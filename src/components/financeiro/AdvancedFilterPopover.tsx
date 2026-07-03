@@ -82,7 +82,7 @@ export function AdvancedFilterPopover({
         return (
             <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>{trigger}</DialogTrigger>
-                <DialogContent className={cn(widthClassName, "max-w-none gap-0 overflow-hidden rounded-[28px] border border-zinc-200 bg-white/95 p-0 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] backdrop-blur-[40px] duration-150 dark:border-white/[0.08] dark:bg-[#09090b]/95 dark:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)]")}>
+                <DialogContent showCloseButton={false} className={cn(widthClassName, "max-w-none gap-0 overflow-hidden rounded-[28px] border border-zinc-200 bg-white/95 p-0 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] backdrop-blur-[40px] duration-150 dark:border-white/[0.08] dark:bg-[#09090b]/95 dark:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)]")}>
                     <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.015] dark:opacity-[0.035]" />
                     <div className="relative z-10 flex items-start justify-between border-b border-zinc-100 px-8 pb-5 pt-7 dark:border-white/5">
                         <div>

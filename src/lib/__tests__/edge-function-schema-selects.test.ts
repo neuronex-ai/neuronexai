@@ -98,4 +98,46 @@ describe("Edge Function schema selects", () => {
 
     expect(unknownColumns).toEqual([]);
   });
+
+  it("keeps patient portal secondary modules isolated behind safe fallbacks", () => {
+    const source = readFileSync(
+      resolve(repoRoot, "supabase/functions/patient-portal-current/index.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain('safeModule("documents"');
+    expect(source).toContain('safeModule("billing"');
+    expect(source).toContain('safeModule("progress"');
+    expect(source).toContain('safeModule("goals"');
+  });
+
+  it("routes patient auth links back to activation instead of the legacy access route", () => {
+    const source = readFileSync(
+      resolve(repoRoot, "supabase/functions/patient-portal-auth/index.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("/portal/ativar");
+    expect(source).not.toContain("/portal/acesso");
+  });
+
+  it("keeps patient portal current context compatible with the legacy patients schema", () => {
+    const source = readFileSync(
+      resolve(repoRoot, "supabase/functions/_shared/patient-portal.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain('.select("id,name,email,phone,status")');
+    expect(source).not.toContain("mobile_phone,status,avatar_url,gender_identity");
+  });
+
+  it("blocks activation takeover when a patient-professional link belongs to another user", () => {
+    const source = readFileSync(
+      resolve(repoRoot, "supabase/functions/patient-portal-activate/index.ts"),
+      "utf8",
+    );
+
+    expect(source).toContain("link_belongs_to_other_patient_user");
+    expect(source).toContain("activation_link_taken_by_other_user");
+  });
 });

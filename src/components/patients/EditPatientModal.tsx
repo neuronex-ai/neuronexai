@@ -36,21 +36,22 @@ export const EditPatientModal = ({ patient, children, defaultOpen = false, onOpe
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent
+        showCloseButton={false}
         className={cn(
           "left-0 top-0 z-[180] flex h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 grid-cols-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0 shadow-none",
           "data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100",
         )}
       >
-        <header className="shrink-0 border-b border-border/45 bg-background/94 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl sm:px-6 lg:px-8">
-          <div className="mx-auto flex max-w-7xl items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] border border-border/50 bg-card">
+        <header className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl sm:px-6 lg:px-8">
+          <div className="mx-auto flex max-w-6xl items-center gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
               <UserCog className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">
-              <DialogTitle className="text-lg font-black leading-tight tracking-tight text-foreground sm:text-xl">
+              <DialogTitle className="text-lg font-semibold leading-tight tracking-normal text-foreground sm:text-xl">
                 Editar Prontuario
               </DialogTitle>
-              <DialogDescription className="mt-0.5 truncate text-xs font-medium text-muted-foreground">
+              <DialogDescription className="mt-1 truncate text-sm text-muted-foreground">
                 {patient.name}
               </DialogDescription>
             </div>
@@ -59,7 +60,7 @@ export const EditPatientModal = ({ patient, children, defaultOpen = false, onOpe
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-10 w-10 shrink-0 rounded-full"
+                className="h-11 w-11 shrink-0 rounded-full border border-border bg-background text-foreground hover:bg-muted"
                 aria-label="Fechar edicao de prontuario"
               >
                 <X className="h-5 w-5" />

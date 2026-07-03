@@ -37,7 +37,7 @@ const PinSlots = ({
                 <InputOTPSlot
                     key={i}
                     index={i}
-                    className="h-12 w-10 rounded-xl border-white/10 bg-[#151518] text-lg shadow-inner transition-all focus:border-white/35 focus:bg-[#1A1A1D]"
+                    className="h-12 w-10 rounded-xl border border-border/70 bg-muted/45 text-lg font-black text-foreground shadow-inner transition-colors first:rounded-xl first:border last:rounded-xl focus:border-ring focus:bg-background"
                 />
             ))}
         </InputOTPGroup>
@@ -135,10 +135,10 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
     };
 
     return (
-        <div className="relative z-10 flex w-full flex-col items-center space-y-8">
+        <div className="relative z-10 flex w-full max-w-[21rem] flex-col items-center space-y-8 text-center">
             <div className="animate-fade-in space-y-2 text-center">
-                <h3 className="text-xl font-bold tracking-tight text-white">{title}</h3>
-                <p className="mx-auto max-w-[230px] text-xs leading-relaxed text-zinc-500">{description}</p>
+                <h3 className="text-xl font-black tracking-tight text-foreground">{title}</h3>
+                <p className="mx-auto max-w-[250px] text-xs font-medium leading-relaxed text-muted-foreground">{description}</p>
             </div>
 
             <div className="relative min-h-[56px]">
@@ -171,12 +171,12 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
                             value={accountPassword}
                             onChange={(event) => setAccountPassword(event.target.value)}
                             placeholder="Senha da sua conta"
-                            className="h-12 rounded-xl border-white/10 bg-[#151518] text-center text-sm font-bold text-white shadow-inner placeholder:text-zinc-600 focus:border-white/35 focus:ring-0"
+                            className="h-12 rounded-xl border-border/70 bg-muted/45 text-center text-sm font-bold text-foreground shadow-inner placeholder:text-muted-foreground/50 focus-visible:ring-2 focus-visible:ring-ring"
                         />
                         <Button
                             type="button"
                             onClick={() => accountPassword.length >= 6 ? setStep("create") : toast.error("Digite sua senha para continuar.")}
-                            className="h-10 w-full rounded-xl bg-white text-[10px] font-black uppercase tracking-[0.16em] text-black hover:bg-zinc-200"
+                            className="h-10 w-full rounded-xl bg-foreground text-[10px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90"
                         >
                             Continuar
                         </Button>
@@ -208,8 +208,8 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
                 )}
 
                 {isLoading && (
-                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-[#0A0A0B]/80 backdrop-blur-sm">
-                        <Loader2 className="h-6 w-6 animate-spin text-white" />
+                    <div className="absolute inset-0 z-20 flex items-center justify-center rounded-xl bg-background/80 backdrop-blur-sm">
+                        <Loader2 className="h-6 w-6 animate-spin text-foreground" />
                     </div>
                 )}
             </div>
@@ -223,7 +223,7 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
                             key={item}
                             className={cn(
                                 "h-2 w-2 rounded-full transition-all duration-300",
-                                step === item ? "scale-125 bg-white" : "bg-white/20"
+                                step === item ? "scale-125 bg-foreground" : "bg-muted-foreground/25"
                             )}
                         />
                     ))}
@@ -236,7 +236,7 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
                         variant="ghost"
                         onClick={requestResetCode}
                         disabled={isLoading}
-                        className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400 hover:bg-white/5 hover:text-white"
+                        className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                         <Mail className="mr-2 h-3.5 w-3.5" />
                         Receber código
@@ -246,7 +246,7 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
                         variant="ghost"
                         onClick={() => setStep("password-reset")}
                         disabled={isLoading}
-                        className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400 hover:bg-white/5 hover:text-white"
+                        className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                         Redefinir com senha
                     </Button>
@@ -259,7 +259,7 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
                     variant="ghost"
                     onClick={resetForm}
                     disabled={isLoading}
-                    className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500 hover:bg-white/5 hover:text-white"
+                    className="h-9 rounded-full px-4 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                     <RotateCcw className="mr-2 h-3.5 w-3.5" />
                     Reiniciar

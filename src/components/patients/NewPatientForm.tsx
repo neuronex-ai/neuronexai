@@ -123,10 +123,11 @@ const RACE_OPTIONS = [
 ];
 
 const inputClassName =
-  "h-11 rounded-lg border-border/60 bg-background text-sm shadow-none placeholder:text-muted-foreground/55 focus-visible:ring-2 focus-visible:ring-ring/25";
+  "h-11 rounded-md border-border bg-background text-sm text-foreground shadow-none placeholder:text-muted-foreground focus-visible:border-foreground focus-visible:ring-2 focus-visible:ring-foreground/20 disabled:bg-muted disabled:text-muted-foreground disabled:opacity-100";
 
-const labelClassName = "text-sm font-medium text-foreground";
-const subtleLabelClassName = "text-xs font-medium text-muted-foreground";
+const labelClassName = "text-[0.8125rem] font-semibold leading-none text-foreground";
+const subtleLabelClassName = "text-[0.7rem] font-semibold uppercase tracking-normal text-muted-foreground";
+const helperTextClassName = "text-xs leading-relaxed text-muted-foreground";
 const selectTriggerClassName = cn(inputClassName, "justify-between");
 
 const asDateInputValue = (date?: Date) => {
@@ -304,10 +305,10 @@ const Section = ({
   description?: string;
   children: ReactNode;
 }) => (
-  <section className="border-t border-border/55 py-6 first:border-t-0 first:pt-0">
-    <div className="grid gap-5 lg:grid-cols-[16rem_minmax(0,1fr)]">
-      <div className="space-y-1">
-        <h3 className="text-base font-semibold leading-tight text-foreground">{title}</h3>
+  <section className="border-t border-border py-7 first:border-t-0 first:pt-0">
+    <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]">
+      <div className="space-y-2">
+        <h3 className="text-base font-semibold leading-tight tracking-normal text-foreground">{title}</h3>
         {description ? <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">{description}</p> : null}
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
@@ -356,7 +357,7 @@ const LookupSelect = ({
           type="button"
           variant="outline"
           size="icon"
-          className="h-8 w-8 rounded-lg"
+          className="h-11 w-11 rounded-md"
           onClick={() => setIsCreating((current) => !current)}
           aria-label={`Adicionar ${label.toLowerCase()}`}
         >
@@ -448,13 +449,13 @@ const InsuranceAgreementWizard = ({
 
   return (
     <div className="sm:col-span-2 xl:col-span-3">
-      <div className="rounded-xl border border-border/60 bg-card/60 p-4 shadow-sm">
+      <div className="rounded-lg border border-border bg-background p-4 shadow-none">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h4 className="text-lg font-semibold text-foreground">Adicionar convênio</h4>
             <p className="mt-1 text-sm text-muted-foreground">Cadastre o convênio e suas regras de repasse.</p>
           </div>
-          <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={handleClose}>
+          <Button type="button" variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={handleClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -462,7 +463,7 @@ const InsuranceAgreementWizard = ({
         <div className="mt-5 grid grid-cols-[1fr_1fr] items-center gap-3">
           {[1, 2].map((item) => (
             <div key={item} className="space-y-2">
-              <div className={cn("h-2 rounded-full", step >= item ? "bg-primary" : "bg-muted")} />
+              <div className={cn("h-1.5 rounded-full", step >= item ? "bg-foreground" : "bg-muted")} />
               <p className={cn("text-xs font-medium", step === item ? "text-foreground" : "text-muted-foreground")}>
                 {item === 1 ? "Nome do convênio" : "Regras de repasse"}
               </p>
@@ -538,12 +539,12 @@ const InsuranceAgreementWizard = ({
         )}
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" className="h-10 rounded-lg px-6" onClick={step === 1 ? handleClose : () => setStep(1)}>
+          <Button type="button" variant="outline" className="h-11 rounded-md px-6" onClick={step === 1 ? handleClose : () => setStep(1)}>
             {step === 1 ? "Cancelar" : "Voltar"}
           </Button>
           <Button
             type="button"
-            className="h-10 rounded-lg px-6"
+            className="h-11 rounded-md px-6"
             disabled={isPending}
             onClick={step === 1 ? () => {
               if (!name.trim()) {
@@ -576,7 +577,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
 
   const professionalName = useMemo(() => {
     const parts = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ");
-    return profile?.full_name || profile?.name || parts || "João Vitor";
+    return profile?.full_name || profile?.name || parts || "";
   }, [profile]);
 
   const defaultValues = useMemo(
@@ -680,7 +681,9 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
       name={name}
       render={({ field }) => (
         <FormItem className={className}>
-          <FormLabel className={labelClassName}>{label}</FormLabel>
+          <FormLabel className={label ? labelClassName : "sr-only"}>
+            {label || props?.["aria-label"] || String(name)}
+          </FormLabel>
           <FormControl>
             <Input
               {...props}
@@ -834,8 +837,8 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <div className="mx-auto w-full max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
-              <div className="mb-5 flex flex-col gap-3 rounded-xl border border-border/55 bg-card/45 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+              <div className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-background p-4 shadow-none sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-base font-semibold text-foreground">Cadastro rápido</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -881,7 +884,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
                   control={form.control}
                   name="has_social_name"
                   render={({ field }) => (
-                    <FormItem className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/55 px-3 py-2">
+                    <FormItem className="flex min-h-11 items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2">
                       <FormLabel className={cn(labelClassName, "flex items-center gap-1.5")}>
                         Cliente possui nome social?
                         <Tooltip>
@@ -916,7 +919,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
                           {...field}
                           placeholder="Digite aqui"
                           maxLength={quickRegistration ? 400 : 10000}
-                          className="min-h-24 resize-y rounded-lg border-border/60 bg-background text-sm"
+                          className={cn(inputClassName, "min-h-24 resize-y py-3 leading-relaxed")}
                         />
                       </FormControl>
                       <FormMessage />
@@ -928,9 +931,16 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
               {!quickRegistration ? (
                 <>
                   <Section title="Informações financeiras" description="Configuração inicial de cobrança e relacionamento financeiro do paciente.">
-                    <div className="rounded-lg border border-border/55 px-3 py-2">
+                    <div className="rounded-md border border-border bg-background px-3 py-3">
                       <p className={subtleLabelClassName}>Profissional</p>
-                      <p className="mt-1 text-sm font-semibold text-foreground">{professionalName}</p>
+                      <p className="mt-1 text-sm font-semibold text-foreground">
+                        {professionalName || "Nao informado no perfil"}
+                      </p>
+                      {!professionalName ? (
+                        <p className={cn(helperTextClassName, "mt-1")}>
+                          O cadastro sera salvo sem nome profissional preenchido.
+                        </p>
+                      ) : null}
                     </div>
                     {renderSelectField("financial_plan", "Plano financeiro", FINANCIAL_PLAN_OPTIONS, "Por sessão")}
 
@@ -958,7 +968,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
                                   type="button"
                                   variant="outline"
                                   size="icon"
-                                  className="h-9 w-9 rounded-lg"
+                                  className="h-11 w-11 rounded-md"
                                   onClick={() => setInsuranceWizardOpen(true)}
                                   aria-label="Adicionar convênio"
                                 >
@@ -1008,7 +1018,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
                     ) : null}
 
                     {financialPlan === "exempt" ? (
-                      <div className="rounded-lg border border-border/55 bg-muted/35 px-3 py-3 text-sm text-muted-foreground sm:col-span-2">
+                      <div className="rounded-md border border-border bg-muted/30 px-3 py-3 text-sm text-foreground sm:col-span-2">
                         Paciente marcado como isento. Nenhum valor financeiro inicial será exigido.
                       </div>
                     ) : null}
@@ -1092,7 +1102,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
                       name="responsible_use_for_billing_documents"
                       render={({ field }) => (
                         <FormItem className="sm:col-span-2 xl:col-span-3">
-                          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border/55 p-3">
+                          <label className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border border-border bg-background p-3">
                             <FormControl>
                               <Switch checked={field.value} onCheckedChange={field.onChange} />
                             </FormControl>
@@ -1109,12 +1119,12 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
             </div>
           </div>
 
-          <footer className="shrink-0 border-t border-border/55 bg-background/94 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 lg:px-8">
-            <div className="mx-auto flex max-w-7xl flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <Button type="button" variant="ghost" className="h-11 rounded-lg px-5" onClick={onCancel}>
+          <footer className="shrink-0 border-t border-border bg-background/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 lg:px-8">
+            <div className="mx-auto flex max-w-6xl flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <Button type="button" variant="ghost" className="h-11 rounded-md px-5" onClick={onCancel}>
                 Cancelar
               </Button>
-              <Button type="submit" disabled={isPending || isFormLoading} className="h-11 rounded-lg px-5">
+              <Button type="submit" disabled={isPending || isFormLoading} className="h-11 rounded-md px-5">
                 {isPending || isFormLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {isEditing ? "Salvar alteracoes" : "Salvar prontuario"}
               </Button>

@@ -22,6 +22,7 @@ interface ResponsiveModalProps {
   className?: string;
   drawerClassName?: string;
   contentStyle?: React.CSSProperties;
+  showCloseButton?: boolean;
 }
 
 export const ResponsiveModal = ({
@@ -32,6 +33,7 @@ export const ResponsiveModal = ({
   className,
   drawerClassName,
   contentStyle,
+  showCloseButton = true,
 }: ResponsiveModalProps) => {
   const isMobile = useIsMobile();
 
@@ -58,7 +60,7 @@ export const ResponsiveModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent style={contentStyle} className={className}>
+      <DialogContent style={contentStyle} className={className} showCloseButton={showCloseButton}>
         {children}
       </DialogContent>
     </Dialog>

@@ -1,12 +1,7 @@
 import { ForgotPasswordModal } from '@/components/auth/ForgotPasswordModal';
 import { TotpMfaDialog } from '@/components/settings/TotpMfaDialog';
+import { AppModalShell, ModalHeroIcon } from '@/components/ui/app-modal-shell';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { getAccountAssurance } from '@/hooks/use-account-security';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -25,10 +20,13 @@ import {
   type BiometricStatus,
   type StoredBiometricAccount,
 } from '@/lib/native-mobile-security';
+import {
+  clearPatientPortalInviteToken,
+  readPatientPortalInviteToken,
+} from '@/lib/patient-portal-flow';
 import { readSupabaseFunctionError } from '@/lib/read-supabase-function-error';
 import { cn } from '@/lib/utils';
 import type { Session } from '@supabase/supabase-js';
-import { motion, type MotionProps, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Eye, EyeOff, Fingerprint, Loader2, ShieldCheck, Stethoscope, UserRound } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -51,28 +49,41 @@ const BiometricPromptDialog = ({
   onSkip,
   onEnable,
 }: BiometricPromptDialogProps) => {
-  const shouldReduceMotion = Boolean(useReducedMotion());
-  const contentMotion: MotionProps = shouldReduceMotion
-    ? {}
-    : {
-      initial: { opacity: 0, y: isMobile ? 18 : 12, scale: 0.98 },
-      animate: { opacity: 1, y: 0, scale: 1 },
-      transition: { type: 'spring' as const, stiffness: 300, damping: 28 },
-    };
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent
-        className={cn(
-          'gap-0 border p-0 text-foreground shadow-2xl outline-none',
-          'max-h-[calc(100dvh-1rem)] w-[calc(100vw-1rem)] overflow-y-auto overscroll-contain rounded-[30px]',
-          'border-black/10 bg-white/95 backdrop-blur-2xl dark:border-white/12 dark:bg-[#08080a]/95',
-          'sm:max-h-[calc(100dvh-2.5rem)] sm:overflow-y-auto',
-          isMobile ? 'max-w-[min(100vw-1rem,24rem)]' : 'sm:max-w-[27rem] sm:rounded-[34px]',
-        )}
-      >
-        <motion.div
-          {...contentMotion}
+    <AppModalShell
+      open={open}
+      onOpenChange={onOpenChange}
+      preventClose={loading}
+      size="sm"
+      eyebrow="Seguranca do dispositivo"
+      title="Entrar com biometria?"
+      description="Ative neste aparelho para desbloquear o app com digital, rosto ou senha do dispositivo. Se falhar, o login normal continua disponivel."
+      heroIcon={<ModalHeroIcon icon={Fingerprint} state={loading ? "loading" : "neutral"} animation="fingerprint" ariaLabel="Biometria do dispositivo" />}
+      footer={
+        <div className={cn('grid gap-3', isMobile ? 'grid-cols-1' : 'grid-cols-[1fr_1fr]')}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={loading}
+            onClick={() => void onSkip()}
+            className="h-12 rounded-[18px] border-border/70 bg-transparent px-5 text-xs font-black text-foreground hover:bg-muted/70"
+          >
+            Agora nao
+          </Button>
+          <Button
+            type="button"
+            disabled={loading}
+            onClick={() => void onEnable()}
+            className="h-12 rounded-[18px] bg-foreground px-5 text-xs font-black text-background shadow-xl shadow-black/10 hover:bg-foreground/90 dark:shadow-black/35"
+          >
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {loading ? 'Ativando' : 'Ativar'}
+          </Button>
+        </div>
+      }
+    >
+      <div className="hidden">
+        <div
           className={cn(
             'relative overflow-hidden px-5 py-6',
             isMobile ? 'pb-[calc(1.5rem+env(safe-area-inset-bottom))]' : 'sm:p-7',
@@ -81,25 +92,22 @@ const BiometricPromptDialog = ({
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-black/20 to-transparent dark:via-white/25" />
 
           <div className="flex items-start gap-4 text-left">
-            <motion.div
-              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.92 }}
-              animate={shouldReduceMotion ? undefined : { opacity: 1, scale: 1 }}
-              transition={{ type: 'spring' as const, stiffness: 330, damping: 24 }}
+            <div
               className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[22px] border border-black/10 bg-black/[0.035] text-zinc-950 shadow-sm dark:border-white/10 dark:bg-white/[0.06] dark:text-white"
             >
               <Fingerprint className="h-6 w-6" />
-            </motion.div>
+            </div>
             <div className="min-w-0 pt-0.5">
               <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Segurança do dispositivo</p>
-              <DialogTitle className="mt-2 text-2xl font-black leading-[1.02] tracking-normal text-foreground">
+              <h2 className="mt-2 text-2xl font-black leading-[1.02] tracking-normal text-foreground">
                 Entrar com biometria?
-              </DialogTitle>
+              </h2>
             </div>
           </div>
 
-          <DialogDescription className="mt-4 text-sm font-medium leading-relaxed text-zinc-600 dark:text-zinc-300">
+          <p className="mt-4 text-sm font-medium leading-relaxed text-zinc-600 dark:text-zinc-300">
             Ative neste aparelho para desbloquear o app com digital, rosto ou senha do dispositivo. Se falhar, o login normal continua disponível.
-          </DialogDescription>
+          </p>
 
           <div className={cn('mt-6 flex gap-3', isMobile ? 'flex-col' : 'justify-end')}>
             <Button
@@ -127,9 +135,9 @@ const BiometricPromptDialog = ({
               Ativar
             </Button>
           </div>
-        </motion.div>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </AppModalShell>
   );
 };
 
@@ -163,15 +171,15 @@ const AuthPageV2 = () => {
       throw new Error(await readSupabaseFunctionError(error, 'Nao foi possivel carregar o Portal do Paciente.'));
     }
 
-    const inviteToken = window.localStorage.getItem('neuronex_patient_portal_invite_token');
+    readPatientPortalInviteToken();
     if (data?.status === 'active') {
-      window.localStorage.removeItem('neuronex_patient_portal_invite_token');
+      clearPatientPortalInviteToken();
       navigate('/portal', { replace: true });
       return;
     }
 
     if (data?.status === 'needs_activation') {
-      navigate(inviteToken ? `/portal/ativar?token=${encodeURIComponent(inviteToken)}` : '/portal/ativar', { replace: true });
+      navigate('/portal/ativar', { replace: true });
       return;
     }
 
@@ -535,6 +543,7 @@ const AuthPageV2 = () => {
         onOpenChange={setForgotOpen}
         context={role === 'patient' ? 'patient' : 'professional'}
         redirectTo={role === 'patient' ? `${window.location.origin}/reset-password?next=portal` : undefined}
+        inviteToken={role === 'patient' ? readPatientPortalInviteToken() : undefined}
       />
       <TotpMfaDialog open={mfaOpen} mode="challenge" onOpenChange={setMfaOpen} onSuccess={finishAuthenticatedSession} onCancel={cancelMfa} />
       <BiometricPromptDialog

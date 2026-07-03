@@ -215,6 +215,13 @@ export interface PatientPortalProfileUpdate {
   avatarFile?: File | null;
 }
 
+export interface PatientPortalAuthResult {
+  status: "created" | "existing_user" | "access_link_sent" | "sent_if_exists";
+  email: string;
+  redirectTo?: string;
+  message: string;
+}
+
 const readFunctionError = async (error: unknown, fallback: string) => {
   const context = (error as { context?: Response })?.context;
   if (context) {
@@ -286,6 +293,40 @@ export const useActivatePatientPortal = () => {
     },
   });
 };
+
+export const createPatientPortalAccess = (input: { email: string; password: string; inviteToken?: string }) =>
+  invokePortalFunction<PatientPortalAuthResult>(
+    "patient-portal-auth",
+    {
+      action: "signup",
+      email: input.email,
+      password: input.password,
+      inviteToken: input.inviteToken || "",
+    },
+    "NÃ£o foi possÃ­vel criar o acesso do paciente.",
+  );
+
+export const sendPatientPortalAccessLink = (input: { email: string; inviteToken?: string }) =>
+  invokePortalFunction<PatientPortalAuthResult>(
+    "patient-portal-auth",
+    {
+      action: "send_access_link",
+      email: input.email,
+      inviteToken: input.inviteToken || "",
+    },
+    "NÃ£o foi possÃ­vel enviar o link de acesso.",
+  );
+
+export const sendPatientPortalPasswordReset = (input: { email: string; inviteToken?: string }) =>
+  invokePortalFunction<PatientPortalAuthResult>(
+    "patient-portal-auth",
+    {
+      action: "reset_password",
+      email: input.email,
+      inviteToken: input.inviteToken || "",
+    },
+    "NÃ£o foi possÃ­vel enviar o e-mail de redefiniÃ§Ã£o.",
+  );
 
 export const usePatientPortalCurrent = () => {
   const { user } = useAuth();

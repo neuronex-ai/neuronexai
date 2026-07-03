@@ -4,7 +4,17 @@ import { useAuth } from '@/components/auth/SessionContextProvider';
 import { format, isSameDay } from 'date-fns';
 import { isCancelledAppointmentStatus } from '@/lib/appointment-status';
 import { getAsaasAccountState } from '@/lib/asaas-account-status';
-import { FINANCIAL_ACCOUNT_SAFE_SELECT, NB_PAYMENTS_SAFE_SELECT, NB_PAYOUTS_SAFE_SELECT } from '@/lib/neurofinance-safe-selects';
+import {
+  FINANCIAL_ACCOUNT_SAFE_SELECT,
+  FINANCIAL_ACCOUNTS_READ_TABLE,
+  NB_PAYMENTS_READ_TABLE,
+  NB_PAYMENTS_SAFE_SELECT,
+  NB_PAYOUTS_READ_TABLE,
+  NB_PAYOUTS_SAFE_SELECT,
+  normalizeFinancialAccountRow,
+  normalizeNbPaymentRow,
+  normalizeNbPayoutRow,
+} from '@/lib/neurofinance-safe-selects';
 
 export interface DashboardAlert {
   id: string;
@@ -32,14 +42,15 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
   if (!inAppEnabled) return [];
 
   const { data: financialAccount } = await (supabase as any)
-    .from('financial_accounts_safe_v')
+    .from(FINANCIAL_ACCOUNTS_READ_TABLE)
     .select(FINANCIAL_ACCOUNT_SAFE_SELECT)
     .eq('user_id', userId)
     .maybeSingle();
 
-  const accountState = getAsaasAccountState(financialAccount);
+  const normalizedFinancialAccount = normalizeFinancialAccountRow(financialAccount);
+  const accountState = getAsaasAccountState(normalizedFinancialAccount);
 
-  if (!financialAccount || accountState.uiStatus === 'not_started' || accountState.uiStatus === 'account_missing') {
+  if (!normalizedFinancialAccount || accountState.uiStatus === 'not_started' || accountState.uiStatus === 'account_missing') {
     alerts.push({
       id: 'payment-connect',
       type: 'warning',
@@ -48,7 +59,7 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
       time: 'Financeiro',
       actionLink: '/financeiro/neurofinance',
     });
-  } else if (financialAccount.last_sync_error) {
+  } else if (normalizedFinancialAccount.last_sync_error) {
     alerts.push({
       id: 'asaas-sync-error',
       type: 'destructive',
@@ -57,10 +68,10 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
       time: 'Financeiro',
       actionLink: '/financeiro/neurofinance',
     });
-  } else if (['pending', 'onboarding', 'pending_review', 'restricted', 'disabled'].includes(financialAccount.status)) {
+  } else if (['pending', 'onboarding', 'pending_review', 'restricted', 'disabled'].includes(normalizedFinancialAccount.status)) {
     alerts.push({
       id: 'asaas-review',
-      type: financialAccount.status === 'restricted' || financialAccount.status === 'disabled' ? 'destructive' : 'warning',
+      type: normalizedFinancialAccount.status === 'restricted' || normalizedFinancialAccount.status === 'disabled' ? 'destructive' : 'warning',
       title: 'Conta Asaas em análise',
       message: 'Sua subconta ainda precisa de validação para liberar cobranças e repasses.',
       time: 'Financeiro',
@@ -71,37 +82,39 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
   if (settings?.in_app_overdue_invoices ?? true) {
     const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const { data: recentPayments } = await (supabase as any)
-      .from('nb_payments_safe_v')
+      .from(NB_PAYMENTS_READ_TABLE)
       .select(NB_PAYMENTS_SAFE_SELECT)
       .eq('user_id', userId)
       .eq('status', 'paid')
       .gte('updated_at', yesterday.toISOString());
 
-    if (recentPayments && recentPayments.length > 0) {
-      const totalReceived = recentPayments.reduce((sum, payment) => sum + (payment.gross_amount || 0), 0);
+    const normalizedRecentPayments = (recentPayments || []).map(normalizeNbPaymentRow);
+    if (normalizedRecentPayments.length > 0) {
+      const totalReceived = normalizedRecentPayments.reduce((sum, payment) => sum + (payment.gross_amount || 0), 0);
       alerts.push({
         id: 'recent-asaas-payments',
         type: 'success',
         title: 'Pagamento recebido',
-        message: `${recentPayments.length} pagamento(s) confirmado(s): ${centsToBRL(totalReceived)}.`,
+        message: `${normalizedRecentPayments.length} pagamento(s) confirmado(s): ${centsToBRL(totalReceived)}.`,
         time: 'Financeiro',
         actionLink: '/financeiro/neurofinance',
       });
     }
 
     const { data: problematicPayouts } = await (supabase as any)
-      .from('nb_payouts_safe_v')
+      .from(NB_PAYOUTS_READ_TABLE)
       .select(NB_PAYOUTS_SAFE_SELECT)
       .eq('user_id', userId)
       .in('status', ['failed', 'canceled'])
       .gte('updated_at', yesterday.toISOString());
 
-    if (problematicPayouts && problematicPayouts.length > 0) {
+    const normalizedProblematicPayouts = (problematicPayouts || []).map(normalizeNbPayoutRow);
+    if (normalizedProblematicPayouts.length > 0) {
       alerts.push({
         id: 'asaas-payout-issues',
         type: 'warning',
         title: 'Repasse com atenção',
-        message: `${problematicPayouts.length} repasse(s) tiveram falha ou cancelamento recente.`,
+        message: `${normalizedProblematicPayouts.length} repasse(s) tiveram falha ou cancelamento recente.`,
         time: 'Financeiro',
         actionLink: '/financeiro/neurofinance',
       });

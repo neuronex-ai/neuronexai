@@ -17,6 +17,26 @@ async function readBody(req: Request) {
   return await req.json().catch(() => ({}));
 }
 
+function moduleUnavailable(module: string, payload: Record<string, unknown>) {
+  return {
+    ...payload,
+    unavailable: true,
+    error: {
+      module,
+      message: "Modulo temporariamente indisponivel.",
+    },
+  };
+}
+
+async function safeModule(module: string, fallback: Record<string, unknown>, loader: () => Promise<Record<string, unknown>>) {
+  try {
+    return await loader();
+  } catch (error) {
+    console.warn(`[patient-portal-current:${module}]`, error);
+    return moduleUnavailable(module, fallback);
+  }
+}
+
 async function loadAppointments(context: any) {
   const { data, error } = await supabaseAdmin
     .from("appointments")
@@ -890,14 +910,26 @@ Deno.serve(async (req: Request) => {
     if (response) return response;
 
     if (action === "appointments") return jsonResponse(await loadAppointments(context));
-    if (action === "documents") return jsonResponse(await loadDocuments(context));
-    if (action === "billing") return jsonResponse(await loadBilling(context));
+    if (action === "documents") return jsonResponse(await safeModule("documents", { documents: [] }, () => loadDocuments(context)));
+    if (action === "billing") return jsonResponse(await safeModule("billing", { entries: [], invoices: [] }, () => loadBilling(context)));
     if (action === "session_summaries") return jsonResponse(await loadSessionSummaries(context));
     if (action === "anamnesis") return jsonResponse(await loadAnamnesis(context));
     if (action === "packages") return jsonResponse(await loadPackages(context));
-    if (action === "progress") return jsonResponse(await loadProgress(context));
+    if (action === "progress") return jsonResponse(await safeModule("progress", {
+      progress: {
+        sessionsTotal: 0,
+        attendedSessions: 0,
+        goalsTotal: 0,
+        completedGoals: 0,
+        sharedDocuments: 0,
+        moodLogs: 0,
+        activePackages: 0,
+        lastMood: null,
+        nextSteps: [],
+      },
+    }, () => loadProgress(context)));
     if (action === "appointment_requests") return jsonResponse(await loadAppointmentRequests(context));
-    if (action === "goals") return jsonResponse(await loadGoals(context));
+    if (action === "goals") return jsonResponse(await safeModule("goals", { goals: [] }, () => loadGoals(context)));
     if (action === "patient_notes") return jsonResponse(await loadPatientNotes(user, context));
     if (action === "save_patient_note") {
       const result = await savePatientNote(user, context, body as Record<string, unknown>);

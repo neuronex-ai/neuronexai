@@ -15,7 +15,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { toast } from "sonner";
 import type { NeuroFinancePayment, CreatePaymentResult } from "./use-neurofinance-payments";
-import { NB_PAYMENTS_SAFE_SELECT } from "@/lib/neurofinance-safe-selects";
+import {
+    NB_PAYMENTS_READ_TABLE,
+    NB_PAYMENTS_SAFE_SELECT,
+    normalizeNbPaymentRow,
+} from "@/lib/neurofinance-safe-selects";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 import { invokeNeurofinanceFunction } from "@/lib/neurofinance-edge";
 
@@ -141,7 +145,7 @@ export function useNeuroFinancePix() {
         if (!session) throw new Error('Não autenticado');
 
         const { data, error } = await (supabase as any)
-            .from('nb_payments_safe_v')
+            .from(NB_PAYMENTS_READ_TABLE)
             .select(NB_PAYMENTS_SAFE_SELECT)
             .eq('user_id', session.user.id)
             .eq('payment_method_type', 'pix')
@@ -149,19 +153,19 @@ export function useNeuroFinancePix() {
             .limit(50);
 
         if (error) throw error;
-        return { charges: (data || []) as NeuroFinancePayment[] };
+        return { charges: (data || []).map(normalizeNbPaymentRow) as NeuroFinancePayment[] };
     };
 
     // ─── Query a single charge ───────────────────────────────
     const queryCharge = async (paymentId: string): Promise<NeuroFinancePayment | null> => {
         const { data, error } = await (supabase as any)
-            .from('nb_payments_safe_v')
+            .from(NB_PAYMENTS_READ_TABLE)
             .select(NB_PAYMENTS_SAFE_SELECT)
             .eq('id', paymentId)
             .single();
 
         if (error) throw error;
-        return data as NeuroFinancePayment;
+        return normalizeNbPaymentRow(data) as NeuroFinancePayment;
     };
 
     return {
@@ -240,7 +244,7 @@ export function usePixCobList() {
             if (!user?.id) throw new Error('Não autenticado');
 
             const { data, error } = await (supabase as any)
-                .from('nb_payments_safe_v')
+                .from(NB_PAYMENTS_READ_TABLE)
                 .select(NB_PAYMENTS_SAFE_SELECT)
                 .eq('user_id', user.id)
                 .eq('payment_method_type', 'pix')
@@ -249,7 +253,7 @@ export function usePixCobList() {
                 .limit(50);
 
             if (error) throw error;
-            return { charges: (data || []) as NeuroFinancePayment[] };
+            return { charges: (data || []).map(normalizeNbPaymentRow) as NeuroFinancePayment[] };
         },
         enabled: !!user?.id,
         staleTime: 30_000,
@@ -268,7 +272,7 @@ export function usePixRecebidos() {
             if (!user?.id) throw new Error('Não autenticado');
 
             const { data, error } = await (supabase as any)
-                .from('nb_payments_safe_v')
+                .from(NB_PAYMENTS_READ_TABLE)
                 .select(NB_PAYMENTS_SAFE_SELECT)
                 .eq('user_id', user.id)
                 .eq('payment_method_type', 'pix')
@@ -277,7 +281,7 @@ export function usePixRecebidos() {
                 .limit(50);
 
             if (error) throw error;
-            return { payments: (data || []) as NeuroFinancePayment[] };
+            return { payments: (data || []).map(normalizeNbPaymentRow) as NeuroFinancePayment[] };
         },
         enabled: !!user?.id,
         staleTime: 30_000,

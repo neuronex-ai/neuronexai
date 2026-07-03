@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { getAsaasAccountState } from "@/lib/asaas-account-status";
-import { FINANCIAL_ACCOUNT_SAFE_SELECT } from "@/lib/neurofinance-safe-selects";
+import {
+  FINANCIAL_ACCOUNT_SAFE_SELECT,
+  FINANCIAL_ACCOUNTS_READ_TABLE,
+  normalizeFinancialAccountRow,
+} from "@/lib/neurofinance-safe-selects";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 type FinancialUiStatus =
@@ -127,14 +131,14 @@ export const useFinancialAccount = () => {
     if (!userId) return null;
 
     const { data, error } = await supabase
-      .from("financial_accounts_safe_v")
+      .from(FINANCIAL_ACCOUNTS_READ_TABLE)
       .select(FINANCIAL_ACCOUNT_SAFE_SELECT)
       .eq("user_id", userId)
       .returns<FinancialAccountRecord[]>()
       .maybeSingle();
 
     if (error) throw error;
-    return data || null;
+    return normalizeFinancialAccountRow(data) || null;
   };
 
   const { data: account, isLoading, refetch } = useQuery({

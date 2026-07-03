@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
-import { DevelopmentModeNotice } from '@/components/runtime/DevelopmentModeNotice';
 
 interface AuthContextType {
   session: Session | null;
@@ -74,7 +73,6 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   return (
     <AuthContext.Provider value={value}>
       {children}
-      <DevelopmentModeNotice user={user} />
     </AuthContext.Provider>
   );
 };

@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Invoice } from "@/types";
 import { useAuth } from "@/components/auth/SessionContextProvider";
-import { NB_PAYMENTS_SAFE_SELECT } from "@/lib/neurofinance-safe-selects";
+import {
+    NB_PAYMENTS_READ_TABLE,
+    NB_PAYMENTS_SAFE_SELECT,
+    normalizeNbPaymentRow,
+} from "@/lib/neurofinance-safe-selects";
 
 export interface InvoiceListParams {
     page?: number;
@@ -93,7 +97,7 @@ export const fetchInvoicesPage = async (userId: string, params: InvoiceListParam
 
     const buildNbQuery = (select: string) => {
         let query = supabase
-            .from("nb_payments_safe_v")
+            .from(NB_PAYMENTS_READ_TABLE)
             .select(select, { count: "exact" })
             .eq("user_id", userId)
             .order("created_at", { ascending: false })
@@ -114,7 +118,7 @@ export const fetchInvoicesPage = async (userId: string, params: InvoiceListParam
     const statusFilter = new Set((params.status || []).map((status) => status.toLowerCase()));
     const allInvoices = [
         ...((legacyResult.data || []) as any[]).map(mapLegacyInvoice),
-        ...((nbResult.data || []) as any[]).map(mapNbPayment),
+        ...((nbResult.data || []) as any[]).map(normalizeNbPaymentRow).map(mapNbPayment),
     ]
         .filter((invoice) => statusFilter.size === 0 || statusFilter.has(invoice.status))
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())

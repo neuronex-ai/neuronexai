@@ -1,5 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
-import { FINANCIAL_ACCOUNT_SAFE_SELECT } from "@/lib/neurofinance-safe-selects";
+import {
+  FINANCIAL_ACCOUNT_SAFE_SELECT,
+  FINANCIAL_ACCOUNTS_READ_TABLE,
+  normalizeFinancialAccountRow,
+} from "@/lib/neurofinance-safe-selects";
 import { normalizeBoletoInput } from "@/lib/boleto";
 
 export type NeuroFinanceAccountState = {
@@ -170,13 +174,13 @@ export async function getNeuroFinanceAccountState() {
   if (!authData.user) throw new Error("Sessão expirada. Entre novamente.");
 
   const { data, error } = await (supabase as any)
-    .from("financial_accounts_safe_v")
+    .from(FINANCIAL_ACCOUNTS_READ_TABLE)
     .select(FINANCIAL_ACCOUNT_SAFE_SELECT)
     .eq("user_id", authData.user.id)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
-  return data as NeuroFinanceAccountState | null;
+  return normalizeFinancialAccountRow(data) as NeuroFinanceAccountState | null;
 }
 
 export const getNeuroFinanceBalanceDetails = () =>
