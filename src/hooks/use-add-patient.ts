@@ -60,12 +60,13 @@ const isDuplicateEmailError = (error: unknown) => {
   return text.includes("patients_email_idx") || (text.includes("duplicate key") && text.includes("email"));
 };
 
-const assertEmailAvailable = async (email: string | null) => {
+const assertEmailAvailable = async (email: string | null, userId: string) => {
   if (!email) return;
 
   const { data, error } = await supabase
     .from("patients")
     .select("id")
+    .eq("user_id", userId)
     .ilike("email", email)
     .limit(1)
     .maybeSingle();
@@ -75,14 +76,21 @@ const assertEmailAvailable = async (email: string | null) => {
 };
 
 const rollbackPatient = async (patientId: string, userId: string, error: unknown) => {
-  await supabase.from("patients").delete().eq("id", patientId).eq("user_id", userId);
+  const { error: rollbackError } = await supabase
+    .from("patients")
+    .delete()
+    .eq("id", patientId)
+    .eq("user_id", userId);
   const message = error instanceof Error ? error.message : "Falha ao salvar dados complementares.";
+  if (rollbackError) {
+    throw new Error(`${message} O prontuario foi criado, mas a reversao automatica falhou: ${rollbackError.message}`);
+  }
   throw new Error(message);
 };
 
 const addPatient = async (patientData: NewPatientFormValues, userId: string) => {
   const email = normalizeEmail(patientData.email);
-  await assertEmailAvailable(email);
+  await assertEmailAvailable(email, userId);
 
   const relativeContact = [patientData.relative_name, patientData.relative_phone]
     .map(cleanText)
@@ -189,7 +197,7 @@ const addPatient = async (patientData: NewPatientFormValues, userId: string) => 
           user_id: userId,
           patient_id: patient.id,
           name: cleanText(patientData.responsible_name),
-          email: cleanText(patientData.responsible_email),
+          email: normalizeEmail(patientData.responsible_email),
           phone_country_code: cleanText(patientData.responsible_phone_country_code) || "+55",
           mobile_phone: cleanText(patientData.responsible_mobile_phone),
           cpf: cleanDigits(patientData.responsible_cpf),
@@ -201,7 +209,7 @@ const addPatient = async (patientData: NewPatientFormValues, userId: string) => 
       if (responsibleError) throw new Error(responsibleError.message);
     }
 
-    await supabase
+    const { error: preferencesError } = await supabase
       .from("psychologist_patient_preferences")
       .upsert({
         user_id: userId,
@@ -211,6 +219,8 @@ const addPatient = async (patientData: NewPatientFormValues, userId: string) => 
         default_financial_plan: patientData.financial_plan,
         default_session_value_cents: patientData.financial_plan === "per_session" ? sessionValueCents : 0,
       }, { onConflict: "user_id" });
+
+    if (preferencesError) throw new Error(preferencesError.message);
   } catch (companionError) {
     await rollbackPatient(patient.id, userId, companionError);
   }

@@ -65,7 +65,7 @@ export const NewTransactionModal = ({ children, open, onOpenChange, showTrigger 
   return (
     <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
       {triggerButton && <DialogTrigger asChild>{triggerButton}</DialogTrigger>}
-      <DialogContent className="sm:max-w-[500px] border-zinc-200 dark:border-white/10 bg-white dark:bg-[#080809] backdrop-blur-3xl shadow-[0_48px_96px_-24px_rgba(0,0,0,0.5)] p-0 overflow-hidden rounded-[48px] outline-none ring-1 ring-black/5 dark:ring-white/5">
+      <DialogContent showCloseButton={false} className="sm:max-w-[500px] border-zinc-200 dark:border-white/10 bg-white dark:bg-[#080809] backdrop-blur-3xl shadow-[0_48px_96px_-24px_rgba(0,0,0,0.5)] p-0 overflow-hidden rounded-[48px] outline-none ring-1 ring-black/5 dark:ring-white/5">
         <DialogClose className="absolute right-8 top-8 rounded-2xl p-3 bg-zinc-50 dark:bg-white/5 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-white/10 transition-all z-50 shadow-sm focus:outline-none focus:ring-0">
           <X className="h-4 w-4" />
         </DialogClose>

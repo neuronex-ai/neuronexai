@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AppModalShell, ModalHeroIcon } from "@/components/ui/app-modal-shell";
 import { Button } from "@/components/ui/button";
-import { DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { useIsMobile } from "@/hooks/use-mobile";
 import type { BillingAddressPayload } from "@/lib/subscription-checkout";
 import { isValidBillingAddress, normalizePostalCode } from "@/lib/subscription-checkout";
@@ -540,21 +539,7 @@ export const SubscriptionUpsellDialog = ({
     </div>
   );
 
-  const header = (
-    <div className="w-full shrink-0 border-b border-zinc-200 bg-white/90 px-6 py-5 text-center dark:border-white/[0.08] dark:bg-[#09090b]/78 md:px-8 md:py-6">
-      <div className={cn("mx-auto flex h-14 w-14 items-center justify-center rounded-[22px] border", iconSurfaceClass)}>
-        <Lock className="h-6 w-6 text-muted-foreground" />
-      </div>
-      <p className="mt-4 text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">{eyebrow}</p>
-      <DialogTitle className="mt-2 text-2xl font-black leading-tight tracking-normal text-foreground md:text-3xl">
-        {title}
-      </DialogTitle>
-      <DialogDescription className="mx-auto mt-3 max-w-[33rem] text-sm font-medium leading-relaxed text-muted-foreground md:text-[15px]">
-        {effectiveDescription}
-      </DialogDescription>
-      <StepBars step={step} />
-    </div>
-  );
+  const stepIndicator = <StepBars step={step} />;
 
   const stepMotion = {
     enter: (direction: number) => ({
@@ -576,57 +561,45 @@ export const SubscriptionUpsellDialog = ({
     : { duration: 0.26, ease: [0.22, 1, 0.36, 1] as const };
 
   const wizardPage = (
-    <AnimatePresence initial={false} custom={stepDirection} mode="popLayout">
-      <motion.div
-        key={step}
-        custom={stepDirection}
-        variants={stepMotion}
-        initial="enter"
-        animate="center"
-        exit="exit"
-        transition={stepTransition}
-        className="absolute inset-0 overflow-y-auto custom-scrollbar"
-      >
-        {header}
-        <div className={cn("w-full py-5", isMobile ? "px-5" : "px-8 md:py-6")}>{stepContent}</div>
-      </motion.div>
-    </AnimatePresence>
-  );
-
-  const footer = (
-    <div className="w-full shrink-0 border-t border-zinc-200 bg-white/95 px-5 py-4 shadow-[0_-18px_50px_-32px_rgba(15,23,42,0.65)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-[#09090b]/92 dark:shadow-none md:px-8 md:py-5">
-      <div className={cn("mx-auto grid gap-3", bodyMaxWidth, isMobile ? "grid-cols-1" : "grid-cols-[1fr_1.25fr]")}>
-        {secondaryButton}
-        {primaryButton}
-      </div>
+    <div className="w-full">
+      <div className="pb-2">{stepIndicator}</div>
+      <AnimatePresence initial={false} custom={stepDirection} mode="wait">
+        <motion.div
+          key={step}
+          custom={stepDirection}
+          variants={stepMotion}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={stepTransition}
+          className="w-full"
+        >
+          <div className={cn("w-full py-4", isMobile ? "px-0" : "md:py-5")}>{stepContent}</div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <ResponsiveModal
-        open={open}
-        onOpenChange={onOpenChange}
-        drawerClassName="h-[min(94dvh,48rem)] border-t border-zinc-200 bg-white text-zinc-950 dark:border-white/[0.08] dark:bg-[#09090b] dark:text-white"
-      >
-        <div className="flex min-h-0 flex-1 flex-col items-center">
-          <div className="relative min-h-0 w-full flex-1 overflow-hidden">{wizardPage}</div>
-          {footer}
-        </div>
-      </ResponsiveModal>
-    );
-  }
+  const footer = (
+    <div className={cn("mx-auto grid gap-3", bodyMaxWidth, isMobile ? "grid-cols-1" : "grid-cols-[1fr_1.25fr]")}>
+      {secondaryButton}
+      {primaryButton}
+    </div>
+  );
 
   return (
-    <ResponsiveModal
+    <AppModalShell
       open={open}
       onOpenChange={onOpenChange}
-      className="w-[min(94vw,44rem)] max-h-[min(92dvh,48rem)] overflow-hidden rounded-[30px] border border-zinc-200 bg-white p-0 text-zinc-950 shadow-[0_35px_90px_-32px_rgba(15,23,42,0.7)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#09090b]/96 dark:text-white dark:shadow-2xl"
+      size="lg"
+      eyebrow={eyebrow}
+      title={title}
+      description={effectiveDescription}
+      heroIcon={<ModalHeroIcon icon={Lock} ariaLabel="Funcionalidade premium" />}
+      footer={footer}
+      bodyClassName="flex flex-col items-center"
     >
-      <div className="flex h-[min(92dvh,48rem)] min-h-0 flex-col items-center">
-        <div className="relative min-h-0 w-full flex-1 overflow-hidden">{wizardPage}</div>
-        {footer}
-      </div>
-    </ResponsiveModal>
+      {wizardPage}
+    </AppModalShell>
   );
 };

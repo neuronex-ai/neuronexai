@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useNotifications, type AppNotification, type NotificationCategory } from '@/hooks/use-notifications';
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -18,18 +19,20 @@ import {
   Info,
   LayoutDashboard,
   Loader2,
+  ListFilter,
   Settings,
   Shield,
   Sparkles,
   Video,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 type NotificationFilter = 'all' | NotificationCategory;
+const NOTIFICATION_PAGE_SIZE = 30;
 
 const filters: Array<{ value: NotificationFilter; label: string }> = [
   { value: 'all', label: 'Todas' },
@@ -106,12 +109,26 @@ export const AlertsPanel = () => {
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
   const [filter, setFilter] = useState<NotificationFilter>('all');
+  const [visibleCount, setVisibleCount] = useState(NOTIFICATION_PAGE_SIZE);
 
-  const visibleNotifications = useMemo(() => (
-    filter === 'all'
-      ? notifications
-      : notifications.filter((notification) => notification.category === filter)
-  ), [filter, notifications]);
+  useEffect(() => {
+    setVisibleCount(NOTIFICATION_PAGE_SIZE);
+  }, [filter, notifications.length]);
+
+  const filteredNotifications = useMemo(() => {
+    const sorted = [...notifications].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
+    return filter === 'all'
+      ? sorted
+      : sorted.filter((notification) => notification.category === filter);
+  }, [filter, notifications]);
+
+  const visibleNotifications = useMemo(
+    () => filteredNotifications.slice(0, visibleCount),
+    [filteredNotifications, visibleCount],
+  );
+
+  const hasMoreNotifications = filteredNotifications.length > visibleNotifications.length;
+  const activeFilterLabel = filters.find((item) => item.value === filter)?.label || 'Todas';
 
   const groupedNotifications = useMemo(() => {
     const groups = new Map<string, AppNotification[]>();
@@ -183,22 +200,44 @@ export const AlertsPanel = () => {
           ) : null}
         </div>
 
-        <div className="mt-5 flex gap-1 overflow-x-auto rounded-xl border border-border/35 bg-muted/45 p-1 dark:border-white/8">
-          {filters.map((item) => (
-            <button
-              key={item.value}
-              type="button"
-              onClick={() => setFilter(item.value)}
-              className={cn(
-                'h-9 shrink-0 rounded-lg px-3 text-[8px] font-black uppercase tracking-[0.1em] transition',
-                filter === item.value
-                  ? 'bg-foreground text-background shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground',
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-border/35 bg-muted/45 px-3 py-2 dark:border-white/8">
+          <div className="min-w-0">
+            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/70">Filtro</p>
+            <p className="mt-0.5 truncate text-xs font-black text-foreground">{activeFilterLabel}</p>
+          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-xl border-border/50 bg-background/70"
+                aria-label="Filtrar notificacoes"
+              >
+                <ListFilter className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={10} className="w-64 rounded-2xl border-border/60 p-2 shadow-2xl">
+              <div className="space-y-1">
+                {filters.map((item) => (
+                  <button
+                    key={item.value}
+                    type="button"
+                    onClick={() => setFilter(item.value)}
+                    className={cn(
+                      'flex min-h-10 w-full items-center justify-between rounded-xl px-3 text-left text-[10px] font-black uppercase tracking-[0.12em] transition-colors',
+                      filter === item.value
+                        ? 'bg-foreground text-background'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+                    )}
+                  >
+                    {item.label}
+                    {filter === item.value ? <Check className="h-3.5 w-3.5" /> : null}
+                  </button>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
       </header>
 
@@ -329,6 +368,18 @@ export const AlertsPanel = () => {
             </motion.div>
           )}
         </AnimatePresence>
+        {hasMoreNotifications ? (
+          <div className="px-2 pb-4 pt-1">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setVisibleCount((current) => current + NOTIFICATION_PAGE_SIZE)}
+              className="h-11 w-full rounded-2xl border-border/60 text-[10px] font-black uppercase tracking-[0.14em]"
+            >
+              Mostrar mais
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );

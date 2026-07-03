@@ -16,12 +16,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           "transition-all duration-300 ease-apple",
           "file:border-0 file:bg-transparent file:text-sm file:font-medium",
           "placeholder:text-muted-foreground/50",
-          // Focus state with glow effect
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40",
           "focus-visible:border-primary/60 focus-visible:bg-background/80",
-          // Hover state
+          "aria-[invalid=true]:border-destructive aria-[invalid=true]:ring-destructive/30",
           "hover:bg-background/60 hover:border-border/50",
-          // Disabled state
           "disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
