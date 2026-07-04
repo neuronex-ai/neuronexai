@@ -168,7 +168,7 @@ const PatientSummary = ({ patient, compact = false }: { patient: InvitePatientMo
         <div className="flex items-start gap-3">
           <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Se o link falhar, o paciente pode entrar em /portal/acesso e ativar pelo código usando este mesmo e-mail.
+            Se o link falhar, o paciente pode entrar em /portal/ativar e ativar pelo código usando este mesmo e-mail.
           </p>
         </div>
       </div>

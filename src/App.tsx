@@ -133,8 +133,8 @@ const SharedRoutes = () => {
 
         {/* ─── Auth Routes ────────────────────────────────── */}
         <Route path="/auth" element={<AuthPage />} />
-        <Route path="/portal/acesso" element={<Navigate to="/auth?role=patient" replace />} />
-        <Route path="/portal/login" element={<Navigate to="/auth?role=patient" replace />} />
+        <Route path="/portal/acesso" element={<Navigate to="/portal/ativar" replace />} />
+        <Route path="/portal/login" element={<Navigate to="/portal/ativar" replace />} />
         <Route path="/email-confirmed" element={<EmailConfirmedPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/create-account" element={<CreateAccount />} />
@@ -180,8 +180,9 @@ const SharedRoutes = () => {
         {/* ─── Patient Portal Routes (Web Only) ──────────────────────── */}
         {!electronMode && (
           <>
+            <Route path="/portal/convite" element={<PatientPortalInvite />} />
             <Route path="/portal/convite/:token" element={<PatientPortalInvite />} />
-            <Route path="/portal/ativar" element={<PatientProtectedRoute><PatientPortalActivate /></PatientProtectedRoute>} />
+            <Route path="/portal/ativar" element={<PatientPortalActivate />} />
             <Route path="/portal/*" element={<PatientProtectedRoute><PatientPortal /></PatientProtectedRoute>} />
           </>
         )}

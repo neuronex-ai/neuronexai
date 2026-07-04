@@ -2,7 +2,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { toast } from "sonner";
-import { NB_PAYOUTS_SAFE_SELECT } from "@/lib/neurofinance-safe-selects";
+import {
+    NB_PAYOUTS_READ_TABLE,
+    NB_PAYOUTS_SAFE_SELECT,
+    normalizeNbPayoutRow,
+} from "@/lib/neurofinance-safe-selects";
 import { toUserFacingError } from "@/lib/user-facing-error";
 import { invokeEdgeFunction } from "@/lib/invoke-edge-function";
 
@@ -92,7 +96,7 @@ export const useNeuroFinancePayouts = (limit = 30) => {
             if (!user?.id) throw new Error("Você precisa entrar novamente para continuar.");
 
             const { data, error } = await (supabase as any)
-                .from("nb_payouts_safe_v")
+                .from(NB_PAYOUTS_READ_TABLE)
                 .select(NB_PAYOUTS_SAFE_SELECT)
                 .eq("user_id", user.id)
                 .neq("operation_type", "pix_qr_payment")
@@ -101,7 +105,7 @@ export const useNeuroFinancePayouts = (limit = 30) => {
                 .limit(limit);
 
             if (error) throw error;
-            return (data || []) as NeuroFinancePayout[];
+            return (data || []).map(normalizeNbPayoutRow) as NeuroFinancePayout[];
         },
         enabled: Boolean(user?.id),
         staleTime: 1000 * 60,

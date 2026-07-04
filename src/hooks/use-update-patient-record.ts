@@ -61,12 +61,13 @@ const isDuplicateEmailError = (error: unknown) => {
   return text.includes("patients_email_idx") || (text.includes("duplicate key") && text.includes("email"));
 };
 
-const assertEmailAvailable = async (email: string | null, patientId: string) => {
+const assertEmailAvailable = async (email: string | null, userId: string, patientId: string) => {
   if (!email) return;
 
   const { data, error } = await supabase
     .from("patients")
     .select("id")
+    .eq("user_id", userId)
     .ilike("email", email)
     .neq("id", patientId)
     .limit(1)
@@ -82,7 +83,7 @@ const updatePatientRecord = async (
   userId: string,
 ) => {
   const email = normalizeEmail(patientData.email);
-  await assertEmailAvailable(email, patientId);
+  await assertEmailAvailable(email, userId, patientId);
 
   const relativeContact = [patientData.relative_name, patientData.relative_phone]
     .map(cleanText)
@@ -211,7 +212,7 @@ const updatePatientRecord = async (
     if (responsibleDeleteError) throw new Error(responsibleDeleteError.message);
   }
 
-  await supabase
+  const { error: preferencesError } = await supabase
     .from("psychologist_patient_preferences")
     .upsert({
       user_id: userId,
@@ -221,6 +222,8 @@ const updatePatientRecord = async (
       default_financial_plan: patientData.financial_plan,
       default_session_value_cents: patientData.financial_plan === "per_session" ? sessionValueCents : 0,
     }, { onConflict: "user_id" });
+
+  if (preferencesError) throw new Error(preferencesError.message);
 
   return patient as Patient;
 };

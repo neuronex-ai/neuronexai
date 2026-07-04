@@ -9,7 +9,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { toast } from 'sonner';
-import { NB_PAYMENTS_SAFE_SELECT } from '@/lib/neurofinance-safe-selects';
+import {
+    NB_PAYMENTS_READ_TABLE,
+    NB_PAYMENTS_SAFE_SELECT,
+    normalizeNbPaymentRow,
+} from '@/lib/neurofinance-safe-selects';
 import { toUserFacingError } from '@/lib/user-facing-error';
 
 export interface NeuroFinancePayment {
@@ -78,7 +82,7 @@ export const useNeuroFinancePayments = (
             if (!user?.id) throw new Error('Não autenticado');
 
             let query = (supabase as any)
-                .from('nb_payments_safe_v')
+                .from(NB_PAYMENTS_READ_TABLE)
                 .select(NB_PAYMENTS_SAFE_SELECT)
                 .eq('user_id', user.id)
                 .order('created_at', { ascending: false })
@@ -90,7 +94,7 @@ export const useNeuroFinancePayments = (
 
             const { data, error } = await query;
             if (error) throw error;
-            return (data || []) as NeuroFinancePayment[];
+            return (data || []).map(normalizeNbPaymentRow) as NeuroFinancePayment[];
         },
         enabled: !!user?.id,
         staleTime: 1000 * 60,
@@ -155,13 +159,13 @@ export const usePaymentDetail = (paymentId: string | null) => {
             if (!paymentId) return null;
 
             const { data, error } = await (supabase as any)
-                .from('nb_payments_safe_v')
+                .from(NB_PAYMENTS_READ_TABLE)
                 .select(NB_PAYMENTS_SAFE_SELECT)
                 .eq('id', paymentId)
                 .single();
 
             if (error) throw error;
-            return data as NeuroFinancePayment;
+            return normalizeNbPaymentRow(data) as NeuroFinancePayment;
         },
         enabled: !!paymentId,
         refetchInterval: (query) => {
@@ -182,7 +186,7 @@ export const useRecentPixCharges = (limit = 20) => {
             if (!user?.id) throw new Error('Não autenticado');
 
             const { data, error } = await (supabase as any)
-                .from('nb_payments_safe_v')
+                .from(NB_PAYMENTS_READ_TABLE)
                 .select(NB_PAYMENTS_SAFE_SELECT)
                 .eq('user_id', user.id)
                 .eq('payment_method_type', 'pix')
@@ -190,7 +194,7 @@ export const useRecentPixCharges = (limit = 20) => {
                 .limit(limit);
 
             if (error) throw error;
-            return (data || []) as NeuroFinancePayment[];
+            return (data || []).map(normalizeNbPaymentRow) as NeuroFinancePayment[];
         },
         enabled: !!user?.id,
         staleTime: 1000 * 30,

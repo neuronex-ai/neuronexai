@@ -19,6 +19,7 @@ interface ForgotPasswordModalProps {
     onOpenChange: (open: boolean) => void;
     redirectTo?: string;
     context?: "professional" | "patient";
+    inviteToken?: string;
 }
 
 export const ForgotPasswordModal = ({
@@ -26,6 +27,7 @@ export const ForgotPasswordModal = ({
     onOpenChange,
     redirectTo,
     context = "professional",
+    inviteToken,
 }: ForgotPasswordModalProps) => {
     const [email, setEmail] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +50,7 @@ export const ForgotPasswordModal = ({
                     body: {
                         action: "reset_password",
                         email: normalizedEmail,
+                        inviteToken: inviteToken || "",
                     },
                 })
                 : await supabase.auth.resetPasswordForEmail(normalizedEmail, {

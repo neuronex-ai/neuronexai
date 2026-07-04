@@ -63,6 +63,36 @@ Deno.serve(async (req: Request) => {
 
     if (!invite) return errorResponse("Convite invalido ou expirado.", 404, { code: "invalid_invite" });
 
+    const existingLinkResult = await supabaseAdmin
+      .from("patient_portal_links")
+      .select("id,patient_user_id,status")
+      .eq("psychologist_user_id", invite.psychologist_user_id)
+      .eq("patient_id", invite.patient_id)
+      .maybeSingle();
+    if (existingLinkResult.error) throw existingLinkResult.error;
+
+    const existingLink = existingLinkResult.data;
+    if (existingLink?.patient_user_id && existingLink.patient_user_id !== user.id) {
+      await auditPortal({
+        actor_type: "patient",
+        actor_user_id: user.id,
+        psychologist_user_id: invite.psychologist_user_id,
+        patient_user_id: user.id,
+        patient_id: invite.patient_id,
+        invite_id: invite.id,
+        link_id: existingLink.id,
+        action: "activation_link_taken_by_other_user",
+      });
+      return errorResponse("Este convite ja foi ativado por outra conta de paciente.", 409, {
+        code: "link_belongs_to_other_patient_user",
+      });
+    }
+
+    if (existingLink?.patient_user_id === user.id && existingLink.status === "active") {
+      const context = await getPatientPortalContext({ id: user.id, email: user.email });
+      return jsonResponse(context);
+    }
+
     if (new Date(invite.expires_at).getTime() <= Date.now() && ["pending", "sent"].includes(invite.status)) {
       await supabaseAdmin
         .from("patient_portal_invites")

@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { usePatientPortalCurrent } from "@/hooks/use-patient-portal";
 import { isPatientAccount } from "@/lib/auth-account-role";
+import { clearPatientPortalInviteToken, storePatientPortalInviteToken } from "@/lib/patient-portal-flow";
 import { useAuth } from "./SessionContextProvider";
 
 interface PatientProtectedRouteProps {
@@ -16,8 +17,8 @@ export const PatientProtectedRoute = ({ children }: PatientProtectedRouteProps) 
   if (isLoading) return null;
   if (!user) {
     const token = new URLSearchParams(location.search).get("token");
-    if (token) window.localStorage.setItem("neuronex_patient_portal_invite_token", token);
-    return <Navigate to="/auth?role=patient" replace />;
+    if (token) storePatientPortalInviteToken(token);
+    return <Navigate to="/portal/ativar" replace />;
   }
 
   if (portal.isLoading) return null;
@@ -28,7 +29,7 @@ export const PatientProtectedRoute = ({ children }: PatientProtectedRouteProps) 
 
   if (!hasPatientRole && !hasPortalLink) return <Navigate to="/dashboard" replace />;
   if (portalStatus === "active" && location.pathname.startsWith("/portal/ativar")) {
-    window.localStorage.removeItem("neuronex_patient_portal_invite_token");
+    clearPatientPortalInviteToken();
     return <Navigate to="/portal" replace />;
   }
 

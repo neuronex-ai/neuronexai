@@ -105,9 +105,26 @@
   html {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    scroll-behavior: smooth;
+    scroll-behavior: auto;
     transition: background-color 0.8s cubic-bezier(0.4, 0, 0.2, 1), color 0.8s cubic-bezier(0.4, 0, 0.2, 1);
     -webkit-tap-highlight-color: transparent;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      scroll-behavior: auto !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   select {
@@ -130,23 +147,26 @@
   h4,
   h5,
   h6 {
-    @apply tracking-tighter leading-tight font-semibold;
+    @apply leading-tight font-semibold;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  }
-
-  h1 {
-    @apply tracking-[-0.04em];
-  }
-
-  h2 {
-    @apply tracking-[-0.03em];
+    letter-spacing: 0;
   }
 
   body {
     @apply bg-background text-foreground antialiased selection:bg-primary/10 selection:text-primary;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    letter-spacing: -0.011em;
+    letter-spacing: 0;
     line-height: 1.5;
+  }
+
+  a:focus-visible,
+  button:focus-visible,
+  [role="button"]:focus-visible,
+  input:focus-visible,
+  textarea:focus-visible,
+  select:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
   html[data-window-controls-overlay="true"]::before {

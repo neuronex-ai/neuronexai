@@ -78,7 +78,7 @@ const passwordRules = [
   { key: "special", label: "1 caractere especial: @ # < ! $ % & * ; / ?" },
 ] as const;
 
-const ACCOUNT_CREATION_PAUSED = true;
+const ACCOUNT_CREATION_PAUSED = String(import.meta.env.VITE_ACCOUNT_CREATION_PAUSED || "").toLowerCase() === "true";
 
 export default function CreateAccount() {
   if (ACCOUNT_CREATION_PAUSED) return <CreateAccountPausedPage />;

@@ -1,8 +1,11 @@
+export const FINANCIAL_ACCOUNTS_READ_TABLE = "financial_accounts";
+export const NB_PAYMENTS_READ_TABLE = "nb_payments";
+export const NB_PAYOUTS_READ_TABLE = "nb_payouts";
+
 export const FINANCIAL_ACCOUNT_SAFE_SELECT = [
   "id",
   "user_id",
   "status",
-  "ui_status",
   "provider",
   "onboarding_started_at",
   "onboarding_completed_at",
@@ -21,7 +24,6 @@ export const FINANCIAL_ACCOUNT_SAFE_SELECT = [
   "asaas_account_id",
   "asaas_wallet_id",
   "requirements",
-  "account_status",
   "asaas_onboarding_url",
   "asaas_environment",
   "last_asaas_event_type",
@@ -52,9 +54,6 @@ export const FINANCIAL_ACCOUNT_SAFE_SELECT = [
   "bank_holder_cpf_cnpj",
   "tos_accepted_at",
   "pix_key_consent_at",
-  "neuronex_terms_version",
-  "asaas_terms_reference",
-  "asaas_privacy_policy_reference",
 ].join(",");
 
 export const NB_PAYMENTS_SAFE_SELECT = [
@@ -78,9 +77,8 @@ export const NB_PAYMENTS_SAFE_SELECT = [
   "pix_qr_code",
   "pix_copy_paste",
   "checkout_url",
-  "invoice_url",
-  "bank_slip_url",
-  "receipt_url",
+  "boleto_url",
+  "boleto_pdf",
   "refund_amount",
   "paid_at",
   "expires_at",
@@ -92,7 +90,6 @@ export const NB_PAYMENTS_SAFE_SELECT = [
   "dispute_status",
   "dispute_reason",
   "dispute_amount",
-  "cancelable",
   "anticipable",
   "anticipated",
   "provider_due_date",
@@ -123,9 +120,6 @@ export const NB_PAYOUTS_SAFE_SELECT = [
   "fee_amount",
   "destination_type",
   "destination_summary",
-  "receipt_url",
-  "error_code",
-  "error_message",
   "requested_at",
   "processed_at",
   "completed_at",
@@ -166,3 +160,31 @@ export const FORBIDDEN_NB_PAYOUT_FIELDS = [
   "reconciliation_status",
   "reconciled_at",
 ];
+
+export function normalizeFinancialAccountRow<T extends Record<string, any> | null>(row: T): T {
+  if (!row) return row;
+  return {
+    ...row,
+    ui_status: row.ui_status || row.status || null,
+    account_status: row.account_status || row.requirements || null,
+  } as T;
+}
+
+export function normalizeNbPaymentRow<T extends Record<string, any>>(row: T): T {
+  return {
+    ...row,
+    invoice_url: row.invoice_url || row.checkout_url || row.nfse_pdf_url || null,
+    bank_slip_url: row.bank_slip_url || row.boleto_url || row.boleto_pdf || null,
+    receipt_url: row.receipt_url || null,
+    cancelable: row.cancelable ?? ["pending", "overdue", "created"].includes(String(row.status || "")),
+  } as T;
+}
+
+export function normalizeNbPayoutRow<T extends Record<string, any>>(row: T): T {
+  return {
+    ...row,
+    receipt_url: row.receipt_url || null,
+    error_code: row.error_code || null,
+    error_message: row.error_message || null,
+  } as T;
+}
