@@ -221,13 +221,13 @@ function ConnectionDialog({
         </div>
       }
       size="lg"
-      className="rounded-[34px] border-zinc-200/70 bg-white/95 shadow-[0_40px_120px_-50px_rgba(0,0,0,0.6)] dark:border-white/[0.08] dark:bg-[#09090b]/95"
+      className="notes-liquid-surface rounded-[34px] border"
       bodyClassName="px-5 sm:px-8"
       footerClassName="px-5 sm:px-8"
     >
       <div className="space-y-4">
-        <section className="relative overflow-hidden rounded-[28px] border border-zinc-200/70 bg-zinc-50/70 p-5 shadow-sm backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.025]">
-          <div className="pointer-events-none absolute inset-0 premium-noise opacity-[0.035]" />
+        <section className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-5">
+          <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.12] dark:opacity-[0.18]" />
           <div className="relative flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Canal dedicado</p>
@@ -253,15 +253,15 @@ function ConnectionDialog({
         </section>
 
         {qrValue && !connected ? (
-          <section className="rounded-[28px] border border-zinc-200/70 bg-white/82 p-5 text-center shadow-sm backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.035]">
+          <section className="notes-liquid-surface rounded-[28px] border p-5 text-center">
             {qrImageSrc ? (
               <img
                 src={qrImageSrc}
                 alt="QR Code de conexao do WhatsApp Business"
-                className="mx-auto h-60 w-60 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-xl"
+                className="mx-auto h-60 w-60 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-xl dark:border-white/10"
               />
             ) : (
-              <p className="break-all rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 text-sm font-bold text-zinc-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-200">
+              <p className="break-all rounded-[22px] border border-white/[0.055] bg-white/[0.035] p-4 text-sm font-bold text-zinc-700 dark:text-zinc-200 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80">
                 {qrValue}
               </p>
             )}
@@ -285,8 +285,8 @@ function InfoTile({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[20px] border border-zinc-200/70 bg-white/75 p-4 dark:border-white/[0.07] dark:bg-white/[0.035]">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
+    <div className="notes-liquid-surface flex items-center gap-3 rounded-[20px] border p-4">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-white text-zinc-950 shadow-[0_12px_30px_-20px_rgba(255,255,255,0.65)] [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_12px_30px_-20px_rgba(0,0,0,0.35)]">
         <Icon className="h-4 w-4" />
       </span>
       <span className="min-w-0">
@@ -351,7 +351,7 @@ export default function NeuroZap() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f6f4] text-zinc-950 dark:bg-[#050507] dark:text-white">
+    <div className="notes-lumen-canvas relative z-0 min-h-screen w-full bg-transparent font-sans text-foreground selection:bg-primary/20">
       <ConnectionDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
@@ -362,9 +362,9 @@ export default function NeuroZap() {
         fullSync={whatsapp.fullSync}
       />
 
-      <main className="mx-auto flex min-h-screen w-full max-w-[1740px] flex-col gap-5 px-4 py-5 sm:px-6 lg:px-8">
-        <header className="relative overflow-hidden rounded-[34px] border border-zinc-200/70 bg-white/76 px-5 py-5 shadow-[0_30px_100px_-72px_rgba(0,0,0,0.65)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-white/[0.025] sm:px-7">
-          <div className="pointer-events-none absolute inset-0 premium-noise opacity-[0.035]" />
+      <main className="mx-auto flex min-h-screen w-full max-w-[1740px] flex-col gap-5 px-4 pb-5 pt-28 sm:px-6 lg:px-8">
+        <header className="notes-toolbar-surface relative overflow-hidden rounded-[34px] border px-5 py-5 sm:px-7">
+          <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.12] dark:opacity-[0.18]" />
           <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -373,20 +373,20 @@ export default function NeuroZap() {
                 </Badge>
                 <StatusPill settings={settings} loading={isLoadingSettings || whatsapp.refreshStatus.isPending} />
               </div>
-              <h1 className="mt-4 text-5xl font-black leading-[0.9] tracking-[-0.055em] sm:text-6xl">
+              <h1 className="mt-4 text-5xl font-black leading-[0.9] tracking-tight text-zinc-100 [.light_&]:text-zinc-950 sm:text-6xl">
                 NeuroZap
               </h1>
-              <p className="mt-3 max-w-xl text-sm font-semibold leading-relaxed text-zinc-500 dark:text-zinc-400">
+              <p className="mt-3 max-w-xl text-sm font-semibold leading-relaxed text-zinc-500">
                 Conversas do WhatsApp Business conectadas ao Synapse, com historico separado por profissional e pacientes.
               </p>
             </div>
 
             <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[27rem]">
-              <Button variant="outline" className="h-12 rounded-[18px] border-zinc-200 bg-white/70 text-[10px] font-black uppercase tracking-[0.16em] dark:border-white/10 dark:bg-white/[0.04]" onClick={() => whatsapp.fullSync.mutate()} disabled={!connected || whatsapp.fullSync.isPending}>
+              <Button variant="outline" className="h-12 rounded-[18px] border-white/[0.06] bg-white/[0.035] text-[10px] font-black uppercase tracking-[0.16em] text-zinc-300 hover:bg-white/[0.08] hover:text-white [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75 [.light_&]:text-zinc-700 [.light_&]:hover:bg-zinc-100 [.light_&]:hover:text-zinc-950" onClick={() => whatsapp.fullSync.mutate()} disabled={!connected || whatsapp.fullSync.isPending}>
                 {whatsapp.fullSync.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                 Sincronizar
               </Button>
-              <Button className="h-12 rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950" onClick={() => setSettingsOpen(true)}>
+              <Button className="h-12 rounded-[18px] bg-white text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 shadow-[0_16px_36px_-24px_rgba(255,255,255,0.7)] hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_16px_36px_-24px_rgba(0,0,0,0.4)]" onClick={() => setSettingsOpen(true)}>
                 <Settings2 className="mr-2 h-4 w-4" />
                 Conectar WhatsApp Business
               </Button>
@@ -394,16 +394,16 @@ export default function NeuroZap() {
           </div>
         </header>
 
-        <section className="grid min-h-[calc(100dvh-12rem)] overflow-hidden rounded-[34px] border border-zinc-200/70 bg-white/76 shadow-[0_34px_110px_-78px_rgba(0,0,0,0.72)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-white/[0.02] lg:grid-cols-[24rem_minmax(0,1fr)]">
-          <aside className={cn("min-h-0 border-r border-zinc-200/70 dark:border-white/[0.08]", showMobileChat ? "hidden lg:block" : "block")}>
-            <div className="border-b border-zinc-200/70 p-4 dark:border-white/[0.08]">
+        <section className="notes-liquid-surface grid min-h-[calc(100dvh-15rem)] overflow-hidden rounded-[34px] border lg:grid-cols-[24rem_minmax(0,1fr)]">
+          <aside className={cn("notes-retina-rail min-h-0 border-r", showMobileChat ? "hidden lg:block" : "block")}>
+            <div className="border-b border-white/[0.045] p-4 [.light_&]:border-zinc-200/60">
               <div className="relative">
-                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+                <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600 transition-colors [.light_&]:text-zinc-400" />
                 <Input
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
                   placeholder="Buscar conversa"
-                  className="h-12 rounded-[20px] border-zinc-200/70 bg-zinc-50/70 pl-11 text-sm font-semibold shadow-inner dark:border-white/[0.08] dark:bg-white/[0.035]"
+                  className="h-11 rounded-xl border-white/[0.055] bg-white/[0.03] pl-10 text-xs font-semibold text-zinc-200 placeholder:text-zinc-600 focus-visible:border-white/15 focus-visible:ring-0 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80 [.light_&]:text-zinc-900 [.light_&]:placeholder:text-zinc-400 [.light_&]:focus-visible:border-zinc-300"
                 />
               </div>
               <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-black text-zinc-500 dark:text-zinc-400">

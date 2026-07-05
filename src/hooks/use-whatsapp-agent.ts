@@ -73,11 +73,36 @@ type SimulateInboundPayload = {
 const toIso = (value: unknown) =>
   typeof value === "string" && value ? value : new Date().toISOString();
 
+const readEdgeErrorMessage = async (error: unknown, response?: Response | null) => {
+  const candidateResponse = response || ((error as { context?: Response })?.context instanceof Response ? (error as { context: Response }).context : null);
+
+  if (candidateResponse) {
+    try {
+      const text = await candidateResponse.clone().text();
+      if (text) {
+        try {
+          const parsed = JSON.parse(text) as Record<string, unknown>;
+          const message = parsed.error || parsed.message || parsed.details;
+          if (typeof message === "string" && message.trim()) return message.trim();
+        } catch {
+          if (!/Edge Function/i.test(text)) return text;
+        }
+      }
+    } catch {
+      // Keep the fallback below when the response body is not readable.
+    }
+  }
+
+  const message = error instanceof Error ? error.message : "";
+  if (message && !/Edge Function/i.test(message)) return message;
+  return "Nao foi possivel concluir a acao no WhatsApp Business.";
+};
+
 const invokeEvolution = async <T>(action: string, body: Record<string, unknown> = {}) => {
-  const { data, error } = await supabase.functions.invoke("neurozap-evolution", {
+  const { data, error, response } = await supabase.functions.invoke("neurozap-evolution", {
     body: { action, ...body },
   });
-  if (error) throw error;
+  if (error) throw new Error(await readEdgeErrorMessage(error, response));
   return data as T;
 };
 

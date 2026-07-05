@@ -18,6 +18,19 @@ const cleanBaseUrl = (value: string) => value.trim().replace(/\/+$/, "").replace
 const remoteJidToPhone = (remoteJid: string) =>
   remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
 const jidToNumber = (remoteJid: string) => remoteJidToPhone(remoteJid).replace(/\D/g, "");
+const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
+const sendTargetFor = (remoteJid: string) => {
+  const raw = safeString(remoteJid);
+  if (!raw) return "";
+  if (raw.includes("@s.whatsapp.net") || raw.includes("@c.us")) return jidToNumber(raw);
+  if (raw.includes("@") || /[a-z]/i.test(raw)) return raw;
+  return digitsOnly(raw) || raw;
+};
+
+const isMissingPrivateCredentialStore = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /schema "private"|relation .*neurozap_instance_credentials|neurozap_instance_credentials.*does not exist|Could not find the table/i.test(message);
+};
 
 const evolutionFetch = async (baseUrl: string, apiKey: string, path: string, init: RequestInit = {}) => {
   const response = await fetch(`${baseUrl}${path}`, {
@@ -101,23 +114,24 @@ serve(async (req) => {
       .eq("user_id", conversation.user_id)
       .eq("instance_name", conversation.instance_name)
       .maybeSingle();
-    if (credentialError) throw credentialError;
-    if (!credential?.instance_api_key) return json({ error: "Credencial WhatsApp nao configurada." }, 409);
+    if (credentialError && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
+    const instanceApiKey = safeString(credential?.instance_api_key) || managerApiKey;
+    if (!instanceApiKey) return json({ error: "Canal WhatsApp ainda nao configurado para envio." }, 409);
 
     const remoteJid = explicitRemoteJid || conversation.remote_jid;
     const payload = {
-      number: remoteJid.includes("@lid") ? remoteJid : jidToNumber(remoteJid),
+      number: sendTargetFor(remoteJid),
       text: message,
     };
 
     let sent: any;
     try {
-      sent = await evolutionFetch(evolutionBaseUrl, credential.instance_api_key, `/message/sendText/${encodeURIComponent(conversation.instance_name)}`, {
+      sent = await evolutionFetch(evolutionBaseUrl, instanceApiKey, `/message/sendText/${encodeURIComponent(conversation.instance_name)}`, {
         method: "POST",
         body: JSON.stringify(payload),
       });
     } catch (error) {
-      if (!managerApiKey || managerApiKey === credential.instance_api_key) throw error;
+      if (!managerApiKey || managerApiKey === instanceApiKey) throw error;
       sent = await evolutionFetch(evolutionBaseUrl, managerApiKey, `/message/sendText/${encodeURIComponent(conversation.instance_name)}`, {
         method: "POST",
         body: JSON.stringify(payload),

@@ -138,6 +138,15 @@ const remoteJidToPhone = (remoteJid: string) =>
 const jidToNumber = (remoteJid: string) => remoteJidToPhone(remoteJid).replace(/\D/g, "");
 const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
 
+const sendTargetFor = (remoteJid: string) => {
+  const raw = safeString(remoteJid);
+  if (!raw) return "";
+  if (raw.includes("@s.whatsapp.net") || raw.includes("@c.us")) return jidToNumber(raw);
+  if (raw.includes("@") || /[a-z]/i.test(raw)) return raw;
+  const digits = digitsOnly(raw);
+  return digits || raw;
+};
+
 const sameJid = (a?: string | null, b?: string | null) => {
   const left = safeString(a).toLowerCase();
   const right = safeString(b).toLowerCase();
@@ -219,7 +228,10 @@ const generateInstanceName = (userId: string) =>
 const generateInstanceToken = () =>
   `${crypto.randomUUID().replace(/-/g, "")}${crypto.randomUUID().replace(/-/g, "").slice(0, 16)}`;
 
-const isManagedInstanceName = (value: unknown) => safeString(value).toLowerCase().startsWith("neurozap-");
+const isMissingPrivateCredentialStore = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /schema "private"|relation .*neurozap_instance_credentials|neurozap_instance_credentials.*does not exist|Could not find the table/i.test(message);
+};
 
 const evolutionFetch = async (
   config: { baseUrl: string; managerApiKey: string },
@@ -438,7 +450,13 @@ const storePrivateCredential = async (supabaseAdmin: any, userId: string, instan
     },
     { onConflict: "user_id" },
   );
-  if (error) throw error;
+  if (error) {
+    if (isMissingPrivateCredentialStore(error)) {
+      console.warn("[neurozap-evolution] private credential store unavailable; using server-side manager key fallback until migration is applied.");
+      return;
+    }
+    throw error;
+  }
 };
 
 const loadInstanceConfig = async (
@@ -452,25 +470,24 @@ const loadInstanceConfig = async (
     .eq("user_id", userId)
     .maybeSingle();
   if (settingsError) throw settingsError;
-  if (!settings?.instance_name || !isManagedInstanceName(settings.instance_name)) return null;
+  const instanceName = safeString(settings?.instance_name);
+  if (!instanceName) return null;
 
   const { data: credential, error: credentialError } = await supabaseAdmin
     .schema("private")
     .from("neurozap_instance_credentials")
     .select("instance_api_key")
     .eq("user_id", userId)
-    .eq("instance_name", settings.instance_name)
+    .eq("instance_name", instanceName)
     .maybeSingle();
-  if (credentialError) throw credentialError;
-  if (!credential?.instance_api_key) return null;
+  if (credentialError && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
 
   const webhookMode: WebhookMode = settings.environment === "production" ? "production" : runtime.webhookMode;
-  const instanceName = settings.instance_name;
   return {
     ...runtime,
     webhookMode,
     instanceName,
-    instanceApiKey: credential.instance_api_key,
+    instanceApiKey: safeString(credential?.instance_api_key) || runtime.managerApiKey,
     webhookUrl: safeString(settings.webhook_url) || buildWebhookUrl({ ...runtime, webhookMode }, instanceName),
     psychologistRemoteJid: safeString(settings.psychologist_remote_jid) || null,
   };
@@ -800,7 +817,7 @@ serve(async (req) => {
 
       const sent = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/message/sendText/${encodeURIComponent(loadedConfig.instanceName)}`, {
         method: "POST",
-        body: JSON.stringify({ number: remoteJid.includes("@lid") ? remoteJid : jidToNumber(remoteJid), text }),
+        body: JSON.stringify({ number: sendTargetFor(remoteJid), text }),
       });
 
       const conversation = conversationId
