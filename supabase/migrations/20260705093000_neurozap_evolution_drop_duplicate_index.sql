@@ -1,0 +1,1 @@
+drop index if exists public.idx_whatsapp_conversations_user_instance_remote_unique;

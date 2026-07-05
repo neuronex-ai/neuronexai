@@ -3,7 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { supabase } from "@/integrations/supabase/client";
+import { useWhatsAppAgent } from "@/hooks/use-whatsapp-agent";
 
 type WhatsAppConnectHelperProps = {
   onConnected?: () => void;
@@ -11,19 +11,12 @@ type WhatsAppConnectHelperProps = {
 
 export function WhatsAppConnectHelper({ onConnected }: WhatsAppConnectHelperProps) {
   const [isConnecting, setIsConnecting] = useState(false);
+  const { connect } = useWhatsAppAgent();
 
   const handleConnect = async () => {
     setIsConnecting(true);
     try {
-      const { data, error } = await supabase.functions.invoke("whatsapp-connect", { body: {} });
-      if (error) throw error;
-
-      const qrCodeUrl = typeof data?.qrCodeUrl === "string" ? data.qrCodeUrl : null;
-      if (qrCodeUrl) {
-        window.open(qrCodeUrl, "_blank", "noopener,noreferrer");
-      }
-
-      toast.success("Fluxo de conexao iniciado.");
+      await connect.mutateAsync();
       onConnected?.();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nao foi possivel iniciar a conexao.");
