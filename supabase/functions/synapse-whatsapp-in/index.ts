@@ -6,6 +6,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-synapse-channel-secret",
 };
 
+type ConversationKind = "patient" | "psychologist";
+
 const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
   new Response(JSON.stringify(payload), {
     status,
@@ -15,6 +17,20 @@ const jsonResponse = (payload: Record<string, unknown>, status = 200) =>
 const normalizeInstanceKey = (value: unknown) => String(value || "").trim().toLowerCase();
 const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
 const bearerToken = (value: string | null) => String(value || "").replace(/^Bearer\s+/i, "").trim();
+const safeString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+
+const remoteJidToPhone = (remoteJid: string) =>
+  remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
+
+const sameJid = (a?: string | null, b?: string | null) => {
+  const left = safeString(a).toLowerCase();
+  const right = safeString(b).toLowerCase();
+  if (!left || !right) return false;
+  if (left === right) return true;
+  const leftDigits = digitsOnly(left);
+  const rightDigits = digitsOnly(right);
+  return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
+};
 
 const stripSynapseWidgets = (text: string) =>
   String(text || "")
@@ -40,24 +56,56 @@ const splitForWhatsApp = (text: string, maxLength = 1000) => {
   return chunks;
 };
 
+const toIso = (value: unknown) => {
+  if (typeof value === "number") {
+    const millis = value > 10_000_000_000 ? value : value * 1000;
+    return new Date(millis).toISOString();
+  }
+  if (typeof value === "string" && value) {
+    const asNumber = Number(value);
+    if (Number.isFinite(asNumber) && value.length >= 10) return toIso(asNumber);
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+  return new Date().toISOString();
+};
+
+const extractMessageText = (body: any, data: any, webhookMessage: any) =>
+  String(
+    body.message ||
+      data.text ||
+      data.messageText ||
+      webhookMessage.conversation ||
+      webhookMessage.extendedTextMessage?.text ||
+      webhookMessage.imageMessage?.caption ||
+      webhookMessage.videoMessage?.caption ||
+      "",
+  ).trim();
+
 async function ensureWhatsappSession(
   admin: any,
   professionalId: string,
   remoteJid: string,
+  conversationKind: ConversationKind,
   pushName?: string | null,
 ) {
-  const phone = digitsOnly(remoteJid);
-  const label = pushName ? `${pushName} • ${phone || remoteJid}` : (phone || remoteJid || "contato");
-  const title = `WhatsApp • ${label}`.slice(0, 180);
-
   const { data: existing, error: findError } = await admin
     .from("chat_sessions")
     .select("id")
     .eq("user_id", professionalId)
-    .eq("title", title)
+    .contains("context_state", { source: "whatsapp", remoteJid })
     .maybeSingle();
   if (findError) throw findError;
   if (existing?.id) return existing.id;
+
+  const phone = remoteJidToPhone(remoteJid);
+  const label =
+    conversationKind === "psychologist"
+      ? "Voce e Synapse"
+      : pushName
+        ? `${pushName} - ${phone || remoteJid}`
+        : phone || remoteJid || "Paciente";
+  const title = `WhatsApp Business - ${label}`.slice(0, 180);
 
   const { data: created, error: createError } = await admin
     .from("chat_sessions")
@@ -69,12 +117,60 @@ async function ensureWhatsappSession(
         remoteJid: remoteJid || null,
         pushName: pushName || null,
         phoneNumber: phone || null,
+        conversation_kind: conversationKind,
       },
     })
     .select("id")
     .single();
   if (createError) throw createError;
   return created.id;
+}
+
+async function upsertConversation(
+  admin: any,
+  professionalId: string,
+  instanceName: string,
+  remoteJid: string,
+  conversationKind: ConversationKind,
+  sessionId: string,
+  pushName: string | null,
+  lastMessagePreview: string,
+  rawPayload: Record<string, unknown>,
+) {
+  const now = new Date().toISOString();
+  const { data, error } = await admin
+    .from("whatsapp_conversations")
+    .upsert(
+      {
+        user_id: professionalId,
+        instance_name: instanceName,
+        remote_jid: remoteJid,
+        conversation_kind: conversationKind,
+        synapse_session_id: sessionId,
+        patient_name: conversationKind === "psychologist" ? "Voce e Synapse" : pushName || null,
+        patient_phone: remoteJidToPhone(remoteJid),
+        last_message_preview: lastMessagePreview || null,
+        last_message_at: now,
+        unread_count: 0,
+        raw_payload: rawPayload,
+        updated_at: now,
+      },
+      { onConflict: "user_id,instance_name,remote_jid" },
+    )
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id;
+}
+
+async function upsertWhatsAppMessage(
+  admin: any,
+  row: Record<string, unknown>,
+) {
+  const { error } = await admin
+    .from("whatsapp_messages")
+    .upsert(row, { onConflict: "user_id,source_message_id" });
+  if (error) throw error;
 }
 
 serve(async (req) => {
@@ -84,16 +180,11 @@ serve(async (req) => {
     const envChannelSecret = Deno.env.get("SYNAPSE_CHANNEL_SECRET") || "";
     const channelSecret = req.headers.get("x-synapse-channel-secret") || "";
     const authorizationSecret = bearerToken(req.headers.get("authorization"));
-
-    // n8n self-hosted can block $env access inside nodes. To keep the workflow working,
-    // accept the same shared secret via either x-synapse-channel-secret or Authorization: Bearer <secret>.
     const authorized = Boolean(envChannelSecret) && (
       channelSecret === envChannelSecret || authorizationSecret === envChannelSecret
     );
 
-    if (!authorized) {
-      return jsonResponse({ error: "Unauthorized Gateway" }, 401);
-    }
+    if (!authorized) return jsonResponse({ error: "Unauthorized Gateway" }, 401);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/+$/, "");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -113,13 +204,7 @@ serve(async (req) => {
     const instanceName = body.instance_name || body.instance;
     const instanceKey = normalizeInstanceKey(instanceName);
     const finalRemoteJid = String(body.remote_jid || fallbackRemoteJid || "").trim();
-    const finalMessage = String(
-      body.message ||
-      data.text ||
-      webhookMessage.conversation ||
-      webhookMessage.extendedTextMessage?.text ||
-      "",
-    ).trim();
+    const finalMessage = extractMessageText(body, data, webhookMessage);
     const pushName = String(body.push_name || data.pushName || "").trim();
     const sourceMessageId = String(body.source_message_id || key.id || "").trim();
     const sourceTimestamp = body.source_timestamp || data.messageTimestamp || Math.floor(Date.now() / 1000);
@@ -131,7 +216,7 @@ serve(async (req) => {
 
     const { data: instance, error: instanceError } = await supabaseAdmin
       .from("synapse_whatsapp_instances")
-      .select("professional_id, instance_name, enabled")
+      .select("professional_id, instance_name, enabled, owner_remote_jid")
       .eq("instance_key", instanceKey)
       .maybeSingle();
 
@@ -141,7 +226,44 @@ serve(async (req) => {
     }
 
     const professionalId = instance.professional_id;
-    const sessionId = await ensureWhatsappSession(supabaseAdmin, professionalId, finalRemoteJid, pushName);
+    const conversationKind: ConversationKind = sameJid(finalRemoteJid, instance.owner_remote_jid) ? "psychologist" : "patient";
+    const sessionId = await ensureWhatsappSession(
+      supabaseAdmin,
+      professionalId,
+      finalRemoteJid,
+      conversationKind,
+      pushName || null,
+    );
+    const conversationId = await upsertConversation(
+      supabaseAdmin,
+      professionalId,
+      instance.instance_name,
+      finalRemoteJid,
+      conversationKind,
+      sessionId,
+      pushName || null,
+      finalMessage,
+      body,
+    );
+
+    const now = new Date().toISOString();
+    await upsertWhatsAppMessage(supabaseAdmin, {
+      user_id: professionalId,
+      conversation_id: conversationId,
+      synapse_session_id: sessionId,
+      instance_name: instance.instance_name,
+      remote_jid: finalRemoteJid,
+      source_message_id: sourceMessageId || `inbound:${instance.instance_name}:${finalRemoteJid}:${sourceTimestamp}`,
+      direction: "inbound",
+      sender_kind: conversationKind,
+      content: finalMessage,
+      content_type: messageType,
+      status: "received",
+      is_from_ai: false,
+      raw_payload: body,
+      created_at: toIso(sourceTimestamp),
+      updated_at: now,
+    });
 
     const corePayload = {
       professional_id: professionalId,
@@ -158,6 +280,7 @@ serve(async (req) => {
         instanceName: instance.instance_name,
         remoteJid: finalRemoteJid,
         pushName: pushName || null,
+        conversationKind,
       },
       source: {
         remote_jid: finalRemoteJid,
@@ -166,6 +289,7 @@ serve(async (req) => {
         source_message_id: sourceMessageId,
         source_timestamp: sourceTimestamp,
         message_type: messageType,
+        conversation_kind: conversationKind,
       },
     };
 
@@ -198,11 +322,43 @@ serve(async (req) => {
     const replyText = stripSynapseWidgets(String(coreData.response || ""));
     const replyChunks = splitForWhatsApp(replyText);
 
+    for (let index = 0; index < replyChunks.length; index += 1) {
+      await upsertWhatsAppMessage(supabaseAdmin, {
+        user_id: professionalId,
+        conversation_id: conversationId,
+        synapse_session_id: sessionId,
+        instance_name: instance.instance_name,
+        remote_jid: finalRemoteJid,
+        source_message_id: `synapse:${sessionId}:${sourceMessageId || sourceTimestamp}:${index}`,
+        direction: "outbound",
+        sender_kind: "synapse",
+        content: replyChunks[index],
+        content_type: "text",
+        status: "queued",
+        is_from_ai: true,
+        raw_payload: { core_result: coreData },
+        created_at: new Date(Date.now() + index).toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+
+    if (replyChunks[0]) {
+      await supabaseAdmin
+        .from("whatsapp_conversations")
+        .update({
+          last_message_preview: replyChunks[replyChunks.length - 1],
+          last_message_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", conversationId);
+    }
+
     return jsonResponse({
       ok: true,
       session_id: coreData.session_id || sessionId,
       professional_id: professionalId,
       remote_jid: finalRemoteJid,
+      conversation_kind: conversationKind,
       reply_text: replyText,
       reply_chunks: replyChunks,
       client_action: coreData.clientAction || null,

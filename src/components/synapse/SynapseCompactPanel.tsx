@@ -67,6 +67,13 @@ type ChatSessionRow = {
     title?: string | null;
     updated_at?: string | null;
     created_at?: string | null;
+    context_state?: {
+        source?: string | null;
+        remoteJid?: string | null;
+        pushName?: string | null;
+        phoneNumber?: string | null;
+        conversation_kind?: 'patient' | 'psychologist' | null;
+    } | null;
 };
 
 type SpeechRecognitionEventLike = {
@@ -200,6 +207,7 @@ export const SynapseCompactPanel = () => {
     const [showAllActions, setShowAllActions] = useState(false);
     const [sessions, setSessions] = useState<ChatSessionRow[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+    const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
 
     useEffect(() => {
         if (activeTab === 'history') {
@@ -208,15 +216,18 @@ export const SynapseCompactPanel = () => {
                 try {
                     const { data, error } = await supabase
                         .from('chat_sessions')
-                        .select('*')
+                        .select('id,title,updated_at,created_at,context_state')
                         .order('updated_at', { ascending: false })
-                        .limit(20);
+                        .limit(40);
 
                     if (error) {
                         console.error("Error fetching sessions:", error);
                     } else if (data) {
-                        // Filter out NeuroPulse internal analysis sessions
-                        const filtered = (data as ChatSessionRow[]).filter((session) => !session.title?.startsWith('NeuroPulse Analysis'));
+                        const filtered = (data as ChatSessionRow[]).filter((session) => {
+                            if (session.title?.startsWith('NeuroPulse Analysis')) return false;
+                            const isWhatsApp = session.context_state?.source === 'whatsapp';
+                            return historyChannel === 'whatsapp' ? isWhatsApp : !isWhatsApp;
+                        });
                         setSessions(filtered);
                     }
                 } catch (err) {
@@ -227,7 +238,7 @@ export const SynapseCompactPanel = () => {
             };
             fetchSessions();
         }
-    }, [activeTab]);
+    }, [activeTab, historyChannel]);
 
     useEffect(() => {
         if (shellState === 'compact' && activeTab === 'voice' && voiceStatus === 'disconnected') {
@@ -389,10 +400,10 @@ export const SynapseCompactPanel = () => {
                     opacity: 0,
                     scale: 0.1,
                     y: 280,
-                    x: 180, 
+                    x: 180,
                     filter: 'blur(15px)',
-                    transition: { 
-                        duration: 0.5, 
+                    transition: {
+                        duration: 0.5,
                         ease: [0.32, 0, 0.67, 0],
                         opacity: { duration: 0.25 }
                     }
@@ -521,15 +532,50 @@ export const SynapseCompactPanel = () => {
                                         {isLoadingSessions && <Loader2 className="w-3 h-3 animate-spin text-zinc-400" />}
                                     </div>
 
+                                    <div className="mx-2 mb-2 grid grid-cols-2 rounded-[18px] border border-black/[0.04] bg-white/65 p-1 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.035]">
+                                        <button
+                                            type="button"
+                                            onClick={() => setHistoryChannel('neuronex')}
+                                            className={cn(
+                                                "h-10 rounded-[14px] transition-all",
+                                                historyChannel === 'neuronex'
+                                                    ? "bg-zinc-950 text-white shadow-sm dark:bg-white dark:text-zinc-950"
+                                                    : "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                                            )}
+                                        >
+                                            NeuroNex
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setHistoryChannel('whatsapp')}
+                                            className={cn(
+                                                "h-10 rounded-[14px] transition-all",
+                                                historyChannel === 'whatsapp'
+                                                    ? "bg-zinc-950 text-white shadow-sm dark:bg-white dark:text-zinc-950"
+                                                    : "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                                            )}
+                                        >
+                                            WhatsApp Business
+                                        </button>
+                                    </div>
+
                                     {sessions.length === 0 && !isLoadingSessions ? (
                                         <div className="text-center py-20 opacity-40 flex flex-col items-center gap-4">
                                             <MessageSquare className="w-8 h-8" />
-                                            <p className="text-[11px] font-bold uppercase tracking-widest">Nenhuma conversa salva</p>
+                                            <p className="text-[11px] font-bold uppercase tracking-widest">
+                                                {historyChannel === 'whatsapp' ? 'Nenhuma conversa WhatsApp' : 'Nenhuma conversa salva'}
+                                            </p>
                                         </div>
                                     ) : (
                                         <div className="grid gap-3">
                                             {sessions.map((session) => {
-                                                const isWpp = session.title?.startsWith('WhatsApp:');
+                                                const isWpp = session.context_state?.source === 'whatsapp';
+                                                const isPsychologist = session.context_state?.conversation_kind === 'psychologist';
+                                                const title = isWpp
+                                                    ? isPsychologist
+                                                        ? 'Voce e Synapse'
+                                                        : session.context_state?.pushName || session.title?.replace(/^WhatsApp Business\s*-\s*/i, '') || session.context_state?.phoneNumber || 'Paciente'
+                                                    : session.title || 'Conversa sem titulo';
                                                 return (
                                                     <button
                                                         key={session.id}
@@ -542,7 +588,7 @@ export const SynapseCompactPanel = () => {
                                                         {isWpp && (
                                                             <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-bl-[14px]">
                                                                 <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                                                                    WhatsApp
+                                                                    {isPsychologist ? 'Profissional' : 'Paciente'}
                                                                 </span>
                                                             </div>
                                                         )}
@@ -554,7 +600,7 @@ export const SynapseCompactPanel = () => {
                                                                 {isWpp ? <Smartphone className="w-5 h-5" /> : <MessageSquare className="w-4 h-4" />}
                                                             </div>
                                                             <div className="flex flex-col mt-1">
-                                                                <span className="text-[13px] font-bold tracking-tight">{session.title || 'Conversa sem título'}</span>
+                                                                <span className="text-[13px] font-bold tracking-tight">{title}</span>
                                                                 <span className="text-[9px] font-mono opacity-40 uppercase tracking-widest">
                                                                     {new Date(session.updated_at).toLocaleDateString('pt-BR')}
                                                                 </span>

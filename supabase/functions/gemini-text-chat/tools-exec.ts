@@ -51,7 +51,7 @@ export async function executeTool(name: string, args: any, ctx: any) {
                     };
                     structuredData = { type: 'clinical_history_widget', data: { notes: data } };
                 } else {
-                    result = { message: "Nenhuma anotação encontrada com esses critérios." };
+                    result = { message: "Nenhuma anotaÃ§Ã£o encontrada com esses critÃ©rios." };
                 }
                 break;
             }
@@ -119,7 +119,7 @@ export async function executeTool(name: string, args: any, ctx: any) {
                     structuredData = { type: 'patient_card', data: patient };
                     result = { success: true, patient_name: patient.name, full_data: patient };
                 } else {
-                    result = { error: "Paciente não encontrado" };
+                    result = { error: "Paciente nÃ£o encontrado" };
                 }
                 break;
             }
@@ -134,7 +134,7 @@ export async function executeTool(name: string, args: any, ctx: any) {
                     .single();
 
                 if (!patient) {
-                    result = { error: "Paciente não encontrado." };
+                    result = { error: "Paciente nÃ£o encontrado." };
                     break;
                 }
 
@@ -180,16 +180,16 @@ export async function executeTool(name: string, args: any, ctx: any) {
                 // Generate insights using Gemini
                 const geminiKey = Deno.env.get('GEMINI_API_KEY');
                 const insightPrompt = `
-Como psicólogo assistente, analise os dados do paciente e gere insights clínicos.
+Como psicÃ³logo assistente, analise os dados do paciente e gere insights clÃ­nicos.
 
 DADOS DO PACIENTE:
 ${JSON.stringify(clinicalContext, null, 2)}
 
-Gere uma análise contendo:
-1. **Resumo da Evolução**: Como o paciente tem progredido?
-2. **Pontos de Atenção**: Áreas que merecem foco
-3. **Padrões Observados**: Tendências identificadas nas sessões
-4. **Recomendações**: Sugestões para próximas sessões
+Gere uma anÃ¡lise contendo:
+1. **Resumo da EvoluÃ§Ã£o**: Como o paciente tem progredido?
+2. **Pontos de AtenÃ§Ã£o**: Ãreas que merecem foco
+3. **PadrÃµes Observados**: TendÃªncias identificadas nas sessÃµes
+4. **RecomendaÃ§Ãµes**: SugestÃµes para prÃ³ximas sessÃµes
 
 ${args.focusArea && args.focusArea !== 'geral' ? `Foque especialmente em: ${args.focusArea}` : ''}
 
@@ -209,7 +209,7 @@ Responda de forma concisa e profissional.`;
                     );
 
                     const geminiData = await geminiResponse.json();
-                    const insights = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar insights.";
+                    const insights = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "NÃ£o foi possÃ­vel gerar insights.";
 
                     result = {
                         success: true,
@@ -248,8 +248,8 @@ Responda de forma concisa e profissional.`;
                         patientContext = `
 CONTEXTO DO PACIENTE:
 - Nome: ${patient.name}
-- Diagnóstico: ${patient.diagnosis || 'Não informado'}
-- Medicações: ${JSON.stringify(patient.medications) || 'Nenhuma'}
+- DiagnÃ³stico: ${patient.diagnosis || 'NÃ£o informado'}
+- MedicaÃ§Ãµes: ${JSON.stringify(patient.medications) || 'Nenhuma'}
 - Notas: ${patient.notes?.substring(0, 300) || 'Sem notas'}
 `;
                     }
@@ -257,21 +257,21 @@ CONTEXTO DO PACIENTE:
 
                 const geminiKey = Deno.env.get('GEMINI_API_KEY');
                 const suggestionPrompt = `
-Como consultor especializado em psicologia clínica, sugira abordagens terapêuticas baseadas em evidências.
+Como consultor especializado em psicologia clÃ­nica, sugira abordagens terapÃªuticas baseadas em evidÃªncias.
 
-CONDIÇÃO: ${condition}
+CONDIÃ‡ÃƒO: ${condition}
 ABORDAGEM PREFERIDA: ${approach}
 ${patientContext}
 
-Forneça:
-1. **Técnicas Recomendadas**: 3-5 técnicas específicas com breve descrição
-2. **Exercícios Práticos**: 2-3 exercícios que podem ser aplicados
-3. **Recursos de Apoio**: Materiais ou ferramentas úteis
-4. **Considerações**: Pontos de atenção para esta condição
+ForneÃ§a:
+1. **TÃ©cnicas Recomendadas**: 3-5 tÃ©cnicas especÃ­ficas com breve descriÃ§Ã£o
+2. **ExercÃ­cios PrÃ¡ticos**: 2-3 exercÃ­cios que podem ser aplicados
+3. **Recursos de Apoio**: Materiais ou ferramentas Ãºteis
+4. **ConsideraÃ§Ãµes**: Pontos de atenÃ§Ã£o para esta condiÃ§Ã£o
 
-IMPORTANTE: Estas são apenas sugestões educativas. A decisão clínica final é sempre do profissional responsável.
+IMPORTANTE: Estas sÃ£o apenas sugestÃµes educativas. A decisÃ£o clÃ­nica final Ã© sempre do profissional responsÃ¡vel.
 
-Seja conciso e prático.`;
+Seja conciso e prÃ¡tico.`;
 
                 try {
                     const geminiResponse = await fetch(
@@ -287,14 +287,14 @@ Seja conciso e prático.`;
                     );
 
                     const geminiData = await geminiResponse.json();
-                    const suggestions = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "Não foi possível gerar sugestões.";
+                    const suggestions = geminiData?.candidates?.[0]?.content?.parts?.[0]?.text || "NÃ£o foi possÃ­vel gerar sugestÃµes.";
 
                     result = {
                         success: true,
                         condition,
                         approach,
                         suggestions,
-                        disclaimer: "Estas são sugestões educativas. A decisão clínica é responsabilidade do profissional."
+                        disclaimer: "Estas sÃ£o sugestÃµes educativas. A decisÃ£o clÃ­nica Ã© responsabilidade do profissional."
                     };
 
                     structuredData = {
@@ -302,7 +302,7 @@ Seja conciso e prático.`;
                         data: { condition, approach, suggestions }
                     };
                 } catch (e: any) {
-                    result = { error: `Erro ao gerar sugestões: ${e.message}` };
+                    result = { error: `Erro ao gerar sugestÃµes: ${e.message}` };
                 }
                 break;
             }
@@ -336,7 +336,7 @@ Seja conciso e prático.`;
                             const daysSinceSession = patient.last_session
                                 ? Math.floor((Date.now() - new Date(patient.last_session).getTime()) / (1000 * 60 * 60 * 24))
                                 : 999;
-                            risks.push(`Sem sessão há ${daysSinceSession} dias`);
+                            risks.push(`Sem sessÃ£o hÃ¡ ${daysSinceSession} dias`);
                         }
                     }
 
@@ -374,13 +374,13 @@ Seja conciso e prático.`;
                 if (riskPatients.length === 0) {
                     result = {
                         success: true,
-                        message: "✅ Nenhum paciente identificado em risco no momento.",
+                        message: "âœ… Nenhum paciente identificado em risco no momento.",
                         checkedPatients: patients.length
                     };
                 } else {
                     result = {
                         success: true,
-                        message: `⚠️ ${riskPatients.length} paciente(s) precisam de atenção.`,
+                        message: `âš ï¸ ${riskPatients.length} paciente(s) precisam de atenÃ§Ã£o.`,
                         patientsAtRisk: riskPatients,
                         checkedPatients: patients.length
                     };
@@ -448,7 +448,7 @@ Seja conciso e prático.`;
                     patient_name: a.patient?.name || 'Bloqueio',
                     start_time_local: fmt(a.start_time, 'full'),
                     end_time_local: fmt(a.end_time, 'full'),
-                    horario: `${fmt(a.start_time, 'time')} �s ${fmt(a.end_time, 'time')}`,
+                    horario: `${fmt(a.start_time, 'time')} às ${fmt(a.end_time, 'time')}`,
                     type: a.type,
                     status: a.status,
                     notes: a.notes,
@@ -478,7 +478,7 @@ Seja conciso e prático.`;
                     .single();
 
                 if (fetchError || !appointment) {
-                    result = { error: "Consulta não encontrada." };
+                    result = { error: "Consulta nÃ£o encontrada." };
                     break;
                 }
 
@@ -517,7 +517,7 @@ Seja conciso e prático.`;
 
                 result = {
                     success: true,
-                    message: `📅 Consulta de ${patientName} remarcada para ${formattedTime}!`,
+                    message: `ðŸ“… Consulta de ${patientName} remarcada para ${formattedTime}!`,
                     newDatetime: args.newDatetime
                 };
 
@@ -545,7 +545,7 @@ Seja conciso e prático.`;
                     .single();
 
                 if (fetchError || !appointment) {
-                    result = { error: "Consulta não encontrada." };
+                    result = { error: "Consulta nÃ£o encontrada." };
                     break;
                 }
 
@@ -573,7 +573,7 @@ Seja conciso e prático.`;
 
                 result = {
                     success: true,
-                    message: `❌ Consulta de ${patientName} em ${appointmentTime} foi cancelada.`,
+                    message: `âŒ Consulta de ${patientName} em ${appointmentTime} foi cancelada.`,
                     reason: args.reason
                 };
 
@@ -598,17 +598,17 @@ Seja conciso e prático.`;
                 // Simulate PubMed search using Gemini knowledge base (since we don't have direct external API access setup)
                 // In production, this would call PubMed API
                 const searchPrompt = `
-Atue como um pesquisador médico acessando a base PubMed.
-Pesquise por artigos científicos recentes e relevantes sobre: "${query}".
+Atue como um pesquisador mÃ©dico acessando a base PubMed.
+Pesquise por artigos cientÃ­ficos recentes e relevantes sobre: "${query}".
 
 Retorne exatamente ${limit} resultados no seguinte formato JSON (sem markdown):
 [
   {
-    "title": "Título do Artigo em Português",
+    "title": "TÃ­tulo do Artigo em PortuguÃªs",
     "authors": "Autor A, Autor B...",
     "year": 2023,
     "summary": "Resumo conciso das descobertas principais (2-3 frases).",
-    "relevance": "Por que é relevante para a prática clínica?"
+    "relevance": "Por que Ã© relevante para a prÃ¡tica clÃ­nica?"
   }
 ]
 `;
@@ -651,16 +651,16 @@ Retorne exatamente ${limit} resultados no seguinte formato JSON (sem markdown):
                 const geminiKey = Deno.env.get('GEMINI_API_KEY');
 
                 const cidPrompt = `
-Atue como um especialista em codificação médica CID-10 (ICD-10).
-Busque pelo código ou descrição: "${query}".
+Atue como um especialista em codificaÃ§Ã£o mÃ©dica CID-10 (ICD-10).
+Busque pelo cÃ³digo ou descriÃ§Ã£o: "${query}".
 
-Retorne os resultados mais prováveis no formato JSON:
+Retorne os resultados mais provÃ¡veis no formato JSON:
 [
   {
     "code": "F41.1",
     "description": "Ansiedade Generalizada",
     "details": "Transtorno caracterizado por...",
-    "category": "Transtornos neuróticos"
+    "category": "Transtornos neurÃ³ticos"
   }
 ]
 Limite a 3 resultados.
@@ -704,15 +704,15 @@ Limite a 3 resultados.
                 const geminiKey = Deno.env.get('GEMINI_API_KEY');
 
                 const medPrompt = `
-Atue como um farmacologista clínico. Forneça informações confiáveis sobre o medicamento: "${medName}".
-Foco: ${type === 'interactions' ? 'Interações Medicamentosas' : type === 'dosage' ? 'Posologia e Administração' : type === 'side_effects' ? 'Efeitos Colaterais' : 'Visão Geral'}.
+Atue como um farmacologista clÃ­nico. ForneÃ§a informaÃ§Ãµes confiÃ¡veis sobre o medicamento: "${medName}".
+Foco: ${type === 'interactions' ? 'InteraÃ§Ãµes Medicamentosas' : type === 'dosage' ? 'Posologia e AdministraÃ§Ã£o' : type === 'side_effects' ? 'Efeitos Colaterais' : 'VisÃ£o Geral'}.
 
 Retorne em formato JSON:
 {
   "name": "Nome Oficial",
-  "class": "Classe Farmacológica",
-  "mechanism": "Mecanismo de ação simplificado",
-  "info": "Informação solicitada detalhada...",
+  "class": "Classe FarmacolÃ³gica",
+  "mechanism": "Mecanismo de aÃ§Ã£o simplificado",
+  "info": "InformaÃ§Ã£o solicitada detalhada...",
   "warnings": ["Alerta 1", "Alerta 2"]
 }
 `;
@@ -744,7 +744,7 @@ Retorne em formato JSON:
                         data: { medication: medName, details: info }
                     };
                 } catch (e: any) {
-                    result = { error: `Erro ao buscar medicação: ${e.message}` };
+                    result = { error: `Erro ao buscar medicaÃ§Ã£o: ${e.message}` };
                 }
                 break;
             }
@@ -765,7 +765,7 @@ Retorne em formato JSON:
 
                 const { data: updates, error } = await query;
 
-                // Fallback: Se não houver dados recentes (últimas 24h) ou tabela vazia, força uma atualização
+                // Fallback: Se nÃ£o houver dados recentes (Ãºltimas 24h) ou tabela vazia, forÃ§a uma atualizaÃ§Ã£o
                 const hasRecentUpdates = updates && updates.length > 0;
 
                 if (!hasRecentUpdates) {
@@ -790,10 +790,10 @@ Retorne em formato JSON:
                                 data: { updates: updateData.curatedUpdates.slice(0, limit) }
                             };
                         } else {
-                            result = { message: "Não foram encontradas atualizações no momento." };
+                            result = { message: "NÃ£o foram encontradas atualizaÃ§Ãµes no momento." };
                         }
                     } catch (e) {
-                        result = { error: "Erro ao buscar atualizações em tempo real." };
+                        result = { error: "Erro ao buscar atualizaÃ§Ãµes em tempo real." };
                     }
                 } else {
                     result = {
@@ -826,8 +826,8 @@ Retorne em formato JSON:
                 if (!embedding || embedding.length === 0) {
                     // Fallback se falhar embedding (usa Gemini Knowledge direto)
                     const fallbackPrompt = `
-Atue como especialista em legislação psicológica (CFP/Brasil).
-Responda com base na resolução CFP 06/2019 e Código de Ética: "${query}".
+Atue como especialista em legislaÃ§Ã£o psicolÃ³gica (CFP/Brasil).
+Responda com base na resoluÃ§Ã£o CFP 06/2019 e CÃ³digo de Ã‰tica: "${query}".
 Seja breve e cite a norma.
 `;
                     const fallbackResponse = await fetch(
@@ -854,7 +854,7 @@ Seja breve e cite a norma.
                     if (error) throw error;
 
                     if (!docs || docs.length === 0) {
-                        result = { message: "Nenhuma norma específica encontrada na base interna. Tente reformular ou adicione os PDFs das resoluções." };
+                        result = { message: "Nenhuma norma especÃ­fica encontrada na base interna. Tente reformular ou adicione os PDFs das resoluÃ§Ãµes." };
                     } else {
                         result = {
                             success: true,
@@ -883,14 +883,14 @@ Seja breve e cite a norma.
                 const { data: notes } = await ctx.supabaseAdmin.from('session_notes').select('notes, created_at').eq('patient_id', patientId).order('created_at', { ascending: false }).limit(5);
 
                 const patientContext = `
-PACIENTE: ${patient?.name || 'Nome não encontrado'}
-CPF: ${patient?.cpf || 'Não informado'}
-HISTÓRICO RECENTE:
+PACIENTE: ${patient?.name || 'Nome nÃ£o encontrado'}
+CPF: ${patient?.cpf || 'NÃ£o informado'}
+HISTÃ“RICO RECENTE:
 ${notes?.map((n: any) => `- ${new Date(n.created_at).toLocaleDateString()}: ${n.notes}`).join('\n')}
                 `;
 
                 // 2. RAG: Buscar regras para esse tipo de documento
-                const embedding = await generateEmbedding(`regras estrutura obrigatória ${type} resolução cfp`, geminiKey || '');
+                const embedding = await generateEmbedding(`regras estrutura obrigatÃ³ria ${type} resoluÃ§Ã£o cfp`, geminiKey || '');
                 let normativeContext = "";
 
                 if (embedding.length > 0) {
@@ -904,31 +904,31 @@ ${notes?.map((n: any) => `- ${new Date(n.created_at).toLocaleDateString()}: ${n.
 
                 // 3. Gerar Documento
                 const prompt = `
-Atue como um Psicólogo Perito rigoroso.
-Sua tarefa é redigir uma MINUTA de um documento oficial do tipo: ${type?.toUpperCase()}.
+Atue como um PsicÃ³logo Perito rigoroso.
+Sua tarefa Ã© redigir uma MINUTA de um documento oficial do tipo: ${type?.toUpperCase()}.
 
 DEMANDA: ${demand}
-DESTINATÁRIO: ${recipients || 'A quem de direito'}
+DESTINATÃRIO: ${recipients || 'A quem de direito'}
 
 CONTEXTO DO PACIENTE:
 ${patientContext}
 
 REGRAS NORMATIVAS (Siga estritamente):
 ${normativeContext}
-(Se não houver regras acima, siga a Resolução CFP 06/2019 padrão).
+(Se nÃ£o houver regras acima, siga a ResoluÃ§Ã£o CFP 06/2019 padrÃ£o).
 
-ESTRUTURA OBRIGATÓRIA (CFP 06/2019):
-1. Identificação
-2. Descrição da Demanda
-3. Procedimento (Cite: Entrevistas, Testes, Observação)
-4. Análise
-5. Conclusão (Com encaminhamento se necessário)
+ESTRUTURA OBRIGATÃ“RIA (CFP 06/2019):
+1. IdentificaÃ§Ã£o
+2. DescriÃ§Ã£o da Demanda
+3. Procedimento (Cite: Entrevistas, Testes, ObservaÃ§Ã£o)
+4. AnÃ¡lise
+5. ConclusÃ£o (Com encaminhamento se necessÃ¡rio)
 
-REGRAS DE REDAÇÃO:
-- Use linguagem técnica, impessoal e objetiva.
-- NÃO faça diagnósticos fechados se não houver dados suficientes.
-- Use termos como "sugere", "indica", "compatível com".
-- ADICIONE AO FINAL: "Este documento é uma sugestão gerada por IA. A revisão e assinatura são de responsabilidade exclusiva do psicólogo (CRP ativo)."
+REGRAS DE REDAÃ‡ÃƒO:
+- Use linguagem tÃ©cnica, impessoal e objetiva.
+- NÃƒO faÃ§a diagnÃ³sticos fechados se nÃ£o houver dados suficientes.
+- Use termos como "sugere", "indica", "compatÃ­vel com".
+- ADICIONE AO FINAL: "Este documento Ã© uma sugestÃ£o gerada por IA. A revisÃ£o e assinatura sÃ£o de responsabilidade exclusiva do psicÃ³logo (CRP ativo)."
 
 Retorne APENAS o texto do documento, formatado em Markdown.
                 `;
@@ -948,7 +948,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                 result = {
                     success: true,
                     document: documentText,
-                    warning: "Este documento é um esboço. Verifique conformidade com a Resolução 06/2019 antes de assinar."
+                    warning: "Este documento Ã© um esboÃ§o. Verifique conformidade com a ResoluÃ§Ã£o 06/2019 antes de assinar."
                 };
 
                 structuredData = {
@@ -1053,15 +1053,15 @@ Retorne APENAS o texto do documento, formatado em Markdown.
 
                 if (availableSlots.length === 0) {
                     result = {
-                        message: "Não encontrei horários disponíveis no período solicitado.",
-                        suggestion: "Tente expandir o período ou verificar outra semana."
+                        message: "NÃ£o encontrei horÃ¡rios disponÃ­veis no perÃ­odo solicitado.",
+                        suggestion: "Tente expandir o perÃ­odo ou verificar outra semana."
                     };
                 } else {
                     result = {
                         success: true,
                         total_slots: availableSlots.length,
                         available_slots: availableSlots,
-                        message: `Encontrei ${availableSlots.length} horários livres.`
+                        message: `Encontrei ${availableSlots.length} horÃ¡rios livres.`
                     };
                     structuredData = {
                         type: 'available_slots_list',
@@ -1082,7 +1082,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     result = { metrics: data };
                     structuredData = { type: 'financial_summary_widget', data: { metrics: data } };
                 } else {
-                    result = { error: "Não foi possível calcular métricas." };
+                    result = { error: "NÃ£o foi possÃ­vel calcular mÃ©tricas." };
                 }
                 break;
             }
@@ -1171,12 +1171,12 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .single();
 
                 if (createError) {
-                    result = { error: `Erro ao criar transação: ${createError.message}` };
+                    result = { error: `Erro ao criar transaÃ§Ã£o: ${createError.message}` };
                 } else {
                     const formattedValue = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amount);
                     result = {
                         success: true,
-                        message: `💰 Transação de ${formattedValue} registrada com sucesso!`,
+                        message: `ðŸ’° TransaÃ§Ã£o de ${formattedValue} registrada com sucesso!`,
                         transactionId: transaction.id
                     };
                     structuredData = {
@@ -1209,12 +1209,12 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                 const { data: transactions, error } = await query;
 
                 if (error) {
-                    result = { error: `Erro ao gerar relatório: ${error.message}` };
+                    result = { error: `Erro ao gerar relatÃ³rio: ${error.message}` };
                     break;
                 }
 
                 if (!transactions || transactions.length === 0) {
-                    result = { message: "Nenhuma transação encontrada no período selecionado." };
+                    result = { message: "Nenhuma transaÃ§Ã£o encontrada no perÃ­odo selecionado." };
                     break;
                 }
 
@@ -1235,7 +1235,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     income,
                     expenses,
                     balance,
-                    transactions: transactions.length <= 10 ? transactions : "Mais de 10 transações..."
+                    transactions: transactions.length <= 10 ? transactions : "Mais de 10 transaÃ§Ãµes..."
                 };
 
                 structuredData = {
@@ -1266,13 +1266,13 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .single();
 
                 if (fetchError || !patient) {
-                    result = { error: "Paciente não encontrado." };
+                    result = { error: "Paciente nÃ£o encontrado." };
                     break;
                 }
 
                 // This tool sends a WhatsApp message if phone exists, customized for billing
                 if (!patient.phone) {
-                    result = { error: `Paciente ${patient.name} não possui telefone cadastrado para cobrança.` };
+                    result = { error: `Paciente ${patient.name} nÃ£o possui telefone cadastrado para cobranÃ§a.` };
                     break;
                 }
 
@@ -1281,7 +1281,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     ? ` com vencimento em *${new Date(args.dueDate).toLocaleDateString('pt-BR')}*`
                     : '';
 
-                const reminderMessage = `Olá ${patient.name}, este é um lembrete amigável sobre o pagamento de ${formattedValue}${dueDateMsg}. Caso já tenha efetuado, por favor desconsidere.`;
+                const reminderMessage = `OlÃ¡ ${patient.name}, este Ã© um lembrete amigÃ¡vel sobre o pagamento de ${formattedValue}${dueDateMsg}. Caso jÃ¡ tenha efetuado, por favor desconsidere.`;
 
                 // Reuse whatsapp sending logic by calling internal function or just simulating the action request
                 // For now, we will structure this as a specialized WhatsApp intent that the frontend or another tool execution can confirm
@@ -1295,7 +1295,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .from('whatsapp_conversations')
                     .select('id, remote_jid')
                     .eq('user_id', user.id)
-                    .or(`contact_phone.eq.${formattedPhone},remote_jid.ilike.%${formattedPhone}%`)
+                    .or(`patient_phone.eq.${formattedPhone},remote_jid.ilike.%${formattedPhone}%`)
                     .maybeSingle();
 
                 if (conversation) {
@@ -1321,7 +1321,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                         if (sendResult.success) {
                             result = {
                                 success: true,
-                                message: `✅ Lembrete de pagamento enviado para ${patient.name} via WhatsApp!`,
+                                message: `âœ… Lembrete de pagamento enviado para ${patient.name} via WhatsApp!`,
                                 details: reminderMessage
                             };
                             structuredData = {
@@ -1329,7 +1329,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                                 data: { patientName: patient.name, amount: formattedValue, method: 'whatsapp' }
                             };
                         } else {
-                            result = { error: `Falha ao enviar mensagem de cobrança: ${sendResult.error}` };
+                            result = { error: `Falha ao enviar mensagem de cobranÃ§a: ${sendResult.error}` };
                         }
                     } catch (e: any) {
                         result = { error: `Erro na API de envio: ${e.message}` };
@@ -1337,7 +1337,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                 } else {
                     // Fallback: Suggest creating conversation first or warn
                     result = {
-                        error: `Não foi possível enviar mensagem automática para ${patient.name} (sem conversa ativa).`,
+                        error: `NÃ£o foi possÃ­vel enviar mensagem automÃ¡tica para ${patient.name} (sem conversa ativa).`,
                         suggestion: "Envie uma mensagem manual primeiro para abrir a janela de 24h."
                     };
                 }
@@ -1351,7 +1351,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
             }
 
             case 'generate_document': {
-                result = { success: true, status: "Pré-visualização gerada" };
+                result = { success: true, status: "PrÃ©-visualizaÃ§Ã£o gerada" };
                 structuredData = {
                     type: 'document_preview',
                     data: { type: args.type, title: args.title, content_html: args.content_html, patientName: args.patientName }
@@ -1415,7 +1415,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                 }
 
                 if (!phone) {
-                    result = { error: "Paciente não possui número de telefone cadastrado." };
+                    result = { error: "Paciente nÃ£o possui nÃºmero de telefone cadastrado." };
                     break;
                 }
 
@@ -1427,12 +1427,12 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .from('whatsapp_conversations')
                     .select('id, remote_jid')
                     .eq('user_id', user.id)
-                    .or(`contact_phone.eq.${formattedPhone},remote_jid.ilike.%${formattedPhone}%`)
+                    .or(`patient_phone.eq.${formattedPhone},remote_jid.ilike.%${formattedPhone}%`)
                     .maybeSingle();
 
                 if (!conversation) {
                     result = {
-                        error: `Não encontrei uma conversa WhatsApp ativa com ${patientName}. O paciente precisa ter enviado uma mensagem primeiro.`,
+                        error: `NÃ£o encontrei uma conversa WhatsApp ativa com ${patientName}. O paciente precisa ter enviado uma mensagem primeiro.`,
                         suggestion: "O paciente precisa iniciar uma conversa via WhatsApp primeiro."
                     };
                     structuredData = { type: 'whatsapp_not_found', data: { patientName, phone: formattedPhone } };
@@ -1463,7 +1463,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     if (sendResult.success) {
                         result = {
                             success: true,
-                            message: `✅ Mensagem enviada para ${patientName} via WhatsApp!`,
+                            message: `âœ… Mensagem enviada para ${patientName} via WhatsApp!`,
                             sentTo: phone
                         };
                         structuredData = {
@@ -1484,8 +1484,9 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .from('whatsapp_conversations')
                     .select(`
                         id,
-                        contact_name,
-                        contact_phone,
+                        patient_name,
+                        patient_phone,
+                        conversation_kind,
                         last_message_preview,
                         last_message_at,
                         unread_count
@@ -1495,7 +1496,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .limit(args.limit || 5);
 
                 if (args.patientName) {
-                    query = query.ilike('contact_name', `%${args.patientName}%`);
+                    query = query.ilike('patient_name', `%${args.patientName}%`);
                 }
 
                 const { data: conversations, error } = await query;
@@ -1513,8 +1514,9 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                 result = {
                     total: conversations.length,
                     conversations: conversations.map((c: any) => ({
-                        name: c.contact_name,
-                        phone: c.contact_phone,
+                        name: c.patient_name,
+                        phone: c.patient_phone,
+                        kind: c.conversation_kind,
                         lastMessage: c.last_message_preview,
                         lastAt: c.last_message_at,
                         unread: c.unread_count
@@ -1547,7 +1549,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                 }
 
                 if (!toEmail) {
-                    result = { error: "Paciente não possui email cadastrado ou email não fornecido." };
+                    result = { error: "Paciente nÃ£o possui email cadastrado ou email nÃ£o fornecido." };
                     break;
                 }
 
@@ -1560,7 +1562,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
 
                 if (!gTokens?.access_token) {
                     result = {
-                        error: "Conta Google não conectada. Conecte sua conta nas Configurações para enviar emails.",
+                        error: "Conta Google nÃ£o conectada. Conecte sua conta nas ConfiguraÃ§Ãµes para enviar emails.",
                         action_required: "connect_google"
                     };
                     structuredData = { type: 'google_not_connected', data: {} };
@@ -1634,7 +1636,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     if (gmailRes.ok) {
                         result = {
                             success: true,
-                            message: `✅ Email enviado para ${patientName || toEmail}!`,
+                            message: `âœ… Email enviado para ${patientName || toEmail}!`,
                             sentTo: toEmail
                         };
                         structuredData = {
@@ -1678,11 +1680,11 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .single();
 
                 if (error) {
-                    result = { error: `Erro ao criar anotação: ${error.message}` };
+                    result = { error: `Erro ao criar anotaÃ§Ã£o: ${error.message}` };
                 } else {
                     result = {
                         success: true,
-                        message: `📝 Anotação registrada para ${patientName}!`,
+                        message: `ðŸ“ AnotaÃ§Ã£o registrada para ${patientName}!`,
                         noteId: note.id
                     };
                     structuredData = {
@@ -1733,7 +1735,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     const updatedFields = Object.keys(updateData).join(', ');
                     result = {
                         success: true,
-                        message: `✅ Dados de ${patientName} atualizados: ${updatedFields}`,
+                        message: `âœ… Dados de ${patientName} atualizados: ${updatedFields}`,
                         updatedFields: Object.keys(updateData)
                     };
                     structuredData = {
@@ -1754,7 +1756,7 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .single();
 
                 if (fetchError || !patient) {
-                    result = { error: "Paciente não encontrado." };
+                    result = { error: "Paciente nÃ£o encontrado." };
                     break;
                 }
 
@@ -1802,12 +1804,12 @@ Retorne APENAS o texto do documento, formatado em Markdown.
                     .eq('id', args.patientId);
 
                 if (updateError) {
-                    result = { error: `Erro ao atualizar medicações: ${updateError.message}` };
+                    result = { error: `Erro ao atualizar medicaÃ§Ãµes: ${updateError.message}` };
                 } else {
                     const actionText = action === 'add' ? 'adicionado' : action === 'remove' ? 'removido' : 'atualizado';
                     result = {
                         success: true,
-                        message: `💊 ${args.medicationName} ${actionText} para ${patientName}!`,
+                        message: `ðŸ’Š ${args.medicationName} ${actionText} para ${patientName}!`,
                         currentMedications: medications
                     };
                     structuredData = {

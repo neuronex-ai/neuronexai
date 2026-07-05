@@ -183,6 +183,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/neurozap-evolution/index.ts"
 
+[functions.whatsapp-send]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/whatsapp-send/index.ts"
+
 [functions.n8n-agent-gateway]
 enabled = true
 verify_jwt = false

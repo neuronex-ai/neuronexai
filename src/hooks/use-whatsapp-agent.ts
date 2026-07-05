@@ -13,6 +13,8 @@ export type WAConversation = {
   remote_jid: string;
   patient_name: string | null;
   patient_phone: string;
+  conversation_kind?: "patient" | "psychologist";
+  synapse_session_id?: string | null;
   profile_picture_url?: string | null;
   last_message_preview?: string | null;
   last_message_at: string;
@@ -27,6 +29,7 @@ export type WAMessage = {
   content: string | null;
   content_type: string;
   status: string;
+  sender_kind?: "patient" | "psychologist" | "synapse" | "professional" | "system";
   is_from_ai?: boolean | null;
   media_base64?: string | null;
   media_mimetype?: string | null;
@@ -43,6 +46,10 @@ export type WhatsAppSettings = {
   webhook_url: string | null;
   webhook_enabled: boolean | null;
   webhook_events: string[] | null;
+  psychologist_remote_jid?: string | null;
+  psychologist_phone?: string | null;
+  last_error?: string | null;
+  settings_applied_at?: string | null;
   last_status_at: string | null;
   last_sync_at: string | null;
 };
@@ -80,6 +87,8 @@ const mapConversation = (row: Record<string, any>): WAConversation => ({
   remote_jid: String(row.remote_jid || row.contact_phone || row.patient_phone || ""),
   patient_name: row.patient_name ?? row.contact_name ?? row.name ?? null,
   patient_phone: String(row.patient_phone || row.contact_phone || row.remote_jid || ""),
+  conversation_kind: row.conversation_kind === "psychologist" ? "psychologist" : "patient",
+  synapse_session_id: row.synapse_session_id ?? null,
   profile_picture_url: row.profile_picture_url ?? row.avatar_url ?? null,
   last_message_preview: row.last_message_preview ?? row.last_message ?? null,
   last_message_at: toIso(row.last_message_at || row.updated_at || row.created_at),
@@ -94,6 +103,7 @@ const mapMessage = (row: Record<string, any>): WAMessage => ({
   content: row.content ?? row.message ?? "",
   content_type: row.content_type ?? row.message_type ?? "text",
   status: row.status ?? "sent",
+  sender_kind: row.sender_kind ?? (row.is_from_ai ? "synapse" : row.direction === "outbound" ? "professional" : "patient"),
   is_from_ai: Boolean(row.is_from_ai),
   media_base64: row.media_base64 ?? null,
   media_mimetype: row.media_mimetype ?? null,
@@ -163,7 +173,7 @@ export function useWhatsAppAgent() {
     mutationFn: async () => invokeEvolution("status"),
     onSuccess: () => invalidateSettings(),
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel consultar a Evolution API.");
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel consultar o WhatsApp Business.");
     },
   });
 
@@ -179,7 +189,7 @@ export function useWhatsAppAgent() {
               ? data.connection.code
               : null;
       if (qr && /^https?:\/\//.test(qr)) window.open(qr, "_blank", "noopener,noreferrer");
-      toast.success("Fluxo de conexao iniciado.");
+      toast.success("Conexao do WhatsApp Business iniciada.");
       invalidateSettings();
     },
     onError: (error) => {
@@ -210,7 +220,7 @@ export function useWhatsAppAgent() {
 
   const simulateInbound = useMutation({
     mutationFn: async (_payload: SimulateInboundPayload) => {
-      throw new Error("Simulador local removido nesta v1 real da Evolution API.");
+      throw new Error("Simulador local removido nesta versao real do WhatsApp Business.");
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Nao foi possivel simular a mensagem.");
@@ -254,17 +264,6 @@ export function useWhatsAppAgent() {
     },
   });
 
-  const reconfigureWebhook = useMutation({
-    mutationFn: async () => invokeEvolution("configureWebhook"),
-    onSuccess: () => {
-      invalidateSettings();
-      toast.success("Webhook reconfigurado.");
-    },
-    onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel reconfigurar o webhook.");
-    },
-  });
-
   return {
     useSettings,
     useConversations,
@@ -276,6 +275,5 @@ export function useWhatsAppAgent() {
     fullSync,
     syncMessages,
     markAsRead,
-    reconfigureWebhook,
   };
 }
