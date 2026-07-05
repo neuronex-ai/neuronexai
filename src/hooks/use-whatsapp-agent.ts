@@ -34,6 +34,19 @@ export type WAMessage = {
   created_at: string;
 };
 
+export type WhatsAppSettings = {
+  user_id: string;
+  instance_name: string;
+  environment: "sandbox" | "production";
+  is_active: boolean;
+  connection_state: string | null;
+  webhook_url: string | null;
+  webhook_enabled: boolean | null;
+  webhook_events: string[] | null;
+  last_status_at: string | null;
+  last_sync_at: string | null;
+};
+
 type SendMessagePayload = {
   conversationId: string;
   remoteJid: string;
@@ -52,6 +65,14 @@ type SimulateInboundPayload = {
 
 const toIso = (value: unknown) =>
   typeof value === "string" && value ? value : new Date().toISOString();
+
+const invokeEvolution = async <T>(action: string, body: Record<string, unknown> = {}) => {
+  const { data, error } = await supabase.functions.invoke("neurozap-evolution", {
+    body: { action, ...body },
+  });
+  if (error) throw error;
+  return data as T;
+};
 
 const mapConversation = (row: Record<string, any>): WAConversation => ({
   id: String(row.id),
@@ -83,6 +104,10 @@ const mapMessage = (row: Record<string, any>): WAMessage => ({
 export function useWhatsAppAgent() {
   const queryClient = useQueryClient();
 
+  const invalidateSettings = () => {
+    void queryClient.invalidateQueries({ queryKey: ["whatsapp-settings"] });
+  };
+
   const invalidateConversations = () => {
     void queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
   };
@@ -90,6 +115,19 @@ export function useWhatsAppAgent() {
   const invalidateMessages = (conversationId?: string) => {
     void queryClient.invalidateQueries({ queryKey: ["whatsapp-messages", conversationId] });
   };
+
+  const useSettings = () =>
+    useQuery<WhatsAppSettings | null>({
+      queryKey: ["whatsapp-settings"],
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from("whatsapp_settings")
+          .select("*")
+          .maybeSingle();
+        if (error) throw error;
+        return (data as WhatsAppSettings | null) ?? null;
+      },
+    });
 
   const useConversations = () =>
     useQuery<WAConversation[]>({
@@ -121,23 +159,45 @@ export function useWhatsAppAgent() {
       },
     });
 
+  const refreshStatus = useMutation({
+    mutationFn: async () => invokeEvolution("status"),
+    onSuccess: () => invalidateSettings(),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel consultar a Evolution API.");
+    },
+  });
+
+  const connect = useMutation({
+    mutationFn: async () => invokeEvolution<{ connection?: Record<string, any> }>("connect"),
+    onSuccess: (data) => {
+      const qr =
+        typeof data?.connection?.base64 === "string"
+          ? data.connection.base64
+          : typeof data?.connection?.qrcode === "string"
+            ? data.connection.qrcode
+            : typeof data?.connection?.code === "string"
+              ? data.connection.code
+              : null;
+      if (qr && /^https?:\/\//.test(qr)) window.open(qr, "_blank", "noopener,noreferrer");
+      toast.success("Fluxo de conexao iniciado.");
+      invalidateSettings();
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel iniciar a conexao.");
+    },
+  });
+
   const sendMessage = useMutation({
     mutationFn: async (payload: SendMessagePayload) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-send", {
-        body: {
-          conversationId: payload.conversationId,
-          remoteJid: payload.remoteJid,
-          message: payload.message,
-          triggerAI: payload.triggerAI,
-          messageType: payload.messageType || "text",
-          mediaBase64: payload.mediaBase64,
-          mediaMimetype: payload.mediaMimetype,
-          mediaFilename: payload.mediaFilename,
-        },
+      if ((payload.messageType || "text") !== "text" || payload.mediaBase64) {
+        throw new Error("Envio de midia entra na proxima etapa do NeuroZap.");
+      }
+      return invokeEvolution("sendText", {
+        conversationId: payload.conversationId,
+        remoteJid: payload.remoteJid,
+        text: payload.message,
+        triggerAI: payload.triggerAI,
       });
-
-      if (error) throw error;
-      return data;
     },
     onSuccess: (_data, variables) => {
       invalidateMessages(variables.conversationId);
@@ -149,21 +209,8 @@ export function useWhatsAppAgent() {
   });
 
   const simulateInbound = useMutation({
-    mutationFn: async (payload: SimulateInboundPayload) => {
-      const { data, error } = await supabase.functions.invoke("synapse-whatsapp-in", {
-        body: {
-          remoteJid: `${payload.phone.replace(/\D/g, "")}@s.whatsapp.net`,
-          content: payload.content,
-          messageType: "text",
-        },
-      });
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      invalidateConversations();
-      toast.success("Mensagem simulada recebida.");
+    mutationFn: async (_payload: SimulateInboundPayload) => {
+      throw new Error("Simulador local removido nesta v1 real da Evolution API.");
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Nao foi possivel simular a mensagem.");
@@ -171,25 +218,26 @@ export function useWhatsAppAgent() {
   });
 
   const fullSync = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-sync", { body: {} });
-      if (error) throw error;
-      return data;
+    mutationFn: async () => invokeEvolution<{ count?: number }>("syncConversations"),
+    onSuccess: (data) => {
+      invalidateConversations();
+      invalidateSettings();
+      toast.success(`${Number(data?.count || 0)} conversas sincronizadas.`);
     },
-    onSettled: invalidateConversations,
-    onError: () => toast.error("Nao foi possivel sincronizar o WhatsApp agora."),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel sincronizar o WhatsApp agora.");
+    },
   });
 
   const syncMessages = useMutation({
-    mutationFn: async ({ remoteJid }: { remoteJid: string }) => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-sync-messages", {
-        body: { remoteJid },
-      });
-      if (error) throw error;
-      return data;
+    mutationFn: async ({ remoteJid }: { remoteJid: string }) =>
+      invokeEvolution<{ count?: number }>("syncMessages", { remoteJid }),
+    onSuccess: () => {
+      invalidateConversations();
     },
-    onSettled: invalidateConversations,
-    onError: () => toast.error("Nao foi possivel atualizar as mensagens."),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel atualizar as mensagens.");
+    },
   });
 
   const markAsRead = useMutation({
@@ -207,20 +255,22 @@ export function useWhatsAppAgent() {
   });
 
   const reconfigureWebhook = useMutation({
-    mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke("whatsapp-configure-webhook", {
-        body: {},
-      });
-      if (error) throw error;
-      return data;
+    mutationFn: async () => invokeEvolution("configureWebhook"),
+    onSuccess: () => {
+      invalidateSettings();
+      toast.success("Webhook reconfigurado.");
     },
-    onSuccess: () => toast.success("Webhook reconfigurado."),
-    onError: () => toast.error("Nao foi possivel reconfigurar o webhook."),
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Nao foi possivel reconfigurar o webhook.");
+    },
   });
 
   return {
+    useSettings,
     useConversations,
     useMessages,
+    refreshStatus,
+    connect,
     sendMessage,
     simulateInbound,
     fullSync,

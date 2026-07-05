@@ -178,6 +178,11 @@ verify_jwt = false
 import_map = "./functions/synapse-whatsapp-in/deno.json"
 entrypoint = "./functions/synapse-whatsapp-in/index.ts"
 
+[functions.neurozap-evolution]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/neurozap-evolution/index.ts"
+
 [functions.n8n-agent-gateway]
 enabled = true
 verify_jwt = false
