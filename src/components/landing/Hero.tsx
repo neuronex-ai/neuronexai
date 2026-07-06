@@ -45,7 +45,7 @@ export const Hero = () => {
                 </FadeIn>
 
                 <div className="mb-4 md:mb-6 pb-2">
-                    <TextReveal stagger={0.08} className="text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-wide text-foreground leading-[0.9] md:leading-[0.95] select-none text-center">
+                    <TextReveal stagger={0.08} className="text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-tight text-foreground leading-[0.9] md:leading-[0.95] select-none text-center">
                         Sua clínica inteira, organizada por IA.
                     </TextReveal>
                 </div>
