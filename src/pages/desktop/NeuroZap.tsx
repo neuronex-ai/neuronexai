@@ -299,7 +299,7 @@ type ConnectionDialogProps = {
   fullSync: ReturnType<typeof useWhatsAppAgent>["fullSync"];
 };
 
-function ConnectionDialog({
+function LegacyConnectionDialog({
   open,
   onOpenChange,
   settings,
@@ -436,6 +436,222 @@ function ConnectionDialog({
             </p>
           </section>
         ) : null}
+      </div>
+    </AppModalShell>
+  );
+}
+
+function ConnectionDialog({
+  open,
+  onOpenChange,
+  settings,
+  loading,
+  connect,
+  fullSync,
+}: ConnectionDialogProps) {
+  const shouldReduceMotion = useReducedMotion();
+  const connected = connectedStatus(settings);
+  const [step, setStep] = useState<ConnectionStep>("intro");
+  const connectPayload = connect.data as WhatsAppConnectResponse | undefined;
+  const { qr, qrImageSrc } = normalizeConnectionQr(connectPayload?.connection);
+  const responseState = String(connectPayload?.state || settings?.connection_state || "").toLowerCase();
+  const isConnectedStep = connected || step === "connected";
+  const isQrStep = step === "qr" && !connected;
+  const pendingQr = connect.isPending || (isQrStep && !qr && !connect.error);
+
+  useEffect(() => {
+    if (!open) return;
+    if (connected) {
+      setStep("connected");
+      return;
+    }
+    setStep(qr ? "qr" : "intro");
+  }, [connected, open, qr]);
+
+  const handleConnect = () => {
+    connect.mutate(undefined, {
+      onSuccess: (data) => {
+        const state = String(data?.state || "").toLowerCase();
+        setStep(data?.connected || ["open", "connected"].includes(state) ? "connected" : "qr");
+      },
+    });
+  };
+
+  const transition = shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] as const };
+  const slideVariants = {
+    enter: { opacity: 0, x: shouldReduceMotion ? 0 : 28 },
+    center: { opacity: 1, x: 0 },
+    exit: { opacity: 0, x: shouldReduceMotion ? 0 : -28 },
+  };
+
+  const footer = isConnectedStep ? (
+    <Button
+      type="button"
+      onClick={() => fullSync.mutate()}
+      disabled={fullSync.isPending || loading}
+      className="h-12 w-full rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+    >
+      {fullSync.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+      Sincronizar conversas
+    </Button>
+  ) : isQrStep ? (
+    <div className="grid gap-2 sm:grid-cols-[0.72fr_1fr]">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setStep("intro")}
+        className="h-12 rounded-[18px] text-[10px] font-black uppercase tracking-[0.16em]"
+      >
+        Voltar
+      </Button>
+      <Button
+        type="button"
+        onClick={handleConnect}
+        disabled={connect.isPending}
+        className="h-12 rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+      >
+        {connect.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
+        Gerar novo QR
+      </Button>
+    </div>
+  ) : (
+    <Button
+      type="button"
+      onClick={handleConnect}
+      disabled={connect.isPending || loading}
+      className="h-12 w-full rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+    >
+      {connect.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
+      {settings?.instance_name ? "Reconectar" : "Conectar"}
+    </Button>
+  );
+
+  return (
+    <AppModalShell
+      open={open}
+      onOpenChange={onOpenChange}
+      title="Conectar WhatsApp Business"
+      eyebrow="WhatsApp Business"
+      description={
+        <span className="inline-flex items-center justify-center gap-2">
+          Ative o Synapse conectando seu WhatsApp Business.
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-300 dark:hover:text-white"
+                  aria-label="Informações sobre o WhatsApp Business"
+                >
+                  <Info className="h-3.5 w-3.5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="z-[320] max-w-sm text-left text-xs leading-relaxed">
+                {infoCopy}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </span>
+      }
+      heroIcon={
+        <div className="group flex h-16 w-16 items-center justify-center bg-transparent">
+          <img
+            src={WHATSAPP_BUSINESS_LOGO}
+            alt="WhatsApp Business"
+            className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105"
+          />
+        </div>
+      }
+      footer={footer}
+      size="lg"
+      className="notes-liquid-surface rounded-[34px] border"
+      bodyClassName="px-5 sm:px-8"
+      footerClassName="px-5 sm:px-8"
+      headerClassName="pt-8"
+    >
+      <div className="relative min-h-[20rem] overflow-hidden">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.section
+            key={isConnectedStep ? "connected" : step}
+            variants={slideVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={transition}
+            className="space-y-4"
+          >
+            {isConnectedStep ? (
+              <div className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-6 text-center">
+                <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.1] dark:opacity-[0.16]" />
+                <div className="relative mx-auto max-w-xl">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Conexão pronta</p>
+                  <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">WhatsApp Business conectado</h3>
+                  <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500">
+                    Seu número já está vinculado ao Synapse. As conversas serão atualizadas automaticamente quando novos eventos chegarem.
+                  </p>
+                  {settings?.last_sync_at ? (
+                    <p className="mt-5 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                      Última sincronização · <span className="text-zinc-300 [.light_&]:text-zinc-700">{format(new Date(settings.last_sync_at), "dd/MM HH:mm")}</span>
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : isQrStep ? (
+              <div className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-5 text-center sm:p-6">
+                <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.1] dark:opacity-[0.16]" />
+                <div className="relative mx-auto max-w-md">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Leitura do QR Code</p>
+                  <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">Aponte a câmera do WhatsApp</h3>
+                  <div className="mt-5 flex min-h-[18rem] items-center justify-center rounded-[26px] border border-zinc-200/70 bg-white/80 p-4 shadow-[0_24px_60px_-42px_rgba(0,0,0,0.5)] dark:border-white/[0.08] dark:bg-white/[0.035]">
+                    {qrImageSrc ? (
+                      <img
+                        src={qrImageSrc}
+                        alt="QR Code de conexão do WhatsApp Business"
+                        className="h-64 w-64 rounded-[22px] bg-white p-4"
+                      />
+                    ) : qr ? (
+                      <p className="max-h-64 overflow-y-auto break-all rounded-[22px] border border-white/[0.055] bg-white/[0.035] p-4 text-sm font-bold text-zinc-700 dark:text-zinc-200 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80">
+                        {qr}
+                      </p>
+                    ) : (
+                      <div className="flex flex-col items-center gap-3 text-zinc-500">
+                        <Loader2 className="h-7 w-7 animate-spin" />
+                        <p className="text-sm font-bold">Gerando QR Code seguro...</p>
+                      </div>
+                    )}
+                  </div>
+                  <p className="mt-4 text-xs font-semibold leading-relaxed text-zinc-500 dark:text-zinc-400">
+                    No WhatsApp Business, abra aparelhos conectados e leia este QR Code. Use preferencialmente um número exclusivo do consultório.
+                  </p>
+                  {pendingQr || responseState ? (
+                    <p className="mt-3 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                      {pendingQr ? "Aguardando QR" : `Estado: ${responseState}`}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-6 text-center">
+                <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.1] dark:opacity-[0.16]" />
+                <div className="relative mx-auto max-w-xl">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Canal dedicado</p>
+                  <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">
+                    Conecte o WhatsApp Business ao Synapse
+                  </h3>
+                  <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500">
+                    A próxima etapa gera um QR Code exclusivo para este profissional. Depois da leitura, o NeuroZap sincroniza contatos, conversas e histórico.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {settings?.last_error ? (
+              <div className="rounded-[18px] border border-red-500/20 bg-red-500/[0.07] px-4 py-3 text-xs font-semibold text-red-700 dark:text-red-300">
+                {settings.last_error}
+              </div>
+            ) : null}
+          </motion.section>
+        </AnimatePresence>
       </div>
     </AppModalShell>
   );
@@ -607,8 +823,8 @@ export default function NeuroZap() {
 
         <section
           className={cn(
-            "notes-liquid-surface grid min-h-[calc(100dvh-15rem)] overflow-hidden rounded-[34px] border transition-[grid-template-columns] duration-300",
-            isListCollapsed ? "lg:grid-cols-[4.75rem_minmax(0,1fr)]" : "lg:grid-cols-[24rem_minmax(0,1fr)]",
+            "notes-liquid-surface grid min-h-[calc(100dvh-15rem)] max-w-full overflow-hidden rounded-[34px] border transition-[grid-template-columns] duration-300",
+            isListCollapsed ? "lg:grid-cols-[4.75rem_minmax(0,1fr)]" : "lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]",
           )}
         >
           <aside className={cn("notes-retina-rail min-h-0 border-r", showMobileChat ? "hidden lg:block" : "block")}>
@@ -702,7 +918,7 @@ export default function NeuroZap() {
             </ScrollArea>
           </aside>
 
-          <section className={cn("min-h-0", !selectedConversation && !showMobileChat ? "hidden lg:block" : "block")}>
+          <section className={cn("min-w-0 min-h-0 overflow-hidden", !selectedConversation && !showMobileChat ? "hidden lg:block" : "block")}>
             {selectedConversation ? (
               <div className="flex h-full min-h-[calc(100dvh-12rem)] flex-col">
                 <ChatHeader
@@ -778,9 +994,9 @@ export default function NeuroZap() {
               <div className="flex h-full min-h-[calc(100dvh-12rem)] w-full items-center justify-center p-8">
                 <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
                   <div className="group/gate relative flex w-full justify-center">
-                    <div className="relative z-10 flex h-32 w-32 items-center justify-center overflow-hidden rounded-[52px] border border-white/[0.05] bg-black/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.22)] backdrop-blur-3xl transition-transform duration-500 group-hover/gate:scale-[1.03] [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-950/[0.84] [.light_&]:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)]">
+                    <div className="relative z-10 flex h-40 w-40 items-center justify-center overflow-hidden rounded-full border border-white/[0.05] bg-black/20 shadow-[0_36px_90px_-48px_rgba(255,255,255,0.32)] backdrop-blur-3xl transition-transform duration-500 group-hover/gate:scale-[1.025] [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-950/[0.9] [.light_&]:shadow-[0_34px_70px_-46px_rgba(0,0,0,0.18)]">
                       <div className="absolute inset-0 notes-retina-texture opacity-[0.4] pointer-events-none [.light_&]:opacity-[0.2]" />
-                      <img src={WHATSAPP_BUSINESS_LOGO} alt="" className="h-16 w-16 object-contain transition-all duration-700 group-hover/gate:scale-110" />
+                      <img src={WHATSAPP_BUSINESS_LOGO} alt="" className="h-20 w-20 object-contain transition-all duration-700 group-hover/gate:scale-110" />
                     </div>
                   </div>
                   <h2 className="mt-8 text-4xl font-black tracking-[-0.05em]">Central NeuroZap</h2>

@@ -396,10 +396,55 @@ const extractApiKey = (payload: any, fallback: string) =>
   safeString(payload?.instance?.apiKey) ||
   fallback;
 
-const extractConnectionPayload = (payload: any) =>
-  payload?.qrcode || payload?.connection || payload?.base64 || payload?.code
-    ? payload
-    : payload?.data || payload?.instance || payload;
+const pickQrValue = (...nodes: any[]) => {
+  for (const node of nodes) {
+    if (!node || typeof node !== "object") continue;
+    const candidates = [
+      node?.qr,
+      node?.qrCode,
+      node?.qrcode?.base64,
+      node?.qrcode?.code,
+      node?.qrcode,
+      node?.base64,
+      node?.pairingCode,
+      node?.code,
+    ];
+    for (const candidate of candidates) {
+      const value = safeString(candidate);
+      if (!value) continue;
+      if (/^\d{3}$/.test(value)) continue;
+      return value;
+    }
+  }
+  return null;
+};
+
+const qrImageSrcFor = (qr: string | null) => {
+  if (!qr) return null;
+  if (qr.startsWith("data:")) return qr;
+  if (/^https?:\/\//i.test(qr)) return null;
+  return qr.length > 120 ? `data:image/png;base64,${qr}` : null;
+};
+
+const extractConnectionPayload = (payload: any) => {
+  const nodes = [
+    payload,
+    payload?.connection,
+    payload?.qrcode,
+    payload?.data,
+    payload?.data?.connection,
+    payload?.data?.qrcode,
+    payload?.instance,
+  ];
+  const qr = pickQrValue(...nodes);
+  return {
+    qr,
+    qrImageSrc: qrImageSrcFor(qr),
+    code: safeString(payload?.code || payload?.data?.code) || null,
+    pairingCode: safeString(payload?.pairingCode || payload?.data?.pairingCode || payload?.qrcode?.pairingCode) || null,
+    raw: payload || {},
+  };
+};
 
 const generateInstanceName = (userId: string) =>
   `neurozap-${userId.slice(0, 8)}-${crypto.randomUUID().slice(0, 8)}`.toLowerCase();
@@ -429,6 +474,11 @@ const readableEvolutionMessage = (value: unknown): string => {
     );
   }
   return "";
+};
+
+const isEvolutionMissingError = (error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error || "");
+  return /(^|[\s(:])404([\s).:]|not found|n[aã]o encontrada|n[aã]o encontrado|does not exist|instance.*missing|instance.*not.*exist|inst[aâ]ncia.*removida/i.test(message);
 };
 
 const evolutionFetch = async (
@@ -668,6 +718,24 @@ const upsertMapping = async (
   if (error) throw error;
 };
 
+const retireInstanceMapping = async (
+  supabaseAdmin: any,
+  userId: string,
+  instanceName: string,
+  reason: string,
+) => {
+  if (!instanceName) return;
+  await supabaseAdmin
+    .from("synapse_whatsapp_instances")
+    .update({
+      enabled: false,
+      last_connection_state: reason,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("professional_id", userId)
+    .eq("instance_name", instanceName);
+};
+
 const storePrivateCredential = async (supabaseAdmin: any, userId: string, instanceName: string, instanceApiKey: string) => {
   const { error } = await supabaseAdmin.schema("private").from("neurozap_instance_credentials").upsert(
     {
@@ -729,9 +797,18 @@ const ensureInstanceConfig = async (
   supabaseAdmin: any,
   userId: string,
   runtime: RuntimeConfig,
+  options: { forceNew?: boolean; retiredReason?: string } = {},
 ): Promise<InstanceConfig> => {
   const existing = await loadInstanceConfig(supabaseAdmin, userId, runtime);
-  if (existing) return existing;
+  if (existing && !options.forceNew && existing.instanceName !== "neuronex-ai") return existing;
+  if (existing) {
+    await retireInstanceMapping(
+      supabaseAdmin,
+      userId,
+      existing.instanceName,
+      options.retiredReason || (existing.instanceName === "neuronex-ai" ? "legacy_replaced" : "recreated"),
+    );
+  }
 
   const instanceName = generateInstanceName(userId);
   const desiredToken = generateInstanceToken();
@@ -1011,7 +1088,7 @@ const fetchMessagesForRemote = async (
       {
         label: "findMessages key",
         path: `/chat/findMessages/${encodeURIComponent(config.instanceName)}`,
-        init: postJson({ where: { key: { remoteJid } }, page, offset: pageSize, take: pageSize }),
+        init: postJson({ where: { key: { remoteJid } }, page, offset: (page - 1) * pageSize, take: pageSize, limit: pageSize }),
       },
       {
         label: "findMessages remote",
@@ -1135,21 +1212,48 @@ serve(async (req) => {
     if (!action) return json({ ok: false, error: "Action obrigat\u00f3ria." });
 
     if (action === "connect") {
-      const config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
-      const setup = await applyRuntimeSetup(config);
-      const connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
+      let recreated = false;
+      let config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
+      let setup = await applyRuntimeSetup(config);
+      let connection: any = null;
+
+      try {
+        connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
+      } catch (error) {
+        if (!isEvolutionMissingError(error)) throw error;
+        await retireInstanceMapping(supabaseAdmin, user.id, config.instanceName, "removed");
+        config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime, { forceNew: true, retiredReason: "removed" });
+        recreated = true;
+        setup = await applyRuntimeSetup(config);
+        connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
+      }
+
+      const normalizedConnection = extractConnectionPayload(connection);
+      const ownerJid = await fetchOwnerJid(config, connection).catch(() => config.psychologistRemoteJid);
+      const state = safeString(connection?.instance?.state || connection?.state || connection?.connectionState) || (normalizedConnection.qr ? "qr" : "connecting");
       await upsertSettings(supabaseAdmin, user.id, config, {
+        is_active: state === "open",
+        connection_state: state,
+        psychologist_remote_jid: ownerJid || config.psychologistRemoteJid,
+        psychologist_phone: ownerJid || config.psychologistRemoteJid ? remoteJidToPhone(ownerJid || config.psychologistRemoteJid || "") : null,
         webhook_enabled: true,
         webhook_events: WEBHOOK_EVENTS,
         settings_applied_at: new Date().toISOString(),
         last_error: setup.warnings.length ? setup.warnings.slice(0, 2).join(" | ") : null,
-        metadata: { setup, connect: { has_qrcode: Boolean(connection?.base64 || connection?.qrcode || connection?.code || connection?.qrcode?.base64) } },
+        metadata: { setup, connect: { has_qrcode: Boolean(normalizedConnection.qr), recreated, state } },
+      });
+      await upsertMapping(supabaseAdmin, user.id, config, {
+        owner_remote_jid: ownerJid || config.psychologistRemoteJid,
+        last_connection_state: state,
       });
       return json({
         ok: true,
         instanceName: config.instanceName,
         environment: config.webhookMode,
-        connection: extractConnectionPayload(connection),
+        recreated,
+        state,
+        connected: state === "open",
+        connection: normalizedConnection,
       });
     }
 
@@ -1169,7 +1273,7 @@ serve(async (req) => {
         supabaseAdmin,
         user.id,
         loadedConfig,
-        "closed",
+        "disconnected",
         loadedConfig.psychologistRemoteJid,
         { logout },
       );
@@ -1196,15 +1300,20 @@ serve(async (req) => {
         ).catch((error) => ({ error: error.message })),
       ]);
       if (connection?.error) {
+        const missing = isEvolutionMissingError(connection.error);
         await upsertSettings(supabaseAdmin, user.id, loadedConfig, {
+          is_active: false,
+          connection_state: missing ? "removed" : "disconnected",
           last_status_at: new Date().toISOString(),
           last_error: connection.error,
           metadata: { status_warning: connection.error, webhook },
         });
+        if (missing) await retireInstanceMapping(supabaseAdmin, user.id, loadedConfig.instanceName, "removed");
         return json({
           ok: true,
           warning: connection.error,
           connected: false,
+          state: missing ? "removed" : "disconnected",
           instanceName: loadedConfig.instanceName,
           environment: loadedConfig.webhookMode,
           connection,
@@ -1317,7 +1426,7 @@ serve(async (req) => {
       }
 
       const canSendByPhone = isLikelyPhoneDigits(digitsOnly(sendTarget));
-      const canSendByJid = /@(s\.whatsapp\.net|c\.us|g\.us|lid)$/i.test(sendTarget);
+      const canSendByJid = /@(s\.whatsapp\.net|c\.us|g\.us)$/i.test(sendTarget);
       if (!canSendByPhone && !canSendByJid) {
         return json({
           ok: false,
