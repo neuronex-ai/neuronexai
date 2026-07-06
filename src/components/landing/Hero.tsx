@@ -44,14 +44,14 @@ export const Hero = () => {
                     </div>
                 </FadeIn>
 
-                <div className="mb-4 md:mb-6 pb-2">
-                    <TextReveal stagger={0.08} className="text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-tight text-foreground leading-[1.15] md:leading-[1.05] select-none text-center">
+                <div className="mb-4 md:mb-6 pb-3">
+                    <TextReveal stagger={0.08} className="text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-tight text-foreground leading-[1.2] md:leading-[1.1] select-none text-center">
                         Sua clínica inteira, organizada por IA.
                     </TextReveal>
                 </div>
 
                 <FadeIn delay={0.6}>
-                    <p className="text-base md:text-xl lg:text-2xl text-muted-foreground/70 font-medium max-w-4xl mx-auto leading-relaxed md:leading-[1.4] tracking-tight mb-8 md:mb-10 lg:mb-12 px-2">
+                    <p className="text-base md:text-xl lg:text-2xl text-muted-foreground/70 font-medium max-w-4xl mx-auto leading-relaxed md:leading-[1.5] tracking-tight mb-8 md:mb-10 lg:mb-12 px-2">
                         Prontuário, agenda, teleconsulta, financeiro, NFS-e, portal do paciente e Synapse em uma única experiência para psicólogos.
                     </p>
                 </FadeIn>
