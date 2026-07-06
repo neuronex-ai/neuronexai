@@ -18,9 +18,27 @@ const normalizeInstanceKey = (value: unknown) => String(value || "").trim().toLo
 const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
 const bearerToken = (value: string | null) => String(value || "").replace(/^Bearer\s+/i, "").trim();
 const safeString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const isLikelyPhoneDigits = (digits: string) => {
+  if (!digits) return false;
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  return [8, 9, 10, 11].includes(local.length);
+};
 
-const remoteJidToPhone = (remoteJid: string) =>
-  remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
+const isStatusJid = (remoteJid?: string | null) => {
+  const value = safeString(remoteJid).toLowerCase();
+  return value === "status@broadcast" || value.includes("status@broadcast");
+};
+
+const isGroupJid = (remoteJid?: string | null) => safeString(remoteJid).toLowerCase().includes("@g.us");
+
+const remoteJidToPhone = (remoteJid: string) => {
+  const raw = safeString(remoteJid);
+  if (!raw || raw.includes("@lid")) return "";
+  const clean = raw.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
+  const digits = digitsOnly(clean);
+  const isPhoneJid = raw.includes("@s.whatsapp.net") || raw.includes("@c.us") || /^[+\d\s().-]+$/.test(clean);
+  return isPhoneJid && isLikelyPhoneDigits(digits) ? digits : "";
+};
 
 const sameJid = (a?: string | null, b?: string | null) => {
   const left = safeString(a).toLowerCase();
@@ -101,7 +119,7 @@ async function ensureWhatsappSession(
   const phone = remoteJidToPhone(remoteJid);
   const label =
     conversationKind === "psychologist"
-      ? "Voce e Synapse"
+      ? "Você e Synapse"
       : pushName
         ? `${pushName} - ${phone || remoteJid}`
         : phone || remoteJid || "Paciente";
@@ -138,6 +156,10 @@ async function upsertConversation(
   rawPayload: Record<string, unknown>,
 ) {
   const now = new Date().toISOString();
+  const isGroup = isGroupJid(remoteJid);
+  const patientName = conversationKind === "psychologist"
+    ? "Você e Synapse"
+    : pushName || (isGroup ? "Grupo do WhatsApp" : null);
   const { data, error } = await admin
     .from("whatsapp_conversations")
     .upsert(
@@ -147,7 +169,10 @@ async function upsertConversation(
         remote_jid: remoteJid,
         conversation_kind: conversationKind,
         synapse_session_id: sessionId,
-        patient_name: conversationKind === "psychologist" ? "Voce e Synapse" : pushName || null,
+        contact_type: isGroup ? "group" : "person",
+        is_group: isGroup,
+        deleted_at: null,
+        patient_name: patientName,
         patient_phone: remoteJidToPhone(remoteJid),
         last_message_preview: lastMessagePreview || null,
         last_message_at: now,
@@ -209,9 +234,14 @@ serve(async (req) => {
     const sourceMessageId = String(body.source_message_id || key.id || "").trim();
     const sourceTimestamp = body.source_timestamp || data.messageTimestamp || Math.floor(Date.now() / 1000);
     const messageType = String(body.message_type || data.messageType || "text").trim();
+    const eventName = String(body.event || body.event_type || body.type || "").toUpperCase();
 
-    if (!instanceKey || !finalRemoteJid || !finalMessage) {
-      return jsonResponse({ error: "Missing required fields: instance_name, remote_jid and message" }, 400);
+    if (!instanceKey || !finalRemoteJid) {
+      return jsonResponse({ error: "Missing required fields: instance_name and remote_jid" }, 400);
+    }
+
+    if (isStatusJid(finalRemoteJid)) {
+      return jsonResponse({ ok: true, ignored: true, reason: "status_broadcast" });
     }
 
     const { data: instance, error: instanceError } = await supabaseAdmin
@@ -226,7 +256,37 @@ serve(async (req) => {
     }
 
     const professionalId = instance.professional_id;
-    const conversationKind: ConversationKind = sameJid(finalRemoteJid, instance.owner_remote_jid) ? "psychologist" : "patient";
+    let ownerRemoteJid = safeString(instance.owner_remote_jid) || null;
+    if (!ownerRemoteJid) {
+      const { data: settings } = await supabaseAdmin
+        .from("whatsapp_settings")
+        .select("psychologist_remote_jid")
+        .eq("user_id", professionalId)
+        .eq("instance_name", instance.instance_name)
+        .maybeSingle();
+      ownerRemoteJid = safeString(settings?.psychologist_remote_jid) || null;
+      if (ownerRemoteJid) {
+        await supabaseAdmin
+          .from("synapse_whatsapp_instances")
+          .update({ owner_remote_jid: ownerRemoteJid, updated_at: new Date().toISOString() })
+          .eq("instance_name", instance.instance_name);
+      }
+    }
+
+    const conversationKind: ConversationKind = sameJid(finalRemoteJid, ownerRemoteJid) ? "psychologist" : "patient";
+
+    if (!finalMessage) {
+      const shouldDelete = /DELETE|REMOVE|REMOVED|ARCHIVE/i.test(eventName) || Boolean(data.deleted || data.removed || data.archived || body.deleted || body.removed);
+      if (shouldDelete) {
+        await supabaseAdmin
+          .from("whatsapp_conversations")
+          .update({ deleted_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq("user_id", professionalId)
+          .eq("instance_name", instance.instance_name)
+          .eq("remote_jid", finalRemoteJid);
+      }
+      return jsonResponse({ ok: true, ignored: true, reason: shouldDelete ? "conversation_removed" : "non_message_event" });
+    }
     const sessionId = await ensureWhatsappSession(
       supabaseAdmin,
       professionalId,

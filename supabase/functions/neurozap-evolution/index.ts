@@ -147,17 +147,24 @@ const isStatusJid = (remoteJid?: string | null) => {
 };
 
 const isGroupJid = (remoteJid?: string | null) => safeString(remoteJid).toLowerCase().includes("@g.us");
+const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
+
+const isLikelyPhoneDigits = (digits: string) => {
+  if (!digits) return false;
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  return [8, 9, 10, 11].includes(local.length);
+};
 
 const remoteJidToPhone = (remoteJid: string) => {
   const raw = safeString(remoteJid);
+  if (!raw || raw.includes("@lid")) return "";
   const clean = raw.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
   const digits = digitsOnly(clean);
   const isPhoneJid = raw.includes("@s.whatsapp.net") || raw.includes("@c.us") || /^[+\d\s().-]+$/.test(clean);
-  return isPhoneJid && digits.length >= 8 ? digits : "";
+  return isPhoneJid && isLikelyPhoneDigits(digits) ? digits : "";
 };
 
 const jidToNumber = (remoteJid: string) => remoteJidToPhone(remoteJid).replace(/\D/g, "");
-const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
 
 const sendTargetFor = (remoteJid: string) => {
   const raw = safeString(remoteJid);
@@ -165,7 +172,7 @@ const sendTargetFor = (remoteJid: string) => {
   if (raw.includes("@s.whatsapp.net") || raw.includes("@c.us")) return jidToNumber(raw);
   if (raw.includes("@") || /[a-z]/i.test(raw)) return raw;
   const digits = digitsOnly(raw);
-  return digits || raw;
+  return isLikelyPhoneDigits(digits) ? digits : "";
 };
 
 const contactJidFrom = (value: any) => {
@@ -216,7 +223,7 @@ const extractPhoneNumber = (...payloads: any[]) => {
       const phone = remoteJidToPhone(raw);
       if (phone) return phone;
       const digits = digitsOnly(raw);
-      if (digits.length >= 10 && /^[+\d\s().@-]+$/.test(raw)) return digits;
+      if (isLikelyPhoneDigits(digits) && /^[+\d\s().@-]+$/.test(raw)) return digits;
     }
   }
   return "";
@@ -1135,9 +1142,28 @@ serve(async (req) => {
       const conversationId = safeString(body.conversationId);
       if (!remoteJid || !text) return json({ ok: false, error: "remoteJid e text s\u00e3o obrigat\u00f3rios." });
 
+      let sendTarget = sendTargetFor(remoteJid);
+      if ((!isLikelyPhoneDigits(digitsOnly(sendTarget)) || /@lid/i.test(sendTarget)) && conversationId) {
+        const { data: savedConversation, error: savedConversationError } = await supabaseAdmin
+          .from("whatsapp_conversations")
+          .select("patient_phone, remote_jid")
+          .eq("id", conversationId)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (savedConversationError) throw savedConversationError;
+        sendTarget = sendTargetFor(safeString(savedConversation?.patient_phone) || safeString(savedConversation?.remote_jid) || remoteJid);
+      }
+
+      if (!isLikelyPhoneDigits(digitsOnly(sendTarget)) || /@lid/i.test(sendTarget)) {
+        return json({
+          ok: false,
+          error: "Ainda não recebemos o telefone real deste contato. Sincronize conversas e contatos antes de enviar.",
+        });
+      }
+
       const sent = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/message/sendText/${encodeURIComponent(loadedConfig.instanceName)}`, {
         method: "POST",
-        body: JSON.stringify({ number: sendTargetFor(remoteJid), text }),
+        body: JSON.stringify({ number: sendTarget, text }),
       });
 
       const conversation = conversationId

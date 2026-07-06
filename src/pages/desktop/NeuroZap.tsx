@@ -51,6 +51,12 @@ import { toast } from "sonner";
 
 const WHATSAPP_BUSINESS_LOGO = "/whatsapp-business-logo-white.png";
 
+const isLikelyPhoneDigits = (digits: string) => {
+  if (!digits) return false;
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  return local.length === 8 || local.length === 9 || local.length === 10 || local.length === 11;
+};
+
 const formatDisplayName = (patientName: string | null | undefined, patientPhone: string | null | undefined) => {
   if (
     patientName &&
@@ -70,6 +76,7 @@ const formatDisplayName = (patientName: string | null | undefined, patientPhone:
     .replace(/[^\d+]/g, "");
 
   const digits = cleanPhone.replace(/\D/g, "");
+  if (!isLikelyPhoneDigits(digits)) return "Contato";
   if (digits.startsWith("55") && digits.length >= 12) {
     const ddd = digits.slice(2, 4);
     const number = digits.slice(4);
@@ -84,6 +91,7 @@ const phoneDigitsFrom = (...values: Array<string | null | undefined>) => {
   for (const value of values) {
     const raw = (value || "").trim();
     if (!raw) continue;
+    if (raw.includes("@lid")) continue;
     const normalized = raw
       .replace("@s.whatsapp.net", "")
       .replace("@c.us", "")
@@ -94,13 +102,14 @@ const phoneDigitsFrom = (...values: Array<string | null | undefined>) => {
       /^[+\d\s().-]+$/.test(normalized);
     if (!looksLikePhone) continue;
     const digits = normalized.replace(/\D/g, "");
-    if (digits.length >= 8) return digits;
+    if (isLikelyPhoneDigits(digits)) return digits;
   }
   return "";
 };
 
 const formatPhoneDigits = (digits: string) => {
   if (!digits) return "";
+  if (!isLikelyPhoneDigits(digits)) return "";
   const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
   if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
   if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
@@ -313,7 +322,7 @@ function ConnectionDialog({
           <Button
             type="button"
             variant="outline"
-            onClick={() => refreshStatus.mutate()}
+            onClick={() => refreshStatus.mutate({})}
             disabled={refreshStatus.isPending || loading}
             className="h-12 rounded-[18px] text-[10px] font-black uppercase tracking-[0.16em]"
           >
