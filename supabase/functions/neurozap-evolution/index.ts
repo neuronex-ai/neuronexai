@@ -490,8 +490,20 @@ const readableEvolutionMessage = (value: unknown): string => {
 };
 
 const isEvolutionMissingError = (error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error || "");
-  return /(^|[\s(:])404([\s).:]|not found|n[aã]o encontrada|n[aã]o encontrado|does not exist|instance.*missing|instance.*not.*exist|inst[aâ]ncia.*removida/i.test(message);
+  const message = (error instanceof Error ? error.message : String(error || ""))
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+  return (
+    message.includes("404") ||
+    message.includes("not found") ||
+    message.includes("nao encontrada") ||
+    message.includes("nao encontrado") ||
+    message.includes("does not exist") ||
+    message.includes("instance missing") ||
+    message.includes("instance not exist") ||
+    message.includes("instancia removida")
+  );
 };
 
 const evolutionFetch = async (
