@@ -17,6 +17,7 @@ type RuntimeConfig = {
   webhookMode: WebhookMode;
   sandboxWebhookBase: string;
   productionWebhookBase: string;
+  channelSecret: string;
 };
 
 type InstanceConfig = RuntimeConfig & {
@@ -33,18 +34,27 @@ type EvolutionRequestCandidate = {
 };
 
 const WEBHOOK_EVENTS = [
+  "APPLICATION_STARTUP",
   "QRCODE_UPDATED",
   "CONNECTION_UPDATE",
   "MESSAGES_SET",
   "MESSAGES_UPSERT",
+  "MESSAGES_EDITED",
   "MESSAGES_UPDATE",
+  "MESSAGES_DELETE",
   "SEND_MESSAGE",
   "CHATS_SET",
   "CHATS_UPSERT",
   "CHATS_UPDATE",
+  "CHATS_DELETE",
   "CONTACTS_SET",
   "CONTACTS_UPSERT",
   "CONTACTS_UPDATE",
+  "GROUPS_UPSERT",
+  "GROUP_UPDATE",
+  "GROUP_PARTICIPANTS_UPDATE",
+  "REMOVE_INSTANCE",
+  "LOGOUT_INSTANCE",
   "LABELS_EDIT",
   "LABELS_ASSOCIATION",
 ];
@@ -54,7 +64,7 @@ const INSTANCE_SETTINGS = {
   groupsIgnore: true,
   alwaysOnline: false,
   readMessages: true,
-  readStatus: false,
+  readStatus: true,
   syncFullHistory: true,
 };
 
@@ -103,7 +113,6 @@ const isManagedWebhookUrl = (value: string, instanceName: string) => {
 const getRuntimeConfig = (): RuntimeConfig => {
   const baseUrl = cleanBaseUrl(Deno.env.get("EVOLUTION_API_URL") || "");
   const managerApiKey = safeString(Deno.env.get("EVOLUTION_GLOBAL_API_KEY"));
-  const legacyInstanceKey = safeString(Deno.env.get("EVOLUTION_INSTANCE_API_KEY"));
   const webhookMode: WebhookMode =
     safeString(Deno.env.get("EVOLUTION_WEBHOOK_MODE")) === "production" ? "production" : "sandbox";
   const sandboxWebhookBase = normalizeWebhookBase(
@@ -117,16 +126,19 @@ const getRuntimeConfig = (): RuntimeConfig => {
     "webhook",
   );
 
-  if (!baseUrl || !(managerApiKey || legacyInstanceKey)) {
-    throw new Error("Configura\u00e7\u00e3o do WhatsApp Business ausente. Defina EVOLUTION_API_URL e EVOLUTION_GLOBAL_API_KEY.");
+  if (!baseUrl || !managerApiKey) {
+    throw new Error(
+      "Configura\u00e7\u00e3o do WhatsApp Business ausente. Defina EVOLUTION_API_URL e EVOLUTION_GLOBAL_API_KEY com a chave mestra da Evolution API.",
+    );
   }
 
   return {
     baseUrl,
-    managerApiKey: managerApiKey || legacyInstanceKey,
+    managerApiKey,
     webhookMode,
     sandboxWebhookBase,
     productionWebhookBase,
+    channelSecret: safeString(Deno.env.get("SYNAPSE_CHANNEL_SECRET")),
   };
 };
 
@@ -509,6 +521,11 @@ const evolutionFetch = async (
       readableEvolutionMessage(data?.response?.message) ||
       readableEvolutionMessage(data) ||
       `HTTP ${response.status}`;
+    if (response.status === 401 || response.status === 403) {
+      throw new Error(
+        `WhatsApp Business (${response.status}) em ${path}: a Evolution API recusou a chave enviada. Confira se EVOLUTION_GLOBAL_API_KEY no Supabase \u00e9 a chave mestra AUTHENTICATION_API_KEY da sua Evolution.`,
+      );
+    }
     throw new Error(`WhatsApp Business (${response.status}) em ${path}: ${message}`);
   }
   return data;
@@ -821,6 +838,13 @@ const ensureInstanceConfig = async (
     psychologistRemoteJid: null,
   };
 
+  const webhookHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (runtime.channelSecret) {
+    webhookHeaders["x-synapse-channel-secret"] = runtime.channelSecret;
+  }
+
   const createPayload = {
     instanceName,
     token: desiredToken,
@@ -828,10 +852,10 @@ const ensureInstanceConfig = async (
     integration: "WHATSAPP-BAILEYS",
     ...INSTANCE_SETTINGS,
     webhook: {
-      enabled: true,
       url: webhookUrl,
       byEvents: false,
       base64: true,
+      headers: webhookHeaders,
       events: WEBHOOK_EVENTS,
     },
   };
@@ -877,12 +901,19 @@ const applyInstanceSettings = async (config: InstanceConfig) => {
 };
 
 const applyWebhook = async (config: InstanceConfig) => {
+  const webhookHeaders: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (config.channelSecret) {
+    webhookHeaders["x-synapse-channel-secret"] = config.channelSecret;
+  }
+
   const payload = {
     webhook: {
-      enabled: true,
       url: config.webhookUrl,
       byEvents: false,
       base64: true,
+      headers: webhookHeaders,
       events: WEBHOOK_EVENTS,
     },
   };
