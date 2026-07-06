@@ -154,6 +154,15 @@ const isOwnConversation = (conversation: WAConversation, settings?: WhatsAppSett
 const getConversationContactLine = (conversation: WAConversation) =>
   isGroupConversation(conversation) ? "Grupo do WhatsApp" : formatRemoteJid(conversation.patient_phone, conversation.remote_jid);
 
+const truncateConversationPreview = (value?: string | null) => {
+  const normalized = String(value || "").replace(/\s+/g, " ").trim();
+  if (!normalized) return "Sem prévia sincronizada";
+  const words = normalized.split(" ").filter(Boolean);
+  const short = words.slice(0, 5).join(" ");
+  const clipped = short.length > 42 ? `${short.slice(0, 42).trim()}...` : short;
+  return words.length > 5 || normalized.length > clipped.length ? `${clipped.replace(/\.+$/, "")}...` : clipped;
+};
+
 const getWhatsAppWebUrl = (conversation: WAConversation) => {
   const digits = phoneDigitsFrom(conversation.patient_phone, conversation.remote_jid);
   if (!digits) return "";
@@ -454,7 +463,7 @@ export default function NeuroZap() {
     if (!selectedConversation.last_message_preview) return;
     if (autoSyncRequestsRef.current.has(selectedConversation.id)) return;
     autoSyncRequestsRef.current.add(selectedConversation.id);
-    whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid });
+    whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid, silent: true });
   }, [
     isLoadingMessages,
     messages.length,
@@ -470,7 +479,7 @@ export default function NeuroZap() {
     setSelectedConversation(conversation);
     setShowMobileChat(true);
     if (conversation.unread_count > 0) whatsapp.markAsRead.mutate(conversation.id);
-    whatsapp.syncMessages.mutate({ remoteJid: conversation.remote_jid });
+    whatsapp.syncMessages.mutate({ remoteJid: conversation.remote_jid, silent: true });
   };
 
   const handleSend = () => {
@@ -731,9 +740,9 @@ export default function NeuroZap() {
                 </div>
               </div>
             ) : (
-              <div className="flex h-full min-h-[calc(100dvh-12rem)] items-center justify-center p-8">
-                <div className="max-w-md text-center">
-                  <div className="group/gate relative mx-auto">
+              <div className="flex h-full min-h-[calc(100dvh-12rem)] w-full items-center justify-center p-8">
+                <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
+                  <div className="group/gate relative flex w-full justify-center">
                     <div className="relative z-10 flex h-32 w-32 items-center justify-center overflow-hidden rounded-[52px] border border-white/[0.05] bg-black/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.22)] backdrop-blur-3xl transition-transform duration-500 group-hover/gate:scale-[1.03] [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-950/[0.84] [.light_&]:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)]">
                       <div className="absolute inset-0 notes-retina-texture opacity-[0.4] pointer-events-none [.light_&]:opacity-[0.2]" />
                       <img src={WHATSAPP_BUSINESS_LOGO} alt="" className="h-16 w-16 object-contain transition-all duration-700 group-hover/gate:scale-110" />
@@ -783,7 +792,7 @@ function ConversationRow({
   const isGroup = isGroupConversation(conversation);
   const name = isPsychologist ? "Você e Synapse" : formatDisplayName(conversation.patient_name, conversation.patient_phone);
   const contactLine = getConversationContactLine(conversation);
-  const preview = conversation.last_message_preview || "Sem prévia sincronizada";
+  const preview = truncateConversationPreview(conversation.last_message_preview);
   const badge = isPsychologist ? "Você" : isGroup ? "Grupo" : "Paciente";
   if (compact) {
     return (
@@ -831,22 +840,22 @@ function ConversationRow({
           : "border-white/[0.045] bg-white/[0.018] text-zinc-300 hover:border-white/[0.09] hover:bg-white/[0.045] [.light_&]:border-zinc-200/60 [.light_&]:bg-white/55 [.light_&]:text-zinc-700 [.light_&]:hover:border-zinc-300 [.light_&]:hover:bg-white",
       )}
     >
-      <Avatar className="h-12 w-12 rounded-[18px]">
+      <Avatar className="h-12 w-12 shrink-0 rounded-[18px]">
         {conversation.profile_picture_url ? <AvatarImage src={conversation.profile_picture_url} /> : null}
         <AvatarFallback className="rounded-[18px] text-sm font-black">{isPsychologist ? <UserRound className="h-5 w-5" /> : getInitials(name)}</AvatarFallback>
       </Avatar>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start justify-between gap-2">
-          <p className="truncate text-sm font-black">{name}</p>
+      <div className="min-w-0 flex-1 overflow-hidden">
+        <div className="flex min-w-0 items-start justify-between gap-2">
+          <p className="min-w-0 truncate text-sm font-black">{name}</p>
           <span className={cn("shrink-0 text-[10px] font-bold", selected ? "text-current/60" : "text-zinc-400")}>
             {formatConversationTime(conversation.last_message_at)}
           </span>
         </div>
-        <p className={cn("mt-1 flex min-w-0 items-center gap-1 truncate text-[11px] font-bold", selected ? "text-current/60" : "text-zinc-500 dark:text-zinc-400")}>
+        <p className={cn("mt-1 flex min-w-0 max-w-full items-center gap-1 overflow-hidden text-[11px] font-bold", selected ? "text-current/60" : "text-zinc-500 dark:text-zinc-400")}>
           <Phone className="h-3 w-3 shrink-0" />
-          <span className="min-w-0 truncate">{contactLine}</span>
+          <span className="block min-w-0 truncate">{contactLine}</span>
         </p>
-        <p className={cn("mt-1 max-w-full truncate text-xs font-semibold", selected ? "text-current/65" : "text-zinc-500 dark:text-zinc-400")} title={preview}>
+        <p className={cn("mt-1 block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xs font-semibold", selected ? "text-current/65" : "text-zinc-500 dark:text-zinc-400")} title={conversation.last_message_preview || preview}>
           {preview}
         </p>
         <span className={cn("mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em]", selected ? "bg-white/10 text-current" : "bg-zinc-100 text-zinc-500 dark:bg-white/[0.05]")}>

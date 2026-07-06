@@ -78,6 +78,11 @@ type RefreshStatusOptions = {
   silent?: boolean;
 };
 
+type SyncMessagesPayload = {
+  remoteJid: string;
+  silent?: boolean;
+};
+
 const toIso = (value: unknown) =>
   typeof value === "string" && value ? value : new Date().toISOString();
 
@@ -390,13 +395,17 @@ export function useWhatsAppAgent() {
   });
 
   const syncMessages = useMutation({
-    mutationFn: async ({ remoteJid }: { remoteJid: string }) =>
+    mutationFn: async ({ remoteJid }: SyncMessagesPayload) =>
       invokeEvolution<{ count?: number }>("syncMessages", { remoteJid }),
     onSuccess: () => {
       invalidateConversations();
       invalidateMessages();
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      if (variables?.silent) {
+        console.warn("[NeuroZap] message sync failed", error);
+        return;
+      }
       toast.error(error instanceof Error ? error.message : "Não foi possível atualizar as mensagens.");
     },
   });

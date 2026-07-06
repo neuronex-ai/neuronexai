@@ -26,6 +26,12 @@ type InstanceConfig = RuntimeConfig & {
   psychologistRemoteJid: string | null;
 };
 
+type EvolutionRequestCandidate = {
+  path: string;
+  init?: RequestInit;
+  label?: string;
+};
+
 const WEBHOOK_EVENTS = [
   "QRCODE_UPDATED",
   "CONNECTION_UPDATE",
@@ -80,6 +86,18 @@ const normalizeWebhookBase = (value: string, marker: "webhook" | "webhook-test")
 const buildWebhookUrl = (config: RuntimeConfig, instanceName: string) => {
   const base = config.webhookMode === "production" ? config.productionWebhookBase : config.sandboxWebhookBase;
   return `${base}/${encodeURIComponent(instanceName)}`;
+};
+
+const isManagedWebhookUrl = (value: string, instanceName: string) => {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    if (url.hostname !== "webhook.neuronexai.com.br") return false;
+    const instance = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || "");
+    return instance === instanceName;
+  } catch {
+    return false;
+  }
 };
 
 const getRuntimeConfig = (): RuntimeConfig => {
@@ -394,6 +412,25 @@ const isMissingPrivateCredentialStore = (error: unknown) => {
   return /schema "private"|relation .*neurozap_instance_credentials|neurozap_instance_credentials.*does not exist|Could not find the table/i.test(message);
 };
 
+const readableEvolutionMessage = (value: unknown): string => {
+  if (!value) return "";
+  if (typeof value === "string") return value.trim();
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) return value.map(readableEvolutionMessage).filter(Boolean).join(", ");
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return (
+      readableEvolutionMessage(record.message) ||
+      readableEvolutionMessage(record.error) ||
+      readableEvolutionMessage(record.details) ||
+      readableEvolutionMessage(record.response) ||
+      readableEvolutionMessage(record.data) ||
+      JSON.stringify(record).slice(0, 300)
+    );
+  }
+  return "";
+};
+
 const evolutionFetch = async (
   config: { baseUrl: string; managerApiKey: string },
   apiKey: string,
@@ -416,8 +453,13 @@ const evolutionFetch = async (
     data = { raw: text };
   }
   if (!response.ok) {
-    const message = data?.message || data?.error || data?.response?.message || `WhatsApp Business ${response.status}`;
-    throw new Error(Array.isArray(message) ? message.join(", ") : String(message));
+    const message =
+      readableEvolutionMessage(data?.message) ||
+      readableEvolutionMessage(data?.error) ||
+      readableEvolutionMessage(data?.response?.message) ||
+      readableEvolutionMessage(data) ||
+      `HTTP ${response.status}`;
+    throw new Error(`WhatsApp Business (${response.status}) em ${path}: ${message}`);
   }
   return data;
 };
@@ -434,6 +476,23 @@ const evolutionFetchWithFallback = async (
     if (instanceApiKey === config.managerApiKey) throw error;
     return evolutionFetch(config, config.managerApiKey, path, init);
   }
+};
+
+const evolutionFetchAny = async (
+  config: RuntimeConfig,
+  instanceApiKey: string,
+  candidates: EvolutionRequestCandidate[],
+) => {
+  const errors: string[] = [];
+  for (const candidate of candidates) {
+    try {
+      return await evolutionFetchWithFallback(config, instanceApiKey, candidate.path, candidate.init || {});
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(candidate.label ? `${candidate.label}: ${message}` : message);
+    }
+  }
+  throw new Error(errors.find(Boolean) || "Não foi possível consultar o WhatsApp Business.");
 };
 
 const extractMessageText = (message: any): string => {
@@ -651,13 +710,17 @@ const loadInstanceConfig = async (
     .maybeSingle();
   if (credentialError && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
 
-  const webhookMode: WebhookMode = settings.environment === "production" ? "production" : runtime.webhookMode;
+  const storedEnvironment = safeString(settings.environment);
+  const webhookMode: WebhookMode =
+    storedEnvironment === "production" ? "production" : storedEnvironment === "sandbox" ? "sandbox" : runtime.webhookMode;
+  const expectedWebhookUrl = buildWebhookUrl({ ...runtime, webhookMode }, instanceName);
+  const storedWebhookUrl = safeString(settings.webhook_url);
   return {
     ...runtime,
     webhookMode,
     instanceName,
     instanceApiKey: safeString(credential?.instance_api_key) || runtime.managerApiKey,
-    webhookUrl: safeString(settings.webhook_url) || buildWebhookUrl({ ...runtime, webhookMode }, instanceName),
+    webhookUrl: isManagedWebhookUrl(storedWebhookUrl, instanceName) ? expectedWebhookUrl : storedWebhookUrl || expectedWebhookUrl,
     psychologistRemoteJid: safeString(settings.psychologist_remote_jid) || null,
   };
 };
@@ -751,6 +814,83 @@ const applyWebhook = async (config: InstanceConfig) => {
     body: JSON.stringify(payload),
   });
 };
+
+const applyRuntimeSetup = async (config: InstanceConfig) => {
+  const warnings: string[] = [];
+  let settings: unknown = null;
+  let webhook: unknown = null;
+
+  try {
+    settings = await applyInstanceSettings(config);
+  } catch (error) {
+    warnings.push(error instanceof Error ? error.message : String(error));
+  }
+
+  try {
+    webhook = await applyWebhook(config);
+  } catch (error) {
+    warnings.push(error instanceof Error ? error.message : String(error));
+  }
+
+  return { settings, webhook, warnings };
+};
+
+const postJson = (body: Record<string, unknown>): RequestInit => ({
+  method: "POST",
+  body: JSON.stringify(body),
+});
+
+const findChats = (config: InstanceConfig) =>
+  evolutionFetchAny(config, config.instanceApiKey, [
+    {
+      label: "findChats take",
+      path: `/chat/findChats/${encodeURIComponent(config.instanceName)}`,
+      init: postJson({ where: {}, take: 100, skip: 0, orderBy: { updatedAt: "desc" } }),
+    },
+    {
+      label: "findChats limit",
+      path: `/chat/findChats/${encodeURIComponent(config.instanceName)}`,
+      init: postJson({ where: {}, limit: 100, offset: 0 }),
+    },
+    {
+      label: "findChats get",
+      path: `/chat/findChats/${encodeURIComponent(config.instanceName)}`,
+      init: { method: "GET" },
+    },
+  ]);
+
+const findContacts = (config: InstanceConfig) =>
+  evolutionFetchAny(config, config.instanceApiKey, [
+    {
+      label: "findContacts post",
+      path: `/chat/findContacts/${encodeURIComponent(config.instanceName)}`,
+      init: postJson({ where: {} }),
+    },
+    {
+      label: "findContacts get",
+      path: `/chat/findContacts/${encodeURIComponent(config.instanceName)}`,
+      init: { method: "GET" },
+    },
+  ]);
+
+const findLabels = (config: InstanceConfig) =>
+  evolutionFetchAny(config, config.instanceApiKey, [
+    {
+      label: "findLabels get",
+      path: `/label/findLabels/${encodeURIComponent(config.instanceName)}`,
+      init: { method: "GET" },
+    },
+    {
+      label: "findLabels post",
+      path: `/label/findLabels/${encodeURIComponent(config.instanceName)}`,
+      init: postJson({}),
+    },
+    {
+      label: "chat findLabels",
+      path: `/chat/findLabels/${encodeURIComponent(config.instanceName)}`,
+      init: { method: "GET" },
+    },
+  ]);
 
 const fetchOwnerJid = async (config: InstanceConfig, ...payloads: unknown[]) => {
   const direct = extractOwnerJid(...payloads);
@@ -867,10 +1007,23 @@ const fetchMessagesForRemote = async (
 ) => {
   const collected: any[] = [];
   for (let page = 1; page <= maxPages; page += 1) {
-    const result = await evolutionFetchWithFallback(config, config.instanceApiKey, `/chat/findMessages/${encodeURIComponent(config.instanceName)}`, {
-      method: "POST",
-      body: JSON.stringify({ where: { key: { remoteJid } }, page, offset: pageSize, take: pageSize }),
-    });
+    const result = await evolutionFetchAny(config, config.instanceApiKey, [
+      {
+        label: "findMessages key",
+        path: `/chat/findMessages/${encodeURIComponent(config.instanceName)}`,
+        init: postJson({ where: { key: { remoteJid } }, page, offset: pageSize, take: pageSize }),
+      },
+      {
+        label: "findMessages remote",
+        path: `/chat/findMessages/${encodeURIComponent(config.instanceName)}`,
+        init: postJson({ where: { remoteJid }, page, limit: pageSize, offset: (page - 1) * pageSize }),
+      },
+      {
+        label: "findMessages jid",
+        path: `/chat/findMessages/${encodeURIComponent(config.instanceName)}`,
+        init: postJson({ remoteJid, page, limit: pageSize }),
+      },
+    ]);
     const items = toArray(result);
     collected.push(...items);
     if (items.length < pageSize) break;
@@ -979,15 +1132,14 @@ serve(async (req) => {
 
     if (action === "connect") {
       const config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
-      await applyInstanceSettings(config);
-      const webhook = await applyWebhook(config);
+      const setup = await applyRuntimeSetup(config);
       const connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
       await upsertSettings(supabaseAdmin, user.id, config, {
         webhook_enabled: true,
         webhook_events: WEBHOOK_EVENTS,
         settings_applied_at: new Date().toISOString(),
-        last_error: null,
-        metadata: { webhook, connect: { has_qrcode: Boolean(connection?.base64 || connection?.qrcode || connection?.code || connection?.qrcode?.base64) } },
+        last_error: setup.warnings.length ? setup.warnings.slice(0, 2).join(" | ") : null,
+        metadata: { setup, connect: { has_qrcode: Boolean(connection?.base64 || connection?.qrcode || connection?.code || connection?.qrcode?.base64) } },
       });
       return json({
         ok: true,
@@ -1070,16 +1222,11 @@ serve(async (req) => {
     }
 
     if (action === "syncConversations") {
+      const setup = await applyRuntimeSetup(loadedConfig);
       const [result, contactsResult, labelsResult] = await Promise.all([
-        evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/chat/findChats/${encodeURIComponent(loadedConfig.instanceName)}`, {
-          method: "POST",
-          body: JSON.stringify({ where: {}, take: 100, skip: 0, orderBy: { updatedAt: "desc" } }),
-        }),
-        evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/chat/findContacts/${encodeURIComponent(loadedConfig.instanceName)}`, {
-          method: "POST",
-          body: JSON.stringify({ where: {} }),
-        }).catch((error) => ({ error: error.message, data: [] })),
-        evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/label/findLabels/${encodeURIComponent(loadedConfig.instanceName)}`)
+        findChats(loadedConfig),
+        findContacts(loadedConfig).catch((error) => ({ error: error.message, data: [] })),
+        findLabels(loadedConfig)
           .catch((error) => ({ error: error.message, data: [] })),
       ]);
       const contacts = toArray(contactsResult);
@@ -1123,6 +1270,7 @@ serve(async (req) => {
             labels: labelIndex.size,
             messages: syncedMessages,
             synced_at: new Date().toISOString(),
+            setup_warnings: setup.warnings,
           },
         },
       });
