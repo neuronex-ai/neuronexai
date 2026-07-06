@@ -27,7 +27,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import { AppModalShell } from "@/components/ui/app-modal-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -45,7 +45,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MediaMessage } from "@/components/whatsapp/MediaMessage";
-import { useWhatsAppAgent, WAConversation, WAMessage, WhatsAppSettings } from "@/hooks/use-whatsapp-agent";
+import { useWhatsAppAgent, WAConversation, WAMessage, WhatsAppConnectResponse, WhatsAppSettings } from "@/hooks/use-whatsapp-agent";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -159,7 +159,7 @@ const truncateConversationPreview = (value?: string | null) => {
   if (!normalized) return "Sem prévia sincronizada";
   const words = normalized.split(" ").filter(Boolean);
   const short = words.slice(0, 5).join(" ");
-  const clipped = short.length > 42 ? `${short.slice(0, 42).trim()}...` : short;
+  const clipped = short.length > 34 ? `${short.slice(0, 34).trim()}...` : short;
   return words.length > 5 || normalized.length > clipped.length ? `${clipped.replace(/\.+$/, "")}...` : clipped;
 };
 
@@ -191,17 +191,21 @@ const formatMessageDate = (date: Date) => {
   return format(date, "d 'de' MMMM", { locale: ptBR });
 };
 
+const disconnectedStates = ["close", "closed", "disconnected", "logout", "logged_out", "removed", "not_found", "invalid", "deleted"];
+const pendingStates = ["created", "connecting", "qr", "qrcode", "pairing", "pending", "connecting_qr"];
+
 const connectedStatus = (settings?: WhatsAppSettings | null) => {
   const state = String(settings?.connection_state || "").toLowerCase();
   if (["open", "connected"].includes(state)) return true;
-  if (["close", "closed", "disconnected", "logout", "logged_out"].includes(state)) return false;
+  if (disconnectedStates.includes(state)) return false;
   return Boolean(settings?.is_active && settings?.instance_name);
 };
 
 const connectionState = (settings?: WhatsAppSettings | null) => {
   if (!settings?.instance_name) return "idle";
   if (connectedStatus(settings)) return "connected";
-  if (settings.connection_state && !["close", "closed", "disconnected", "logout", "logged_out"].includes(settings.connection_state.toLowerCase())) return "pending";
+  const state = settings.connection_state?.toLowerCase();
+  if (state && (pendingStates.includes(state) || !disconnectedStates.includes(state))) return "pending";
   return "disconnected";
 };
 
@@ -253,6 +257,37 @@ const groupMessages = (messages: WAMessage[] = []) =>
 
 const infoCopy =
   "Conectar este WhatsApp Business permite que o Synapse responda pacientes, envie lembretes, apoie cobranças e mantenha uma conversa operacional com você. Recomendamos usar um chip exclusivo para o consultório, não o seu número pessoal. Você continua podendo intervir, assumir conversas e pausar o uso quando precisar.";
+
+type ConnectionStep = "intro" | "qr" | "connected";
+
+const normalizeConnectionQr = (connection: WhatsAppConnectResponse["connection"] | undefined) => {
+  const node = connection as Record<string, any> | undefined;
+  const qr =
+    typeof node?.qr === "string"
+      ? node.qr
+      : typeof node?.base64 === "string"
+        ? node.base64
+        : typeof node?.qrcode?.base64 === "string"
+          ? node.qrcode.base64
+          : typeof node?.qrcode === "string"
+            ? node.qrcode
+            : typeof node?.code === "string"
+              ? node.code
+              : typeof node?.pairingCode === "string"
+                ? node.pairingCode
+                : null;
+
+  const qrImageSrc =
+    typeof node?.qrImageSrc === "string"
+      ? node.qrImageSrc
+      : qr?.startsWith("data:")
+        ? qr
+        : qr && qr.length > 120 && !/^https?:\/\//i.test(qr)
+          ? `data:image/png;base64,${qr}`
+          : null;
+
+  return { qr, qrImageSrc };
+};
 
 type ConnectionDialogProps = {
   open: boolean;
