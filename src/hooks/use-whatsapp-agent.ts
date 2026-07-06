@@ -104,6 +104,11 @@ const invokeEvolution = async <T>(action: string, body: Record<string, unknown> 
     body: { action, ...body },
   });
   if (error) throw new Error(await readEdgeErrorMessage(error, response));
+  const result = data as { ok?: boolean; error?: unknown; message?: unknown } | null;
+  if (result?.ok === false || typeof result?.error === "string") {
+    const message = typeof result.error === "string" ? result.error : result.message;
+    throw new Error(typeof message === "string" && message.trim() ? message.trim() : "N\u00e3o foi poss\u00edvel concluir a a\u00e7\u00e3o no WhatsApp Business.");
+  }
   return data as T;
 };
 

@@ -872,7 +872,7 @@ serve(async (req) => {
     const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
     const action = safeString(body.action) as Action;
 
-    if (!action) return json({ error: "Action obrigat\u00f3ria." }, 400);
+    if (!action) return json({ ok: false, error: "Action obrigat\u00f3ria." });
 
     if (action === "connect") {
       const config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
@@ -1022,7 +1022,7 @@ serve(async (req) => {
 
     if (action === "syncMessages") {
       const remoteJid = safeString(body.remoteJid);
-      if (!remoteJid) return json({ error: "remoteJid obrigat\u00f3rio." }, 400);
+      if (!remoteJid) return json({ ok: false, error: "remoteJid obrigat\u00f3rio." });
       const upserted = await syncMessagesForRemote(supabaseAdmin, user.id, loadedConfig, remoteJid, 5, 200);
       return json({ ok: true, count: upserted });
     }
@@ -1031,7 +1031,7 @@ serve(async (req) => {
       const remoteJid = safeString(body.remoteJid);
       const text = safeString(body.text);
       const conversationId = safeString(body.conversationId);
-      if (!remoteJid || !text) return json({ error: "remoteJid e text s\u00e3o obrigat\u00f3rios." }, 400);
+      if (!remoteJid || !text) return json({ ok: false, error: "remoteJid e text s\u00e3o obrigat\u00f3rios." });
 
       const sent = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/message/sendText/${encodeURIComponent(loadedConfig.instanceName)}`, {
         method: "POST",
@@ -1078,9 +1078,9 @@ serve(async (req) => {
       return json({ ok: true, success: true, sent });
     }
 
-    return json({ error: `Action n\u00e3o suportada: ${action}` }, 400);
+    return json({ ok: false, error: `Action n\u00e3o suportada: ${action}` });
   } catch (error) {
     console.error("[neurozap-evolution]", error);
-    return json({ error: error instanceof Error ? error.message : "Erro interno." }, 500);
+    return json({ ok: false, error: error instanceof Error ? error.message : "Erro interno." });
   }
 });
