@@ -15,7 +15,9 @@ export const Layout = ({ children }: LayoutProps) => {
   const location = useLocation();
   const hasFullBleedDesktopShell =
     !isMobile &&
-    (location.pathname === "/dashboard" || location.pathname.startsWith("/notas"));
+    (location.pathname === "/dashboard" ||
+      location.pathname === "/neurozap" ||
+      location.pathname.startsWith("/notas"));
 
   return (
     <div className={cn(

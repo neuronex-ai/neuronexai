@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "status" | "connect" | "syncConversations" | "syncMessages" | "sendText";
+type Action = "status" | "connect" | "logout" | "syncConversations" | "syncMessages" | "sendText";
 type WebhookMode = "sandbox" | "production";
 type ConversationKind = "patient" | "psychologist";
 type SenderKind = "patient" | "psychologist" | "synapse" | "professional" | "system";
@@ -29,11 +29,18 @@ type InstanceConfig = RuntimeConfig & {
 const WEBHOOK_EVENTS = [
   "QRCODE_UPDATED",
   "CONNECTION_UPDATE",
+  "MESSAGES_SET",
   "MESSAGES_UPSERT",
   "MESSAGES_UPDATE",
   "SEND_MESSAGE",
+  "CHATS_SET",
   "CHATS_UPSERT",
+  "CHATS_UPDATE",
+  "CONTACTS_SET",
   "CONTACTS_UPSERT",
+  "CONTACTS_UPDATE",
+  "LABELS_EDIT",
+  "LABELS_ASSOCIATION",
 ];
 
 const INSTANCE_SETTINGS = {
@@ -93,7 +100,7 @@ const getRuntimeConfig = (): RuntimeConfig => {
   );
 
   if (!baseUrl || !(managerApiKey || legacyInstanceKey)) {
-    throw new Error("Configuração do WhatsApp Business ausente. Defina EVOLUTION_API_URL e EVOLUTION_GLOBAL_API_KEY.");
+    throw new Error("Configura\u00e7\u00e3o do WhatsApp Business ausente. Defina EVOLUTION_API_URL e EVOLUTION_GLOBAL_API_KEY.");
   }
 
   return {
@@ -451,7 +458,7 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
     conversation_kind: kind,
     patient_name:
       kind === "psychologist"
-        ? "Você e Synapse"
+        ? "Voc\u00ea e Synapse"
         : safeString(chat?.name) ||
           safeString(chat?.pushName) ||
           safeString(contact?.pushName) ||
@@ -514,7 +521,7 @@ const getUser = async (req: Request, supabaseUrl: string, anonKey: string) => {
     auth: { persistSession: false },
   });
   const { data, error } = await userClient.auth.getUser();
-  if (error || !data.user) throw new Error("Usuário não autenticado.");
+  if (error || !data.user) throw new Error("Usu\u00e1rio n\u00e3o autenticado.");
   return data.user;
 };
 
@@ -751,7 +758,7 @@ const ensureSynapseSession = async (
   const phone = remoteJidToPhone(remoteJid);
   const title =
     conversationKind === "psychologist"
-      ? "WhatsApp Business - Você e Synapse"
+      ? "WhatsApp Business - Voc\u00ea e Synapse"
       : `WhatsApp Business - ${displayName || phone || "Paciente"}`.slice(0, 180);
   const { data: created, error: createError } = await supabaseAdmin
     .from("chat_sessions")
@@ -780,7 +787,7 @@ const upsertConversation = async (
   patch: Record<string, unknown> = {},
 ) => {
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
-  const displayName = kind === "psychologist" ? "Você e Synapse" : safeString(patch.patient_name) || null;
+  const displayName = kind === "psychologist" ? "Voc\u00ea e Synapse" : safeString(patch.patient_name) || null;
   const sessionId = await ensureSynapseSession(supabaseAdmin, userId, remoteJid, kind, displayName);
   const { data, error } = await supabaseAdmin
     .from("whatsapp_conversations")
@@ -857,7 +864,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("Configuração Supabase ausente.");
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("Configura\u00e7\u00e3o Supabase ausente.");
 
     const user = await getUser(req, supabaseUrl, anonKey);
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
@@ -865,7 +872,7 @@ serve(async (req) => {
     const body = req.method === "GET" ? {} : await req.json().catch(() => ({}));
     const action = safeString(body.action) as Action;
 
-    if (!action) return json({ error: "Action obrigatoria." }, 400);
+    if (!action) return json({ error: "Action obrigat\u00f3ria." }, 400);
 
     if (action === "connect") {
       const config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
@@ -892,7 +899,40 @@ serve(async (req) => {
       return json({
         ok: false,
         connected: false,
-        message: "WhatsApp Business ainda não conectado.",
+        message: "WhatsApp Business ainda n\u00e3o conectado.",
+      });
+    }
+
+    if (action === "logout") {
+      const logout = await evolutionFetchWithFallback(
+        loadedConfig,
+        loadedConfig.instanceApiKey,
+        `/instance/logout/${encodeURIComponent(loadedConfig.instanceName)}`,
+        { method: "DELETE" },
+      ).catch(async (error) => {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!/method|404|not found/i.test(message)) throw error;
+        return evolutionFetchWithFallback(
+          loadedConfig,
+          loadedConfig.instanceApiKey,
+          `/instance/logout/${encodeURIComponent(loadedConfig.instanceName)}`,
+        );
+      });
+
+      await updateConnectionState(
+        supabaseAdmin,
+        user.id,
+        loadedConfig,
+        "closed",
+        loadedConfig.psychologistRemoteJid,
+        { logout },
+      );
+
+      return json({
+        ok: true,
+        connected: false,
+        instanceName: loadedConfig.instanceName,
+        logout,
       });
     }
 
@@ -982,7 +1022,7 @@ serve(async (req) => {
 
     if (action === "syncMessages") {
       const remoteJid = safeString(body.remoteJid);
-      if (!remoteJid) return json({ error: "remoteJid obrigatório." }, 400);
+      if (!remoteJid) return json({ error: "remoteJid obrigat\u00f3rio." }, 400);
       const upserted = await syncMessagesForRemote(supabaseAdmin, user.id, loadedConfig, remoteJid, 5, 200);
       return json({ ok: true, count: upserted });
     }
@@ -991,7 +1031,7 @@ serve(async (req) => {
       const remoteJid = safeString(body.remoteJid);
       const text = safeString(body.text);
       const conversationId = safeString(body.conversationId);
-      if (!remoteJid || !text) return json({ error: "remoteJid e text são obrigatórios." }, 400);
+      if (!remoteJid || !text) return json({ error: "remoteJid e text s\u00e3o obrigat\u00f3rios." }, 400);
 
       const sent = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/message/sendText/${encodeURIComponent(loadedConfig.instanceName)}`, {
         method: "POST",
@@ -1038,7 +1078,7 @@ serve(async (req) => {
       return json({ ok: true, success: true, sent });
     }
 
-    return json({ error: `Action não suportada: ${action}` }, 400);
+    return json({ error: `Action n\u00e3o suportada: ${action}` }, 400);
   } catch (error) {
     console.error("[neurozap-evolution]", error);
     return json({ error: error instanceof Error ? error.message : "Erro interno." }, 500);

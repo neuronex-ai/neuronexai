@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -147,8 +148,84 @@ export function useWhatsAppAgent() {
     void queryClient.invalidateQueries({ queryKey: ["whatsapp-conversations"] });
   };
 
-  const invalidateMessages = (conversationId?: string) => {
-    void queryClient.invalidateQueries({ queryKey: ["whatsapp-messages", conversationId] });
+  const invalidateMessages = (conversationId?: string | null) => {
+    void queryClient.invalidateQueries({
+      queryKey: conversationId ? ["whatsapp-messages", conversationId] : ["whatsapp-messages"],
+    });
+  };
+
+  const useRealtime = (activeConversationId?: string | null) => {
+    useEffect(() => {
+      let cancelled = false;
+      let fallbackTimer: ReturnType<typeof setInterval> | undefined;
+      let channel: ReturnType<typeof supabase.channel> | undefined;
+
+      const refreshActiveData = () => {
+        invalidateSettings();
+        invalidateConversations();
+        invalidateMessages(activeConversationId);
+      };
+
+      const startFallbackPolling = () => {
+        if (fallbackTimer) return;
+        fallbackTimer = setInterval(refreshActiveData, 15000);
+      };
+
+      const stopFallbackPolling = () => {
+        if (!fallbackTimer) return;
+        clearInterval(fallbackTimer);
+        fallbackTimer = undefined;
+      };
+
+      supabase.auth
+        .getUser()
+        .then(({ data }) => {
+          const userId = data.user?.id;
+          if (cancelled || !userId) return;
+
+          channel = supabase
+            .channel(`neurozap:${userId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
+            .on(
+              "postgres_changes",
+              { event: "*", schema: "public", table: "whatsapp_settings", filter: `user_id=eq.${userId}` },
+              () => invalidateSettings(),
+            )
+            .on(
+              "postgres_changes",
+              { event: "*", schema: "public", table: "whatsapp_conversations", filter: `user_id=eq.${userId}` },
+              () => {
+                invalidateConversations();
+                invalidateMessages(activeConversationId);
+              },
+            )
+            .on(
+              "postgres_changes",
+              { event: "*", schema: "public", table: "whatsapp_messages", filter: `user_id=eq.${userId}` },
+              () => {
+                invalidateConversations();
+                invalidateMessages(activeConversationId);
+              },
+            )
+            .subscribe((status) => {
+              if (status === "SUBSCRIBED") {
+                stopFallbackPolling();
+                refreshActiveData();
+              }
+              if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+                startFallbackPolling();
+              }
+            });
+        })
+        .catch(() => startFallbackPolling());
+
+      return () => {
+        cancelled = true;
+        stopFallbackPolling();
+        if (channel) supabase.removeChannel(channel);
+      };
+      // queryClient is stable; the invalidate helpers intentionally reuse the latest query keys.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [activeConversationId]);
   };
 
   const useSettings = () =>
@@ -208,17 +285,32 @@ export function useWhatsAppAgent() {
       const qr =
         typeof data?.connection?.base64 === "string"
           ? data.connection.base64
-          : typeof data?.connection?.qrcode === "string"
-            ? data.connection.qrcode
-            : typeof data?.connection?.code === "string"
-              ? data.connection.code
-              : null;
+          : typeof data?.connection?.qrcode?.base64 === "string"
+            ? data.connection.qrcode.base64
+            : typeof data?.connection?.qrcode === "string"
+              ? data.connection.qrcode
+              : typeof data?.connection?.code === "string"
+                ? data.connection.code
+                : null;
       if (qr && /^https?:\/\//.test(qr)) window.open(qr, "_blank", "noopener,noreferrer");
-      toast.success("Conexao do WhatsApp Business iniciada.");
+      toast.success("Conexão do WhatsApp Business iniciada.");
       invalidateSettings();
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Não foi possível iniciar a conexão.");
+    },
+  });
+
+  const disconnect = useMutation({
+    mutationFn: async () => invokeEvolution("logout"),
+    onSuccess: () => {
+      invalidateSettings();
+      invalidateConversations();
+      invalidateMessages();
+      toast.success("WhatsApp Business desconectado.");
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Não foi possível desconectar o WhatsApp Business.");
     },
   });
 
@@ -269,6 +361,7 @@ export function useWhatsAppAgent() {
       invokeEvolution<{ count?: number }>("syncMessages", { remoteJid }),
     onSuccess: () => {
       invalidateConversations();
+      invalidateMessages();
     },
     onError: (error) => {
       toast.error(error instanceof Error ? error.message : "Não foi possível atualizar as mensagens.");
@@ -293,8 +386,10 @@ export function useWhatsAppAgent() {
     useSettings,
     useConversations,
     useMessages,
+    useRealtime,
     refreshStatus,
     connect,
+    disconnect,
     sendMessage,
     simulateInbound,
     fullSync,

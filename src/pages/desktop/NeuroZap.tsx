@@ -4,9 +4,13 @@ import {
   ArrowLeft,
   Check,
   CheckCheck,
+  CheckCircle2,
   Clock,
+  Copy,
+  ExternalLink,
   Info,
   Loader2,
+  LogOut,
   MessageCircle,
   MessageSquare,
   MoreHorizontal,
@@ -27,6 +31,13 @@ import { AppModalShell } from "@/components/ui/app-modal-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
@@ -34,6 +45,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { MediaMessage } from "@/components/whatsapp/MediaMessage";
 import { useWhatsAppAgent, WAConversation, WAMessage, WhatsAppSettings } from "@/hooks/use-whatsapp-agent";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const formatDisplayName = (patientName: string | null | undefined, patientPhone: string | null | undefined) => {
   if (
@@ -62,6 +74,58 @@ const formatDisplayName = (patientName: string | null | undefined, patientPhone:
   }
   if (digits.length >= 10) return digits.replace(/(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3");
   return cleanPhone || "Contato";
+};
+
+const shortIdentifier = (value: string) => {
+  const clean = value.replace(/@.*$/, "").trim();
+  if (!clean) return "Contato";
+  if (clean.length <= 14) return clean;
+  return `ID ${clean.slice(0, 6)}...${clean.slice(-4)}`;
+};
+
+const phoneDigitsFrom = (...values: Array<string | null | undefined>) => {
+  for (const value of values) {
+    const raw = (value || "").trim();
+    if (!raw) continue;
+    const normalized = raw
+      .replace("@s.whatsapp.net", "")
+      .replace("@c.us", "")
+      .replace("@g.us", "");
+    const looksLikePhone =
+      raw.includes("@s.whatsapp.net") ||
+      raw.includes("@c.us") ||
+      /^[+\d\s().-]+$/.test(normalized);
+    if (!looksLikePhone) continue;
+    const digits = normalized.replace(/\D/g, "");
+    if (digits.length >= 8) return digits;
+  }
+  return "";
+};
+
+const formatPhoneDigits = (digits: string) => {
+  if (!digits) return "";
+  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
+  if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
+  if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
+  if (local.length === 9) return `${local.slice(0, 5)}-${local.slice(5)}`;
+  if (local.length === 8) return `${local.slice(0, 4)}-${local.slice(4)}`;
+  return digits;
+};
+
+const formatRemoteJid = (...values: Array<string | null | undefined>) => {
+  const digits = phoneDigitsFrom(...values);
+  if (digits) return formatPhoneDigits(digits);
+  return shortIdentifier(values.find(Boolean) || "");
+};
+
+const getConversationContactLine = (conversation: WAConversation) =>
+  formatRemoteJid(conversation.patient_phone, conversation.remote_jid);
+
+const getWhatsAppWebUrl = (conversation: WAConversation) => {
+  const digits = phoneDigitsFrom(conversation.patient_phone, conversation.remote_jid);
+  if (!digits) return "";
+  const normalized = digits.startsWith("55") ? digits : `55${digits}`;
+  return `https://wa.me/${normalized}`;
 };
 
 const getInitials = (name: string) => {
@@ -123,16 +187,6 @@ const ConnectionDot = ({ settings, loading, className }: { settings?: WhatsAppSe
       aria-label={statusLabel(settings)}
       role="img"
     />
-  );
-};
-
-const CompactConnectionState = ({ settings, loading }: { settings?: WhatsAppSettings | null; loading?: boolean }) => {
-  const connected = connectedStatus(settings);
-  return (
-    <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
-      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ConnectionDot settings={settings} />}
-      {connected ? "Ativo" : statusLabel(settings)}
-    </div>
   );
 };
 
@@ -259,8 +313,7 @@ function ConnectionDialog({
           <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.12] dark:opacity-[0.18]" />
           <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-xl">
-              <CompactConnectionState settings={settings} loading={loading || refreshStatus.isPending} />
-              <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">
+              <h3 className="text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">
                 {connected ? "WhatsApp Business conectado" : "Aguardando conexão"}
               </h3>
               <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-500">
@@ -319,13 +372,20 @@ export default function NeuroZap() {
   const { data: settings, isLoading: isLoadingSettings } = whatsapp.useSettings();
   const { data: conversations = [], isLoading: isLoadingConversations } = whatsapp.useConversations();
   const { data: messages = [], isLoading: isLoadingMessages } = whatsapp.useMessages(selectedConversation?.id);
+  whatsapp.useRealtime(selectedConversation?.id);
 
   const filteredConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
     if (!query) return conversations;
     return conversations.filter((conversation) => {
       const name = formatDisplayName(conversation.patient_name, conversation.patient_phone).toLowerCase();
-      return name.includes(query) || conversation.patient_phone.includes(query) || conversation.remote_jid.includes(query);
+      const contactLine = getConversationContactLine(conversation).toLowerCase();
+      return (
+        name.includes(query) ||
+        contactLine.includes(query) ||
+        conversation.patient_phone.toLowerCase().includes(query) ||
+        conversation.remote_jid.toLowerCase().includes(query)
+      );
     });
   }, [conversations, searchQuery]);
 
@@ -412,6 +472,25 @@ export default function NeuroZap() {
                 <SlidersHorizontal className="mr-2 h-4 w-4" />
                 Conectar
               </Button>
+              {connected || connectionState(settings) === "pending" ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-11 w-11 rounded-[16px] border-white/[0.06] bg-white/[0.035] text-zinc-300 hover:bg-white/[0.08] hover:text-white [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75 [.light_&]:text-zinc-700 [.light_&]:hover:bg-zinc-100 [.light_&]:hover:text-zinc-950"
+                        onClick={() => whatsapp.disconnect.mutate()}
+                        disabled={whatsapp.disconnect.isPending}
+                        aria-label="Desconectar WhatsApp Business"
+                      >
+                        {whatsapp.disconnect.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Desconectar</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
             </div>
           </div>
         </header>
@@ -472,6 +551,7 @@ export default function NeuroZap() {
                     setShowMobileChat(false);
                   }}
                   onSync={() => whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid })}
+                  onMarkAsRead={() => whatsapp.markAsRead.mutate(selectedConversation.id)}
                 />
 
                 <ScrollArea className="notes-scroll-surface min-h-0 flex-1 bg-transparent px-3 py-5 sm:px-6">
@@ -575,6 +655,7 @@ function ConversationRow({
 }) {
   const name = formatDisplayName(conversation.patient_name, conversation.patient_phone);
   const isPsychologist = conversation.conversation_kind === "psychologist";
+  const contactLine = getConversationContactLine(conversation);
   return (
     <button
       type="button"
@@ -598,7 +679,7 @@ function ConversationRow({
           </span>
         </div>
         <p className={cn("mt-1 truncate text-xs font-semibold", selected ? "text-current/65" : "text-zinc-500 dark:text-zinc-400")}>
-          {conversation.last_message_preview || conversation.patient_phone}
+          {conversation.last_message_preview || contactLine}
         </p>
         <span className={cn("mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em]", selected ? "bg-white/10 text-current" : "bg-zinc-100 text-zinc-500 dark:bg-white/[0.05]")}>
           {isPsychologist ? "Você e Synapse" : "Paciente"}
@@ -618,14 +699,29 @@ function ChatHeader({
   syncing,
   onBack,
   onSync,
+  onMarkAsRead,
 }: {
   conversation: WAConversation;
   syncing: boolean;
   onBack: () => void;
   onSync: () => void;
+  onMarkAsRead: () => void;
 }) {
   const name = formatDisplayName(conversation.patient_name, conversation.patient_phone);
   const isPsychologist = conversation.conversation_kind === "psychologist";
+  const contactLine = getConversationContactLine(conversation);
+  const whatsappWebUrl = getWhatsAppWebUrl(conversation);
+  const hasPhoneNumber = Boolean(phoneDigitsFrom(conversation.patient_phone, conversation.remote_jid));
+  const copyText = async (value: string, label: string) => {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      toast.success(`${label} copiado.`);
+    } catch {
+      toast.error("N\u00e3o foi poss\u00edvel copiar.");
+    }
+  };
+
   return (
     <div className="notes-retina-rail flex items-center justify-between gap-3 border-b px-3 py-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -646,7 +742,7 @@ function ChatHeader({
           </div>
           <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
             <Phone className="h-3 w-3" />
-            {conversation.patient_phone.replace("@s.whatsapp.net", "").replace(/@.*$/, "")}
+            {contactLine}
           </p>
         </div>
       </div>
@@ -662,9 +758,50 @@ function ChatHeader({
             <TooltipContent>Atualizar conversa</TooltipContent>
           </Tooltip>
         </TooltipProvider>
-        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[16px]" aria-label="Mais opcoes">
-          <MoreHorizontal className="h-5 w-5" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[16px]" aria-label="Mais opções">
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-60 rounded-2xl border-white/[0.08] bg-zinc-950/95 p-2 text-zinc-100 shadow-2xl backdrop-blur-xl [.light_&]:border-zinc-200 [.light_&]:bg-white [.light_&]:text-zinc-950"
+          >
+            <DropdownMenuItem className="rounded-xl" onClick={onSync}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Atualizar conversa
+            </DropdownMenuItem>
+            <DropdownMenuItem className="rounded-xl" onClick={onMarkAsRead}>
+              <CheckCircle2 className="mr-2 h-4 w-4" />
+              Marcar como lida
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/[0.08] [.light_&]:bg-zinc-200" />
+            <DropdownMenuItem className="rounded-xl" disabled={!hasPhoneNumber} onClick={() => copyText(contactLine, "Número")}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copiar número
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="rounded-xl"
+              disabled={!whatsappWebUrl}
+              onClick={() => {
+                if (!whatsappWebUrl) {
+                  toast.error("Número indisponível para abrir no WhatsApp Web.");
+                  return;
+                }
+                window.open(whatsappWebUrl, "_blank", "noopener,noreferrer");
+              }}
+            >
+              <ExternalLink className="mr-2 h-4 w-4" />
+              Abrir no WhatsApp
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-white/[0.08] [.light_&]:bg-zinc-200" />
+            <DropdownMenuItem className="rounded-xl" onClick={() => copyText(conversation.remote_jid, "Identificador")}>
+              <Copy className="mr-2 h-4 w-4" />
+              Copiar ID técnico
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   );
