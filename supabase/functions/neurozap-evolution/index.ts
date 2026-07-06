@@ -853,14 +853,7 @@ const loadInstanceConfig = async (
   const instanceName = safeString(settings?.instance_name);
   if (!instanceName) return null;
 
-  const { data: credential, error: credentialError } = await supabaseAdmin
-    .schema("private")
-    .from("neurozap_instance_credentials")
-    .select("instance_api_key")
-    .eq("user_id", userId)
-    .eq("instance_name", instanceName)
-    .maybeSingle();
-  if (credentialError && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
+  const instanceApiKey = await loadPrivateCredential(supabaseAdmin, userId, instanceName);
 
   const storedEnvironment = safeString(settings.environment);
   const webhookMode: WebhookMode =
@@ -871,7 +864,7 @@ const loadInstanceConfig = async (
     ...runtime,
     webhookMode,
     instanceName,
-    instanceApiKey: safeString(credential?.instance_api_key) || runtime.managerApiKey,
+    instanceApiKey: instanceApiKey || runtime.managerApiKey,
     webhookUrl: isManagedWebhookUrl(storedWebhookUrl, instanceName) ? expectedWebhookUrl : storedWebhookUrl || expectedWebhookUrl,
     psychologistRemoteJid: safeString(settings.psychologist_remote_jid) || null,
   };
