@@ -16,6 +16,9 @@ export type WAConversation = {
   patient_phone: string;
   conversation_kind?: "patient" | "psychologist";
   synapse_session_id?: string | null;
+  contact_type?: "person" | "group";
+  is_group?: boolean;
+  deleted_at?: string | null;
   profile_picture_url?: string | null;
   last_message_preview?: string | null;
   last_message_at: string;
@@ -71,6 +74,10 @@ type SimulateInboundPayload = {
   content: string;
 };
 
+type RefreshStatusOptions = {
+  silent?: boolean;
+};
+
 const toIso = (value: unknown) =>
   typeof value === "string" && value ? value : new Date().toISOString();
 
@@ -120,6 +127,9 @@ const mapConversation = (row: Record<string, any>): WAConversation => ({
   patient_phone: String(row.patient_phone || row.contact_phone || row.remote_jid || ""),
   conversation_kind: row.conversation_kind === "psychologist" ? "psychologist" : "patient",
   synapse_session_id: row.synapse_session_id ?? null,
+  contact_type: row.contact_type === "group" || row.is_group ? "group" : "person",
+  is_group: Boolean(row.is_group || row.contact_type === "group" || String(row.remote_jid || "").includes("@g.us")),
+  deleted_at: row.deleted_at ?? null,
   profile_picture_url: row.profile_picture_url ?? row.avatar_url ?? null,
   last_message_preview: row.last_message_preview ?? row.last_message ?? null,
   last_message_at: toIso(row.last_message_at || row.updated_at || row.created_at),
@@ -253,6 +263,7 @@ export function useWhatsAppAgent() {
         const { data, error } = await supabase
           .from("whatsapp_conversations")
           .select("*")
+          .is("deleted_at", null)
           .order("last_message_at", { ascending: false });
 
         if (error) throw error;
@@ -260,15 +271,28 @@ export function useWhatsAppAgent() {
       },
     });
 
-  const useMessages = (conversationId?: string) =>
+  const useMessages = (conversationId?: string, remoteJid?: string) =>
     useQuery<WAMessage[]>({
-      queryKey: ["whatsapp-messages", conversationId],
-      enabled: Boolean(conversationId),
+      queryKey: ["whatsapp-messages", conversationId, remoteJid],
+      enabled: Boolean(conversationId || remoteJid),
       queryFn: async () => {
+        if (conversationId) {
+          const { data, error } = await supabase
+            .from("whatsapp_messages")
+            .select("*")
+            .eq("conversation_id", conversationId)
+            .order("created_at", { ascending: true });
+
+          if (error) throw error;
+          if (data?.length) return data.map((row) => mapMessage(row as Record<string, any>));
+        }
+
+        if (!remoteJid) return [];
+
         const { data, error } = await supabase
           .from("whatsapp_messages")
           .select("*")
-          .eq("conversation_id", conversationId)
+          .eq("remote_jid", remoteJid)
           .order("created_at", { ascending: true });
 
         if (error) throw error;
@@ -277,9 +301,13 @@ export function useWhatsAppAgent() {
     });
 
   const refreshStatus = useMutation({
-    mutationFn: async () => invokeEvolution("status"),
+    mutationFn: async (_options?: RefreshStatusOptions) => invokeEvolution("status"),
     onSuccess: () => invalidateSettings(),
-    onError: (error) => {
+    onError: (error, options) => {
+      if (options?.silent) {
+        console.warn("[NeuroZap] status refresh failed", error);
+        return;
+      }
       toast.error(error instanceof Error ? error.message : "Não foi possível consultar o WhatsApp Business.");
     },
   });

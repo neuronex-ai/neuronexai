@@ -14,6 +14,8 @@ import {
   MessageCircle,
   MessageSquare,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Phone,
   RefreshCw,
   Search,
@@ -47,6 +49,8 @@ import { useWhatsAppAgent, WAConversation, WAMessage, WhatsAppSettings } from "@
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
+const WHATSAPP_BUSINESS_LOGO = "/whatsapp-business-logo-white.png";
+
 const formatDisplayName = (patientName: string | null | undefined, patientPhone: string | null | undefined) => {
   if (
     patientName &&
@@ -74,13 +78,6 @@ const formatDisplayName = (patientName: string | null | undefined, patientPhone:
   }
   if (digits.length >= 10) return digits.replace(/(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3");
   return cleanPhone || "Contato";
-};
-
-const shortIdentifier = (value: string) => {
-  const clean = value.replace(/@.*$/, "").trim();
-  if (!clean) return "Contato";
-  if (clean.length <= 14) return clean;
-  return `ID ${clean.slice(0, 6)}...${clean.slice(-4)}`;
 };
 
 const phoneDigitsFrom = (...values: Array<string | null | undefined>) => {
@@ -115,11 +112,38 @@ const formatPhoneDigits = (digits: string) => {
 const formatRemoteJid = (...values: Array<string | null | undefined>) => {
   const digits = phoneDigitsFrom(...values);
   if (digits) return formatPhoneDigits(digits);
-  return shortIdentifier(values.find(Boolean) || "");
+  return "Número não informado";
 };
 
+const isGroupConversation = (conversation: WAConversation) =>
+  Boolean(conversation.is_group || conversation.contact_type === "group" || conversation.remote_jid?.includes("@g.us"));
+
+const isStatusConversation = (conversation: WAConversation) => {
+  const remote = String(conversation.remote_jid || "").toLowerCase();
+  const name = String(conversation.patient_name || "").toLowerCase();
+  return remote === "status@broadcast" || remote.includes("status@broadcast") || name === "status";
+};
+
+const normalizedIdentity = (value?: string | null) => {
+  const raw = String(value || "").trim().toLowerCase();
+  if (!raw) return "";
+  const digits = raw.replace(/\D/g, "");
+  return digits || raw.replace(/@.*$/, "");
+};
+
+const sameIdentity = (a?: string | null, b?: string | null) => {
+  const left = normalizedIdentity(a);
+  const right = normalizedIdentity(b);
+  return Boolean(left && right && left === right);
+};
+
+const isOwnConversation = (conversation: WAConversation, settings?: WhatsAppSettings | null) =>
+  conversation.conversation_kind === "psychologist" ||
+  sameIdentity(conversation.remote_jid, settings?.psychologist_remote_jid) ||
+  sameIdentity(conversation.patient_phone, settings?.psychologist_phone);
+
 const getConversationContactLine = (conversation: WAConversation) =>
-  formatRemoteJid(conversation.patient_phone, conversation.remote_jid);
+  isGroupConversation(conversation) ? "Grupo do WhatsApp" : formatRemoteJid(conversation.patient_phone, conversation.remote_jid);
 
 const getWhatsAppWebUrl = (conversation: WAConversation) => {
   const digits = phoneDigitsFrom(conversation.patient_phone, conversation.remote_jid);
