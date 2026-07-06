@@ -470,6 +470,20 @@ const isMissingPrivateCredentialStore = (error: unknown) => {
   return /schema "private"|relation .*neurozap_instance_credentials|neurozap_instance_credentials.*does not exist|Could not find the table/i.test(message);
 };
 
+const isPrivateSchemaUnavailable = (error: unknown) => {
+  const record = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const code = safeString(record.code);
+  const message = safeString(record.message || (error instanceof Error ? error.message : String(error || "")));
+  return code === "PGRST106" || /schema must be one of|schema .*private.*not exposed/i.test(message);
+};
+
+const isMissingCredentialRpc = (error: unknown) => {
+  const record = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const code = safeString(record.code);
+  const message = safeString(record.message || (error instanceof Error ? error.message : String(error || "")));
+  return code === "PGRST202" || /neurozap_(store|get)_instance_credential|function .*not.*found|Could not find the function/i.test(message);
+};
+
 const readableEvolutionMessage = (value: unknown): string => {
   if (!value) return "";
   if (typeof value === "string") return value.trim();
@@ -778,12 +792,51 @@ const storePrivateCredential = async (supabaseAdmin: any, userId: string, instan
     { onConflict: "user_id" },
   );
   if (error) {
-    if (isMissingPrivateCredentialStore(error)) {
-      console.warn("[neurozap-evolution] private credential store unavailable; using server-side manager key fallback until migration is applied.");
-      return;
+    if (isPrivateSchemaUnavailable(error) || isMissingPrivateCredentialStore(error)) {
+      const { error: rpcError } = await supabaseAdmin.rpc("neurozap_store_instance_credential", {
+        p_user_id: userId,
+        p_instance_name: instanceName,
+        p_instance_api_key: instanceApiKey,
+      });
+      if (!rpcError) return;
+      if (isMissingCredentialRpc(rpcError) || isMissingPrivateCredentialStore(rpcError)) {
+        console.warn("[neurozap-evolution] private credential RPC unavailable; using server-side manager key fallback until migration is applied.");
+        return;
+      }
+      throw rpcError;
     }
     throw error;
   }
+};
+
+const loadPrivateCredential = async (
+  supabaseAdmin: any,
+  userId: string,
+  instanceName: string,
+): Promise<string | null> => {
+  const { data: credential, error } = await supabaseAdmin
+    .schema("private")
+    .from("neurozap_instance_credentials")
+    .select("instance_api_key")
+    .eq("user_id", userId)
+    .eq("instance_name", instanceName)
+    .maybeSingle();
+  if (!error) return safeString(credential?.instance_api_key) || null;
+
+  if (isPrivateSchemaUnavailable(error) || isMissingPrivateCredentialStore(error)) {
+    const { data, error: rpcError } = await supabaseAdmin.rpc("neurozap_get_instance_credential", {
+      p_user_id: userId,
+      p_instance_name: instanceName,
+    });
+    if (!rpcError) return safeString(data) || null;
+    if (isMissingCredentialRpc(rpcError) || isMissingPrivateCredentialStore(rpcError)) {
+      console.warn("[neurozap-evolution] private credential RPC unavailable; using server-side manager key fallback until migration is applied.");
+      return;
+    }
+    throw rpcError;
+  }
+
+  throw error;
 };
 
 const loadInstanceConfig = async (
