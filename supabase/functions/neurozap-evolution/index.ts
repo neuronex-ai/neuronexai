@@ -1109,7 +1109,11 @@ const logoutInstance = async (config: InstanceConfig) => {
     }
   }
 
-  throw new Error(errors.find(Boolean) || "Não foi possível desconectar o WhatsApp Business.");
+  return {
+    ok: true,
+    localOnly: true,
+    warning: errors.find(Boolean) || "A Evolution não confirmou o logout; o vínculo local foi encerrado.",
+  };
 };
 
 serve(async (req) => {
@@ -1223,10 +1227,12 @@ serve(async (req) => {
 
     if (action === "syncConversations") {
       const setup = await applyRuntimeSetup(loadedConfig);
+      const ownerJid = await fetchOwnerJid(loadedConfig).catch(() => loadedConfig.psychologistRemoteJid);
+      const syncConfig = ownerJid ? { ...loadedConfig, psychologistRemoteJid: ownerJid } : loadedConfig;
       const [result, contactsResult, labelsResult] = await Promise.all([
-        findChats(loadedConfig),
-        findContacts(loadedConfig).catch((error) => ({ error: error.message, data: [] })),
-        findLabels(loadedConfig)
+        findChats(syncConfig),
+        findContacts(syncConfig).catch((error) => ({ error: error.message, data: [] })),
+        findLabels(syncConfig)
           .catch((error) => ({ error: error.message, data: [] })),
       ]);
       const contacts = toArray(contactsResult);
@@ -1239,14 +1245,14 @@ serve(async (req) => {
             safeString(chat?.remoteJid) ||
             safeString(chat?.remote_jid) ||
             safeString(chat?.jid);
-          return mapChat(chat, loadedConfig, findContactFor(contactIndex, remoteJid), labelIndex);
+          return mapChat(chat, syncConfig, findContactFor(contactIndex, remoteJid), labelIndex);
         })
         .filter(Boolean);
       const activeRemoteJids = chats.map((chat) => chat.remote_jid);
-      await markMissingConversationsDeleted(supabaseAdmin, user.id, loadedConfig.instanceName, activeRemoteJids);
+      await markMissingConversationsDeleted(supabaseAdmin, user.id, syncConfig.instanceName, activeRemoteJids);
       let upserted = 0;
       for (const chat of chats) {
-        await upsertConversation(supabaseAdmin, user.id, loadedConfig, chat.remote_jid, {
+        await upsertConversation(supabaseAdmin, user.id, syncConfig, chat.remote_jid, {
           ...chat,
           updated_at: new Date().toISOString(),
         });
@@ -1254,13 +1260,15 @@ serve(async (req) => {
       }
       let syncedMessages = 0;
       for (const chat of chats) {
-        syncedMessages += await syncMessagesForRemote(supabaseAdmin, user.id, loadedConfig, chat.remote_jid, 2, 200).catch((error) => {
+        syncedMessages += await syncMessagesForRemote(supabaseAdmin, user.id, syncConfig, chat.remote_jid, 2, 200).catch((error) => {
           console.warn("[neurozap-evolution] message sync failed for chat", chat.remote_jid, error);
           return 0;
         });
       }
-      await upsertSettings(supabaseAdmin, user.id, loadedConfig, {
+      await upsertSettings(supabaseAdmin, user.id, syncConfig, {
         is_active: true,
+        psychologist_remote_jid: ownerJid || syncConfig.psychologistRemoteJid,
+        psychologist_phone: ownerJid || syncConfig.psychologistRemoteJid ? remoteJidToPhone(ownerJid || syncConfig.psychologistRemoteJid || "") : null,
         last_sync_at: new Date().toISOString(),
         last_error: null,
         metadata: {
@@ -1274,13 +1282,18 @@ serve(async (req) => {
           },
         },
       });
+      await upsertMapping(supabaseAdmin, user.id, syncConfig, {
+        owner_remote_jid: ownerJid || syncConfig.psychologistRemoteJid,
+      });
       return json({ ok: true, count: upserted, messages: syncedMessages });
     }
 
     if (action === "syncMessages") {
       const remoteJid = safeString(body.remoteJid);
       if (!remoteJid) return json({ ok: false, error: "remoteJid obrigat\u00f3rio." });
-      const upserted = await syncMessagesForRemote(supabaseAdmin, user.id, loadedConfig, remoteJid, 5, 200);
+      const ownerJid = loadedConfig.psychologistRemoteJid || await fetchOwnerJid(loadedConfig).catch(() => null);
+      const messageConfig = ownerJid ? { ...loadedConfig, psychologistRemoteJid: ownerJid } : loadedConfig;
+      const upserted = await syncMessagesForRemote(supabaseAdmin, user.id, messageConfig, remoteJid, 5, 200);
       return json({ ok: true, count: upserted });
     }
 
@@ -1299,10 +1312,13 @@ serve(async (req) => {
           .eq("user_id", user.id)
           .maybeSingle();
         if (savedConversationError) throw savedConversationError;
-        sendTarget = sendTargetFor(safeString(savedConversation?.patient_phone) || safeString(savedConversation?.remote_jid) || remoteJid);
+        const savedTarget = sendTargetFor(safeString(savedConversation?.patient_phone) || safeString(savedConversation?.remote_jid) || remoteJid);
+        if (savedTarget) sendTarget = savedTarget;
       }
 
-      if (!isLikelyPhoneDigits(digitsOnly(sendTarget)) || /@lid/i.test(sendTarget)) {
+      const canSendByPhone = isLikelyPhoneDigits(digitsOnly(sendTarget));
+      const canSendByJid = /@(s\.whatsapp\.net|c\.us|g\.us|lid)$/i.test(sendTarget);
+      if (!canSendByPhone && !canSendByJid) {
         return json({
           ok: false,
           error: "Ainda não recebemos o telefone real deste contato. Sincronize conversas e contatos antes de enviar.",
