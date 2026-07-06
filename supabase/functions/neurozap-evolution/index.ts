@@ -25,6 +25,7 @@ type InstanceConfig = RuntimeConfig & {
   instanceApiKey: string;
   webhookUrl: string;
   psychologistRemoteJid: string | null;
+  initialConnection?: unknown;
 };
 
 type EvolutionRequestCandidate = {
@@ -503,6 +504,7 @@ const evolutionFetch = async (
     ...init,
     headers: {
       "Content-Type": "application/json",
+      "Accept": "application/json",
       apikey: apiKey,
       ...(init.headers || {}),
     },
@@ -873,7 +875,7 @@ const ensureInstanceConfig = async (
   }
 
   const instanceApiKey = extractApiKey(created, desiredToken);
-  const config = { ...provisionalConfig, instanceApiKey };
+  const config = { ...provisionalConfig, instanceApiKey, initialConnection: created };
 
   await storePrivateCredential(supabaseAdmin, userId, instanceName, instanceApiKey);
   await upsertSettings(supabaseAdmin, userId, config, {
@@ -1247,21 +1249,29 @@ serve(async (req) => {
       let config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
       let setup = await applyRuntimeSetup(config);
       let connection: any = null;
+      let normalizedConnection = extractConnectionPayload(config.initialConnection);
 
-      try {
-        connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
-      } catch (error) {
-        if (!isEvolutionMissingError(error)) throw error;
-        await retireInstanceMapping(supabaseAdmin, user.id, config.instanceName, "removed");
-        config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime, { forceNew: true, retiredReason: "removed" });
-        recreated = true;
-        setup = await applyRuntimeSetup(config);
-        connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
+      if (!normalizedConnection.qr) {
+        try {
+          connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
+          normalizedConnection = extractConnectionPayload(connection);
+        } catch (error) {
+          if (!isEvolutionMissingError(error)) throw error;
+          await retireInstanceMapping(supabaseAdmin, user.id, config.instanceName, "removed");
+          config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime, { forceNew: true, retiredReason: "removed" });
+          recreated = true;
+          setup = await applyRuntimeSetup(config);
+          normalizedConnection = extractConnectionPayload(config.initialConnection);
+          if (!normalizedConnection.qr) {
+            connection = await evolutionFetchWithFallback(config, config.instanceApiKey, `/instance/connect/${encodeURIComponent(config.instanceName)}`);
+            normalizedConnection = extractConnectionPayload(connection);
+          }
+        }
       }
 
-      const normalizedConnection = extractConnectionPayload(connection);
-      const ownerJid = await fetchOwnerJid(config, connection).catch(() => config.psychologistRemoteJid);
-      const state = safeString(connection?.instance?.state || connection?.state || connection?.connectionState) || (normalizedConnection.qr ? "qr" : "connecting");
+      const connectionSource = (connection || config.initialConnection || {}) as Record<string, any>;
+      const ownerJid = await fetchOwnerJid(config, connectionSource).catch(() => config.psychologistRemoteJid);
+      const state = safeString(connectionSource?.instance?.state || connectionSource?.state || connectionSource?.connectionState) || (normalizedConnection.qr ? "qr" : "connecting");
       await upsertSettings(supabaseAdmin, user.id, config, {
         is_active: state === "open",
         connection_state: state,

@@ -178,10 +178,13 @@ export function AppModalShell({
             type="button"
             onClick={() => handleOpenChange(false)}
             style={{
+              position: "absolute",
+              left: "auto",
               right: "max(0.75rem, env(safe-area-inset-right))",
               top: "max(0.75rem, env(safe-area-inset-top))",
+              transform: "none",
             }}
-            className="absolute left-auto z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.07]"
+            className="z-40 flex h-10 w-10 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.07]"
             aria-label="Fechar"
           >
             <X className="h-4 w-4" />

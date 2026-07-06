@@ -454,6 +454,7 @@ function ConnectionDialog({
   const [step, setStep] = useState<ConnectionStep>("intro");
   const connectPayload = connect.data as WhatsAppConnectResponse | undefined;
   const { qr, qrImageSrc } = normalizeConnectionQr(connectPayload?.connection);
+  const connectError = connect.error instanceof Error ? connect.error.message : "";
   const responseState = String(connectPayload?.state || settings?.connection_state || "").toLowerCase();
   const isConnectedStep = connected || step === "connected";
   const isQrStep = step === "qr" && !connected;
@@ -489,7 +490,7 @@ function ConnectionDialog({
       type="button"
       onClick={() => fullSync.mutate()}
       disabled={fullSync.isPending || loading}
-      className="h-12 w-full rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+      className="h-11 w-full rounded-[16px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
     >
       {fullSync.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
       Sincronizar conversas
@@ -500,7 +501,7 @@ function ConnectionDialog({
         type="button"
         variant="outline"
         onClick={() => setStep("intro")}
-        className="h-12 rounded-[18px] text-[10px] font-black uppercase tracking-[0.16em]"
+        className="h-11 rounded-[16px] text-[10px] font-black uppercase tracking-[0.16em]"
       >
         Voltar
       </Button>
@@ -508,7 +509,7 @@ function ConnectionDialog({
         type="button"
         onClick={handleConnect}
         disabled={connect.isPending}
-        className="h-12 rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+        className="h-11 rounded-[16px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
       >
         {connect.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
         Gerar novo QR
@@ -519,7 +520,7 @@ function ConnectionDialog({
       type="button"
       onClick={handleConnect}
       disabled={connect.isPending || loading}
-      className="h-12 w-full rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+      className="h-11 w-full rounded-[16px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
     >
       {connect.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <MessageCircle className="mr-2 h-4 w-4" />}
       {settings?.instance_name ? "Reconectar" : "Conectar"}
@@ -554,22 +555,22 @@ function ConnectionDialog({
         </span>
       }
       heroIcon={
-        <div className="group flex h-16 w-16 items-center justify-center bg-transparent">
+        <div className="group flex h-12 w-12 items-center justify-center bg-transparent">
           <img
             src={WHATSAPP_BUSINESS_LOGO}
             alt="WhatsApp Business"
-            className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105"
+            className="h-11 w-11 object-contain transition-transform duration-300 group-hover:scale-105"
           />
         </div>
       }
       footer={footer}
-      size="lg"
-      className="notes-liquid-surface rounded-[34px] border"
-      bodyClassName="px-5 sm:px-8"
-      footerClassName="px-5 sm:px-8"
-      headerClassName="pt-8"
+      size="md"
+      className="notes-liquid-surface rounded-[28px] border"
+      bodyClassName="px-4 py-2 sm:px-5"
+      footerClassName="px-4 py-3 sm:px-5"
+      headerClassName="pt-5 pb-2 sm:pt-6"
     >
-      <div className="relative min-h-[20rem] overflow-hidden">
+      <div className="relative min-h-[13.5rem] overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.section
             key={isConnectedStep ? "connected" : step}
@@ -581,12 +582,12 @@ function ConnectionDialog({
             className="space-y-4"
           >
             {isConnectedStep ? (
-              <div className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-6 text-center">
+              <div className="notes-liquid-surface relative overflow-hidden rounded-[22px] border p-5 text-center">
                 <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.1] dark:opacity-[0.16]" />
                 <div className="relative mx-auto max-w-xl">
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Conexão pronta</p>
-                  <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">WhatsApp Business conectado</h3>
-                  <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500">
+                  <h3 className="mt-2 text-xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">WhatsApp Business conectado</h3>
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-500">
                     Seu número já está vinculado ao Synapse. As conversas serão atualizadas automaticamente quando novos eventos chegarem.
                   </p>
                   {settings?.last_sync_at ? (
@@ -597,17 +598,17 @@ function ConnectionDialog({
                 </div>
               </div>
             ) : isQrStep ? (
-              <div className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-5 text-center sm:p-6">
+              <div className="notes-liquid-surface relative overflow-hidden rounded-[22px] border p-4 text-center sm:p-5">
                 <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.1] dark:opacity-[0.16]" />
                 <div className="relative mx-auto max-w-md">
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Leitura do QR Code</p>
-                  <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">Aponte a câmera do WhatsApp</h3>
-                  <div className="mt-5 flex min-h-[18rem] items-center justify-center rounded-[26px] border border-zinc-200/70 bg-white/80 p-4 shadow-[0_24px_60px_-42px_rgba(0,0,0,0.5)] dark:border-white/[0.08] dark:bg-white/[0.035]">
+                  <h3 className="mt-2 text-xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">Aponte a câmera do WhatsApp</h3>
+                  <div className="mt-4 flex min-h-[14rem] items-center justify-center rounded-[22px] border border-zinc-200/70 bg-white/80 p-3 shadow-[0_24px_60px_-42px_rgba(0,0,0,0.5)] dark:border-white/[0.08] dark:bg-white/[0.035]">
                     {qrImageSrc ? (
                       <img
                         src={qrImageSrc}
                         alt="QR Code de conexão do WhatsApp Business"
-                        className="h-64 w-64 rounded-[22px] bg-white p-4"
+                        className="h-56 w-56 rounded-[18px] bg-white p-3"
                       />
                     ) : qr ? (
                       <p className="max-h-64 overflow-y-auto break-all rounded-[22px] border border-white/[0.055] bg-white/[0.035] p-4 text-sm font-bold text-zinc-700 dark:text-zinc-200 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80">
@@ -631,23 +632,23 @@ function ConnectionDialog({
                 </div>
               </div>
             ) : (
-              <div className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-6 text-center">
+              <div className="notes-liquid-surface relative overflow-hidden rounded-[22px] border p-5 text-center">
                 <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.1] dark:opacity-[0.16]" />
                 <div className="relative mx-auto max-w-xl">
                   <p className="text-[10px] font-black uppercase tracking-[0.22em] text-zinc-500">Canal dedicado</p>
-                  <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">
+                  <h3 className="mt-2 text-xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">
                     Conecte o WhatsApp Business ao Synapse
                   </h3>
-                  <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500">
+                  <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-500">
                     A próxima etapa gera um QR Code exclusivo para este profissional. Depois da leitura, o NeuroZap sincroniza contatos, conversas e histórico.
                   </p>
                 </div>
               </div>
             )}
 
-            {settings?.last_error ? (
+            {connectError || settings?.last_error ? (
               <div className="rounded-[18px] border border-red-500/20 bg-red-500/[0.07] px-4 py-3 text-xs font-semibold text-red-700 dark:text-red-300">
-                {settings.last_error}
+                {connectError || settings?.last_error}
               </div>
             ) : null}
           </motion.section>
