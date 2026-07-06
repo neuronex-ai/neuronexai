@@ -83,6 +83,22 @@ type SyncMessagesPayload = {
   silent?: boolean;
 };
 
+export type WhatsAppConnectResponse = {
+  ok?: boolean;
+  connected?: boolean;
+  state?: string | null;
+  instanceName?: string;
+  environment?: "sandbox" | "production";
+  recreated?: boolean;
+  connection?: {
+    qr?: string | null;
+    qrImageSrc?: string | null;
+    code?: string | null;
+    pairingCode?: string | null;
+    raw?: unknown;
+  } | Record<string, any>;
+};
+
 const toIso = (value: unknown) =>
   typeof value === "string" && value ? value : new Date().toISOString();
 
@@ -122,6 +138,33 @@ const invokeEvolution = async <T>(action: string, body: Record<string, unknown> 
     throw new Error(typeof message === "string" && message.trim() ? message.trim() : "N\u00e3o foi poss\u00edvel concluir a a\u00e7\u00e3o no WhatsApp Business.");
   }
   return data as T;
+};
+
+const normalizeConnectionQr = (connection: any) => {
+  const qr =
+    typeof connection?.qr === "string"
+      ? connection.qr
+      : typeof connection?.base64 === "string"
+        ? connection.base64
+        : typeof connection?.qrcode?.base64 === "string"
+          ? connection.qrcode.base64
+          : typeof connection?.qrcode === "string"
+            ? connection.qrcode
+            : typeof connection?.code === "string"
+              ? connection.code
+              : null;
+
+  return {
+    qr,
+    qrImageSrc:
+      typeof connection?.qrImageSrc === "string"
+        ? connection.qrImageSrc
+        : qr?.startsWith("data:")
+          ? qr
+          : qr && qr.length > 120 && !/^https?:\/\//i.test(qr)
+            ? `data:image/png;base64,${qr}`
+            : null,
+  };
 };
 
 const mapConversation = (row: Record<string, any>): WAConversation => ({
@@ -318,18 +361,9 @@ export function useWhatsAppAgent() {
   });
 
   const connect = useMutation({
-    mutationFn: async () => invokeEvolution<{ connection?: Record<string, any> }>("connect"),
+    mutationFn: async () => invokeEvolution<WhatsAppConnectResponse>("connect"),
     onSuccess: (data) => {
-      const qr =
-        typeof data?.connection?.base64 === "string"
-          ? data.connection.base64
-          : typeof data?.connection?.qrcode?.base64 === "string"
-            ? data.connection.qrcode.base64
-            : typeof data?.connection?.qrcode === "string"
-              ? data.connection.qrcode
-              : typeof data?.connection?.code === "string"
-                ? data.connection.code
-                : null;
+      const { qr } = normalizeConnectionQr(data?.connection);
       if (qr && /^https?:\/\//.test(qr)) window.open(qr, "_blank", "noopener,noreferrer");
       toast.success("Conexão do WhatsApp Business iniciada.");
       invalidateSettings();

@@ -161,7 +161,7 @@ export function AppModalShell({
       contentStyle={contentStyle}
       showCloseButton={false}
       className={cn(
-        "w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] border-0 bg-transparent p-0 shadow-none",
+        "w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)] overflow-visible border-0 bg-transparent p-0 shadow-none",
         sizeClass[size],
       )}
       drawerClassName="border-0 bg-transparent p-0 shadow-none"
@@ -177,7 +177,11 @@ export function AppModalShell({
           <button
             type="button"
             onClick={() => handleOpenChange(false)}
-            className="absolute left-auto right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-30 flex h-11 w-11 items-center justify-center rounded-full border border-border/45 bg-muted/55 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.055]"
+            style={{
+              insetInlineEnd: "max(0.75rem, env(safe-area-inset-right))",
+              top: "max(0.75rem, env(safe-area-inset-top))",
+            }}
+            className="absolute z-40 flex h-11 w-11 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.07]"
             aria-label="Fechar"
           >
             <X className="h-4 w-4" />
