@@ -48,7 +48,7 @@ const INSTANCE_SETTINGS = {
   groupsIgnore: true,
   alwaysOnline: false,
   readMessages: true,
-  readStatus: true,
+  readStatus: false,
   syncFullHistory: true,
 };
 
@@ -141,8 +141,20 @@ const toIso = (value: unknown) => {
   return new Date().toISOString();
 };
 
-const remoteJidToPhone = (remoteJid: string) =>
-  remoteJid.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
+const isStatusJid = (remoteJid?: string | null) => {
+  const value = safeString(remoteJid).toLowerCase();
+  return value === "status@broadcast" || value.includes("status@broadcast");
+};
+
+const isGroupJid = (remoteJid?: string | null) => safeString(remoteJid).toLowerCase().includes("@g.us");
+
+const remoteJidToPhone = (remoteJid: string) => {
+  const raw = safeString(remoteJid);
+  const clean = raw.replace("@s.whatsapp.net", "").replace("@c.us", "").replace(/@.*$/, "");
+  const digits = digitsOnly(clean);
+  const isPhoneJid = raw.includes("@s.whatsapp.net") || raw.includes("@c.us") || /^[+\d\s().-]+$/.test(clean);
+  return isPhoneJid && digits.length >= 8 ? digits : "";
+};
 
 const jidToNumber = (remoteJid: string) => remoteJidToPhone(remoteJid).replace(/\D/g, "");
 const digitsOnly = (value: unknown) => String(value || "").replace(/\D/g, "");
@@ -185,6 +197,29 @@ const buildContactIndex = (contacts: any[]) => {
     for (const key of contactLookupKeys(jid)) index.set(key, contact);
   }
   return index;
+};
+
+const extractPhoneNumber = (...payloads: any[]) => {
+  for (const payload of payloads) {
+    const values = [
+      payload?.phone,
+      payload?.number,
+      payload?.wuid,
+      payload?.id,
+      payload?.jid,
+      payload?.remoteJid,
+      payload?.remote_jid,
+    ];
+    for (const value of values) {
+      const raw = safeString(value);
+      if (!raw) continue;
+      const phone = remoteJidToPhone(raw);
+      if (phone) return phone;
+      const digits = digitsOnly(raw);
+      if (digits.length >= 10 && /^[+\d\s().@-]+$/.test(raw)) return digits;
+    }
+  }
+  return "";
 };
 
 const findContactFor = (index: Map<string, any>, remoteJid: string) => {
@@ -445,10 +480,11 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
     safeString(chat?.lastMessage) ||
     safeString(chat?.last_message_preview);
 
-  if (!remoteJid || remoteJid.includes("@g.us")) return null;
+  if (!remoteJid || isStatusJid(remoteJid)) return null;
 
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
-  const phone = remoteJidToPhone(remoteJid);
+  const phone = extractPhoneNumber(contact, chat, { remoteJid });
+  const isGroup = isGroupJid(remoteJid);
   const labels = normalizeLabels(chat?.labels || chat?.labelIds || contact?.labels || contact?.labelIds, labelIndex);
   const contactStatus = extractContactStatus(contact, chat);
 
@@ -456,6 +492,8 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
     instance_name: config.instanceName,
     remote_jid: remoteJid,
     conversation_kind: kind,
+    contact_type: isGroup ? "group" : "person",
+    is_group: isGroup,
     patient_name:
       kind === "psychologist"
         ? "Voc\u00ea e Synapse"
@@ -466,7 +504,7 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
           safeString(contact?.verifiedName) ||
           safeString(chat?.subject) ||
           null,
-    patient_phone: phone,
+    patient_phone: phone || null,
     profile_picture_url: extractProfilePicture(chat, contact),
     last_message_preview: lastMessage || null,
     last_message_at: toIso(chat?.conversationTimestamp || chat?.lastMessage?.messageTimestamp || chat?.updatedAt || chat?.createdAt),
@@ -483,7 +521,7 @@ const mapMessage = (message: any, config: InstanceConfig, fallbackRemoteJid?: st
     safeString(message?.remoteJid) ||
     safeString(message?.remote_jid) ||
     safeString(fallbackRemoteJid);
-  if (!remoteJid || remoteJid.includes("@g.us")) return null;
+  if (!remoteJid || isStatusJid(remoteJid)) return null;
 
   const createdAt = toIso(message?.messageTimestamp || message?.timestamp || message?.created_at || message?.createdAt);
   const text = extractMessageText(message);
@@ -787,6 +825,7 @@ const upsertConversation = async (
   patch: Record<string, unknown> = {},
 ) => {
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
+  const isGroup = isGroupJid(remoteJid);
   const displayName = kind === "psychologist" ? "Voc\u00ea e Synapse" : safeString(patch.patient_name) || null;
   const sessionId = await ensureSynapseSession(supabaseAdmin, userId, remoteJid, kind, displayName);
   const { data, error } = await supabaseAdmin
@@ -798,9 +837,12 @@ const upsertConversation = async (
         remote_jid: remoteJid,
         conversation_kind: kind,
         synapse_session_id: sessionId,
-        patient_phone: remoteJidToPhone(remoteJid),
-        updated_at: new Date().toISOString(),
         ...patch,
+        patient_phone: safeString(patch.patient_phone) || remoteJidToPhone(remoteJid) || null,
+        contact_type: safeString(patch.contact_type) || (isGroup ? "group" : "person"),
+        is_group: Boolean(patch.is_group ?? isGroup),
+        deleted_at: null,
+        updated_at: new Date().toISOString(),
       },
       { onConflict: "user_id,instance_name,remote_jid" },
     )
@@ -837,6 +879,7 @@ const syncMessagesForRemote = async (
   maxPages = 3,
   pageSize = 200,
 ) => {
+  if (isStatusJid(remoteJid)) return 0;
   const result = await fetchMessagesForRemote(config, remoteJid, maxPages, pageSize);
   const messages = result.map((item) => mapMessage(item, config, remoteJid)).filter(Boolean);
   const conversation = await upsertConversation(supabaseAdmin, userId, config, remoteJid);
@@ -854,6 +897,59 @@ const syncMessagesForRemote = async (
     .upsert(rows, { onConflict: "user_id,source_message_id" });
   if (error) throw error;
   return rows.length;
+};
+
+const postgrestInList = (values: string[]) =>
+  `(${values.map((value) => `"${String(value).replace(/"/g, '\\"')}"`).join(",")})`;
+
+const markMissingConversationsDeleted = async (
+  supabaseAdmin: any,
+  userId: string,
+  instanceName: string,
+  activeRemoteJids: string[],
+) => {
+  const patch = {
+    deleted_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+
+  let query = supabaseAdmin
+    .from("whatsapp_conversations")
+    .update(patch)
+    .eq("user_id", userId)
+    .eq("instance_name", instanceName)
+    .is("deleted_at", null);
+
+  if (activeRemoteJids.length) {
+    query = query.not("remote_jid", "in", postgrestInList(activeRemoteJids));
+  }
+
+  const { error } = await query;
+  if (error) throw error;
+};
+
+const logoutInstance = async (config: InstanceConfig) => {
+  const path = `/instance/logout/${encodeURIComponent(config.instanceName)}`;
+  const attempts: RequestInit[] = [
+    { method: "DELETE" },
+    { method: "POST" },
+    { method: "GET" },
+  ];
+  const errors: string[] = [];
+
+  for (const init of attempts) {
+    try {
+      return await evolutionFetchWithFallback(config, config.instanceApiKey, path, init);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      errors.push(message);
+      if (/already|not connected|disconnected|closed|logout|not found|404/i.test(message)) {
+        return { ok: true, alreadyDisconnected: true, message };
+      }
+    }
+  }
+
+  throw new Error(errors.find(Boolean) || "Não foi possível desconectar o WhatsApp Business.");
 };
 
 serve(async (req) => {
@@ -904,20 +1000,7 @@ serve(async (req) => {
     }
 
     if (action === "logout") {
-      const logout = await evolutionFetchWithFallback(
-        loadedConfig,
-        loadedConfig.instanceApiKey,
-        `/instance/logout/${encodeURIComponent(loadedConfig.instanceName)}`,
-        { method: "DELETE" },
-      ).catch(async (error) => {
-        const message = error instanceof Error ? error.message : String(error);
-        if (!/method|404|not found/i.test(message)) throw error;
-        return evolutionFetchWithFallback(
-          loadedConfig,
-          loadedConfig.instanceApiKey,
-          `/instance/logout/${encodeURIComponent(loadedConfig.instanceName)}`,
-        );
-      });
+      const logout = await logoutInstance(loadedConfig);
 
       await updateConnectionState(
         supabaseAdmin,
@@ -942,13 +1025,30 @@ serve(async (req) => {
           loadedConfig,
           loadedConfig.instanceApiKey,
           `/instance/connectionState/${encodeURIComponent(loadedConfig.instanceName)}`,
-        ),
+        ).catch((error) => ({ error: error instanceof Error ? error.message : String(error) })),
         evolutionFetchWithFallback(
           loadedConfig,
           loadedConfig.instanceApiKey,
           `/webhook/find/${encodeURIComponent(loadedConfig.instanceName)}`,
         ).catch((error) => ({ error: error.message })),
       ]);
+      if (connection?.error) {
+        await upsertSettings(supabaseAdmin, user.id, loadedConfig, {
+          last_status_at: new Date().toISOString(),
+          last_error: connection.error,
+          metadata: { status_warning: connection.error, webhook },
+        });
+        return json({
+          ok: true,
+          warning: connection.error,
+          connected: false,
+          instanceName: loadedConfig.instanceName,
+          environment: loadedConfig.webhookMode,
+          connection,
+          webhook,
+          psychologistRemoteJid: loadedConfig.psychologistRemoteJid,
+        });
+      }
       const state = safeString(connection?.instance?.state || connection?.state || connection?.connectionState);
       const ownerJid = await fetchOwnerJid(loadedConfig, connection);
       await updateConnectionState(supabaseAdmin, user.id, loadedConfig, state, ownerJid, { webhook });
@@ -988,6 +1088,8 @@ serve(async (req) => {
           return mapChat(chat, loadedConfig, findContactFor(contactIndex, remoteJid), labelIndex);
         })
         .filter(Boolean);
+      const activeRemoteJids = chats.map((chat) => chat.remote_jid);
+      await markMissingConversationsDeleted(supabaseAdmin, user.id, loadedConfig.instanceName, activeRemoteJids);
       let upserted = 0;
       for (const chat of chats) {
         await upsertConversation(supabaseAdmin, user.id, loadedConfig, chat.remote_jid, {

@@ -173,13 +173,17 @@ const formatMessageDate = (date: Date) => {
   return format(date, "d 'de' MMMM", { locale: ptBR });
 };
 
-const connectedStatus = (settings?: WhatsAppSettings | null) =>
-  settings?.connection_state === "open" || Boolean(settings?.is_active);
+const connectedStatus = (settings?: WhatsAppSettings | null) => {
+  const state = String(settings?.connection_state || "").toLowerCase();
+  if (["open", "connected"].includes(state)) return true;
+  if (["close", "closed", "disconnected", "logout", "logged_out"].includes(state)) return false;
+  return Boolean(settings?.is_active && settings?.instance_name);
+};
 
 const connectionState = (settings?: WhatsAppSettings | null) => {
   if (!settings?.instance_name) return "idle";
   if (connectedStatus(settings)) return "connected";
-  if (settings.connection_state && !["close", "closed", "disconnected"].includes(settings.connection_state)) return "pending";
+  if (settings.connection_state && !["close", "closed", "disconnected", "logout", "logged_out"].includes(settings.connection_state.toLowerCase())) return "pending";
   return "disconnected";
 };
 
@@ -292,7 +296,7 @@ function ConnectionDialog({
                   <Info className="h-3.5 w-3.5" />
                 </button>
               </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-sm text-left text-xs leading-relaxed">
+              <TooltipContent side="bottom" className="z-[220] max-w-sm text-left text-xs leading-relaxed">
                 {infoCopy}
               </TooltipContent>
             </Tooltip>
@@ -300,8 +304,8 @@ function ConnectionDialog({
         </span>
       }
       heroIcon={
-        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-transparent">
-          <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" className="h-14 w-14 object-contain" />
+        <div className="group flex h-16 w-16 items-center justify-center bg-transparent">
+          <img src={WHATSAPP_BUSINESS_LOGO} alt="WhatsApp Business" className="h-14 w-14 object-contain transition-transform duration-300 group-hover:scale-105" />
         </div>
       }
       footer={
@@ -390,18 +394,31 @@ export default function NeuroZap() {
   const [searchQuery, setSearchQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [isListCollapsed, setIsListCollapsed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const autoSyncRequestsRef = useRef<Set<string>>(new Set());
 
   const whatsapp = useWhatsAppAgent();
   const { data: settings, isLoading: isLoadingSettings } = whatsapp.useSettings();
   const { data: conversations = [], isLoading: isLoadingConversations } = whatsapp.useConversations();
-  const { data: messages = [], isLoading: isLoadingMessages } = whatsapp.useMessages(selectedConversation?.id);
+  const { data: messages = [], isLoading: isLoadingMessages } = whatsapp.useMessages(selectedConversation?.id, selectedConversation?.remote_jid);
   whatsapp.useRealtime(selectedConversation?.id);
+
+  const visibleConversations = useMemo(() => {
+    return conversations
+      .filter((conversation) => !isStatusConversation(conversation))
+      .sort((a, b) => {
+        const aOwn = isOwnConversation(a, settings);
+        const bOwn = isOwnConversation(b, settings);
+        if (aOwn !== bOwn) return aOwn ? -1 : 1;
+        return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
+      });
+  }, [conversations, settings]);
 
   const filteredConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
-    if (!query) return conversations;
-    return conversations.filter((conversation) => {
+    if (!query) return visibleConversations;
+    return visibleConversations.filter((conversation) => {
       const name = formatDisplayName(conversation.patient_name, conversation.patient_phone).toLowerCase();
       const contactLine = getConversationContactLine(conversation).toLowerCase();
       return (
@@ -411,17 +428,30 @@ export default function NeuroZap() {
         conversation.remote_jid.toLowerCase().includes(query)
       );
     });
-  }, [conversations, searchQuery]);
+  }, [visibleConversations, searchQuery]);
 
-  const unreadCount = conversations.reduce((total, conversation) => total + Number(conversation.unread_count || 0), 0);
-  const patientCount = conversations.filter((conversation) => conversation.conversation_kind !== "psychologist").length;
+  const unreadCount = visibleConversations.reduce((total, conversation) => total + Number(conversation.unread_count || 0), 0);
+  const patientCount = visibleConversations.filter((conversation) => !isOwnConversation(conversation, settings) && !isGroupConversation(conversation)).length;
   const groupedMessages = useMemo(() => groupMessages(messages), [messages]);
   const connected = connectedStatus(settings);
 
   useEffect(() => {
-    whatsapp.refreshStatus.mutate();
+    whatsapp.refreshStatus.mutate({ silent: true });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!selectedConversation || isLoadingMessages || messages.length > 0 || whatsapp.syncMessages.isPending) return;
+    if (!selectedConversation.last_message_preview) return;
+    if (autoSyncRequestsRef.current.has(selectedConversation.id)) return;
+    autoSyncRequestsRef.current.add(selectedConversation.id);
+    whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid });
+  }, [
+    isLoadingMessages,
+    messages.length,
+    selectedConversation,
+    whatsapp.syncMessages,
+  ]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -446,6 +476,7 @@ export default function NeuroZap() {
 
   return (
     <div className="notes-lumen-canvas relative z-0 min-h-screen w-full bg-transparent font-sans text-foreground selection:bg-primary/20">
+      <div className="notes-lumen-field pointer-events-none fixed inset-0 z-0" />
       <ConnectionDialog
         open={settingsOpen}
         onOpenChange={setSettingsOpen}
@@ -456,7 +487,7 @@ export default function NeuroZap() {
         fullSync={whatsapp.fullSync}
       />
 
-      <main className="mx-auto flex min-h-screen w-full max-w-[1740px] flex-col gap-5 px-4 pb-5 pt-28 sm:px-6 lg:px-8">
+      <main className="relative z-10 mx-auto flex min-h-screen w-full max-w-[1740px] flex-col gap-5 px-4 pb-5 pt-28 sm:px-6 lg:px-8">
         <header className="notes-toolbar-surface relative overflow-hidden rounded-[28px] border px-4 py-3 sm:px-5">
           <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.12] dark:opacity-[0.18]" />
           <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -492,11 +523,13 @@ export default function NeuroZap() {
                   <TooltipContent>Sincronizar</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Button className="h-11 rounded-[16px] bg-white px-5 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 shadow-[0_16px_36px_-24px_rgba(255,255,255,0.7)] hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_16px_36px_-24px_rgba(0,0,0,0.4)]" onClick={() => setSettingsOpen(true)}>
-                <SlidersHorizontal className="mr-2 h-4 w-4" />
-                Conectar
-              </Button>
-              {connected || connectionState(settings) === "pending" ? (
+              {!connected ? (
+                <Button className="h-11 rounded-[16px] bg-white px-5 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 shadow-[0_16px_36px_-24px_rgba(255,255,255,0.7)] hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_16px_36px_-24px_rgba(0,0,0,0.4)]" onClick={() => setSettingsOpen(true)}>
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Conectar
+                </Button>
+              ) : null}
+              {settings?.instance_name ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -519,10 +552,60 @@ export default function NeuroZap() {
           </div>
         </header>
 
-        <section className="notes-liquid-surface grid min-h-[calc(100dvh-15rem)] overflow-hidden rounded-[34px] border lg:grid-cols-[24rem_minmax(0,1fr)]">
+        <section
+          className={cn(
+            "notes-liquid-surface grid min-h-[calc(100dvh-15rem)] overflow-hidden rounded-[34px] border transition-[grid-template-columns] duration-300",
+            isListCollapsed ? "lg:grid-cols-[4.75rem_minmax(0,1fr)]" : "lg:grid-cols-[24rem_minmax(0,1fr)]",
+          )}
+        >
           <aside className={cn("notes-retina-rail min-h-0 border-r", showMobileChat ? "hidden lg:block" : "block")}>
-            <div className="border-b border-white/[0.045] p-4 [.light_&]:border-zinc-200/60">
-              <div className="relative">
+            <div className={cn("border-b border-white/[0.045] p-4 [.light_&]:border-zinc-200/60", isListCollapsed && "p-2")}>
+              <div className={cn("mb-3 flex items-center justify-between gap-2", isListCollapsed && "mb-0 justify-center")}>
+                {!isListCollapsed ? (
+                  <div className="min-w-0">
+                    <p className="text-[9px] font-black uppercase tracking-[0.26em] text-zinc-500">Conversas</p>
+                    <p className="mt-1 truncate text-lg font-black tracking-tight">WhatsApp Business</p>
+                  </div>
+                ) : null}
+                <div className={cn("flex items-center gap-2", isListCollapsed && "flex-col")}>
+                  {!isListCollapsed ? (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-10 w-10 rounded-[14px]"
+                            onClick={() => whatsapp.fullSync.mutate()}
+                            disabled={!connected || whatsapp.fullSync.isPending}
+                            aria-label="Sincronizar conversas"
+                          >
+                            {whatsapp.fullSync.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Sincronizar conversas</TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  ) : null}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-10 w-10 rounded-[14px]"
+                          onClick={() => setIsListCollapsed((current) => !current)}
+                          aria-label={isListCollapsed ? "Expandir lista de conversas" : "Recolher lista de conversas"}
+                        >
+                          {isListCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isListCollapsed ? "Expandir" : "Recolher"}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+              </div>
+              <div className={cn("relative", isListCollapsed && "hidden")}>
                 <Search className="absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-600 transition-colors [.light_&]:text-zinc-400" />
                 <Input
                   value={searchQuery}
@@ -531,15 +614,15 @@ export default function NeuroZap() {
                   className="h-11 rounded-xl border-white/[0.055] bg-white/[0.03] pl-10 text-xs font-semibold text-zinc-200 placeholder:text-zinc-600 focus-visible:border-white/15 focus-visible:ring-0 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80 [.light_&]:text-zinc-900 [.light_&]:placeholder:text-zinc-400 [.light_&]:focus-visible:border-zinc-300"
                 />
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-black text-zinc-500 dark:text-zinc-400">
-                <MetricTile label="Conversas" value={conversations.length} />
+              <div className={cn("mt-4 grid grid-cols-3 gap-2 text-xs font-black text-zinc-500 dark:text-zinc-400", isListCollapsed && "hidden")}>
+                <MetricTile label="Conversas" value={visibleConversations.length} />
                 <MetricTile label="Pacientes" value={patientCount} />
                 <MetricTile label="Não lidas" value={unreadCount} />
               </div>
             </div>
 
             <ScrollArea className="notes-scroll-surface h-[calc(100dvh-22rem)]">
-              <div className="space-y-2 p-3">
+              <div className={cn("space-y-2 p-3", isListCollapsed && "px-2")}>
                 {isLoadingConversations ? (
                   <LoadingBlock label="Carregando conversas" />
                 ) : filteredConversations.length ? (
@@ -547,8 +630,10 @@ export default function NeuroZap() {
                     <ConversationRow
                       key={conversation.id}
                       conversation={conversation}
+                      settings={settings}
                       selected={selectedConversation?.id === conversation.id}
                       onClick={() => handleSelectConversation(conversation)}
+                      compact={isListCollapsed}
                     />
                   ))
                 ) : (
@@ -569,6 +654,7 @@ export default function NeuroZap() {
               <div className="flex h-full min-h-[calc(100dvh-12rem)] flex-col">
                 <ChatHeader
                   conversation={selectedConversation}
+                  settings={settings}
                   syncing={whatsapp.syncMessages.isPending}
                   onBack={() => {
                     setSelectedConversation(null);
@@ -638,16 +724,19 @@ export default function NeuroZap() {
             ) : (
               <div className="flex h-full min-h-[calc(100dvh-12rem)] items-center justify-center p-8">
                 <div className="max-w-md text-center">
-                  <div className="notes-liquid-surface mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] border">
-                    <img src="/whatsapp-business-logo.png" alt="" className="h-8 w-8 object-contain" />
+                  <div className="group/gate relative mx-auto">
+                    <div className="relative z-10 flex h-32 w-32 items-center justify-center overflow-hidden rounded-[52px] border border-white/[0.05] bg-black/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.22)] backdrop-blur-3xl transition-transform duration-500 group-hover/gate:scale-[1.03] [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-950/[0.84] [.light_&]:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)]">
+                      <div className="absolute inset-0 notes-retina-texture opacity-[0.4] pointer-events-none [.light_&]:opacity-[0.2]" />
+                      <img src={WHATSAPP_BUSINESS_LOGO} alt="" className="h-16 w-16 object-contain transition-all duration-700 group-hover/gate:scale-110" />
+                    </div>
                   </div>
-                  <h2 className="mt-6 text-3xl font-black tracking-[-0.05em]">Central NeuroZap</h2>
+                  <h2 className="mt-8 text-4xl font-black tracking-[-0.05em]">Central NeuroZap</h2>
                   <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500 dark:text-zinc-400">
                     Selecione uma conversa para responder pelo WhatsApp Business ou conecte um número dedicado ao Synapse.
                   </p>
-                  <Button className="mt-6 h-12 rounded-[18px] bg-white px-6 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white" onClick={() => setSettingsOpen(true)}>
-                    <SlidersHorizontal className="mr-2 h-4 w-4" />
-                    Conectar
+                  <Button className="mt-8 h-14 rounded-[22px] bg-white px-8 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-950 hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white" onClick={() => (connected ? whatsapp.fullSync.mutate() : setSettingsOpen(true))}>
+                    {connected ? <RefreshCw className="mr-2 h-4 w-4" /> : <SlidersHorizontal className="mr-2 h-4 w-4" />}
+                    {connected ? "Sincronizar" : "Conectar"}
                   </Button>
                 </div>
               </div>
@@ -670,22 +759,64 @@ function MetricTile({ label, value }: { label: string; value: number }) {
 
 function ConversationRow({
   conversation,
+  settings,
   selected,
   onClick,
+  compact = false,
 }: {
   conversation: WAConversation;
+  settings?: WhatsAppSettings | null;
   selected: boolean;
   onClick: () => void;
+  compact?: boolean;
 }) {
-  const name = formatDisplayName(conversation.patient_name, conversation.patient_phone);
-  const isPsychologist = conversation.conversation_kind === "psychologist";
+  const isPsychologist = isOwnConversation(conversation, settings);
+  const isGroup = isGroupConversation(conversation);
+  const name = isPsychologist ? "Você e Synapse" : formatDisplayName(conversation.patient_name, conversation.patient_phone);
   const contactLine = getConversationContactLine(conversation);
+  const preview = conversation.last_message_preview || "Sem prévia sincronizada";
+  const badge = isPsychologist ? "Você" : isGroup ? "Grupo" : "Paciente";
+  if (compact) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={onClick}
+              className={cn(
+                "group relative flex h-14 w-full items-center justify-center rounded-[18px] border transition-colors duration-200",
+                selected
+                  ? "border-white bg-white text-zinc-950 [.light_&]:border-zinc-950 [.light_&]:bg-zinc-950 [.light_&]:text-white"
+                  : "border-white/[0.045] bg-white/[0.018] text-zinc-300 hover:border-white/[0.09] hover:bg-white/[0.045] [.light_&]:border-zinc-200/60 [.light_&]:bg-white/55 [.light_&]:text-zinc-700 [.light_&]:hover:bg-white",
+              )}
+              aria-label={name}
+            >
+              <Avatar className="h-10 w-10 rounded-[16px]">
+                {conversation.profile_picture_url ? <AvatarImage src={conversation.profile_picture_url} /> : null}
+                <AvatarFallback className="rounded-[16px] text-xs font-black">
+                  {isPsychologist ? <UserRound className="h-4 w-4" /> : getInitials(name)}
+                </AvatarFallback>
+              </Avatar>
+              {conversation.unread_count > 0 ? <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-foreground" /> : null}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right" className="max-w-64">
+            <div className="space-y-1">
+              <p className="font-bold">{name}</p>
+              <p className="text-xs text-muted-foreground">{contactLine}</p>
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
   return (
     <button
       type="button"
       onClick={onClick}
       className={cn(
-        "group relative flex w-full gap-3 overflow-hidden rounded-2xl border p-3 text-left transition-colors duration-200",
+        "group relative flex w-full min-w-0 max-w-full gap-3 overflow-hidden rounded-2xl border p-3 text-left transition-colors duration-200",
         selected
           ? "border-white/10 bg-white text-zinc-950 shadow-[0_18px_42px_-26px_rgba(255,255,255,0.5)] [.light_&]:border-zinc-950 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.45)]"
           : "border-white/[0.045] bg-white/[0.018] text-zinc-300 hover:border-white/[0.09] hover:bg-white/[0.045] [.light_&]:border-zinc-200/60 [.light_&]:bg-white/55 [.light_&]:text-zinc-700 [.light_&]:hover:border-zinc-300 [.light_&]:hover:bg-white",
@@ -702,11 +833,15 @@ function ConversationRow({
             {formatConversationTime(conversation.last_message_at)}
           </span>
         </div>
-        <p className={cn("mt-1 truncate text-xs font-semibold", selected ? "text-current/65" : "text-zinc-500 dark:text-zinc-400")}>
-          {conversation.last_message_preview || contactLine}
+        <p className={cn("mt-1 flex min-w-0 items-center gap-1 truncate text-[11px] font-bold", selected ? "text-current/60" : "text-zinc-500 dark:text-zinc-400")}>
+          <Phone className="h-3 w-3 shrink-0" />
+          <span className="min-w-0 truncate">{contactLine}</span>
+        </p>
+        <p className={cn("mt-1 max-w-full truncate text-xs font-semibold", selected ? "text-current/65" : "text-zinc-500 dark:text-zinc-400")} title={preview}>
+          {preview}
         </p>
         <span className={cn("mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em]", selected ? "bg-white/10 text-current" : "bg-zinc-100 text-zinc-500 dark:bg-white/[0.05]")}>
-          {isPsychologist ? "Você e Synapse" : "Paciente"}
+          {badge}
         </span>
       </div>
       {conversation.unread_count > 0 ? (
@@ -720,19 +855,23 @@ function ConversationRow({
 
 function ChatHeader({
   conversation,
+  settings,
   syncing,
   onBack,
   onSync,
   onMarkAsRead,
 }: {
   conversation: WAConversation;
+  settings?: WhatsAppSettings | null;
   syncing: boolean;
   onBack: () => void;
   onSync: () => void;
   onMarkAsRead: () => void;
 }) {
-  const name = formatDisplayName(conversation.patient_name, conversation.patient_phone);
-  const isPsychologist = conversation.conversation_kind === "psychologist";
+  const isPsychologist = isOwnConversation(conversation, settings);
+  const isGroup = isGroupConversation(conversation);
+  const name = isPsychologist ? "Você e Synapse" : formatDisplayName(conversation.patient_name, conversation.patient_phone);
+  const badge = isPsychologist ? "Você" : isGroup ? "Grupo" : "Paciente";
   const contactLine = getConversationContactLine(conversation);
   const whatsappWebUrl = getWhatsAppWebUrl(conversation);
   const hasPhoneNumber = Boolean(phoneDigitsFrom(conversation.patient_phone, conversation.remote_jid));
@@ -761,7 +900,7 @@ function ChatHeader({
             <h2 className="truncate text-sm font-black sm:text-base">{name}</h2>
             <Badge variant="outline" className="hidden rounded-[12px] text-[9px] font-black uppercase tracking-[0.12em] sm:inline-flex">
               <Sparkles className="mr-1 h-3 w-3" />
-              {isPsychologist ? "Profissional" : "Paciente"}
+              {badge}
             </Badge>
           </div>
           <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
