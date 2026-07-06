@@ -20,7 +20,7 @@ export const TextReveal = ({ children, className, stagger = 0.05, delay = 0 }: T
   return (
     <span className={className}>
       {words.map((word, i) => (
-        <span key={i} className="inline-block overflow-hidden pb-3 align-bottom">
+        <span key={i} className="inline-block overflow-hidden pb-3 align-bottom mr-4 last:mr-0">
           <motion.span
             className="inline-block"
             initial={{ y: "110%" }}
@@ -30,7 +30,6 @@ export const TextReveal = ({ children, className, stagger = 0.05, delay = 0 }: T
           >
             {word}
           </motion.span>
-          {" "}
         </span>
       ))}
     </span>
