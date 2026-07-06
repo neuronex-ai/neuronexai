@@ -95,7 +95,7 @@ const readEdgeErrorMessage = async (error: unknown, response?: Response | null) 
 
   const message = error instanceof Error ? error.message : "";
   if (message && !/Edge Function/i.test(message)) return message;
-  return "Nao foi possivel concluir a acao no WhatsApp Business.";
+  return "Não foi possível concluir a ação no WhatsApp Business.";
 };
 
 const invokeEvolution = async <T>(action: string, body: Record<string, unknown> = {}) => {
@@ -198,7 +198,7 @@ export function useWhatsAppAgent() {
     mutationFn: async () => invokeEvolution("status"),
     onSuccess: () => invalidateSettings(),
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel consultar o WhatsApp Business.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível consultar o WhatsApp Business.");
     },
   });
 
@@ -218,14 +218,14 @@ export function useWhatsAppAgent() {
       invalidateSettings();
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel iniciar a conexao.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível iniciar a conexão.");
     },
   });
 
   const sendMessage = useMutation({
     mutationFn: async (payload: SendMessagePayload) => {
       if ((payload.messageType || "text") !== "text" || payload.mediaBase64) {
-        throw new Error("Envio de midia entra na proxima etapa do NeuroZap.");
+        throw new Error("Envio de mídia entra na próxima etapa do NeuroZap.");
       }
       return invokeEvolution("sendText", {
         conversationId: payload.conversationId,
@@ -239,28 +239,28 @@ export function useWhatsAppAgent() {
       invalidateConversations();
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel enviar a mensagem.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível enviar a mensagem.");
     },
   });
 
   const simulateInbound = useMutation({
     mutationFn: async (_payload: SimulateInboundPayload) => {
-      throw new Error("Simulador local removido nesta versao real do WhatsApp Business.");
+      throw new Error("Simulador local removido nesta versão real do WhatsApp Business.");
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel simular a mensagem.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível simular a mensagem.");
     },
   });
 
   const fullSync = useMutation({
-    mutationFn: async () => invokeEvolution<{ count?: number }>("syncConversations"),
+    mutationFn: async () => invokeEvolution<{ count?: number; messages?: number }>("syncConversations"),
     onSuccess: (data) => {
       invalidateConversations();
       invalidateSettings();
-      toast.success(`${Number(data?.count || 0)} conversas sincronizadas.`);
+      toast.success(`${Number(data?.count || 0)} conversas e ${Number(data?.messages || 0)} mensagens sincronizadas.`);
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel sincronizar o WhatsApp agora.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível sincronizar o WhatsApp agora.");
     },
   });
 
@@ -271,7 +271,7 @@ export function useWhatsAppAgent() {
       invalidateConversations();
     },
     onError: (error) => {
-      toast.error(error instanceof Error ? error.message : "Nao foi possivel atualizar as mensagens.");
+      toast.error(error instanceof Error ? error.message : "Não foi possível atualizar as mensagens.");
     },
   });
 

@@ -7,7 +7,6 @@ import {
   Clock,
   Info,
   Loader2,
-  LockKeyhole,
   MessageCircle,
   MessageSquare,
   MoreHorizontal,
@@ -15,9 +14,8 @@ import {
   RefreshCw,
   Search,
   Send,
-  Settings2,
-  ShieldCheck,
   Sparkles,
+  SlidersHorizontal,
   UserRound,
   WifiOff,
 } from "lucide-react";
@@ -25,7 +23,7 @@ import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion } from "framer-motion";
 
-import { AppModalShell, ModalHeroIcon } from "@/components/ui/app-modal-shell";
+import { AppModalShell } from "@/components/ui/app-modal-shell";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -90,23 +88,50 @@ const formatMessageDate = (date: Date) => {
 const connectedStatus = (settings?: WhatsAppSettings | null) =>
   settings?.connection_state === "open" || Boolean(settings?.is_active);
 
-const StatusPill = ({ settings, loading }: { settings?: WhatsAppSettings | null; loading?: boolean }) => {
+const connectionState = (settings?: WhatsAppSettings | null) => {
+  if (!settings?.instance_name) return "idle";
+  if (connectedStatus(settings)) return "connected";
+  if (settings.connection_state && !["close", "closed", "disconnected"].includes(settings.connection_state)) return "pending";
+  return "disconnected";
+};
+
+const statusLabel = (settings?: WhatsAppSettings | null) => {
+  const state = connectionState(settings);
+  if (state === "connected") return "Conectado";
+  if (state === "pending") return "Sincronização pendente";
+  if (state === "disconnected") return "Desconectado";
+  return "Sem primeira conexão";
+};
+
+const ConnectionDot = ({ settings, loading, className }: { settings?: WhatsAppSettings | null; loading?: boolean; className?: string }) => {
+  const state = connectionState(settings);
+  return (
+    <span
+      className={cn(
+        "inline-flex h-3 w-3 shrink-0 rounded-full border",
+        loading
+          ? "animate-pulse border-zinc-400/40 bg-zinc-400/35"
+          : state === "connected"
+            ? "border-emerald-400/40 bg-emerald-400 shadow-[0_0_16px_rgba(52,211,153,0.35)]"
+            : state === "pending"
+              ? "border-amber-300/45 bg-amber-300 shadow-[0_0_16px_rgba(252,211,77,0.28)]"
+              : state === "disconnected"
+                ? "border-red-400/40 bg-red-400 shadow-[0_0_14px_rgba(248,113,113,0.24)]"
+                : "border-zinc-400/25 bg-zinc-400/20",
+        className,
+      )}
+      aria-label={statusLabel(settings)}
+      role="img"
+    />
+  );
+};
+
+const CompactConnectionState = ({ settings, loading }: { settings?: WhatsAppSettings | null; loading?: boolean }) => {
   const connected = connectedStatus(settings);
   return (
-    <div
-      className={cn(
-        "inline-flex h-10 items-center gap-2 rounded-[16px] border px-3.5 text-xs font-black shadow-sm backdrop-blur-2xl",
-        connected
-          ? "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-700 dark:text-emerald-300"
-          : "border-zinc-200/70 bg-white/70 text-zinc-600 dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-zinc-300",
-      )}
-    >
-      {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <span className={cn("h-2 w-2 rounded-full", connected ? "bg-emerald-500" : "bg-zinc-400")} />
-      )}
-      {connected ? "Conectado" : "Desconectado"}
+    <div className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+      {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ConnectionDot settings={settings} />}
+      {connected ? "Ativo" : statusLabel(settings)}
     </div>
   );
 };
@@ -127,7 +152,7 @@ const groupMessages = (messages: WAMessage[] = []) =>
   }, {});
 
 const infoCopy =
-  "Conectar este WhatsApp Business permite que o Synapse responda pacientes, envie lembretes, apoie cobrancas e mantenha uma conversa operacional com voce. Recomendamos usar um chip exclusivo para o consultorio, nao o seu numero pessoal. Voce continua podendo intervir, assumir conversas e pausar o uso quando precisar.";
+  "Conectar este WhatsApp Business permite que o Synapse responda pacientes, envie lembretes, apoie cobranças e mantenha uma conversa operacional com você. Recomendamos usar um chip exclusivo para o consultório, não o seu número pessoal. Você continua podendo intervir, assumir conversas e pausar o uso quando precisar.";
 
 type ConnectionDialogProps = {
   open: boolean;
@@ -173,8 +198,8 @@ function ConnectionDialog({
     <AppModalShell
       open={open}
       onOpenChange={onOpenChange}
-      title="NeuroZap - Conectar WhatsApp Business"
-      eyebrow="NeuroZap"
+      title="Conectar WhatsApp business"
+      eyebrow="WhatsApp Business"
       description={
         <span className="inline-flex items-center justify-center gap-2">
           Ative o Synapse conectando seu WhatsApp Business.
@@ -184,7 +209,7 @@ function ConnectionDialog({
                 <button
                   type="button"
                   className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-500 shadow-sm transition hover:text-zinc-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white/[0.06] dark:text-zinc-300 dark:hover:text-white"
-                  aria-label="Informacoes sobre o WhatsApp Business"
+                  aria-label="Informações sobre o WhatsApp Business"
                 >
                   <Info className="h-3.5 w-3.5" />
                 </button>
@@ -196,7 +221,11 @@ function ConnectionDialog({
           </TooltipProvider>
         </span>
       }
-      heroIcon={<ModalHeroIcon icon={MessageCircle} state={connected ? "success" : "neutral"} tone="status" ariaLabel="WhatsApp Business" />}
+      heroIcon={
+        <div className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-transparent">
+          <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" className="h-14 w-14 object-contain" />
+        </div>
+      }
       footer={
         <div className="grid gap-2 sm:grid-cols-[0.8fr_1fr]">
           <Button
@@ -226,23 +255,26 @@ function ConnectionDialog({
       footerClassName="px-5 sm:px-8"
     >
       <div className="space-y-4">
-        <section className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-5">
+        <section className="notes-liquid-surface relative overflow-hidden rounded-[28px] border p-5 sm:p-6">
           <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.12] dark:opacity-[0.18]" />
-          <div className="relative flex flex-wrap items-center justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Canal dedicado</p>
-              <h3 className="mt-1 text-xl font-black tracking-[-0.03em] text-zinc-950 dark:text-white">
-                {connected ? "WhatsApp Business ativo" : "Aguardando conexao"}
+          <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-xl">
+              <CompactConnectionState settings={settings} loading={loading || refreshStatus.isPending} />
+              <h3 className="mt-3 text-2xl font-black tracking-tight text-zinc-100 [.light_&]:text-zinc-950">
+                {connected ? "WhatsApp Business conectado" : "Aguardando conexão"}
               </h3>
+              <p className="mt-2 text-sm font-semibold leading-relaxed text-zinc-500">
+                {connected
+                  ? "Seu número já está vinculado ao Synapse. Use sincronizar para atualizar conversas, contatos e histórico."
+                  : "Leia o QR Code com um número dedicado do consultório para ativar a conversa assistida pelo Synapse."}
+              </p>
             </div>
-            <StatusPill settings={settings} loading={loading || refreshStatus.isPending} />
-          </div>
-
-          <div className="relative mt-5 grid gap-3 sm:grid-cols-2">
-            <InfoTile icon={ShieldCheck} label="Seguranca" value="Credenciais protegidas" />
-            <InfoTile icon={LockKeyhole} label="Atendimento" value={settings?.psychologist_remote_jid ? "Numero identificado" : "Confirmacao pendente"} />
-            <InfoTile icon={RefreshCw} label="Ultima sincronizacao" value={settings?.last_sync_at ? format(new Date(settings.last_sync_at), "dd/MM HH:mm") : "Ainda nao sincronizado"} />
-            <InfoTile icon={Sparkles} label="Synapse" value={connected ? "Pronto para conversas" : "Conecte por QR Code"} />
+            {settings?.last_sync_at ? (
+              <p className="shrink-0 text-right text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                Atualizado em<br />
+                <span className="text-zinc-300 [.light_&]:text-zinc-700">{format(new Date(settings.last_sync_at), "dd/MM HH:mm")}</span>
+              </p>
+            ) : null}
           </div>
 
           {settings?.last_error ? (
@@ -257,7 +289,7 @@ function ConnectionDialog({
             {qrImageSrc ? (
               <img
                 src={qrImageSrc}
-                alt="QR Code de conexao do WhatsApp Business"
+                alt="QR Code de conexão do WhatsApp Business"
                 className="mx-auto h-60 w-60 rounded-[24px] border border-zinc-200 bg-white p-4 shadow-xl dark:border-white/10"
               />
             ) : (
@@ -266,34 +298,12 @@ function ConnectionDialog({
               </p>
             )}
             <p className="mx-auto mt-4 max-w-md text-xs font-semibold leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Abra o WhatsApp Business, acesse aparelhos conectados e leia este QR Code. Use preferencialmente um numero exclusivo do consultorio.
+              Abra o WhatsApp Business, acesse aparelhos conectados e leia este QR Code. Use preferencialmente um número exclusivo do consultório.
             </p>
           </section>
         ) : null}
       </div>
     </AppModalShell>
-  );
-}
-
-function InfoTile({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType<{ className?: string }>;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="notes-liquid-surface flex items-center gap-3 rounded-[20px] border p-4">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-white text-zinc-950 shadow-[0_12px_30px_-20px_rgba(255,255,255,0.65)] [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_12px_30px_-20px_rgba(0,0,0,0.35)]">
-        <Icon className="h-4 w-4" />
-      </span>
-      <span className="min-w-0">
-        <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{label}</span>
-        <span className="mt-0.5 block truncate text-sm font-black text-zinc-950 dark:text-white">{value}</span>
-      </span>
-    </div>
   );
 }
 
@@ -363,32 +373,44 @@ export default function NeuroZap() {
       />
 
       <main className="mx-auto flex min-h-screen w-full max-w-[1740px] flex-col gap-5 px-4 pb-5 pt-28 sm:px-6 lg:px-8">
-        <header className="notes-toolbar-surface relative overflow-hidden rounded-[34px] border px-5 py-5 sm:px-7">
+        <header className="notes-toolbar-surface relative overflow-hidden rounded-[28px] border px-4 py-3 sm:px-5">
           <div className="pointer-events-none absolute inset-0 notes-retina-texture opacity-[0.12] dark:opacity-[0.18]" />
-          <div className="relative flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-3">
+              <h1 className="text-3xl font-black leading-none tracking-tight text-zinc-100 [.light_&]:text-zinc-950 sm:text-4xl">
+                NeuroZap
+              </h1>
+              <div className="flex items-center gap-2">
                 <Badge variant="outline" className="rounded-[14px] border-zinc-300/80 px-3 py-1 text-[10px] font-black uppercase tracking-[0.18em] dark:border-white/10">
                   Business
                 </Badge>
-                <StatusPill settings={settings} loading={isLoadingSettings || whatsapp.refreshStatus.isPending} />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/[0.055] bg-white/[0.035] [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75">
+                        <ConnectionDot settings={settings} loading={isLoadingSettings || whatsapp.refreshStatus.isPending} />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{statusLabel(settings)}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
-              <h1 className="mt-4 text-5xl font-black leading-[0.9] tracking-tight text-zinc-100 [.light_&]:text-zinc-950 sm:text-6xl">
-                NeuroZap
-              </h1>
-              <p className="mt-3 max-w-xl text-sm font-semibold leading-relaxed text-zinc-500">
-                Conversas do WhatsApp Business conectadas ao Synapse, com historico separado por profissional e pacientes.
-              </p>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2 lg:min-w-[27rem]">
-              <Button variant="outline" className="h-12 rounded-[18px] border-white/[0.06] bg-white/[0.035] text-[10px] font-black uppercase tracking-[0.16em] text-zinc-300 hover:bg-white/[0.08] hover:text-white [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75 [.light_&]:text-zinc-700 [.light_&]:hover:bg-zinc-100 [.light_&]:hover:text-zinc-950" onClick={() => whatsapp.fullSync.mutate()} disabled={!connected || whatsapp.fullSync.isPending}>
-                {whatsapp.fullSync.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Sincronizar
-              </Button>
-              <Button className="h-12 rounded-[18px] bg-white text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 shadow-[0_16px_36px_-24px_rgba(255,255,255,0.7)] hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_16px_36px_-24px_rgba(0,0,0,0.4)]" onClick={() => setSettingsOpen(true)}>
-                <Settings2 className="mr-2 h-4 w-4" />
-                Conectar WhatsApp Business
+            <div className="flex items-center gap-2 sm:justify-end">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-[16px] border-white/[0.06] bg-white/[0.035] text-zinc-300 hover:bg-white/[0.08] hover:text-white [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75 [.light_&]:text-zinc-700 [.light_&]:hover:bg-zinc-100 [.light_&]:hover:text-zinc-950" onClick={() => whatsapp.fullSync.mutate()} disabled={!connected || whatsapp.fullSync.isPending} aria-label="Sincronizar">
+                      {whatsapp.fullSync.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Sincronizar</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <Button className="h-11 rounded-[16px] bg-white px-5 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 shadow-[0_16px_36px_-24px_rgba(255,255,255,0.7)] hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_16px_36px_-24px_rgba(0,0,0,0.4)]" onClick={() => setSettingsOpen(true)}>
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                Conectar
               </Button>
             </div>
           </div>
@@ -409,11 +431,11 @@ export default function NeuroZap() {
               <div className="mt-4 grid grid-cols-3 gap-2 text-xs font-black text-zinc-500 dark:text-zinc-400">
                 <MetricTile label="Conversas" value={conversations.length} />
                 <MetricTile label="Pacientes" value={patientCount} />
-                <MetricTile label="Nao lidas" value={unreadCount} />
+                <MetricTile label="Não lidas" value={unreadCount} />
               </div>
             </div>
 
-            <ScrollArea className="h-[calc(100dvh-22rem)]">
+            <ScrollArea className="notes-scroll-surface h-[calc(100dvh-22rem)]">
               <div className="space-y-2 p-3">
                 {isLoadingConversations ? (
                   <LoadingBlock label="Carregando conversas" />
@@ -452,7 +474,7 @@ export default function NeuroZap() {
                   onSync={() => whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid })}
                 />
 
-                <ScrollArea className="min-h-0 flex-1 bg-zinc-50/55 px-3 py-5 dark:bg-black/10 sm:px-6">
+                <ScrollArea className="notes-scroll-surface min-h-0 flex-1 bg-transparent px-3 py-5 sm:px-6">
                   <div className="mx-auto max-w-3xl space-y-3">
                     {isLoadingMessages ? (
                       <LoadingBlock label="Carregando mensagens" />
@@ -482,7 +504,7 @@ export default function NeuroZap() {
                   </div>
                 </ScrollArea>
 
-                <div className="border-t border-zinc-200/70 bg-white/88 p-3 backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#09090b]/92 sm:p-4">
+                <div className="notes-retina-rail border-t p-3 sm:p-4">
                   <div className="mx-auto flex max-w-3xl items-end gap-2">
                     <Textarea
                       value={replyText}
@@ -494,14 +516,14 @@ export default function NeuroZap() {
                         }
                       }}
                       placeholder="Mensagem"
-                      className="min-h-[56px] resize-none rounded-[20px] border-zinc-200 bg-zinc-50/80 text-sm font-semibold shadow-inner dark:border-white/10 dark:bg-white/[0.04]"
+                      className="min-h-[56px] resize-none rounded-[20px] border-white/[0.055] bg-white/[0.03] text-sm font-semibold text-zinc-200 placeholder:text-zinc-600 focus-visible:border-white/15 focus-visible:ring-0 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80 [.light_&]:text-zinc-900 [.light_&]:placeholder:text-zinc-400"
                     />
                     <Button
                       type="button"
                       size="icon"
                       onClick={handleSend}
                       disabled={!replyText.trim() || whatsapp.sendMessage.isPending}
-                      className="h-[56px] w-[56px] shrink-0 rounded-[20px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950"
+                      className="h-[56px] w-[56px] shrink-0 rounded-[20px] bg-white text-zinc-950 shadow-[0_16px_36px_-24px_rgba(255,255,255,0.7)] hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white"
                       aria-label="Enviar mensagem"
                     >
                       {whatsapp.sendMessage.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -512,16 +534,16 @@ export default function NeuroZap() {
             ) : (
               <div className="flex h-full min-h-[calc(100dvh-12rem)] items-center justify-center p-8">
                 <div className="max-w-md text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] border border-zinc-200 bg-white text-zinc-950 shadow-xl dark:border-white/10 dark:bg-white/[0.06] dark:text-white">
-                    <ShieldCheck className="h-7 w-7" />
+                  <div className="notes-liquid-surface mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] border">
+                    <img src="/whatsapp-business-logo.png" alt="" className="h-8 w-8 object-contain" />
                   </div>
                   <h2 className="mt-6 text-3xl font-black tracking-[-0.05em]">Central NeuroZap</h2>
                   <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500 dark:text-zinc-400">
-                    Selecione uma conversa para responder pelo WhatsApp Business ou conecte um numero dedicado ao Synapse.
+                    Selecione uma conversa para responder pelo WhatsApp Business ou conecte um número dedicado ao Synapse.
                   </p>
-                  <Button className="mt-6 h-12 rounded-[18px] bg-zinc-950 px-6 text-[10px] font-black uppercase tracking-[0.16em] text-white dark:bg-white dark:text-zinc-950" onClick={() => setSettingsOpen(true)}>
-                    <Settings2 className="mr-2 h-4 w-4" />
-                    Conectar WhatsApp Business
+                  <Button className="mt-6 h-12 rounded-[18px] bg-white px-6 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-950 hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white" onClick={() => setSettingsOpen(true)}>
+                    <SlidersHorizontal className="mr-2 h-4 w-4" />
+                    Conectar
                   </Button>
                 </div>
               </div>
@@ -535,7 +557,7 @@ export default function NeuroZap() {
 
 function MetricTile({ label, value }: { label: string; value: number }) {
   return (
-    <div className="rounded-[18px] border border-zinc-200/70 bg-zinc-50/70 px-4 py-3 dark:border-white/[0.08] dark:bg-white/[0.03]">
+    <div className="notes-liquid-surface rounded-[18px] border px-4 py-3">
       <span className="block text-[9px] uppercase tracking-[0.18em]">{label}</span>
       <span className="mt-1 block text-lg text-zinc-950 dark:text-white">{value}</span>
     </div>
@@ -558,10 +580,10 @@ function ConversationRow({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex w-full gap-3 rounded-[24px] border p-3 text-left transition-all duration-200",
+        "group relative flex w-full gap-3 overflow-hidden rounded-2xl border p-3 text-left transition-colors duration-200",
         selected
-          ? "border-zinc-950 bg-zinc-950 text-white shadow-xl shadow-zinc-950/10 dark:border-white dark:bg-white dark:text-zinc-950"
-          : "border-transparent bg-transparent hover:border-zinc-200/70 hover:bg-white/70 dark:hover:border-white/[0.08] dark:hover:bg-white/[0.035]",
+          ? "border-white/10 bg-white text-zinc-950 shadow-[0_18px_42px_-26px_rgba(255,255,255,0.5)] [.light_&]:border-zinc-950 [.light_&]:bg-zinc-950 [.light_&]:text-white [.light_&]:shadow-[0_18px_42px_-26px_rgba(0,0,0,0.45)]"
+          : "border-white/[0.045] bg-white/[0.018] text-zinc-300 hover:border-white/[0.09] hover:bg-white/[0.045] [.light_&]:border-zinc-200/60 [.light_&]:bg-white/55 [.light_&]:text-zinc-700 [.light_&]:hover:border-zinc-300 [.light_&]:hover:bg-white",
       )}
     >
       <Avatar className="h-12 w-12 rounded-[18px]">
@@ -579,7 +601,7 @@ function ConversationRow({
           {conversation.last_message_preview || conversation.patient_phone}
         </p>
         <span className={cn("mt-2 inline-flex rounded-full px-2 py-1 text-[8px] font-black uppercase tracking-[0.14em]", selected ? "bg-white/10 text-current" : "bg-zinc-100 text-zinc-500 dark:bg-white/[0.05]")}>
-          {isPsychologist ? "Voce e Synapse" : "Paciente"}
+          {isPsychologist ? "Você e Synapse" : "Paciente"}
         </span>
       </div>
       {conversation.unread_count > 0 ? (
@@ -605,7 +627,7 @@ function ChatHeader({
   const name = formatDisplayName(conversation.patient_name, conversation.patient_phone);
   const isPsychologist = conversation.conversation_kind === "psychologist";
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-zinc-200/70 bg-white/86 px-3 py-3 backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#09090b]/88 sm:px-4">
+    <div className="notes-retina-rail flex items-center justify-between gap-3 border-b px-3 py-3 sm:px-4">
       <div className="flex min-w-0 items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onBack} className="h-11 w-11 rounded-[16px] lg:hidden">
           <ArrowLeft className="h-5 w-5" />
@@ -661,8 +683,8 @@ function MessageBubble({ message }: { message: WAMessage }) {
         className={cn(
           "max-w-[82%] rounded-[26px] border px-4 py-3 text-sm shadow-sm sm:max-w-[68%]",
           outbound
-            ? "rounded-br-[8px] border-zinc-950 bg-zinc-950 text-white dark:border-white dark:bg-white dark:text-zinc-950"
-            : "rounded-bl-[8px] border-zinc-200/70 bg-white text-zinc-950 dark:border-white/[0.08] dark:bg-white/[0.05] dark:text-white",
+            ? "rounded-br-[8px] border-white bg-white text-zinc-950 shadow-[0_18px_42px_-26px_rgba(255,255,255,0.5)] [.light_&]:border-zinc-950 [.light_&]:bg-zinc-950 [.light_&]:text-white"
+            : "rounded-bl-[8px] border-white/[0.055] bg-white/[0.035] text-zinc-100 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/80 [.light_&]:text-zinc-950",
         )}
       >
         {fromSynapse ? (
@@ -711,8 +733,8 @@ function EmptyBlock({
   loading?: boolean;
 }) {
   return (
-    <div className="flex min-h-[18rem] flex-col items-center justify-center gap-4 rounded-[28px] border border-dashed border-zinc-200/80 bg-zinc-50/55 p-6 text-center dark:border-white/[0.08] dark:bg-white/[0.025]">
-      <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-zinc-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.06]">
+    <div className="notes-liquid-surface flex min-h-[18rem] flex-col items-center justify-center gap-4 rounded-[28px] border border-dashed p-6 text-center">
+      <div className="flex h-14 w-14 items-center justify-center rounded-[20px] border border-white/[0.055] bg-white/[0.035] shadow-sm [.light_&]:border-zinc-200/70 [.light_&]:bg-white">
         <Icon className="h-5 w-5 text-zinc-500 dark:text-zinc-300" />
       </div>
       <h3 className="text-sm font-black">{title}</h3>

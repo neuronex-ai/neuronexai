@@ -65,7 +65,7 @@ serve(async (req) => {
     const managerApiKey = safeString(Deno.env.get("EVOLUTION_GLOBAL_API_KEY")) || safeString(Deno.env.get("EVOLUTION_INSTANCE_API_KEY"));
 
     if (!supabaseUrl || !serviceRoleKey || !evolutionBaseUrl) {
-      throw new Error("Configuracao interna ausente para envio WhatsApp.");
+      throw new Error("Configuração interna ausente para envio WhatsApp.");
     }
 
     const token = bearerToken(req.headers.get("authorization"));
@@ -105,7 +105,7 @@ serve(async (req) => {
       conversation = data;
     }
 
-    if (!conversation) return json({ error: "Conversa WhatsApp nao encontrada." }, 404);
+    if (!conversation) return json({ error: "Conversa WhatsApp não encontrada." }, 404);
 
     const { data: credential, error: credentialError } = await supabaseAdmin
       .schema("private")
@@ -116,7 +116,7 @@ serve(async (req) => {
       .maybeSingle();
     if (credentialError && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
     const instanceApiKey = safeString(credential?.instance_api_key) || managerApiKey;
-    if (!instanceApiKey) return json({ error: "Canal WhatsApp ainda nao configurado para envio." }, 409);
+    if (!instanceApiKey) return json({ error: "Canal WhatsApp ainda não configurado para envio." }, 409);
 
     const remoteJid = explicitRemoteJid || conversation.remote_jid;
     const payload = {

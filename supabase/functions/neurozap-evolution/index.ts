@@ -93,7 +93,7 @@ const getRuntimeConfig = (): RuntimeConfig => {
   );
 
   if (!baseUrl || !(managerApiKey || legacyInstanceKey)) {
-    throw new Error("Configuracao do WhatsApp Business ausente. Defina EVOLUTION_API_URL e EVOLUTION_GLOBAL_API_KEY.");
+    throw new Error("Configuração do WhatsApp Business ausente. Defina EVOLUTION_API_URL e EVOLUTION_GLOBAL_API_KEY.");
   }
 
   return {
@@ -117,6 +117,8 @@ const toArray = (value: unknown): any[] => {
   }
   return [];
 };
+
+const compactArray = <T>(value: T[]) => value.filter(Boolean);
 
 const toIso = (value: unknown) => {
   if (typeof value === "number") {
@@ -145,6 +147,116 @@ const sendTargetFor = (remoteJid: string) => {
   if (raw.includes("@") || /[a-z]/i.test(raw)) return raw;
   const digits = digitsOnly(raw);
   return digits || raw;
+};
+
+const contactJidFrom = (value: any) => {
+  const raw =
+    safeString(value?.id) ||
+    safeString(value?.remoteJid) ||
+    safeString(value?.remote_jid) ||
+    safeString(value?.jid) ||
+    safeString(value?.wuid) ||
+    safeString(value?.number) ||
+    safeString(value?.phone);
+  if (!raw) return "";
+  if (raw.includes("@")) return raw;
+  const digits = digitsOnly(raw);
+  return digits ? `${digits}@s.whatsapp.net` : raw;
+};
+
+const contactLookupKeys = (remoteJid: string) =>
+  compactArray([
+    safeString(remoteJid).toLowerCase(),
+    remoteJidToPhone(remoteJid).toLowerCase(),
+    digitsOnly(remoteJid),
+  ]);
+
+const buildContactIndex = (contacts: any[]) => {
+  const index = new Map<string, any>();
+  for (const contact of contacts) {
+    const jid = contactJidFrom(contact);
+    for (const key of contactLookupKeys(jid)) index.set(key, contact);
+  }
+  return index;
+};
+
+const findContactFor = (index: Map<string, any>, remoteJid: string) => {
+  for (const key of contactLookupKeys(remoteJid)) {
+    const found = index.get(key);
+    if (found) return found;
+  }
+  return null;
+};
+
+const buildLabelIndex = (labels: any[]) => {
+  const index = new Map<string, any>();
+  for (const label of labels) {
+    const ids = compactArray([
+      safeString(label?.id),
+      safeString(label?.labelId),
+      safeString(label?.label_id),
+      safeString(label?.name),
+    ]);
+    for (const id of ids) index.set(id, label);
+  }
+  return index;
+};
+
+const normalizeLabels = (rawLabels: unknown, labelIndex: Map<string, any>) => {
+  const values = Array.isArray(rawLabels)
+    ? rawLabels
+    : typeof rawLabels === "string" && rawLabels
+      ? rawLabels.split(",")
+      : [];
+
+  return values.map((item) => {
+    if (typeof item === "string" || typeof item === "number") {
+      const id = String(item);
+      const label = labelIndex.get(id);
+      return label
+        ? {
+          id: safeString(label.id || label.labelId || id) || id,
+          name: safeString(label.name || label.label || id) || id,
+          color: safeString(label.color || label.hexColor) || null,
+        }
+        : { id, name: id };
+    }
+
+    const label = item as Record<string, unknown>;
+    const id = safeString(label.id || label.labelId || label.label_id || label.name);
+    const resolved = id ? labelIndex.get(id) : null;
+    return {
+      id: id || safeString(resolved?.id) || crypto.randomUUID(),
+      name: safeString(label.name || label.label || resolved?.name || resolved?.label || id) || "Marcador",
+      color: safeString(label.color || label.hexColor || resolved?.color || resolved?.hexColor) || null,
+    };
+  });
+};
+
+const extractProfilePicture = (...payloads: any[]) => {
+  for (const payload of payloads) {
+    const value =
+      safeString(payload?.profilePictureUrl) ||
+      safeString(payload?.profilePicUrl) ||
+      safeString(payload?.profilePic) ||
+      safeString(payload?.profile_picture_url) ||
+      safeString(payload?.picture) ||
+      safeString(payload?.avatar);
+    if (value) return value;
+  }
+  return null;
+};
+
+const extractContactStatus = (...payloads: any[]) => {
+  for (const payload of payloads) {
+    const value =
+      safeString(payload?.status) ||
+      safeString(payload?.statusMessage) ||
+      safeString(payload?.about) ||
+      safeString(payload?.description);
+    if (value) return value;
+  }
+  return null;
 };
 
 const sameJid = (a?: string | null, b?: string | null) => {
@@ -311,12 +423,13 @@ const senderKindFor = (
   return conversationKind === "psychologist" ? "psychologist" : "patient";
 };
 
-const mapChat = (chat: any, config: InstanceConfig) => {
+const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIndex = new Map<string, any>()) => {
   const remoteJid =
     safeString(chat?.id) ||
     safeString(chat?.remoteJid) ||
     safeString(chat?.remote_jid) ||
-    safeString(chat?.jid);
+    safeString(chat?.jid) ||
+    contactJidFrom(contact);
   const lastMessage =
     safeString(chat?.lastMessage?.message?.conversation) ||
     safeString(chat?.lastMessage?.message?.extendedTextMessage?.text) ||
@@ -329,6 +442,8 @@ const mapChat = (chat: any, config: InstanceConfig) => {
 
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
   const phone = remoteJidToPhone(remoteJid);
+  const labels = normalizeLabels(chat?.labels || chat?.labelIds || contact?.labels || contact?.labelIds, labelIndex);
+  const contactStatus = extractContactStatus(contact, chat);
 
   return {
     instance_name: config.instanceName,
@@ -336,19 +451,21 @@ const mapChat = (chat: any, config: InstanceConfig) => {
     conversation_kind: kind,
     patient_name:
       kind === "psychologist"
-        ? "Voce e Synapse"
-        : safeString(chat?.name) || safeString(chat?.pushName) || safeString(chat?.subject) || null,
+        ? "Você e Synapse"
+        : safeString(chat?.name) ||
+          safeString(chat?.pushName) ||
+          safeString(contact?.pushName) ||
+          safeString(contact?.name) ||
+          safeString(contact?.verifiedName) ||
+          safeString(chat?.subject) ||
+          null,
     patient_phone: phone,
-    profile_picture_url:
-      safeString(chat?.profilePictureUrl) ||
-      safeString(chat?.profilePicUrl) ||
-      safeString(chat?.profile_picture_url) ||
-      null,
+    profile_picture_url: extractProfilePicture(chat, contact),
     last_message_preview: lastMessage || null,
     last_message_at: toIso(chat?.conversationTimestamp || chat?.lastMessage?.messageTimestamp || chat?.updatedAt || chat?.createdAt),
     unread_count: Number(chat?.unreadMessages || chat?.unread_count || 0),
-    labels: Array.isArray(chat?.labels) ? chat.labels : [],
-    raw_payload: chat || {},
+    labels,
+    raw_payload: { chat: chat || {}, contact: contact || null, contact_status: contactStatus, labels },
   };
 };
 
@@ -397,7 +514,7 @@ const getUser = async (req: Request, supabaseUrl: string, anonKey: string) => {
     auth: { persistSession: false },
   });
   const { data, error } = await userClient.auth.getUser();
-  if (error || !data.user) throw new Error("Usuario nao autenticado.");
+  if (error || !data.user) throw new Error("Usuário não autenticado.");
   return data.user;
 };
 
@@ -634,7 +751,7 @@ const ensureSynapseSession = async (
   const phone = remoteJidToPhone(remoteJid);
   const title =
     conversationKind === "psychologist"
-      ? "WhatsApp Business - Voce e Synapse"
+      ? "WhatsApp Business - Você e Synapse"
       : `WhatsApp Business - ${displayName || phone || "Paciente"}`.slice(0, 180);
   const { data: created, error: createError } = await supabaseAdmin
     .from("chat_sessions")
@@ -663,7 +780,7 @@ const upsertConversation = async (
   patch: Record<string, unknown> = {},
 ) => {
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
-  const displayName = kind === "psychologist" ? "Voce e Synapse" : safeString(patch.patient_name) || null;
+  const displayName = kind === "psychologist" ? "Você e Synapse" : safeString(patch.patient_name) || null;
   const sessionId = await ensureSynapseSession(supabaseAdmin, userId, remoteJid, kind, displayName);
   const { data, error } = await supabaseAdmin
     .from("whatsapp_conversations")
@@ -686,6 +803,52 @@ const upsertConversation = async (
   return data;
 };
 
+const fetchMessagesForRemote = async (
+  config: InstanceConfig,
+  remoteJid: string,
+  maxPages = 3,
+  pageSize = 200,
+) => {
+  const collected: any[] = [];
+  for (let page = 1; page <= maxPages; page += 1) {
+    const result = await evolutionFetchWithFallback(config, config.instanceApiKey, `/chat/findMessages/${encodeURIComponent(config.instanceName)}`, {
+      method: "POST",
+      body: JSON.stringify({ where: { key: { remoteJid } }, page, offset: pageSize, take: pageSize }),
+    });
+    const items = toArray(result);
+    collected.push(...items);
+    if (items.length < pageSize) break;
+  }
+  return collected;
+};
+
+const syncMessagesForRemote = async (
+  supabaseAdmin: any,
+  userId: string,
+  config: InstanceConfig,
+  remoteJid: string,
+  maxPages = 3,
+  pageSize = 200,
+) => {
+  const result = await fetchMessagesForRemote(config, remoteJid, maxPages, pageSize);
+  const messages = result.map((item) => mapMessage(item, config, remoteJid)).filter(Boolean);
+  const conversation = await upsertConversation(supabaseAdmin, userId, config, remoteJid);
+  if (!messages.length) return 0;
+
+  const rows = messages.map((message) => ({
+    ...message,
+    user_id: userId,
+    conversation_id: conversation.id,
+    synapse_session_id: conversation.synapse_session_id,
+    updated_at: new Date().toISOString(),
+  }));
+  const { error } = await supabaseAdmin
+    .from("whatsapp_messages")
+    .upsert(rows, { onConflict: "user_id,source_message_id" });
+  if (error) throw error;
+  return rows.length;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -694,7 +857,7 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("Configuracao Supabase ausente.");
+    if (!supabaseUrl || !serviceRoleKey || !anonKey) throw new Error("Configuração Supabase ausente.");
 
     const user = await getUser(req, supabaseUrl, anonKey);
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
@@ -729,7 +892,7 @@ serve(async (req) => {
       return json({
         ok: false,
         connected: false,
-        message: "WhatsApp Business ainda nao conectado.",
+        message: "WhatsApp Business ainda não conectado.",
       });
     }
 
@@ -760,11 +923,31 @@ serve(async (req) => {
     }
 
     if (action === "syncConversations") {
-      const result = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/chat/findChats/${encodeURIComponent(loadedConfig.instanceName)}`, {
-        method: "POST",
-        body: JSON.stringify({ where: {}, take: 80, skip: 0, orderBy: { updatedAt: "desc" } }),
-      });
-      const chats = toArray(result).map((chat) => mapChat(chat, loadedConfig)).filter(Boolean);
+      const [result, contactsResult, labelsResult] = await Promise.all([
+        evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/chat/findChats/${encodeURIComponent(loadedConfig.instanceName)}`, {
+          method: "POST",
+          body: JSON.stringify({ where: {}, take: 100, skip: 0, orderBy: { updatedAt: "desc" } }),
+        }),
+        evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/chat/findContacts/${encodeURIComponent(loadedConfig.instanceName)}`, {
+          method: "POST",
+          body: JSON.stringify({ where: {} }),
+        }).catch((error) => ({ error: error.message, data: [] })),
+        evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/label/findLabels/${encodeURIComponent(loadedConfig.instanceName)}`)
+          .catch((error) => ({ error: error.message, data: [] })),
+      ]);
+      const contacts = toArray(contactsResult);
+      const contactIndex = buildContactIndex(contacts);
+      const labelIndex = buildLabelIndex(toArray(labelsResult));
+      const chats = toArray(result)
+        .map((chat) => {
+          const remoteJid =
+            safeString(chat?.id) ||
+            safeString(chat?.remoteJid) ||
+            safeString(chat?.remote_jid) ||
+            safeString(chat?.jid);
+          return mapChat(chat, loadedConfig, findContactFor(contactIndex, remoteJid), labelIndex);
+        })
+        .filter(Boolean);
       let upserted = 0;
       for (const chat of chats) {
         await upsertConversation(supabaseAdmin, user.id, loadedConfig, chat.remote_jid, {
@@ -773,39 +956,34 @@ serve(async (req) => {
         });
         upserted += 1;
       }
+      let syncedMessages = 0;
+      for (const chat of chats) {
+        syncedMessages += await syncMessagesForRemote(supabaseAdmin, user.id, loadedConfig, chat.remote_jid, 2, 200).catch((error) => {
+          console.warn("[neurozap-evolution] message sync failed for chat", chat.remote_jid, error);
+          return 0;
+        });
+      }
       await upsertSettings(supabaseAdmin, user.id, loadedConfig, {
         is_active: true,
         last_sync_at: new Date().toISOString(),
         last_error: null,
+        metadata: {
+          sync: {
+            chats: chats.length,
+            contacts: contacts.length,
+            labels: labelIndex.size,
+            messages: syncedMessages,
+            synced_at: new Date().toISOString(),
+          },
+        },
       });
-      return json({ ok: true, count: upserted });
+      return json({ ok: true, count: upserted, messages: syncedMessages });
     }
 
     if (action === "syncMessages") {
       const remoteJid = safeString(body.remoteJid);
-      if (!remoteJid) return json({ error: "remoteJid obrigatorio." }, 400);
-      const result = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/chat/findMessages/${encodeURIComponent(loadedConfig.instanceName)}`, {
-        method: "POST",
-        body: JSON.stringify({ where: { key: { remoteJid } }, take: 50 }),
-      });
-      const messages = toArray(result).map((item) => mapMessage(item, loadedConfig, remoteJid)).filter(Boolean);
-
-      const conversation = await upsertConversation(supabaseAdmin, user.id, loadedConfig, remoteJid);
-      let upserted = 0;
-      if (messages.length) {
-        const rows = messages.map((message) => ({
-          ...message,
-          user_id: user.id,
-          conversation_id: conversation.id,
-          synapse_session_id: conversation.synapse_session_id,
-          updated_at: new Date().toISOString(),
-        }));
-        const { error } = await supabaseAdmin
-          .from("whatsapp_messages")
-          .upsert(rows, { onConflict: "user_id,source_message_id" });
-        if (error) throw error;
-        upserted = rows.length;
-      }
+      if (!remoteJid) return json({ error: "remoteJid obrigatório." }, 400);
+      const upserted = await syncMessagesForRemote(supabaseAdmin, user.id, loadedConfig, remoteJid, 5, 200);
       return json({ ok: true, count: upserted });
     }
 
@@ -813,7 +991,7 @@ serve(async (req) => {
       const remoteJid = safeString(body.remoteJid);
       const text = safeString(body.text);
       const conversationId = safeString(body.conversationId);
-      if (!remoteJid || !text) return json({ error: "remoteJid e text sao obrigatorios." }, 400);
+      if (!remoteJid || !text) return json({ error: "remoteJid e text são obrigatórios." }, 400);
 
       const sent = await evolutionFetchWithFallback(loadedConfig, loadedConfig.instanceApiKey, `/message/sendText/${encodeURIComponent(loadedConfig.instanceName)}`, {
         method: "POST",
@@ -860,7 +1038,7 @@ serve(async (req) => {
       return json({ ok: true, success: true, sent });
     }
 
-    return json({ error: `Action nao suportada: ${action}` }, 400);
+    return json({ error: `Action não suportada: ${action}` }, 400);
   } catch (error) {
     console.error("[neurozap-evolution]", error);
     return json({ error: error instanceof Error ? error.message : "Erro interno." }, 500);
