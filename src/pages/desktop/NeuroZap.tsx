@@ -47,6 +47,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { MediaMessage } from "@/components/whatsapp/MediaMessage";
 import { useWhatsAppAgent, WAConversation, WAMessage, WhatsAppConnectResponse, WhatsAppSettings } from "@/hooks/use-whatsapp-agent";
 import { cn } from "@/lib/utils";
+import {
+  formatRemoteJid,
+  identitiesIntersect,
+  isLikelyPhoneDigits,
+  isStatusJid,
+  phoneDigitsFrom,
+} from "@/lib/whatsapp-identity";
 import { toast } from "sonner";
 
 const WHATSAPP_BUSINESS_LOGO = "/whatsapp-business-logo-white.png";
