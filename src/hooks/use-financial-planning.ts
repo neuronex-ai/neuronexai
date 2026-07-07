@@ -34,21 +34,20 @@ export function useFinancialPlanning(month: Date) {
   const queryClient = useQueryClient();
   const userId = user?.id;
   const monthKey = monthKeyOf(month);
+  const queryKey = ["financial-planning-goal", userId, monthKey] as const;
 
   const goal = useQuery<FinancialPlanningGoal | null, Error>({
-    queryKey: ["financial-planning-goal", userId, monthKey],
+    queryKey,
     enabled: Boolean(userId),
     staleTime: 1000 * 60 * 2,
     queryFn: async () => {
-      if (!userId) throw new Error("Usuario nao autenticado");
+      if (!userId) throw new Error("Usuário não autenticado");
 
       const { data, error } = await supabase
         .from("financial_planning_goals")
         .select("*")
         .eq("professional_id", userId)
         .eq("month", monthKey)
-        .order("updated_at", { ascending: false })
-        .limit(1)
         .maybeSingle();
 
       if (error) throw error;
@@ -58,7 +57,7 @@ export function useFinancialPlanning(month: Date) {
 
   const saveGoal = useMutation({
     mutationFn: async (input: FinancialPlanningGoalInput) => {
-      if (!userId) throw new Error("Usuario nao autenticado");
+      if (!userId) throw new Error("Usuário não autenticado");
 
       const payload = {
         professional_id: userId,
@@ -81,8 +80,10 @@ export function useFinancialPlanning(month: Date) {
       return data as FinancialPlanningGoal;
     },
     onSuccess: (data) => {
-      queryClient.setQueryData(["financial-planning-goal", userId, monthKey], data);
-      queryClient.invalidateQueries({ queryKey: ["financial-planning-goal", userId, monthKey] });
+      queryClient.setQueryData(queryKey, data);
+      queryClient.invalidateQueries({ queryKey });
+      queryClient.invalidateQueries({ queryKey: ["financial-planning-goal"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-managerial-metrics"] });
     },
   });
 
