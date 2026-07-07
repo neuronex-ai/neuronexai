@@ -784,6 +784,15 @@ export default function NeuroZap() {
   const patientCount = visibleConversations.filter((conversation) => !isOwnConversation(conversation, settings) && !isGroupConversation(conversation)).length;
   const groupedMessages = useMemo(() => groupMessages(messages), [messages]);
   const connected = connectedStatus(settings);
+  const panelRefreshPending = whatsapp.syncPanel.isPending;
+
+  const handlePanelRefresh = () => {
+    if (!connected) {
+      setSettingsOpen(true);
+      return;
+    }
+    whatsapp.syncPanel.mutate({ remoteJid: selectedConversation?.remote_jid });
+  };
 
   useEffect(() => {
     whatsapp.refreshStatus.mutate({ silent: true });

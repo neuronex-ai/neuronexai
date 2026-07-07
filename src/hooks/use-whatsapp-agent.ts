@@ -86,6 +86,10 @@ type SyncMessagesPayload = {
   silent?: boolean;
 };
 
+type SyncPanelPayload = {
+  remoteJid?: string | null;
+};
+
 type WhatsAppSyncResponse = {
   count?: number;
   messages?: number;
@@ -446,6 +450,43 @@ export function useWhatsAppAgent() {
     },
   });
 
+  const syncPanel = useMutation({
+    mutationFn: async (payload?: SyncPanelPayload) => {
+      const status = await invokeEvolution("status").catch((error) => ({
+        ok: false,
+        error: error instanceof Error ? error.message : "status_failed",
+      }));
+      const sync = await invokeEvolution<WhatsAppSyncResponse>("syncConversations");
+      const selectedMessages = payload?.remoteJid
+        ? await invokeEvolution<{ count?: number }>("syncMessages", { remoteJid: payload.remoteJid })
+        : null;
+
+      return {
+        status,
+        sync,
+        selectedMessages,
+      };
+    },
+    onSuccess: (data, variables) => {
+      invalidateSettings();
+      invalidateConversations();
+      invalidateMessages();
+      if (variables?.remoteJid) invalidateMessages(variables.remoteJid);
+
+      if (data.sync?.waitingForHistory) {
+        toast.info("WhatsApp conectado. O hist\u00f3rico ainda est\u00e1 sendo disponibilizado pela conex\u00e3o.");
+        return;
+      }
+
+      const conversationCount = Number(data.sync?.count || 0);
+      const messageCount = Number(data.sync?.messages || 0) + Number(data.selectedMessages?.count || 0);
+      toast.success(`${conversationCount} conversas e ${messageCount} mensagens atualizadas.`);
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "N\u00e3o foi poss\u00edvel atualizar o painel do NeuroZap.");
+    },
+  });
+
   const syncMessages = useMutation({
     mutationFn: async ({ remoteJid }: SyncMessagesPayload) =>
       invokeEvolution<{ count?: number }>("syncMessages", { remoteJid }),
@@ -487,6 +528,7 @@ export function useWhatsAppAgent() {
     sendMessage,
     simulateInbound,
     fullSync,
+    syncPanel,
     syncMessages,
     markAsRead,
   };
