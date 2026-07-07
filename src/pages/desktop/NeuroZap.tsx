@@ -58,12 +58,6 @@ import { toast } from "sonner";
 
 const WHATSAPP_BUSINESS_LOGO = "/whatsapp-business-logo-white.png";
 
-const isLikelyPhoneDigits = (digits: string) => {
-  if (!digits) return false;
-  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
-  return local.length === 8 || local.length === 9 || local.length === 10 || local.length === 11;
-};
-
 const formatDisplayName = (patientName: string | null | undefined, patientPhone: string | null | undefined) => {
   if (
     patientName &&
@@ -92,26 +86,6 @@ const formatDisplayName = (patientName: string | null | undefined, patientPhone:
   }
   if (digits.length >= 10) return digits.replace(/(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3");
   return cleanPhone || "Contato";
-};
-
-const phoneDigitsFrom = (...values: Array<string | null | undefined>) => {
-  for (const value of values) {
-    const raw = (value || "").trim();
-    if (!raw) continue;
-    if (raw.includes("@lid")) continue;
-    const normalized = raw
-      .replace("@s.whatsapp.net", "")
-      .replace("@c.us", "")
-      .replace("@g.us", "");
-    const looksLikePhone =
-      raw.includes("@s.whatsapp.net") ||
-      raw.includes("@c.us") ||
-      /^[+\d\s().-]+$/.test(normalized);
-    if (!looksLikePhone) continue;
-    const digits = normalized.replace(/\D/g, "");
-    if (isLikelyPhoneDigits(digits)) return digits;
-  }
-  return "";
 };
 
 const formatPhoneDigits = (digits: string) => {
