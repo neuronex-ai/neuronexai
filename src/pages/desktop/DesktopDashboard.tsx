@@ -35,6 +35,10 @@ const METRIC_SELECTORS = [
   },
 ] as const;
 
+function setText(node: HTMLElement | undefined, value: string) {
+  if (node && node.textContent !== value) node.textContent = value;
+}
+
 function patchNeuroFinanceDashboardCards(balance: ReturnType<typeof useNeuroFinanceBalance>["data"], isLoading: boolean) {
   const labelNodes = Array.from(document.querySelectorAll<HTMLParagraphElement>("button p"));
 
@@ -50,11 +54,10 @@ function patchNeuroFinanceDashboardCards(balance: ReturnType<typeof useNeuroFina
     if (!card) return;
 
     const paragraphs = Array.from(card.querySelectorAll<HTMLParagraphElement>("p"));
-    const label = paragraphs[0];
-    const value = paragraphs[1];
+    const value = isLoading ? "..." : formatCurrency(metric.getValue(balance) || 0);
 
-    if (label) label.textContent = metric.label;
-    if (value) value.textContent = isLoading ? "..." : formatCurrency(metric.getValue(balance) || 0);
+    setText(paragraphs[0], metric.label);
+    setText(paragraphs[1], value);
   });
 }
 
@@ -79,12 +82,16 @@ const DesktopDashboard = () => {
 
   useEffect(() => {
     const apply = () => patchNeuroFinanceDashboardCards(neuroFinanceBalance, isLoading);
-    apply();
+    const delays = [0, 80, 250, 700];
+    const timers = delays.map((delay) => window.setTimeout(apply, delay));
 
-    const observer = new MutationObserver(() => apply());
-    observer.observe(document.body, { childList: true, subtree: true });
+    const handleClick = () => window.setTimeout(apply, 40);
+    document.addEventListener("click", handleClick);
 
-    return () => observer.disconnect();
+    return () => {
+      timers.forEach((timer) => window.clearTimeout(timer));
+      document.removeEventListener("click", handleClick);
+    };
   }, [balanceSignature, isLoading, neuroFinanceBalance]);
 
   return <DesktopDashboardCommandCenter />;
