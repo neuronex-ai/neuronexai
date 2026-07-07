@@ -1,0 +1,132 @@
+{
+  "name": "NeuroZap Synapse WhatsApp - Dynamic Edge Router",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": ":instance",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "id": "0d70a4d6-078f-48a0-b445-e5a2fd4db66c",
+      "name": "Evolution Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -660,
+        0
+      ],
+      "webhookId": "neurozap-dynamic-instance"
+    },
+    {
+      "parameters": {
+        "jsCode": "const envelope = $json || {};\nconst body = envelope.body ?? envelope;\nconst data = body.data ?? body;\nconst key = data.key ?? body.key ?? {};\n\nconst instanceFromPath = envelope.params?.instance ?? envelope.pathParams?.instance ?? null;\nconst instanceName = instanceFromPath\n  || body.instance_name\n  || body.instanceName\n  || body.instance\n  || data.instanceName\n  || data.instance\n  || body?.instance?.instanceName\n  || null;\n\nconst remoteJid = body.remoteJid\n  || body.remote_jid\n  || data.remoteJid\n  || data.remote_jid\n  || key.remoteJid\n  || null;\n\nconst message = data.message ?? body.message ?? {};\nconst text = body.text\n  || data.text\n  || message.conversation\n  || message.extendedTextMessage?.text\n  || body.content\n  || null;\n\nreturn [\n  {\n    json: {\n      ...body,\n      data,\n      key,\n      instance_name: instanceName,\n      instanceName,\n      webhook_path_instance: instanceFromPath,\n      remoteJid,\n      remote_jid: remoteJid,\n      text,\n      professional_id: body.professional_id ?? body.professionalId ?? null,\n      conversation_kind: body.conversation_kind ?? null,\n      sender_kind: body.sender_kind ?? null,\n      headers: envelope.headers ?? body.headers ?? {},\n      query: envelope.query ?? {},\n      received_at: new Date().toISOString()\n    }\n  }\n];"
+      },
+      "id": "a4101d48-9eb9-46e0-88be-1a2bfb77cd18",
+      "name": "Normalizar payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_SYNAPSE_WHATSAPP_URL || 'https://krewdaklcyzqfxkkgvqr.supabase.co/functions/v1/synapse-whatsapp-in' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-synapse-channel-secret",
+              "value": "={{ $env.SYNAPSE_CHANNEL_SECRET }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "timeout": 300000
+        }
+      },
+      "id": "95544f72-f944-4618-a39c-3f89a46334cd",
+      "name": "Chamar Synapse Central",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -160,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, synapse: $json, handled_at: new Date().toISOString() }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "8e2043dd-5951-427f-aa50-dcadfdb5b36f",
+      "name": "Responder Evolution",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        100,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "Evolution Webhook": {
+      "main": [
+        [
+          {
+            "node": "Normalizar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar payload": {
+      "main": [
+        [
+          {
+            "node": "Chamar Synapse Central",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar Synapse Central": {
+      "main": [
+        [
+          {
+            "node": "Responder Evolution",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-07-07T00:00:00.000Z",
+  "versionId": "neurozap-dynamic-edge-router-v1",
+  "active": false
+}

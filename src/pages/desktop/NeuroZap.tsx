@@ -875,11 +875,11 @@ export default function NeuroZap() {
               <TooltipProvider>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-[16px] border-white/[0.06] bg-white/[0.035] text-zinc-300 hover:bg-white/[0.08] hover:text-white [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75 [.light_&]:text-zinc-700 [.light_&]:hover:bg-zinc-100 [.light_&]:hover:text-zinc-950" onClick={() => whatsapp.fullSync.mutate()} disabled={!connected || whatsapp.fullSync.isPending} aria-label="Sincronizar">
-                      {whatsapp.fullSync.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                    <Button variant="outline" size="icon" className="h-11 w-11 rounded-[16px] border-white/[0.06] bg-white/[0.035] text-zinc-300 hover:bg-white/[0.08] hover:text-white [.light_&]:border-zinc-200/70 [.light_&]:bg-white/75 [.light_&]:text-zinc-700 [.light_&]:hover:bg-zinc-100 [.light_&]:hover:text-zinc-950" onClick={handlePanelRefresh} disabled={!connected || panelRefreshPending} aria-label="Atualizar painel NeuroZap">
+                      {panelRefreshPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     </Button>
                   </TooltipTrigger>
-                  <TooltipContent>Sincronizar</TooltipContent>
+                  <TooltipContent>Atualizar painel</TooltipContent>
                 </Tooltip>
               </TooltipProvider>
               {!connected ? (
@@ -927,25 +927,6 @@ export default function NeuroZap() {
                   </div>
                 ) : null}
                 <div className={cn("flex items-center gap-2", isListCollapsed && "flex-col")}>
-                  {!isListCollapsed ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-10 w-10 rounded-[14px]"
-                            onClick={() => whatsapp.fullSync.mutate()}
-                            disabled={!connected || whatsapp.fullSync.isPending}
-                            aria-label="Sincronizar conversas"
-                          >
-                            {whatsapp.fullSync.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>Sincronizar conversas</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : null}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -999,9 +980,9 @@ export default function NeuroZap() {
                   <EmptyBlock
                     icon={connected ? MessageCircle : WifiOff}
                     title={connected ? "Nenhuma conversa" : "WhatsApp Business desconectado"}
-                    actionLabel={connected ? "Sincronizar" : "Conectar"}
-                    onAction={() => (connected ? whatsapp.fullSync.mutate() : setSettingsOpen(true))}
-                    loading={whatsapp.fullSync.isPending}
+                    actionLabel={connected ? "Atualizar painel" : "Conectar"}
+                    onAction={handlePanelRefresh}
+                    loading={panelRefreshPending}
                   />
                 )}
               </div>
@@ -1014,12 +995,10 @@ export default function NeuroZap() {
                 <ChatHeader
                   conversation={selectedConversation}
                   settings={settings}
-                  syncing={whatsapp.syncMessages.isPending}
                   onBack={() => {
                     setSelectedConversation(null);
                     setShowMobileChat(false);
                   }}
-                  onSync={() => whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid })}
                   onMarkAsRead={() => whatsapp.markAsRead.mutate(selectedConversation.id)}
                 />
 
@@ -1044,9 +1023,9 @@ export default function NeuroZap() {
                       <EmptyBlock
                         icon={MessageSquare}
                         title="Sem mensagens sincronizadas"
-                        actionLabel="Atualizar"
-                        onAction={() => whatsapp.syncMessages.mutate({ remoteJid: selectedConversation.remote_jid })}
-                        loading={whatsapp.syncMessages.isPending}
+                        actionLabel="Atualizar painel"
+                        onAction={handlePanelRefresh}
+                        loading={panelRefreshPending}
                       />
                     )}
                     <div ref={messagesEndRef} />
@@ -1093,9 +1072,9 @@ export default function NeuroZap() {
                   <p className="mt-3 text-sm font-semibold leading-relaxed text-zinc-500 dark:text-zinc-400">
                     Selecione uma conversa para responder pelo WhatsApp Business ou conecte um número dedicado ao Synapse.
                   </p>
-                  <Button className="mt-8 h-14 rounded-[22px] bg-white px-8 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-950 hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white" onClick={() => (connected ? whatsapp.fullSync.mutate() : setSettingsOpen(true))}>
-                    {connected ? <RefreshCw className="mr-2 h-4 w-4" /> : <SlidersHorizontal className="mr-2 h-4 w-4" />}
-                    {connected ? "Sincronizar" : "Conectar"}
+                  <Button className="mt-8 h-14 rounded-[22px] bg-white px-8 text-[10px] font-black uppercase tracking-[0.22em] text-zinc-950 hover:bg-zinc-200 [.light_&]:bg-zinc-950 [.light_&]:text-white" onClick={handlePanelRefresh}>
+                    {connected ? null : <SlidersHorizontal className="mr-2 h-4 w-4" />}
+                    {connected ? "Atualizar painel" : "Conectar"}
                   </Button>
                 </div>
               </div>
@@ -1215,16 +1194,12 @@ function ConversationRow({
 function ChatHeader({
   conversation,
   settings,
-  syncing,
   onBack,
-  onSync,
   onMarkAsRead,
 }: {
   conversation: WAConversation;
   settings?: WhatsAppSettings | null;
-  syncing: boolean;
   onBack: () => void;
-  onSync: () => void;
   onMarkAsRead: () => void;
 }) {
   const isPsychologist = isOwnConversation(conversation, settings);
@@ -1270,16 +1245,6 @@ function ChatHeader({
       </div>
 
       <div className="flex items-center gap-1">
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button variant="ghost" size="icon" onClick={onSync} disabled={syncing} className="h-11 w-11 rounded-[16px]">
-                <RefreshCw className={cn("h-4 w-4", syncing && "animate-spin")} />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Atualizar conversa</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="h-11 w-11 rounded-[16px]" aria-label="Mais opções">
@@ -1290,10 +1255,6 @@ function ChatHeader({
             align="end"
             className="w-60 rounded-2xl border-white/[0.08] bg-zinc-950/95 p-2 text-zinc-100 shadow-2xl backdrop-blur-xl [.light_&]:border-zinc-200 [.light_&]:bg-white [.light_&]:text-zinc-950"
           >
-            <DropdownMenuItem className="rounded-xl" onClick={onSync}>
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Atualizar conversa
-            </DropdownMenuItem>
             <DropdownMenuItem className="rounded-xl" onClick={onMarkAsRead}>
               <CheckCircle2 className="mr-2 h-4 w-4" />
               Marcar como lida
