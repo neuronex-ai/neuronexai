@@ -50,6 +50,10 @@ const listFrom = (value: any, key: string) => Array.isArray(value?.data?.[key]) 
 const getDateValue = (item: any) =>
   item?.date || item?.start_time || item?.created_at || item?.paid_at || item?.due_date || item?.uploaded_at || null;
 
+const paidStatuses = new Set(["paid", "received", "completed", "confirmed"]);
+const openStatuses = new Set(["planned", "pending", "overdue", "scheduled", "processing"]);
+const cancelledAppointmentStatuses = new Set(["cancelled", "canceled", "cancelled_by_patient", "cancelled_by_professional"]);
+
 function summarizePaymentTotals(charges: any[], entries: any[]) {
   const chargePendingStatuses = new Set(["pending", "overdue", "processing"]);
   const chargePaidStatuses = new Set(["paid", "received", "confirmed", "completed"]);
@@ -187,6 +191,227 @@ async function queryCharges(
   return (data || []).map(mapCharge);
 }
 
+function referenceDate(entry: any) {
+  return String(entry.paid_at || entry.competence_date || entry.due_date || entry.created_at || "").slice(0, 10);
+}
+
+async function getMonthFinancialEntries(admin: any, userId: string) {
+  const now = new Date();
+  const start = dateOnly(new Date(now.getFullYear(), now.getMonth(), 1));
+  const end = dateOnly(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  const { data, error } = await admin
+    .from("financial_entries")
+    .select("id,type,title,description,amount,status,due_date,competence_date,paid_at,created_at,origin,patient_id,appointment_id,neurofinance_charge_id,metadata,patient:patient_id(name)")
+    .eq("professional_id", userId)
+    .neq("status", "cancelled")
+    .order("due_date", { ascending: false })
+    .limit(1000);
+  if (error) throw error;
+
+  return {
+    start_date: start,
+    end_date: end,
+    entries: (data || []).filter((entry: any) => {
+      const date = referenceDate(entry);
+      return date >= start && date <= end;
+    }),
+  };
+}
+
+async function getFinancialPlanningGoal(admin: any, userId: string) {
+  const now = new Date();
+  const month = dateOnly(new Date(now.getFullYear(), now.getMonth(), 1));
+  const { data, error } = await admin
+    .from("financial_planning_goals")
+    .select("*")
+    .eq("professional_id", userId)
+    .eq("month", month)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+function summarizeManagerialFinance(entries: any[]) {
+  return entries.reduce((acc, entry) => {
+    const amount = Math.abs(Number(entry.amount || 0));
+    const status = String(entry.status || "").toLowerCase();
+    const isPaid = paidStatuses.has(status);
+    const isOpen = openStatuses.has(status) || !isPaid;
+
+    if (entry.type === "income") {
+      if (isPaid) acc.income += amount;
+      if (isOpen) acc.receivable += amount;
+    }
+    if (entry.type === "expense") {
+      if (isPaid) acc.expense += amount;
+      if (isOpen) acc.payable += amount;
+    }
+    return acc;
+  }, { income: 0, expense: 0, receivable: 0, payable: 0, result: 0 });
+}
+
+async function getNeurofinanceOverviewData(admin: any, userId: string) {
+  const account = await getFinancialAccount(admin, userId);
+  const status = safeAccount(account);
+  if (!status.has_account) return { account: status, overview: null };
+
+  const { data: snapshot, error } = await admin
+    .from("neurofinance_overview_snapshot_v")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+
+  const overview = snapshot ? {
+    available_balance: Number(snapshot.available_balance || 0) / 100,
+    pending_receivables: Number(snapshot.pending_receivables || 0) / 100,
+    gross_received: Number(snapshot.gross_received || 0) / 100,
+    fees_total: Number(snapshot.fees_total || 0) / 100,
+    total_outflow: Number(snapshot.total_outflow || 0) / 100,
+    calculated_available_balance: Number(snapshot.calculated_available_balance || 0) / 100,
+    reconciliation_difference: Number(snapshot.reconciliation_difference || 0) / 100,
+    is_stale: Boolean(snapshot.is_stale),
+    provider_as_of: snapshot.provider_as_of || snapshot.updated_at || null,
+    last_sync_error: snapshot.last_sync_error || status.last_sync_error || null,
+  } : null;
+
+  return { account: status, overview };
+}
+
+function mapAppointment(row: any) {
+  return {
+    id: row.id,
+    patient_id: row.patient_id,
+    patient_name: row.patient?.name || null,
+    start_time: row.start_time,
+    end_time: row.end_time,
+    type: row.type,
+    status: row.status,
+    location: row.location || null,
+    google_meet_link: row.google_meet_link || null,
+    notes: row.notes || null,
+    metadata: row.metadata || {},
+  };
+}
+
+async function queryDashboardAppointments(admin: any, userId: string, startDate: string, endDate: string, limit = 50) {
+  const start = `${startDate}T00:00:00.000-03:00`;
+  const end = `${endDate}T23:59:59.999-03:00`;
+  const { data, error } = await admin
+    .from("appointments")
+    .select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,notes,metadata,patient:patient_id(name)")
+    .eq("user_id", userId)
+    .gte("start_time", new Date(start).toISOString())
+    .lte("start_time", new Date(end).toISOString())
+    .order("start_time", { ascending: true })
+    .limit(limit);
+  if (error) throw error;
+  return (data || []).map(mapAppointment);
+}
+
+async function getNextAppointment(admin: any, userId: string) {
+  const { data, error } = await admin
+    .from("appointments")
+    .select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,notes,metadata,patient:patient_id(name)")
+    .eq("user_id", userId)
+    .gte("start_time", new Date().toISOString())
+    .not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)")
+    .order("start_time", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapAppointment(data) : null;
+}
+
+async function getDashboardFinancialOverview(admin: any, userId: string) {
+  const month = await getMonthFinancialEntries(admin, userId);
+  const managerial = summarizeManagerialFinance(month.entries);
+  managerial.result = managerial.income - managerial.expense;
+  const neurofinance = await getNeurofinanceOverviewData(admin, userId);
+  const planning = await getFinancialPlanningGoal(admin, userId);
+  const revenueGoal = Number(planning?.revenue_goal_cents || 0) / 100;
+  const expenseLimit = Number(planning?.expense_limit_cents || 0) / 100;
+  const desiredProfit = Number(planning?.desired_profit_cents || 0) / 100;
+
+  return {
+    period: { start_date: month.start_date, end_date: month.end_date },
+    management: {
+      ...managerial,
+      entry_count: month.entries.length,
+      recent_entries: month.entries.slice(0, 8).map((entry: any) => ({
+        id: entry.id,
+        type: entry.type,
+        title: entry.title || entry.description,
+        amount: Math.abs(Number(entry.amount || 0)),
+        status: entry.status,
+        due_date: entry.due_date,
+        patient_name: entry.patient?.name || null,
+      })),
+    },
+    neurofinance,
+    planning: planning ? {
+      id: planning.id,
+      month: planning.month,
+      revenue_goal: revenueGoal,
+      expense_limit: expenseLimit,
+      desired_profit: desiredProfit,
+      target_sessions: planning.target_sessions || 0,
+      notes: planning.notes || null,
+      revenue_progress_percent: revenueGoal > 0 ? Math.min(100, (managerial.income / revenueGoal) * 100) : 0,
+      expense_usage_percent: expenseLimit > 0 ? Math.min(100, (managerial.expense / expenseLimit) * 100) : 0,
+      remaining_revenue: Math.max(0, revenueGoal - managerial.income),
+    } : null,
+  };
+}
+
+async function getDashboardAttentionQueue(admin: any, userId: string, limit = 20) {
+  const today = dateOnly(new Date());
+  const yesterday = dateOnly(addDays(new Date(), -1));
+  const upcoming = await queryDashboardAppointments(admin, userId, yesterday, today, 80);
+  const appointmentItems = upcoming
+    .filter((appointment: any) => !cancelledAppointmentStatuses.has(String(appointment.status || "").toLowerCase()))
+    .filter((appointment: any) => ["unscored", "pending"].includes(String(appointment.status || "").toLowerCase()) || appointment.metadata?.syncStatus === "pending_professional_review")
+    .map((appointment: any) => ({
+      kind: "appointment_attention",
+      priority: appointment.metadata?.syncStatus === "pending_professional_review" ? "high" : "normal",
+      title: appointment.metadata?.syncStatus === "pending_professional_review" ? "Reagendamento pendente" : "Consulta precisa de atenção",
+      description: `${appointment.patient_name || "Paciente"} · ${appointment.start_time}`,
+      appointment,
+    }));
+
+  const { data: pendingPatients, error: pendingPatientsError } = await admin
+    .from("patients")
+    .select("id,name,status,created_at")
+    .eq("user_id", userId)
+    .in("status", ["pending", "new", "triage"])
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (pendingPatientsError) throw pendingPatientsError;
+
+  const account = safeAccount(await getFinancialAccount(admin, userId));
+  const neurofinanceItems = !account.has_account || !account.is_active ? [{
+    kind: "neurofinance_attention",
+    priority: "normal",
+    title: "NeuroFinance ainda não está ativo",
+    description: `Estado atual: ${account.state}`,
+    account,
+  }] : [];
+
+  const items = [
+    ...appointmentItems,
+    ...(pendingPatients || []).map((patient: any) => ({
+      kind: "patient_attention",
+      priority: "normal",
+      title: "Paciente pendente",
+      description: patient.name,
+      patient,
+    })),
+    ...neurofinanceItems,
+  ].slice(0, limit);
+
+  return { items, total: items.length };
+}
+
 function stageNewMutation(name: string, args: Record<string, any>): AgentToolResult {
   const now = new Date();
   const summaries: Record<string, string> = {
@@ -226,6 +451,57 @@ async function executeNewReadTool(
   const { admin, userId } = context;
 
   switch (name) {
+    case "get_dashboard_schedule": {
+      const today = new Date();
+      const startDate = clean(args.start_date || dateOnly(today), 10);
+      const endDate = clean(args.end_date || dateOnly(addDays(today, 7)), 10);
+      const appointments = await queryDashboardAppointments(admin, userId, startDate, endDate, clamp(args.limit, 30, 1, 50));
+      const data = { period: { start_date: startDate, end_date: endDate }, appointments };
+      return { ok: true, grounded: true, recordCount: appointments.length, data, structuredData: { type: "dashboard_schedule", data } };
+    }
+
+    case "get_dashboard_next_appointment": {
+      const appointment = await getNextAppointment(admin, userId);
+      return { ok: true, grounded: true, recordCount: appointment ? 1 : 0, data: { appointment }, structuredData: { type: "dashboard_next_appointment", data: { appointment } } };
+    }
+
+    case "get_dashboard_financial_overview": {
+      const overview = await getDashboardFinancialOverview(admin, userId);
+      return { ok: true, grounded: true, recordCount: 1, data: overview, structuredData: { type: "dashboard_financial_overview", data: overview } };
+    }
+
+    case "get_dashboard_attention_queue": {
+      const queue = await getDashboardAttentionQueue(admin, userId, clamp(args.limit, 20, 1, 30));
+      return { ok: true, grounded: true, recordCount: queue.total, data: queue, structuredData: { type: "dashboard_attention_queue", data: queue } };
+    }
+
+    case "get_dashboard_daily_briefing": {
+      const today = dateOnly(new Date());
+      const [nextAppointment, todaySchedule, weekSchedule, financial, attention] = await Promise.all([
+        getNextAppointment(admin, userId),
+        queryDashboardAppointments(admin, userId, today, today, 50),
+        queryDashboardAppointments(admin, userId, today, dateOnly(addDays(new Date(), 7)), 80),
+        getDashboardFinancialOverview(admin, userId),
+        getDashboardAttentionQueue(admin, userId, 20),
+      ]);
+      const data = {
+        date: today,
+        next_appointment: nextAppointment,
+        today_appointments: todaySchedule,
+        week_appointments: weekSchedule,
+        attention_queue: attention.items,
+        financial,
+        summary: {
+          today_count: todaySchedule.length,
+          week_count: weekSchedule.length,
+          attention_count: attention.total,
+          management_result: financial.management.result,
+          neurofinance_available_balance: financial.neurofinance?.overview?.available_balance ?? null,
+        },
+      };
+      return { ok: true, grounded: true, recordCount: 1 + todaySchedule.length + attention.total, data, structuredData: { type: "dashboard_daily_briefing", data } };
+    }
+
     case "get_neurofinance_status": {
       const account = await getFinancialAccount(admin, userId);
       const status = safeAccount(account);
@@ -239,42 +515,13 @@ async function executeNewReadTool(
     }
 
     case "get_neurofinance_overview": {
-      const account = await getFinancialAccount(admin, userId);
-      const status = safeAccount(account);
-      if (!status.has_account) {
-        return {
-          ok: true,
-          grounded: true,
-          recordCount: 0,
-          data: { account: status, overview: null },
-          structuredData: { type: "neurofinance_status", data: status },
-        };
-      }
-
-      const { data: snapshot, error } = await admin
-        .from("neurofinance_overview_snapshot_v")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-      if (error) throw error;
-      const overview = snapshot ? {
-        available_balance: Number(snapshot.available_balance || 0) / 100,
-        pending_receivables: Number(snapshot.pending_receivables || 0) / 100,
-        gross_received: Number(snapshot.gross_received || 0) / 100,
-        fees_total: Number(snapshot.fees_total || 0) / 100,
-        total_outflow: Number(snapshot.total_outflow || 0) / 100,
-        calculated_available_balance: Number(snapshot.calculated_available_balance || 0) / 100,
-        reconciliation_difference: Number(snapshot.reconciliation_difference || 0) / 100,
-        is_stale: Boolean(snapshot.is_stale),
-        provider_as_of: snapshot.provider_as_of || snapshot.updated_at || null,
-        last_sync_error: snapshot.last_sync_error || status.last_sync_error || null,
-      } : null;
+      const data = await getNeurofinanceOverviewData(admin, userId);
       return {
         ok: true,
         grounded: true,
-        recordCount: snapshot ? 1 : 0,
-        data: { account: status, overview },
-        structuredData: { type: "neurofinance_overview", data: { account: status, overview } },
+        recordCount: data.overview ? 1 : 0,
+        data,
+        structuredData: { type: data.overview ? "neurofinance_overview" : "neurofinance_status", data },
       };
     }
 
@@ -792,7 +1039,7 @@ export async function executeConfirmedMutationV3(
       case "send_appointment_reminder": {
         const { data: appointment, error } = await context.admin
           .from("appointments")
-          .select("id,start_time,end_time,type,location,meet_link,patient:patient_id(name,email)")
+          .select("id,start_time,end_time,type,location,google_meet_link,patient:patient_id(name,email)")
           .eq("id", args.appointment_id)
           .eq("user_id", context.userId)
           .maybeSingle();
@@ -807,7 +1054,7 @@ export async function executeConfirmedMutationV3(
           startTime: appointment.start_time,
           endTime: appointment.end_time,
           type: appointment.type,
-          meetLink: appointment.meet_link || null,
+          meetLink: appointment.google_meet_link || null,
           location: appointment.location || null,
           origin: context.requestOrigin || "https://neuronex.site",
           action: args.action || "reminder",
