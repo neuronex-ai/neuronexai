@@ -83,6 +83,14 @@ type SyncMessagesPayload = {
   silent?: boolean;
 };
 
+type WhatsAppSyncResponse = {
+  count?: number;
+  messages?: number;
+  contacts?: number;
+  labels?: number;
+  waitingForHistory?: boolean;
+};
+
 export type WhatsAppConnectResponse = {
   ok?: boolean;
   connected?: boolean;
@@ -417,10 +425,14 @@ export function useWhatsAppAgent() {
   });
 
   const fullSync = useMutation({
-    mutationFn: async () => invokeEvolution<{ count?: number; messages?: number }>("syncConversations"),
+    mutationFn: async () => invokeEvolution<WhatsAppSyncResponse>("syncConversations"),
     onSuccess: (data) => {
       invalidateConversations();
       invalidateSettings();
+      if (data?.waitingForHistory) {
+        toast.info("WhatsApp conectado. O histórico ainda está sendo disponibilizado pela conexão.");
+        return;
+      }
       toast.success(`${Number(data?.count || 0)} conversas e ${Number(data?.messages || 0)} mensagens sincronizadas.`);
     },
     onError: (error) => {

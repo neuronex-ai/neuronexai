@@ -83,15 +83,32 @@ const cleanBaseUrl = (value: string) =>
     .replace(/\/+$/, "")
     .replace(/\/manager$/i, "");
 
-const normalizeWebhookBase = (value: string, marker: "webhook" | "webhook-test") => {
-  const fallback =
-    marker === "webhook-test"
-      ? "https://webhook.neuronexai.com.br/webhook-test"
-      : "https://webhook.neuronexai.com.br/webhook";
-  const clean = (value || fallback).trim().replace(/\/+$/, "");
+const originFromBaseUrl = (baseUrl: string) => {
+  try {
+    return new URL(baseUrl).origin;
+  } catch {
+    return "https://wsapi.neuronexai.com.br";
+  }
+};
+
+const normalizeWebhookBase = (value: string, marker: "webhook" | "webhook-test", fallbackOrigin: string) => {
+  const fallback = `${fallbackOrigin.replace(/\/+$/, "")}/${marker}`;
+  const raw = (value || fallback).trim().replace(/\/+$/, "");
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return fallback;
+  }
+
+  const legacyOrInvalidHost =
+    url.hostname === "webhook" ||
+    url.hostname === "webhook.neuronexai.com.br" ||
+    !url.hostname.includes(".");
+  const clean = legacyOrInvalidHost ? fallback : raw;
   const markerIndex = clean.indexOf(`/${marker}`);
   if (markerIndex >= 0) return clean.slice(0, markerIndex + marker.length + 1);
-  return clean;
+  return `${new URL(clean).origin}/${marker}`;
 };
 
 const buildWebhookUrl = (config: RuntimeConfig, instanceName: string) => {
@@ -103,7 +120,11 @@ const isManagedWebhookUrl = (value: string, instanceName: string) => {
   if (!value) return false;
   try {
     const url = new URL(value);
-    if (url.hostname !== "webhook.neuronexai.com.br") return false;
+    const isKnownHost =
+      url.hostname === "webhook" ||
+      url.hostname === "webhook.neuronexai.com.br" ||
+      url.hostname === "wsapi.neuronexai.com.br";
+    if (!isKnownHost) return false;
     const instance = decodeURIComponent(url.pathname.split("/").filter(Boolean).pop() || "");
     return instance === instanceName;
   } catch {
@@ -114,17 +135,20 @@ const isManagedWebhookUrl = (value: string, instanceName: string) => {
 const getRuntimeConfig = (): RuntimeConfig => {
   const baseUrl = cleanBaseUrl(Deno.env.get("EVOLUTION_API_URL") || "");
   const managerApiKey = safeString(Deno.env.get("EVOLUTION_GLOBAL_API_KEY"));
+  const evolutionOrigin = originFromBaseUrl(baseUrl);
   const webhookMode: WebhookMode =
     safeString(Deno.env.get("EVOLUTION_WEBHOOK_MODE")) === "production" ? "production" : "sandbox";
   const sandboxWebhookBase = normalizeWebhookBase(
     safeString(Deno.env.get("EVOLUTION_WEBHOOK_SANDBOX_BASE")) ||
       safeString(Deno.env.get("EVOLUTION_WEBHOOK_SANDBOX_URL")),
     "webhook-test",
+    evolutionOrigin,
   );
   const productionWebhookBase = normalizeWebhookBase(
     safeString(Deno.env.get("EVOLUTION_WEBHOOK_PRODUCTION_BASE")) ||
       safeString(Deno.env.get("EVOLUTION_WEBHOOK_PRODUCTION_URL")),
     "webhook",
+    evolutionOrigin,
   );
 
   if (!baseUrl || !managerApiKey) {
@@ -143,15 +167,18 @@ const getRuntimeConfig = (): RuntimeConfig => {
   };
 };
 
-const toArray = (value: unknown): any[] => {
+const toArray = (value: unknown, depth = 0): any[] => {
   if (Array.isArray(value)) return value;
-  if (value && typeof value === "object") {
+  if (value && typeof value === "object" && depth < 4) {
     const record = value as Record<string, any>;
-    if (Array.isArray(record.data)) return record.data;
-    if (Array.isArray(record.chats)) return record.chats;
-    if (Array.isArray(record.records)) return record.records;
-    if (Array.isArray(record.messages)) return record.messages;
-    if (Array.isArray(record?.messages?.records)) return record.messages.records;
+    const keys = ["data", "response", "result", "rows", "chats", "contacts", "labels", "records", "messages"];
+    for (const key of keys) {
+      if (Array.isArray(record[key])) return record[key];
+    }
+    for (const key of keys) {
+      const nested = toArray(record[key], depth + 1);
+      if (nested.length) return nested;
+    }
   }
   return [];
 };
@@ -968,19 +995,40 @@ const applyWebhook = async (config: InstanceConfig) => {
     webhookHeaders["x-synapse-channel-secret"] = config.channelSecret;
   }
 
+  const webhookConfig = {
+    enabled: true,
+    url: config.webhookUrl,
+    byEvents: false,
+    base64: true,
+    webhookByEvents: false,
+    webhookBase64: true,
+    headers: webhookHeaders,
+    events: WEBHOOK_EVENTS,
+  };
+
   const payload = {
     webhook: {
-      url: config.webhookUrl,
-      byEvents: false,
-      base64: true,
-      headers: webhookHeaders,
-      events: WEBHOOK_EVENTS,
+      ...webhookConfig,
     },
   };
-  return evolutionFetchWithFallback(config, config.instanceApiKey, `/webhook/set/${encodeURIComponent(config.instanceName)}`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  return evolutionFetchAny(config, config.instanceApiKey, [
+    {
+      label: "webhook nested",
+      path: `/webhook/set/${encodeURIComponent(config.instanceName)}`,
+      init: {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    },
+    {
+      label: "webhook direct",
+      path: `/webhook/set/${encodeURIComponent(config.instanceName)}`,
+      init: {
+        method: "POST",
+        body: JSON.stringify(webhookConfig),
+      },
+    },
+  ]);
 };
 
 const applyRuntimeSetup = async (config: InstanceConfig) => {
@@ -1021,6 +1069,11 @@ const findChats = (config: InstanceConfig) =>
       init: postJson({ where: {}, limit: 100, offset: 0 }),
     },
     {
+      label: "findChats all",
+      path: `/chat/findChats/${encodeURIComponent(config.instanceName)}`,
+      init: postJson({}),
+    },
+    {
       label: "findChats get",
       path: `/chat/findChats/${encodeURIComponent(config.instanceName)}`,
       init: { method: "GET" },
@@ -1033,6 +1086,11 @@ const findContacts = (config: InstanceConfig) =>
       label: "findContacts post",
       path: `/chat/findContacts/${encodeURIComponent(config.instanceName)}`,
       init: postJson({ where: {} }),
+    },
+    {
+      label: "findContacts all",
+      path: `/chat/findContacts/${encodeURIComponent(config.instanceName)}`,
+      init: postJson({}),
     },
     {
       label: "findContacts get",
@@ -1066,6 +1124,70 @@ const fetchOwnerJid = async (config: InstanceConfig, ...payloads: unknown[]) => 
   const fetched = await evolutionFetch(config, config.managerApiKey, `/instance/fetchInstances?instanceName=${encodeURIComponent(config.instanceName)}`)
     .catch(() => null);
   return extractOwnerJid(fetched);
+};
+
+const instanceNameFromPayload = (payload: any) =>
+  safeString(payload?.name) ||
+  safeString(payload?.instanceName) ||
+  safeString(payload?.instance?.instanceName) ||
+  safeString(payload?.instance?.name);
+
+const instanceStateFromPayload = (payload: any) =>
+  safeString(payload?.connectionStatus) ||
+  safeString(payload?.state) ||
+  safeString(payload?.instance?.state) ||
+  safeString(payload?.instance?.connectionStatus) ||
+  safeString(payload?.connectionState);
+
+const findOpenManagedInstance = async (runtime: RuntimeConfig, userId: string): Promise<InstanceConfig | null> => {
+  const prefix = `neurozap-${userId.slice(0, 8).toLowerCase()}-`;
+  const fetched = await evolutionFetch(runtime, runtime.managerApiKey, "/instance/fetchInstances").catch(() => []);
+  const instances = toArray(fetched)
+    .map((item) => ({
+      raw: item,
+      instanceName: instanceNameFromPayload(item),
+      state: instanceStateFromPayload(item).toLowerCase(),
+      ownerJid: extractOwnerJid(item),
+    }))
+    .filter((item) => item.instanceName.toLowerCase().startsWith(prefix));
+  const open = instances.find((item) => ["open", "connected"].includes(item.state));
+  if (!open) return null;
+  return {
+    ...runtime,
+    instanceName: open.instanceName,
+    instanceApiKey: runtime.managerApiKey,
+    webhookUrl: buildWebhookUrl(runtime, open.instanceName),
+    psychologistRemoteJid: open.ownerJid,
+    initialConnection: open.raw,
+  };
+};
+
+const adoptOpenManagedInstance = async (
+  supabaseAdmin: any,
+  userId: string,
+  runtime: RuntimeConfig,
+  current: InstanceConfig,
+): Promise<InstanceConfig> => {
+  const recovered = await findOpenManagedInstance(runtime, userId).catch(() => null);
+  if (!recovered || recovered.instanceName === current.instanceName) return current;
+  await upsertSettings(supabaseAdmin, userId, recovered, {
+    is_active: true,
+    connection_state: "open",
+    psychologist_remote_jid: recovered.psychologistRemoteJid,
+    psychologist_phone: recovered.psychologistRemoteJid ? remoteJidToPhone(recovered.psychologistRemoteJid) : null,
+    webhook_enabled: true,
+    webhook_events: WEBHOOK_EVENTS,
+    settings_applied_at: new Date().toISOString(),
+    last_status_at: new Date().toISOString(),
+    last_error: null,
+    metadata: { recovered_from_open_evolution_instance: true, previous_instance_name: current.instanceName },
+  });
+  await upsertMapping(supabaseAdmin, userId, recovered, {
+    owner_remote_jid: recovered.psychologistRemoteJid,
+    last_connection_state: "open",
+    metadata: { recovered_from_open_evolution_instance: true },
+  });
+  return recovered;
 };
 
 const updateConnectionState = async (
@@ -1305,6 +1427,7 @@ serve(async (req) => {
     if (action === "connect") {
       let recreated = false;
       let config = await ensureInstanceConfig(supabaseAdmin, user.id, runtime);
+      config = await adoptOpenManagedInstance(supabaseAdmin, user.id, runtime, config);
       let setup = await applyRuntimeSetup(config);
       let connection: any = null;
       let normalizedConnection = extractConnectionPayload(config.initialConnection);
@@ -1356,7 +1479,7 @@ serve(async (req) => {
       });
     }
 
-    const loadedConfig = await loadInstanceConfig(supabaseAdmin, user.id, runtime);
+    let loadedConfig = await loadInstanceConfig(supabaseAdmin, user.id, runtime);
     if (!loadedConfig) {
       return json({
         ok: false,
@@ -1364,6 +1487,7 @@ serve(async (req) => {
         message: "WhatsApp Business ainda n\u00e3o conectado.",
       });
     }
+    loadedConfig = await adoptOpenManagedInstance(supabaseAdmin, user.id, runtime, loadedConfig);
 
     if (action === "logout") {
       const logout = await logoutInstance(loadedConfig);
@@ -1457,6 +1581,49 @@ serve(async (req) => {
         })
         .filter(Boolean);
       const activeRemoteJids = chats.map((chat) => chat.remote_jid);
+
+      if (!chats.length) {
+        const { count: existingConversationCount, error: existingCountError } = await supabaseAdmin
+          .from("whatsapp_conversations")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("instance_name", syncConfig.instanceName)
+          .is("deleted_at", null);
+        if (existingCountError) throw existingCountError;
+
+        if (!existingConversationCount) {
+          await upsertSettings(supabaseAdmin, user.id, syncConfig, {
+            is_active: true,
+            psychologist_remote_jid: ownerJid || syncConfig.psychologistRemoteJid,
+            psychologist_phone: ownerJid || syncConfig.psychologistRemoteJid ? remoteJidToPhone(ownerJid || syncConfig.psychologistRemoteJid || "") : null,
+            last_sync_at: new Date().toISOString(),
+            last_error: null,
+            metadata: {
+              sync: {
+                chats: 0,
+                contacts: contacts.length,
+                labels: labelIndex.size,
+                messages: 0,
+                waiting_for_history: true,
+                synced_at: new Date().toISOString(),
+                setup_warnings: setup.warnings,
+              },
+            },
+          });
+          await upsertMapping(supabaseAdmin, user.id, syncConfig, {
+            owner_remote_jid: ownerJid || syncConfig.psychologistRemoteJid,
+          });
+          return json({
+            ok: true,
+            count: 0,
+            messages: 0,
+            waitingForHistory: true,
+            contacts: contacts.length,
+            labels: labelIndex.size,
+          });
+        }
+      }
+
       await markMissingConversationsDeleted(supabaseAdmin, user.id, syncConfig.instanceName, activeRemoteJids);
       let upserted = 0;
       for (const chat of chats) {

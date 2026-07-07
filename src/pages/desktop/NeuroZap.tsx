@@ -446,19 +446,47 @@ function ConnectionDialog({
   onOpenChange,
   settings,
   loading,
+  refreshStatus,
   connect,
   fullSync,
 }: ConnectionDialogProps) {
   const shouldReduceMotion = useReducedMotion();
   const connected = connectedStatus(settings);
   const [step, setStep] = useState<ConnectionStep>("intro");
+  const startedConnectionRef = useRef(false);
+  const autoSyncedRef = useRef(false);
+  const autoCloseTimerRef = useRef<number | null>(null);
   const connectPayload = connect.data as WhatsAppConnectResponse | undefined;
   const { qr, qrImageSrc } = normalizeConnectionQr(connectPayload?.connection);
   const connectError = connect.error instanceof Error ? connect.error.message : "";
   const responseState = String(connectPayload?.state || settings?.connection_state || "").toLowerCase();
   const isConnectedStep = connected || step === "connected";
   const isQrStep = step === "qr" && !connected;
+  const visibleError = connectError || (!isConnectedStep ? settings?.last_error || "" : "");
   const pendingQr = connect.isPending || (isQrStep && !qr && !connect.error);
+  const syncingAfterConnect = fullSync.isPending && isConnectedStep;
+
+  const progress = connect.isPending
+    ? 24
+    : isQrStep
+      ? qr
+        ? 52
+        : 40
+      : syncingAfterConnect
+        ? 86
+        : isConnectedStep
+          ? 100
+          : 12;
+
+  const progressLabel = connect.isPending
+    ? "Criando canal exclusivo"
+    : isQrStep
+      ? "Aguardando leitura do QR Code"
+      : syncingAfterConnect
+        ? "Sincronizando conversas"
+        : isConnectedStep
+          ? "WhatsApp Business conectado"
+          : "Pronto para iniciar";
 
   useEffect(() => {
     if (!open) return;
@@ -469,7 +497,43 @@ function ConnectionDialog({
     setStep(qr ? "qr" : "intro");
   }, [connected, open, qr]);
 
+  useEffect(() => {
+    if (!open) {
+      startedConnectionRef.current = false;
+      autoSyncedRef.current = false;
+      if (autoCloseTimerRef.current) {
+        window.clearTimeout(autoCloseTimerRef.current);
+        autoCloseTimerRef.current = null;
+      }
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || connected || step !== "qr") return;
+    const interval = window.setInterval(() => {
+      refreshStatus.mutate({ silent: true });
+    }, 2500);
+    return () => window.clearInterval(interval);
+  }, [connected, open, refreshStatus, step]);
+
+  useEffect(() => {
+    if (!open || !connected || !startedConnectionRef.current || autoSyncedRef.current) return;
+    autoSyncedRef.current = true;
+    const startSync = window.setTimeout(() => {
+      fullSync.mutate(undefined, {
+        onSettled: () => {
+          autoCloseTimerRef.current = window.setTimeout(() => {
+            onOpenChange(false);
+          }, shouldReduceMotion ? 350 : 950);
+        },
+      });
+    }, shouldReduceMotion ? 0 : 250);
+    return () => window.clearTimeout(startSync);
+  }, [connected, fullSync, onOpenChange, open, shouldReduceMotion]);
+
   const handleConnect = () => {
+    startedConnectionRef.current = true;
+    autoSyncedRef.current = false;
     connect.mutate(undefined, {
       onSuccess: (data) => {
         const state = String(data?.state || "").toLowerCase();
@@ -646,13 +710,29 @@ function ConnectionDialog({
               </div>
             )}
 
-            {connectError || settings?.last_error ? (
+            {visibleError ? (
               <div className="rounded-[18px] border border-red-500/20 bg-red-500/[0.07] px-4 py-3 text-xs font-semibold text-red-700 dark:text-red-300">
-                {connectError || settings?.last_error}
+                {visibleError}
               </div>
             ) : null}
           </motion.section>
         </AnimatePresence>
+
+        {(connect.isPending || isQrStep || isConnectedStep) ? (
+          <div className="mt-4 rounded-[18px] border border-white/[0.06] bg-white/[0.025] p-3 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/70">
+            <div className="h-1.5 overflow-hidden rounded-full bg-zinc-800/80 [.light_&]:bg-zinc-200">
+              <motion.div
+                className="h-full rounded-full bg-white [.light_&]:bg-zinc-950"
+                initial={false}
+                animate={{ width: `${progress}%` }}
+                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
+              />
+            </div>
+            <p className="mt-2 text-center text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+              {progressLabel}
+            </p>
+          </div>
+        ) : null}
       </div>
     </AppModalShell>
   );
