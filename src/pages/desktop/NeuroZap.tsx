@@ -48,7 +48,7 @@ import { MediaMessage } from "@/components/whatsapp/MediaMessage";
 import { useWhatsAppAgent, WAConversation, WAMessage, WhatsAppConnectResponse, WhatsAppSettings } from "@/hooks/use-whatsapp-agent";
 import { cn } from "@/lib/utils";
 import {
-  formatRemoteJid,
+  formatRemoteJid as formatRemoteJidShared,
   identitiesIntersect,
   isLikelyPhoneDigits,
   isStatusJid,
@@ -88,20 +88,8 @@ const formatDisplayName = (patientName: string | null | undefined, patientPhone:
   return cleanPhone || "Contato";
 };
 
-const formatPhoneDigits = (digits: string) => {
-  if (!digits) return "";
-  if (!isLikelyPhoneDigits(digits)) return "";
-  const local = digits.startsWith("55") && digits.length >= 12 ? digits.slice(2) : digits;
-  if (local.length === 11) return `(${local.slice(0, 2)}) ${local.slice(2, 7)}-${local.slice(7)}`;
-  if (local.length === 10) return `(${local.slice(0, 2)}) ${local.slice(2, 6)}-${local.slice(6)}`;
-  if (local.length === 9) return `${local.slice(0, 5)}-${local.slice(5)}`;
-  if (local.length === 8) return `${local.slice(0, 4)}-${local.slice(4)}`;
-  return digits;
-};
-
 const formatRemoteJid = (...values: Array<string | null | undefined>) => {
-  const digits = phoneDigitsFrom(...values);
-  if (digits) return formatPhoneDigits(digits);
+  return formatRemoteJidShared(...values);
   return "Número não informado";
 };
 
@@ -111,26 +99,25 @@ const isGroupConversation = (conversation: WAConversation) =>
 const isStatusConversation = (conversation: WAConversation) => {
   const remote = String(conversation.remote_jid || "").toLowerCase();
   const name = String(conversation.patient_name || "").toLowerCase();
-  return remote === "status@broadcast" || remote.includes("status@broadcast") || name === "status";
-};
-
-const normalizedIdentity = (value?: string | null) => {
-  const raw = String(value || "").trim().toLowerCase();
-  if (!raw) return "";
-  const digits = raw.replace(/\D/g, "");
-  return digits || raw.replace(/@.*$/, "");
-};
-
-const sameIdentity = (a?: string | null, b?: string | null) => {
-  const left = normalizedIdentity(a);
-  const right = normalizedIdentity(b);
-  return Boolean(left && right && left === right);
+  return isStatusJid(remote) || name === "status";
 };
 
 const isOwnConversation = (conversation: WAConversation, settings?: WhatsAppSettings | null) =>
   conversation.conversation_kind === "psychologist" ||
-  sameIdentity(conversation.remote_jid, settings?.psychologist_remote_jid) ||
-  sameIdentity(conversation.patient_phone, settings?.psychologist_phone);
+  identitiesIntersect(
+    [
+      conversation.remote_jid,
+      conversation.canonical_remote_jid,
+      conversation.patient_phone,
+      conversation.remote_jid_aliases,
+      conversation.identity_key,
+      conversation.identity_variants,
+    ],
+    [
+      settings?.psychologist_remote_jid,
+      settings?.psychologist_phone,
+    ],
+  );
 
 const getConversationContactLine = (conversation: WAConversation) =>
   isGroupConversation(conversation) ? "Grupo do WhatsApp" : formatRemoteJid(conversation.patient_phone, conversation.remote_jid);
@@ -731,11 +718,15 @@ export default function NeuroZap() {
 
   const whatsapp = useWhatsAppAgent();
   const { data: settings, isLoading: isLoadingSettings } = whatsapp.useSettings();
-  const { data: conversations = [], isLoading: isLoadingConversations } = whatsapp.useConversations();
-  const { data: messages = [], isLoading: isLoadingMessages } = whatsapp.useMessages(selectedConversation?.id, selectedConversation?.remote_jid);
-  whatsapp.useRealtime(selectedConversation?.id);
+  const connected = connectedStatus(settings);
+  const activeConversationId = connected ? selectedConversation?.id : undefined;
+  const activeRemoteJid = connected ? selectedConversation?.remote_jid : undefined;
+  const { data: conversations = [], isLoading: isLoadingConversations } = whatsapp.useConversations(connected);
+  const { data: messages = [], isLoading: isLoadingMessages } = whatsapp.useMessages(activeConversationId, activeRemoteJid, connected);
+  whatsapp.useRealtime(activeConversationId, connected);
 
   const visibleConversations = useMemo(() => {
+    if (!connected) return [];
     return conversations
       .filter((conversation) => !isStatusConversation(conversation))
       .sort((a, b) => {
@@ -744,7 +735,7 @@ export default function NeuroZap() {
         if (aOwn !== bOwn) return aOwn ? -1 : 1;
         return new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime();
       });
-  }, [conversations, settings]);
+  }, [connected, conversations, settings]);
 
   const filteredConversations = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -755,8 +746,8 @@ export default function NeuroZap() {
       return (
         name.includes(query) ||
         contactLine.includes(query) ||
-        conversation.patient_phone.toLowerCase().includes(query) ||
-        conversation.remote_jid.toLowerCase().includes(query)
+        String(conversation.patient_phone || "").toLowerCase().includes(query) ||
+        String(conversation.remote_jid || "").toLowerCase().includes(query)
       );
     });
   }, [visibleConversations, searchQuery]);
@@ -764,7 +755,6 @@ export default function NeuroZap() {
   const unreadCount = visibleConversations.reduce((total, conversation) => total + Number(conversation.unread_count || 0), 0);
   const patientCount = visibleConversations.filter((conversation) => !isOwnConversation(conversation, settings) && !isGroupConversation(conversation)).length;
   const groupedMessages = useMemo(() => groupMessages(messages), [messages]);
-  const connected = connectedStatus(settings);
   const panelRefreshPending = whatsapp.syncPanel.isPending;
 
   const handlePanelRefresh = () => {
@@ -781,6 +771,14 @@ export default function NeuroZap() {
   }, []);
 
   useEffect(() => {
+    if (!connected && selectedConversation) {
+      setSelectedConversation(null);
+      setShowMobileChat(false);
+    }
+  }, [connected, selectedConversation]);
+
+  useEffect(() => {
+    if (!connected) return;
     if (!selectedConversation || isLoadingMessages || messages.length > 0 || whatsapp.syncMessages.isPending) return;
     if (!selectedConversation.last_message_preview) return;
     if (autoSyncRequestsRef.current.has(selectedConversation.id)) return;
@@ -789,6 +787,7 @@ export default function NeuroZap() {
   }, [
     isLoadingMessages,
     messages.length,
+    connected,
     selectedConversation,
     whatsapp.syncMessages,
   ]);
@@ -798,6 +797,10 @@ export default function NeuroZap() {
   }, [messages]);
 
   const handleSelectConversation = (conversation: WAConversation) => {
+    if (!connected) {
+      setSettingsOpen(true);
+      return;
+    }
     setSelectedConversation(conversation);
     setShowMobileChat(true);
     if (conversation.unread_count > 0) whatsapp.markAsRead.mutate(conversation.id);
@@ -805,7 +808,10 @@ export default function NeuroZap() {
   };
 
   const handleSend = () => {
-    if (!replyText.trim() || !selectedConversation) return;
+    if (!replyText.trim() || !selectedConversation || !connected) {
+      if (!connected) setSettingsOpen(true);
+      return;
+    }
     whatsapp.sendMessage.mutate({
       conversationId: selectedConversation.id,
       remoteJid: selectedConversation.remote_jid,
@@ -869,7 +875,7 @@ export default function NeuroZap() {
                   Conectar
                 </Button>
               ) : null}
-              {settings?.instance_name ? (
+              {connected ? (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
@@ -1299,6 +1305,8 @@ function MessageBubble({ message }: { message: WAMessage }) {
           mediaBase64={message.media_base64}
           mediaMimetype={message.media_mimetype}
           mediaFilename={message.media_filename}
+          mediaUrl={message.media_url}
+          metadata={message.metadata}
           direction={message.direction}
         />
         <div className={cn("mt-2 flex items-center gap-1.5 text-[10px] font-bold", outbound ? "justify-end text-current/60" : "text-zinc-400")}>

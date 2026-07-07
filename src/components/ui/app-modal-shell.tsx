@@ -169,6 +169,7 @@ export function AppModalShell({
       <div
         className={cn(
           "relative flex max-h-[calc(100dvh-1rem)] min-h-0 w-full flex-col overflow-hidden rounded-[28px] border border-border/70 bg-background text-foreground shadow-[0_36px_110px_-46px_rgba(0,0,0,0.62)] ring-1 ring-foreground/[0.03] dark:border-white/10 dark:bg-[#09090b]",
+          "isolate",
           "sm:max-h-[calc(100dvh-2.5rem)] sm:rounded-[30px]",
           className,
         )}
@@ -177,6 +178,7 @@ export function AppModalShell({
           <button
             type="button"
             onPointerDown={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
             onClick={(event) => {
               event.preventDefault();
               event.stopPropagation();
@@ -191,7 +193,7 @@ export function AppModalShell({
               insetInlineEnd: "max(0.75rem, env(safe-area-inset-right))",
               transform: "none",
             }}
-            className="pointer-events-auto z-[80] flex h-10 w-10 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.07]"
+            className="pointer-events-auto z-[1000] flex h-10 w-10 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.07]"
             aria-label="Fechar"
           >
             <X className="h-4 w-4" />

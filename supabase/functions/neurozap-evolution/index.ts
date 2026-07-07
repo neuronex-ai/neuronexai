@@ -51,6 +51,7 @@ const WEBHOOK_EVENTS = [
   "CONTACTS_SET",
   "CONTACTS_UPSERT",
   "CONTACTS_UPDATE",
+  "PRESENCE_UPDATE",
   "GROUPS_UPSERT",
   "GROUP_UPDATE",
   "GROUP_PARTICIPANTS_UPDATE",
@@ -58,6 +59,7 @@ const WEBHOOK_EVENTS = [
   "LOGOUT_INSTANCE",
   "LABELS_EDIT",
   "LABELS_ASSOCIATION",
+  "CALL",
 ];
 
 const INSTANCE_SETTINGS = {
@@ -213,6 +215,53 @@ const isLikelyPhoneDigits = (digits: string) => {
   return [8, 9, 10, 11].includes(local.length);
 };
 
+const addPhoneVariants = (variants: Set<string>, rawDigits: string) => {
+  const digits = digitsOnly(rawDigits);
+  if (!isLikelyPhoneDigits(digits)) return;
+
+  const add = (value: string) => {
+    if (!value) return;
+    variants.add(value);
+    variants.add(`${value}@s.whatsapp.net`);
+    variants.add(`${value}@c.us`);
+  };
+
+  add(digits);
+  const hasCountry = digits.startsWith("55") && digits.length >= 12;
+  const local = hasCountry ? digits.slice(2) : digits;
+  if (hasCountry) add(local);
+  if (!hasCountry && local.length >= 10) add(`55${local}`);
+
+  if (local.length === 11) {
+    const ddd = local.slice(0, 2);
+    const subscriberWithNine = local.slice(2);
+    const subscriberWithoutNine = subscriberWithNine.startsWith("9")
+      ? subscriberWithNine.slice(1)
+      : subscriberWithNine;
+    add(`${ddd}${subscriberWithNine}`);
+    add(`${ddd}${subscriberWithoutNine}`);
+    add(`55${ddd}${subscriberWithNine}`);
+    add(`55${ddd}${subscriberWithoutNine}`);
+    add(subscriberWithNine);
+    add(subscriberWithoutNine);
+  } else if (local.length === 10) {
+    const ddd = local.slice(0, 2);
+    const subscriber = local.slice(2);
+    add(`${ddd}${subscriber}`);
+    add(`${ddd}9${subscriber}`);
+    add(`55${ddd}${subscriber}`);
+    add(`55${ddd}9${subscriber}`);
+    add(subscriber);
+    add(`9${subscriber}`);
+  } else if (local.length === 9) {
+    add(local);
+    if (local.startsWith("9")) add(local.slice(1));
+  } else if (local.length === 8) {
+    add(local);
+    add(`9${local}`);
+  }
+};
+
 const remoteJidToPhone = (remoteJid: string) => {
   const raw = safeString(remoteJid);
   if (!raw || raw.includes("@lid")) return "";
@@ -231,16 +280,15 @@ const addAlias = (aliases: Set<string>, value: unknown) => {
   const raw = safeString(value);
   if (!raw) return;
   aliases.add(raw.toLowerCase());
+  aliases.add(raw.toLowerCase().replace(/@.*$/, ""));
   const phone = remoteJidToPhone(raw);
   if (phone) {
-    aliases.add(phone);
-    aliases.add(`${phone}@s.whatsapp.net`);
+    addPhoneVariants(aliases, phone);
     return;
   }
   const digits = digitsOnly(raw);
   if (isLikelyPhoneDigits(digits) && /^[+\d\s().@-]+$/.test(raw)) {
-    aliases.add(digits);
-    aliases.add(`${digits}@s.whatsapp.net`);
+    addPhoneVariants(aliases, digits);
   }
 };
 
@@ -259,6 +307,25 @@ const aliasCandidatesFrom = (remoteJid?: string | null, phone?: string | null, .
   }
 
   return Array.from(aliases).filter(Boolean).slice(0, 32);
+};
+
+const identityKeyFor = (...values: unknown[]) => {
+  const phone = values.map((value) => remoteJidToPhone(safeString(value)) || (isLikelyPhoneDigits(digitsOnly(value)) ? digitsOnly(value) : "")).find(Boolean) || "";
+  if (phone) {
+    const local = phone.startsWith("55") && phone.length >= 12 ? phone.slice(2) : phone;
+    if (local.length === 11) {
+      const ddd = local.slice(0, 2);
+      const subscriber = local.slice(2);
+      return `55${ddd}${subscriber.startsWith("9") ? subscriber.slice(1) : subscriber}`;
+    }
+    if (local.length === 10) return `55${local}`;
+    if (local.length === 9 && local.startsWith("9")) return local.slice(1);
+    return local;
+  }
+
+  const group = values.map((value) => safeString(value).toLowerCase()).find((value) => isGroupJid(value));
+  if (group) return group;
+  return safeString(values.find(Boolean)).toLowerCase();
 };
 
 const canonicalRemoteJidFor = (remoteJid?: string | null, phone?: string | null, aliases: string[] = []) => {
@@ -418,9 +485,8 @@ const sameJid = (a?: string | null, b?: string | null) => {
   const right = safeString(b).toLowerCase();
   if (!left || !right) return false;
   if (left === right) return true;
-  const leftDigits = digitsOnly(left);
-  const rightDigits = digitsOnly(right);
-  return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
+  const leftAliases = new Set(aliasCandidatesFrom(left));
+  return aliasCandidatesFrom(right).some((alias) => leftAliases.has(alias));
 };
 
 const sameAnyJid = (target?: string | null, candidates: Array<string | null | undefined> = []) =>
@@ -674,6 +740,13 @@ const extractMessageText = (message: any): string => {
     safeString(node?.extendedTextMessage?.text) ||
     safeString(node?.imageMessage?.caption) ||
     safeString(node?.videoMessage?.caption) ||
+    safeString(node?.documentMessage?.caption) ||
+    safeString(node?.buttonsResponseMessage?.selectedDisplayText) ||
+    safeString(node?.listResponseMessage?.title) ||
+    safeString(node?.reactionMessage?.text) ||
+    safeString(node?.locationMessage?.name) ||
+    safeString(node?.liveLocationMessage?.caption) ||
+    safeString(node?.contactMessage?.displayName) ||
     safeString(message?.text) ||
     safeString(message?.messageText) ||
     safeString(message?.content) ||
@@ -683,11 +756,86 @@ const extractMessageText = (message: any): string => {
 
 const extractContentType = (message: any): string => {
   const node = message?.message || message;
+  if (message?.messageType) return safeString(message.messageType).replace(/Message$/i, "").toLowerCase();
+  if (message?.event === "call" || message?.call || message?.callLog) return "call";
+  if (node?.protocolMessage?.type === 0 || node?.protocolMessage?.type === "REVOKE") return "deleted";
+  if (node?.editedMessage || node?.protocolMessage?.editedMessage) return "edited";
+  if (node?.reactionMessage) return "reaction";
+  if (node?.locationMessage || node?.liveLocationMessage) return "location";
+  if (node?.contactMessage || node?.contactsArrayMessage) return "contact";
   if (node?.imageMessage) return "image";
-  if (node?.audioMessage) return "audio";
+  if (node?.stickerMessage) return "sticker";
+  if (node?.audioMessage) return node.audioMessage?.ptt ? "ptt" : "audio";
   if (node?.documentMessage) return "document";
   if (node?.videoMessage) return "video";
   return safeString(message?.messageType) || safeString(message?.content_type) || "text";
+};
+
+const messageNodeForType = (message: any) => {
+  const node = message?.message || message;
+  return (
+    node?.imageMessage ||
+    node?.videoMessage ||
+    node?.audioMessage ||
+    node?.documentMessage ||
+    node?.stickerMessage ||
+    node?.locationMessage ||
+    node?.liveLocationMessage ||
+    node?.contactMessage ||
+    node?.contactsArrayMessage ||
+    node?.reactionMessage ||
+    node?.protocolMessage ||
+    message
+  );
+};
+
+const extractMediaUrl = (message: any) => {
+  const node = messageNodeForType(message);
+  return (
+    safeString(message?.media_url) ||
+    safeString(message?.mediaUrl) ||
+    safeString(message?.url) ||
+    safeString(node?.url) ||
+    safeString(node?.jpegThumbnail)
+  );
+};
+
+const extractMessageMetadata = (message: any) => {
+  const node = message?.message || message;
+  const typed = messageNodeForType(message);
+  const location = node?.locationMessage || node?.liveLocationMessage || null;
+  const contact = node?.contactMessage || null;
+  const contacts = node?.contactsArrayMessage?.contacts || null;
+  const reaction = node?.reactionMessage || null;
+  const protocol = node?.protocolMessage || null;
+
+  return {
+    pushName: safeString(message?.pushName),
+    participant: safeString(message?.key?.participant || message?.participant),
+    quotedMessageId: safeString(message?.contextInfo?.stanzaId || typed?.contextInfo?.stanzaId),
+    caption: safeString(typed?.caption),
+    mimetype: safeString(typed?.mimetype || message?.mimetype || message?.media_mimetype),
+    fileName: safeString(typed?.fileName || typed?.title || message?.fileName || message?.media_filename),
+    fileLength: safeString(typed?.fileLength),
+    seconds: safeString(typed?.seconds),
+    latitude: location?.degreesLatitude ?? location?.lat ?? null,
+    longitude: location?.degreesLongitude ?? location?.lng ?? null,
+    name: safeString(location?.name || contact?.displayName || reaction?.text),
+    address: safeString(location?.address),
+    displayName: safeString(contact?.displayName),
+    vcard: safeString(contact?.vcard),
+    contacts,
+    reaction: safeString(reaction?.text),
+    reactedMessageId: safeString(reaction?.key?.id),
+    protocolType: protocol?.type ?? null,
+    editedMessage: protocol?.editedMessage || node?.editedMessage || null,
+    rawType: safeString(message?.messageType || message?.event),
+  };
+};
+
+const statusTimestamp = (...values: unknown[]) => {
+  const value = values.find((item) => typeof item === "string" || typeof item === "number");
+  return value === undefined ? null : toIso(value);
 };
 
 const conversationKindFor = (
@@ -727,6 +875,7 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
   const phone = extractPhoneNumber(contact, chat, { remoteJid });
   const aliases = aliasCandidatesFrom(remoteJid, phone, chat, contact);
   const canonicalRemoteJid = canonicalRemoteJidFor(remoteJid, phone, aliases);
+  const identityKey = identityKeyFor(remoteJid, phone, ...aliases);
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid, aliases);
   const isGroup = isGroupJid(remoteJid);
   const labels = normalizeLabels(chat?.labels || chat?.labelIds || contact?.labels || contact?.labelIds, labelIndex);
@@ -737,6 +886,8 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
     remote_jid: remoteJid,
     canonical_remote_jid: canonicalRemoteJid || remoteJid,
     remote_jid_aliases: aliases,
+    identity_key: identityKey || canonicalRemoteJid || remoteJid,
+    identity_variants: aliases,
     conversation_kind: kind,
     contact_type: isGroup ? "group" : "person",
     is_group: isGroup,
@@ -758,6 +909,7 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
     labels,
     contact_status: contactStatus,
     contact_about: contactStatus,
+    metadata: { identity_key: identityKey, source: "sync" },
     raw_payload: { chat: chat || {}, contact: contact || null, contact_status: contactStatus, labels },
   };
 };
@@ -781,23 +933,34 @@ const mapMessage = (message: any, config: InstanceConfig, fallbackRemoteJid?: st
   const direction = key?.fromMe || message?.fromMe || message?.direction === "outbound" ? "outbound" : "inbound";
   const aliases = aliasCandidatesFrom(remoteJid, null, message, key);
   const canonicalRemoteJid = canonicalRemoteJidFor(remoteJid, null, aliases);
+  const identityKey = identityKeyFor(remoteJid, ...aliases);
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid, aliases);
   const isFromAi = Boolean(message?.is_from_ai);
+  const metadata = extractMessageMetadata(message);
+  const contentType = extractContentType(message);
 
   return {
     instance_name: config.instanceName,
     remote_jid: remoteJid,
     canonical_remote_jid: canonicalRemoteJid || remoteJid,
+    identity_key: identityKey || canonicalRemoteJid || remoteJid,
+    identity_variants: aliases,
     source_message_id: sourceId,
     direction,
     sender_kind: senderKindFor(direction, kind, isFromAi),
     content: text || null,
-    content_type: extractContentType(message),
+    content_type: contentType,
     status: safeString(message?.status) || "sent",
     is_from_ai: isFromAi,
-    media_base64: safeString(message?.media_base64) || null,
-    media_mimetype: safeString(message?.mimetype || message?.media_mimetype) || null,
-    media_filename: safeString(message?.fileName || message?.media_filename) || null,
+    media_base64: safeString(message?.media_base64 || message?.base64) || null,
+    media_mimetype: safeString(metadata.mimetype || message?.mimetype || message?.media_mimetype) || null,
+    media_filename: safeString(metadata.fileName || message?.fileName || message?.media_filename) || null,
+    media_url: extractMediaUrl(message) || null,
+    metadata,
+    delivered_at: statusTimestamp(message?.deliveredAt, message?.message?.deliveredAt),
+    read_at: statusTimestamp(message?.readAt, message?.message?.readAt),
+    edited_at: contentType === "edited" ? createdAt : statusTimestamp(message?.editedAt, message?.message?.editedAt),
+    deleted_at: contentType === "deleted" ? createdAt : null,
     raw_payload: message || {},
     created_at: createdAt,
   };
@@ -1344,6 +1507,7 @@ const upsertConversation = async (
   const aliases = aliasCandidatesFrom(remoteJid, phone, ...patchAliases.map((alias) => ({ remoteJid: alias })));
   const canonicalRemoteJid = safeString(patch.canonical_remote_jid) || canonicalRemoteJidFor(remoteJid, phone, aliases);
   const mergedAliases = Array.from(new Set([...aliases, ...patchAliases, remoteJid, canonicalRemoteJid].map((alias) => safeString(alias).toLowerCase()).filter(Boolean)));
+  const identityKey = safeString(patch.identity_key) || identityKeyFor(remoteJid, phone, ...mergedAliases);
   const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid, mergedAliases);
   const isGroup = isGroupJid(remoteJid);
   const displayName = kind === "psychologist" ? "Voc\u00ea e Synapse" : safeString(patch.patient_name) || null;
@@ -1355,6 +1519,8 @@ const upsertConversation = async (
     remote_jid: remoteJid,
     canonical_remote_jid: canonicalRemoteJid || remoteJid,
     remote_jid_aliases: mergedAliases,
+    identity_key: identityKey || canonicalRemoteJid || remoteJid,
+    identity_variants: mergedAliases,
     conversation_kind: kind,
     synapse_session_id: sessionId,
     ...patch,
@@ -1366,7 +1532,19 @@ const upsertConversation = async (
   };
 
   let existing: Record<string, any> | null = null;
-  if (canonicalRemoteJid) {
+  if (identityKey) {
+    const { data: existingByIdentity, error: existingByIdentityError } = await supabaseAdmin
+      .from("whatsapp_conversations")
+      .select("id, remote_jid_aliases")
+      .eq("user_id", userId)
+      .eq("instance_name", config.instanceName)
+      .eq("identity_key", identityKey)
+      .maybeSingle();
+    if (existingByIdentityError) throw existingByIdentityError;
+    existing = existingByIdentity;
+  }
+
+  if (!existing && canonicalRemoteJid) {
     const { data: existingByCanonical, error: existingByCanonicalError } = await supabaseAdmin
       .from("whatsapp_conversations")
       .select("id, remote_jid_aliases")

@@ -14,6 +14,8 @@ export type WAConversation = {
   remote_jid: string;
   canonical_remote_jid?: string | null;
   remote_jid_aliases?: string[] | null;
+  identity_key?: string | null;
+  identity_variants?: string[] | null;
   patient_name: string | null;
   patient_phone: string;
   conversation_kind?: "patient" | "psychologist";
@@ -22,16 +24,21 @@ export type WAConversation = {
   is_group?: boolean;
   deleted_at?: string | null;
   profile_picture_url?: string | null;
+  contact_about?: string | null;
+  contact_status?: string | null;
   last_message_preview?: string | null;
   last_message_at: string;
   unread_count: number;
   labels?: WhatsAppLabel[] | null;
+  metadata?: Record<string, any> | null;
 };
 
 export type WAMessage = {
   id: string;
   conversation_id?: string | null;
   canonical_remote_jid?: string | null;
+  identity_key?: string | null;
+  identity_variants?: string[] | null;
   direction: "inbound" | "outbound";
   content: string | null;
   content_type: string;
@@ -41,6 +48,13 @@ export type WAMessage = {
   media_base64?: string | null;
   media_mimetype?: string | null;
   media_filename?: string | null;
+  media_url?: string | null;
+  media_storage_path?: string | null;
+  metadata?: Record<string, any> | null;
+  delivered_at?: string | null;
+  read_at?: string | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
   created_at: string;
 };
 
@@ -188,6 +202,8 @@ const mapConversation = (row: Record<string, any>): WAConversation => ({
   remote_jid: String(row.remote_jid || row.contact_phone || row.patient_phone || ""),
   canonical_remote_jid: row.canonical_remote_jid ?? null,
   remote_jid_aliases: Array.isArray(row.remote_jid_aliases) ? row.remote_jid_aliases : [],
+  identity_key: row.identity_key ?? null,
+  identity_variants: Array.isArray(row.identity_variants) ? row.identity_variants : [],
   patient_name: row.patient_name ?? row.contact_name ?? row.name ?? null,
   patient_phone: String(row.patient_phone || row.contact_phone || ""),
   conversation_kind: row.conversation_kind === "psychologist" ? "psychologist" : "patient",
@@ -196,16 +212,21 @@ const mapConversation = (row: Record<string, any>): WAConversation => ({
   is_group: Boolean(row.is_group || row.contact_type === "group" || String(row.remote_jid || "").includes("@g.us")),
   deleted_at: row.deleted_at ?? null,
   profile_picture_url: row.profile_picture_url ?? row.avatar_url ?? null,
+  contact_about: row.contact_about ?? null,
+  contact_status: row.contact_status ?? null,
   last_message_preview: row.last_message_preview ?? row.last_message ?? null,
   last_message_at: toIso(row.last_message_at || row.updated_at || row.created_at),
   unread_count: Number(row.unread_count || 0),
   labels: Array.isArray(row.labels) ? row.labels : [],
+  metadata: row.metadata && typeof row.metadata === "object" ? row.metadata : {},
 });
 
 const mapMessage = (row: Record<string, any>): WAMessage => ({
   id: String(row.id),
   conversation_id: row.conversation_id ?? null,
   canonical_remote_jid: row.canonical_remote_jid ?? null,
+  identity_key: row.identity_key ?? null,
+  identity_variants: Array.isArray(row.identity_variants) ? row.identity_variants : [],
   direction: row.direction === "outbound" ? "outbound" : "inbound",
   content: row.content ?? row.message ?? "",
   content_type: row.content_type ?? row.message_type ?? "text",
@@ -215,6 +236,13 @@ const mapMessage = (row: Record<string, any>): WAMessage => ({
   media_base64: row.media_base64 ?? null,
   media_mimetype: row.media_mimetype ?? null,
   media_filename: row.media_filename ?? null,
+  media_url: row.media_url ?? null,
+  media_storage_path: row.media_storage_path ?? null,
+  metadata: row.metadata && typeof row.metadata === "object" ? row.metadata : {},
+  delivered_at: row.delivered_at ?? null,
+  read_at: row.read_at ?? null,
+  edited_at: row.edited_at ?? null,
+  deleted_at: row.deleted_at ?? null,
   created_at: toIso(row.created_at),
 });
 
@@ -235,8 +263,9 @@ export function useWhatsAppAgent() {
     });
   };
 
-  const useRealtime = (activeConversationId?: string | null) => {
+  const useRealtime = (activeConversationId?: string | null, enabled = true) => {
     useEffect(() => {
+      if (!enabled) return;
       let cancelled = false;
       let fallbackTimer: ReturnType<typeof setInterval> | undefined;
       let channel: ReturnType<typeof supabase.channel> | undefined;
@@ -306,7 +335,7 @@ export function useWhatsAppAgent() {
       };
       // queryClient is stable; the invalidate helpers intentionally reuse the latest query keys.
       // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [activeConversationId]);
+    }, [activeConversationId, enabled]);
   };
 
   const useSettings = () =>
@@ -322,9 +351,10 @@ export function useWhatsAppAgent() {
       },
     });
 
-  const useConversations = () =>
+  const useConversations = (enabled = true) =>
     useQuery<WAConversation[]>({
       queryKey: ["whatsapp-conversations"],
+      enabled,
       queryFn: async () => {
         const { data, error } = await supabase
           .from("whatsapp_conversations")
@@ -337,10 +367,10 @@ export function useWhatsAppAgent() {
       },
     });
 
-  const useMessages = (conversationId?: string, remoteJid?: string) =>
+  const useMessages = (conversationId?: string, remoteJid?: string, enabled = true) =>
     useQuery<WAMessage[]>({
       queryKey: ["whatsapp-messages", conversationId, remoteJid],
-      enabled: Boolean(conversationId || remoteJid),
+      enabled: enabled && Boolean(conversationId || remoteJid),
       queryFn: async () => {
         if (conversationId) {
           const { data, error } = await supabase
