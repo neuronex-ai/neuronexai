@@ -904,11 +904,11 @@ export default function NeuroZap() {
 
         <section
           className={cn(
-            "notes-liquid-surface grid min-h-[calc(100dvh-15rem)] max-w-full overflow-hidden rounded-[34px] border transition-[grid-template-columns] duration-300",
+            "notes-liquid-surface grid h-[calc(100dvh-15rem)] min-h-[34rem] max-h-[calc(100dvh-10rem)] max-w-full overflow-hidden rounded-[34px] border transition-[grid-template-columns] duration-300",
             isListCollapsed ? "lg:grid-cols-[4.75rem_minmax(0,1fr)]" : "lg:grid-cols-[minmax(20rem,24rem)_minmax(0,1fr)]",
           )}
         >
-          <aside className={cn("notes-retina-rail min-h-0 border-r", showMobileChat ? "hidden lg:block" : "block")}>
+          <aside className={cn("notes-retina-rail flex min-h-0 flex-col border-r", showMobileChat ? "hidden lg:flex" : "flex")}>
             <div className={cn("border-b border-white/[0.045] p-4 [.light_&]:border-zinc-200/60", isListCollapsed && "p-2")}>
               <div className={cn("mb-3 flex items-center justify-between gap-2", isListCollapsed && "mb-0 justify-center")}>
                 {!isListCollapsed ? (
@@ -971,7 +971,7 @@ export default function NeuroZap() {
               </div>
             </div>
 
-            <ScrollArea className="notes-scroll-surface h-[calc(100dvh-22rem)]">
+            <ScrollArea className="notes-scroll-surface min-h-0 flex-1">
               <div className={cn("space-y-2 p-3", isListCollapsed && "px-2")}>
                 {isLoadingConversations ? (
                   <LoadingBlock label="Carregando conversas" />
@@ -999,9 +999,9 @@ export default function NeuroZap() {
             </ScrollArea>
           </aside>
 
-          <section className={cn("min-w-0 min-h-0 overflow-hidden", !selectedConversation && !showMobileChat ? "hidden lg:block" : "block")}>
+          <section className={cn("h-full min-h-0 min-w-0 overflow-hidden", !selectedConversation && !showMobileChat ? "hidden lg:block" : "block")}>
             {selectedConversation ? (
-              <div className="flex h-full min-h-[calc(100dvh-12rem)] flex-col">
+              <div className="flex h-full min-h-0 flex-col overflow-hidden">
                 <ChatHeader
                   conversation={selectedConversation}
                   settings={settings}
@@ -1014,8 +1014,8 @@ export default function NeuroZap() {
                   onMarkAsRead={() => whatsapp.markAsRead.mutate(selectedConversation.id)}
                 />
 
-                <ScrollArea className="notes-scroll-surface min-h-0 flex-1 bg-transparent px-3 py-5 sm:px-6">
-                  <div className="mx-auto max-w-3xl space-y-3">
+                <ScrollArea className="notes-scroll-surface h-full min-h-0 flex-1 bg-transparent px-3 py-5 sm:px-6">
+                  <div className="mx-auto flex min-h-full max-w-3xl flex-col justify-end space-y-3">
                     {isLoadingMessages ? (
                       <LoadingBlock label="Carregando mensagens" />
                     ) : Object.keys(groupedMessages).length ? (
@@ -1044,7 +1044,7 @@ export default function NeuroZap() {
                   </div>
                 </ScrollArea>
 
-                <div className="notes-retina-rail border-t p-3 sm:p-4">
+                <div className="notes-retina-rail shrink-0 border-t p-3 sm:p-4">
                   <div className="mx-auto flex max-w-3xl items-end gap-2">
                     <Textarea
                       value={replyText}
@@ -1072,7 +1072,7 @@ export default function NeuroZap() {
                 </div>
               </div>
             ) : (
-              <div className="flex h-full min-h-[calc(100dvh-12rem)] w-full items-center justify-center p-8">
+              <div className="flex h-full min-h-0 w-full items-center justify-center p-8">
                 <div className="mx-auto flex w-full max-w-md flex-col items-center text-center">
                   <div className="group/gate relative flex w-full justify-center">
                     <div className="relative z-10 flex h-40 w-40 items-center justify-center overflow-hidden rounded-full border border-white/[0.05] bg-black/20 shadow-[0_36px_90px_-48px_rgba(255,255,255,0.32)] backdrop-blur-3xl transition-transform duration-500 group-hover/gate:scale-[1.025] [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-950/[0.9] [.light_&]:shadow-[0_34px_70px_-46px_rgba(0,0,0,0.18)]">

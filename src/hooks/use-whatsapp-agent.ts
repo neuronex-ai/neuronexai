@@ -12,6 +12,8 @@ export type WAConversation = {
   id: string;
   user_id?: string | null;
   remote_jid: string;
+  canonical_remote_jid?: string | null;
+  remote_jid_aliases?: string[] | null;
   patient_name: string | null;
   patient_phone: string;
   conversation_kind?: "patient" | "psychologist";
@@ -29,6 +31,7 @@ export type WAConversation = {
 export type WAMessage = {
   id: string;
   conversation_id?: string | null;
+  canonical_remote_jid?: string | null;
   direction: "inbound" | "outbound";
   content: string | null;
   content_type: string;
@@ -179,8 +182,10 @@ const mapConversation = (row: Record<string, any>): WAConversation => ({
   id: String(row.id),
   user_id: row.user_id ?? null,
   remote_jid: String(row.remote_jid || row.contact_phone || row.patient_phone || ""),
+  canonical_remote_jid: row.canonical_remote_jid ?? null,
+  remote_jid_aliases: Array.isArray(row.remote_jid_aliases) ? row.remote_jid_aliases : [],
   patient_name: row.patient_name ?? row.contact_name ?? row.name ?? null,
-  patient_phone: String(row.patient_phone || row.contact_phone || row.remote_jid || ""),
+  patient_phone: String(row.patient_phone || row.contact_phone || ""),
   conversation_kind: row.conversation_kind === "psychologist" ? "psychologist" : "patient",
   synapse_session_id: row.synapse_session_id ?? null,
   contact_type: row.contact_type === "group" || row.is_group ? "group" : "person",
@@ -196,6 +201,7 @@ const mapConversation = (row: Record<string, any>): WAConversation => ({
 const mapMessage = (row: Record<string, any>): WAMessage => ({
   id: String(row.id),
   conversation_id: row.conversation_id ?? null,
+  canonical_remote_jid: row.canonical_remote_jid ?? null,
   direction: row.direction === "outbound" ? "outbound" : "inbound",
   content: row.content ?? row.message ?? "",
   content_type: row.content_type ?? row.message_type ?? "text",
@@ -348,7 +354,7 @@ export function useWhatsAppAgent() {
         const { data, error } = await supabase
           .from("whatsapp_messages")
           .select("*")
-          .eq("remote_jid", remoteJid)
+          .or(`remote_jid.eq.${remoteJid},canonical_remote_jid.eq.${remoteJid}`)
           .order("created_at", { ascending: true });
 
         if (error) throw error;

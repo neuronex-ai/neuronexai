@@ -222,6 +222,58 @@ const remoteJidToPhone = (remoteJid: string) => {
   return isPhoneJid && isLikelyPhoneDigits(digits) ? digits : "";
 };
 
+const phoneJidFor = (value: unknown) => {
+  const digits = digitsOnly(value);
+  return isLikelyPhoneDigits(digits) ? `${digits}@s.whatsapp.net` : "";
+};
+
+const addAlias = (aliases: Set<string>, value: unknown) => {
+  const raw = safeString(value);
+  if (!raw) return;
+  aliases.add(raw.toLowerCase());
+  const phone = remoteJidToPhone(raw);
+  if (phone) {
+    aliases.add(phone);
+    aliases.add(`${phone}@s.whatsapp.net`);
+    return;
+  }
+  const digits = digitsOnly(raw);
+  if (isLikelyPhoneDigits(digits) && /^[+\d\s().@-]+$/.test(raw)) {
+    aliases.add(digits);
+    aliases.add(`${digits}@s.whatsapp.net`);
+  }
+};
+
+const aliasCandidatesFrom = (remoteJid?: string | null, phone?: string | null, ...payloads: any[]) => {
+  const aliases = new Set<string>();
+  addAlias(aliases, remoteJid);
+  addAlias(aliases, phone);
+
+  for (const payload of payloads) {
+    if (!payload || typeof payload !== "object") continue;
+    for (const key of ["id", "remoteJid", "remote_jid", "jid", "wuid", "number", "phone", "participant", "lid"]) {
+      addAlias(aliases, payload?.[key]);
+    }
+    addAlias(aliases, payload?.key?.remoteJid);
+    addAlias(aliases, payload?.key?.participant);
+  }
+
+  return Array.from(aliases).filter(Boolean).slice(0, 32);
+};
+
+const canonicalRemoteJidFor = (remoteJid?: string | null, phone?: string | null, aliases: string[] = []) => {
+  const phoneDigits =
+    remoteJidToPhone(safeString(remoteJid)) ||
+    remoteJidToPhone(safeString(phone)) ||
+    aliases.map((alias) => remoteJidToPhone(alias) || (isLikelyPhoneDigits(digitsOnly(alias)) ? digitsOnly(alias) : "")).find(Boolean) ||
+    "";
+
+  if (phoneDigits) return `${phoneDigits}@s.whatsapp.net`;
+  const group = [safeString(remoteJid), ...aliases].find((alias) => isGroupJid(alias));
+  if (group) return group.toLowerCase();
+  return safeString(remoteJid).toLowerCase();
+};
+
 const jidToNumber = (remoteJid: string) => remoteJidToPhone(remoteJid).replace(/\D/g, "");
 
 const sendTargetFor = (remoteJid: string) => {
@@ -248,18 +300,13 @@ const contactJidFrom = (value: any) => {
   return digits ? `${digits}@s.whatsapp.net` : raw;
 };
 
-const contactLookupKeys = (remoteJid: string) =>
-  compactArray([
-    safeString(remoteJid).toLowerCase(),
-    remoteJidToPhone(remoteJid).toLowerCase(),
-    digitsOnly(remoteJid),
-  ]);
+const contactLookupKeys = (remoteJid: string) => aliasCandidatesFrom(remoteJid);
 
 const buildContactIndex = (contacts: any[]) => {
   const index = new Map<string, any>();
   for (const contact of contacts) {
     const jid = contactJidFrom(contact);
-    for (const key of contactLookupKeys(jid)) index.set(key, contact);
+    for (const key of aliasCandidatesFrom(jid, extractPhoneNumber(contact), contact)) index.set(key, contact);
   }
   return index;
 };
@@ -375,6 +422,9 @@ const sameJid = (a?: string | null, b?: string | null) => {
   const rightDigits = digitsOnly(right);
   return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
 };
+
+const sameAnyJid = (target?: string | null, candidates: Array<string | null | undefined> = []) =>
+  candidates.some((candidate) => sameJid(target, candidate));
 
 const normalizeOwnerJid = (value: unknown) => {
   const raw = safeString(value);
@@ -640,8 +690,12 @@ const extractContentType = (message: any): string => {
   return safeString(message?.messageType) || safeString(message?.content_type) || "text";
 };
 
-const conversationKindFor = (remoteJid: string, psychologistRemoteJid?: string | null): ConversationKind =>
-  sameJid(remoteJid, psychologistRemoteJid) ? "psychologist" : "patient";
+const conversationKindFor = (
+  remoteJid: string,
+  psychologistRemoteJid?: string | null,
+  aliases: string[] = [],
+): ConversationKind =>
+  sameAnyJid(psychologistRemoteJid, [remoteJid, ...aliases]) ? "psychologist" : "patient";
 
 const senderKindFor = (
   direction: "inbound" | "outbound",
@@ -670,8 +724,10 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
 
   if (!remoteJid || isStatusJid(remoteJid)) return null;
 
-  const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
   const phone = extractPhoneNumber(contact, chat, { remoteJid });
+  const aliases = aliasCandidatesFrom(remoteJid, phone, chat, contact);
+  const canonicalRemoteJid = canonicalRemoteJidFor(remoteJid, phone, aliases);
+  const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid, aliases);
   const isGroup = isGroupJid(remoteJid);
   const labels = normalizeLabels(chat?.labels || chat?.labelIds || contact?.labels || contact?.labelIds, labelIndex);
   const contactStatus = extractContactStatus(contact, chat);
@@ -679,6 +735,8 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
   return {
     instance_name: config.instanceName,
     remote_jid: remoteJid,
+    canonical_remote_jid: canonicalRemoteJid || remoteJid,
+    remote_jid_aliases: aliases,
     conversation_kind: kind,
     contact_type: isGroup ? "group" : "person",
     is_group: isGroup,
@@ -698,6 +756,8 @@ const mapChat = (chat: any, config: InstanceConfig, contact: any = null, labelIn
     last_message_at: toIso(chat?.conversationTimestamp || chat?.lastMessage?.messageTimestamp || chat?.updatedAt || chat?.createdAt),
     unread_count: Number(chat?.unreadMessages || chat?.unread_count || 0),
     labels,
+    contact_status: contactStatus,
+    contact_about: contactStatus,
     raw_payload: { chat: chat || {}, contact: contact || null, contact_status: contactStatus, labels },
   };
 };
@@ -719,12 +779,15 @@ const mapMessage = (message: any, config: InstanceConfig, fallbackRemoteJid?: st
     safeString(message?.source_message_id) ||
     `synthetic:${config.instanceName}:${remoteJid}:${createdAt}:${text.slice(0, 80)}`;
   const direction = key?.fromMe || message?.fromMe || message?.direction === "outbound" ? "outbound" : "inbound";
-  const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
+  const aliases = aliasCandidatesFrom(remoteJid, null, message, key);
+  const canonicalRemoteJid = canonicalRemoteJidFor(remoteJid, null, aliases);
+  const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid, aliases);
   const isFromAi = Boolean(message?.is_from_ai);
 
   return {
     instance_name: config.instanceName,
     remote_jid: remoteJid,
+    canonical_remote_jid: canonicalRemoteJid || remoteJid,
     source_message_id: sourceId,
     direction,
     sender_kind: senderKindFor(direction, kind, isFromAi),
@@ -1220,17 +1283,30 @@ const ensureSynapseSession = async (
   remoteJid: string,
   conversationKind: ConversationKind,
   displayName?: string | null,
+  canonicalRemoteJid?: string | null,
+  aliases: string[] = [],
+  explicitPhone?: string | null,
 ) => {
-  const { data: existing, error: findError } = await supabaseAdmin
+  const canonical = canonicalRemoteJid || canonicalRemoteJidFor(remoteJid, explicitPhone, aliases);
+  const { data: existingByCanonical, error: canonicalFindError } = await supabaseAdmin
+    .from("chat_sessions")
+    .select("id")
+    .eq("user_id", userId)
+    .contains("context_state", { source: "whatsapp", canonicalRemoteJid: canonical })
+    .maybeSingle();
+  if (canonicalFindError) throw canonicalFindError;
+  if (existingByCanonical?.id) return existingByCanonical.id;
+
+  const { data: existingByRemote, error: remoteFindError } = await supabaseAdmin
     .from("chat_sessions")
     .select("id")
     .eq("user_id", userId)
     .contains("context_state", { source: "whatsapp", remoteJid })
     .maybeSingle();
-  if (findError) throw findError;
-  if (existing?.id) return existing.id;
+  if (remoteFindError) throw remoteFindError;
+  if (existingByRemote?.id) return existingByRemote.id;
 
-  const phone = remoteJidToPhone(remoteJid);
+  const phone = explicitPhone || remoteJidToPhone(remoteJid);
   const title =
     conversationKind === "psychologist"
       ? "WhatsApp Business - Voc\u00ea e Synapse"
@@ -1243,6 +1319,8 @@ const ensureSynapseSession = async (
       context_state: {
         source: "whatsapp",
         remoteJid,
+        canonicalRemoteJid: canonical || remoteJid,
+        aliases,
         phoneNumber: phone || null,
         pushName: displayName || null,
         conversation_kind: conversationKind,
@@ -1261,28 +1339,77 @@ const upsertConversation = async (
   remoteJid: string,
   patch: Record<string, unknown> = {},
 ) => {
-  const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid);
+  const patchAliases = Array.isArray(patch.remote_jid_aliases) ? patch.remote_jid_aliases.map((item) => safeString(item)).filter(Boolean) : [];
+  const phone = safeString(patch.patient_phone) || remoteJidToPhone(remoteJid) || "";
+  const aliases = aliasCandidatesFrom(remoteJid, phone, ...patchAliases.map((alias) => ({ remoteJid: alias })));
+  const canonicalRemoteJid = safeString(patch.canonical_remote_jid) || canonicalRemoteJidFor(remoteJid, phone, aliases);
+  const mergedAliases = Array.from(new Set([...aliases, ...patchAliases, remoteJid, canonicalRemoteJid].map((alias) => safeString(alias).toLowerCase()).filter(Boolean)));
+  const kind = conversationKindFor(remoteJid, config.psychologistRemoteJid, mergedAliases);
   const isGroup = isGroupJid(remoteJid);
   const displayName = kind === "psychologist" ? "Voc\u00ea e Synapse" : safeString(patch.patient_name) || null;
-  const sessionId = await ensureSynapseSession(supabaseAdmin, userId, remoteJid, kind, displayName);
+  const sessionId = await ensureSynapseSession(supabaseAdmin, userId, remoteJid, kind, displayName, canonicalRemoteJid, mergedAliases, phone);
+  const now = new Date().toISOString();
+  const payload = {
+    user_id: userId,
+    instance_name: config.instanceName,
+    remote_jid: remoteJid,
+    canonical_remote_jid: canonicalRemoteJid || remoteJid,
+    remote_jid_aliases: mergedAliases,
+    conversation_kind: kind,
+    synapse_session_id: sessionId,
+    ...patch,
+    patient_phone: phone || null,
+    contact_type: safeString(patch.contact_type) || (isGroup ? "group" : "person"),
+    is_group: Boolean(patch.is_group ?? isGroup),
+    deleted_at: null,
+    updated_at: now,
+  };
+
+  let existing: Record<string, any> | null = null;
+  if (canonicalRemoteJid) {
+    const { data: existingByCanonical, error: existingByCanonicalError } = await supabaseAdmin
+      .from("whatsapp_conversations")
+      .select("id, remote_jid_aliases")
+      .eq("user_id", userId)
+      .eq("instance_name", config.instanceName)
+      .eq("canonical_remote_jid", canonicalRemoteJid)
+      .maybeSingle();
+    if (existingByCanonicalError) throw existingByCanonicalError;
+    existing = existingByCanonical;
+  }
+
+  if (!existing) {
+    const { data: existingByRemote, error: existingByRemoteError } = await supabaseAdmin
+      .from("whatsapp_conversations")
+      .select("id, remote_jid_aliases")
+      .eq("user_id", userId)
+      .eq("instance_name", config.instanceName)
+      .eq("remote_jid", remoteJid)
+      .maybeSingle();
+    if (existingByRemoteError) throw existingByRemoteError;
+    existing = existingByRemote;
+  }
+
+  if (existing?.id) {
+    const existingAliases = Array.isArray(existing.remote_jid_aliases)
+      ? existing.remote_jid_aliases.map((item: unknown) => safeString(item).toLowerCase()).filter(Boolean)
+      : [];
+    const { data, error } = await supabaseAdmin
+      .from("whatsapp_conversations")
+      .update({
+        ...payload,
+        remote_jid_aliases: Array.from(new Set([...existingAliases, ...mergedAliases])),
+      })
+      .eq("id", existing.id)
+      .select("id, synapse_session_id, conversation_kind")
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
   const { data, error } = await supabaseAdmin
     .from("whatsapp_conversations")
-    .upsert(
-      {
-        user_id: userId,
-        instance_name: config.instanceName,
-        remote_jid: remoteJid,
-        conversation_kind: kind,
-        synapse_session_id: sessionId,
-        ...patch,
-        patient_phone: safeString(patch.patient_phone) || remoteJidToPhone(remoteJid) || null,
-        contact_type: safeString(patch.contact_type) || (isGroup ? "group" : "person"),
-        is_group: Boolean(patch.is_group ?? isGroup),
-        deleted_at: null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "user_id,instance_name,remote_jid" },
-    )
+    .upsert(payload, { onConflict: "user_id,instance_name,remote_jid" })
     .select("id, synapse_session_id, conversation_kind")
     .single();
   if (error) throw error;
@@ -1371,7 +1498,10 @@ const markMissingConversationsDeleted = async (
     .is("deleted_at", null);
 
   if (activeRemoteJids.length) {
-    query = query.not("remote_jid", "in", postgrestInList(activeRemoteJids));
+    const activeList = postgrestInList(Array.from(new Set(activeRemoteJids.filter(Boolean))));
+    query = query
+      .not("remote_jid", "in", activeList)
+      .not("canonical_remote_jid", "in", activeList);
   }
 
   const { error } = await query;
@@ -1580,7 +1710,11 @@ serve(async (req) => {
           return mapChat(chat, syncConfig, findContactFor(contactIndex, remoteJid), labelIndex);
         })
         .filter(Boolean);
-      const activeRemoteJids = chats.map((chat) => chat.remote_jid);
+      const activeRemoteJids = chats.flatMap((chat) =>
+        [chat.remote_jid, chat.canonical_remote_jid, ...(Array.isArray(chat.remote_jid_aliases) ? chat.remote_jid_aliases : [])]
+          .map((value) => safeString(value))
+          .filter(Boolean)
+      );
 
       if (!chats.length) {
         const { count: existingConversationCount, error: existingCountError } = await supabaseAdmin
@@ -1682,12 +1816,17 @@ serve(async (req) => {
       if ((!isLikelyPhoneDigits(digitsOnly(sendTarget)) || /@lid/i.test(sendTarget)) && conversationId) {
         const { data: savedConversation, error: savedConversationError } = await supabaseAdmin
           .from("whatsapp_conversations")
-          .select("patient_phone, remote_jid")
+          .select("patient_phone, remote_jid, canonical_remote_jid")
           .eq("id", conversationId)
           .eq("user_id", user.id)
           .maybeSingle();
         if (savedConversationError) throw savedConversationError;
-        const savedTarget = sendTargetFor(safeString(savedConversation?.patient_phone) || safeString(savedConversation?.remote_jid) || remoteJid);
+        const savedTarget = sendTargetFor(
+          safeString(savedConversation?.patient_phone) ||
+            safeString(savedConversation?.canonical_remote_jid) ||
+            safeString(savedConversation?.remote_jid) ||
+            remoteJid,
+        );
         if (savedTarget) sendTarget = savedTarget;
       }
 
@@ -1709,6 +1848,7 @@ serve(async (req) => {
         ? { id: conversationId, synapse_session_id: null }
         : await upsertConversation(supabaseAdmin, user.id, loadedConfig, remoteJid);
       const sourceId = safeString(sent?.key?.id || sent?.id) || crypto.randomUUID();
+      const canonicalRemoteJid = canonicalRemoteJidFor(remoteJid, digitsOnly(sendTarget), aliasCandidatesFrom(remoteJid, sendTarget));
       const { error: insertError } = await supabaseAdmin.from("whatsapp_messages").upsert(
         {
           user_id: user.id,
@@ -1716,6 +1856,7 @@ serve(async (req) => {
           synapse_session_id: conversation.synapse_session_id || null,
           instance_name: loadedConfig.instanceName,
           remote_jid: remoteJid,
+          canonical_remote_jid: canonicalRemoteJid || remoteJid,
           source_message_id: sourceId,
           direction: "outbound",
           sender_kind: "professional",

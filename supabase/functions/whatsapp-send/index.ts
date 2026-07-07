@@ -32,6 +32,13 @@ const isMissingPrivateCredentialStore = (error: unknown) => {
   return /schema "private"|relation .*neurozap_instance_credentials|neurozap_instance_credentials.*does not exist|Could not find the table/i.test(message);
 };
 
+const isPrivateSchemaUnavailable = (error: unknown) => {
+  const record = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const code = safeString(record.code);
+  const message = safeString(record.message || (error instanceof Error ? error.message : String(error || "")));
+  return code === "PGRST106" || /schema must be one of|schema .*private.*not exposed/i.test(message);
+};
+
 const evolutionFetch = async (baseUrl: string, apiKey: string, path: string, init: RequestInit = {}) => {
   const response = await fetch(`${baseUrl}${path}`, {
     ...init,
@@ -87,7 +94,7 @@ serve(async (req) => {
     if (conversationId) {
       const { data, error } = await supabaseAdmin
         .from("whatsapp_conversations")
-        .select("id,user_id,instance_name,remote_jid,synapse_session_id")
+        .select("id,user_id,instance_name,remote_jid,canonical_remote_jid,patient_phone,synapse_session_id")
         .eq("id", conversationId)
         .maybeSingle();
       if (error) throw error;
@@ -97,7 +104,7 @@ serve(async (req) => {
     if (!conversation && explicitRemoteJid && body.userId) {
       const { data, error } = await supabaseAdmin
         .from("whatsapp_conversations")
-        .select("id,user_id,instance_name,remote_jid,synapse_session_id")
+        .select("id,user_id,instance_name,remote_jid,canonical_remote_jid,patient_phone,synapse_session_id")
         .eq("user_id", body.userId)
         .eq("remote_jid", explicitRemoteJid)
         .maybeSingle();
@@ -107,18 +114,15 @@ serve(async (req) => {
 
     if (!conversation) return json({ error: "Conversa WhatsApp não encontrada." }, 404);
 
-    const { data: credential, error: credentialError } = await supabaseAdmin
-      .schema("private")
-      .from("neurozap_instance_credentials")
-      .select("instance_api_key")
-      .eq("user_id", conversation.user_id)
-      .eq("instance_name", conversation.instance_name)
-      .maybeSingle();
-    if (credentialError && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
-    const instanceApiKey = safeString(credential?.instance_api_key) || managerApiKey;
+    const { data: credential, error: credentialError } = await supabaseAdmin.rpc("neurozap_get_instance_credential", {
+      p_user_id: conversation.user_id,
+      p_instance_name: conversation.instance_name,
+    });
+    if (credentialError && !isPrivateSchemaUnavailable(credentialError) && !isMissingPrivateCredentialStore(credentialError)) throw credentialError;
+    const instanceApiKey = safeString(credential) || managerApiKey;
     if (!instanceApiKey) return json({ error: "Canal WhatsApp ainda não configurado para envio." }, 409);
 
-    const remoteJid = explicitRemoteJid || conversation.remote_jid;
+    const remoteJid = explicitRemoteJid || conversation.patient_phone || conversation.canonical_remote_jid || conversation.remote_jid;
     const payload = {
       number: sendTargetFor(remoteJid),
       text: message,
@@ -146,7 +150,8 @@ serve(async (req) => {
         conversation_id: conversation.id,
         synapse_session_id: conversation.synapse_session_id || null,
         instance_name: conversation.instance_name,
-        remote_jid: remoteJid,
+        remote_jid: explicitRemoteJid || conversation.remote_jid,
+        canonical_remote_jid: conversation.canonical_remote_jid || explicitRemoteJid || conversation.remote_jid,
         source_message_id: sourceId,
         direction: "outbound",
         sender_kind: "synapse",

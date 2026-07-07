@@ -40,6 +40,52 @@ const remoteJidToPhone = (remoteJid: string) => {
   return isPhoneJid && isLikelyPhoneDigits(digits) ? digits : "";
 };
 
+const cleanBaseUrl = (value: string) => value.trim().replace(/\/+$/, "").replace(/\/manager$/i, "");
+
+const addAlias = (aliases: Set<string>, value: unknown) => {
+  const raw = safeString(value);
+  if (!raw) return;
+  aliases.add(raw.toLowerCase());
+  const phone = remoteJidToPhone(raw);
+  if (phone) {
+    aliases.add(phone);
+    aliases.add(`${phone}@s.whatsapp.net`);
+    return;
+  }
+  const digits = digitsOnly(raw);
+  if (isLikelyPhoneDigits(digits) && /^[+\d\s().@-]+$/.test(raw)) {
+    aliases.add(digits);
+    aliases.add(`${digits}@s.whatsapp.net`);
+  }
+};
+
+const aliasCandidatesFrom = (remoteJid?: string | null, phone?: string | null, ...payloads: any[]) => {
+  const aliases = new Set<string>();
+  addAlias(aliases, remoteJid);
+  addAlias(aliases, phone);
+  for (const payload of payloads) {
+    if (!payload || typeof payload !== "object") continue;
+    for (const key of ["id", "remoteJid", "remote_jid", "jid", "wuid", "number", "phone", "participant", "lid"]) {
+      addAlias(aliases, payload?.[key]);
+    }
+    addAlias(aliases, payload?.key?.remoteJid);
+    addAlias(aliases, payload?.key?.participant);
+  }
+  return Array.from(aliases).filter(Boolean).slice(0, 32);
+};
+
+const canonicalRemoteJidFor = (remoteJid?: string | null, phone?: string | null, aliases: string[] = []) => {
+  const phoneDigits =
+    remoteJidToPhone(safeString(remoteJid)) ||
+    remoteJidToPhone(safeString(phone)) ||
+    aliases.map((alias) => remoteJidToPhone(alias) || (isLikelyPhoneDigits(digitsOnly(alias)) ? digitsOnly(alias) : "")).find(Boolean) ||
+    "";
+  if (phoneDigits) return `${phoneDigits}@s.whatsapp.net`;
+  const group = [safeString(remoteJid), ...aliases].find((alias) => isGroupJid(alias));
+  if (group) return group.toLowerCase();
+  return safeString(remoteJid).toLowerCase();
+};
+
 const sameJid = (a?: string | null, b?: string | null) => {
   const left = safeString(a).toLowerCase();
   const right = safeString(b).toLowerCase();
@@ -48,6 +94,44 @@ const sameJid = (a?: string | null, b?: string | null) => {
   const leftDigits = digitsOnly(left);
   const rightDigits = digitsOnly(right);
   return Boolean(leftDigits && rightDigits && leftDigits === rightDigits);
+};
+
+const sameAnyJid = (target?: string | null, candidates: Array<string | null | undefined> = []) =>
+  candidates.some((candidate) => sameJid(target, candidate));
+
+const sendTargetFor = (remoteJid: string, phone?: string | null) => {
+  const fromPhone = remoteJidToPhone(safeString(phone)) || (isLikelyPhoneDigits(digitsOnly(phone)) ? digitsOnly(phone) : "");
+  if (fromPhone) return fromPhone;
+  const raw = safeString(remoteJid);
+  if (!raw) return "";
+  if (raw.includes("@s.whatsapp.net") || raw.includes("@c.us")) return remoteJidToPhone(raw);
+  if (raw.includes("@g.us")) return raw;
+  if (raw.includes("@lid")) return raw;
+  if (raw.includes("@") || /[a-z]/i.test(raw)) return raw;
+  const digits = digitsOnly(raw);
+  return isLikelyPhoneDigits(digits) ? digits : "";
+};
+
+const evolutionFetch = async (baseUrl: string, apiKey: string, path: string, init: RequestInit = {}) => {
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      apikey: apiKey,
+      ...(init.headers || {}),
+    },
+  });
+  const text = await response.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { raw: text };
+  }
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error || `WhatsApp Business ${response.status}`);
+  }
+  return data;
 };
 
 const stripSynapseWidgets = (text: string) =>
@@ -106,7 +190,20 @@ async function ensureWhatsappSession(
   remoteJid: string,
   conversationKind: ConversationKind,
   pushName?: string | null,
+  canonicalRemoteJid?: string | null,
+  aliases: string[] = [],
+  explicitPhone?: string | null,
 ) {
+  const canonical = canonicalRemoteJid || canonicalRemoteJidFor(remoteJid, explicitPhone, aliases);
+  const { data: existingByCanonical, error: canonicalFindError } = await admin
+    .from("chat_sessions")
+    .select("id")
+    .eq("user_id", professionalId)
+    .contains("context_state", { source: "whatsapp", canonicalRemoteJid: canonical })
+    .maybeSingle();
+  if (canonicalFindError) throw canonicalFindError;
+  if (existingByCanonical?.id) return existingByCanonical.id;
+
   const { data: existing, error: findError } = await admin
     .from("chat_sessions")
     .select("id")
@@ -116,7 +213,7 @@ async function ensureWhatsappSession(
   if (findError) throw findError;
   if (existing?.id) return existing.id;
 
-  const phone = remoteJidToPhone(remoteJid);
+  const phone = explicitPhone || remoteJidToPhone(remoteJid);
   const label =
     conversationKind === "psychologist"
       ? "Você e Synapse"
@@ -133,6 +230,8 @@ async function ensureWhatsappSession(
       context_state: {
         source: "whatsapp",
         remoteJid: remoteJid || null,
+        canonicalRemoteJid: canonical || remoteJid || null,
+        aliases,
         pushName: pushName || null,
         phoneNumber: phone || null,
         conversation_kind: conversationKind,
@@ -157,31 +256,58 @@ async function upsertConversation(
 ) {
   const now = new Date().toISOString();
   const isGroup = isGroupJid(remoteJid);
+  const phone = remoteJidToPhone(remoteJid);
+  const aliases = aliasCandidatesFrom(remoteJid, phone, rawPayload);
+  const canonicalRemoteJid = canonicalRemoteJidFor(remoteJid, phone, aliases);
   const patientName = conversationKind === "psychologist"
     ? "Você e Synapse"
     : pushName || (isGroup ? "Grupo do WhatsApp" : null);
+  const payload = {
+    user_id: professionalId,
+    instance_name: instanceName,
+    remote_jid: remoteJid,
+    canonical_remote_jid: canonicalRemoteJid || remoteJid,
+    remote_jid_aliases: aliases,
+    conversation_kind: conversationKind,
+    synapse_session_id: sessionId,
+    contact_type: isGroup ? "group" : "person",
+    is_group: isGroup,
+    deleted_at: null,
+    patient_name: patientName,
+    patient_phone: phone || null,
+    last_message_preview: lastMessagePreview || null,
+    last_message_at: now,
+    unread_count: 0,
+    raw_payload: rawPayload,
+    updated_at: now,
+  };
+
+  const { data: existing, error: existingError } = await admin
+    .from("whatsapp_conversations")
+    .select("id, remote_jid_aliases")
+    .eq("user_id", professionalId)
+    .eq("instance_name", instanceName)
+    .eq("canonical_remote_jid", canonicalRemoteJid || remoteJid)
+    .maybeSingle();
+  if (existingError) throw existingError;
+
+  if (existing?.id) {
+    const existingAliases = Array.isArray(existing.remote_jid_aliases)
+      ? existing.remote_jid_aliases.map((item: unknown) => safeString(item).toLowerCase()).filter(Boolean)
+      : [];
+    const { data, error } = await admin
+      .from("whatsapp_conversations")
+      .update({ ...payload, remote_jid_aliases: Array.from(new Set([...existingAliases, ...aliases])) })
+      .eq("id", existing.id)
+      .select("id")
+      .single();
+    if (error) throw error;
+    return data.id;
+  }
+
   const { data, error } = await admin
     .from("whatsapp_conversations")
-    .upsert(
-      {
-        user_id: professionalId,
-        instance_name: instanceName,
-        remote_jid: remoteJid,
-        conversation_kind: conversationKind,
-        synapse_session_id: sessionId,
-        contact_type: isGroup ? "group" : "person",
-        is_group: isGroup,
-        deleted_at: null,
-        patient_name: patientName,
-        patient_phone: remoteJidToPhone(remoteJid),
-        last_message_preview: lastMessagePreview || null,
-        last_message_at: now,
-        unread_count: 0,
-        raw_payload: rawPayload,
-        updated_at: now,
-      },
-      { onConflict: "user_id,instance_name,remote_jid" },
-    )
+    .upsert(payload, { onConflict: "user_id,instance_name,remote_jid" })
     .select("id")
     .single();
   if (error) throw error;
@@ -196,6 +322,21 @@ async function upsertWhatsAppMessage(
     .from("whatsapp_messages")
     .upsert(row, { onConflict: "user_id,source_message_id" });
   if (error) throw error;
+}
+
+async function resolveInstanceApiKey(
+  admin: any,
+  professionalId: string,
+  instanceName: string,
+  fallback: string,
+) {
+  const { data, error } = await admin.rpc("neurozap_get_instance_credential", {
+    p_user_id: professionalId,
+    p_instance_name: instanceName,
+  });
+  if (!error && safeString(data)) return safeString(data);
+  if (error) console.warn("[synapse-whatsapp-in] private credential RPC unavailable; using manager key fallback.", error);
+  return fallback;
 }
 
 serve(async (req) => {
@@ -214,6 +355,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")?.replace(/\/+$/, "");
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const internalSecret = Deno.env.get("SYNAPSE_INTERNAL_SECRET");
+    const evolutionBaseUrl = cleanBaseUrl(Deno.env.get("EVOLUTION_API_URL") || "");
+    const evolutionManagerApiKey = safeString(Deno.env.get("EVOLUTION_GLOBAL_API_KEY"));
+    const autoSend = safeString(Deno.env.get("SYNAPSE_WHATSAPP_AUTO_SEND") || "true").toLowerCase() !== "false";
 
     if (!supabaseUrl || !supabaseKey || !internalSecret) {
       throw new Error("Configuracao interna Synapse/Supabase ausente.");
@@ -231,6 +375,9 @@ serve(async (req) => {
     const finalRemoteJid = String(body.remote_jid || fallbackRemoteJid || "").trim();
     const finalMessage = extractMessageText(body, data, webhookMessage);
     const pushName = String(body.push_name || data.pushName || "").trim();
+    const finalPhone = remoteJidToPhone(finalRemoteJid);
+    const finalAliases = aliasCandidatesFrom(finalRemoteJid, finalPhone, body, data, key);
+    const canonicalRemoteJid = canonicalRemoteJidFor(finalRemoteJid, finalPhone, finalAliases);
     const sourceMessageId = String(body.source_message_id || key.id || "").trim();
     const sourceTimestamp = body.source_timestamp || data.messageTimestamp || Math.floor(Date.now() / 1000);
     const messageType = String(body.message_type || data.messageType || "text").trim();
@@ -273,7 +420,7 @@ serve(async (req) => {
       }
     }
 
-    const conversationKind: ConversationKind = sameJid(finalRemoteJid, ownerRemoteJid) ? "psychologist" : "patient";
+    const conversationKind: ConversationKind = sameAnyJid(ownerRemoteJid, [finalRemoteJid, canonicalRemoteJid, ...finalAliases]) ? "psychologist" : "patient";
 
     if (!finalMessage) {
       const shouldDelete = /DELETE|REMOVE|REMOVED|ARCHIVE/i.test(eventName) || Boolean(data.deleted || data.removed || data.archived || body.deleted || body.removed);
@@ -293,6 +440,9 @@ serve(async (req) => {
       finalRemoteJid,
       conversationKind,
       pushName || null,
+      canonicalRemoteJid,
+      finalAliases,
+      finalPhone,
     );
     const conversationId = await upsertConversation(
       supabaseAdmin,
@@ -313,6 +463,7 @@ serve(async (req) => {
       synapse_session_id: sessionId,
       instance_name: instance.instance_name,
       remote_jid: finalRemoteJid,
+      canonical_remote_jid: canonicalRemoteJid || finalRemoteJid,
       source_message_id: sourceMessageId || `inbound:${instance.instance_name}:${finalRemoteJid}:${sourceTimestamp}`,
       direction: "inbound",
       sender_kind: conversationKind,
@@ -381,22 +532,47 @@ serve(async (req) => {
 
     const replyText = stripSynapseWidgets(String(coreData.response || ""));
     const replyChunks = splitForWhatsApp(replyText);
+    const sentMessages: Record<string, unknown>[] = [];
+    const shouldSendReplies = autoSend && Boolean(evolutionBaseUrl && evolutionManagerApiKey && replyChunks.length);
+    const instanceApiKey = shouldSendReplies
+      ? await resolveInstanceApiKey(supabaseAdmin, professionalId, instance.instance_name, evolutionManagerApiKey)
+      : "";
+    const sendTarget = sendTargetFor(finalRemoteJid, finalPhone);
 
     for (let index = 0; index < replyChunks.length; index += 1) {
+      let sendResult: Record<string, unknown> | null = null;
+      let sendError: string | null = null;
+      let status = shouldSendReplies ? "sent" : "queued";
+      if (shouldSendReplies) {
+        try {
+          if (!sendTarget) throw new Error("Contato sem telefone/JID de envio confirmado.");
+          sendResult = await evolutionFetch(evolutionBaseUrl, instanceApiKey, `/message/sendText/${encodeURIComponent(instance.instance_name)}`, {
+            method: "POST",
+            body: JSON.stringify({ number: sendTarget, text: replyChunks[index] }),
+          });
+          sentMessages.push({ index, ok: true, result: sendResult });
+        } catch (error) {
+          status = "failed";
+          sendError = error instanceof Error ? error.message : String(error);
+          sentMessages.push({ index, ok: false, error: sendError });
+        }
+      }
+
       await upsertWhatsAppMessage(supabaseAdmin, {
         user_id: professionalId,
         conversation_id: conversationId,
         synapse_session_id: sessionId,
         instance_name: instance.instance_name,
         remote_jid: finalRemoteJid,
+        canonical_remote_jid: canonicalRemoteJid || finalRemoteJid,
         source_message_id: `synapse:${sessionId}:${sourceMessageId || sourceTimestamp}:${index}`,
         direction: "outbound",
         sender_kind: "synapse",
         content: replyChunks[index],
         content_type: "text",
-        status: "queued",
+        status,
         is_from_ai: true,
-        raw_payload: { core_result: coreData },
+        raw_payload: { core_result: coreData, send_result: sendResult, send_error: sendError },
         created_at: new Date(Date.now() + index).toISOString(),
         updated_at: new Date().toISOString(),
       });
@@ -421,6 +597,7 @@ serve(async (req) => {
       conversation_kind: conversationKind,
       reply_text: replyText,
       reply_chunks: replyChunks,
+      sent_messages: sentMessages,
       client_action: coreData.clientAction || null,
       core_result: coreData,
     });
