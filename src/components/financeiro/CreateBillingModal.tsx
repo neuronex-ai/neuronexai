@@ -113,20 +113,25 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
     return (
         <div className="fixed inset-0 z-[150] flex items-center justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top))] md:px-6">
             <motion.div 
-                initial={{ opacity: 0 }}
+                initial={shouldReduceMotion ? false : { opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
+                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18 }}
                 onClick={() => onOpenChange(false)}
-                className="absolute inset-0 bg-black/60 backdrop-blur-md"
+                className="absolute inset-0 bg-black/55 backdrop-blur-xl dark:bg-black/68"
             />
             
             <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="create-billing-title"
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96, y: 18 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-2xl bg-white dark:bg-zinc-950 rounded-[32px] shadow-2xl border border-zinc-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh]"
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96, y: 18 }}
+                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", damping: 28, stiffness: 360 }}
+                className="relative flex max-h-[min(92vh,760px)] w-full max-w-2xl flex-col overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-[0_30px_90px_-42px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.75)] dark:border-white/10 dark:bg-zinc-950 dark:shadow-[0_30px_110px_-42px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.08)] sm:rounded-[32px]"
             >
-                <div className="px-8 py-6 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between shrink-0">
+                <div className="flex shrink-0 items-center justify-between gap-4 border-b border-zinc-100 px-5 py-5 dark:border-white/5 sm:px-8 sm:py-6">
                     <div>
                         <h2 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">Nova Cobrança</h2>
                         <p className="text-xs text-zinc-500 font-medium mt-1">Gere faturas profissionais para seus pacientes</p>
