@@ -302,7 +302,7 @@ export function useDeepgramAgentVoice({
       audio: {
         channelCount: 1,
         echoCancellation: true,
-        noiseSuppression: true,
+        noiseSuppression: import.meta.env.VITE_SYNAPSE_VOICE_NOISE_SUPPRESSION === "true",
         autoGainControl: true,
       },
     });
@@ -354,7 +354,7 @@ export function useDeepgramAgentVoice({
       return;
     }
 
-    if (type === "UserStartedSpeaking" || type === "AgentAudioInterrupted") {
+    if (type === "UserStartedSpeaking" || type === "AgentAudioInterrupted" || type === "StartOfTurn") {
       stopPlayback();
       applyRestingPhase();
       return;
