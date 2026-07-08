@@ -128,10 +128,10 @@ const actionLabel = (type: string) => {
 };
 
 const rowClassName =
-  "group/item flex min-h-11 w-full items-center justify-between rounded-2xl border border-border/45 bg-background/70 p-3.5 text-left shadow-[inset_0_1px_0_hsl(var(--background)/0.78)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-foreground/12 hover:bg-muted/55 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.075] dark:bg-white/[0.04] dark:hover:bg-white/[0.07]";
+  "group/item flex min-h-11 w-full items-center justify-between rounded-2xl border border-border/40 bg-background/70 p-3.5 text-left shadow-[inset_0_1px_0_hsl(var(--background)/0.78)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-foreground/12 hover:bg-muted/55 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.04] dark:bg-white/[0.028] dark:hover:border-white/[0.06] dark:hover:bg-white/[0.045]";
 
 const iconClassName =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/70 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.72)] transition-colors group-hover/item:text-foreground dark:border-white/[0.075] dark:bg-white/[0.055]";
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/70 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.72)] transition-colors group-hover/item:text-foreground dark:border-white/[0.04] dark:bg-white/[0.032]";
 
 export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWidgetProps) => {
   const navigate = useNavigate();
@@ -246,7 +246,7 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
         className="grid w-full grid-cols-1 gap-2 text-left transition-transform active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 sm:grid-cols-2"
       >
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-2xl border border-border/45 bg-background/70 p-3.5 dark:border-white/[0.075] dark:bg-white/[0.04]">
+          <div key={metric.label} className="rounded-2xl border border-border/40 bg-background/70 p-3.5 dark:border-white/[0.04] dark:bg-white/[0.028]">
             <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">{metric.label}</p>
             <p className={cn("mt-1 truncate text-[15px] font-black tracking-[-0.03em]", metric.color)}>{formatCurrency(metric.value)}</p>
           </div>
@@ -302,12 +302,12 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
   return (
     <div
       className={cn(
-        "notes-liquid-surface my-3 overflow-hidden rounded-[22px] border shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.75)]",
+        "notes-liquid-surface my-3 overflow-hidden rounded-[22px] border shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.75)] dark:border-white/[0.04] dark:shadow-[0_22px_58px_-46px_rgba(0,0,0,0.98)]",
         compact && "rounded-[18px]",
       )}
     >
-      <div className="flex items-center gap-2.5 border-b border-border/35 px-4 py-3 dark:border-white/[0.055]">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/70 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]">
+      <div className="flex items-center gap-2.5 border-b border-border/30 px-4 py-3 dark:border-white/[0.035]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/70 text-muted-foreground dark:border-white/[0.04] dark:bg-white/[0.032]">
           {icon}
         </div>
         <div className="min-w-0">
@@ -317,7 +317,7 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
           </p>
         </div>
         {dataArray.length > 1 ? (
-          <span className="ml-auto rounded-full border border-border/35 bg-muted/55 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]">
+          <span className="ml-auto rounded-full border border-border/30 bg-muted/55 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.04] dark:bg-white/[0.032]">
             {dataArray.length}
           </span>
         ) : null}

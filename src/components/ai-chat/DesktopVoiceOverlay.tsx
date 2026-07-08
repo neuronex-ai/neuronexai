@@ -190,7 +190,7 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28 }}
-          className="fixed inset-0 z-[100] overflow-hidden bg-zinc-50 text-zinc-950 dark:bg-[#030305] dark:text-white"
+          className="notes-lumen-canvas fixed inset-0 z-[100] overflow-hidden bg-background text-foreground"
         >
           <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.78),rgba(255,255,255,0.24)_45%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.08),rgba(255,255,255,0.015)_42%,rgba(0,0,0,0))]" />
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-white/70 dark:bg-white/12" />
@@ -251,14 +251,14 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
               variant="ghost"
               size="icon"
               onClick={handleClose}
-              className="pointer-events-auto h-11 w-11 rounded-full border border-black/10 bg-white/54 text-zinc-700 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] backdrop-blur-2xl transition hover:bg-white/80 hover:text-zinc-950 dark:border-white/10 dark:bg-white/[0.075] dark:text-white/72 dark:hover:bg-white/12 dark:hover:text-white sm:h-12 sm:w-12"
+              className="pointer-events-auto h-11 w-11 rounded-full border border-border/45 bg-background/62 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.72)] backdrop-blur-2xl transition hover:bg-muted hover:text-foreground dark:border-white/[0.075] dark:bg-white/[0.055] sm:h-12 sm:w-12"
               aria-label="Fechar modo voz"
             >
               <X className="h-5 w-5" />
             </Button>
           </header>
 
-          <footer className="absolute inset-x-0 bottom-0 z-30 max-h-[46vh] overflow-y-auto bg-gradient-to-t from-zinc-50 via-zinc-50/96 to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 dark:from-[#030305] dark:via-[#030305]/96 sm:px-6 sm:pb-6 sm:pt-10">
+          <footer className="absolute inset-x-0 bottom-0 z-30 max-h-[46vh] overflow-y-auto bg-gradient-to-t from-background via-background/96 to-transparent px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-8 sm:px-6 sm:pb-6 sm:pt-10">
             <motion.div
               initial={shouldReduceMotion ? false : { y: 28, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
@@ -270,7 +270,7 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
                 size="icon"
                 onClick={handleReset}
                 disabled={isStarting || voiceConfigLoading}
-                className="h-[clamp(3rem,7vh,3.5rem)] w-[clamp(3rem,7vh,3.5rem)] rounded-full border border-black/10 bg-white/50 text-zinc-600 shadow-[inset_0_1px_0_rgba(255,255,255,0.22)] backdrop-blur-2xl transition hover:bg-white/80 hover:text-zinc-950 disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.07] dark:text-white/55 dark:hover:bg-white/12 dark:hover:text-white"
+                className="h-[clamp(3rem,7vh,3.5rem)] w-[clamp(3rem,7vh,3.5rem)] rounded-full border border-border/45 bg-background/58 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.72)] backdrop-blur-2xl transition hover:bg-muted hover:text-foreground disabled:opacity-50 dark:border-white/[0.075] dark:bg-white/[0.055]"
                 title="Reiniciar conversa"
                 aria-label="Reiniciar conversa por voz"
               >
@@ -281,10 +281,10 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
                 onClick={handleMainAction}
                 disabled={isStarting || voiceConfigLoading}
                 className={cn(
-                  "h-[clamp(4rem,10vh,5rem)] w-[clamp(4rem,10vh,5rem)] rounded-full border text-white shadow-[0_24px_64px_-30px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.22)] transition active:scale-95 disabled:opacity-60",
+                  "h-[clamp(4rem,10vh,5rem)] w-[clamp(4rem,10vh,5rem)] rounded-full border shadow-[0_24px_64px_-30px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.22)] transition active:scale-95 disabled:opacity-60",
                   error
-                    ? "border-rose-400/30 bg-rose-500 hover:bg-rose-500/90"
-                    : "border-white/15 bg-zinc-950 hover:bg-zinc-900 dark:bg-white dark:text-black dark:hover:bg-white/90",
+                    ? "border-rose-400/30 bg-rose-500 text-background hover:bg-rose-500/90"
+                    : "border-transparent bg-primary text-primary-foreground hover:bg-primary/90",
                 )}
                 aria-label={isConnected ? "Alternar escuta do modo voz" : "Iniciar modo voz"}
               >
@@ -315,7 +315,7 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
                       ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
                       : status.tone === "active"
                         ? "border-foreground/15 bg-muted/45 text-foreground"
-                      : "border-black/10 bg-white/42 text-zinc-600 dark:border-white/10 dark:bg-white/[0.055] dark:text-white/55",
+                      : "border-border/45 bg-background/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]",
                 )}
               >
                 {status.tone === "success" ? (
@@ -351,15 +351,15 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
                     error
                       ? "text-rose-500"
                       : isConnected
-                        ? "text-zinc-700 dark:text-white/70"
-                        : "text-zinc-500 dark:text-white/42",
+                        ? "text-foreground/72"
+                        : "text-muted-foreground",
                   )}
                 >
                   {displayText || "Synapse por voz"}
                 </motion.p>
               </AnimatePresence>
 
-              <div className="rounded-full border border-black/5 bg-white/32 px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:text-white/24 sm:px-5 sm:py-2 sm:text-[10px]">
+              <div className="rounded-full border border-border/35 bg-background/42 px-4 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground backdrop-blur-xl dark:border-white/[0.075] dark:bg-white/[0.04] sm:px-5 sm:py-2 sm:text-[10px]">
                 ESC para fechar · fale naturalmente
               </div>
             </div>

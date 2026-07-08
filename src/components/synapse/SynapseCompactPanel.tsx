@@ -400,14 +400,12 @@ export const SynapseCompactPanel = () => {
                 animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
                 exit={shouldReduceMotion ? { opacity: 0 } : {
                     opacity: 0,
-                    scale: 0.1,
-                    y: 280,
-                    x: 180,
-                    filter: 'blur(15px)',
+                    scale: 0.94,
+                    y: 12,
+                    filter: 'blur(8px)',
                     transition: {
-                        duration: 0.5,
+                        duration: 0.18,
                         ease: [0.32, 0, 0.67, 0],
-                        opacity: { duration: 0.25 }
                     }
                 }}
                 transition={shouldReduceMotion ? { duration: 0 } : {
@@ -432,7 +430,7 @@ export const SynapseCompactPanel = () => {
                 <div className="relative z-10 flex flex-col h-full max-h-[620px]">
                     <div className="flex items-center justify-between px-7 pt-7 pb-4">
                         <div className="flex items-center gap-3">
-                            <span className="text-[14px] font-black uppercase tracking-[0.24em] text-zinc-950 dark:text-white">
+                            <span className="text-[14px] font-black uppercase tracking-[0.24em] text-foreground">
                                 Synapse AI
                             </span>
                         </div>
@@ -440,33 +438,37 @@ export const SynapseCompactPanel = () => {
                         <div className="flex items-center gap-2 p-1 bg-white/50 dark:bg-white/[0.04] rounded-full border border-black/[0.03] dark:border-white/[0.05] shadow-sm">
                             <button
                                 onClick={() => setActiveTab(activeTab === 'history' ? 'chat' : 'history')}
-                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95", activeTab === 'history' ? "bg-black/10 dark:bg-white/[0.12] text-zinc-900 dark:text-zinc-100 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")}
+                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeTab === 'history' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground")}
                                 title="Histórico"
+                                aria-label="Abrir histórico"
                             >
                                 <History className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={() => setActiveTab(activeTab === 'timeline' ? 'chat' : 'timeline')}
-                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95", activeTab === 'timeline' ? "bg-black/10 dark:bg-white/[0.12] text-zinc-900 dark:text-zinc-100 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")}
+                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeTab === 'timeline' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground")}
                                 title="Atividade"
+                                aria-label="Abrir atividade"
                             >
                                 <Activity className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={() => setActiveTab(activeTab === 'agent' ? 'chat' : 'agent')}
-                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95", activeTab === 'agent' ? "bg-black/10 dark:bg-white/[0.12] text-zinc-900 dark:text-zinc-100 shadow-sm" : "hover:bg-black/5 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300")}
+                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeTab === 'agent' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground")}
                                 title="Agente"
+                                aria-label="Abrir modo agente"
                             >
                                 <MousePointer2 className="h-4 w-4" />
                             </button>
-                            <div className="w-[1px] h-4 bg-black/10 dark:bg-white/[0.08] mx-0.5" />
+                            <div className="w-[1px] h-4 bg-border/70 dark:bg-white/[0.08] mx-0.5" />
                             <button
                                 onClick={handleVoiceButtonClick}
                                 className={cn(
                                     "p-1.5 rounded-full transition-all duration-300 relative overflow-hidden active:scale-95",
-                                    voiceStatus === 'connected' ? "bg-indigo-500/20 text-indigo-500 dark:text-indigo-400" : "hover:bg-black/5 dark:hover:bg-white/[0.08] text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+                                    voiceStatus === 'connected' ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground"
                                 )}
                                 title="Voz"
+                                aria-label={activeTab === 'voice' ? "Fechar modo de voz" : "Abrir modo de voz"}
                             >
                                 {voiceStatus === 'connected' ? (
                                     <>
@@ -482,22 +484,24 @@ export const SynapseCompactPanel = () => {
                             {messages.length > 0 && (
                                 <button
                                     onClick={clearSession}
-                                    className="p-1.5 rounded-full hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-all duration-300 active:scale-95"
+                                    className="p-1.5 rounded-full text-muted-foreground transition-all duration-300 hover:bg-red-500/10 hover:text-red-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:text-red-400"
                                     title="Limpar"
+                                    aria-label="Limpar conversa"
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </button>
                             )}
                             <button
                                 onClick={clearSession}
-                                className="p-1.5 rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 border border-transparent dark:border-white shadow-md hover:scale-105 active:scale-95 transition-all duration-300 ml-1"
+                                className="p-1.5 rounded-full bg-primary text-primary-foreground border border-transparent shadow-md hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300 ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 title="Nova Conversa"
+                                aria-label="Criar nova conversa"
                             >
                                 <Plus className="h-4 w-4" />
                             </button>
                             <button
                                 onClick={() => setShellState('pill')}
-                                className="p-1.5 rounded-full hover:bg-black/5 dark:hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-all duration-300 active:scale-95"
+                                className="p-1.5 rounded-full text-muted-foreground hover:bg-muted/55 hover:text-foreground transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                 aria-label="Fechar"
                             >
                                 <X className="h-4 w-4" />
@@ -509,7 +513,7 @@ export const SynapseCompactPanel = () => {
                         ref={scrollRef}
                         className={cn(
                             'flex-1 min-h-0 overflow-y-auto px-5 relative',
-                            'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-zinc-800/50',
+                            'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
                         <AnimatePresence initial={false} mode="wait">
@@ -522,19 +526,19 @@ export const SynapseCompactPanel = () => {
                                     className="flex flex-col py-6 gap-4"
                                 >
                                     <div className="flex items-center justify-between px-2 mb-2">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400">Conversas Recentes</h3>
-                                        {isLoadingSessions && <Loader2 className="w-3 h-3 animate-spin text-zinc-400" />}
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Conversas Recentes</h3>
+                                        {isLoadingSessions && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
                                     </div>
 
-                                    <div className="mx-2 mb-2 grid grid-cols-2 rounded-[18px] border border-black/[0.04] bg-white/65 p-1 text-[9px] font-black uppercase tracking-[0.16em] text-zinc-500 shadow-sm dark:border-white/[0.06] dark:bg-white/[0.035]">
+                                    <div className="mx-2 mb-2 grid grid-cols-2 rounded-[18px] border border-black/[0.04] bg-white/65 p-1 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground shadow-sm dark:border-white/[0.045] dark:bg-white/[0.03]">
                                         <button
                                             type="button"
                                             onClick={() => setHistoryChannel('neuronex')}
                                             className={cn(
                                                 "h-10 rounded-[14px] transition-all",
                                                 historyChannel === 'neuronex'
-                                                    ? "bg-zinc-950 text-white shadow-sm dark:bg-white dark:text-zinc-950"
-                                                    : "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                                    : "hover:bg-muted/55"
                                             )}
                                         >
                                             NeuroNex
@@ -545,8 +549,8 @@ export const SynapseCompactPanel = () => {
                                             className={cn(
                                                 "h-10 rounded-[14px] transition-all",
                                                 historyChannel === 'whatsapp'
-                                                    ? "bg-zinc-950 text-white shadow-sm dark:bg-white dark:text-zinc-950"
-                                                    : "hover:bg-black/[0.04] dark:hover:bg-white/[0.06]"
+                                                    ? "bg-primary text-primary-foreground shadow-sm"
+                                                    : "hover:bg-muted/55"
                                             )}
                                         >
                                             WhatsApp Business
@@ -577,7 +581,7 @@ export const SynapseCompactPanel = () => {
                                                             setActiveSessionId(session.id);
                                                             setActiveTab('chat');
                                                         }}
-                                                        className="group w-full flex items-center justify-between p-5 rounded-[28px] bg-white/50 dark:bg-white/[0.02] border border-black/[0.03] dark:border-white/[0.05] hover:bg-zinc-950 dark:hover:bg-white hover:text-white dark:hover:text-zinc-900 transition-all duration-300 text-left relative overflow-hidden"
+                                                        className="group relative flex w-full items-center justify-between overflow-hidden rounded-[28px] border border-border/35 bg-background/58 p-5 text-left transition-all duration-300 hover:bg-muted/55 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.055] dark:bg-white/[0.025]"
                                                     >
                                                         {isWpp && (
                                                             <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-bl-[14px]">
@@ -589,7 +593,7 @@ export const SynapseCompactPanel = () => {
                                                         <div className="flex items-center gap-4">
                                                             <div className={cn(
                                                                 "w-10 h-10 rounded-2xl flex items-center justify-center transition-all",
-                                                                isWpp ? "bg-emerald-100 dark:bg-emerald-500/10 group-hover:bg-emerald-500 text-emerald-600 group-hover:text-white dark:text-emerald-400" : "bg-zinc-100 dark:bg-white/5 group-hover:bg-white/10 text-zinc-400"
+                                                                isWpp ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted/65 text-muted-foreground"
                                                             )}>
                                                                 {isWpp ? <Smartphone className="w-5 h-5" /> : <MessageSquare className="w-4 h-4" />}
                                                             </div>
@@ -616,17 +620,17 @@ export const SynapseCompactPanel = () => {
                                     className="flex flex-col py-4 gap-4"
                                 >
                                     {timeline.length === 0 ? (
-                                        <div className="text-center text-zinc-500 text-[11px] mt-10">Nenhuma atividade registrada.</div>
+                                        <div className="text-center text-muted-foreground text-[11px] mt-10">Nenhuma atividade registrada.</div>
                                     ) : (
                                         timeline.map((entry, idx) => (
                                             <div key={entry.id} className="flex gap-4">
                                                 <div className="flex flex-col items-center">
-                                                    <div className="w-2.5 h-2.5 rounded-full bg-zinc-300 dark:bg-zinc-600 mt-1" />
-                                                    {idx !== timeline.length - 1 && <div className="w-[1px] h-full bg-zinc-200 dark:bg-white/[0.06] mt-1" />}
+                                                    <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/28 dark:bg-white/[0.18] mt-1" />
+                                                    {idx !== timeline.length - 1 && <div className="w-[1px] h-full bg-border/60 dark:bg-white/[0.05] mt-1" />}
                                                 </div>
                                                 <div className="flex flex-col flex-1 pb-4">
-                                                    <span className="text-[10px] font-mono text-zinc-400 mb-0.5">{new Date(entry.timestamp).toLocaleTimeString('pt-BR')}</span>
-                                                    <span className="text-[13px] text-zinc-800 dark:text-zinc-200 font-medium">{entry.label}</span>
+                                                    <span className="text-[10px] font-mono text-muted-foreground mb-0.5">{new Date(entry.timestamp).toLocaleTimeString('pt-BR')}</span>
+                                                    <span className="text-[13px] text-foreground font-medium">{entry.label}</span>
                                                 </div>
                                             </div>
                                         ))
@@ -640,11 +644,11 @@ export const SynapseCompactPanel = () => {
                                     exit={{ opacity: 0, x: -20 }}
                                     className="flex flex-col py-5 gap-4"
                                 >
-                                    <div className="rounded-[28px] bg-white/65 dark:bg-white/[0.035] border border-black/[0.04] dark:border-white/[0.06] p-5 shadow-sm">
+                                    <div className="rounded-[28px] bg-white/65 dark:bg-white/[0.032] border border-black/[0.04] dark:border-white/[0.045] p-5 shadow-sm dark:shadow-[0_20px_56px_-46px_rgba(0,0,0,0.8)]">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-1">
-                                                <span className="text-[9px] font-black uppercase tracking-[0.28em] text-zinc-400">Modo agente</span>
-                                                <h3 className="text-[17px] font-black tracking-tight text-zinc-950 dark:text-white">Controle de tela</h3>
+                                                <span className="text-[9px] font-black uppercase tracking-[0.28em] text-muted-foreground">Modo agente</span>
+                                                <h3 className="text-[17px] font-black tracking-tight text-foreground">Controle de tela</h3>
                                             </div>
                                             <span className={cn(
                                                 "rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-[0.16em]",
@@ -653,8 +657,8 @@ export const SynapseCompactPanel = () => {
                                                     : execState === 'success'
                                                         ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                                                         : agentBusy
-                                                            ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400"
-                                                            : "bg-zinc-950/[0.06] text-zinc-500 dark:bg-white/[0.08] dark:text-zinc-400"
+                                                            ? "bg-foreground/10 text-foreground"
+                                                            : "bg-foreground/[0.06] text-muted-foreground dark:bg-white/[0.055]"
                                             )}>
                                                 {EXEC_STATE_LABELS[execState]}
                                             </span>
@@ -668,15 +672,15 @@ export const SynapseCompactPanel = () => {
                                                         key={item.id}
                                                         onClick={() => void runAgentAction(item)}
                                                         disabled={agentBusy}
-                                                        className="group flex min-h-[88px] flex-col items-start justify-between rounded-[22px] border border-black/[0.04] bg-zinc-50/80 p-4 text-left transition-all hover:-translate-y-0.5 hover:bg-zinc-950 hover:text-white disabled:pointer-events-none disabled:opacity-45 dark:border-white/[0.06] dark:bg-white/[0.035] dark:hover:bg-white dark:hover:text-zinc-950"
+                                                        className="group flex min-h-[88px] flex-col items-start justify-between rounded-[22px] border border-border/35 bg-background/62 p-4 text-left transition-all hover:-translate-y-0.5 hover:bg-muted/55 disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0 dark:border-white/[0.045] dark:bg-white/[0.03]"
                                                     >
                                                         <div className="flex w-full items-center justify-between gap-2">
-                                                            <Icon className="h-4 w-4 text-zinc-500 transition-colors group-hover:text-current" />
+                                                            <Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-current" />
                                                             <ChevronRight className="h-3.5 w-3.5 opacity-30 transition-all group-hover:translate-x-0.5 group-hover:opacity-80" />
                                                         </div>
                                                         <div className="space-y-1">
                                                             <span className="block text-[11px] font-black uppercase tracking-[0.12em] leading-tight">{item.label}</span>
-                                                            <span className="line-clamp-2 text-[10px] leading-relaxed text-zinc-500 group-hover:text-current/70 dark:text-zinc-500">{item.description}</span>
+                                                            <span className="line-clamp-2 text-[10px] leading-relaxed text-muted-foreground group-hover:text-current/70">{item.description}</span>
                                                         </div>
                                                     </button>
                                                 );
@@ -684,17 +688,18 @@ export const SynapseCompactPanel = () => {
                                         </div>
                                     </div>
 
-                                    <div className="rounded-[26px] bg-white/45 dark:bg-white/[0.025] border border-black/[0.035] dark:border-white/[0.055] p-4">
+                                    <div className="rounded-[26px] bg-white/45 dark:bg-white/[0.024] border border-black/[0.035] dark:border-white/[0.04] p-4">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Inteligencia diaria</span>
-                                                <p className="mt-1 text-[11px] font-semibold text-zinc-600 dark:text-zinc-400">{dailyActionCount} sugestoes ativas</p>
+                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inteligencia diaria</span>
+                                                <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{dailyActionCount} sugestoes ativas</p>
                                             </div>
                                             <button
                                                 onClick={() => void handleDailySync()}
                                                 disabled={isIntelligenceLoading}
-                                                className="h-10 w-10 rounded-2xl bg-zinc-950 text-white transition-all hover:scale-105 active:scale-95 disabled:opacity-50 dark:bg-white dark:text-zinc-950"
+                                                className="h-10 w-10 rounded-2xl bg-primary text-primary-foreground transition-all hover:scale-105 active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
                                                 title="Atualizar"
+                                                aria-label="Atualizar inteligencia diaria"
                                             >
                                                 {isIntelligenceLoading ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : <RefreshCw className="mx-auto h-4 w-4" />}
                                             </button>
@@ -702,28 +707,28 @@ export const SynapseCompactPanel = () => {
 
                                         <div className="mt-4 grid gap-2">
                                             {scanProgress.map((item) => (
-                                                <div key={item.module} className="flex items-center justify-between rounded-2xl bg-zinc-950/[0.035] px-3 py-2 dark:bg-white/[0.035]">
-                                                    <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400">{item.label}</span>
+                                                <div key={item.module} className="flex items-center justify-between rounded-2xl bg-foreground/[0.035] px-3 py-2 dark:bg-white/[0.03]">
+                                                    <span className="text-[10px] font-bold text-muted-foreground">{item.label}</span>
                                                     <span className={cn(
                                                         "h-2 w-2 rounded-full",
                                                         item.status === 'completed'
                                                             ? "bg-emerald-500"
                                                             : item.status === 'scanning'
-                                                                ? "bg-indigo-500 animate-pulse"
-                                                                : "bg-zinc-300 dark:bg-zinc-700"
+                                                                ? cn("bg-foreground", !shouldReduceMotion && "animate-pulse")
+                                                                : "bg-muted-foreground/25 dark:bg-white/[0.18]"
                                                     )} />
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    <div className="rounded-[26px] bg-white/35 dark:bg-white/[0.02] border border-black/[0.03] dark:border-white/[0.05] p-4">
+                                    <div className="rounded-[26px] bg-white/35 dark:bg-white/[0.02] border border-black/[0.03] dark:border-white/[0.04] p-4">
                                         <div className="mb-3 flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Atividade recente</span>
-                                            <Activity className="h-3.5 w-3.5 text-zinc-400" />
+                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Atividade recente</span>
+                                            <Activity className="h-3.5 w-3.5 text-muted-foreground" />
                                         </div>
                                         {recentAgentTimeline.length === 0 ? (
-                                            <p className="py-4 text-center text-[11px] font-semibold text-zinc-400">Nenhuma atividade registrada.</p>
+                                            <p className="py-4 text-center text-[11px] font-semibold text-muted-foreground">Nenhuma atividade registrada.</p>
                                         ) : (
                                             <div className="space-y-3">
                                                 {recentAgentTimeline.map((entry) => (
@@ -734,11 +739,11 @@ export const SynapseCompactPanel = () => {
                                                                 ? "bg-emerald-500"
                                                                 : entry.state === 'error'
                                                                     ? "bg-red-500"
-                                                                    : "bg-indigo-500"
+                                                                    : "bg-foreground"
                                                         )} />
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-[11px] font-bold text-zinc-700 dark:text-zinc-300">{entry.label}</p>
-                                                            {entry.detail && <p className="truncate text-[10px] text-zinc-400">{entry.detail}</p>}
+                                                            <p className="truncate text-[11px] font-bold text-foreground">{entry.label}</p>
+                                                            {entry.detail && <p className="truncate text-[10px] text-muted-foreground">{entry.detail}</p>}
                                                         </div>
                                                     </div>
                                                 ))}
@@ -754,20 +759,24 @@ export const SynapseCompactPanel = () => {
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     className="flex flex-col items-center justify-center h-full py-12 gap-8 min-h-[400px]"
                                 >
-                                    <div className="relative w-56 h-56 flex items-center justify-center bg-black/[0.03] dark:bg-white/[0.02] rounded-full shadow-inner border border-black/[0.05] dark:border-white/[0.05]">
-                                        <VoiceSpiral
-                                            getAudioVolume={getVoiceInputVolume}
-                                            isListening={voiceStatus === 'connected' && !isVoiceSpeaking && !isVoiceToolActive}
-                                            isProcessing={voiceStatus === 'connecting' || isVoiceToolActive}
-                                            className="rounded-full overflow-hidden opacity-90 dark:opacity-100 mix-blend-multiply dark:mix-blend-screen"
-                                        />
+                                    <div className="relative flex h-56 w-56 items-center justify-center rounded-full border border-border/35 bg-muted/35 shadow-inner dark:border-white/[0.055] dark:bg-white/[0.025]">
+                                        {shouldReduceMotion ? (
+                                            <div className="h-44 w-44 rounded-full border border-foreground/10 bg-foreground/[0.035]" />
+                                        ) : (
+                                            <VoiceSpiral
+                                                getAudioVolume={getVoiceInputVolume}
+                                                isListening={voiceStatus === 'connected' && !isVoiceSpeaking && !isVoiceToolActive}
+                                                isProcessing={voiceStatus === 'connecting' || isVoiceToolActive}
+                                                className="overflow-hidden rounded-full opacity-80 mix-blend-multiply dark:opacity-90 dark:mix-blend-screen"
+                                            />
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col items-center gap-2 text-center">
-                                        <span className={cn("text-sm uppercase tracking-[0.2em] font-black", voiceStatus === 'connected' || isVoiceToolActive ? 'text-indigo-500' : 'text-zinc-400 animate-pulse')}>
+                                        <span className={cn("text-sm uppercase tracking-[0.2em] font-black", voiceStatus === 'connected' || isVoiceToolActive ? 'text-foreground' : cn('text-muted-foreground', !shouldReduceMotion && 'animate-pulse'))}>
                                             {voiceModeLabel}
                                         </span>
-                                        <p className="text-[11px] text-zinc-500 dark:text-zinc-500 max-w-[280px] leading-relaxed">
+                                        <p className="text-[11px] text-muted-foreground max-w-[280px] leading-relaxed">
                                             {voiceModeDescription}
                                         </p>
                                     </div>
@@ -775,7 +784,8 @@ export const SynapseCompactPanel = () => {
                                     {voiceStatus === 'connected' && (
                                         <button
                                             onClick={() => toggleVoiceMode()}
-                                            className="mt-4 px-8 py-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-500 text-[12px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2"
+                                            className="mt-4 px-8 py-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-[12px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            aria-label="Encerrar chamada de voz"
                                         >
                                             <PhoneOff className="w-4 h-4" />
                                             Encerrar Chamada
@@ -789,12 +799,12 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex flex-col items-center justify-center h-full py-10 gap-5"
                                 >
-                                    <div className="w-14 h-14 rounded-3xl bg-black/5 dark:bg-white/[0.04] border border-black/5 dark:border-white/[0.06] flex items-center justify-center">
-                                        <Sparkles className="h-6 w-6 text-zinc-400" />
+                                    <div className="flex h-14 w-14 items-center justify-center rounded-3xl border border-border/35 bg-muted/45 text-muted-foreground dark:border-white/[0.06] dark:bg-white/[0.04]">
+                                        <Sparkles className="h-6 w-6" />
                                     </div>
                                     <div className="text-center space-y-1.5">
-                                        <h3 className="text-[14px] font-semibold text-zinc-900 dark:text-zinc-200">Como posso ajudar?</h3>
-                                        <p className="text-[12px] text-zinc-500 max-w-[240px]">Peça para resumir um paciente ou agendar uma sessão.</p>
+                                        <h3 className="text-[14px] font-semibold text-foreground">Como posso ajudar?</h3>
+                                        <p className="text-[12px] text-muted-foreground max-w-[240px]">Peça para resumir um paciente ou agendar uma sessão.</p>
                                     </div>
 
                                     {quickActions.length > 0 && (
@@ -803,7 +813,7 @@ export const SynapseCompactPanel = () => {
                                                 <button
                                                     key={tool.id}
                                                     onClick={() => setInputDraft(tool.name)}
-                                                    className="px-4 py-2 rounded-[14px] text-[11px] font-semibold bg-black/[0.03] dark:bg-white/[0.04] border border-black/[0.04] dark:border-white/[0.06] text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 transition-all active:scale-95 shadow-sm"
+                                                    className="rounded-[14px] border border-border/35 bg-muted/35 px-4 py-2 text-[11px] font-semibold text-muted-foreground shadow-sm transition-all hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 dark:border-white/[0.06] dark:bg-white/[0.04]"
                                                 >
                                                     {tool.name}
                                                 </button>
@@ -828,23 +838,25 @@ export const SynapseCompactPanel = () => {
                                             <div className={cn(
                                                 'relative group max-w-[85%]',
                                                 msg.role === 'user'
-                                                    ? 'rounded-[28px] rounded-br-[8px] px-6 py-4 bg-zinc-900 text-white dark:bg-white/[0.08] dark:text-zinc-200 shadow-xl'
-                                                    : 'rounded-[28px] rounded-bl-[8px] px-6 py-4 bg-white border border-zinc-200/60 text-zinc-800 dark:bg-white/[0.04] dark:border-white/[0.04] dark:text-zinc-300 shadow-sm'
+                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-primary-foreground shadow-xl'
+                                                    : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
                                             )}>
                                                 {msg.role === "assistant" && (
                                                     <button
                                                         onClick={() => handleCopy(msg.id, msg.content)}
-                                                        className="absolute -right-9 top-1 opacity-0 group-hover:opacity-100 transition-all p-1.5 text-zinc-400 hover:text-zinc-900"
+                                                        className="absolute -right-9 top-1 rounded-lg p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        aria-label="Copiar mensagem"
                                                     >
                                                         {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
                                                     </button>
                                                 )}
 
                                                 <div className={cn(
-                                                    'prose prose-sm max-w-none text-[13px] leading-relaxed break-words',
+                                                    'prose prose-sm max-w-none break-words text-[13px] leading-relaxed',
+                                                    'prose-p:text-foreground/88 prose-strong:text-foreground prose-li:text-foreground/78 prose-code:text-foreground',
                                                     msg.role === 'user'
                                                         ? 'prose-invert'
-                                                        : 'dark:prose-invert'
+                                                        : ''
                                                 )}>
                                                     {(() => {
                                                         const parsedMessage = msg.role === "assistant"
@@ -905,22 +917,22 @@ export const SynapseCompactPanel = () => {
                                         >
                                             <SynapseOrbAvatar className="mb-0.5 h-8 w-8" />
                                             <motion.div
-                                                animate={{
+                                                animate={shouldReduceMotion ? undefined : {
                                                     boxShadow: [
                                                         '0 16px 42px -34px rgba(0,0,0,0.45)',
                                                         '0 22px 58px -36px rgba(0,0,0,0.56)',
                                                         '0 16px 42px -34px rgba(0,0,0,0.45)',
                                                     ],
                                                 }}
-                                                transition={{ repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-                                                className="flex items-center gap-1.5 px-5 py-3.5 rounded-[24px] rounded-bl-[8px] border border-zinc-200/70 bg-white/82 shadow-sm backdrop-blur-xl dark:border-white/[0.08] dark:bg-white/[0.055]"
+                                                transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
+                                                className="flex items-center gap-1.5 rounded-[24px] rounded-bl-[8px] border border-border/45 bg-background/72 px-5 py-3.5 shadow-sm backdrop-blur-xl dark:border-white/[0.045] dark:bg-white/[0.04]"
                                             >
                                                 {[0, 0.16, 0.32].map((delay) => (
                                                     <motion.div
                                                         key={delay}
-                                                        animate={{ y: [0, -3, 0], scale: [1, 1.18, 1], opacity: [0.35, 1, 0.35] }}
-                                                        transition={{ repeat: Infinity, duration: 0.9, delay, ease: 'easeInOut' }}
-                                                        className="w-1.5 h-1.5 rounded-full bg-zinc-950/60 dark:bg-white/70"
+                                                        animate={shouldReduceMotion ? undefined : { y: [0, -3, 0], scale: [1, 1.18, 1], opacity: [0.35, 1, 0.35] }}
+                                                        transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 0.9, delay, ease: 'easeInOut' }}
+                                                        className="h-1.5 w-1.5 rounded-full bg-foreground/65"
                                                     />
                                                 ))}
                                             </motion.div>
@@ -933,17 +945,17 @@ export const SynapseCompactPanel = () => {
 
                     <div className="px-6 pb-6 pt-2">
                         <motion.div
-                            animate={{
+                            animate={shouldReduceMotion ? undefined : {
                                 y: isInputFocused ? -2 : 0,
                                 scale: isInputFocused ? 1.008 : 1,
                                 boxShadow: isInputFocused
                                     ? '0 24px 70px -42px rgba(0,0,0,0.45)'
                                     : '0 16px 48px -44px rgba(0,0,0,0.35)',
                             }}
-                            transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
                             className={cn(
                                 'flex items-end gap-3 rounded-[26px]',
-                                'bg-white/90 dark:bg-white/[0.06] border border-zinc-200/70 dark:border-white/[0.08]',
+                                'notes-liquid-surface border',
                                 'px-4 py-3 transition-colors duration-300 backdrop-blur-2xl'
                             )}
                         >
@@ -957,35 +969,37 @@ export const SynapseCompactPanel = () => {
                                 placeholder="Pergunte ao Synapse..."
                                 rows={1}
                                 disabled={!sessionReady || isSending}
-                                className="min-h-9 flex-1 resize-none bg-transparent py-2 text-[13px] font-medium text-zinc-900 outline-none placeholder:text-zinc-400 disabled:opacity-50 dark:text-zinc-100 dark:placeholder:text-white/35"
+                                className="min-h-9 flex-1 resize-none bg-transparent py-2 text-[13px] font-medium text-foreground outline-none placeholder:text-muted-foreground/55 disabled:opacity-50"
                             />
                             <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
                                 <motion.button
                                     onClick={toggleListening}
-                                    whileTap={{ scale: 0.92 }}
+                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
                                     className={cn(
-                                        'w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300',
+                                        'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                         isListening
-                                            ? 'bg-zinc-950 text-white dark:bg-white dark:text-zinc-950'
-                                            : 'bg-zinc-100 text-zinc-500 hover:text-zinc-900 dark:bg-white/[0.06] dark:text-white/48 dark:hover:text-white'
+                                            ? 'bg-primary text-primary-foreground'
+                                            : 'bg-muted/65 text-muted-foreground hover:text-foreground dark:bg-white/[0.06]'
                                     )}
+                                    aria-label={isListening ? "Parar ditado" : "Iniciar ditado"}
                                 >
                                     <Mic className="h-4 w-4" />
                                 </motion.button>
                                 <motion.button
                                     onClick={handleSend}
                                     disabled={!inputDraft.trim() || isSending}
-                                    whileTap={{ scale: 0.92 }}
-                                    animate={{ rotate: inputDraft.trim() ? 0 : -4 }}
-                                    transition={{ type: 'spring', stiffness: 520, damping: 30 }}
+                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
+                                    animate={shouldReduceMotion ? undefined : { rotate: inputDraft.trim() ? 0 : -4 }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 30 }}
                                     className={cn(
-                                        'w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-300 disabled:cursor-not-allowed',
+                                        'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                         inputDraft.trim()
-                                            ? 'bg-zinc-900 text-white shadow-md dark:bg-white dark:text-zinc-900'
-                                            : 'bg-zinc-100 text-zinc-400 dark:bg-white/[0.04] dark:text-white/32'
+                                            ? 'bg-primary text-primary-foreground shadow-md'
+                                            : 'bg-muted/45 text-muted-foreground/60 dark:bg-white/[0.04]'
                                     )}
+                                    aria-label="Enviar mensagem"
                                 >
-                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-4 w-4" />}
+                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowUp className="h-4 w-4" />}
                                 </motion.button>
                             </div>
                         </motion.div>

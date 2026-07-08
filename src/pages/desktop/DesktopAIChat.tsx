@@ -1,7 +1,7 @@
 import type { MouseEvent } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { History, PanelLeftClose, Phone, Sparkles } from "lucide-react";
+import { History, PanelLeftClose, Phone } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -61,6 +61,9 @@ const getNavigationPath = (payload: unknown) => {
     if (!isRecord(payload) || typeof payload.path !== "string") return null;
     return payload.path;
 };
+
+const liquidGlassButtonClassName =
+    "notes-liquid-surface border-border/40 bg-background/62 text-muted-foreground shadow-[0_18px_48px_-38px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background)/0.78)] backdrop-blur-2xl transition-[border-color,background-color,color,box-shadow,transform] duration-200 hover:border-foreground/12 hover:bg-muted/55 hover:text-foreground active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 dark:border-white/[0.04] dark:bg-white/[0.032] dark:shadow-[0_18px_48px_-38px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.025)] dark:hover:border-white/[0.06] dark:hover:bg-white/[0.048]";
 
 export default function DesktopAIChat() {
     const navigate = useNavigate();
@@ -259,10 +262,9 @@ export default function DesktopAIChat() {
     );
 
     return (
-        <div className="notes-lumen-canvas relative mx-3 flex h-[calc(100dvh-5.5rem)] min-h-[36rem] overflow-hidden rounded-[32px] border border-border/45 bg-background font-sans text-foreground shadow-[0_34px_110px_-62px_hsl(var(--foreground)/0.8)] selection:bg-primary/10 md:mx-4 md:rounded-[38px] dark:border-white/[0.075] dark:shadow-[0_34px_120px_-56px_rgba(0,0,0,0.96)]">
+        <div className="notes-lumen-canvas relative mx-3 flex h-[calc(100dvh-5.5rem)] min-h-[36rem] overflow-hidden rounded-[32px] border border-border/40 bg-background font-sans text-foreground shadow-[0_34px_110px_-62px_hsl(var(--foreground)/0.8)] selection:bg-primary/10 md:mx-4 md:rounded-[38px] dark:border-white/[0.045] dark:shadow-[0_34px_120px_-56px_rgba(0,0,0,0.96)]">
             <div className="notes-lumen-field pointer-events-none absolute inset-0 z-0" />
             <div className="notes-retina-texture pointer-events-none absolute inset-0 z-[1] opacity-70" />
-            <div className="pointer-events-none absolute inset-x-0 top-0 z-[2] h-px bg-background/80 dark:bg-white/[0.08]" />
 
             <DesktopVoiceOverlay isOpen={isVoiceModeOpen} onClose={() => setIsVoiceModeOpen(false)} />
 
@@ -301,33 +303,28 @@ export default function DesktopAIChat() {
             </motion.aside>
 
             <div className="relative z-20 flex min-w-0 flex-1 flex-col">
-                <header className="notes-retina-rail absolute left-0 right-0 top-0 z-30 flex h-[78px] items-center justify-between border-b px-4 backdrop-blur-2xl sm:px-7">
-                    <div className="flex min-w-0 items-center gap-3">
+                <header className="pointer-events-none absolute left-0 right-0 top-0 z-30 flex h-[78px] items-center justify-between px-4 sm:px-7">
+                    <div className="flex min-w-0 items-center gap-3 pointer-events-auto">
                         <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsSidebarOpen((current) => !current)}
-                            className="h-11 w-11 shrink-0 rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                            className={cn("h-11 w-11 shrink-0 rounded-full", liquidGlassButtonClassName)}
                             aria-label={isSidebarOpen ? "Fechar historico de conversas" : "Abrir historico de conversas"}
                             aria-pressed={isSidebarOpen}
                         >
                             {isSidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <History className="h-5 w-5" />}
                         </Button>
-
-                        <div className="flex min-w-0 items-center gap-2.5 rounded-full border border-border/40 bg-background/58 px-4 py-1.5 shadow-sm backdrop-blur-xl dark:border-white/[0.075] dark:bg-white/[0.04]">
-                            <Sparkles className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            <span className="truncate text-[11px] font-black uppercase tracking-[0.2em] text-muted-foreground">Synapse AI</span>
-                        </div>
                     </div>
 
-                    <div className="flex shrink-0 items-center gap-3">
+                    <div className="pointer-events-auto flex shrink-0 items-center gap-3">
                         <Button
                             type="button"
                             variant="outline"
                             size="sm"
                             onClick={() => setIsVoiceModeOpen(true)}
-                            className="h-11 rounded-full border-border/45 bg-background/68 px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground shadow-sm transition-colors hover:border-foreground/16 hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.075] dark:bg-white/[0.04]"
+                            className={cn("h-11 rounded-full px-4 text-[10px] font-black uppercase tracking-widest", liquidGlassButtonClassName)}
                             aria-label="Abrir modo voz"
                         >
                             <Phone className="mr-2 h-3.5 w-3.5" />

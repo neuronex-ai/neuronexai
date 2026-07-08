@@ -419,12 +419,13 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
             <div
                 className={cn(
                     "prose max-w-none flex-1 overflow-hidden break-words px-0.5 md:px-0",
-                    "prose-p:my-2 prose-p:text-[15px] prose-p:font-medium prose-p:leading-[1.55] prose-p:text-foreground/84 md:prose-p:text-[17px]",
+                    "prose-p:my-2 prose-p:text-[15px] prose-p:font-medium prose-p:leading-[1.58] prose-p:text-foreground/92 md:prose-p:text-[17px]",
                     "prose-strong:break-words prose-strong:font-black prose-strong:text-foreground",
                     "prose-headings:my-3 prose-headings:break-words prose-headings:font-black prose-headings:tracking-tight prose-headings:text-foreground",
                     "prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6 md:prose-ul:my-6 md:prose-ul:pl-8",
-                    "prose-li:my-1 prose-li:break-words prose-li:pl-1 prose-li:text-muted-foreground prose-li:marker:text-muted-foreground/45",
-                    "dark:prose-invert dark:prose-p:text-foreground/84",
+                    "prose-li:my-1 prose-li:break-words prose-li:pl-1 prose-li:text-foreground/78 prose-li:marker:text-muted-foreground/55",
+                    "prose-a:text-foreground prose-code:text-foreground prose-blockquote:text-foreground/72",
+                    "dark:prose-p:text-foreground/92 dark:prose-li:text-foreground/78 dark:prose-strong:text-foreground dark:prose-headings:text-foreground",
                 )}
             >
                 {parsedContent.cleanContent ? (
