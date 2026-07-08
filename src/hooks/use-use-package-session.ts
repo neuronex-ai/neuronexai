@@ -8,7 +8,7 @@ interface UsePackageSessionData {
   patientId: string;
 }
 
-const usePackageSession = async ({ packageId, patientId: _patientId }: UsePackageSessionData, userId: string) => {
+const markPackageSessionAsUsed = async ({ packageId, patientId: _patientId }: UsePackageSessionData, userId: string) => {
   // 1. Buscar o pacote atual
   const { data: currentPackage, error: fetchError } = await supabase
     .from('patient_packages')
@@ -52,7 +52,7 @@ export const useUsePackageSession = () => {
   return useMutation({
     mutationFn: (data: UsePackageSessionData) => {
       if (!userId) throw new Error("Usuário não autenticado.");
-      return usePackageSession(data, userId);
+      return markPackageSessionAsUsed(data, userId);
     },
     onSuccess: (data, variables) => {
       toast.success(`Sessão utilizada! Restam ${data.total_sessions - data.sessions_used} sessões.`);

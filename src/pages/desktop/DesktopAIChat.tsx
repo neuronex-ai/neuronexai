@@ -115,7 +115,7 @@ export default function DesktopAIChat() {
         if (isListening) stopListening();
 
         const outboundText = text.trim() || "Anexo enviado para analise.";
-        let uploadedFiles: { name: string, url: string, documentId?: string, storageProvider?: "r2" }[] = [];
+        const uploadedFiles: { name: string, url: string, documentId?: string, storageProvider?: "r2" }[] = [];
         if (attachments.length > 0) {
             setIsUploading(true);
             try {

@@ -102,7 +102,7 @@ export const WidgetRenderer = ({ type, data }: { type: string, data: any }) => {
                     </div>
                 </div>
             );
-        case 'financial_summary':
+        case 'financial_summary': {
             const metrics = data.metrics || data;
             return (
                 <div className="my-6 w-full rounded-[24px] md:rounded-[32px] bg-black border border-white/10 shadow-2xl overflow-hidden relative" onClick={handleNavigate}>
@@ -131,6 +131,7 @@ export const WidgetRenderer = ({ type, data }: { type: string, data: any }) => {
                     </div>
                 </div>
             );
+        }
         default:
             // "Real Action" Bar Style
             return (
@@ -153,7 +154,7 @@ export const WidgetRenderer = ({ type, data }: { type: string, data: any }) => {
 const parsePatientList = (content: string): { patients: PatientCardData[], raw: string } | null => {
     const patients: PatientCardData[] = [];
     let rawText = '';
-    const mainPattern = /^\s*[\*\-]\s+\*\*(.+?)\*\*\s+\(ID:\s*`?([a-f0-9-]+)`?\)/gim;
+    const mainPattern = /^\s*[*-]\s+\*\*(.+?)\*\*\s+\(ID:\s*`?([a-f0-9-]+)`?\)/gim;
     const matches: Array<{ match: RegExpExecArray, details: string }> = [];
     let match;
     const lines = content.split('\n');
@@ -164,7 +165,7 @@ const parsePatientList = (content: string): { patients: PatientCardData[], raw: 
     if (matches.length > 0) {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
-            const patientMatch = line.match(/^\s*[\*\-]\s+\*\*(.+?)\*\*\s+\(ID:\s*`?([a-f0-9-]+)`?\)/i);
+            const patientMatch = line.match(/^\s*[*-]\s+\*\*(.+?)\*\*\s+\(ID:\s*`?([a-f0-9-]+)`?\)/i);
             if (patientMatch) {
                 currentPatientIndex++;
                 const name = patientMatch[1].trim();
@@ -172,13 +173,13 @@ const parsePatientList = (content: string): { patients: PatientCardData[], raw: 
                 let phone = '';
                 let email = '';
                 let j = i + 1;
-                while (j < lines.length && lines[j].match(/^\s{4,}[\*\-]/)) {
+                while (j < lines.length && lines[j].match(/^\s{4,}[*-]/)) {
                     const detailLine = lines[j];
                     const phoneMatch = detailLine.match(/\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/);
                     if (phoneMatch && !phone) {
                         phone = phoneMatch[0].replace(/\D/g, '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
                     }
-                    const emailMatch = detailLine.match(/[\w\.-]+@[\w\.-]+\.\w+/);
+                    const emailMatch = detailLine.match(/[\w.-]+@[\w.-]+\.\w+/);
                     if (emailMatch && !email) {
                         email = emailMatch[0];
                     }
@@ -195,7 +196,7 @@ const parsePatientList = (content: string): { patients: PatientCardData[], raw: 
             const remainingContent = content.substring(endIndex);
             const remainingLines = remainingContent.split('\n');
             for (const line of remainingLines) {
-                if (line.trim() && !line.match(/^\s{4,}[\*\-]/)) break;
+                if (line.trim() && !line.match(/^\s{4,}[*-]/)) break;
                 endIndex += line.length + 1;
             }
             const beforeList = content.substring(0, startIndex);
@@ -209,7 +210,7 @@ const parsePatientList = (content: string): { patients: PatientCardData[], raw: 
 
 const parseMarkdownTable = (content: string) => {
     const tablePattern = new RegExp(
-        "\\|(.+)\\|\\n\\|" + "[" + "\\-:\\s|" + "]+" + "\\|\\n((?:\\|.+\\|\\n?)+)",
+        "\\|(.+)\\|\\n\\|" + "[-:\\s|]+" + "\\|\\n((?:\\|.+\\|\\n?)+)",
         "g",
     );
     const match = tablePattern.exec(content);
@@ -366,7 +367,9 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
                             </div>
                         );
                     }
-                } catch (e) { }
+                } catch (e) {
+                    console.debug("Ignoring non-widget code block", e);
+                }
             }
             return (
                 <pre className="my-6 p-5 md:p-7 rounded-[24px] md:rounded-[32px] bg-black border border-white/10 overflow-x-auto shadow-xl custom-scrollbar w-full">

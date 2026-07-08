@@ -184,7 +184,7 @@ export const CommunicationSettings = () => {
             .replace(/>/g, "&gt;");
 
         VARIABLES.forEach(v => {
-            const regex = new RegExp(v.code.replace(/[\[\]]/g, '\\$&'), 'g');
+            const regex = new RegExp(v.code.replace(/[[\]]/g, '\\$&'), 'g');
             html = html.replace(regex, `<span class="inline-block bg-primary text-primary-foreground font-bold rounded-[4px] px-[3px] mx-[-3px] shadow-[0_4px_12px_rgba(var(--primary),0.2)] text-[0.95em] translate-y-[-1px] select-none">${v.code}</span>`);
         });
 

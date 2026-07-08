@@ -35,7 +35,7 @@ export const useProjectedCashFlow = (mode: ProjectionMode, rangeDays: number, vi
       const startDate = subDays(today, 30);
       const totalRange = rangeDays + 30;
 
-      let dailyData: ChartPoint[] = [];
+      const dailyData: ChartPoint[] = [];
       for (let i = 0; i <= totalRange; i++) {
         const currentDay = addDays(startDate, i);
         dailyData.push({

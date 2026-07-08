@@ -13,7 +13,9 @@ describe('cn', () => {
     });
 
     it('deve aceitar condicionais (clsx)', () => {
-        const result = cn('base', false && 'hidden', true && 'visible');
+        const shouldHide = false;
+        const shouldShow = true;
+        const result = cn('base', shouldHide && 'hidden', shouldShow && 'visible');
         expect(result).toContain('base');
         expect(result).toContain('visible');
         expect(result).not.toContain('hidden');

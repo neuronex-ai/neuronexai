@@ -25,7 +25,7 @@ export const LandingMobileNav = () => {
                 () => import("@/pages/FinanceLanding"),
             ];
             if ('requestIdleCallback' in window) {
-                // @ts-ignore
+                // @ts-expect-error optional native browser share API typing varies by runtime.
                 window.requestIdleCallback(() => {
                     prefetchQueue.forEach((prefetch) => prefetch());
                 });

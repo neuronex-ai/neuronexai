@@ -49,7 +49,7 @@ export function useAppUpdate(): UseAppUpdateReturn {
             setStatus(data.status);
 
             switch (data.status) {
-                case 'available':
+                case 'available': {
                     setUpdateVersion(data.version || null);
                     if (data.releaseNotes) {
                         if (typeof data.releaseNotes === 'string') {
@@ -65,6 +65,7 @@ export function useAppUpdate(): UseAppUpdateReturn {
                         setShowModal(true);
                     }
                     break;
+                }
 
                 case 'downloading':
                     setDownloadPercent(data.percent || 0);

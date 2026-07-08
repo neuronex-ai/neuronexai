@@ -187,7 +187,7 @@ export const AppointmentDetailModal = ({
   const buildTimeUpdates = () => {
     const datePart = format(new Date(appointment.start_time), "yyyy-MM-dd");
     const newStart = new Date(`${datePart}T${startTime}:00-03:00`);
-    let newEnd = new Date(`${datePart}T${endTime}:00-03:00`);
+    const newEnd = new Date(`${datePart}T${endTime}:00-03:00`);
     if (newEnd <= newStart) newEnd.setDate(newEnd.getDate() + 1);
 
     return {

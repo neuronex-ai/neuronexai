@@ -55,7 +55,6 @@ import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { usePatients } from "@/hooks/use-patients";
 import { useAddAppointment } from "@/hooks/use-add-appointment";
 import { useAddAppointmentTransaction } from "@/hooks/use-add-appointment-transaction";
-import { useAddRecurringAppointment } from "@/hooks/use-add-recurring-appointment";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
 import { useUsePackageSession } from "@/hooks/use-use-package-session";
@@ -247,7 +246,6 @@ export function NewAppointmentModal({
   const [step, setStep] = useState(1);
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
-  const { mutateAsync: createRecurringAppointments, isPending: isCreatingRecurringAppointments } = useAddRecurringAppointment();
   const { mutateAsync: createAppointmentTransaction, isPending: isCreatingTransaction } = useAddAppointmentTransaction();
   const { mutateAsync: debitPackageSession, isPending: isDebitingPackage } = useUsePackageSession();
 
@@ -332,7 +330,6 @@ export function NewAppointmentModal({
   const isCheckingFinancialRules = isLoadingPackages || isLoadingPatientPackages;
   const isSubmitting =
     isCreatingAppointment ||
-    isCreatingRecurringAppointments ||
     isCreatingTransaction ||
     isDebitingPackage;
 
@@ -444,43 +441,25 @@ export function NewAppointmentModal({
     let createdPrimaryAppointment: any = null;
 
     try {
-      if (false && values.eventType === "session" && recurrenceCount > 1) {
-        const recurrenceEndDate = addRecurrenceInterval(startDateTime, recurrenceCount - 1, values.recurrenceFrequency);
+      const createdAppointments = [];
 
-        const createdAppointments = await createRecurringAppointments({
-          patient_id: values.patientId!,
-          date: startDateTime,
-          startTime: values.startTime,
-          duration: String(values.duration),
-          type: values.modality,
-          notes: notesStr,
-          location: locStr || "",
-          repetition: values.recurrenceFrequency,
-          endDate: recurrenceEndDate,
-        });
+      for (let index = 0; index < recurrenceCount; index += 1) {
+        const occurrenceStart = addRecurrenceInterval(startDateTime, index, values.recurrenceFrequency);
+        const occurrenceEnd = addRecurrenceInterval(endDateTime, index, values.recurrenceFrequency);
 
-        createdPrimaryAppointment = createdAppointments?.[0];
-      } else {
-        const createdAppointments = [];
+        const result = await createAppointment({
+          ...appointmentPayload,
+          start_time: occurrenceStart,
+          end_time: occurrenceEnd,
+        } as any);
 
-        for (let index = 0; index < recurrenceCount; index += 1) {
-          const occurrenceStart = addRecurrenceInterval(startDateTime, index, values.recurrenceFrequency);
-          const occurrenceEnd = addRecurrenceInterval(endDateTime, index, values.recurrenceFrequency);
-
-          const result = await createAppointment({
-            ...appointmentPayload,
-            start_time: occurrenceStart,
-            end_time: occurrenceEnd,
-          } as any);
-
-          createdAppointments.push(result.newAppointment);
-          if (!createdPrimaryAppointment) {
-            createdPrimaryAppointment = result.newAppointment;
-          }
+        createdAppointments.push(result.newAppointment);
+        if (!createdPrimaryAppointment) {
+          createdPrimaryAppointment = result.newAppointment;
         }
-
-        createdPrimaryAppointment = createdAppointments[0] || createdPrimaryAppointment;
       }
+
+      createdPrimaryAppointment = createdAppointments[0] || createdPrimaryAppointment;
 
       if (values.eventType === "session" && createdPrimaryAppointment) {
         if (values.usePackage && selectedPackage?.id && values.patientId) {
