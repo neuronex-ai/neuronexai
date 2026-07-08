@@ -111,7 +111,7 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
     if (!open) return null;
 
     return (
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-6">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center px-3 py-[max(0.75rem,env(safe-area-inset-top))] md:px-6">
             <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
