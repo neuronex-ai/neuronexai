@@ -3,66 +3,26 @@
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { WaitlistModal } from "@/components/landing/WaitlistModal";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { useProfile } from "@/hooks/use-profile";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { MobileMainMenuSheet } from "./MobileMainMenuSheet";
-import { AnimatePresence, motion } from "framer-motion";
-import { Calendar, DollarSign, Home, LogIn, LogOut, Menu, Settings, Sparkles, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { Calendar, DollarSign, Home, Menu, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
-
-const PRIVATE_MENU = [
-    { label: "Painel", href: "/dashboard" },
-    { label: "Agenda", href: "/agenda" },
-    { label: "Pacientes", href: "/pacientes" },
-    { label: "Teleconsulta", href: "/teleconsulta" },
-    { label: "Notas", href: "/notas" },
-    { label: "Financeiro", href: "/financeiro" },
-    { label: "Synapse AI", href: "/synapse-ai" },
-    { label: "Integrações", href: "/integracoes" },
-    { label: "Configurações", href: "/ajustes" },
-];
-
-const PUBLIC_MENU = [
-    { label: "Início", href: "/" },
-    { label: "Funcionalidades", href: "/#features" },
-    { label: "Preços", href: "/pricing" },
-    { label: "Sobre", href: "/sobre" },
-    { label: "Contato", href: "/contato" },
-];
+import { Link, useLocation } from "react-router-dom";
 
 export const MobileBottomNav = () => {
     const [menuOpen, setMenuOpen] = useState(false);
     const [waitlistOpen, setWaitlistOpen] = useState(false);
     const location = useLocation();
-    const navigate = useNavigate();
     const { user } = useAuth();
-    const { data: profile } = useProfile();
 
     const publicRoutes = ["/", "/auth", "/pricing", "/sobre", "/contato"];
     const publicMode = publicRoutes.includes(location.pathname) || !user;
-    const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ") || "Usuário";
-    const initials = fullName.substring(0, 2).toUpperCase();
-    const menuItems = publicMode ? PUBLIC_MENU : PRIVATE_MENU;
 
     const isActive = (href: string) => {
         if (href === "/dashboard") return location.pathname === "/dashboard";
         if (href === "/financeiro") return location.pathname.startsWith("/financeiro");
         return location.pathname === href || location.pathname.startsWith(`${href}/`);
-    };
-
-    const logout = async () => {
-        const { error } = await supabase.auth.signOut();
-        if (error) {
-            toast.error("Não foi possível encerrar a sessão.");
-            return;
-        }
-        setMenuOpen(false);
-        navigate("/auth");
     };
 
     const navItems = [

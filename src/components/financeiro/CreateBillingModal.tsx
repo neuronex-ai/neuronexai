@@ -4,7 +4,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { 
     X, 
     CreditCard, 
@@ -33,14 +33,26 @@ const billingSchema = z.object({
 
 type BillingForm = z.infer<typeof billingSchema>;
 
+interface BillingPatientOption {
+    id: string;
+    name: string;
+}
+
 interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    patients: any[];
+    patients: BillingPatientOption[];
 }
+
+const fieldClass =
+    "w-full h-14 rounded-2xl border border-zinc-200 bg-zinc-50 px-5 text-sm font-bold outline-none transition-all placeholder:text-zinc-400 hover:border-zinc-300 hover:bg-white focus:border-zinc-900/25 focus:ring-2 focus:ring-zinc-900/20 dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:border-white/20 dark:hover:bg-white/[0.07] dark:focus:border-white/25 dark:focus:ring-white/25 motion-reduce:transition-none";
+
+const subtleButtonClass =
+    "h-14 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-95 dark:focus-visible:ring-white/25 dark:focus-visible:ring-offset-zinc-950 motion-reduce:transition-none motion-reduce:active:scale-100";
 
 export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
     const [loading, setLoading] = React.useState(false);
+    const shouldReduceMotion = useReducedMotion();
 
     const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<BillingForm>({
         resolver: zodResolver(billingSchema),
@@ -51,6 +63,17 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
     });
 
     const selectedType = watch("billingType");
+
+    React.useEffect(() => {
+        if (!open) return;
+
+        const handleKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") onOpenChange(false);
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [onOpenChange, open]);
 
     const onSubmit = async (data: BillingForm) => {
         setLoading(true);

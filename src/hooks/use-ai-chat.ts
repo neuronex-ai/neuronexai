@@ -170,7 +170,6 @@ export const useSendChatMessage = () => {
           role: 'user',
           created_at: new Date().toISOString(),
           user_id: user?.id || '',
-          // @ts-expect-error database field exists at runtime
           session_id: sessionId
         };
 
@@ -195,7 +194,6 @@ export const useSendChatMessage = () => {
           role: 'assistant',
           created_at: new Date().toISOString(),
           user_id: user?.id || '',
-          // @ts-expect-error database field exists at runtime
           session_id: variables.sessionId
         };
 
