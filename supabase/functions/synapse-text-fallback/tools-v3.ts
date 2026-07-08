@@ -47,7 +47,37 @@ const appointmentReference = {
   },
 };
 
+const dashboardPeriod = {
+  start_date: { type: "string", description: "Data inicial em YYYY-MM-DD. Se ausente, use hoje." },
+  end_date: { type: "string", description: "Data final em YYYY-MM-DD. Se ausente, use hoje ou os próximos 7 dias conforme o pedido." },
+};
+
 const EXTRA_TOOLS = [
+  fn(
+    "get_dashboard_daily_briefing",
+    "Consulta um briefing real do Dashboard Desktop: próximo atendimento, agenda de hoje, semana, pendências e resumo financeiro útil. Use para pedidos como 'resuma meu dia', 'o que tenho hoje' ou 'como está meu dashboard'.",
+    objectSchema({}),
+  ),
+  fn(
+    "get_dashboard_schedule",
+    "Consulta agenda real para o Dashboard Desktop, com foco em hoje ou na semana. Use quando o profissional perguntar sobre consultas do dia, semana, próximos atendimentos ou horários no painel.",
+    objectSchema({ ...dashboardPeriod, limit: { type: "integer", minimum: 1, maximum: 50 } }),
+  ),
+  fn(
+    "get_dashboard_next_appointment",
+    "Consulta o próximo atendimento real do profissional para orientar ações rápidas do Dashboard Desktop.",
+    objectSchema({}),
+  ),
+  fn(
+    "get_dashboard_attention_queue",
+    "Consulta a fila de atenção do Dashboard Desktop: consultas sem registro de presença, pacientes pendentes, pendências de revisão e alertas relevantes do NeuroFinance.",
+    objectSchema({ limit: { type: "integer", minimum: 1, maximum: 30 } }),
+  ),
+  fn(
+    "get_dashboard_financial_overview",
+    "Consulta o resumo financeiro útil do Dashboard Desktop combinando Gestão Financeira, NeuroFinance e Planejamento do mês atual.",
+    objectSchema({}),
+  ),
   fn(
     "get_neurofinance_status",
     "Consulta a situação real da conta NeuroFinance do profissional. Use antes de falar sobre saldo, cobranças ou disponibilidade de recursos bancários.",
@@ -187,6 +217,11 @@ export const MUTATING_TOOLS_V3 = new Set([
 
 export const SYSTEM_DATA_TOOLS_V3 = new Set([
   ...BASE_SYSTEM_DATA_TOOLS,
+  "get_dashboard_daily_briefing",
+  "get_dashboard_schedule",
+  "get_dashboard_next_appointment",
+  "get_dashboard_attention_queue",
+  "get_dashboard_financial_overview",
   "get_neurofinance_status",
   "get_neurofinance_overview",
   "list_neurofinance_charges",

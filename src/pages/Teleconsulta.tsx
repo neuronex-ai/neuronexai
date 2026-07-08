@@ -10,12 +10,17 @@ import { MobileTeleconsulta } from '@/mobile/pages/MobileTeleconsulta';
 import { FeatureGate, LockedFeatureScreen } from '@/components/subscription';
 import { getAppointmentKind } from '@/lib/appointment-metadata';
 import { isCancelledAppointmentStatus } from '@/lib/appointment-status';
+import {
+  SYNAPSE_PAGE_ACTION_EVENT,
+  type SynapseInterfaceAction,
+} from '@/lib/synapse-interface-actions';
 
 const TeleconsultaCore = () => {
   const queryClient = useQueryClient();
   const location = useLocation();
   const isMobile = useIsMobile();
   const [activeAppointmentId, setActiveAppointmentId] = useState<string | undefined>(undefined);
+  const [inviteRequestedAppointmentId, setInviteRequestedAppointmentId] = useState<string | undefined>(undefined);
 
   const [dateRange] = useState(() => {
     const start = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -33,10 +38,23 @@ const TeleconsultaCore = () => {
       const targetAppointment = appointments.find((appointment) => appointment.id === location.state.activeAppointmentId);
       if (targetAppointment) {
         setActiveAppointmentId(targetAppointment.id);
+        if (location.state?.openInvite) setInviteRequestedAppointmentId(targetAppointment.id);
         window.history.replaceState({}, document.title, location.pathname);
       }
     }
   }, [location.pathname, location.state, appointments]);
+
+  useEffect(() => {
+    const handleSynapseAction = (event: Event) => {
+      const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
+      if (!action?.appointmentId) return;
+      if (!["open_teleconsultation_lobby", "open_patient_invite_modal"].includes(action.action)) return;
+      setActiveAppointmentId(action.appointmentId);
+      if (action.action === "open_patient_invite_modal") setInviteRequestedAppointmentId(action.appointmentId);
+    };
+    window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+    return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+  }, []);
 
   const clinicalSessions = (appointments || []).filter((appointment) => {
     if (isCancelledAppointmentStatus(appointment.status, appointment.notes)) return false;
@@ -52,6 +70,7 @@ const TeleconsultaCore = () => {
 
   const endSession = () => {
     setActiveAppointmentId(undefined);
+    setInviteRequestedAppointmentId(undefined);
     void queryClient.invalidateQueries({ queryKey: ['appointments'] });
   };
 
@@ -64,6 +83,7 @@ const TeleconsultaCore = () => {
           activeAppointment={activeAppointment}
           patientName={activeAppointment.patient_name || 'Paciente'}
           onSessionEnd={endSession}
+          openInviteOnMount={inviteRequestedAppointmentId === activeAppointment.id}
         />
       </div>
     );

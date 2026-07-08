@@ -1,14 +1,19 @@
 "use client";
 
-import { lazy, Suspense, useState, useMemo, useEffect } from "react";
+import { lazy, Suspense, useState, useMemo, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion, type Transition } from "framer-motion";
 
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
 import { useReminders } from "@/hooks/use-reminders";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import {
+    SYNAPSE_PAGE_ACTION_EVENT,
+    type SynapseInterfaceAction,
+    type SynapseNotesView,
+} from "@/lib/synapse-interface-actions";
 
 // Sub-components
 import { NotesSidebar } from "@/components/notes/NotesSidebar";
@@ -29,14 +34,14 @@ const NoteEditor = lazy(() =>
 );
 
 const NOTES_LAYOUT_STORAGE_KEY = "neuronex:notes-layout";
+type NotesViewMode = "notes" | "tasks" | "neuroview" | "neuroflow" | "neuropulse" | "files" | "notion";
+const SYNAPSE_SUPPORTED_NOTES_VIEWS = new Set<SynapseNotesView>(["notes", "tasks", "files", "notion"]);
 
 const loadLayoutPreference = () => {
     try {
         const stored = window.localStorage.getItem(NOTES_LAYOUT_STORAGE_KEY);
         if (!stored) return { sidebarCollapsed: false, listCollapsed: false };
-
         const parsed = JSON.parse(stored);
-
         return {
             sidebarCollapsed: Boolean(parsed.sidebarCollapsed),
             listCollapsed: Boolean(parsed.listCollapsed),
@@ -55,7 +60,6 @@ const NoteEditorSkeleton = () => (
                 <div className="h-8 w-20 rounded-xl bg-white/[0.04] [.light_&]:bg-zinc-100" />
             </div>
         </div>
-
         <div className="mx-auto w-full max-w-[820px] flex-1 space-y-7 px-12 py-12">
             <div className="h-12 w-2/3 rounded-2xl bg-white/[0.045] [.light_&]:bg-zinc-100" />
             <div className="h-px bg-white/[0.05] [.light_&]:bg-zinc-200" />
@@ -72,12 +76,10 @@ export default function Notes() {
     const isMobile = useIsMobile();
     const shouldReduceMotion = useReducedMotion();
     const [searchParams] = useSearchParams();
+    const location = useLocation();
     const noteIdParam = searchParams.get("noteId");
 
-    const [viewMode, setViewMode] = useState<
-        "notes" | "tasks" | "neuroview" | "neuroflow" | "neuropulse" | "files" | "notion"
-    >("notes");
-
+    const [viewMode, setViewMode] = useState<NotesViewMode>("notes");
     const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
@@ -109,10 +111,68 @@ export default function Notes() {
         updateReminder,
     } = useReminders();
 
+    const createNoteFromSynapseOrClick = useCallback(async (moduleId?: string | null) => {
+        if (isCreatingNote) return null;
+        try {
+            const newNote = await createNote({
+                title: "Nova Nota",
+                content: "",
+                module_id: moduleId ?? selectedModuleId,
+                reference_date: new Date().toISOString(),
+                tags: [],
+                patient_id: null,
+            });
+            if (newNote) {
+                setSelectedNoteId(newNote.id);
+                setViewMode("notes");
+                if (isListCollapsed) setIsListCollapsed(false);
+            }
+            return newNote;
+        } catch (error) {
+            console.error(error);
+            return null;
+        }
+    }, [createNote, isCreatingNote, isListCollapsed, selectedModuleId]);
+
+    const handleCreateNote = useCallback(async () => {
+        await createNoteFromSynapseOrClick();
+    }, [createNoteFromSynapseOrClick]);
+
+    const applySynapseNotesAction = useCallback((action: Partial<SynapseInterfaceAction>) => {
+        const notesView = action.notesView && SYNAPSE_SUPPORTED_NOTES_VIEWS.has(action.notesView) ? action.notesView : undefined;
+        const actionName = action.action;
+
+        if (actionName === "open_tasks_board") setViewMode("tasks");
+        else if (actionName === "open_files_manager" || actionName === "open_file_preview") setViewMode("files");
+        else if (actionName === "open_notion_panel") setViewMode("notion");
+        else if (notesView) setViewMode(notesView);
+        else if (["open_notes_desktop", "open_note", "filter_notes", "open_new_note", "open_note_module"].includes(String(actionName))) setViewMode("notes");
+
+        if (typeof action.query === "string") {
+            setSearchQuery(action.query);
+            if (isListCollapsed) setIsListCollapsed(false);
+        }
+
+        if (action.moduleId) {
+            setSelectedModuleId(action.moduleId);
+            setViewMode("notes");
+            if (isSidebarCollapsed) setIsSidebarCollapsed(false);
+        }
+
+        if (action.noteId) {
+            setSelectedNoteId(action.noteId);
+            setViewMode("notes");
+            if (isListCollapsed) setIsListCollapsed(false);
+        }
+
+        if (actionName === "open_new_note") {
+            void createNoteFromSynapseOrClick(action.moduleId || null);
+        }
+    }, [createNoteFromSynapseOrClick, isListCollapsed, isSidebarCollapsed]);
+
     useEffect(() => {
         if (noteIdParam && notes) {
             const targetNote = notes.find((note) => note.id === noteIdParam);
-
             if (targetNote) {
                 setSelectedNoteId(noteIdParam);
                 setViewMode("notes");
@@ -121,74 +181,63 @@ export default function Notes() {
     }, [noteIdParam, notes]);
 
     useEffect(() => {
+        const state = (location.state || {}) as Record<string, any>;
+        if (!state.synapseAction && !state.synapseNotesView && !state.synapseNoteId && !state.synapseQuery && !state.synapseModuleId) return;
+        applySynapseNotesAction({
+            action: state.synapseAction,
+            notesView: state.synapseNotesView,
+            query: state.synapseQuery,
+            noteId: state.synapseNoteId,
+            moduleId: state.synapseModuleId,
+            taskId: state.synapseTaskId,
+            fileId: state.synapseFileId,
+        });
+        window.history.replaceState({}, document.title, `${location.pathname}${location.search}`);
+    }, [applySynapseNotesAction, location.pathname, location.search, location.state]);
+
+    useEffect(() => {
+        const handleSynapseAction = (event: Event) => {
+            const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
+            if (!action) return;
+            if (!["open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"].includes(action.action)) return;
+            applySynapseNotesAction(action);
+        };
+        window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+        return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+    }, [applySynapseNotesAction]);
+
+    useEffect(() => {
         const handleNeuroFlowNavigate = (event: Event) => {
             const { flowId } = (event as CustomEvent<{ flowId?: string }>).detail ?? {};
-
             if (flowId) {
                 setSelectedFlowId(flowId);
                 setViewMode("neuroflow");
             }
         };
-
         window.addEventListener("neuroflow:navigate", handleNeuroFlowNavigate);
-
-        return () => {
-            window.removeEventListener("neuroflow:navigate", handleNeuroFlowNavigate);
-        };
+        return () => window.removeEventListener("neuroflow:navigate", handleNeuroFlowNavigate);
     }, []);
 
     useEffect(() => {
         window.localStorage.setItem(
             NOTES_LAYOUT_STORAGE_KEY,
-            JSON.stringify({
-                sidebarCollapsed: isSidebarCollapsed,
-                listCollapsed: isListCollapsed,
-            })
+            JSON.stringify({ sidebarCollapsed: isSidebarCollapsed, listCollapsed: isListCollapsed })
         );
     }, [isListCollapsed, isSidebarCollapsed]);
 
     const filteredNotes = useMemo(() => {
         if (!notes) return [];
-
         return notes.filter((note) => {
             const matchesModule = selectedModuleId ? note.module_id === selectedModuleId : true;
-
             const matchesSearch =
                 note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 note.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
                 (note.tags || []).some((tag) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-
             return matchesModule && matchesSearch;
         });
     }, [notes, selectedModuleId, searchQuery]);
 
     if (isMobile) return <MobileNotes />;
-
-    const handleCreateNote = async () => {
-        if (isCreatingNote) return;
-
-        try {
-            const newNote = await createNote({
-                title: "Nova Nota",
-                content: "",
-                module_id: selectedModuleId,
-                reference_date: new Date().toISOString(),
-                tags: [],
-                patient_id: null,
-            });
-
-            if (newNote) {
-                setSelectedNoteId(newNote.id);
-                setViewMode("notes");
-
-                if (isListCollapsed) {
-                    setIsListCollapsed(false);
-                }
-            }
-        } catch (error) {
-            console.error(error);
-        }
-    };
 
     const activeNote = notes?.find((note) => note.id === selectedNoteId);
 
@@ -197,7 +246,6 @@ export default function Notes() {
             duration: shouldReduceMotion ? 0 : 0.4,
             ease: [0.23, 1, 0.32, 1],
         };
-
         const motionProps = {
             initial: { opacity: 0, y: 10 },
             animate: { opacity: 1, y: 0 },
@@ -208,50 +256,34 @@ export default function Notes() {
         switch (viewMode) {
             case "files":
                 return (
-                    <motion.div {...motionProps} className="flex-1 h-full min-h-0 min-w-0">
+                    <motion.div {...motionProps} className="flex-1 h-full min-h-0 min-w-0" data-synapse-target="files-manager">
                         <FilesManager />
                     </motion.div>
                 );
-
             case "notion":
                 return (
-                    <motion.div {...motionProps} className="relative z-30 flex-1 h-full min-h-0 min-w-0">
+                    <motion.div {...motionProps} className="relative z-30 flex-1 h-full min-h-0 min-w-0" data-synapse-target="notion-panel">
                         <NotionPagesPanel
                             selectedPageId={selectedNotionPageId}
                             onSelectNotionPage={setSelectedNotionPageId}
                             onImportedNote={(noteId) => {
                                 setSelectedNoteId(noteId);
                                 setViewMode("notes");
-
-                                if (isListCollapsed) {
-                                    setIsListCollapsed(false);
-                                }
+                                if (isListCollapsed) setIsListCollapsed(false);
                             }}
                         />
                     </motion.div>
                 );
-
             case "tasks":
                 return (
-                    <motion.div
-                        {...motionProps}
-                        className="flex-1 overflow-hidden"
-                        style={{ minHeight: 0, minWidth: 0, height: "100%" }}
-                    >
+                    <motion.div {...motionProps} className="flex-1 overflow-hidden" style={{ minHeight: 0, minWidth: 0, height: "100%" }} data-synapse-target="tasks-board">
                         <TaskBoard
                             tasks={reminders || []}
                             searchQuery={searchQuery}
                             setSearchQuery={setSearchQuery}
                             onToggle={(id, status) => toggleReminder({ id, is_completed: status })}
                             onDelete={deleteReminder}
-                            onCreate={(title, date, category) =>
-                                createReminder({
-                                    title,
-                                    due_date: date.toISOString(),
-                                    is_completed: false,
-                                    category,
-                                })
-                            }
+                            onCreate={(title, date, category) => createReminder({ title, due_date: date.toISOString(), is_completed: false, category })}
                             onUpdateCategory={(id, category) => updateReminderCategory({ id, category })}
                             onUpdate={(id, updates) => updateReminder({ id, updates })}
                             isListCollapsed={isListCollapsed}
@@ -259,60 +291,30 @@ export default function Notes() {
                         />
                     </motion.div>
                 );
-
             case "neuroview":
                 return (
-                    <motion.div
-                        {...motionProps}
-                        className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden"
-                    >
+                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden">
                         <NeuroView />
                     </motion.div>
                 );
-
             case "neuroflow":
                 return (
-                    <motion.div
-                        {...motionProps}
-                        className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden"
-                    >
-                        {selectedFlowId ? (
-                            <NeuroFlow flowId={selectedFlowId} onBack={() => setSelectedFlowId(null)} />
-                        ) : (
-                            <NeuroFlowVault onOpenFlow={setSelectedFlowId} />
-                        )}
+                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden">
+                        {selectedFlowId ? <NeuroFlow flowId={selectedFlowId} onBack={() => setSelectedFlowId(null)} /> : <NeuroFlowVault onOpenFlow={setSelectedFlowId} />}
                     </motion.div>
                 );
-
             case "neuropulse":
                 return (
                     <motion.div {...motionProps} className="flex-1 h-full min-h-0 min-w-0">
                         <NeuroPulse />
                     </motion.div>
                 );
-
             default:
                 return (
                     <div className="flex-1 flex h-full min-h-0 min-w-0 overflow-hidden relative bg-transparent">
                         {!isFocusMode && (
-                            <motion.div
-                                initial={false}
-                                animate={{ width: isListCollapsed ? 52 : 330 }}
-                                transition={{
-                                    duration: shouldReduceMotion ? 0 : undefined,
-                                    type: "spring",
-                                    stiffness: 320,
-                                    damping: 34,
-                                    mass: 0.78,
-                                }}
-                                className="notes-retina-rail relative z-20 flex shrink-0 flex-col overflow-hidden border-r"
-                            >
-                                <div
-                                    className={cn(
-                                        "h-full relative z-10",
-                                        isListCollapsed ? "w-[52px]" : "w-[330px]"
-                                    )}
-                                >
+                            <motion.div initial={false} animate={{ width: isListCollapsed ? 52 : 330 }} transition={{ duration: shouldReduceMotion ? 0 : undefined, type: "spring", stiffness: 320, damping: 34, mass: 0.78 }} className="notes-retina-rail relative z-20 flex shrink-0 flex-col overflow-hidden border-r" data-synapse-target="notes-list">
+                                <div className={cn("h-full relative z-10", isListCollapsed ? "w-[52px]" : "w-[330px]")}> 
                                     <NotesListPanel
                                         searchQuery={searchQuery}
                                         setSearchQuery={setSearchQuery}
@@ -322,10 +324,7 @@ export default function Notes() {
                                         onCreate={handleCreateNote}
                                         onDeleteNote={(id) => {
                                             deleteNote(id);
-
-                                            if (selectedNoteId === id) {
-                                                setSelectedNoteId(null);
-                                            }
+                                            if (selectedNoteId === id) setSelectedNoteId(null);
                                         }}
                                         isLoading={isLoadingNotes}
                                         isCollapsed={isListCollapsed}
@@ -336,14 +335,10 @@ export default function Notes() {
                             </motion.div>
                         )}
 
-                        <div className="flex-1 min-w-0 min-h-0 bg-transparent relative flex flex-col group/editor">
+                        <div className="flex-1 min-w-0 min-h-0 bg-transparent relative flex flex-col group/editor" data-synapse-target="notes-editor">
                             <AnimatePresence mode="wait">
                                 {activeNote ? (
-                                    <motion.div
-                                        key={activeNote.id}
-                                        {...motionProps}
-                                        className="flex-1 flex flex-col h-full min-h-0 relative z-10 bg-transparent"
-                                    >
+                                    <motion.div key={activeNote.id} {...motionProps} className="flex-1 flex flex-col h-full min-h-0 relative z-10 bg-transparent">
                                         <Suspense fallback={<NoteEditorSkeleton />}>
                                             <NoteEditor
                                                 note={activeNote}
@@ -354,11 +349,7 @@ export default function Notes() {
                                                 }}
                                                 isFocusMode={isFocusMode}
                                                 onToggleFocus={() => setIsFocusMode(!isFocusMode)}
-                                                linkableNotes={(notes || []).map((note) => ({
-                                                    id: note.id,
-                                                    title: note.title,
-                                                    content: note.content,
-                                                }))}
+                                                linkableNotes={(notes || []).map((note) => ({ id: note.id, title: note.title, content: note.content }))}
                                             />
                                         </Suspense>
                                     </motion.div>
@@ -367,35 +358,15 @@ export default function Notes() {
                                         <div className="relative group/gate">
                                             <div className="relative z-10 flex h-40 w-40 items-center justify-center overflow-hidden rounded-[64px] border border-white/[0.05] bg-black/40 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.22)] backdrop-blur-3xl group/icon [.light_&]:border-zinc-200/50 [.light_&]:bg-white/40 [.light_&]:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)]">
                                                 <div className="absolute inset-0 notes-retina-texture opacity-[0.4] pointer-events-none [.light_&]:opacity-[0.26]" />
-
-                                                <img
-                                                    src="/favicon-dark.png"
-                                                    alt="NeuroNex"
-                                                    className="h-16 w-16 dark:hidden transition-all duration-1000 group-hover/gate:scale-110"
-                                                />
-
-                                                <img
-                                                    src="/favicon-light.png"
-                                                    alt="NeuroNex"
-                                                    className="h-16 w-16 hidden dark:block transition-all duration-1000 group-hover/gate:scale-110"
-                                                />
+                                                <img src="/favicon-dark.png" alt="NeuroNex" className="h-16 w-16 dark:hidden transition-all duration-1000 group-hover/gate:scale-110" />
+                                                <img src="/favicon-light.png" alt="NeuroNex" className="h-16 w-16 hidden dark:block transition-all duration-1000 group-hover/gate:scale-110" />
                                             </div>
                                         </div>
-
                                         <div className="space-y-4">
-                                            <h3 className="text-6xl font-black tracking-tighter text-zinc-100 leading-none [.light_&]:text-zinc-900">
-                                                NeuroDrive
-                                            </h3>
-
-                                            <p className="mx-auto max-w-xs text-[10px] font-black uppercase tracking-[0.6em] text-zinc-500 leading-relaxed">
-                                                Sinfonia de dados para mentes complexas.
-                                            </p>
+                                            <h3 className="text-6xl font-black tracking-tighter text-zinc-100 leading-none [.light_&]:text-zinc-900">NeuroDrive</h3>
+                                            <p className="mx-auto max-w-xs text-[10px] font-black uppercase tracking-[0.6em] text-zinc-500 leading-relaxed">Sinfonia de dados para mentes complexas.</p>
                                         </div>
-
-                                        <Button
-                                            onClick={handleCreateNote}
-                                            className="h-16 rounded-[24px] bg-zinc-100 px-12 text-[11px] font-black uppercase tracking-[0.3em] text-black shadow-[0_30px_60px_-15px_rgba(255,255,255,0.05)] transition-all hover:opacity-90 active:scale-95 group/btn [.light_&]:bg-zinc-900 [.light_&]:text-white [.light_&]:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)]"
-                                        >
+                                        <Button onClick={handleCreateNote} className="h-16 rounded-[24px] bg-zinc-100 px-12 text-[11px] font-black uppercase tracking-[0.3em] text-black shadow-[0_30px_60px_-15px_rgba(255,255,255,0.05)] transition-all hover:opacity-90 active:scale-95 group/btn [.light_&]:bg-zinc-900 [.light_&]:text-white [.light_&]:shadow-[0_30px_60px_-15px_rgba(0,0,0,0.2)]">
                                             <Plus className="h-4 w-4 mr-3 stroke-[3]" />
                                             Nova Nota
                                         </Button>
@@ -413,60 +384,30 @@ export default function Notes() {
             <div className="notes-lumen-field pointer-events-none fixed inset-0 z-0" />
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 items-stretch px-5 pb-5 pt-28">
                 <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/42 shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.7)] ring-1 ring-foreground/[0.025] backdrop-blur-sm dark:border-white/[0.04] dark:bg-white/[0.02] dark:ring-white/[0.035]">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: shouldReduceMotion ? 0 : 1, ease: [0.16, 1, 0.3, 1] }}
-                        className="group/main-window pointer-events-auto relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent shadow-none"
-                    >
+                    <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: shouldReduceMotion ? 0 : 1, ease: [0.16, 1, 0.3, 1] }} className="group/main-window pointer-events-auto relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent shadow-none">
                         {!isFocusMode && (
-                            <motion.div
-                                initial={false}
-                                animate={{ width: isSidebarCollapsed ? 66 : 226 }}
-                                transition={{
-                                    duration: shouldReduceMotion ? 0 : undefined,
-                                    type: "spring",
-                                    stiffness: 320,
-                                    damping: 34,
-                                    mass: 0.78,
-                                }}
-                                className="notes-retina-rail relative z-20 hidden shrink-0 overflow-hidden border-r lg:flex"
-                            >
-                                <div
-                                    className={cn(
-                                        "h-full relative z-10",
-                                        isSidebarCollapsed ? "w-[66px]" : "w-[226px]"
-                                    )}
-                                >
+                            <motion.div initial={false} animate={{ width: isSidebarCollapsed ? 66 : 226 }} transition={{ duration: shouldReduceMotion ? 0 : undefined, type: "spring", stiffness: 320, damping: 34, mass: 0.78 }} className="notes-retina-rail relative z-20 hidden shrink-0 overflow-hidden border-r lg:flex" data-synapse-target="notes-sidebar">
+                                <div className={cn("h-full relative z-10", isSidebarCollapsed ? "w-[66px]" : "w-[226px]")}> 
                                     <NotesSidebar
                                         viewMode={viewMode}
                                         setViewMode={setViewMode}
                                         selectedModuleId={selectedModuleId}
                                         onSelectModule={setSelectedModuleId}
-                                        onMoveNoteToModule={(id, modId) =>
-                                            updateNote({
-                                                id,
-                                                updates: { module_id: modId },
-                                            })
-                                        }
+                                        onMoveNoteToModule={(id, modId) => updateNote({ id, updates: { module_id: modId } })}
                                         onCreateNote={handleCreateNote}
                                         isCollapsed={isSidebarCollapsed}
-                                        onToggleCollapsed={() =>
-                                            setIsSidebarCollapsed((current) => !current)
-                                        }
+                                        onToggleCollapsed={() => setIsSidebarCollapsed((current) => !current)}
                                         isCreatingNote={isCreatingNote}
                                     />
                                 </div>
                             </motion.div>
                         )}
-
                         <div className="relative z-30 flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
                             <AnimatePresence mode="wait">{renderMainContent()}</AnimatePresence>
                         </div>
                     </motion.div>
                 </div>
             </div>
-
             <style>{`
                 .notes-scroll-surface {
                     scroll-behavior: auto !important;
