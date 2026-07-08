@@ -211,7 +211,7 @@ export async function resolveAppointmentReference(
   if (explicitId) {
     const { data, error } = await admin
       .from("appointments")
-      .select("id,patient_id,start_time,end_time,type,status,location,meet_link,patient:patient_id(name,email,phone)")
+      .select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,patient:patient_id(name,email,phone)")
       .eq("id", explicitId)
       .eq("user_id", userId)
       .maybeSingle();
@@ -236,10 +236,10 @@ export async function resolveAppointmentReference(
   const nowMinusDay = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data, error } = await admin
     .from("appointments")
-    .select("id,patient_id,start_time,end_time,type,status,location,meet_link,patient:patient_id(name,email,phone)")
+    .select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,patient:patient_id(name,email,phone)")
     .eq("user_id", userId)
     .eq("patient_id", patient.id)
-    .neq("status", "cancelled")
+    .not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)")
     .gte("start_time", nowMinusDay)
     .order("start_time")
     .limit(20);
@@ -302,6 +302,7 @@ const PATIENT_REQUIRED_TOOLS = new Set([
 
 const PATIENT_OPTIONAL_TOOLS = new Set([
   "get_calendar",
+  "get_appointment_details",
   "list_financial_entries",
   "list_documents",
   "request_interface_action",
@@ -313,6 +314,7 @@ const PATIENT_OPTIONAL_TOOLS = new Set([
 ]);
 
 const APPOINTMENT_REQUIRED_TOOLS = new Set([
+  "get_appointment_details",
   "reschedule_appointment",
   "cancel_appointment",
   "send_appointment_reminder",
