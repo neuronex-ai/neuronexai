@@ -5,6 +5,12 @@ export interface SynapseConversationState {
   activeAppointmentLabel?: string | null;
   activeChargeId?: string | null;
   activeInvoiceId?: string | null;
+  activeNoteId?: string | null;
+  activeNoteTitle?: string | null;
+  activeTaskId?: string | null;
+  activeTaskTitle?: string | null;
+  activeFileId?: string | null;
+  activeFileName?: string | null;
   lastTool?: string | null;
   updatedAt?: string | null;
   [key: string]: unknown;
@@ -132,14 +138,17 @@ export async function resolveAppointmentReference(admin: any, userId: string, ar
 const PATIENT_REQUIRED_TOOLS = new Set([
   "get_patient_details", "get_clinical_history", "get_patient_card_summary", "update_patient", "update_patient_basic_info", "inactivate_patient", "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment", "create_neurofinance_charge", "create_fiscal_invoice", "send_appointment_reminder", "send_patient_email", "get_patient_system_snapshot", "get_patient_payment_status", "get_patient_timeline",
 ]);
-
 const PATIENT_OPTIONAL_TOOLS = new Set([
-  "get_calendar", "get_appointment_details", "get_teleconsultation_session_status", "get_teleconsultation_readiness", "list_financial_entries", "list_documents", "request_interface_action", "create_financial_entry", "list_neurofinance_charges", "get_neurofinance_charge", "list_fiscal_invoices", "get_fiscal_invoice",
+  "get_calendar", "get_appointment_details", "get_teleconsultation_session_status", "get_teleconsultation_readiness", "list_financial_entries", "list_documents", "request_interface_action", "create_financial_entry", "list_neurofinance_charges", "get_neurofinance_charge", "list_fiscal_invoices", "get_fiscal_invoice", "create_personal_note", "search_patient_files", "list_files_by_patient", "link_file_to_patient",
 ]);
-
 const APPOINTMENT_REQUIRED_TOOLS = new Set([
   "get_appointment_details", "get_teleconsultation_session_status", "get_teleconsultation_readiness", "set_teleconsultation_transcription_decision", "close_teleconsultation_room", "reschedule_appointment", "cancel_appointment", "send_appointment_reminder",
 ]);
+const NOTE_CONTEXT_TOOLS = new Set([
+  "get_personal_note_details", "summarize_note", "extract_tasks_from_note", "update_personal_note", "append_to_personal_note", "rename_personal_note", "move_note_to_module", "tag_personal_note", "delete_personal_note", "create_task",
+]);
+const TASK_CONTEXT_TOOLS = new Set(["get_task_details", "update_task", "complete_task", "reopen_task", "move_task_category", "delete_task"]);
+const FILE_CONTEXT_TOOLS = new Set(["get_file_details", "link_file_to_patient", "unlink_file_from_patient", "delete_file"]);
 
 export async function enrichToolArguments(admin: any, userId: string, toolName: string, originalArgs: Record<string, any>, state: SynapseConversationState) {
   let args = { ...originalArgs };
@@ -155,6 +164,9 @@ export async function enrichToolArguments(admin: any, userId: string, toolName: 
     args = appointmentResult.args;
     appointment = appointmentResult.appointment;
   }
+  if (NOTE_CONTEXT_TOOLS.has(toolName) && !args.note_id && !args.note_title && state.activeNoteId) args.note_id = state.activeNoteId;
+  if (TASK_CONTEXT_TOOLS.has(toolName) && !args.task_id && !args.task_title && state.activeTaskId) args.task_id = state.activeTaskId;
+  if (FILE_CONTEXT_TOOLS.has(toolName) && !args.file_id && !args.file_name && state.activeFileId) args.file_id = state.activeFileId;
   if (toolName === "get_neurofinance_charge" && !args.charge_id && state.activeChargeId) args.charge_id = state.activeChargeId;
   if (toolName === "get_fiscal_invoice" && !args.invoice_id && state.activeInvoiceId) args.invoice_id = state.activeInvoiceId;
   return { args, patient, appointment };
@@ -178,6 +190,18 @@ export function updateContextFromResult(current: SynapseConversationState, toolN
   const invoice = data.invoice || (Array.isArray(data.invoices) && data.invoices.length === 1 ? data.invoices[0] : null);
   const invoiceId = safeId(invoice?.id || data.invoice_id || args.invoice_id);
   if (invoiceId) next.activeInvoiceId = invoiceId;
+  const note = data.note || (Array.isArray(data.notes) && data.notes.length === 1 ? data.notes[0] : null);
+  const noteId = safeId(note?.id || data.note_id || args.note_id);
+  if (noteId) next.activeNoteId = noteId;
+  if (note?.title || args.note_title) next.activeNoteTitle = clean(note?.title || args.note_title, 180);
+  const task = data.task || (Array.isArray(data.tasks) && data.tasks.length === 1 ? data.tasks[0] : null);
+  const taskId = safeId(task?.id || data.task_id || args.task_id);
+  if (taskId) next.activeTaskId = taskId;
+  if (task?.title || args.task_title) next.activeTaskTitle = clean(task?.title || args.task_title, 180);
+  const file = data.file || (Array.isArray(data.files) && data.files.length === 1 ? data.files[0] : null);
+  const fileId = safeId(file?.id || data.file_id || args.file_id);
+  if (fileId) next.activeFileId = fileId;
+  if (file?.name || args.file_name) next.activeFileName = clean(file?.name || args.file_name, 180);
   return next;
 }
 
@@ -185,6 +209,9 @@ export function formatContextForPrompt(state: SynapseConversationState) {
   const lines = [
     state.activePatientName ? `Paciente em contexto: ${state.activePatientName}.` : "",
     state.activeAppointmentLabel ? `Consulta em contexto: ${state.activeAppointmentLabel}.` : "",
+    state.activeNoteTitle ? `Nota em contexto: ${state.activeNoteTitle}.` : "",
+    state.activeTaskTitle ? `Tarefa em contexto: ${state.activeTaskTitle}.` : "",
+    state.activeFileName ? `Arquivo em contexto: ${state.activeFileName}.` : "",
     state.activeChargeId ? "Há uma cobrança NeuroFinance ativa no contexto interno." : "",
     state.activeInvoiceId ? "Há uma NFS-e ativa no contexto interno." : "",
   ].filter(Boolean);
