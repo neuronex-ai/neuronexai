@@ -86,7 +86,6 @@ export const SynapsePill = () => {
     return (
         <motion.div
             ref={pillRef}
-            layoutId="synapse-shell"
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             onMouseEnter={() => setIsHovered(true)}

@@ -394,8 +394,6 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
-                layout
-                layoutId="synapse-shell"
                 initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9, y: 20, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
                 exit={shouldReduceMotion ? { opacity: 0 } : {
@@ -413,7 +411,6 @@ export const SynapseCompactPanel = () => {
                     stiffness: 450,
                     damping: 38,
                     mass: 1,
-                    layout: { duration: 0.45, ease: [0.23, 1, 0.32, 1] }
                 }}
                 className={cn(
                     'w-[480px] h-[640px]',
