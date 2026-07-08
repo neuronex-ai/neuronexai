@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react';
 import { useDesktopClinicalSession, formatSessionElapsed } from '@/hooks/use-desktop-clinical-session';
 import { cn } from '@/lib/utils';
 import type { Appointment } from '@/types';
@@ -12,14 +13,23 @@ interface DesktopClinicalSessionProps {
   activeAppointment: Appointment;
   patientName: string;
   onSessionEnd: () => void;
+  openInviteOnMount?: boolean;
 }
 
 export const DesktopClinicalSession = ({
   activeAppointment,
   patientName,
   onSessionEnd,
+  openInviteOnMount = false,
 }: DesktopClinicalSessionProps) => {
   const session = useDesktopClinicalSession(activeAppointment, patientName, onSessionEnd);
+  const inviteRequestedRef = useRef(false);
+
+  useEffect(() => {
+    if (!openInviteOnMount || inviteRequestedRef.current) return;
+    inviteRequestedRef.current = true;
+    session.openPatientInvite();
+  }, [openInviteOnMount, session]);
 
   if (session.showLobby) {
     return (
@@ -43,7 +53,7 @@ export const DesktopClinicalSession = ({
         </div>
 
         {session.showConsent ? (
-          <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-4 backdrop-blur-md sm:p-6">
+          <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-4 backdrop-blur-md sm:p-6" data-synapse-target="transcription-decision">
             <div className="w-full max-w-2xl">
               <TranscriptionConsentPanel
                 patientName={patientName}
@@ -140,16 +150,18 @@ export const DesktopClinicalSession = ({
         </div>
       </div>
 
-      <InvitePatientModal
-        isOpen={session.showInviteModal}
-        onClose={() => session.setShowInviteModal(false)}
-        patient={session.patient}
-        meetLink={session.effectiveMeetLink}
-        therapistName={session.therapistName}
-      />
+      <div data-synapse-target="patient-invite">
+        <InvitePatientModal
+          isOpen={session.showInviteModal}
+          onClose={() => session.setShowInviteModal(false)}
+          patient={session.patient}
+          meetLink={session.effectiveMeetLink}
+          therapistName={session.therapistName}
+        />
+      </div>
 
       {session.showConsent && session.hasJoined && !session.reviewOpen ? (
-        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-6 backdrop-blur-md">
+        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-6 backdrop-blur-md" data-synapse-target="transcription-decision">
           <div className="w-full max-w-2xl">
             <TranscriptionConsentPanel
               patientName={patientName}
