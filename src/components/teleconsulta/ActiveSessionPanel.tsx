@@ -5,6 +5,7 @@ interface ActiveSessionPanelProps {
   activeAppointment: Appointment;
   patientName: string;
   onSessionEnd: () => void;
+  openInviteOnMount?: boolean;
 }
 
 export const ActiveSessionPanel = (props: ActiveSessionPanelProps) => (
