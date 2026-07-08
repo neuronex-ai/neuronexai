@@ -1,4 +1,11 @@
 import { MUTATING_TOOLS } from "./tools.ts";
+import {
+  executeConfirmedNotesMutation,
+  executeNotesTool,
+  NOTES_MUTATION_TOOLS,
+  NOTES_READ_TOOLS,
+  summarizeNotesMutation,
+} from "./notes-tools.ts";
 
 export interface AgentToolContext {
   admin: any;
@@ -36,7 +43,6 @@ const clamp = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.floor(parsed))) : fallback;
 };
-
 const cleanText = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const cleanId = (value: unknown) => {
   const result = cleanText(value, 100);
@@ -71,6 +77,7 @@ const dateBounds = (startValue?: unknown, endValue?: unknown) => {
 };
 
 const summarizeMutation = (name: string, args: Record<string, any>) => {
+  if (NOTES_MUTATION_TOOLS.has(name)) return summarizeNotesMutation(name, args);
   switch (name) {
     case "create_patient": return `Cadastrar o paciente ${cleanText(args.name, 120)}${args.email ? `, e-mail ${cleanText(args.email, 160)}` : ""}.`;
     case "update_patient":
@@ -99,11 +106,9 @@ const stageMutation = (name: string, args: Record<string, unknown>): AgentToolRe
 function mapPatient(row: any) {
   return { id: row.id, name: row.name, email: row.email || null, phone: row.phone || null, cpf: row.cpf || null, status: row.status || null, diagnosis: row.diagnosis || null, birth_date: row.birth_date || null, address: row.address || null, emergency_contact: row.emergency_contact || null, risk_score: row.risk_score ?? null, last_session: row.last_session || null, next_session: row.next_session || null, created_at: row.created_at || null };
 }
-
 function mapAppointment(item: any) {
   return { id: item.id, patient_id: item.patient_id, patient_name: item.patient?.name || (item.type === "block" ? "Bloqueio" : "Sem paciente"), patient_email: item.patient?.email || null, patient_phone: item.patient?.phone || null, start_time: item.start_time, end_time: item.end_time, start_time_local: item.start_time ? formatDateTime(item.start_time) : null, end_time_local: item.end_time ? formatDateTime(item.end_time) : null, time_label: item.start_time ? formatTime(item.start_time) : null, date: item.start_time ? localDate(item.start_time) : null, type: item.type, status: item.status, notes: item.notes, location: item.location || null, google_meet_link: item.google_meet_link || null, price: item.price ?? null, metadata: item.metadata || {} };
 }
-
 async function queryPatients(admin: any, userId: string, args: Record<string, any> = {}) {
   let query = admin.from("patients").select("id,name,email,phone,cpf,status,diagnosis,birth_date,address,emergency_contact,risk_score,last_session,next_session,created_at").eq("user_id", userId).order("name").limit(clamp(args.limit, 50, 1, 100));
   const status = cleanText(args.status || "all", 30);
@@ -114,7 +119,6 @@ async function queryPatients(admin: any, userId: string, args: Record<string, an
   if (error) throw error;
   return (data || []).map(mapPatient);
 }
-
 async function queryAppointments(admin: any, userId: string, startDate: string, endDate: string, options: Record<string, any> = {}) {
   const period = dateBounds(startDate, endDate);
   let query = admin.from("appointments").select("id,user_id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").eq("user_id", userId).gte("start_time", period.startIso).lte("start_time", period.endIso).order("start_time").limit(clamp(options.limit, 80, 1, 200));
@@ -125,7 +129,6 @@ async function queryAppointments(admin: any, userId: string, startDate: string, 
   if (error) throw error;
   return (data || []).map(mapAppointment);
 }
-
 function summarizeAgenda(appointments: any[], period: { start: string; end: string }) {
   const now = Date.now();
   const active = appointments.filter((item) => !CANCELLED_STATUSES.has(String(item.status || "").toLowerCase()));
@@ -146,7 +149,6 @@ function summarizeAgenda(appointments: any[], period: { start: string; end: stri
   }
   return { period, total: appointments.length, active_count: active.length, sessions_count: sessions.length, blocks_count: blocks.length, cancelled_count: cancelled.length, pending_review_count: pendingReview.length, next_appointment: nextAppointment, day_groups: Object.values(byDay), attention: pendingReview.map((appointment) => ({ kind: appointment.metadata?.syncStatus === "pending_professional_review" ? "reschedule_request" : "pending_appointment", appointment })) };
 }
-
 async function resolvePatientByName(admin: any, userId: string, name: string) {
   const term = cleanText(name, 160).replace(/[%_]/g, "");
   if (!term) return null;
@@ -158,7 +160,6 @@ async function resolvePatientByName(admin: any, userId: string, name: string) {
   if (candidates.length !== 1) throw new Error(`Encontrei mais de um paciente compatível: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}.`);
   return candidates[0];
 }
-
 async function findAppointment(admin: any, userId: string, args: Record<string, any>) {
   if (args.appointment_id) {
     const { data, error } = await admin.from("appointments").select("id,user_id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").eq("id", cleanId(args.appointment_id)).eq("user_id", userId).maybeSingle();
@@ -178,7 +179,6 @@ async function findAppointment(admin: any, userId: string, args: Record<string, 
   if (appointments.length > 1) throw new Error(`Há mais de uma consulta possível. Especifique uma destas datas: ${appointments.slice(0, 5).map((item) => item.start_time_local).join(", ")}.`);
   return appointments[0];
 }
-
 async function hasAppointmentConflict(admin: any, userId: string, start: string, end: string, excludeId?: string | null) {
   let query = admin.from("appointments").select("id,start_time,end_time,type,status,patient:patient_id(name)").eq("user_id", userId).not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)").lt("start_time", end).gt("end_time", start).limit(5);
   if (excludeId) query = query.neq("id", excludeId);
@@ -186,7 +186,6 @@ async function hasAppointmentConflict(admin: any, userId: string, start: string,
   if (error) throw error;
   return (data || []).map(mapAppointment);
 }
-
 async function buildSlots(admin: any, userId: string, args: Record<string, any>) {
   const start = cleanText(args.start_date || dateOnly(new Date()), 10);
   const end = cleanText(args.end_date || start, 10);
@@ -222,14 +221,12 @@ async function buildSlots(admin: any, userId: string, args: Record<string, any>)
   }
   return { duration_minutes: duration, slots };
 }
-
 const teleRoomStatus = (appointment: any) => appointment?.metadata?.teleconsultationRoom?.status || "waiting";
 const transcriptionDecision = (appointment: any) => {
   const decision = appointment?.metadata?.teleconsultationTranscription;
   return decision && typeof decision.enabled === "boolean" ? decision : null;
 };
 const meetLinkFor = (appointment: any) => appointment?.google_meet_link || (appointment?.id ? `/join/${appointment.id}` : null);
-
 function teleStatus(appointment: any) {
   const decision = transcriptionDecision(appointment);
   const roomStatus = teleRoomStatus(appointment);
@@ -242,6 +239,7 @@ function teleStatus(appointment: any) {
 
 export async function executeAgentTool(name: string, args: Record<string, any>, context: AgentToolContext): Promise<AgentToolResult> {
   if (MUTATING_TOOLS.has(name)) return stageMutation(name, args);
+  if (NOTES_READ_TOOLS.has(name)) return executeNotesTool(name, args, context);
   const { admin, userId } = context;
   try {
     switch (name) {
@@ -250,6 +248,7 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
           { name: "Agenda Desktop", capabilities: ["visão diária e semanal", "detalhes de consulta", "horários livres", "criar/remarcar/cancelar com confirmação"] },
           { name: "Teleconsulta Desktop", capabilities: ["próxima sessão", "status da sala", "decisão de transcrição", "lobby e convite do paciente"] },
           { name: "Pacientes Desktop", capabilities: ["buscar pacientes", "ver cards cadastrais", "cadastrar/atualizar/inativar com confirmação", "listar pacientes sem próxima sessão"] },
+          { name: "Notas Desktop", capabilities: ["notas", "módulos", "tarefas", "arquivos", "Notion básico", "sem importação do Google Drive nesta versão"] },
           { name: "NeuroFinance", capabilities: ["consultar cobranças", "criar cobranças com confirmação", "acompanhar pagamentos"] },
         ];
         return { ok: true, grounded: true, recordCount: modules.length, data: { query: cleanText(args.query, 240), modules }, structuredData: { type: "system_help", data: { modules } } };
@@ -419,13 +418,13 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
         return { ok: true, grounded: true, recordCount: documents.length, data: { documents }, structuredData: { type: "documents_list", data: { documents } } };
       }
       case "request_interface_action": {
-        const allowedActions = new Set(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory"]);
+        const allowedActions = new Set(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"]);
         const allowedTargets = new Set(["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"]);
         const action = cleanText(args.action, 50);
         const target = args.target ? cleanText(args.target, 50) : undefined;
         if (!allowedActions.has(action)) throw new Error("Ação visual inválida.");
         if (target && !allowedTargets.has(target)) throw new Error("Destino visual inválido.");
-        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
+        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
         return { ok: true, grounded: false, data: { action_requested: action }, clientAction };
       }
       default: return { ok: false, grounded: false, error: `Ferramenta não suportada: ${name}` };
@@ -436,6 +435,9 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
 }
 
 export async function executeConfirmedMutation(pending: PendingAction, context: AgentToolContext): Promise<AgentToolResult> {
+  const notesResult = await executeConfirmedNotesMutation(pending, context);
+  if (notesResult) return notesResult;
+
   const { admin, userId, sessionId } = context;
   const args = pending.arguments as Record<string, any>;
   try {
