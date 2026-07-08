@@ -16,29 +16,34 @@ const fn = (name: string, description: string, parameters: JsonSchema) => ({
 });
 
 const patientReference = {
-  patient_name: {
-    type: "string",
-    description: "Nome humano informado pelo profissional. Prefira sempre este campo e nunca peça ID ao usuário.",
-  },
-  patient_id: {
-    type: "string",
-    description: "Identificador exclusivamente interno, opcional. Nunca solicite ou exponha ao usuário.",
-  },
+  patient_name: { type: "string", description: "Nome humano informado pelo profissional. Prefira sempre este campo e nunca peça ID ao usuário." },
+  patient_id: { type: "string", description: "Identificador exclusivamente interno, opcional. Nunca solicite ou exponha ao usuário." },
 };
 
 const appointmentReference = {
-  appointment_id: {
-    type: "string",
-    description: "Identificador interno opcional, obtido pelo contexto ou por ferramentas. Nunca peça ID ao usuário.",
-  },
-  appointment_date: {
-    type: "string",
-    description: "Data local da consulta em YYYY-MM-DD para localizar o agendamento.",
-  },
-  appointment_time: {
-    type: "string",
-    description: "Horário local aproximado da consulta, como HH:mm, para desempatar agendamentos.",
-  },
+  appointment_id: { type: "string", description: "Identificador interno opcional, obtido pelo contexto ou por ferramentas. Nunca peça ID ao usuário." },
+  appointment_date: { type: "string", description: "Data local da consulta em YYYY-MM-DD para localizar o agendamento." },
+  appointment_time: { type: "string", description: "Horário local aproximado da consulta, como HH:mm, para desempatar agendamentos." },
+};
+
+const noteReference = {
+  note_id: { type: "string", description: "Identificador interno opcional da nota. Nunca peça ao usuário." },
+  note_title: { type: "string", description: "Título ou parte do título da nota." },
+};
+
+const moduleReference = {
+  module_id: { type: "string", description: "Identificador interno opcional do módulo/pasta de notas. Nunca peça ao usuário." },
+  module_name: { type: "string", description: "Nome do módulo/pasta de notas." },
+};
+
+const taskReference = {
+  task_id: { type: "string", description: "Identificador interno opcional da tarefa. Nunca peça ao usuário." },
+  task_title: { type: "string", description: "Título ou parte do título da tarefa." },
+};
+
+const fileReference = {
+  file_id: { type: "string", description: "Identificador interno opcional do arquivo. Nunca peça ao usuário." },
+  file_name: { type: "string", description: "Nome ou parte do nome do arquivo." },
 };
 
 export const AGENT_TOOLS = [
@@ -66,19 +71,48 @@ export const AGENT_TOOLS = [
   fn("get_teleconsultation_session_status", "Consulta o estado de uma sessão na Teleconsulta Desktop por contexto, paciente, data ou horário: sala, link, transcrição, convite e resumo pendente.", objectSchema({ ...appointmentReference, ...patientReference })),
   fn("get_teleconsultation_readiness", "Mostra o que falta antes de iniciar uma teleconsulta: decisão de transcrição, sala, convite, paciente vinculado, e-mail e status da sessão.", objectSchema({ ...appointmentReference, ...patientReference })),
 
+  fn("get_notes_desktop_overview", "Consulta a visão operacional da aba Notas Desktop, sem NeuroView/NeuroFlow/NeuroPulse: notas, módulos, tarefas, arquivos, Notion e status do Drive sem importar nada.", objectSchema({})),
+  fn("search_personal_notes", "Busca notas pessoais por título, conteúdo, tags, módulo ou paciente vinculado.", objectSchema({ query: { type: "string" }, ...moduleReference, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("get_personal_note_details", "Obtém detalhes de uma nota pessoal por título ou ID interno.", objectSchema({ ...noteReference })),
+  fn("list_recent_notes", "Lista notas pessoais recentes da aba Notas Desktop.", objectSchema({ limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("list_notes_by_module", "Lista notas pessoais dentro de um módulo/pasta.", objectSchema({ ...moduleReference, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("list_uncategorized_notes", "Lista notas sem módulo/pasta.", objectSchema({ limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("summarize_note", "Resume de forma determinística uma nota existente, sem alterar conteúdo.", objectSchema({ ...noteReference })),
+  fn("extract_tasks_from_note", "Extrai sugestões de tarefas a partir do conteúdo de uma nota. Não cria tarefas sem confirmação.", objectSchema({ ...noteReference, category: { type: "string" } })),
+  fn("list_note_modules", "Lista módulos/pastas de notas e a quantidade de notas em cada um.", objectSchema({})),
+  fn("get_note_module_overview", "Mostra detalhes de um módulo/pasta e suas notas.", objectSchema({ ...moduleReference, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("get_tasks_overview", "Consulta resumo das tarefas da aba Notas Desktop: abertas, concluídas, vencidas, hoje, próximos 7 dias e categorias.", objectSchema({})),
+  fn("list_tasks", "Lista tarefas/lembretes da aba Notas Desktop.", objectSchema({ status: { type: "string", enum: ["open", "completed", "all"] }, category: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("list_today_tasks", "Lista tarefas de hoje.", objectSchema({})),
+  fn("list_overdue_tasks", "Lista tarefas vencidas e ainda não concluídas.", objectSchema({})),
+  fn("search_tasks", "Busca tarefas por título e categoria.", objectSchema({ query: { type: "string" }, category: { type: "string" }, status: { type: "string", enum: ["open", "completed", "all"] }, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("get_task_details", "Obtém detalhes de uma tarefa por título ou ID interno.", objectSchema({ ...taskReference })),
+  fn("get_files_overview", "Consulta resumo dos arquivos da aba Notas Desktop: pessoais, vinculados a pacientes e recentes. Não importa arquivos do Google Drive.", objectSchema({})),
+  fn("search_personal_files", "Busca arquivos pessoais do NeuroDrive por nome. Não importa arquivos externos.", objectSchema({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("search_patient_files", "Busca arquivos vinculados a pacientes por paciente e/ou nome do arquivo.", objectSchema({ ...patientReference, query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("list_recent_files", "Lista arquivos recentes do NeuroDrive/Arquivos, pessoais e de pacientes.", objectSchema({ limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("get_file_details", "Obtém detalhes de um arquivo por nome ou ID interno.", objectSchema({ ...fileReference })),
+  fn("list_files_by_patient", "Lista arquivos vinculados a um paciente.", objectSchema({ ...patientReference, limit: { type: "integer", minimum: 1, maximum: 80 } })),
+  fn("get_notion_connection_status", "Consulta se o Notion está conectado. Não edita blocos Notion e não importa Google Drive.", objectSchema({})),
+
   fn("get_financial_summary", "Consulta receitas, despesas, saldo gerencial e pendências reais em um período.", objectSchema({ start_date: { type: "string" }, end_date: { type: "string" } })),
   fn("list_financial_entries", "Lista lançamentos financeiros gerenciais reais.", objectSchema({ start_date: { type: "string" }, end_date: { type: "string" }, entry_type: { type: "string", enum: ["income", "expense", "all"] }, status: { type: "string" }, ...patientReference, limit: { type: "integer", minimum: 1, maximum: 50 } })),
-  fn("list_personal_notes", "Lista notas reais do NeuroNotes pertencentes ao profissional.", objectSchema({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 20 } })),
+  fn("list_personal_notes", "Lista notas reais do NeuroNotes pertencentes ao profissional. Preferir as ferramentas novas de Notes Desktop quando o pedido for sobre a aba Notas.", objectSchema({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 20 } })),
   fn("list_documents", "Lista documentos privados. Para documentos de uma pessoa, envie patient_name.", objectSchema({ ...patientReference, category: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 30 } })),
-  fn("request_interface_action", "Solicita uma ação visual estruturada. Use para abrir abas, fichas, modais, lobby da teleconsulta ou destacar elementos sem expor rotas/URLs internas.", objectSchema({
-    action: { type: "string", enum: ["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory"] },
+  fn("request_interface_action", "Solicita uma ação visual estruturada. Use para abrir abas, fichas, modais, lobby da teleconsulta, Notas Desktop, Tarefas, Arquivos, Notion ou destacar elementos sem expor rotas/URLs internas.", objectSchema({
+    action: { type: "string", enum: ["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"] },
     target: { type: "string", enum: ["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"] },
     ...patientReference,
+    ...noteReference,
+    ...moduleReference,
+    ...taskReference,
+    ...fileReference,
     appointment_id: { type: "string", description: "Interno. Nunca peça ao usuário." },
     date: { type: "string" },
-    query: { type: "string", description: "Texto de busca para filtrar a aba Pacientes." },
-    element: { type: "string", enum: ["next_appointment", "daily_schedule", "patient_header", "financial_balance", "transcription_decision", "patient_invite", "patients_search", "patients_grid"] },
-    modal: { type: "string", enum: ["new_appointment", "new_patient", "new_transaction", "patient_details", "patient_invite"] },
+    query: { type: "string", description: "Texto de busca/filtro." },
+    notes_view: { type: "string", enum: ["notes", "tasks", "files", "notion"] },
+    element: { type: "string", enum: ["next_appointment", "daily_schedule", "patient_header", "financial_balance", "transcription_decision", "patient_invite", "patients_search", "patients_grid", "notes_search", "notes_editor", "notes_list", "notes_sidebar", "tasks_board", "files_manager", "notion_panel"] },
+    modal: { type: "string", enum: ["new_appointment", "new_patient", "new_transaction", "patient_details", "patient_invite", "new_note"] },
     reason: { type: "string" },
   }, ["action"])),
 
@@ -92,6 +126,27 @@ export const AGENT_TOOLS = [
   fn("cancel_appointment", "Prepara o cancelamento de uma consulta na Agenda Desktop e exige confirmação separada. Informe patient_name e, quando possível, data/horário ou use o contexto atual.", objectSchema({ ...patientReference, appointment_id: { type: "string", description: "Interno e opcional." }, appointment_date: { type: "string" }, appointment_time: { type: "string" }, reason: { type: "string" } }, ["patient_name"])),
   fn("set_teleconsultation_transcription_decision", "Prepara a decisão de transcrição da Teleconsulta Desktop e exige confirmação separada.", objectSchema({ ...appointmentReference, ...patientReference, enabled: { type: "boolean" }, notes: { type: "string" } }, ["enabled"])),
   fn("close_teleconsultation_room", "Prepara o fechamento seguro da sala de Teleconsulta Desktop e exige confirmação separada.", objectSchema({ ...appointmentReference, ...patientReference, reason: { type: "string" } })),
+
+  fn("create_personal_note", "Prepara criação de nota pessoal na aba Notas Desktop e exige confirmação separada.", objectSchema({ title: { type: "string" }, content: { type: "string" }, tags: { type: "array", items: { type: "string" } }, ...moduleReference, ...patientReference, reference_date: { type: "string" } }, ["title"])),
+  fn("update_personal_note", "Prepara atualização de uma nota pessoal existente e exige confirmação separada.", objectSchema({ ...noteReference, title: { type: "string" }, content: { type: "string" }, tags: { type: "array", items: { type: "string" } }, ...moduleReference, ...patientReference, reference_date: { type: "string" } })),
+  fn("append_to_personal_note", "Prepara acréscimo de conteúdo ao final de uma nota existente e exige confirmação separada.", objectSchema({ ...noteReference, content: { type: "string" }, text: { type: "string" }, separator: { type: "string" } }, ["content"])),
+  fn("rename_personal_note", "Prepara renomeação de nota pessoal e exige confirmação separada.", objectSchema({ ...noteReference, new_title: { type: "string" } }, ["new_title"])),
+  fn("move_note_to_module", "Prepara mover uma nota para um módulo/pasta e exige confirmação separada.", objectSchema({ ...noteReference, ...moduleReference })),
+  fn("tag_personal_note", "Prepara atualização de tags de uma nota e exige confirmação separada.", objectSchema({ ...noteReference, tags: { type: "array", items: { type: "string" } }, add_tags: { type: "array", items: { type: "string" } }, remove_tags: { type: "array", items: { type: "string" } } })),
+  fn("delete_personal_note", "Prepara exclusão permanente de nota pessoal e exige confirmação explícita.", objectSchema({ ...noteReference })),
+  fn("create_note_module", "Prepara criação de módulo/pasta de notas e exige confirmação separada.", objectSchema({ name: { type: "string" }, module_name: { type: "string" } })),
+  fn("rename_note_module", "Prepara renomeação de módulo/pasta de notas e exige confirmação separada.", objectSchema({ ...moduleReference, new_name: { type: "string" } }, ["new_name"])),
+  fn("delete_note_module", "Prepara exclusão de módulo/pasta e deixa suas notas sem módulo. Exige confirmação separada.", objectSchema({ ...moduleReference })),
+  fn("create_task", "Prepara criação de tarefa/lembrete da aba Notas Desktop e exige confirmação separada.", objectSchema({ title: { type: "string" }, due_date: { type: "string" }, category: { type: "string" }, ...noteReference }, ["title"])),
+  fn("update_task", "Prepara atualização de tarefa/lembrete e exige confirmação separada.", objectSchema({ ...taskReference, title: { type: "string" }, due_date: { type: "string" }, category: { type: "string" }, is_completed: { type: "boolean" }, ...noteReference })),
+  fn("complete_task", "Prepara concluir uma tarefa e exige confirmação separada.", objectSchema({ ...taskReference })),
+  fn("reopen_task", "Prepara reabrir uma tarefa e exige confirmação separada.", objectSchema({ ...taskReference })),
+  fn("move_task_category", "Prepara mover tarefa para outra categoria e exige confirmação separada.", objectSchema({ ...taskReference, category: { type: "string" } }, ["category"])),
+  fn("delete_task", "Prepara exclusão de tarefa/lembrete e exige confirmação separada.", objectSchema({ ...taskReference })),
+  fn("link_file_to_patient", "Prepara vincular arquivo existente a paciente e exige confirmação separada. Não importa arquivo do Google Drive.", objectSchema({ ...fileReference, ...patientReference, category: { type: "string" } })),
+  fn("unlink_file_from_patient", "Prepara remover vínculo de paciente de um arquivo e exige confirmação separada.", objectSchema({ ...fileReference })),
+  fn("delete_file", "Prepara exclusão lógica de arquivo do NeuroDrive/Arquivos e exige confirmação separada. Não importa arquivo do Google Drive.", objectSchema({ ...fileReference })),
+
   fn("create_financial_entry", "Prepara um lançamento gerencial e exige confirmação. patient_name é opcional e será resolvido internamente.", objectSchema({ title: { type: "string" }, description: { type: "string" }, amount: { type: "number", exclusiveMinimum: 0 }, entry_type: { type: "string", enum: ["income", "expense"] }, ...patientReference, date: { type: "string" }, category: { type: "string" } }, ["title", "amount", "entry_type"])),
 ] as const;
 
@@ -99,6 +154,11 @@ export const MUTATING_TOOLS = new Set([
   "create_patient", "update_patient", "update_patient_basic_info", "inactivate_patient",
   "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment",
   "set_teleconsultation_transcription_decision", "close_teleconsultation_room",
+  "create_personal_note", "update_personal_note", "append_to_personal_note", "rename_personal_note",
+  "move_note_to_module", "tag_personal_note", "delete_personal_note", "create_note_module",
+  "rename_note_module", "delete_note_module", "create_task", "update_task", "complete_task",
+  "reopen_task", "move_task_category", "delete_task", "link_file_to_patient",
+  "unlink_file_from_patient", "delete_file",
   "create_financial_entry",
 ]);
 
@@ -109,6 +169,11 @@ export const SYSTEM_DATA_TOOLS = new Set([
   "list_pending_patients", "get_calendar", "get_agenda_daily_overview",
   "get_agenda_week_overview", "get_appointment_details", "find_available_slots",
   "get_teleconsultation_overview", "get_next_teleconsultation", "get_teleconsultation_session_status",
-  "get_teleconsultation_readiness", "get_financial_summary", "list_financial_entries",
-  "list_personal_notes", "list_documents",
+  "get_teleconsultation_readiness", "get_notes_desktop_overview", "search_personal_notes",
+  "get_personal_note_details", "list_recent_notes", "list_notes_by_module", "list_uncategorized_notes",
+  "summarize_note", "extract_tasks_from_note", "list_note_modules", "get_note_module_overview",
+  "get_tasks_overview", "list_tasks", "list_today_tasks", "list_overdue_tasks", "search_tasks",
+  "get_task_details", "get_files_overview", "search_personal_files", "search_patient_files",
+  "list_recent_files", "get_file_details", "list_files_by_patient", "get_notion_connection_status",
+  "get_financial_summary", "list_financial_entries", "list_personal_notes", "list_documents",
 ]);
