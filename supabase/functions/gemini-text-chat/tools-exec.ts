@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { generateEmbedding } from './embeddings.ts';
 
@@ -380,7 +379,7 @@ Seja conciso e prÃ¡tico.`;
                 } else {
                     result = {
                         success: true,
-                        message: `âš ï¸ ${riskPatients.length} paciente(s) precisam de atenÃ§Ã£o.`,
+                        message: `Aten??o: ${riskPatients.length} paciente(s) precisam de aten??o.`,
                         patientsAtRisk: riskPatients,
                         checkedPatients: patients.length
                     };

@@ -648,41 +648,6 @@ export function NewAppointmentModal({
             {renderRecurrenceToggle()}
           </div>
         )}
-
-        {/* ── Bloqueio ───────────────────────────────── */}
-        {false && (
-          <div className="space-y-6 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
-            <div className="space-y-2">
-              <h3 className="text-2xl font-bold text-foreground tracking-tight flex items-center gap-3">
-                <div className="p-2 rounded-full bg-rose-500/10">
-                  <Clock className="h-5 w-5 text-rose-500" />
-                </div>
-                Bloqueio de Agenda
-              </h3>
-              <p className="text-sm font-medium text-muted-foreground ml-1">Defina o horário e adicione o motivo do bloqueio.</p>
-            </div>
-
-            {renderDateTimeRow()}
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel className={labelBase}>Motivo / Observações</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      {...field}
-                      className={cn(inputBase, "min-h-[100px] resize-none px-6 py-4 text-base placeholder:text-muted-foreground/50 h-auto")}
-                      placeholder="Ex: Reunião externa, almoço, curso..."
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        )}
       </div>
     );
   };

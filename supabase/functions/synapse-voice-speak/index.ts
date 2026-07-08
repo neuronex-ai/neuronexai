@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -43,7 +42,8 @@ const hardSanitize = (value: string) => value
   .replace(/\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi, " ")
   .replace(/(?:\/?[a-zA-ZÀ-ÿ0-9_-]+){2,}\/[a-zA-ZÀ-ÿ0-9_/-]+/g, " essa área ")
   .replace(/\b(?:rota|path|endpoint|uuid|json|id interno|identificador interno)\b\s*[:=-]?\s*/gi, " ")
-  .replace(/[*_#>`~\[\]{}]/g, " ")
+  .replace(/[*_#>`~{}]/g, " ")
+  .replace(/\[|\]/g, " ")
   .replace(/^\s*[-•]\s*/gm, "")
   .replace(/\s+/g, " ")
   .trim()

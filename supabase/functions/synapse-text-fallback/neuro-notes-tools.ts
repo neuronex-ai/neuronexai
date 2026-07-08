@@ -500,7 +500,6 @@ export async function executeNeuroNotesAgentTool(
     createStep("Coletar histÃ³rico vinculado", "active", "Notas, prontuÃ¡rio, fluxos e NeuroPulse."),
   ];
 
-  try {
     if (name === "analyze_neuroview_patient_patterns") {
       const run = await createRun(context, "neuroview", patient, intent || "Analisar padrÃµes no NeuroView", initialSteps);
       const bundle = await gatherPatientBundle(context, patient, false);
@@ -696,7 +695,4 @@ export async function executeNeuroNotesAgentTool(
     }
 
     return null;
-  } catch (error) {
-    throw error;
-  }
 }

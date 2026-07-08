@@ -36,12 +36,12 @@ export const PackageCard = ({ pkg, patientId }: PackageCardProps) => {
     const isCompleted = sessionsRemaining <= 0;
     const isExpired = pkg.end_date && new Date(pkg.end_date + 'T23:59:59') < new Date();
 
-    const { mutate: useSession, isPending: isUsingSession } = useUsePackageSession();
+    const { mutate: consumeSession, isPending: isUsingSession } = useUsePackageSession();
     const { mutate: deletePackage, isPending: isDeleting } = useDeletePatientPackage();
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
     const handleUseSession = () => {
-        useSession({ packageId: pkg.id, patientId });
+        consumeSession({ packageId: pkg.id, patientId });
     };
 
     const handleDelete = () => {

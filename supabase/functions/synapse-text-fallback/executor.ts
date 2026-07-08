@@ -364,7 +364,19 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
         const end = cleanText(args.end_date || dateOnly(addDays(today, 90)), 10);
         const appointments = (await queryAppointments(admin, userId, start, end, { limit: args.limit || 80 })).filter((appointment) => appointment.type !== "block");
         const sessions = appointments.map((appointment) => teleStatus(appointment));
-        const data = { period: { start, end }, sessions, summary: { total: sessions.length, online_count: sessions.filter((s) => s.is_online).length, open_rooms_count: sessions.filter((s) => s.room_status === "open").length, closed_rooms_count: sessions.filter((s) => s.room_status === "closed").length, missing_transcription_decision_count: sessions.filter((s) => s.transcription_required).length, invite_ready_count: sessions.filter((s) => s.can_invite_patient).length, next_session: sessions.find((s) => new Date(s.appointment.start_time).getTime() >= Date.now()) || null } } };
+        const data = {
+          period: { start, end },
+          sessions,
+          summary: {
+            total: sessions.length,
+            online_count: sessions.filter((s) => s.is_online).length,
+            open_rooms_count: sessions.filter((s) => s.room_status === "open").length,
+            closed_rooms_count: sessions.filter((s) => s.room_status === "closed").length,
+            missing_transcription_decision_count: sessions.filter((s) => s.transcription_required).length,
+            invite_ready_count: sessions.filter((s) => s.can_invite_patient).length,
+            next_session: sessions.find((s) => new Date(s.appointment.start_time).getTime() >= Date.now()) || null,
+          },
+        };
         return { ok: true, grounded: true, recordCount: sessions.length, data, structuredData: { type: "teleconsultation_overview", data } };
       }
       case "get_next_teleconsultation": {

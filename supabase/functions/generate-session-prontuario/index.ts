@@ -15,7 +15,7 @@ function extractJSON(text: string) {
     return JSON.parse(text);
   } catch {
     // 2. Remove blocos de código markdown
-    let cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const cleaned = text.replace(/```json/g, '').replace(/```/g, '').trim();
     try {
       return JSON.parse(cleaned);
     } catch {
