@@ -162,9 +162,6 @@ const RECURRENCE_OPTIONS = [
   { value: "monthly", label: "Mensal" },
 ] as const;
 
-const getRecurrenceLabel = (value?: string | null) =>
-  RECURRENCE_OPTIONS.find((item) => item.value === value)?.label || "Semanal";
-
 const addMinutesToTime = (time: string, minutesToAdd: number) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
   const date = new Date();

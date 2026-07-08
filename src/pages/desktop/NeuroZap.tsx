@@ -267,7 +267,7 @@ type ConnectionDialogProps = {
   fullSync: ReturnType<typeof useWhatsAppAgent>["fullSync"];
 };
 
-function LegacyConnectionDialog({
+export function LegacyConnectionDialog({
   open,
   onOpenChange,
   settings,

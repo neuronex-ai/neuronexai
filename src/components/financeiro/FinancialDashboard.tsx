@@ -22,7 +22,6 @@ import {
     Activity,
     Repeat,
     WalletCards,
-    PlusCircle,
     CalendarClock,
 } from "lucide-react";
 

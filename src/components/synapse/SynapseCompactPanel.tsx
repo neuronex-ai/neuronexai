@@ -602,7 +602,7 @@ export const SynapseCompactPanel = () => {
                                                             <div className="flex flex-col mt-1">
                                                                 <span className="text-[13px] font-bold tracking-tight">{title}</span>
                                                                 <span className="text-[9px] font-mono opacity-40 uppercase tracking-widest">
-                                                                    {new Date(session.updated_at).toLocaleDateString('pt-BR')}
+                                                                    {session.updated_at ? new Date(session.updated_at).toLocaleDateString('pt-BR') : 'Sem data'}
                                                                 </span>
                                                             </div>
                                                         </div>

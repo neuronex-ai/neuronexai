@@ -98,7 +98,8 @@ export const PersistentNotificationSettings = () => {
     try {
       if (enabled) {
         const api = getElectronAPI();
-        const supported = await api?.notifications?.isSupported();
+        if (!api?.notifications) throw new Error('O app desktop nao conseguiu acessar as notificacoes nativas do Windows.');
+        const supported = await api.notifications.isSupported();
         if (!supported) throw new Error('O app desktop nao conseguiu acessar as notificacoes nativas do Windows.');
         const permission = await api.notifications.requestPermission();
         if (permission !== 'granted') throw new Error('Permissao de notificacao nativa nao concedida.');

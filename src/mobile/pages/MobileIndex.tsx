@@ -30,7 +30,6 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
-  Users,
   X,
 } from "lucide-react";
 import { useState, type ElementType, type ReactNode } from "react";

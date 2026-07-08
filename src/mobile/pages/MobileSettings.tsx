@@ -284,6 +284,7 @@ export const MobileSettings = () => {
         navigate("/auth");
     };
 
+    /* Removed legacy menuGroups; refinedMenuGroups is the active settings navigation.
     const menuGroups: Array<{ title: string; items: MenuItem[] }> = [
         {
             title: "Conta",
@@ -311,6 +312,7 @@ export const MobileSettings = () => {
         },
     ];
 
+    */
     const refinedMenuGroups: Array<{ title: string; items: MenuItem[] }> = [
         {
             title: "Conta",

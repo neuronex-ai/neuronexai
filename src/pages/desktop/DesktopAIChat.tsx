@@ -1,4 +1,3 @@
-import { useAuth } from "@/components/auth/SessionContextProvider";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAI } from "@/context/AIContext";
@@ -27,7 +26,6 @@ import { InvoiceDraftModal } from "@/components/ai-chat/InvoiceDraftModal";
 
 export default function DesktopAIChat() {
     const navigate = useNavigate();
-    const { user } = useAuth();
     const { activePatientId, currentContext } = useAI();
     const scrollRef = useRef<HTMLDivElement>(null);
 

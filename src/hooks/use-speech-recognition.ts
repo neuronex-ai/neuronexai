@@ -123,7 +123,7 @@ export const useSpeechRecognition = ({
 
       recognition.onstart = () => setIsListening(true);
 
-      recognition.onresult = (event) => {
+      recognition.onresult = (event: SpeechRecognitionEventLike) => {
         let interim = '';
         let finalText = '';
 
@@ -145,7 +145,7 @@ export const useSpeechRecognition = ({
         }
       };
 
-      recognition.onerror = (event) => {
+      recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
         if (browserSpeechServiceErrors.has(event.error)) {
           shouldRestartRef.current = false;
           recognitionRef.current = null;

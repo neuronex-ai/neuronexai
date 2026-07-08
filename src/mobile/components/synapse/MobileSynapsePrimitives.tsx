@@ -27,41 +27,6 @@ import ReactMarkdown from "react-markdown";
 import { useNavigate } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 
-type SynapseTone = "default" | "dark" | "success" | "warning" | "danger";
-
-const toneStyles: Record<SynapseTone, { surface: string; icon: string; text: string; muted: string }> = {
-  default: {
-    surface: "border-border/40 bg-card/74 text-foreground dark:border-white/10 dark:bg-white/[0.035]",
-    icon: "bg-foreground/[0.045] text-muted-foreground",
-    text: "text-foreground",
-    muted: "text-muted-foreground/68",
-  },
-  dark: {
-    surface: "border-foreground bg-foreground text-background",
-    icon: "bg-background/12 text-background",
-    text: "text-background",
-    muted: "text-background/62",
-  },
-  success: {
-    surface: "border-emerald-500/18 bg-emerald-500/[0.07] text-emerald-700 dark:text-emerald-300",
-    icon: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-    text: "text-emerald-700 dark:text-emerald-300",
-    muted: "text-emerald-700/65 dark:text-emerald-300/65",
-  },
-  warning: {
-    surface: "border-amber-500/20 bg-amber-500/[0.075] text-amber-800 dark:text-amber-200",
-    icon: "bg-amber-500/10 text-amber-700 dark:text-amber-200",
-    text: "text-amber-800 dark:text-amber-200",
-    muted: "text-amber-800/65 dark:text-amber-200/65",
-  },
-  danger: {
-    surface: "border-rose-500/18 bg-rose-500/[0.065] text-rose-700 dark:text-rose-300",
-    icon: "bg-rose-500/10 text-rose-600 dark:text-rose-300",
-    text: "text-rose-700 dark:text-rose-300",
-    muted: "text-rose-700/65 dark:text-rose-300/65",
-  },
-};
-
 export const mobileSynapseInputClassName =
   "mt-2 h-[52px] w-full rounded-[17px] border border-border/50 bg-card px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground/42 focus:border-foreground/25 focus-visible:ring-2 focus-visible:ring-foreground/12 dark:border-white/10 dark:bg-white/[0.035]";
 

@@ -42,7 +42,7 @@ interface NeuroViewControlsProps {
 }
 
 const controlButtonClass =
-  "h-10 w-10 shrink-0 rounded-2xl border border-white/[0.085] bg-white/[0.055] text-white/62 hover:bg-white/[0.105] hover:text-white transition-all duration-300 active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_44px_-32px_rgba(0,0,0,0.75)] [.light_&]:border-black/[0.06] [.light_&]:bg-white/62 [.light_&]:text-zinc-500 [.light_&]:hover:bg-white/86 [.light_&]:hover:text-zinc-950 [.light_&]:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_18px_44px_-32px_rgba(0,0,0,0.55)]";
+  "h-10 w-10 shrink-0 rounded-2xl border border-white/[0.085] bg-white/[0.055] text-white/62 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_44px_-32px_rgba(0,0,0,0.75)] transition-all duration-300 hover:bg-white/[0.105] hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708] motion-reduce:transition-none motion-reduce:active:scale-100 [.light_&]:border-black/[0.06] [.light_&]:bg-white/62 [.light_&]:text-zinc-500 [.light_&]:hover:bg-white/86 [.light_&]:hover:text-zinc-950 [.light_&]:focus-visible:ring-zinc-950/35 [.light_&]:focus-visible:ring-offset-white [.light_&]:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_18px_44px_-32px_rgba(0,0,0,0.55)]";
 
 export const NeuroViewControls = ({
   config,
@@ -58,7 +58,7 @@ export const NeuroViewControls = ({
 }: NeuroViewControlsProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const update = (key: keyof NeuroConfig, value: any) => {
+  const update = (key: keyof NeuroConfig, value: NeuroConfig[keyof NeuroConfig]) => {
     onConfigChange({ ...config, [key]: value });
   };
 
@@ -92,7 +92,8 @@ export const NeuroViewControls = ({
                   size="icon"
                   variant="ghost"
                   onClick={() => setIsExpanded(false)}
-                  className="h-7 w-7 rounded-xl text-white/45 hover:bg-white/10 hover:text-white [.light_&]:text-zinc-400 [.light_&]:hover:bg-black/5 [.light_&]:hover:text-zinc-900"
+                  className="h-7 w-7 rounded-xl text-white/45 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 [.light_&]:text-zinc-400 [.light_&]:hover:bg-black/5 [.light_&]:hover:text-zinc-900 [.light_&]:focus-visible:ring-zinc-950/35"
+                  aria-label="Recolher ajustes do NeuroView"
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
@@ -191,8 +192,8 @@ export const NeuroViewControls = ({
               placeholder="Buscar notas..."
               className={cn(
                 "h-10 rounded-2xl border-transparent bg-white/[0.055] pl-10 pr-3 text-sm text-white shadow-none outline-none transition-all",
-                "placeholder:text-white/36 focus-visible:ring-0 focus-visible:border-white/[0.12]",
-                "[.light_&]:bg-black/[0.035] [.light_&]:text-zinc-900 [.light_&]:placeholder:text-zinc-400 [.light_&]:focus-visible:border-black/[0.08]",
+                "placeholder:text-white/36 focus-visible:border-white/[0.12] focus-visible:ring-2 focus-visible:ring-white/25 motion-reduce:transition-none",
+                "[.light_&]:bg-black/[0.035] [.light_&]:text-zinc-900 [.light_&]:placeholder:text-zinc-400 [.light_&]:focus-visible:border-black/[0.08] [.light_&]:focus-visible:ring-zinc-950/15",
               )}
             />
           </div>
@@ -200,16 +201,16 @@ export const NeuroViewControls = ({
           <div className="hidden h-8 w-px bg-white/[0.09] [.light_&]:bg-black/[0.08] sm:block" />
 
           <div className="flex shrink-0 items-center gap-1.5">
-            <Button size="icon" variant="ghost" onClick={onAnimate} className={controlButtonClass} title="Brotar rede neural">
+            <Button size="icon" variant="ghost" onClick={onAnimate} className={controlButtonClass} title="Brotar rede neural" aria-label="Animar rede neural">
               <Play className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={onZoomOut} className={controlButtonClass} title="Visao panoramica">
+            <Button size="icon" variant="ghost" onClick={onZoomOut} className={controlButtonClass} title="Visao panoramica" aria-label="Afastar NeuroView">
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={onZoomIn} className={controlButtonClass} title="Foco de leitura">
+            <Button size="icon" variant="ghost" onClick={onZoomIn} className={controlButtonClass} title="Foco de leitura" aria-label="Aproximar NeuroView">
               <ZoomIn className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={onCenter} className={controlButtonClass} title="Centralizar rede">
+            <Button size="icon" variant="ghost" onClick={onCenter} className={controlButtonClass} title="Centralizar rede" aria-label="Centralizar rede">
               <Target className="h-4 w-4" />
             </Button>
             <Button
@@ -221,10 +222,11 @@ export const NeuroViewControls = ({
                 config.performanceMode && "bg-amber-500/18 text-amber-300 [.light_&]:bg-amber-500/16 [.light_&]:text-amber-600"
               )}
               title={config.performanceMode ? "Desativar modo performance" : "Ativar modo performance"}
+              aria-label={config.performanceMode ? "Desativar modo performance" : "Ativar modo performance"}
             >
               <Settings2 className={cn("h-4 w-4", config.performanceMode && "animate-pulse")} />
             </Button>
-            <Button size="icon" variant="ghost" onClick={onToggleFullscreen} className={controlButtonClass} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>
+            <Button size="icon" variant="ghost" onClick={onToggleFullscreen} className={controlButtonClass} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"} aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}>
               {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
             </Button>
             <Button
@@ -233,6 +235,7 @@ export const NeuroViewControls = ({
               onClick={() => setIsExpanded(!isExpanded)}
               className={cn(controlButtonClass, isExpanded && "bg-white text-black [.light_&]:bg-zinc-950 [.light_&]:text-white")}
               title="Ajustar fisica"
+              aria-label={isExpanded ? "Fechar ajustes de fisica" : "Abrir ajustes de fisica"}
             >
               <Settings2 className="h-4 w-4" />
             </Button>

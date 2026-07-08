@@ -33,6 +33,7 @@ import { TranscriptionNode } from './nodes/TranscriptionNode';
 import { NodeType, SegundoCerebro } from './SegundoCerebro';
 import { useSynapseNotesAgentRun } from '@/hooks/use-synapse-notes-agent-run';
 import { SynapseAgentRunOverlay } from './SynapseAgentRunOverlay';
+import { useReducedMotion } from 'framer-motion';
 
 const nodeTypes = {
   start: NeuralNode,
@@ -83,6 +84,9 @@ const edgeTypes = {
 
 type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict';
 
+const flowToolbarButtonClass =
+  "h-10 w-10 flex items-center justify-center rounded-xl text-muted-foreground transition-all hover:bg-muted/70 hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100";
+
 interface NeuroFlowContentProps {
   flowId?: string;
   synapseRunId?: string | null;
@@ -115,6 +119,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
   const saveStateRef = useRef<() => Promise<void>>(async () => undefined);
   const { screenToFlowPosition, getViewport, zoomIn, zoomOut, fitView } = useReactFlow();
   const { theme } = useTheme();
+  const shouldReduceMotion = useReducedMotion();
 
   // Modal States
   const [editModalNoteId, setEditModalNoteId] = useState<string | null>(null);
@@ -197,7 +202,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
       setEdges(restored.edges.map((edge) => ({
         ...edge,
         type: edge.type || 'neural',
-        animated: edge.animated ?? true,
+        animated: shouldReduceMotion ? false : edge.animated ?? true,
       })));
 
       lastSavedFingerprintRef.current = JSON.stringify({
@@ -217,7 +222,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
         setSaveStatus('saved');
       }, 0);
     }
-  }, [attachRuntimeNodeData, flowId, setNodes, setEdges]);
+  }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion]);
 
   useEffect(() => { loadFlow(); }, [loadFlow]);
 
@@ -374,9 +379,9 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
       ...params,
       id: edgeId,
       type: 'neural',
-      animated: true
+      animated: !shouldReduceMotion
     }, eds));
-  }, [setEdges]);
+  }, [setEdges, shouldReduceMotion]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
@@ -496,8 +501,9 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
         <Panel position="top-left" className="m-12">
           <div className="notes-toolbar-surface flex items-center gap-2 rounded-2xl border p-2 backdrop-blur-3xl">
             <button
+              type="button"
               onClick={onBack}
-              className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted/70 text-foreground transition-all mr-1"
+              className={cn(flowToolbarButtonClass, "mr-1 text-foreground")}
               aria-label="Voltar"
             >
               <ChevronLeft size={20} strokeWidth={2.5} />
@@ -505,17 +511,17 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
 
             <div className="w-px h-6 bg-border/70 mx-1" />
 
-            <button onClick={() => zoomIn()} className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-all" aria-label="Aproximar"><ZoomIn size={18} /></button>
-            <button onClick={() => zoomOut()} className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-all" aria-label="Afastar"><ZoomOut size={18} /></button>
-            <button onClick={() => fitView()} className="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-all" aria-label="Ajustar visualizacao"><Maximize size={18} /></button>
+            <button type="button" onClick={() => zoomIn()} className={flowToolbarButtonClass} aria-label="Aproximar"><ZoomIn size={18} /></button>
+            <button type="button" onClick={() => zoomOut()} className={flowToolbarButtonClass} aria-label="Afastar"><ZoomOut size={18} /></button>
+            <button type="button" onClick={() => fitView({ duration: shouldReduceMotion ? 0 : 400 })} className={flowToolbarButtonClass} aria-label="Ajustar visualizacao"><Maximize size={18} /></button>
 
             <div className="w-px h-6 bg-border/70 mx-1" />
 
-            <button onClick={() => setIsLocked(!isLocked)} className={cn(
-              "h-10 w-10 flex items-center justify-center rounded-xl transition-all",
+            <button type="button" onClick={() => setIsLocked(!isLocked)} className={cn(
+              flowToolbarButtonClass,
               isLocked
                 ? "bg-foreground text-background shadow-lg"
-                : "hover:bg-muted/70 text-muted-foreground hover:text-foreground"
+                : ""
             )} aria-label={isLocked ? "Desbloquear canvas" : "Bloquear canvas"}>
               {isLocked ? <Lock size={18} /> : <Unlock size={18} />}
             </button>
@@ -525,7 +531,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
         <Panel position="top-right" className="m-12">
           <Button
             onClick={() => setIsLibraryOpen(true)}
-            className="notes-toolbar-surface h-14 w-14 rounded-full border text-foreground hover:scale-105 active:scale-95 transition-all flex items-center justify-center"
+            className="notes-toolbar-surface h-14 w-14 rounded-full border text-foreground transition-all hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100 flex items-center justify-center"
             aria-label="Adicionar bloco"
           >
             <Plus size={24} strokeWidth={3} />
@@ -572,14 +578,14 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
 
       <style>{`
         .react-flow__viewport {
-          transition: transform 0.1s ease-out;
+          transition: ${shouldReduceMotion ? "none" : "transform 0.1s ease-out"};
         }
       `}</style>
     </div>
   );
 };
 
-export const NeuroFlow = (props: any) => (
+export const NeuroFlow = (props: NeuroFlowContentProps) => (
   <ReactFlowProvider>
     <NeuroFlowContent {...props} />
   </ReactFlowProvider>

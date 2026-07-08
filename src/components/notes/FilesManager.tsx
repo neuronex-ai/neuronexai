@@ -290,21 +290,6 @@ export const FilesManager = () => {
         setPendingDeletePath(path);
     };
 
-    const confirmDeleteR2 = async () => {
-        if (!pendingDeletePath) return;
-        const path = pendingDeletePath;
-        setPendingDeletePath(null);
-        try {
-            await deleteR2Document(getDocumentIdFromPath(path));
-            toast.success("Arquivo excluido.");
-            queryClient.invalidateQueries({ queryKey: ["personalFiles"] });
-            queryClient.invalidateQueries({ queryKey: ["allPatientFiles"] });
-        } catch (error) {
-            console.error("Erro ao excluir arquivo R2:", error);
-            toast.error("Erro ao excluir arquivo.");
-        }
-    };
-
     const confirmDelete = async () => {
         if (!pendingDeletePath) return;
         const path = pendingDeletePath;
@@ -335,29 +320,13 @@ export const FilesManager = () => {
         URL.revokeObjectURL(url);
     };
 
-    const handleDownloadR2 = async (path: string, name: string) => {
-        try {
-            const url = await getR2DocumentDownloadUrl({
-                documentId: getDocumentIdFromPath(path),
-                disposition: "attachment",
-            });
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = name.replace(/^\d+_/, "");
-            a.click();
-        } catch (error) {
-            console.error("Erro ao baixar arquivo R2:", error);
-            toast.error("Erro ao baixar arquivo.");
-        }
-    };
-
     // ─── RENAME ────────────────────────────────────────────────
     const handleRenameStart = (file: FileItem) => {
         setRenamingFileId(file.id);
         setRenameValue(file.name.replace(/^\d+_/, ""));
     };
 
-    const handleRenameConfirm = async (file: FileItem) => {
+    const handleRenameConfirm = async (_file: FileItem) => {
         if (!renameValue.trim() || !userId) return;
         toast.info("Renomear arquivos R2 exige uma acao server-side. Mantive o arquivo original por seguranca.");
         setRenamingFileId(null);
@@ -416,7 +385,7 @@ export const FilesManager = () => {
             const sanitizedName = driveFile.name
                 .normalize("NFD").replace(/[\u0300-\u036f]/g, "")   // remove accents
                 .replace(/\s+/g, "_")                                // spaces → underscores
-                .replace(/[^a-zA-Z0-9_.\-]/g, "");                  // keep only safe chars
+                .replace(/[^a-zA-Z0-9_.-]/g, "");                   // keep only safe chars
             const importedFile = new File([blob], sanitizedName || driveFile.name, {
                 type: blob.type || driveFile.mimeType || "application/octet-stream",
             });

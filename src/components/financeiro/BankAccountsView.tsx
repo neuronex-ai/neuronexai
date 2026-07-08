@@ -27,7 +27,7 @@ export const BankAccountsView = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [isSavingPix, setIsSavingPix] = useState(false);
     const [form, setForm] = useState({ holderName: "", cpfCnpj: "", bankCode: "", agency: "", account: "", digit: "", pixKey: "" });
-    const pixKeyValues = useMemo(() => pixKeys.map(getPixKeyValue).filter(Boolean), [pixKeys]);
+    const pixKeyValues = useMemo<string[]>(() => pixKeys.map(getPixKeyValue).filter(Boolean) as string[], [pixKeys]);
     const storedPixKey = pixKeyValues[0] || "";
 
     useEffect(() => {

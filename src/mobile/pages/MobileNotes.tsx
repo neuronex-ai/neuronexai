@@ -110,12 +110,13 @@ export const MobileNotes = () => {
     );
 
     const editorOpen = Boolean(selectedNoteId && selectedNote);
+    const noteForEditor = selectedNote;
 
     return (
         <MobileLayout className="bg-background" showNav={!editorOpen} showBottomNav={!editorOpen}>
             <div className="flex h-full min-h-0 flex-col">
                 <AnimatePresence mode="wait" initial={false}>
-                    {editorOpen ? (
+                    {editorOpen && noteForEditor ? (
                         <motion.div
                             key="editor-edit"
                             initial={{ opacity: 0, x: 8 }}
@@ -125,7 +126,7 @@ export const MobileNotes = () => {
                             className="flex h-full min-h-0 flex-1 flex-col"
                         >
                             <MobileNoteEditor
-                                note={selectedNote}
+                                note={noteForEditor}
                                 onBack={() => setSelectedNoteId(null)}
                                 onUpdate={handleUpdateNote}
                                 onDelete={handleDeleteNote}

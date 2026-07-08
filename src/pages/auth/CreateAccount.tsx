@@ -41,7 +41,6 @@ import {
   Loader2,
   MailCheck,
   ShieldCheck,
-  Sparkles,
   UserRound,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";

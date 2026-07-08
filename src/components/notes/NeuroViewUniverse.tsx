@@ -220,9 +220,9 @@ export const NeuroViewUniverse = ({
     const cosX = Math.cos(rotation.x), sinX = Math.sin(rotation.x);
     const cosY = Math.cos(rotation.y), sinY = Math.sin(rotation.y);
 
-    let x = pos.x * cosY + pos.z * sinY;
+    const x = pos.x * cosY + pos.z * sinY;
     let z = -pos.x * sinY + pos.z * cosY;
-    let y = pos.y * cosX - z * sinX;
+    const y = pos.y * cosX - z * sinX;
     z = pos.y * sinX + z * cosX;
 
     const perspective = 820;

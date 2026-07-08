@@ -8,10 +8,8 @@ import {
   ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
-  BarChart3,
   CalendarClock,
   CheckCircle2,
-  Clock,
   FileText,
   Landmark,
   Loader2,
@@ -22,7 +20,6 @@ import {
   Save,
   Sparkles,
   Target,
-  TrendingDown,
   TrendingUp,
   Users,
   WalletCards,
@@ -75,8 +72,6 @@ const dateOf = (transaction: Transaction) => new Date(transaction.date || transa
 const isIncome = (transaction: Transaction) => transaction.type === "income";
 const isExpense = (transaction: Transaction) => transaction.type === "expense";
 const isPending = (transaction: Transaction) => transaction.status === "pending" || transaction.status === "scheduled";
-const isCompleted = (transaction: Transaction) => transaction.status === "completed" || transaction.status === "paid" || !transaction.status;
-
 const buildFinancialMetrics = (
   allTransactions: Transaction[],
   realizedTransactions: Transaction[],
@@ -331,7 +326,7 @@ const CashFlowOverview = ({ metrics, setActiveView }: { metrics: Metrics; setAct
   );
 };
 
-const ActionQueue = ({ metrics, setActiveView, onCreateEntry }: { metrics: Metrics; setActiveView: (view: FinanceView) => void; onCreateEntry?: (type: EntryType) => void }) => {
+const ActionQueue = ({ metrics, setActiveView }: { metrics: Metrics; setActiveView: (view: FinanceView) => void; onCreateEntry?: (type: EntryType) => void }) => {
   const actions = [
     metrics.overdueCount > 0
       ? { priority: "Alta", title: "Cobranças vencidas", description: `${metrics.overdueCount} cobrança${metrics.overdueCount > 1 ? "s" : ""} em atraso somando ${currency(metrics.overdueAmount)}.`, icon: AlertCircle, tone: "warning" as const, action: () => setActiveView("gestao-inadimplencia") }

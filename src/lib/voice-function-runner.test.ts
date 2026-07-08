@@ -34,7 +34,7 @@ describe("VoiceFunctionRunner", () => {
   });
 
   it("injects initial and slow progress feedback while a tool is running", async () => {
-    let resolveTool: ((value: unknown) => void) | undefined;
+    let resolveTool: ((value: ReturnType<typeof toolResponse>) => void) | undefined;
     const { runner, deepgram, client } = createHarness(vi.fn(() => new Promise((resolve) => {
       resolveTool = resolve;
     })));
@@ -105,7 +105,7 @@ describe("VoiceFunctionRunner", () => {
   });
 
   it("keeps the function alive when the user complements the request", async () => {
-    let resolveTool: ((value: unknown) => void) | undefined;
+    let resolveTool: ((value: ReturnType<typeof toolResponse>) => void) | undefined;
     let capturedSignal: AbortSignal | undefined;
     const invokeTool = vi.fn(({ signal }: { signal: AbortSignal }) => {
       capturedSignal = signal;

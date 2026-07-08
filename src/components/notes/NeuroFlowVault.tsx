@@ -215,7 +215,7 @@ export const NeuroFlowVault = ({ onOpenFlow }: NeuroFlowVaultProps) => {
                 },
             });
 
-            const { data: newFlow, error: flowError } = await supabase
+            const { error: flowError } = await supabase
                 .from('neuro_flows')
                 .insert({
                     user_id: user.id,

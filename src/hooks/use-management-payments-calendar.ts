@@ -3,7 +3,7 @@ import { format } from "date-fns";
 
 import type { BillPaymentCalendarItem } from "@/hooks/use-bill-payments-calendar";
 import { useBillPaymentsCalendar } from "@/hooks/use-bill-payments-calendar";
-import type { FinancialEntry, FinancialEntryStatus } from "@/hooks/use-financial-entries";
+import type { FinancialEntry } from "@/hooks/use-financial-entries";
 import { useFinancialEntries } from "@/hooks/use-financial-entries";
 
 export type FinancialPaymentSource = "management" | "neurofinance";

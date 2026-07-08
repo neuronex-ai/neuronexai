@@ -80,7 +80,7 @@ const renderSuggestionPopup = () => {
         popup[0].hide();
         return true;
       }
-      // @ts-ignore
+      // @ts-expect-error Tiptap suggestion refs expose onKeyDown at runtime.
       return component.ref?.onKeyDown(props);
     },
     onExit() {

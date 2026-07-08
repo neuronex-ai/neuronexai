@@ -8,7 +8,7 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import html2canvas from "html2canvas";
 import {
     Brain, Download, FileText, Fingerprint, Maximize2, Mic, MicOff,
@@ -44,16 +44,19 @@ const escapeHtml = (value: string) =>
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;");
 
+const neuroPulseIconButtonClass =
+    "h-9 w-9 rounded-lg text-zinc-400 transition-all hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/25 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:text-zinc-500 dark:hover:bg-white/10 dark:hover:text-white dark:focus-visible:ring-white/35 dark:focus-visible:ring-offset-black motion-reduce:transition-none";
+
 const NeuralBackground = () => {
     const { theme } = useTheme();
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
             <div className={cn(
-                "absolute top-1/4 left-1/4 w-[500px] h-[500px] blur-[120px] rounded-full animate-float-slow transition-colors duration-1000",
+                "absolute top-1/4 left-1/4 w-[500px] h-[500px] blur-[120px] rounded-full animate-float-slow transition-colors duration-1000 motion-reduce:animate-none",
                 theme === 'dark' ? "bg-white/[0.02]" : "bg-black/[0.05]"
             )} />
             <div className={cn(
-                "absolute bottom-1/4 right-1/4 w-[600px] h-[600px] blur-[150px] rounded-full animate-float-slower transition-colors duration-1000",
+                "absolute bottom-1/4 right-1/4 w-[600px] h-[600px] blur-[150px] rounded-full animate-float-slower transition-colors duration-1000 motion-reduce:animate-none",
                 theme === 'dark' ? "bg-white/[0.01]" : "bg-black/[0.03]"
             )} />
             <div className={cn(
@@ -89,6 +92,7 @@ export const NeuroPulse = ({
     const [isFullscreen, setIsFullscreen] = useState(false);
     const diagramRef = useRef<HTMLDivElement>(null);
     const { theme } = useTheme();
+    const shouldReduceMotion = useReducedMotion();
     const { data: patients = [] } = usePatients();
     const { createNote } = usePersonalNotes();
     const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
@@ -325,8 +329,8 @@ Relato:
                         <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-black/40 shadow-2xl backdrop-blur-3xl transition-all duration-500 group-hover:border-white/20 [.light_&]:border-zinc-200 [.light_&]:bg-white/40 [.light_&]:group-hover:border-zinc-300">
                             <Fingerprint className="h-7 w-7 text-white/90 [.light_&]:text-zinc-900" strokeWidth={1.2} />
                             <motion.div
-                                animate={{ opacity: [0.4, 1, 0.4] }}
-                                transition={{ duration: 2, repeat: Infinity }}
+                                animate={shouldReduceMotion ? { opacity: 0.85 } : { opacity: [0.4, 1, 0.4] }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 2, repeat: Infinity }}
                                 className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-white shadow-[0_0_10px_rgba(255,255,255,0.8)] [.light_&]:bg-zinc-900 [.light_&]:shadow-[0_0_10px_rgba(0,0,0,0.2)]"
                             />
                         </div>
@@ -341,7 +345,7 @@ Relato:
 
                 <div className="pointer-events-auto flex items-center gap-3 rounded-2xl border border-white/5 bg-black/40 p-1.5 shadow-2xl backdrop-blur-3xl [.light_&]:border-zinc-200 [.light_&]:bg-white/40 [.light_&]:shadow-xl">
                     <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                        <SelectTrigger className="w-[190px] h-10 bg-transparent border-none text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors focus:ring-0">
+                        <SelectTrigger className="w-[190px] h-10 bg-transparent border-none text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 transition-colors hover:text-zinc-900 focus:ring-0 focus-visible:ring-2 focus-visible:ring-zinc-900/20 dark:hover:text-white dark:focus-visible:ring-white/30 motion-reduce:transition-none">
                             <SelectValue placeholder="Paciente" />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-[#0a0a0b] border-zinc-100 dark:border-white/5 text-zinc-400">
@@ -359,7 +363,7 @@ Relato:
                     <div className="mx-1 h-6 w-px bg-white/5 [.light_&]:bg-zinc-200" />
 
                     <Select value={selectedLens} onValueChange={setSelectedLens}>
-                        <SelectTrigger className="w-[200px] h-10 bg-transparent border-none text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors focus:ring-0">
+                        <SelectTrigger className="w-[200px] h-10 bg-transparent border-none text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 transition-colors hover:text-zinc-900 focus:ring-0 focus-visible:ring-2 focus-visible:ring-zinc-900/20 dark:hover:text-white dark:focus-visible:ring-white/30 motion-reduce:transition-none">
                             <SelectValue placeholder="Ótica Analítica" />
                         </SelectTrigger>
                         <SelectContent className="bg-white dark:bg-[#0a0a0b] border-zinc-100 dark:border-white/5 text-zinc-400">
@@ -381,7 +385,7 @@ Relato:
                             isGenerating
                                 ? "cursor-not-allowed border-transparent bg-white/5 text-zinc-600 [.light_&]:bg-zinc-100 [.light_&]:text-zinc-400"
                                 : "border-transparent bg-white text-black shadow-[0_20px_40px_-10px_rgba(255,255,255,0.2)] hover:scale-[1.02] hover:bg-zinc-200 active:scale-95 [.light_&]:bg-zinc-900 [.light_&]:text-white [.light_&]:shadow-lg [.light_&]:hover:bg-zinc-800",
-                            "text-[10px] font-black uppercase tracking-[0.3em]"
+                            "text-[10px] font-black uppercase tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/35 focus-visible:ring-offset-2 focus-visible:ring-offset-black motion-reduce:transition-none motion-reduce:hover:scale-100 motion-reduce:active:scale-100 [.light_&]:focus-visible:ring-zinc-950/30 [.light_&]:focus-visible:ring-offset-white"
                         )}
                     >
                         {isGenerating ? (
@@ -401,8 +405,9 @@ Relato:
                 {/* Left: Input Console */}
                 {!isFullscreen && (
                     <motion.div
-                        initial={{ opacity: 0, x: -20 }}
+                        initial={shouldReduceMotion ? false : { opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : undefined}
                         className="w-[38%] flex flex-col space-y-6"
                     >
                         <div className={cn(
@@ -421,10 +426,11 @@ Relato:
                             </div>
 
                             <textarea
+                                aria-label="Relato clinico para gerar diagrama NeuroPulse"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 placeholder="Inicie a fala ou descreva o padrão aqui para processamento neural..."
-                                className="flex-1 bg-transparent border-none resize-none focus:ring-0 text-md text-zinc-900 dark:text-zinc-200 leading-relaxed placeholder:text-zinc-300 dark:placeholder:text-zinc-800 font-medium custom-scrollbar selection:bg-zinc-900/10 dark:selection:bg-white/10"
+                                className="flex-1 resize-none rounded-2xl border-none bg-transparent text-md font-medium leading-relaxed text-zinc-900 placeholder:text-zinc-300 selection:bg-zinc-900/10 focus:outline-none focus:ring-0 focus-visible:ring-2 focus-visible:ring-zinc-900/15 dark:text-zinc-200 dark:placeholder:text-zinc-800 dark:selection:bg-white/10 dark:focus-visible:ring-white/20 custom-scrollbar"
                             />
 
                             <div className="mt-6 flex items-center justify-between">
@@ -434,8 +440,8 @@ Relato:
                                             {[...Array(3)].map((_, i) => (
                                                 <motion.div
                                                     key={i}
-                                                    animate={{ height: [4, 12, 4] }}
-                                                    transition={{ duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
+                                                    animate={shouldReduceMotion ? { height: 8 } : { height: [4, 12, 4] }}
+                                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.8, repeat: Infinity, delay: i * 0.1 }}
                                                     className="w-0.5 bg-zinc-900/40 dark:bg-white/40 rounded-full"
                                                 />
                                             ))}
@@ -455,13 +461,14 @@ Relato:
                                     size="icon"
                                     onClick={toggleListening}
                                     className={cn(
-                                        "h-16 w-16 rounded-[24px] shadow-2xl transition-all duration-700 border relative group",
+                                        "h-16 w-16 rounded-[24px] shadow-2xl transition-all duration-700 border relative group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/25 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-white/35 dark:focus-visible:ring-offset-black motion-reduce:transition-none",
                                         isListening
                                             ? "bg-zinc-900 dark:bg-white text-white dark:text-black border-zinc-900 dark:border-white"
                                             : "bg-white dark:bg-black/60 text-zinc-400 dark:text-zinc-500 border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/20 hover:text-zinc-900 dark:hover:text-white shadow-xl"
                                     )}
+                                    aria-label={isListening ? "Parar captura de voz" : "Iniciar captura de voz"}
                                 >
-                                    {isListening && (
+                                    {isListening && !shouldReduceMotion && (
                                         <motion.div
                                             initial={{ scale: 0.8, opacity: 0 }}
                                             animate={{ scale: 1.5, opacity: 0 }}
@@ -492,8 +499,8 @@ Relato:
                             >
                                 <div className="relative">
                                     <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 4, repeat: Infinity, ease: "linear" }}
+                                        animate={shouldReduceMotion ? { rotate: 0 } : { rotate: 360 }}
+                                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 4, repeat: Infinity, ease: "linear" }}
                                         className="w-32 h-32 rounded-full border-2 border-zinc-200 dark:border-white/5 border-t-zinc-900 dark:border-t-white/40"
                                     />
                                     <div className="absolute inset-0 flex items-center justify-center">
@@ -506,8 +513,8 @@ Relato:
                                         {[...Array(3)].map((_, i) => (
                                             <motion.div
                                                 key={i}
-                                                animate={{ opacity: [0, 1, 0] }}
-                                                transition={{ duration: 1, repeat: Infinity, delay: i * 0.2 }}
+                                                animate={shouldReduceMotion ? { opacity: 0.75 } : { opacity: [0, 1, 0] }}
+                                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 1, repeat: Infinity, delay: i * 0.2 }}
                                                 className="w-1.5 h-1.5 rounded-full bg-zinc-300 dark:bg-white/40"
                                             />
                                         ))}
@@ -517,9 +524,10 @@ Relato:
                         ) : diagramCode ? (
                             <motion.div
                                 key="diagram"
-                                initial={{ opacity: 0, scale: 0.98 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 1.02 }}
+                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.02 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : undefined}
                                 className="h-full flex flex-col"
                             >
                                 <div className="absolute top-6 right-6 z-20 flex gap-2">
@@ -534,17 +542,17 @@ Relato:
                                         </div>
                                     )}
                                     <div className="flex p-1 bg-white/80 dark:bg-black/60 backdrop-blur-2xl border border-zinc-200 dark:border-white/5 rounded-xl shadow-2xl">
-                                        <Button size="icon" variant="ghost" title="Regenerar" className="h-9 w-9 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={handleGenerate} disabled={isGenerating}>
+                                        <Button size="icon" variant="ghost" title="Regenerar" aria-label="Regenerar diagrama" className={neuroPulseIconButtonClass} onClick={handleGenerate} disabled={isGenerating}>
                                             <RefreshCcw className={cn("h-4 w-4", isGenerating && "animate-spin")} />
                                         </Button>
-                                        <Button size="icon" variant="ghost" title="Copiar Código" className="h-9 w-9 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={handleCopyCode}>
+                                        <Button size="icon" variant="ghost" title="Copiar Código" aria-label="Copiar codigo Mermaid" className={neuroPulseIconButtonClass} onClick={handleCopyCode}>
                                             <FileText className="h-4 w-4" />
                                         </Button>
-                                        <Button size="icon" variant="ghost" title="Download PNG" className="h-9 w-9 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={handleExportPNG}>
+                                        <Button size="icon" variant="ghost" title="Download PNG" aria-label="Baixar diagrama em PNG" className={neuroPulseIconButtonClass} onClick={handleExportPNG}>
                                             <Download className="h-4 w-4" />
                                         </Button>
                                         <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1 self-center" />
-                                        <Button size="icon" variant="ghost" title="Tela Cheia" className="h-9 w-9 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white" onClick={() => setIsFullscreen(!isFullscreen)}>
+                                        <Button size="icon" variant="ghost" title="Tela Cheia" aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"} className={neuroPulseIconButtonClass} onClick={() => setIsFullscreen(!isFullscreen)}>
                                             <Maximize2 className="h-4 w-4" />
                                         </Button>
                                     </div>
@@ -558,27 +566,28 @@ Relato:
                         ) : (
                             <motion.div
                                 key="empty"
-                                initial={{ opacity: 0 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : undefined}
                                 className="h-full w-full flex flex-col items-center justify-center p-12 space-y-8"
                             >
                                 {/* Scan Visualizer */}
                                 <div className="relative w-72 h-72 border border-white/[0.05] rounded-full flex items-center justify-center group/empty">
                                     {/* Outer Rotating Ring */}
                                     <motion.div
-                                        animate={{ rotate: 360 }}
-                                        transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                                        animate={shouldReduceMotion ? { rotate: 0 } : { rotate: 360 }}
+                                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 20, repeat: Infinity, ease: "linear" }}
                                         className="absolute inset-0 border border-dashed border-white/[0.05] rounded-full"
                                     />
 
                                     {/* Scanner Line */}
                                     <motion.div
-                                        animate={{
+                                        animate={shouldReduceMotion ? { top: "50%", opacity: 0.55 } : {
                                             top: ["0%", "100%", "0%"],
                                             opacity: [0.3, 1, 0.3]
                                         }}
-                                        transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
+                                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: "easeInOut" }}
                                         className="absolute left-0 right-0 h-px bg-gradient-to-r from-transparent via-zinc-900/40 dark:via-white/40 to-transparent z-10 shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.4)]"
                                     />
 
@@ -620,8 +629,8 @@ Relato:
                                         {[...Array(3)].map((_, i) => (
                                             <motion.div
                                                 key={i}
-                                                animate={{ opacity: [0.2, 1, 0.2] }}
-                                                transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
+                                                animate={shouldReduceMotion ? { opacity: 0.7 } : { opacity: [0.2, 1, 0.2] }}
+                                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
                                                 className="h-1 w-4 bg-zinc-200 dark:bg-white/10 rounded-full"
                                             />
                                         ))}

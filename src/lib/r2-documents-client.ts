@@ -139,6 +139,7 @@ export async function uploadDocumentToR2({
   if (confirmError || !confirmed?.document) {
     await markR2UploadFailed(prepared.id, "confirm_upload_failed");
     throwFunctionError(confirmError, "Nao foi possivel confirmar o upload.");
+    throw new Error("Nao foi possivel confirmar o upload.");
   }
 
   return confirmed.document;
@@ -154,6 +155,7 @@ export async function getR2DocumentDownloadUrl({
 
   if (error || !data?.downloadUrl) {
     throwFunctionError(error, "Nao foi possivel gerar o link seguro do documento.");
+    throw new Error("Nao foi possivel gerar o link seguro do documento.");
   }
 
   return data.downloadUrl;

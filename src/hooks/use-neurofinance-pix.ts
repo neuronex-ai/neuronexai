@@ -21,7 +21,6 @@ import {
     normalizeNbPaymentRow,
 } from "@/lib/neurofinance-safe-selects";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
-import { invokeNeurofinanceFunction } from "@/lib/neurofinance-edge";
 
 // ─── Types ────────────────────────────────────────────────────────
 

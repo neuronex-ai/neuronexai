@@ -90,7 +90,7 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
 
     const normalizedRecentPayments = (recentPayments || []).map(normalizeNbPaymentRow);
     if (normalizedRecentPayments.length > 0) {
-      const totalReceived = normalizedRecentPayments.reduce((sum, payment) => sum + (payment.gross_amount || 0), 0);
+      const totalReceived = normalizedRecentPayments.reduce((sum: number, payment: { gross_amount?: number | null }) => sum + (payment.gross_amount || 0), 0);
       alerts.push({
         id: 'recent-asaas-payments',
         type: 'success',

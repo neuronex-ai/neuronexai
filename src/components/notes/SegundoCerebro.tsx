@@ -9,7 +9,7 @@ import {
     DialogDescription
 } from "@/components/ui/dialog";
 import {
-    Search, FileText, Hash, MessageSquare,
+    Search, FileText, Hash,
     Zap, Brain, Target, BookOpen, Clock,
     Plus, ChevronRight, FolderOpen,
     User, Users, ChevronDown, Loader2,

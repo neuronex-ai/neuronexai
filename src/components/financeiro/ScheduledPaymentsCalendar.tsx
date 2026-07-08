@@ -17,12 +17,10 @@ import {
 import { ptBR } from "date-fns/locale";
 import {
   ArrowRight,
-  CalendarClock,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock3,
-  FileText,
   Loader2,
   Receipt,
   Sparkles,

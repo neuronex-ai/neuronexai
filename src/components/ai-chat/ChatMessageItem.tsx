@@ -28,7 +28,7 @@ interface ChatMessageItemProps {
 }
 
 // Global Widget Renderer - Clean & Action-Oriented
-const WidgetRenderer = ({ type, data }: { type: string, data: any }) => {
+export const WidgetRenderer = ({ type, data }: { type: string, data: any }) => {
     const navigate = useNavigate();
 
     const handleNavigate = () => {

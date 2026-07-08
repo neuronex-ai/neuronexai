@@ -325,8 +325,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
     // 4. Animation Loop
     useEffect(() => {
         const animate = () => {
-            timeRef.current += 0.016;
-            const lerpFactor = 0.15;
+            timeRef.current = shouldReduceMotion ? 0 : timeRef.current + 0.016;
+            const lerpFactor = shouldReduceMotion ? 1 : 0.15;
 
             graphData.nodes.forEach((n) => {
                 const baseRadius = n.type === 'patient' ? 6 : (n.type === 'flow' ? 5.2 : (n.type === 'note' ? 4.2 : 2.8));
@@ -345,17 +345,17 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
                 }
 
                 // Breathing effect
-                const breathe = Math.sin(timeRef.current * 2 + (n.id.charCodeAt(0) * 0.1)) * 0.1;
+                const breathe = shouldReduceMotion ? 0 : Math.sin(timeRef.current * 2 + (n.id.charCodeAt(0) * 0.1)) * 0.1;
 
                 n.currentRadius = lerp(n.currentRadius || baseRadius, targetRadius * (1 + breathe * 0.1), lerpFactor);
                 n.currentGlow = lerp(n.currentGlow || baseGlow, targetGlow * (1 + breathe * 0.2), lerpFactor);
-                n.revealProgress = lerp(n.revealProgress ?? 1, n.revealTarget ?? 1, 0.12);
-                n.bloomIntensity = lerp(n.bloomIntensity ?? 0, 0, 0.08);
-                n.dragPulse = lerp(n.dragPulse ?? 0, 0, 0.1);
+                n.revealProgress = shouldReduceMotion ? (n.revealTarget ?? 1) : lerp(n.revealProgress ?? 1, n.revealTarget ?? 1, 0.12);
+                n.bloomIntensity = shouldReduceMotion ? 0 : lerp(n.bloomIntensity ?? 0, 0, 0.08);
+                n.dragPulse = shouldReduceMotion ? 0 : lerp(n.dragPulse ?? 0, 0, 0.1);
             });
 
             graphData.links.forEach((l) => {
-                l.revealProgress = lerp(l.revealProgress ?? 1, l.revealTarget ?? 1, 0.12);
+                l.revealProgress = shouldReduceMotion ? (l.revealTarget ?? 1) : lerp(l.revealProgress ?? 1, l.revealTarget ?? 1, 0.12);
             });
 
             (graphRef.current as any)?.refresh?.();
@@ -366,15 +366,15 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [graphData.nodes, graphData.links, effectiveHoverNode]);
+    }, [graphData.nodes, graphData.links, effectiveHoverNode, shouldReduceMotion]);
 
     // 5. Interaction Handlers
     const handleNodeClick = useCallback((node: GraphNode) => {
         if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
 
         // Smooth camera transition
-        graphRef.current?.centerAt(node.x!, node.y!, 800);
-        graphRef.current?.zoom(3.5, 1000);
+        graphRef.current?.centerAt(node.x!, node.y!, shouldReduceMotion ? 0 : 800);
+        graphRef.current?.zoom(3.5, shouldReduceMotion ? 0 : 1000);
 
         if (node.type === 'patient') {
             setSelectedPatient(node.data);
@@ -389,7 +389,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
                 detail: { flowId: node.data?.id },
             }));
         }
-    }, []);
+    }, [shouldReduceMotion]);
 
     const handleFullscreen = () => {
         if (!containerRef.current) return;
@@ -409,6 +409,25 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
 
         animationTimeoutsRef.current.forEach((timeout) => clearTimeout(timeout));
         animationTimeoutsRef.current = [];
+
+        if (shouldReduceMotion) {
+            graphData.nodes.forEach((n) => {
+                n.currentOpacity = 1;
+                n.revealProgress = 1;
+                n.revealTarget = 1;
+                n.bloomIntensity = 0;
+                n.dragPulse = 0;
+            });
+            graphData.links.forEach((l) => {
+                l.currentOpacity = 1;
+                l.currentWidth = Math.max(l.currentWidth || 0, 0.6);
+                l.revealProgress = 1;
+                l.revealTarget = 1;
+            });
+            fg.d3ReheatSimulation();
+            fg.zoomToFit(0, 80);
+            return;
+        }
 
         const adjacency = new Map<string, string[]>();
         graphData.nodes.forEach((node) => adjacency.set(node.id, []));
@@ -505,7 +524,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
 
         animationTimeoutsRef.current.push(finalTimeout);
 
-    }, [graphData]);
+    }, [graphData, shouldReduceMotion]);
 
 
     const patientNotes = useMemo(() => {
@@ -627,7 +646,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
                     nodeRelSize={4}
                     linkColor={() => "transparent"}
                     linkCanvasObject={handleLinkCanvasObject}
-                    linkDirectionalParticles={effectiveHoverNode ? 2 : 0}
+                    linkDirectionalParticles={!shouldReduceMotion && effectiveHoverNode ? 2 : 0}
                     linkDirectionalParticleWidth={1}
                     linkDirectionalParticleSpeed={0.003}
                     linkDirectionalParticleColor={() => "rgba(255, 255, 255, 0.48)"}
@@ -652,7 +671,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
                     d3VelocityDecay={0.39}
                     cooldownTicks={260}
                     warmupTicks={110}
-                    onEngineStop={() => graphRef.current?.zoomToFit(600, 80)}
+                    onEngineStop={() => graphRef.current?.zoomToFit(shouldReduceMotion ? 0 : 600, 80)}
                 />
             </div>
 
@@ -670,8 +689,10 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
 
             {!isUniverseMode && (
                 <button
+                    type="button"
                     onClick={() => setIsUniverseMode(true)}
-                    className="absolute right-5 top-5 z-40 rounded-[18px] border border-white/[0.1] bg-white/[0.075] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/72 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.12] hover:text-white [.light_&]:border-black/[0.08] [.light_&]:bg-white/72 [.light_&]:text-zinc-700 [.light_&]:shadow-[0_22px_64px_-38px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.65)] [.light_&]:hover:bg-white [.light_&]:hover:text-zinc-950"
+                    className="absolute right-5 top-5 z-40 rounded-[18px] border border-white/[0.1] bg-white/[0.075] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/72 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 [.light_&]:border-black/[0.08] [.light_&]:bg-white/72 [.light_&]:text-zinc-700 [.light_&]:shadow-[0_22px_64px_-38px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.65)] [.light_&]:hover:bg-white [.light_&]:hover:text-zinc-950 [.light_&]:focus-visible:ring-zinc-950/35 [.light_&]:focus-visible:ring-offset-white"
+                    aria-label="Abrir NeuroView em modo 3D"
                 >
                     Modo 3D
                 </button>
