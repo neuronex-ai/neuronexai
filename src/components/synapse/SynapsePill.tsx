@@ -89,11 +89,23 @@ export const SynapsePill = () => {
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
             onMouseEnter={() => setIsHovered(true)}
-            style={{ x: shouldReduceMotion ? 0 : magneticX, y: shouldReduceMotion ? 0 : magneticY }}
-            initial={shouldReduceMotion ? false : { scale: 0.96, opacity: 0, y: 8 }}
+            style={{ 
+                x: shouldReduceMotion ? 0 : magneticX, 
+                y: shouldReduceMotion ? 0 : magneticY,
+                willChange: "transform, opacity, width"
+            }}
+            layout
+            initial={shouldReduceMotion ? false : { scale: 0.9, opacity: 0, y: 14 }}
             animate={{ scale: 1, opacity: 1, y: 0, width }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0, y: 8 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34, width: { type: "spring", stiffness: 300, damping: 30 } }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { scale: 0.85, opacity: 0, y: 20 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { 
+                type: "spring", 
+                stiffness: 400, 
+                damping: 34,
+                mass: 0.8,
+                width: { type: "spring", stiffness: 350, damping: 30, mass: 0.9 },
+                layout: { type: "spring", stiffness: 400, damping: 34 }
+            }}
             className={cn(
                 "notes-liquid-surface group relative flex h-14 items-center gap-1 overflow-hidden rounded-full border p-1.5 backdrop-blur-3xl",
                 "shadow-[0_18px_58px_-38px_hsl(var(--foreground)/0.42)]",
@@ -130,9 +142,10 @@ export const SynapsePill = () => {
                     <motion.button
                         key="voice-active"
                         type="button"
-                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.8 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
+                        transition={{ duration: 0.2, ease: "easeOut" }}
                         onClick={() => {
                             setActiveTab("voice");
                             setShellState("compact");

@@ -394,22 +394,23 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
+                style={{ willChange: "transform, opacity, filter" }}
                 initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9, y: 20, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
                 exit={shouldReduceMotion ? { opacity: 0 } : {
                     opacity: 0,
-                    scale: 0.94,
+                    scale: 0.92,
                     y: 12,
                     filter: 'blur(8px)',
                     transition: {
-                        duration: 0.18,
+                        duration: 0.22,
                         ease: [0.32, 0, 0.67, 0],
                     }
                 }}
                 transition={shouldReduceMotion ? { duration: 0 } : {
                     type: 'spring',
-                    stiffness: 450,
-                    damping: 38,
+                    stiffness: 400,
+                    damping: 34,
                     mass: 1,
                 }}
                 className={cn(
