@@ -225,7 +225,7 @@ export function useSynapseCascadeVoice({
       await playNeuralAudio(data.audioBase64, data.mimeType || "audio/mpeg");
       return spokenText;
     } catch (caught) {
-      console.warn("[Synapse Voice] Azure TTS indisponível; usando voz local.", caught);
+      console.warn("[Synapse Voice] Voz neural indisponível; usando voz local.", caught);
       spokenText = cleanForSpeech(spokenText) || fallbackText;
       setLastResponse(spokenText);
       onResponseText?.(spokenText);
@@ -373,6 +373,7 @@ export function useSynapseCascadeVoice({
       const blob = await recordSpeechTurn({
         signal: controller.signal,
         onLevel: updateAudioLevel,
+        noiseSuppression: import.meta.env.VITE_SYNAPSE_VOICE_NOISE_SUPPRESSION === "true",
       });
       if (blob && !controller.signal.aborted) await transcribeAudio(blob);
     } catch (caught) {
@@ -429,58 +430,35 @@ export function useSynapseCascadeVoice({
     setIsProcessing(false);
   }, [stopInput, stopSpeech]);
 
-  const toggleListening = useCallback(() => {
-    if (!activeRef.current) {
-      void startSession();
-      return;
-    }
-
-    const next = !listeningEnabledRef.current;
-    listeningEnabledRef.current = next;
-    setListeningEnabled(next);
-
-    if (!next) {
-      stopInput();
-      return;
-    }
-
-    if (!processingRef.current && !isSpeaking) {
-      if (recognition.isSupported) startListeningRef.current();
-      else void startWhisperFallback();
-    }
-  }, [isSpeaking, recognition.isSupported, startSession, startWhisperFallback, stopInput]);
-
-  useEffect(() => () => {
-    activeRef.current = false;
-    listeningEnabledRef.current = false;
-    processingRef.current = false;
-    stopListeningRef.current();
-    recorderAbortRef.current?.abort();
-    recorderAbortRef.current = null;
-    clearAudioElement();
-    if (typeof window !== "undefined" && "speechSynthesis" in window) window.speechSynthesis.cancel();
-  }, [clearAudioElement]);
-
-  const isListening = listeningEnabled && (
-    recognition.isSupported ? recognition.isListening : fallbackListening
-  );
-
   return {
     isConnected,
     isSpeaking,
-    isListening,
+    isListening: listeningEnabled && (recognition.isListening || fallbackListening),
     isProcessing,
     audioIntensity,
     getAudioVolume: () => volumeRef.current,
-    transcript: recognition.interimTranscript || recognition.transcript,
+    transcript: recognition.transcript,
     lastResponse,
     startSession,
     endSession,
-    toggleListening,
+    toggleListening: () => {
+      if (listeningEnabledRef.current) {
+        listeningEnabledRef.current = false;
+        setListeningEnabled(false);
+        stopInput();
+      } else {
+        listeningEnabledRef.current = true;
+        setListeningEnabled(true);
+        if (activeRef.current) {
+          if (recognition.isSupported) startListeningRef.current();
+          else void startWhisperFallback();
+        }
+      }
+    },
     sendTextMessage: (text: string) => void submitTranscript(text),
-    error,
-    provider: "free-cascade" as const,
-    inputProvider: recognition.isSupported ? "device" as const : "groq-whisper" as const,
-    outputProvider: "azure-speech" as const,
+    error: error || recognition.error,
+    provider: "legacy-cascade" as const,
+    inputProvider: recognition.isSupported ? "browser-speech" : "deepgram-stt-fallback",
+    outputProvider: "neural-or-local-speech",
   };
 }
