@@ -1,5 +1,5 @@
 import React from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { User, ArrowUpRight, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -20,7 +20,6 @@ interface PatientMiniCardProps {
 
 export const PatientMiniCard = ({ patient, index = 0 }: PatientMiniCardProps) => {
     const navigate = useNavigate();
-    const shouldReduceMotion = useReducedMotion();
 
     const handleClick = () => {
         navigate(`/pacientes/${patient.id}`);
@@ -29,37 +28,35 @@ export const PatientMiniCard = ({ patient, index = 0 }: PatientMiniCardProps) =>
     const getStatusColor = (status?: string) => {
         switch (status) {
             case 'active': return 'bg-emerald-500';
-            case 'inactive': return 'bg-muted-foreground/55';
+            case 'inactive': return 'bg-zinc-500';
             case 'pending': return 'bg-amber-500';
-            default: return 'bg-muted-foreground/55';
+            default: return 'bg-zinc-500';
         }
     };
 
     return (
         <motion.button
-            type="button"
-            initial={shouldReduceMotion ? false : { opacity: 0, x: -14 }}
+            initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { delay: index * 0.04, duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ delay: index * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
             onClick={handleClick}
-            aria-label={`Abrir prontuário de ${patient.name}`}
             className={cn(
-                "group flex w-[min(280px,78vw)] flex-shrink-0 cursor-pointer items-center gap-3 rounded-[18px] border p-3 text-left",
-                "border-foreground/[0.085] bg-background/72 shadow-[0_14px_36px_-30px_hsl(var(--foreground)/0.42)] backdrop-blur-xl",
-                "hover:border-foreground/[0.14] hover:bg-background/88",
-                "dark:border-white/[0.075] dark:bg-white/[0.045] dark:hover:bg-white/[0.07]",
-                "transition-all duration-300 ease-apple active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100"
+                "flex-shrink-0 w-[280px] flex items-center gap-3 p-3 rounded-[16px] text-left",
+                "bg-white/[0.03] border border-white/[0.06]",
+                "hover:bg-white/[0.06] hover:border-white/[0.1] hover:scale-[1.02]",
+                "transition-all duration-300 ease-apple group",
+                "active:scale-[0.98] cursor-pointer"
             )}
         >
             {/* Avatar */}
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-foreground/[0.085] bg-muted/45 transition-colors group-hover:bg-muted dark:border-white/[0.075] dark:bg-white/[0.06]">
-                <User className="h-4 w-4 text-muted-foreground group-hover:text-foreground" />
+            <div className="h-10 w-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shrink-0 group-hover:bg-white/[0.08] transition-colors">
+                <User className="h-4 w-4 text-zinc-400 group-hover:text-zinc-300" />
             </div>
 
             {/* Info */}
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <span className="truncate text-xs font-semibold text-foreground">
+                    <span className="text-xs font-semibold text-white truncate">
                         {patient.name}
                     </span>
                     {patient.status && (
@@ -69,7 +66,7 @@ export const PatientMiniCard = ({ patient, index = 0 }: PatientMiniCardProps) =>
 
                 <div className="flex items-center gap-2 mt-0.5">
                     {patient.phone && (
-                        <span className="flex items-center gap-1 text-[9px] text-muted-foreground">
+                        <span className="text-[9px] text-zinc-500 flex items-center gap-1">
                             <Phone className="h-2 w-2" />
                             {patient.phone}
                         </span>
@@ -78,8 +75,8 @@ export const PatientMiniCard = ({ patient, index = 0 }: PatientMiniCardProps) =>
             </div>
 
             {/* Arrow */}
-            <div className="opacity-50 transition-all duration-300 group-hover:opacity-100">
-                <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground group-hover:text-foreground" />
+            <div className="opacity-50 group-hover:opacity-100 transition-all duration-300">
+                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-500 group-hover:text-white" />
             </div>
         </motion.button>
     );
@@ -91,8 +88,6 @@ interface PatientListWidgetProps {
 }
 
 export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: PatientListWidgetProps) => {
-    const navigate = useNavigate();
-    const shouldReduceMotion = useReducedMotion();
     const showViewAll = patients.length > 5;
     const displayPatients = showViewAll ? patients.slice(0, 5) : patients;
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -134,22 +129,22 @@ export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: Pa
 
     return (
         <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+            initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            className="notes-liquid-surface my-6 overflow-hidden rounded-[26px] border shadow-xl"
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+            className="my-6 rounded-[24px] bg-[#0A0A0B] border border-white/[0.06] overflow-hidden shadow-xl"
         >
             {/* Header */}
-            <div className="flex items-center justify-between border-b border-foreground/[0.07] px-5 py-4 dark:border-white/[0.055]">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.05] bg-white/[0.01]">
                 <div className="flex items-center gap-2.5">
-                    <div className="rounded-lg border border-foreground/[0.085] bg-muted/45 p-1.5 dark:border-white/[0.075] dark:bg-white/[0.06]">
-                        <User className="h-3.5 w-3.5 text-muted-foreground" />
+                    <div className="p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08]">
+                        <User className="h-3.5 w-3.5 text-zinc-400" />
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">
                         {title}
                     </span>
                 </div>
-                <span className="text-[10px] font-mono text-muted-foreground/70">
+                <span className="text-[10px] font-mono text-zinc-600">
                     {patients.length} {patients.length === 1 ? 'paciente' : 'pacientes'}
                 </span>
             </div>
@@ -157,10 +152,10 @@ export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: Pa
             {/* Horizontal Scrollable Patient List */}
             <div className="relative group/scroll">
                 {/* Gradient fade on left edge */}
-                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-background/80 to-transparent opacity-0 transition-opacity group-hover/scroll:opacity-100" />
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0A0A0B] to-transparent z-10 pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
 
                 {/* Gradient fade on right edge */}
-                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-background/80 to-transparent opacity-0 transition-opacity group-hover/scroll:opacity-100" />
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0A0A0B] to-transparent z-10 pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
 
                 <div
                     ref={scrollContainerRef}
@@ -168,11 +163,11 @@ export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: Pa
                     onMouseMove={handleMouseMove}
                     onMouseUp={handleMouseUp}
                     onMouseLeave={handleMouseLeave}
-                    className="flex select-none gap-3 overflow-x-auto snap-x snap-mandatory p-4 scroll-smooth motion-reduce:scroll-auto"
+                    className="flex gap-3 p-4 overflow-x-auto snap-x snap-mandatory scroll-smooth select-none"
                     style={{
                         cursor: 'grab',
                         scrollbarWidth: 'thin',
-                        scrollbarColor: 'hsl(var(--muted-foreground) / 0.22) transparent'
+                        scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent'
                     }}
                 >
                     {displayPatients.map((patient, index) => (
@@ -184,37 +179,32 @@ export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: Pa
                     {/* View All Card */}
                     {showViewAll && (
                         <motion.div
-                            initial={shouldReduceMotion ? false : { opacity: 0, x: -14 }}
+                            initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={shouldReduceMotion ? { duration: 0 } : { delay: displayPatients.length * 0.04, duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+                            transition={{ delay: displayPatients.length * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
                             className="flex-shrink-0 w-[280px] snap-start"
                         >
-                            <button
-                                type="button"
-                                onClick={() => navigate("/pacientes")}
-                                className="group/viewall flex h-full w-full cursor-pointer items-center justify-center rounded-[18px] border border-dashed border-foreground/[0.14] bg-background/40 p-3 text-center transition-all hover:bg-background/72 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.12] dark:bg-white/[0.035]"
-                                aria-label={`Ver todos os ${patients.length} pacientes`}
-                            >
+                            <div className="h-full flex items-center justify-center p-3 rounded-[16px] border border-dashed border-white/[0.1] bg-white/[0.01] hover:bg-white/[0.03] transition-all cursor-pointer group/viewall">
                                 <div className="text-center">
-                                    <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-foreground/[0.085] bg-muted/45 transition-colors group-hover/viewall:bg-muted dark:border-white/[0.075] dark:bg-white/[0.06]">
-                                        <ArrowUpRight className="h-4 w-4 text-muted-foreground group-hover/viewall:text-foreground" />
+                                    <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-2 group-hover/viewall:bg-white/[0.06] transition-colors">
+                                        <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover/viewall:text-zinc-300" />
                                     </div>
-                                    <p className="text-[10px] font-medium text-muted-foreground">
+                                    <p className="text-[10px] text-zinc-500 font-medium">
                                         Ver todos ({patients.length})
                                     </p>
                                 </div>
-                            </button>
+                            </div>
                         </motion.div>
                     )}
                 </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between border-t border-foreground/[0.07] px-4 py-2 dark:border-white/[0.055]">
-                <span className="text-[9px] font-medium uppercase tracking-wider text-muted-foreground/70">
+            <div className="px-4 py-2 bg-[#050505] border-t border-white/[0.05] flex justify-between items-center">
+                <span className="text-[9px] text-zinc-600 font-medium uppercase tracking-wider">
                     Arraste para ver mais • Clique para abrir prontuário
                 </span>
-                <div className="h-1 w-1 rounded-full bg-emerald-500/50 motion-safe:animate-pulse" />
+                <div className="h-1 w-1 rounded-full bg-emerald-500/50 animate-pulse" />
             </div>
         </motion.div>
     );

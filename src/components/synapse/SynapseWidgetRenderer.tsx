@@ -13,28 +13,25 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
-import {
-  firstString,
-  isRecord,
-  normalizeSynapseDataArray as normalizeDataArray,
-  normalizeSynapseWidgetType as normalizeType,
-  parseSynapseWidgetFromContent,
-  unwrapSynapseToolResponse as unwrapToolResponse,
-  type SynapseWidgetData,
-} from "@/lib/synapse-widget-parser";
 
-export { parseSynapseWidgetFromContent } from "@/lib/synapse-widget-parser";
+type SynapseWidgetData = {
+  __actionType?: string;
+  type?: string;
+  data?: unknown;
+  payload?: unknown;
+  title?: string;
+};
 
 interface SynapseWidgetProps {
   widgetData: SynapseWidgetData;
   compact?: boolean;
 }
 
-const widgetRowClassName =
-  "group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-foreground/[0.075] bg-background/58 p-3.5 text-left shadow-[inset_0_1px_0_hsl(var(--background)/0.55)] transition active:scale-[0.985] hover:bg-muted/55 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]";
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
 
-const widgetIconClassName =
-  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-foreground/[0.075] bg-muted/55 text-muted-foreground shadow-inner dark:border-white/[0.06] dark:bg-white/[0.055]";
+const firstString = (...values: unknown[]) =>
+  values.find((value): value is string => typeof value === "string" && value.trim().length > 0);
 
 const toBrazilTime = (iso?: unknown) => {
   if (typeof iso !== "string") return "";
@@ -54,6 +51,79 @@ const toBrazilTime = (iso?: unknown) => {
 const formatCurrency = (value: unknown) => {
   const amount = typeof value === "number" ? value : Number(value || 0);
   return amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+};
+
+const normalizeType = (type?: string) =>
+  (type || "synapse_action")
+    .replace(/_widget$/i, "")
+    .replace(/_response$/i, "")
+    .toLowerCase();
+
+const unwrapToolResponse = (value: unknown): SynapseWidgetData | null => {
+  if (!isRecord(value)) return null;
+  const directType = firstString(value.__actionType, value.type);
+  if (directType) return value as SynapseWidgetData;
+
+  const responseEntry = Object.entries(value).find(([key]) => key.endsWith("_response"));
+  if (!responseEntry) return null;
+
+  const [responseKey, responseValue] = responseEntry;
+  const response = isRecord(responseValue) ? responseValue : {};
+  const content = isRecord(response.content) ? response.content : response;
+  const data =
+    (isRecord(content.appointment) && content.appointment) ||
+    (isRecord(content.patient) && content.patient) ||
+    (isRecord(content.invoice) && content.invoice) ||
+    content;
+
+  return {
+    __actionType: responseKey.replace(/_response$/i, ""),
+    data,
+    title: firstString(content.message, response.message),
+  };
+};
+
+export const parseSynapseWidgetFromContent = (content: string): {
+  cleanContent: string;
+  widgetData: SynapseWidgetData | null;
+} => {
+  const trimmed = content.trim();
+
+  const fromRawJson = (() => {
+    if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return null;
+    try {
+      return unwrapToolResponse(JSON.parse(trimmed));
+    } catch {
+      return null;
+    }
+  })();
+
+  if (fromRawJson) return { cleanContent: "", widgetData: fromRawJson };
+
+  const fencePattern = /```(?:json)?\s*([\s\S]*?)```/gi;
+  let widgetData: SynapseWidgetData | null = null;
+  const cleanContent = content.replace(fencePattern, (fullMatch, jsonCandidate) => {
+    if (widgetData) return fullMatch;
+    try {
+      widgetData = unwrapToolResponse(JSON.parse(String(jsonCandidate).trim()));
+      return widgetData ? "" : fullMatch;
+    } catch {
+      return fullMatch;
+    }
+  }).trim();
+
+  return { cleanContent, widgetData };
+};
+
+const normalizeDataArray = (rawData: unknown): unknown[] => {
+  if (Array.isArray(rawData)) return rawData;
+  if (!isRecord(rawData)) return rawData ? [rawData] : [];
+  if (Array.isArray(rawData.items)) return rawData.items;
+  if (Array.isArray(rawData.results)) return rawData.results;
+  if (Array.isArray(rawData.data)) return rawData.data;
+  if (Array.isArray(rawData.patients)) return rawData.patients;
+  if (Array.isArray(rawData.appointments)) return rawData.appointments;
+  return [rawData];
 };
 
 const getEntityId = (data: unknown, type: string) => {
@@ -151,23 +221,23 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
           <button
             key={firstString(patient.id, patient.patient_id) || index}
             onClick={() => openTarget(patient)}
-            className={widgetRowClassName}
+            className="group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 text-left transition active:scale-[0.985] hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]"
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className={cn("relative", widgetIconClassName)}>
+              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-200 text-zinc-600 dark:bg-white/[0.07] dark:text-zinc-300">
                 <User className="h-4 w-4" />
-                <span className={cn("absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-background", patient.status === "inactive" ? "bg-amber-500" : "bg-emerald-500")} />
+                <span className={cn("absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-zinc-50 dark:border-[#0a0a0c]", patient.status === "inactive" ? "bg-amber-500" : "bg-emerald-500")} />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">
+                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
                   {firstString(patient.name, patient.patient_name) || "Paciente"}
                 </p>
-                <p className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground">
+                <p className="mt-0.5 truncate text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
                   {firstString(patient.email, patient.phone, patient.diagnosis) || "Abrir detalhes"}
                 </p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/45 transition group-hover/item:translate-x-0.5 group-hover/item:text-foreground motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover/item:translate-x-0.5 dark:text-zinc-500" />
           </button>
         );
       })}
@@ -195,25 +265,25 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
             key={firstString(appointment.id, appointment.appointment_id) || index}
             onClick={() => openTarget(appointment)}
             className={cn(
-              widgetRowClassName,
+              "group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 text-left transition active:scale-[0.985] hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
               isCancelledAppointmentStatus(status, firstString(appointment.notes)) && "opacity-60",
             )}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className={widgetIconClassName}>
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
                 {appointmentType === "online" ? <Stethoscope className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">
+                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
                   {patientName}
                 </p>
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
-                  {time ? <span className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">{time}</span> : null}
+                  {time ? <span className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">{time}</span> : null}
                   <StatusBadge status={status} notes={firstString(appointment.notes)} />
                 </div>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/45 transition group-hover/item:translate-x-0.5 group-hover/item:text-foreground motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover/item:translate-x-0.5 dark:text-zinc-500" />
           </button>
         );
       })}
@@ -228,13 +298,10 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
     ];
 
     return (
-      <button
-        onClick={() => openTarget(data)}
-        className="grid w-full grid-cols-2 gap-2 text-left transition active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100"
-      >
+      <button onClick={() => openTarget(data)} className="grid w-full grid-cols-2 gap-2 text-left transition active:scale-[0.985]">
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-2xl border border-foreground/[0.075] bg-background/58 p-3.5 shadow-[inset_0_1px_0_hsl(var(--background)/0.55)] dark:border-white/[0.07] dark:bg-white/[0.035]">
-            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">{metric.label}</p>
+          <div key={metric.label} className="rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 dark:border-white/[0.07] dark:bg-white/[0.035]">
+            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">{metric.label}</p>
             <p className={cn("mt-1 truncate text-[15px] font-black tracking-[-0.03em]", metric.color)}>{formatCurrency(metric.value)}</p>
           </div>
         ))}
@@ -247,20 +314,20 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
     return (
       <button
         onClick={() => openTarget(data)}
-        className={widgetRowClassName}
+        className="group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 text-left transition active:scale-[0.985] hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]"
       >
         <div className="flex min-w-0 items-center gap-3">
-          <div className={widgetIconClassName}>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-200 text-zinc-700 dark:bg-white/[0.07] dark:text-zinc-200">
             <CheckCircle2 className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Executado</p>
-            <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">
+            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500 dark:text-zinc-400">Executado</p>
+            <p className="truncate text-[13px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
               {actionLabel(type)}
             </p>
           </div>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/45 transition group-hover/item:translate-x-0.5 group-hover/item:text-foreground motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover/item:translate-x-0.5 dark:text-zinc-500" />
       </button>
     );
   };
@@ -293,21 +360,21 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
 
   return (
     <div className={cn(
-      "notes-liquid-surface my-3 overflow-hidden rounded-[22px] border shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.55)]",
+      "my-3 overflow-hidden rounded-[22px] border border-zinc-200/70 bg-white shadow-[0_18px_55px_-45px_rgba(0,0,0,0.75)] dark:border-white/[0.08] dark:bg-[#0a0a0c]",
       compact && "rounded-[18px]",
     )}>
-      <div className="flex items-center gap-2.5 border-b border-foreground/[0.07] px-4 py-3 dark:border-white/[0.055]">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-foreground/[0.075] bg-muted/55 text-muted-foreground dark:border-white/[0.06] dark:bg-white/[0.055]">
+      <div className="flex items-center gap-2.5 border-b border-zinc-100 px-4 py-3 dark:border-white/[0.05]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-white/[0.07] dark:text-zinc-200">
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{headerLabel}</p>
-          <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-foreground">
+          <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{headerLabel}</p>
+          <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
             {firstString(normalizedWidget.title) || actionLabel(type)}
           </p>
         </div>
         {dataArray.length > 1 ? (
-          <span className="ml-auto rounded-full border border-foreground/[0.075] bg-muted/55 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.06] dark:bg-white/[0.055]">
+          <span className="ml-auto rounded-full bg-zinc-100 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-zinc-500 dark:bg-white/[0.07] dark:text-zinc-400">
             {dataArray.length}
           </span>
         ) : null}

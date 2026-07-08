@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { FileText, Download, Mail, Loader2, ZoomIn, ZoomOut, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,6 @@ export const PDFPreviewCard = ({
 }: PDFPreviewCardProps) => {
     const [blobUrl, setBlobUrl] = useState<string | null>(null);
     const [internalLoading, setInternalLoading] = useState(true);
-    const shouldReduceMotion = useReducedMotion();
     const isLoading = externalLoading || internalLoading;
     const [zoom, setZoom] = useState(100);
     const [isExpanded, setIsExpanded] = useState(false);
@@ -57,33 +56,34 @@ export const PDFPreviewCard = ({
 
     return (
         <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.97, y: 14 }}
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={shouldReduceMotion ? { duration: 0 } : {
+            transition={{
                 type: "spring",
                 stiffness: 300,
                 damping: 30,
                 delay: 0.1
             }}
             className={cn(
-                "notes-liquid-surface group relative my-6 overflow-hidden rounded-[26px] border shadow-2xl",
+                "my-6 rounded-[24px] border border-white/[0.06] bg-[#080808] overflow-hidden shadow-2xl",
+                "backdrop-blur-xl relative group",
                 isExpanded && "fixed inset-4 z-50 my-0"
             )}
         >
             {/* Premium gradient border effect */}
-            <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-[linear-gradient(135deg,hsl(var(--foreground)/0.04),transparent_44%)] opacity-0 transition-opacity group-hover:opacity-100" />
+            <div className="absolute inset-0 rounded-[24px] bg-gradient-to-br from-white/[0.03] via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
             {/* Header */}
-            <div className="relative z-10 flex items-center justify-between gap-3 border-b border-foreground/[0.07] px-5 py-4 dark:border-white/[0.055] sm:px-6">
+            <div className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-white/[0.04] bg-white/[0.01]">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-foreground/[0.085] bg-muted/45 dark:border-white/[0.075] dark:bg-white/[0.06]">
-                        <FileText className="h-5 w-5 text-muted-foreground" />
+                    <div className="h-10 w-10 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
+                        <FileText className="h-5 w-5 text-red-400" />
                     </div>
-                    <div className="min-w-0">
-                        <h4 className="truncate text-sm font-bold tracking-tight text-foreground">
+                    <div>
+                        <h4 className="text-sm font-bold text-white tracking-tight">
                             {title || "Documento PDF"}
                         </h4>
-                        <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">
+                        <p className="text-[10px] text-zinc-500 font-mono mt-0.5">
                             {filename}
                         </p>
                     </div>
@@ -91,18 +91,17 @@ export const PDFPreviewCard = ({
 
                 <div className="flex items-center gap-2">
                     {/* Zoom controls */}
-                    <div className="flex items-center gap-1 rounded-lg border border-foreground/[0.085] bg-background/55 px-2 py-1 dark:border-white/[0.075] dark:bg-white/[0.045]">
+                    <div className="flex items-center gap-1 px-2 py-1 rounded-lg bg-white/[0.03] border border-white/[0.05]">
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={handleZoomOut}
                             disabled={zoom <= 50}
-                            className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
-                            aria-label="Diminuir zoom"
+                            className="h-7 w-7 rounded-md hover:bg-white/[0.08] text-zinc-400 hover:text-white disabled:opacity-30"
                         >
                             <ZoomOut className="h-3.5 w-3.5" />
                         </Button>
-                        <span className="min-w-[40px] text-center font-mono text-[10px] text-muted-foreground">
+                        <span className="text-[10px] text-zinc-500 font-mono min-w-[40px] text-center">
                             {zoom}%
                         </span>
                         <Button
@@ -110,8 +109,7 @@ export const PDFPreviewCard = ({
                             size="icon"
                             onClick={handleZoomIn}
                             disabled={zoom >= 200}
-                            className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30"
-                            aria-label="Aumentar zoom"
+                            className="h-7 w-7 rounded-md hover:bg-white/[0.08] text-zinc-400 hover:text-white disabled:opacity-30"
                         >
                             <ZoomIn className="h-3.5 w-3.5" />
                         </Button>
@@ -123,9 +121,8 @@ export const PDFPreviewCard = ({
                         size="icon"
                         onClick={handleDownload}
                         disabled={!blobUrl}
-                        className="h-8 w-8 rounded-lg border border-foreground/[0.085] text-muted-foreground hover:bg-muted hover:text-foreground dark:border-white/[0.075]"
+                        className="h-8 w-8 rounded-lg hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.05]"
                         title="Baixar PDF"
-                        aria-label="Baixar PDF"
                     >
                         <Download className="h-4 w-4" />
                     </Button>
@@ -136,12 +133,11 @@ export const PDFPreviewCard = ({
                             size="icon"
                             onClick={onSendEmail}
                             disabled={isLoadingEmail || !blobUrl}
-                            className="h-8 w-8 rounded-lg border border-foreground/[0.085] text-muted-foreground transition-all hover:bg-muted hover:text-foreground dark:border-white/[0.075]"
+                            className="h-8 w-8 rounded-lg hover:bg-indigo-500/20 text-indigo-400 hover:text-indigo-300 border border-indigo-500/20 hover:border-indigo-500/30 transition-all"
                             title="Enviar por Email"
-                            aria-label="Enviar PDF por e-mail"
                         >
                             {isLoadingEmail ? (
-                                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                                <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (
                                 <Mail className="h-4 w-4" />
                             )}
@@ -153,8 +149,7 @@ export const PDFPreviewCard = ({
                             variant="ghost"
                             size="icon"
                             onClick={() => setIsExpanded(false)}
-                            className="h-8 w-8 rounded-lg border border-foreground/[0.085] text-muted-foreground hover:bg-muted hover:text-foreground dark:border-white/[0.075]"
-                            aria-label="Fechar preview expandido"
+                            className="h-8 w-8 rounded-lg hover:bg-white/[0.08] text-zinc-400 hover:text-white border border-white/[0.05]"
                         >
                             <X className="h-4 w-4" />
                         </Button>
@@ -165,20 +160,20 @@ export const PDFPreviewCard = ({
             {/* PDF Preview */}
             <div
                 className={cn(
-                    "custom-scrollbar relative overflow-auto bg-muted/35 dark:bg-black/35",
+                    "relative bg-zinc-950 overflow-auto custom-scrollbar",
                     isExpanded ? "h-[calc(100vh-120px)]" : "max-h-[600px]"
                 )}
                 style={{
                     transform: `scale(${zoom / 100})`,
                     transformOrigin: 'top center',
-                    transition: shouldReduceMotion ? 'none' : 'transform 0.2s ease-out'
+                    transition: 'transform 0.2s ease-out'
                 }}
             >
                 {isLoading ? (
                     <div className="flex items-center justify-center h-96">
                         <div className="flex flex-col items-center gap-3">
-                            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground motion-reduce:animate-none" />
-                            <p className="text-sm font-medium text-muted-foreground">Carregando PDF...</p>
+                            <Loader2 className="h-8 w-8 animate-spin text-zinc-600" />
+                            <p className="text-sm text-zinc-600 font-medium">Carregando PDF...</p>
                         </div>
                     </div>
                 ) : blobUrl ? (
@@ -194,26 +189,24 @@ export const PDFPreviewCard = ({
                 ) : (
                     <div className="flex items-center justify-center h-96">
                         <div className="flex flex-col items-center gap-3">
-                            <FileText className="h-12 w-12 text-muted-foreground/45" />
-                            <p className="text-sm font-medium text-muted-foreground">PDF não disponível</p>
+                            <FileText className="h-12 w-12 text-zinc-700" />
+                            <p className="text-sm text-zinc-600 font-medium">PDF não disponível</p>
                         </div>
                     </div>
                 )}
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between border-t border-foreground/[0.07] px-5 py-3 dark:border-white/[0.055] sm:px-6">
+            <div className="px-6 py-3 bg-[#0A0A0B] border-t border-white/[0.04] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 motion-safe:animate-pulse" />
-                    <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground/70">
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500/50 animate-pulse" />
+                    <span className="text-[9px] text-zinc-600 font-mono uppercase tracking-wider">
                         Preview Ativo
                     </span>
                 </div>
                 <button
-                    type="button"
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground transition-colors hover:text-foreground"
-                    aria-label={isExpanded ? "Minimizar preview" : "Expandir preview"}
+                    className="text-[9px] text-zinc-500 hover:text-zinc-300 font-mono uppercase tracking-wider transition-colors"
                 >
                     {isExpanded ? "Minimizar" : "Expandir"}
                 </button>
