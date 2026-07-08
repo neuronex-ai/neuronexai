@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { useSynapse } from "@/context/SynapseProvider";
 import "@/styles/synapse-agent.css";
@@ -34,9 +34,34 @@ export const SynapseGlobalShell = () => {
     return (
         <>
             <SynapseScreenAgentOverlay />
-            <div className="fixed bottom-6 right-6 flex flex-col items-end gap-3" style={{ zIndex: 9990 }}>
+            <div
+                className="fixed bottom-6 right-6 flex items-end"
+                style={{ zIndex: 9990 }}
+            >
                 <AnimatePresence initial={false} mode="wait">
-                    {shellState === "compact" ? <SynapseCompactPanel key="compact" /> : <SynapsePill key="pill" />}
+                    {shellState === "compact" ? (
+                        <motion.div
+                            key="compact"
+                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            style={{ transformOrigin: "bottom right" }}
+                        >
+                            <SynapseCompactPanel />
+                        </motion.div>
+                    ) : (
+                        <motion.div
+                            key="pill"
+                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
+                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            style={{ transformOrigin: "bottom right" }}
+                        >
+                            <SynapsePill />
+                        </motion.div>
+                    )}
                 </AnimatePresence>
             </div>
         </>
