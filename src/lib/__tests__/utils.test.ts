@@ -13,8 +13,8 @@ describe('cn', () => {
     });
 
     it('deve aceitar condicionais (clsx)', () => {
-        const shouldHide = false;
-        const shouldShow = true;
+        const shouldHide = Boolean(0);
+        const shouldShow = Boolean(1);
         const result = cn('base', shouldHide && 'hidden', shouldShow && 'visible');
         expect(result).toContain('base');
         expect(result).toContain('visible');
