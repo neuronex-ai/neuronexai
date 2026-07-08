@@ -209,8 +209,9 @@ const parsePatientList = (content: string): { patients: PatientCardData[], raw: 
 };
 
 const parseMarkdownTable = (content: string) => {
+    const separatorChars = ["-", ":", "\\s", "|"].join("");
     const tablePattern = new RegExp(
-        "\\|(.+)\\|\\n\\|" + "[-:\\s|]+" + "\\|\\n((?:\\|.+\\|\\n?)+)",
+        "\\|(.+)\\|\\n\\|[" + separatorChars + "]+\\|\\n((?:\\|.+\\|\\n?)+)",
         "g",
     );
     const match = tablePattern.exec(content);
