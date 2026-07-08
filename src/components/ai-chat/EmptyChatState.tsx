@@ -1,8 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { Calendar, Wallet, FileText, Sparkles } from "lucide-react";
-import { motion } from "framer-motion";
+import { BrainCircuit, Calendar, Wallet, FileText, Sparkles } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 
 const SUGGESTIONS = [
   { text: "Resumo executivo da agenda", icon: Calendar, delay: 0 },
@@ -15,66 +15,39 @@ interface EmptyChatStateProps {
   onSuggestionClick: (text: string) => void;
 }
 
-const OrbCore = () => {
+const SynapsePromptMark = () => {
   return (
-    <div className="relative w-24 h-24 flex items-center justify-center">
-      {/* Outer Glow - Monochromatic */}
-      <div className="absolute inset-0 bg-white/[0.03] blur-2xl rounded-full" />
-
-      {/* Main Orb Body - Monochromatic Glass */}
-      <div className="relative w-16 h-16 rounded-full bg-gradient-to-b from-zinc-800 to-black shadow-[0_0_30px_-5px_rgba(255,255,255,0.05)] border border-white/10 flex items-center justify-center overflow-hidden">
-
-        {/* Top Highlight */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-10 h-6 bg-white/[0.04] blur-lg rounded-full" />
-
-        {/* Inner Core Pulsing Dot - Monochromatic */}
-        <motion.div
-          animate={{ scale: [1, 1.15, 1], opacity: [0.7, 0.9, 0.7] }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="w-2 h-2 bg-white rounded-full shadow-[0_0_12px_2px_rgba(255,255,255,0.3)]"
-        />
-
-        {/* Premium Noise Texture */}
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
-          className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-cover mix-blend-overlay"
-        />
+    <div className="relative flex h-20 w-20 items-center justify-center rounded-[26px] border border-border/55 bg-background/82 shadow-[0_22px_58px_-42px_hsl(var(--foreground)/0.55),inset_0_1px_0_hsl(var(--background))] backdrop-blur-2xl dark:border-white/[0.085] dark:bg-white/[0.052] dark:shadow-[0_24px_64px_-42px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="pointer-events-none absolute inset-0 rounded-[26px] bg-[linear-gradient(135deg,hsl(var(--background)/0.58),transparent_44%),radial-gradient(circle_at_50%_0%,hsl(var(--foreground)/0.04),transparent_60%)] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent_44%),radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.055),transparent_60%)]" />
+      <div className="relative flex h-12 w-12 items-center justify-center rounded-[18px] border border-border/50 bg-muted/45 text-foreground dark:border-white/[0.08] dark:bg-white/[0.06]">
+        <BrainCircuit className="h-5 w-5" strokeWidth={1.7} />
       </div>
-
-      {/* Orbiting Dot - Monochromatic */}
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 10, ease: "linear", repeat: Infinity }}
-        className="absolute w-full h-full rounded-full"
-      >
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-white/[0.15] rounded-full blur-[0.5px]" />
-      </motion.div>
     </div>
   );
 };
 
 export const EmptyChatState = ({ onSuggestionClick }: EmptyChatStateProps) => {
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <div className="flex flex-col items-center justify-center w-full h-full flex-1 text-center relative z-10 overflow-hidden min-h-[600px] px-4 pb-32">
 
       {/* Hero Section */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 1, ease: "easeOut" }}
+        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96, y: 8 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
         className="mb-8"
       >
-        <OrbCore />
+        <SynapsePromptMark />
       </motion.div>
 
       {/* Welcome Text */}
       <div className="space-y-4 max-w-2xl px-4 relative z-20 mb-8">
         <motion.h2
-          initial={{ opacity: 0, y: 20 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.8 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.1, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
           className="text-4xl md:text-5xl font-medium tracking-tight text-foreground leading-tight antialiased"
         >
           Olá! Vamos Começar?
@@ -86,17 +59,19 @@ export const EmptyChatState = ({ onSuggestionClick }: EmptyChatStateProps) => {
         {SUGGESTIONS.map((item, i) => (
           <motion.button
             key={i}
-            initial={{ opacity: 0, y: 30 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 + item.delay, duration: 1, ease: [0.22, 1, 0.36, 1] }}
+            transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.18 + item.delay, duration: 0.36, ease: [0.22, 1, 0.36, 1] }}
             onClick={() => onSuggestionClick(item.text)}
+            aria-label={`Iniciar conversa: ${item.text}`}
             className={cn(
               "group relative flex items-start gap-4 p-5 rounded-[24px] text-left transition-all duration-500",
-              "bg-secondary/20 hover:bg-secondary/40 border border-border/20 hover:border-border/40",
-              "backdrop-blur-xl shadow-2xl hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.2)] dark:hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)]",
-              "hover:scale-[1.02] active:scale-[0.98]"
+              "border border-border/45 bg-background/72 hover:border-border/70 hover:bg-background/88",
+              "shadow-[0_18px_46px_-36px_hsl(var(--foreground)/0.42),inset_0_1px_0_hsl(var(--background)/0.82)] backdrop-blur-xl",
+              "dark:border-white/[0.075] dark:bg-white/[0.045] dark:hover:bg-white/[0.07]",
+              "hover:scale-[1.012] active:scale-[0.985] motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
             )}
-            whileTap={{ scale: 0.98 }}
+            whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
           >
             {/* Icon Container */}
             <div className="relative w-12 h-12 rounded-[18px] bg-secondary/30 border border-border/20 flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-500 shadow-lg">
@@ -113,7 +88,7 @@ export const EmptyChatState = ({ onSuggestionClick }: EmptyChatStateProps) => {
                 </span>
                 <div className="w-1 h-1 rounded-full bg-border" />
                 <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/60 font-bold group-hover:text-muted-foreground/80">
-                  Click to start
+                  Iniciar
                 </span>
               </div>
             </div>

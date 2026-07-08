@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import type { ChangeEvent, KeyboardEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -16,7 +17,7 @@ import { AudioWaveform } from "./AudioWaveform";
 import { cn } from "@/lib/utils";
 import { useAI } from "@/context/AIContext";
 import { usePatientById } from "@/hooks/use-patient-by-id";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 
 interface ChatInputAreaProps {
     onSend: (text: string, attachments: File[]) => void;
@@ -39,6 +40,7 @@ export const ChatInputArea = ({
 }: ChatInputAreaProps) => {
     const { activePatientId } = useAI();
     const { data: activePatient } = usePatientById(activePatientId || '');
+    const shouldReduceMotion = useReducedMotion();
 
     const [inputValue, setInputValue] = useState("");
     const [isFocused, setIsFocused] = useState(false);
@@ -61,22 +63,25 @@ export const ChatInputArea = ({
         }
     }, [inputValue, isFocused]);
 
+    const isComposerBusy = isSending || isUploading;
+    const canSend = Boolean(inputValue.trim() || attachments.length > 0) && !isComposerBusy && !isListening;
+
     const handleSend = () => {
-        if ((!inputValue.trim() && attachments.length === 0) || isListening) return;
+        if (!canSend) return;
         onSend(inputValue, attachments);
         setInputValue("");
         setAttachments([]);
         if (fileInputRef.current) fileInputRef.current.value = "";
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
     };
 
-    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files.length > 0) {
             const newFiles = Array.from(e.target.files);
             setAttachments(prev => [...prev, ...newFiles]);
@@ -94,16 +99,22 @@ export const ChatInputArea = ({
             <AnimatePresence>
                 {attachments.length > 0 && (
                     <motion.div
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 10 }}
-                        className="flex gap-2 px-2 overflow-x-auto pb-1"
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 10 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                        className="flex gap-2 overflow-x-auto px-2 pb-1"
                     >
                         {attachments.map((file, i) => (
-                            <div key={i} className="flex items-center gap-2 bg-secondary/30 backdrop-blur-xl border border-border/10 rounded-xl px-3 py-2 shrink-0">
+                            <div key={`${file.name}-${file.size}-${file.lastModified}-${i}`} className="flex shrink-0 items-center gap-2 rounded-xl border border-border/40 bg-background/80 px-3 py-2 shadow-sm backdrop-blur-xl dark:border-white/[0.075] dark:bg-white/[0.055]">
                                 {file.type.startsWith('image/') ? <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" /> : <FileIcon className="w-3.5 h-3.5 text-muted-foreground" />}
                                 <span className="text-[11px] font-medium text-foreground/80 truncate max-w-[100px]">{file.name}</span>
-                                <button onClick={() => removeAttachment(i)} className="p-1 hover:bg-secondary rounded-full transition-colors">
+                                <button
+                                    type="button"
+                                    onClick={() => removeAttachment(i)}
+                                    className="rounded-full p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                    aria-label={`Remover anexo ${file.name}`}
+                                >
                                     <X className="w-3 h-3 text-muted-foreground" />
                                 </button>
                             </div>
@@ -119,27 +130,27 @@ export const ChatInputArea = ({
                     paddingTop: isFocused ? "24px" : "18px",
                     paddingBottom: isFocused ? "24px" : "18px"
                 }}
-                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 30 }}
                 className={cn(
-                    "relative flex items-end gap-4 px-6 rounded-[36px] transition-all duration-500",
-                    "bg-card",
-                    "border border-border/20",
-                    "shadow-[0_10px_40px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_10px_40px_-15px_rgba(0,0,0,0.8)]",
-                    isFocused && "bg-card border-border/40 shadow-[0_20px_60px_-10px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_60px_-10px_rgba(0,0,0,0.9)]"
+                    "relative flex items-end gap-3 rounded-[30px] border px-4 transition-[border-color,box-shadow,background-color] duration-300 sm:gap-4 sm:rounded-[34px] sm:px-6",
+                    "border-border/45 bg-background/88 shadow-[0_18px_54px_-38px_hsl(var(--foreground)/0.38),inset_0_1px_0_hsl(var(--background))] backdrop-blur-2xl",
+                    "dark:border-white/[0.075] dark:bg-[#09090b]/92 dark:shadow-[0_18px_58px_-38px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.04)]",
+                    isFocused && "border-foreground/20 shadow-[0_26px_72px_-44px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background))] dark:border-white/[0.13]"
                 )}
             >
                 {/* Inner Glow to give depth */}
-                <div className="absolute inset-0 rounded-[36px] pointer-events-none shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.03)]" />
+                <div className="pointer-events-none absolute inset-0 rounded-[30px] bg-[linear-gradient(135deg,hsl(var(--background)/0.46),transparent_44%),radial-gradient(circle_at_50%_0%,hsl(var(--foreground)/0.035),transparent_58%)] opacity-80 sm:rounded-[34px] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.035),transparent_44%),radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.044),transparent_58%)]" />
 
                 {/* Left controls */}
                 <div className="flex items-center gap-1.5 h-10 pb-1">
-                    <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileSelect} />
+                    <input type="file" multiple ref={fileInputRef} className="hidden" onChange={handleFileSelect} aria-label="Adicionar anexos ao Synapse" />
                     <Button
                         size="icon"
                         variant="ghost"
                         onClick={() => fileInputRef.current?.click()}
-                        className="h-9 w-9 rounded-full text-muted-foreground hover:text-foreground hover:bg-secondary/50 shrink-0 transition-all hover:scale-105 active:scale-95"
-                        disabled={isSending || isListening}
+                        className="h-9 w-9 shrink-0 rounded-full text-muted-foreground transition-all hover:bg-muted hover:text-foreground hover:scale-105 active:scale-95 motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
+                        disabled={isComposerBusy || isListening}
+                        aria-label="Adicionar anexo"
                     >
                         <Plus className="h-4.5 w-4.5" />
                     </Button>
@@ -147,12 +158,13 @@ export const ChatInputArea = ({
                     <AnimatePresence>
                         {activePatient && !isListening && !isFocused && (
                             <motion.div
-                                initial={{ opacity: 0, width: 0 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
                                 animate={{ opacity: 1, width: "auto" }}
-                                exit={{ opacity: 0, width: 0 }}
-                                className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-secondary/30 border border-border/10 text-[10px] font-black text-foreground uppercase tracking-[0.2em] whitespace-nowrap overflow-hidden shadow-lg"
+                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                                className="hidden items-center gap-2 overflow-hidden whitespace-nowrap rounded-full border border-border/45 bg-muted/45 px-3.5 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-foreground shadow-sm sm:flex"
                             >
-                                <Sparkles className="w-3 w-3 text-muted-foreground" />
+                                <Sparkles className="h-3 w-3 text-muted-foreground" />
                                 <span className="max-w-[90px] truncate">{activePatient.name.split(' ')[0]}</span>
                             </motion.div>
                         )}
@@ -174,12 +186,13 @@ export const ChatInputArea = ({
                             onBlur={() => setIsFocused(false)}
                             onKeyDown={handleKeyDown}
                             placeholder="Pergunte sobre pacientes, agenda ou financeiro..."
+                            aria-label="Mensagem para o Synapse"
                             className={cn(
-                                "w-full bg-transparent border-none focus:ring-0 text-[15px] placeholder:text-muted-foreground/50 resize-none p-0 max-h-[240px] text-foreground leading-relaxed font-light px-2 scrollbar-none transition-all duration-300",
+                                "max-h-[240px] w-full resize-none border-none bg-transparent p-0 px-2 text-[15px] font-medium leading-relaxed text-foreground placeholder:text-muted-foreground/50 scrollbar-none transition-all duration-300 focus:ring-0",
                                 isFocused ? "min-h-[60px]" : "min-h-[24px]"
                             )}
                             rows={1}
-                            disabled={isSending}
+                            disabled={isComposerBusy}
                         />
                     )}
                 </div>
@@ -192,11 +205,13 @@ export const ChatInputArea = ({
                             variant="ghost"
                             onClick={isListening ? onStopListening : onStartListening}
                             className={cn(
-                                "h-11 w-11 rounded-full transition-all duration-500 relative overflow-hidden",
+                                "relative h-11 w-11 overflow-hidden rounded-full transition-all duration-300 motion-reduce:transition-none",
                                 isListening
-                                    ? "bg-primary text-primary-foreground scale-110 shadow-[0_0_30px_rgba(0,0,0,0.15)] dark:shadow-[0_0_30px_rgba(255,255,255,0.3)]"
-                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                                    ? "bg-primary text-primary-foreground shadow-[0_18px_40px_-28px_hsl(var(--foreground)/0.7)]"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
                             )}
+                            aria-label={isListening ? "Parar gravação de voz" : "Iniciar gravação de voz"}
+                            disabled={isComposerBusy}
                         >
                             {isListening ? (
                                 <span className="relative z-10 flex items-center justify-center">
@@ -210,8 +225,9 @@ export const ChatInputArea = ({
                         <Button
                             size="icon"
                             onClick={handleSend}
-                            disabled={isSending || isUploading}
-                            className="h-10 w-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-lg active:scale-95 border border-transparent"
+                            disabled={!canSend}
+                            className="h-10 w-10 rounded-full border border-transparent bg-primary text-primary-foreground shadow-lg transition-all hover:bg-primary/90 active:scale-95 disabled:opacity-45 motion-reduce:active:scale-100"
+                            aria-label="Enviar mensagem"
                         >
                             {isSending || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowUp className="h-5 w-5 stroke-[2.5]" />}
                         </Button>
@@ -223,9 +239,10 @@ export const ChatInputArea = ({
             <AnimatePresence>
                 {isFocused && (
                     <motion.div
-                        initial={{ opacity: 0, y: -5 }}
+                        initial={shouldReduceMotion ? false : { opacity: 0, y: -5 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -5 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -5 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                         className="flex justify-between px-4 text-[10px] text-muted-foreground font-medium tracking-tight"
                     >
                         <span>Model: <span className="text-muted-foreground/80">Synapse v1.0</span></span>

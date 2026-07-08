@@ -1,156 +1,205 @@
-import { useState } from "react";
-import { FadeIn } from "@/components/animations/FadeIn";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-    Search,
-    Book,
-    Shield,
-    CreditCard,
-    Settings,
-    ChevronRight,
-    LifeBuoy,
-    Zap,
-    ArrowRight,
-    MessageSquare,
-    Keyboard,
-    Monitor,
-    RefreshCw,
-    HelpCircle,
-} from "lucide-react";
+import { useMemo, useState } from "react";
 import {
     Accordion,
     AccordionContent,
     AccordionItem,
     AccordionTrigger,
 } from "@/components/ui/accordion";
+import { FadeIn } from "@/components/animations/FadeIn";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+    ArrowRight,
+    Book,
+    ChevronRight,
+    CreditCard,
+    HelpCircle,
+    Keyboard,
+    LifeBuoy,
+    MessageSquare,
+    Monitor,
+    RefreshCw,
+    Search,
+    Settings,
+    Shield,
+    Zap,
+    type LucideIcon,
+} from "lucide-react";
 import { getElectronAppVersion } from "@/lib/electron";
+
+type HelpCategory = {
+    icon: LucideIcon;
+    title: string;
+    count: number;
+};
+
+type HelpArticle = {
+    q: string;
+    a: string;
+};
+
+const HELP_CATEGORIES: HelpCategory[] = [
+    { icon: Book, title: "Primeiros Passos", count: 14 },
+    { icon: CreditCard, title: "Financeiro & Split", count: 9 },
+    { icon: Shield, title: "Privacidade (LGPD)", count: 6 },
+    { icon: Settings, title: "Infra & Domínios", count: 12 },
+];
+
+const FAQ_ITEMS: HelpArticle[] = [
+    {
+        q: "Como exportar prontuários do app desktop?",
+        a: "Você possui controle absoluto sobre seus dados. A exportação pode ser realizada em massa ou individualmente nos formatos PDF ou JSON, garantindo soberania total sobre suas informações clínicas.",
+    },
+    {
+        q: "O NeuroNex Desktop funciona offline?",
+        a: "Os dados essenciais de pacientes e agenda são armazenados localmente permitindo consulta imediata. Recursos de IA, sincronização em nuvem e teleconsulta exigem conexão ativa com a internet.",
+    },
+    {
+        q: "Meus dados estão seguros no app desktop?",
+        a: "Sim. A comunicação com nossos servidores usa HTTPS/TLS quando aplicável, e dados sensíveis devem permanecer protegidos por controles server-side e políticas de acesso. O tratamento segue a LGPD e a documentação técnica vigente.",
+    },
+    {
+        q: "Como funciona o Split de Pagamentos?",
+        a: "O Split permite automatizar a divisão de honorários entre clínica e profissionais instantaneamente no ato do pagamento, via NeuroFinance (serviços financeiros por Asaas), reduzindo custos tributários e burocracia contábil.",
+    },
+    {
+        q: "Posso usar o app desktop e o web simultaneamente?",
+        a: "Sim. Sua conta NeuroNex funciona em qualquer plataforma. Os dados são sincronizados em tempo real entre o app desktop, web e mobile.",
+    },
+];
+
+const normalizeSearch = (value: string) =>
+    value
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
 
 const CategoryCard = ({
     icon: Icon,
     title,
     count,
     delay,
-}: {
-    icon: any;
-    title: string;
-    count: number;
+    onSelect,
+}: HelpCategory & {
     delay: number;
+    onSelect: (query: string) => void;
 }) => (
     <FadeIn delay={delay}>
-        <div className="group p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 hover:bg-card/60 hover:border-foreground/20 transition-all duration-500 h-full flex flex-col justify-between">
+        <button
+            type="button"
+            onClick={() => onSelect(title)}
+            className="desktop-apple-surface desktop-tactile group flex h-full w-full flex-col justify-between rounded-[24px] p-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            aria-label={`Pesquisar artigos de ${title}`}
+        >
             <div>
-                <div className="w-12 h-12 rounded-xl bg-foreground/[0.03] flex items-center justify-center text-foreground/40 border border-border/30 mb-6 group-hover:text-foreground group-hover:border-foreground/20 group-hover:scale-110 transition-all duration-500">
-                    <Icon className="w-5 h-5" />
+                <div className="mb-5 flex h-11 w-11 items-center justify-center rounded-[16px] border border-border/50 bg-muted/42 text-muted-foreground transition-colors group-hover:text-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                    <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground mb-1 tracking-tight">
+                <h3 className="mb-1 text-base font-bold tracking-normal text-foreground">
                     {title}
                 </h3>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/50">
-                    {count} Artigos
+                <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-muted-foreground/65">
+                    {count} artigos
                 </p>
             </div>
-            <div className="mt-6 pt-6 border-t border-border/20 flex items-center justify-between opacity-30 group-hover:opacity-100 transition-opacity duration-500">
-                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-foreground">
+            <div className="mt-6 flex items-center justify-between border-t border-border/35 pt-5 text-muted-foreground transition-colors group-hover:text-foreground dark:border-white/[0.06]">
+                <span className="text-[10px] font-bold uppercase tracking-[0.18em]">
                     Explorar
                 </span>
-                <ChevronRight className="w-4 h-4 text-foreground/60" />
+                <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
             </div>
-        </div>
+        </button>
     </FadeIn>
 );
 
 const DesktopHelpCenter = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const appVersion = getElectronAppVersion() || "1.0.0";
+    const normalizedQuery = normalizeSearch(searchQuery.trim());
+
+    const filteredFaqItems = useMemo(() => {
+        if (!normalizedQuery) return FAQ_ITEMS;
+
+        return FAQ_ITEMS.filter((item) => {
+            const haystack = normalizeSearch(`${item.q} ${item.a}`);
+            return haystack.includes(normalizedQuery);
+        });
+    }, [normalizedQuery]);
 
     return (
-        <div className="min-h-full text-foreground font-sans">
-            {/* ─── Hero Search ───────────────────────────────────────── */}
-            <section className="pt-12 pb-10 px-6 relative z-10">
-                <div className="max-w-4xl mx-auto space-y-8">
+        <div className="min-h-full font-sans text-foreground">
+            <section className="relative z-10 px-4 pb-10 pt-10 sm:px-6">
+                <div className="mx-auto max-w-5xl space-y-8">
                     <FadeIn>
-                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-border/40 bg-foreground/[0.03] text-foreground/40 uppercase tracking-[0.25em] text-[10px] font-bold backdrop-blur-xl">
-                            <LifeBuoy className="w-3.5 h-3.5 text-foreground/50" />
+                        <div className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-background/72 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.22em] text-muted-foreground shadow-sm backdrop-blur-xl dark:border-white/[0.075] dark:bg-white/[0.045]">
+                            <LifeBuoy className="h-3.5 w-3.5" />
                             Central de Ajuda
                         </div>
                     </FadeIn>
 
-                    <FadeIn delay={0.1}>
-                        <h1 className="text-4xl md:text-5xl font-bold tracking-[-0.04em] text-foreground leading-[0.9]">
-                            Como podemos{" "}
-                            <span className="text-transparent bg-clip-text bg-gradient-to-b from-foreground via-foreground/80 to-foreground/30">
-                                ajudar?
-                            </span>
-                        </h1>
+                    <FadeIn delay={0.08}>
+                        <div className="max-w-3xl space-y-4">
+                            <h1 className="text-4xl font-bold leading-none tracking-normal text-foreground md:text-5xl">
+                                Como podemos ajudar?
+                            </h1>
+                            <p className="max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground sm:text-base">
+                                Pesquise por rotina clínica, finanças, segurança, desktop ou integrações.
+                            </p>
+                        </div>
                     </FadeIn>
 
-                    <FadeIn delay={0.2}>
-                        <div className="relative group max-w-2xl">
-                            <div className="relative flex items-center bg-card/60 backdrop-blur-xl border border-border/40 rounded-2xl p-2 transition-all duration-500 group-focus-within:border-foreground/30">
-                                <Search className="w-5 h-5 text-muted-foreground/40 ml-4" />
-                                <Input
-                                    placeholder="Pesquisar artigos, guias, FAQ..."
-                                    className="border-none bg-transparent focus-visible:ring-0 h-12 text-base font-medium placeholder:text-muted-foreground/30 px-4 text-foreground"
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                />
-                                <Button className="rounded-xl px-8 h-12 bg-foreground text-background hover:opacity-90 font-bold text-[11px] uppercase tracking-[0.15em] transition-all active:scale-95">
-                                    Pesquisar
-                                </Button>
-                            </div>
+                    <FadeIn delay={0.16}>
+                        <div className="desktop-apple-surface group relative max-w-3xl rounded-[24px] p-2">
+                            <Search className="pointer-events-none absolute left-6 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground/55 transition-colors group-focus-within:text-foreground" />
+                            <Input
+                                placeholder="Pesquisar artigos, guias e respostas..."
+                                className="h-12 border-none bg-transparent pl-12 pr-4 text-base font-medium text-foreground placeholder:text-muted-foreground/45 focus-visible:ring-0"
+                                value={searchQuery}
+                                onChange={(event) => setSearchQuery(event.target.value)}
+                                aria-label="Pesquisar na Central de Ajuda"
+                            />
                         </div>
                     </FadeIn>
                 </div>
             </section>
 
-            {/* ─── Categories Grid ───────────────────────────────────── */}
-            <section className="px-6 pb-12 relative z-10">
-                <div className="max-w-6xl mx-auto">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-16">
-                        <CategoryCard icon={Book} title="Primeiros Passos" count={14} delay={0.3} />
-                        <CategoryCard icon={CreditCard} title="Financeiro & Split" count={9} delay={0.4} />
-                        <CategoryCard icon={Shield} title="Privacidade (LGPD)" count={6} delay={0.5} />
-                        <CategoryCard icon={Settings} title="Infra & Domínios" count={12} delay={0.6} />
+            <section className="relative z-10 px-4 pb-12 sm:px-6">
+                <div className="mx-auto max-w-6xl">
+                    <div className="mb-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        {HELP_CATEGORIES.map((category, index) => (
+                            <CategoryCard
+                                key={category.title}
+                                {...category}
+                                delay={0.2 + index * 0.06}
+                                onSelect={setSearchQuery}
+                            />
+                        ))}
                     </div>
 
-                    {/* ─── Desktop-Specific Section ──────────────────────── */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
-                        <FadeIn delay={0.35}>
-                            <div className="p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 hover:bg-card/60 hover:border-foreground/20 transition-all duration-500 group">
-                                <div className="w-12 h-12 rounded-xl bg-foreground/[0.03] flex items-center justify-center text-foreground/40 border border-border/30 mb-4 group-hover:text-foreground group-hover:scale-110 transition-all duration-500">
-                                    <Monitor className="w-5 h-5" />
+                    <div className="mb-14 grid grid-cols-1 gap-4 md:grid-cols-3">
+                        <FadeIn delay={0.22}>
+                            <div className="desktop-apple-surface h-full rounded-[24px] p-5">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[16px] border border-border/50 bg-muted/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                                    <Monitor className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-foreground mb-2 tracking-tight">
+                                <h3 className="mb-2 text-base font-bold tracking-normal text-foreground">
                                     Requisitos do Sistema
                                 </h3>
-                                <ul className="space-y-2 text-sm text-muted-foreground/70">
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-foreground/30 mt-0.5">•</span>
-                                        Windows 10/11 (64-bit)
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-foreground/30 mt-0.5">•</span>
-                                        4GB RAM mínimo (8GB recomendado)
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-foreground/30 mt-0.5">•</span>
-                                        200MB de espaço em disco
-                                    </li>
-                                    <li className="flex items-start gap-2">
-                                        <span className="text-foreground/30 mt-0.5">•</span>
-                                        Conexão com a internet ativa
-                                    </li>
+                                <ul className="space-y-2 text-sm text-muted-foreground">
+                                    <li>Windows 10/11 (64-bit)</li>
+                                    <li>4GB RAM mínimo (8GB recomendado)</li>
+                                    <li>200MB de espaço em disco</li>
+                                    <li>Conexão com a internet ativa</li>
                                 </ul>
                             </div>
                         </FadeIn>
 
-                        <FadeIn delay={0.45}>
-                            <div className="p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 hover:bg-card/60 hover:border-foreground/20 transition-all duration-500 group">
-                                <div className="w-12 h-12 rounded-xl bg-foreground/[0.03] flex items-center justify-center text-foreground/40 border border-border/30 mb-4 group-hover:text-foreground group-hover:scale-110 transition-all duration-500">
-                                    <Keyboard className="w-5 h-5" />
+                        <FadeIn delay={0.28}>
+                            <div className="desktop-apple-surface h-full rounded-[24px] p-5">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[16px] border border-border/50 bg-muted/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                                    <Keyboard className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-foreground mb-2 tracking-tight">
+                                <h3 className="mb-2 text-base font-bold tracking-normal text-foreground">
                                     Atalhos de Teclado
                                 </h3>
                                 <div className="space-y-2.5 text-sm">
@@ -162,9 +211,9 @@ const DesktopHelpCenter = () => {
                                         { keys: "F11", desc: "Tela cheia" },
                                         { keys: "Alt + F4", desc: "Fechar app" },
                                     ].map((shortcut) => (
-                                        <div key={shortcut.keys} className="flex items-center justify-between">
-                                            <span className="text-muted-foreground/70">{shortcut.desc}</span>
-                                            <kbd className="px-2 py-0.5 rounded-md bg-foreground/[0.05] border border-border/40 text-[11px] font-mono text-foreground/60">
+                                        <div key={shortcut.keys} className="flex items-center justify-between gap-3">
+                                            <span className="min-w-0 text-muted-foreground">{shortcut.desc}</span>
+                                            <kbd className="shrink-0 rounded-md border border-border/45 bg-muted/45 px-2 py-0.5 font-mono text-[11px] text-foreground/70 dark:border-white/[0.075]">
                                                 {shortcut.keys}
                                             </kbd>
                                         </div>
@@ -173,22 +222,22 @@ const DesktopHelpCenter = () => {
                             </div>
                         </FadeIn>
 
-                        <FadeIn delay={0.55}>
-                            <div className="p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 hover:bg-card/60 hover:border-foreground/20 transition-all duration-500 group">
-                                <div className="w-12 h-12 rounded-xl bg-foreground/[0.03] flex items-center justify-center text-foreground/40 border border-border/30 mb-4 group-hover:text-foreground group-hover:scale-110 transition-all duration-500">
-                                    <RefreshCw className="w-5 h-5" />
+                        <FadeIn delay={0.34}>
+                            <div className="desktop-apple-surface h-full rounded-[24px] p-5">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-[16px] border border-border/50 bg-muted/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                                    <RefreshCw className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-foreground mb-2 tracking-tight">
+                                <h3 className="mb-2 text-base font-bold tracking-normal text-foreground">
                                     Atualizações
                                 </h3>
-                                <p className="text-sm text-muted-foreground/70 mb-4">
-                                    O NeuroNex Desktop é atualizado automaticamente. Em breve, notificações de novas versões serão exibidas diretamente no app.
+                                <p className="mb-4 text-sm leading-relaxed text-muted-foreground">
+                                    O NeuroNex Desktop é atualizado automaticamente quando uma nova versão está disponível.
                                 </p>
-                                <div className="flex items-center justify-between pt-3 border-t border-border/20">
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/50">
+                                <div className="flex items-center justify-between gap-3 border-t border-border/35 pt-4 dark:border-white/[0.06]">
+                                    <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground/65">
                                         Versão Atual
                                     </span>
-                                    <span className="text-sm font-mono text-foreground/70">
+                                    <span className="font-mono text-sm text-foreground/75">
                                         v{appVersion}
                                     </span>
                                 </div>
@@ -196,121 +245,107 @@ const DesktopHelpCenter = () => {
                         </FadeIn>
                     </div>
 
-                    {/* ─── FAQ Section ───────────────────────────────────── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-16 py-12 border-t border-border/20">
-                        <div className="lg:col-span-1 space-y-6">
-                            <FadeIn delay={0.4}>
-                                <h2 className="text-3xl font-bold text-foreground tracking-[-0.03em] leading-[0.9]">
-                                    Dúvidas{" "}
-                                    <span className="text-muted-foreground/30">Frequentes</span>
+                    <div className="grid grid-cols-1 gap-8 border-t border-border/30 py-10 lg:grid-cols-3 dark:border-white/[0.06]">
+                        <div className="space-y-4 lg:col-span-1">
+                            <FadeIn delay={0.16}>
+                                <h2 className="text-3xl font-bold leading-none tracking-normal text-foreground">
+                                    Dúvidas frequentes
                                 </h2>
-                                <p className="text-base text-muted-foreground/70 font-medium leading-tight tracking-tight mt-4">
-                                    Respostas rápidas para profissionais de alto rendimento.
+                                <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
+                                    {normalizedQuery
+                                        ? `${filteredFaqItems.length} resultado${filteredFaqItems.length === 1 ? "" : "s"} para sua busca.`
+                                        : "Respostas rápidas para operações comuns no desktop."}
                                 </p>
                             </FadeIn>
                         </div>
 
                         <div className="lg:col-span-2">
-                            <FadeIn delay={0.5}>
-                                <Accordion type="single" collapsible className="space-y-4">
-                                    {[
-                                        {
-                                            q: "Como exportar prontuários do app desktop?",
-                                            a: "Você possui controle absoluto sobre seus dados. A exportação pode ser realizada em massa ou individualmente nos formatos PDF ou JSON, garantindo soberania total sobre suas informações clínicas.",
-                                        },
-                                        {
-                                            q: "O NeuroNex Desktop funciona offline?",
-                                            a: "Os dados essenciais de pacientes e agenda são armazenados localmente permitindo consulta imediata. Recursos de IA, sincronização em nuvem e teleconsulta exigem conexão ativa com a internet.",
-                                        },
-                                        {
-                                            q: "Meus dados estão seguros no app desktop?",
-                                            a: "Sim. A comunicação com nossos servidores usa HTTPS/TLS quando aplicável, e dados sensíveis devem permanecer protegidos por controles server-side e políticas de acesso. O tratamento segue a LGPD e a documentação técnica vigente.",
-                                        },
-                                        {
-                                            q: "Como funciona o Split de Pagamentos?",
-                                            a: "O Split permite automatizar a divisão de honorários entre clínica e profissionais instantaneamente no ato do pagamento, via NeuroFinance (serviços financeiros por Asaas), reduzindo custos tributários e burocracia contábil.",
-                                        },
-                                        {
-                                            q: "Posso usar o app desktop e o web simultaneamente?",
-                                            a: "Sim! Sua conta NeuroNex funciona em qualquer plataforma. Os dados são sincronizados em tempo real entre o app desktop, web e mobile. Use onde preferir.",
-                                        },
-                                    ].map((item, i) => (
-                                        <AccordionItem
-                                            key={i}
-                                            value={`item-${i}`}
-                                            className="border border-border/30 bg-card/40 backdrop-blur-xl px-6 rounded-2xl transition-all data-[state=open]:bg-card/60 data-[state=open]:border-foreground/20"
-                                        >
-                                            <AccordionTrigger className="text-base font-bold text-foreground py-5 hover:no-underline hover:text-foreground/80 transition-all text-left">
-                                                {item.q}
-                                            </AccordionTrigger>
-                                            <AccordionContent className="text-muted-foreground/80 font-medium text-sm leading-relaxed pb-6 max-w-2xl">
-                                                {item.a}
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    ))}
-                                </Accordion>
+                            <FadeIn delay={0.22}>
+                                {filteredFaqItems.length > 0 ? (
+                                    <Accordion type="single" collapsible className="space-y-3">
+                                        {filteredFaqItems.map((item) => (
+                                            <AccordionItem
+                                                key={item.q}
+                                                value={item.q}
+                                                className="desktop-apple-surface rounded-[22px] px-5"
+                                            >
+                                                <AccordionTrigger className="py-5 text-left text-base font-bold text-foreground transition-colors hover:text-foreground/80 hover:no-underline">
+                                                    {item.q}
+                                                </AccordionTrigger>
+                                                <AccordionContent className="max-w-2xl pb-6 text-sm font-medium leading-relaxed text-muted-foreground">
+                                                    {item.a}
+                                                </AccordionContent>
+                                            </AccordionItem>
+                                        ))}
+                                    </Accordion>
+                                ) : (
+                                    <div className="desktop-apple-surface rounded-[24px] p-6 text-sm font-medium text-muted-foreground">
+                                        Nenhum artigo encontrado. Tente buscar por agenda, financeiro, segurança ou integrações.
+                                    </div>
+                                )}
                             </FadeIn>
                         </div>
                     </div>
 
-                    {/* ─── Quick Links ─────────────────────────────────────── */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5 py-12 border-t border-border/20">
-                        <FadeIn delay={0.6}>
-                            <div className="p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 flex flex-col items-center text-center group hover:border-foreground/20 transition-all duration-500">
-                                <div className="w-12 h-12 rounded-full bg-foreground/[0.03] border border-border/30 flex items-center justify-center text-foreground/40 mb-4 group-hover:scale-110 group-hover:text-foreground transition-all duration-500">
-                                    <Zap className="w-5 h-5" />
+                    <div className="grid grid-cols-1 gap-4 border-t border-border/30 py-10 md:grid-cols-3 dark:border-white/[0.06]">
+                        <FadeIn delay={0.24}>
+                            <div className="desktop-apple-surface flex h-full flex-col items-center rounded-[24px] p-6 text-center">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-border/50 bg-muted/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                                    <Zap className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-foreground mb-2 tracking-tight">
+                                <h3 className="mb-2 text-base font-bold text-foreground">
                                     Status do Sistema
                                 </h3>
-                                <p className="text-sm text-muted-foreground mb-4">
+                                <p className="mb-4 text-sm text-muted-foreground">
                                     Infraestrutura global em operação.
                                 </p>
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-foreground uppercase tracking-[0.15em] bg-foreground/[0.03] px-4 py-1.5 rounded-full border border-border/40">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981] animate-pulse" />
+                                <div className="flex items-center gap-2 rounded-full border border-border/45 bg-muted/35 px-4 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-foreground dark:border-white/[0.075]">
+                                    <span className="h-2 w-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.65)] animate-pulse motion-reduce:animate-none" />
                                     Operacional
                                 </div>
                             </div>
                         </FadeIn>
 
-                        <FadeIn delay={0.7}>
-                            <div className="p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 flex flex-col items-center text-center group hover:border-foreground/20 transition-all duration-500">
-                                <div className="w-12 h-12 rounded-full bg-foreground/[0.03] border border-border/30 flex items-center justify-center text-foreground/40 mb-4 group-hover:scale-110 group-hover:text-foreground transition-all duration-500">
-                                    <HelpCircle className="w-5 h-5" />
+                        <FadeIn delay={0.3}>
+                            <div className="desktop-apple-surface flex h-full flex-col items-center rounded-[24px] p-6 text-center">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-border/50 bg-muted/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                                    <HelpCircle className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-foreground mb-2 tracking-tight">
+                                <h3 className="mb-2 text-base font-bold text-foreground">
                                     Documentação
                                 </h3>
-                                <p className="text-sm text-muted-foreground mb-4">
+                                <p className="mb-4 text-sm text-muted-foreground">
                                     Guias técnicos e tutoriais completos.
                                 </p>
                                 <Button
+                                    type="button"
                                     variant="link"
-                                    className="text-foreground hover:opacity-70 p-0 h-auto text-[10px] uppercase font-bold tracking-[0.2em]"
+                                    className="h-auto p-0 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground hover:opacity-75"
                                     onClick={() => window.open("https://neuronex.site/help", "_blank")}
                                 >
-                                    Acessar Docs <ArrowRight className="w-3 h-3 ml-1.5" />
+                                    Acessar Docs <ArrowRight className="ml-1.5 h-3 w-3" />
                                 </Button>
                             </div>
                         </FadeIn>
 
-                        <FadeIn delay={0.8}>
-                            <div className="p-6 rounded-2xl bg-card/40 backdrop-blur-xl border border-border/30 flex flex-col items-center text-center group hover:border-foreground/20 transition-all duration-500">
-                                <div className="w-12 h-12 rounded-full bg-foreground/[0.03] border border-border/30 flex items-center justify-center text-foreground/40 mb-4 group-hover:scale-110 group-hover:text-foreground transition-all duration-500">
-                                    <MessageSquare className="w-5 h-5" />
+                        <FadeIn delay={0.36}>
+                            <div className="desktop-apple-surface flex h-full flex-col items-center rounded-[24px] p-6 text-center">
+                                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-full border border-border/50 bg-muted/42 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.045]">
+                                    <MessageSquare className="h-5 w-5" />
                                 </div>
-                                <h3 className="text-base font-bold text-foreground mb-2 tracking-tight">
+                                <h3 className="mb-2 text-base font-bold text-foreground">
                                     Suporte Direto
                                 </h3>
-                                <p className="text-sm text-muted-foreground mb-4">
+                                <p className="mb-4 text-sm text-muted-foreground">
                                     Especialistas prontos para ajudar.
                                 </p>
                                 <Button
+                                    type="button"
                                     variant="link"
-                                    className="text-foreground hover:opacity-70 p-0 h-auto text-[10px] uppercase font-bold tracking-[0.2em]"
+                                    className="h-auto p-0 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground hover:opacity-75"
                                     onClick={() => window.open("https://neuronex.site/contact", "_blank")}
                                 >
-                                    Falar com Suporte <ArrowRight className="w-3 h-3 ml-1.5" />
+                                    Falar com Suporte <ArrowRight className="ml-1.5 h-3 w-3" />
                                 </Button>
                             </div>
                         </FadeIn>
