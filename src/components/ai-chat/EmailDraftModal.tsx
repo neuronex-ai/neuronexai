@@ -11,15 +11,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { edgeFunctionUrl } from "@/lib/supabase-config";
 
+export type EmailDraftData = {
+  to: string;
+  subject: string;
+  body: string;
+  patientName?: string;
+};
+
 interface EmailDraftModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData: {
-    to: string;
-    subject: string;
-    body: string;
-    patientName?: string;
-  } | null;
+  initialData: EmailDraftData | null;
   onSent: () => void;
 }
 

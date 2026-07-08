@@ -1,18 +1,26 @@
 "use client";
 
-import { cn } from "@/lib/utils";
+import type { ComponentPropsWithoutRef } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { User, Copy, Check, FileText, Calendar, DollarSign, ArrowRight } from "lucide-react";
-import { toast } from "sonner";
-import { useState, useMemo, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Check, Copy, FileText, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { PatientListWidget, PatientCardData } from "./PatientMiniCard";
+import { toast } from "sonner";
+
+import { PatientListWidget, type PatientCardData } from "./PatientMiniCard";
 import { PDFPreviewCard } from "./PDFPreviewCard";
-import { generateDocumentPDF } from "@/lib/pdf-generator";
-import { useSendEmail } from "@/hooks/use-send-email";
 import { SynapseOrbAvatar } from "@/components/synapse/SynapseOrbAvatar";
-import { SynapseWidgetRenderer, parseSynapseWidgetFromContent } from "@/components/synapse/SynapseWidgetRenderer";
+import { SynapseWidgetRenderer } from "@/components/synapse/SynapseWidgetRenderer";
+import { useSendEmail } from "@/hooks/use-send-email";
+import { generateDocumentPDF, type DocumentPDFData } from "@/lib/pdf-generator";
+import {
+    firstString,
+    isRecord,
+    parseSynapseWidgetFromContent,
+    type SynapseRichData,
+} from "@/lib/synapse-widget-parser";
+import { cn } from "@/lib/utils";
 
 interface Message {
     id: string;
@@ -23,230 +31,150 @@ interface Message {
 
 interface ChatMessageItemProps {
     message: Message;
-    richData?: any;
-    onAction?: (type: string, payload: any) => void;
+    richData?: SynapseRichData;
+    onAction?: (type: string, payload: unknown) => void;
 }
 
-// Global Widget Renderer - Clean & Action-Oriented
-export const WidgetRenderer = ({ type, data }: { type: string, data: any }) => {
-    const navigate = useNavigate();
+type MarkdownAnchorProps = ComponentPropsWithoutRef<"a"> & { node?: unknown };
+type MarkdownCodeProps = ComponentPropsWithoutRef<"code"> & {
+    node?: unknown;
+    inline?: boolean;
+    className?: string;
+};
+type MarkdownBlockquoteProps = ComponentPropsWithoutRef<"blockquote"> & { node?: unknown };
 
-    const handleNavigate = () => {
-        // Extraction of ID if available
-        const entityId = data?.id || data?.patient_id || data?.appointment_id;
-
-        if (type === 'patient_list' || type === 'patient' || type === 'patient_card') {
-            if (entityId) navigate(`/mobile/pacientes/${entityId}`);
-            else navigate('/mobile/pacientes');
-        } else if (type === 'appointment_list' || type === 'agenda' || type === 'create_appointment') {
-            if (entityId) navigate(`/mobile/agenda?id=${entityId}`);
-            else navigate('/mobile/agenda');
-        } else if (type === 'financial_summary') {
-            navigate('/mobile/financeiro');
-        }
-    };
-
-    // Helper to format action names for humans in Portuguese
-    const formatActionName = (name: string) => {
-        const mapping: Record<string, string> = {
-            'create_appointment': 'Agendamento Criado',
-            'send_email': 'Email Enviado',
-            'create_invoice': 'Cobrança Gerada',
-            'update_patient': 'Paciente Atualizado',
-            'create_patient': 'Paciente Cadastrado',
-            'generate_document': 'Documento Gerado',
-            'patient_list': 'Lista de Pacientes',
-            'patient_card': 'Ficha do Paciente',
-            'patient': 'Paciente Localizado',
-            'agenda': 'Agenda do Dia'
-        };
-        return mapping[name] || name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-    };
-
-    switch (type) {
-        case 'patient_list':
-            return (
-                <div className="my-6 w-full overflow-hidden bg-transparent">
-                    <PatientListWidget patients={data.patients || data} />
-                </div>
-            );
-        case 'appointment_list':
-        case 'agenda':
-            return (
-                <div className="my-6 w-full rounded-[24px] md:rounded-[32px] bg-black border border-white/10 shadow-2xl overflow-hidden" onClick={handleNavigate}>
-                    <div className="p-5 md:p-8 border-b border-white/[0.05] bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center text-white border border-white/10 shadow-inner shrink-0">
-                                <Calendar className="h-5 w-5 md:h-6 md:w-6" strokeWidth={1.5} />
-                            </div>
-                            <div className="min-w-0">
-                                <h4 className="text-[11px] md:text-[13px] font-black text-white tracking-[0.15em] md:tracking-[0.2em] uppercase truncate">Sua Agenda</h4>
-                                <p className="text-[9px] md:text-[11px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5 opacity-60 truncate">Próximos compromissos</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-2 md:p-3">
-                        <div className="space-y-1">
-                            {(data.appointments || data).map((app: any, i: number) => (
-                                <div key={i} className="flex items-center justify-between p-4 md:p-6 rounded-[20px] md:rounded-[24px] bg-transparent hover:bg-white/[0.04] transition-all group cursor-pointer active:scale-[0.98]">
-                                    <div className="flex flex-col gap-0.5 min-w-0 pr-4">
-                                        <span className="text-[14px] md:text-[16px] font-bold text-zinc-100 group-hover:text-white transition-colors truncate">{app.patient_name || app.title}</span>
-                                        <span className="text-[10px] md:text-[12px] text-zinc-500 font-mono uppercase tracking-widest">{app.horario || app.time || app.start_time_local || app.date}</span>
-                                    </div>
-                                    <div className="h-9 w-9 md:h-11 md:w-11 rounded-full border border-white/[0.08] flex items-center justify-center text-zinc-600 group-hover:text-white group-hover:bg-white/[0.08] transition-all shrink-0">
-                                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            );
-        case 'financial_summary': {
-            const metrics = data.metrics || data;
-            return (
-                <div className="my-6 w-full rounded-[24px] md:rounded-[32px] bg-black border border-white/10 shadow-2xl overflow-hidden relative" onClick={handleNavigate}>
-                    <div className="p-5 md:p-8 border-b border-white/[0.05] relative z-10 bg-white/[0.02]">
-                        <div className="flex items-center gap-3 md:gap-4">
-                            <div className="h-10 w-10 md:h-12 md:w-12 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center text-white border border-white/10 shadow-inner shrink-0">
-                                <DollarSign className="h-5 w-5 md:h-6 md:w-6" strokeWidth={1.5} />
-                            </div>
-                            <div className="min-w-0">
-                                <h4 className="text-[11px] md:text-[13px] font-black text-white tracking-[0.15em] md:tracking-[0.2em] uppercase truncate">Financeiro</h4>
-                                <p className="text-[9px] md:text-[11px] text-zinc-500 font-bold uppercase tracking-wider mt-0.5 opacity-60 truncate">Resumo do dia</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="p-5 md:p-8 space-y-4 md:space-y-6 relative z-10">
-                        <div className="grid grid-cols-2 gap-3 md:gap-6">
-                            <div className="p-4 md:p-6 rounded-[20px] md:rounded-[28px] bg-white/[0.03] border border-white/[0.05] flex flex-col gap-1.5 min-w-0">
-                                <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.1em] opacity-50 truncate">Projetado</p>
-                                <p className="text-lg md:text-2xl font-black text-white tracking-tighter truncate">R$ {metrics.projectedRevenue?.toLocaleString('pt-BR') || '0,00'}</p>
-                            </div>
-                            <div className="p-4 md:p-6 rounded-[20px] md:rounded-[28px] bg-white/[0.03] border border-white/[0.05] flex flex-col gap-1.5 min-w-0">
-                                <p className="text-[9px] text-zinc-500 font-black uppercase tracking-[0.1em] opacity-50 truncate">Pendente</p>
-                                <p className="text-lg md:text-2xl font-black text-white tracking-tighter truncate">R$ {metrics.pendingInvoices?.toLocaleString('pt-BR') || '0,00'}</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-        default:
-            // "Real Action" Bar Style
-            return (
-                <div
-                    onClick={handleNavigate}
-                    className="my-6 p-5 md:p-6 rounded-[20px] bg-black border border-white/10 flex items-center justify-between group hover:bg-zinc-950 transition-all shadow-xl active:scale-[0.98] cursor-pointer overflow-hidden w-full"
-                >
-                    <div className="flex flex-col gap-0.5 min-w-0 pr-4">
-                        <p className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.2em] opacity-60 truncate">Ação Realizada</p>
-                        <p className="text-[14px] font-black text-white tracking-tight leading-tight truncate">{formatActionName(type)}</p>
-                    </div>
-                    <div className="h-9 w-9 rounded-full border border-white/[0.08] flex items-center justify-center text-zinc-600 group-hover:text-white group-hover:bg-white/[0.08] transition-all shrink-0">
-                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" strokeWidth={2.5} />
-                    </div>
-                </div>
-            );
-    }
+type ParsedTable = {
+    headers: string[];
+    rows: string[][];
+    raw: string;
 };
 
-const parsePatientList = (content: string): { patients: PatientCardData[], raw: string } | null => {
+const getRecordString = (value: unknown, ...keys: string[]) => {
+    if (!isRecord(value)) return undefined;
+    return firstString(...keys.map((key) => value[key]));
+};
+
+const toDocumentPDFData = (value: unknown): DocumentPDFData | null => {
+    if (!isRecord(value)) return null;
+
+    return {
+        type: getRecordString(value, "type", "documentType") || "Documento",
+        title: getRecordString(value, "title") || "Documento NeuroNex",
+        content: getRecordString(value, "content", "body", "htmlBody") || "",
+        patientName: getRecordString(value, "patientName", "patient_name") || "Paciente",
+        patientDoc: getRecordString(value, "patientDoc", "patient_doc", "cpf"),
+        professionalName: getRecordString(value, "professionalName", "professional_name") || "Profissional",
+        professionalRegistry: getRecordString(value, "professionalRegistry", "professional_registry", "crp") || "",
+        date: getRecordString(value, "date") || new Date().toLocaleDateString("pt-BR"),
+        clinicName: getRecordString(value, "clinicName", "clinic_name"),
+    };
+};
+
+const getDocumentFilename = (value: unknown) =>
+    getRecordString(value, "filename") || `${getRecordString(value, "title") || "documento"}.pdf`;
+
+const parsePatientList = (content: string): { patients: PatientCardData[]; raw: string } | null => {
     const patients: PatientCardData[] = [];
-    let rawText = '';
+    let rawText = "";
     const mainPattern = /^\s*[*-]\s+\*\*(.+?)\*\*\s+\(ID:\s*`?([a-f0-9-]+)`?\)/gim;
-    const matches: Array<{ match: RegExpExecArray, details: string }> = [];
-    let match;
-    const lines = content.split('\n');
-    let currentPatientIndex = -1;
+    const matches: Array<{ match: RegExpExecArray; details: string }> = [];
+    let match: RegExpExecArray | null;
+    const lines = content.split("\n");
+
     while ((match = mainPattern.exec(content)) !== null) {
-        matches.push({ match, details: '' });
+        matches.push({ match, details: "" });
     }
+
     if (matches.length > 0) {
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const patientMatch = line.match(/^\s*[*-]\s+\*\*(.+?)\*\*\s+\(ID:\s*`?([a-f0-9-]+)`?\)/i);
-            if (patientMatch) {
-                currentPatientIndex++;
-                const name = patientMatch[1].trim();
-                const id = patientMatch[2].trim();
-                let phone = '';
-                let email = '';
-                let j = i + 1;
-                while (j < lines.length && lines[j].match(/^\s{4,}[*-]/)) {
-                    const detailLine = lines[j];
-                    const phoneMatch = detailLine.match(/\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/);
-                    if (phoneMatch && !phone) {
-                        phone = phoneMatch[0].replace(/\D/g, '').replace(/^(\d{2})(\d{4,5})(\d{4})$/, '($1) $2-$3');
-                    }
-                    const emailMatch = detailLine.match(/[\w.-]+@[\w.-]+\.\w+/);
-                    if (emailMatch && !email) {
-                        email = emailMatch[0];
-                    }
-                    j++;
+            if (!patientMatch) continue;
+
+            const name = patientMatch[1].trim();
+            const id = patientMatch[2].trim();
+            let phone = "";
+            let email = "";
+            let j = i + 1;
+
+            while (j < lines.length && lines[j].match(/^\s{4,}[*-]/)) {
+                const detailLine = lines[j];
+                const phoneMatch = detailLine.match(/\(?\d{2}\)?\s*\d{4,5}[-\s]?\d{4}/);
+                if (phoneMatch && !phone) {
+                    phone = phoneMatch[0].replace(/\D/g, "").replace(/^(\d{2})(\d{4,5})(\d{4})$/, "($1) $2-$3");
                 }
-                patients.push({ id, name, email: email || undefined, phone: phone || undefined, status: 'active' });
+
+                const emailMatch = detailLine.match(/[\w.-]+@[\w.-]+\.\w+/);
+                if (emailMatch && !email) {
+                    email = emailMatch[0];
+                }
+                j++;
             }
+
+            patients.push({ id, name, email: email || undefined, phone: phone || undefined, status: "active" });
         }
-        if (matches.length > 0) {
-            const firstMatch = matches[0].match;
-            const lastMatch = matches[matches.length - 1].match;
-            const startIndex = content.indexOf(firstMatch[0]);
-            let endIndex = content.indexOf(lastMatch[0]) + lastMatch[0].length;
-            const remainingContent = content.substring(endIndex);
-            const remainingLines = remainingContent.split('\n');
-            for (const line of remainingLines) {
-                if (line.trim() && !line.match(/^\s{4,}[*-]/)) break;
-                endIndex += line.length + 1;
-            }
-            const beforeList = content.substring(0, startIndex);
-            const introMatch = beforeList.match(/([^\n]*pacientes[^\n]*):?\s*$/i);
-            const actualStart = introMatch ? beforeList.lastIndexOf(introMatch[1]) : startIndex;
-            rawText = content.substring(actualStart, endIndex).trim();
+
+        const firstMatch = matches[0].match;
+        const lastMatch = matches[matches.length - 1].match;
+        const startIndex = content.indexOf(firstMatch[0]);
+        let endIndex = content.indexOf(lastMatch[0]) + lastMatch[0].length;
+        const remainingContent = content.substring(endIndex);
+        const remainingLines = remainingContent.split("\n");
+
+        for (const line of remainingLines) {
+            if (line.trim() && !line.match(/^\s{4,}[*-]/)) break;
+            endIndex += line.length + 1;
         }
+
+        const beforeList = content.substring(0, startIndex);
+        const introMatch = beforeList.match(/([^\n]*pacientes[^\n]*):?\s*$/i);
+        const actualStart = introMatch ? beforeList.lastIndexOf(introMatch[1]) : startIndex;
+        rawText = content.substring(actualStart, endIndex).trim();
     }
+
     return patients.length > 0 ? { patients, raw: rawText } : null;
 };
 
-const parseMarkdownTable = (content: string) => {
+const parseMarkdownTable = (content: string): ParsedTable | null => {
     const separatorChars = ["-", ":", "\\s", "|"].join("");
     const tablePattern = new RegExp(
         "\\|(.+)\\|\\n\\|[" + separatorChars + "]+\\|\\n((?:\\|.+\\|\\n?)+)",
         "g",
     );
     const match = tablePattern.exec(content);
-    if (match) {
-        const headers = match[1].split('|').map(h => h.trim()).filter(Boolean);
-        const rows = match[2].trim().split('\n').map(row =>
-            row.split('|').map(cell => cell.trim()).filter(Boolean)
-        );
-        return { headers, rows, raw: match[0] };
-    }
-    return null;
+    if (!match) return null;
+
+    const headers = match[1].split("|").map((header) => header.trim()).filter(Boolean);
+    const rows = match[2].trim().split("\n").map((row) =>
+        row.split("|").map((cell) => cell.trim()).filter(Boolean),
+    );
+
+    return { headers, rows, raw: match[0] };
 };
 
-const SimpleTable = ({ headers, rows }: { headers: string[], rows: string[][] }) => (
+const SimpleTable = ({ headers, rows, reduceMotion }: ParsedTable & { reduceMotion: boolean }) => (
     <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={reduceMotion ? false : { opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        className="my-6 rounded-[24px] md:rounded-[32px] border border-white/10 bg-black overflow-hidden shadow-2xl w-full"
+        transition={reduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="notes-liquid-surface my-6 w-full overflow-hidden rounded-[24px] border shadow-[0_22px_64px_-48px_hsl(var(--foreground)/0.8)] md:rounded-[28px]"
     >
         <div className="overflow-x-auto custom-scrollbar">
-            <table className="w-full text-left border-collapse min-w-[400px]">
-                <thead className="bg-white/[0.03] border-b border-white/[0.08]">
+            <table className="w-full min-w-[400px] border-collapse text-left">
+                <thead className="border-b border-border/35 bg-muted/35 dark:border-white/[0.055] dark:bg-white/[0.035]">
                     <tr>
-                        {headers.map((h, i) => (
-                            <th key={i} className="text-[10px] md:text-[11px] font-black uppercase text-zinc-500 px-5 md:px-7 py-4 md:py-6 tracking-[0.2em] whitespace-nowrap">
-                                {h}
+                        {headers.map((header) => (
+                            <th key={header} className="whitespace-nowrap px-5 py-4 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground md:px-6">
+                                {header}
                             </th>
                         ))}
                     </tr>
                 </thead>
                 <tbody>
-                    {rows.map((row, i) => (
-                        <tr key={i} className="group hover:bg-white/[0.02] transition-colors border-b border-white/[0.03] last:border-0">
-                            {row.map((cell, j) => (
-                                <td key={j} className="text-[13px] md:text-[15px] text-zinc-300 px-5 md:px-7 py-4 md:py-6 group-hover:text-white transition-colors font-medium break-words max-w-[200px]">
+                    {rows.map((row, rowIndex) => (
+                        <tr key={row.join("|") || rowIndex} className="group border-b border-border/25 transition-colors last:border-0 hover:bg-muted/30 dark:border-white/[0.04] dark:hover:bg-white/[0.035]">
+                            {row.map((cell, cellIndex) => (
+                                <td key={`${rowIndex}-${cellIndex}-${cell}`} className="max-w-[220px] break-words px-5 py-4 text-[13px] font-medium text-foreground/82 transition-colors group-hover:text-foreground md:px-6 md:text-[14px]">
                                     <ReactMarkdown components={{ p: ({ children }) => <>{children}</> }}>{cell}</ReactMarkdown>
                                 </td>
                             ))}
@@ -260,61 +188,95 @@ const SimpleTable = ({ headers, rows }: { headers: string[], rows: string[][] })
 
 export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => {
     const isAssistant = message.role === "assistant";
+    const shouldReduceMotion = useReducedMotion();
     const [copied, setCopied] = useState(false);
     const [pdfBlob, setPdfBlob] = useState<string | null>(null);
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
     const { mutate: sendEmail, isPending: isSendingEmail } = useSendEmail();
     const navigate = useNavigate();
 
+    const richPayload = richData?.data ?? richData?.payload;
+    const documentData = useMemo(
+        () => (richData?.type === "generate_document" ? toDocumentPDFData(richPayload) : null),
+        [richData?.type, richPayload],
+    );
+
     useEffect(() => {
         let active = true;
-        if (richData?.type === 'generate_document' && richData.data) {
-            const generate = async () => {
-                setIsGeneratingPdf(true);
-                try {
-                    const blob = await generateDocumentPDF(richData.data);
-                    if (active) {
-                        const url = URL.createObjectURL(blob);
-                        setPdfBlob(url);
-                    }
-                } catch (e) {
-                    console.error("Failed to generate PDF", e);
-                } finally {
-                    if (active) setIsGeneratingPdf(false);
+        if (!documentData) return;
+
+        const generate = async () => {
+            setIsGeneratingPdf(true);
+            try {
+                const blob = await generateDocumentPDF(documentData);
+                if (active) {
+                    const url = URL.createObjectURL(blob);
+                    setPdfBlob((previous) => {
+                        if (previous) URL.revokeObjectURL(previous);
+                        return url;
+                    });
                 }
-            };
-            generate();
-        }
-        return () => { active = false; };
-    }, [richData]);
+            } catch (error) {
+                console.error("Failed to generate PDF", error);
+            } finally {
+                if (active) setIsGeneratingPdf(false);
+            }
+        };
+
+        void generate();
+
+        return () => {
+            active = false;
+        };
+    }, [documentData]);
+
+    useEffect(() => () => {
+        if (pdfBlob) URL.revokeObjectURL(pdfBlob);
+    }, [pdfBlob]);
 
     const handleSendEmail = async () => {
         const email = prompt("Para qual email deseja enviar o documento?");
         if (!email) return;
-        if (!richData?.data) { toast.error("Dados do documento não encontrados."); return; }
+        if (!documentData) {
+            toast.error("Dados do documento nao encontrados.");
+            return;
+        }
+
         try {
-            const blob = await generateDocumentPDF(richData.data);
+            const blob = await generateDocumentPDF(documentData);
             const reader = new FileReader();
             reader.readAsDataURL(blob);
             reader.onloadend = () => {
-                const base64data = (reader.result as string)?.split(',')[1];
-                if (!base64data) { toast.error("Erro ao processar arquivo PDF."); return; }
-                const emailParams = {
-                    to: email,
-                    subject: `Documento: ${richData.data.title || "Documento NeuroNex"}`,
-                    htmlBody: `<div style="font-family: sans-serif; color: #333;"><h2>Documento Enviado via NeuroNex</h2><p>Olá,</p><p>Segue em anexo o documento <strong>${richData.data.title || "Documento"}</strong>.</p><br/><p style="color: #666; font-size: 12px;">Enviado automaticamente por NeuroNex.</p></div>`,
-                    documentType: "documento",
-                    pdfAttachment: { filename: `${richData.data.title || "documento"}.pdf`, content: base64data, contentType: "application/pdf" }
-                };
-                sendEmail({ type: 'document', params: emailParams as any });
+                const base64data = (reader.result as string)?.split(",")[1];
+                if (!base64data) {
+                    toast.error("Erro ao processar arquivo PDF.");
+                    return;
+                }
+
+                sendEmail({
+                    type: "document",
+                    params: {
+                        to: email,
+                        subject: `Documento: ${documentData.title || "Documento NeuroNex"}`,
+                        htmlBody: `<div style="font-family: sans-serif; color: #333;"><h2>Documento Enviado via NeuroNex</h2><p>Ola,</p><p>Segue em anexo o documento <strong>${documentData.title || "Documento"}</strong>.</p><br/><p style="color: #666; font-size: 12px;">Enviado automaticamente por NeuroNex.</p></div>`,
+                        documentType: "documento",
+                        pdfAttachment: {
+                            filename: getDocumentFilename(richPayload),
+                            content: base64data,
+                            contentType: "application/pdf",
+                        },
+                    },
+                });
             };
-        } catch (error) { toast.error("Erro ao preparar documento para envio."); }
+        } catch {
+            toast.error("Erro ao preparar documento para envio.");
+        }
     };
 
     const handleCopy = () => {
-        navigator.clipboard.writeText(message.content);
+        void navigator.clipboard.writeText(message.content);
         setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        window.setTimeout(() => setCopied(false), 2000);
     };
 
     const parsedContent = useMemo(() => {
@@ -324,62 +286,91 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
         const patientData = parsePatientList(sourceContent);
         const tableData = parseMarkdownTable(sourceContent);
         let cleanContent = sourceContent;
-        if (tableData) cleanContent = cleanContent.replace(tableData.raw, '');
-        if (patientData) cleanContent = cleanContent.replace(patientData.raw, '');
-        return { patients: patientData?.patients || null, table: tableData, cleanContent: cleanContent.trim(), widgetData: widgetContent.widgetData };
+        if (tableData) cleanContent = cleanContent.replace(tableData.raw, "");
+        if (patientData) cleanContent = cleanContent.replace(patientData.raw, "");
+        return {
+            patients: patientData?.patients || null,
+            table: tableData,
+            cleanContent: cleanContent.trim(),
+            widgetData: widgetContent.widgetData,
+        };
     }, [message.content, isAssistant]);
 
     const customComponents = {
-        a: ({ href, children, ...props }: any) => {
+        a: ({ href, children, ...props }: MarkdownAnchorProps) => {
             const patientMatch = href?.match(/\/pacientes\/([a-f0-9-]+)/);
-            if (patientMatch) {
+            if (patientMatch && href) {
                 return (
-                    <button onClick={() => navigate(href)} className="text-white hover:text-white/80 underline underline-offset-4 transition-colors font-black">
+                    <button
+                        type="button"
+                        onClick={() => navigate(href)}
+                        className="font-black text-foreground underline underline-offset-4 transition-colors hover:text-foreground/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    >
                         {children}
                     </button>
                 );
             }
-            if (href?.toLowerCase().endsWith('.pdf')) {
+
+            if (href?.toLowerCase().endsWith(".pdf")) {
                 return (
-                    <a href={href} target="_blank" rel="noopener noreferrer" className="flex items-center gap-4 p-5 my-6 rounded-[24px] md:rounded-[36px] bg-black border border-white/10 hover:bg-zinc-950 transition-all group max-w-full md:max-w-sm no-underline shadow-xl active:scale-[0.98]">
-                        <div className="h-11 w-11 md:h-14 md:w-14 rounded-xl md:rounded-2xl bg-white/5 flex items-center justify-center shrink-0 border border-white/10 group-hover:scale-105 transition-all duration-500 shadow-inner">
-                            <FileText className="h-6 w-6 md:h-8 md:w-8 text-white" strokeWidth={1.5} />
+                    <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="notes-liquid-surface my-6 flex max-w-full items-center gap-4 rounded-[22px] border p-4 no-underline shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.72)] transition-transform hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:hover:translate-y-0 md:max-w-sm md:rounded-[26px] md:p-5"
+                    >
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/65 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055] md:h-12 md:w-12">
+                            <FileText className="h-5 w-5" strokeWidth={1.7} />
                         </div>
-                        <div className="flex flex-col overflow-hidden text-left gap-0.5">
-                            <span className="text-[14px] md:text-[16px] font-black text-white truncate">{String(children)}</span>
-                            <span className="text-[9px] md:text-[11px] text-zinc-500 font-black uppercase tracking-[0.15em] md:tracking-[0.2em]">Abrir Documento</span>
+                        <div className="flex min-w-0 flex-col gap-0.5 overflow-hidden text-left">
+                            <span className="truncate text-[14px] font-black text-foreground md:text-[15px]">{String(children)}</span>
+                            <span className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground md:text-[10px]">Abrir documento</span>
                         </div>
                     </a>
                 );
             }
-            return <a href={href} {...props} className="text-white hover:underline font-bold break-all">{children}</a>;
+
+            return (
+                <a href={href} {...props} className="break-all font-bold text-foreground underline underline-offset-4 hover:text-foreground/70">
+                    {children}
+                </a>
+            );
         },
-        code: ({ inline, className, children, ...props }: any) => {
-            if (inline) return <code className="text-white bg-white/10 px-1.5 py-0.5 rounded font-mono text-[12px] md:text-[13px] break-all" {...props}>{children}</code>;
+        code: ({ inline, className, children, ...props }: MarkdownCodeProps) => {
+            if (inline) {
+                return (
+                    <code className="rounded-md border border-border/35 bg-muted/60 px-1.5 py-0.5 font-mono text-[12px] text-foreground dark:border-white/[0.075] dark:bg-white/[0.055] md:text-[13px]" {...props}>
+                        {children}
+                    </code>
+                );
+            }
+
             const codeString = String(children).trim();
-            if (codeString.startsWith('{') && codeString.endsWith('}')) {
+            if (codeString.startsWith("{") && codeString.endsWith("}")) {
                 try {
-                    const json = JSON.parse(codeString);
-                    const type = json.type || json.__actionType;
-                    if (type) {
+                    const parsedJson = JSON.parse(codeString) as unknown;
+                    if (isRecord(parsedJson) && firstString(parsedJson.type, parsedJson.__actionType)) {
                         return (
                             <div className="my-6 bg-transparent">
-                                <SynapseWidgetRenderer widgetData={json} />
+                                <SynapseWidgetRenderer widgetData={parsedJson} />
                             </div>
                         );
                     }
-                } catch (e) {
-                    console.debug("Ignoring non-widget code block", e);
+                } catch {
+                    // Not a Synapse widget; render as a normal code block.
                 }
             }
+
             return (
-                <pre className="my-6 p-5 md:p-7 rounded-[24px] md:rounded-[32px] bg-black border border-white/10 overflow-x-auto shadow-xl custom-scrollbar w-full">
-                    <code className={cn("text-[13px] md:text-[14px] font-mono text-zinc-400/90 leading-relaxed", className)} {...props}>{children}</code>
+                <pre className="notes-liquid-surface my-6 w-full overflow-x-auto rounded-[22px] border p-5 shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.72)] custom-scrollbar md:rounded-[26px] md:p-6">
+                    <code className={cn("font-mono text-[13px] leading-relaxed text-foreground/72 md:text-[14px]", className)} {...props}>
+                        {children}
+                    </code>
                 </pre>
             );
         },
-        blockquote: ({ children }: any) => (
-            <blockquote className="my-8 pl-6 md:pl-10 border-l-2 border-white/15 text-zinc-400 italic font-medium leading-relaxed text-[16px] md:text-[18px]">
+        blockquote: ({ children }: MarkdownBlockquoteProps) => (
+            <blockquote className="my-8 border-l-2 border-border/70 pl-6 text-[16px] font-medium italic leading-relaxed text-muted-foreground md:pl-8 md:text-[17px]">
                 {children}
             </blockquote>
         ),
@@ -387,55 +378,55 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
-                "group relative w-full flex flex-col gap-2 md:gap-4 px-4 md:px-10 py-6 md:py-10 transition-all duration-700 rounded-[32px] md:rounded-[56px] border border-transparent overflow-hidden",
-                isAssistant ? "bg-transparent" : "bg-white/[0.04] border-white/[0.06] shadow-2xl backdrop-blur-3xl"
+                "group relative flex w-full flex-col gap-3 overflow-hidden rounded-[30px] border border-transparent px-4 py-6 transition-colors duration-300 md:gap-4 md:rounded-[40px] md:px-8 md:py-8",
+                !isAssistant && "notes-liquid-surface border-border/45 shadow-[0_24px_70px_-52px_hsl(var(--foreground)/0.7)] dark:border-white/[0.07]",
             )}
         >
             {isAssistant ? (
-                <div className="mb-2 flex items-center gap-3 shrink-0">
+                <div className="mb-1 flex shrink-0 items-center gap-3">
                     <SynapseOrbAvatar className="h-9 w-9 md:h-10 md:w-10" />
                     <div className="min-w-0">
-                        <span className="block truncate text-[10px] font-black uppercase tracking-[0.28em] text-zinc-500 dark:text-zinc-400">
+                        <span className="block truncate text-[10px] font-black uppercase tracking-[0.28em] text-muted-foreground">
                             Synapse
                         </span>
-                        <span className="block text-[8px] font-bold uppercase tracking-widest text-zinc-500/55 dark:text-zinc-500">
-                            {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <span className="block text-[8px] font-bold uppercase tracking-widest text-muted-foreground/55">
+                            {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                         </span>
                     </div>
                 </div>
             ) : (
-                <div className="flex items-center justify-between mb-2 shrink-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                        <div className={cn(
-                            "h-9 w-9 rounded-xl flex items-center justify-center shadow-2xl border transition-all duration-700 shrink-0",
-                            "bg-zinc-900 text-zinc-500 border-white/5"
-                        )}>
+                <div className="mb-1 flex shrink-0 items-center justify-between">
+                    <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-primary text-primary-foreground shadow-[0_18px_44px_-30px_hsl(var(--foreground)/0.75)]">
                             <User className="h-4.5 w-4.5" strokeWidth={2} />
                         </div>
-                        <div className="flex flex-col gap-0 min-w-0">
-                            <span className="text-[10px] font-black uppercase tracking-[0.3em] leading-none truncate text-zinc-500">
-                                Sua Conta
+                        <div className="flex min-w-0 flex-col gap-0">
+                            <span className="truncate text-[10px] font-black uppercase leading-none tracking-[0.24em] text-muted-foreground">
+                                Sua conta
                             </span>
-                            <span className="text-[8px] text-zinc-600 font-bold uppercase tracking-widest opacity-60">
-                                {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/55">
+                                {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             </span>
                         </div>
                     </div>
                 </div>
             )}
 
-            <div className={cn(
-                "prose max-w-none prose-p:leading-[1.4] prose-p:text-zinc-200 prose-p:text-[15px] md:prose-p:text-[18px] prose-p:font-medium prose-p:my-2",
-                "prose-strong:text-white prose-strong:font-black prose-strong:tracking-tight prose-strong:break-words",
-                "prose-headings:text-white prose-headings:font-black prose-headings:tracking-tighter prose-headings:break-words prose-headings:my-3",
-                "prose-ul:my-4 md:prose-ul:my-6 prose-ul:list-disc prose-ul:pl-6 md:prose-ul:pl-8",
-                "prose-li:pl-1 prose-li:text-zinc-400 prose-li:marker:text-white/20 prose-li:break-words prose-li:my-1",
-                "flex-1 px-0.5 md:px-0 w-full overflow-hidden break-words",
-                isAssistant ? "mt-0" : ""
-            )}>
+            <div
+                className={cn(
+                    "prose max-w-none flex-1 overflow-hidden break-words px-0.5 md:px-0",
+                    "prose-p:my-2 prose-p:text-[15px] prose-p:font-medium prose-p:leading-[1.55] prose-p:text-foreground/84 md:prose-p:text-[17px]",
+                    "prose-strong:break-words prose-strong:font-black prose-strong:text-foreground",
+                    "prose-headings:my-3 prose-headings:break-words prose-headings:font-black prose-headings:tracking-tight prose-headings:text-foreground",
+                    "prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6 md:prose-ul:my-6 md:prose-ul:pl-8",
+                    "prose-li:my-1 prose-li:break-words prose-li:pl-1 prose-li:text-muted-foreground prose-li:marker:text-muted-foreground/45",
+                    "dark:prose-invert dark:prose-p:text-foreground/84",
+                )}
+            >
                 {parsedContent.cleanContent ? (
                     <ReactMarkdown components={customComponents}>{parsedContent.cleanContent}</ReactMarkdown>
                 ) : null}
@@ -443,19 +434,25 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
 
             <AnimatePresence>
                 {(parsedContent.table || parsedContent.patients || parsedContent.widgetData || richData) && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-4 md:space-y-6 w-full overflow-hidden bg-transparent">
-                        {parsedContent.table && <SimpleTable headers={parsedContent.table.headers} rows={parsedContent.table.rows} />}
+                    <motion.div
+                        initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                        className="w-full space-y-4 overflow-hidden bg-transparent md:space-y-5"
+                    >
+                        {parsedContent.table && <SimpleTable {...parsedContent.table} reduceMotion={Boolean(shouldReduceMotion)} />}
                         {parsedContent.patients && parsedContent.patients.length > 0 && (
                             <div className="my-4 w-full overflow-hidden bg-transparent">
                                 <PatientListWidget patients={parsedContent.patients} />
                             </div>
                         )}
-                        {richData?.type === 'generate_document' && (
+                        {richData?.type === "generate_document" && documentData && (
                             <div className="my-4 w-full bg-transparent">
                                 <PDFPreviewCard
                                     pdfUrl={pdfBlob || undefined}
-                                    filename={richData.data?.filename || "documento.pdf"}
-                                    title={richData.data?.title || "Documento Gerado"}
+                                    filename={getDocumentFilename(richPayload)}
+                                    title={documentData.title || "Documento gerado"}
                                     isLoading={isGeneratingPdf}
                                     isLoadingEmail={isSendingEmail}
                                     onSendEmail={handleSendEmail}
@@ -467,20 +464,21 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
                                 <SynapseWidgetRenderer widgetData={parsedContent.widgetData} />
                             </div>
                         )}
-                        {richData && richData.type !== 'generate_document' && richData.type !== 'review_draft' && richData.type !== 'review_invoice_draft' && (
+                        {richData && richData.type !== "generate_document" && richData.type !== "review_draft" && richData.type !== "review_invoice_draft" && (
                             <div className="bg-transparent">
-                                <SynapseWidgetRenderer widgetData={{ __actionType: richData.type, data: richData.payload || richData.data }} />
+                                <SynapseWidgetRenderer widgetData={{ __actionType: richData.type, data: richPayload }} />
                             </div>
                         )}
                     </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Actions at the bottom */}
-            <div className="mt-2 flex items-center justify-start gap-2 opacity-40 group-hover:opacity-100 transition-all duration-300">
+            <div className="mt-1 flex items-center justify-start gap-2 opacity-55 transition-opacity duration-200 group-hover:opacity-100 group-focus-within:opacity-100">
                 <button
+                    type="button"
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 text-[10px] font-bold uppercase tracking-wider text-zinc-500 hover:text-white transition-all active:scale-95"
+                    className="flex min-h-9 items-center gap-1.5 rounded-xl border border-border/35 bg-muted/35 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.055] dark:bg-white/[0.035]"
+                    aria-label="Copiar mensagem"
                 >
                     {copied ? (
                         <>

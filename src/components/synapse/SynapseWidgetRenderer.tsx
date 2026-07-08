@@ -10,28 +10,23 @@ import {
   Stethoscope,
   User,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
 
-type SynapseWidgetData = {
-  __actionType?: string;
-  type?: string;
-  data?: unknown;
-  payload?: unknown;
-  title?: string;
-};
+import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
+import {
+  firstString,
+  isRecord,
+  normalizeSynapseDataArray,
+  normalizeSynapseWidgetType,
+  type SynapseWidgetData,
+  unwrapSynapseToolResponse,
+} from "@/lib/synapse-widget-parser";
+import { cn } from "@/lib/utils";
 
 interface SynapseWidgetProps {
   widgetData: SynapseWidgetData;
   compact?: boolean;
 }
-
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  !!value && typeof value === "object" && !Array.isArray(value);
-
-const firstString = (...values: unknown[]) =>
-  values.find((value): value is string => typeof value === "string" && value.trim().length > 0);
 
 const toBrazilTime = (iso?: unknown) => {
   if (typeof iso !== "string") return "";
@@ -53,84 +48,11 @@ const formatCurrency = (value: unknown) => {
   return amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 };
 
-const normalizeType = (type?: string) =>
-  (type || "synapse_action")
-    .replace(/_widget$/i, "")
-    .replace(/_response$/i, "")
-    .toLowerCase();
-
-const unwrapToolResponse = (value: unknown): SynapseWidgetData | null => {
-  if (!isRecord(value)) return null;
-  const directType = firstString(value.__actionType, value.type);
-  if (directType) return value as SynapseWidgetData;
-
-  const responseEntry = Object.entries(value).find(([key]) => key.endsWith("_response"));
-  if (!responseEntry) return null;
-
-  const [responseKey, responseValue] = responseEntry;
-  const response = isRecord(responseValue) ? responseValue : {};
-  const content = isRecord(response.content) ? response.content : response;
-  const data =
-    (isRecord(content.appointment) && content.appointment) ||
-    (isRecord(content.patient) && content.patient) ||
-    (isRecord(content.invoice) && content.invoice) ||
-    content;
-
-  return {
-    __actionType: responseKey.replace(/_response$/i, ""),
-    data,
-    title: firstString(content.message, response.message),
-  };
-};
-
-export const parseSynapseWidgetFromContent = (content: string): {
-  cleanContent: string;
-  widgetData: SynapseWidgetData | null;
-} => {
-  const trimmed = content.trim();
-
-  const fromRawJson = (() => {
-    if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return null;
-    try {
-      return unwrapToolResponse(JSON.parse(trimmed));
-    } catch {
-      return null;
-    }
-  })();
-
-  if (fromRawJson) return { cleanContent: "", widgetData: fromRawJson };
-
-  const fencePattern = /```(?:json)?\s*([\s\S]*?)```/gi;
-  let widgetData: SynapseWidgetData | null = null;
-  const cleanContent = content.replace(fencePattern, (fullMatch, jsonCandidate) => {
-    if (widgetData) return fullMatch;
-    try {
-      widgetData = unwrapToolResponse(JSON.parse(String(jsonCandidate).trim()));
-      return widgetData ? "" : fullMatch;
-    } catch {
-      return fullMatch;
-    }
-  }).trim();
-
-  return { cleanContent, widgetData };
-};
-
-const normalizeDataArray = (rawData: unknown): unknown[] => {
-  if (Array.isArray(rawData)) return rawData;
-  if (!isRecord(rawData)) return rawData ? [rawData] : [];
-  if (Array.isArray(rawData.items)) return rawData.items;
-  if (Array.isArray(rawData.results)) return rawData.results;
-  if (Array.isArray(rawData.data)) return rawData.data;
-  if (Array.isArray(rawData.patients)) return rawData.patients;
-  if (Array.isArray(rawData.appointments)) return rawData.appointments;
-  return [rawData];
-};
-
 const getEntityId = (data: unknown, type: string) => {
   if (!isRecord(data)) return undefined;
   const nestedAppointment = isRecord(data.appointment) ? data.appointment : undefined;
   const nestedPatient = isRecord(data.patient) ? data.patient : undefined;
-  const normalized = normalizeType(type);
+  const normalized = normalizeSynapseWidgetType(type);
 
   if (normalized.includes("appointment") || normalized.includes("agenda") || normalized.includes("calendar")) {
     return firstString(data.appointment_id, nestedAppointment?.id, data.id);
@@ -144,7 +66,7 @@ const getEntityId = (data: unknown, type: string) => {
 };
 
 const getTarget = (type: string, data: unknown) => {
-  const normalized = normalizeType(type);
+  const normalized = normalizeSynapseWidgetType(type);
   const id = getEntityId(data, type);
 
   if (normalized.includes("appointment") || normalized.includes("agenda") || normalized.includes("calendar")) {
@@ -159,7 +81,7 @@ const getTarget = (type: string, data: unknown) => {
     return {
       path: id ? `/pacientes/${id}` : "/pacientes",
       state: id ? { openPatientId: id } : undefined,
-      toast: id ? "Abrindo prontuário..." : "Abrindo pacientes...",
+      toast: id ? "Abrindo prontuario..." : "Abrindo pacientes...",
     };
   }
 
@@ -178,7 +100,13 @@ const StatusBadge = ({ status, notes }: { status?: string | null; notes?: string
   const meta = getAppointmentStatusMeta(status || "unscored", notes);
   const Icon = meta.icon;
   return (
-    <span className={cn("inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider", meta.softClassName, meta.textClassName)}>
+    <span
+      className={cn(
+        "inline-flex min-h-6 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase tracking-wider",
+        meta.softClassName,
+        meta.textClassName,
+      )}
+    >
       <Icon className="h-3 w-3" />
       {meta.label}
     </span>
@@ -186,26 +114,32 @@ const StatusBadge = ({ status, notes }: { status?: string | null; notes?: string
 };
 
 const actionLabel = (type: string) => {
-  const normalized = normalizeType(type);
+  const normalized = normalizeSynapseWidgetType(type);
   const labels: Record<string, string> = {
     create_appointment: "Agendamento criado",
     send_email: "E-mail enviado",
-    create_invoice: "Cobrança gerada",
+    create_invoice: "Cobranca gerada",
     update_patient: "Paciente atualizado",
     create_patient: "Paciente cadastrado",
     generate_document: "Documento gerado",
-    clinical_history: "Prontuário atualizado",
+    clinical_history: "Prontuario atualizado",
   };
   return labels[normalized] || normalized.replace(/_/g, " ");
 };
 
+const rowClassName =
+  "group/item flex min-h-11 w-full items-center justify-between rounded-2xl border border-border/45 bg-background/70 p-3.5 text-left shadow-[inset_0_1px_0_hsl(var(--background)/0.78)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-foreground/12 hover:bg-muted/55 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.075] dark:bg-white/[0.04] dark:hover:bg-white/[0.07]";
+
+const iconClassName =
+  "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/70 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.72)] transition-colors group-hover/item:text-foreground dark:border-white/[0.075] dark:bg-white/[0.055]";
+
 export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWidgetProps) => {
   const navigate = useNavigate();
-  const normalizedWidget = unwrapToolResponse(widgetData) || widgetData;
+  const normalizedWidget = unwrapSynapseToolResponse(widgetData) || widgetData;
   const type = firstString(normalizedWidget.__actionType, normalizedWidget.type) || "synapse_action";
-  const normalizedType = normalizeType(type);
+  const normalizedType = normalizeSynapseWidgetType(type);
   const rawData = normalizedWidget.data ?? normalizedWidget.payload ?? normalizedWidget;
-  const dataArray = normalizeDataArray(rawData);
+  const dataArray = normalizeSynapseDataArray(rawData);
 
   const openTarget = (data: unknown = rawData) => {
     const target = getTarget(type, data);
@@ -217,27 +151,34 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
     <div className="space-y-2">
       {dataArray.map((item, index) => {
         const patient = isRecord(item) ? item : {};
+        const patientId = firstString(patient.id, patient.patient_id);
         return (
           <button
-            key={firstString(patient.id, patient.patient_id) || index}
+            key={patientId || `patient-${index}`}
+            type="button"
             onClick={() => openTarget(patient)}
-            className="group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 text-left transition active:scale-[0.985] hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]"
+            className={rowClassName}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-200 text-zinc-600 dark:bg-white/[0.07] dark:text-zinc-300">
+              <div className={cn("relative", iconClassName)}>
                 <User className="h-4 w-4" />
-                <span className={cn("absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-zinc-50 dark:border-[#0a0a0c]", patient.status === "inactive" ? "bg-amber-500" : "bg-emerald-500")} />
+                <span
+                  className={cn(
+                    "absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full border-2 border-background",
+                    patient.status === "inactive" ? "bg-amber-500" : "bg-emerald-500",
+                  )}
+                />
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
+                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">
                   {firstString(patient.name, patient.patient_name) || "Paciente"}
                 </p>
-                <p className="mt-0.5 truncate text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                <p className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground">
                   {firstString(patient.email, patient.phone, patient.diagnosis) || "Abrir detalhes"}
                 </p>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover/item:translate-x-0.5 dark:text-zinc-500" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover/item:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0" />
           </button>
         );
       })}
@@ -254,36 +195,37 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
         const time = firstString(
           appointment.horario,
           appointment.time,
-          start ? `${toBrazilTime(start)}${end ? ` às ${toBrazilTime(end)}` : ""}` : undefined,
+          start ? `${toBrazilTime(start)}${end ? ` as ${toBrazilTime(end)}` : ""}` : undefined,
         );
         const patientName = firstString(appointment.patient_name, patient.name, appointment.title) || "Agendamento";
         const appointmentType = firstString(appointment.type) || "presencial";
         const status = firstString(appointment.status) || "confirmed";
+        const appointmentId = firstString(appointment.id, appointment.appointment_id);
 
         return (
           <button
-            key={firstString(appointment.id, appointment.appointment_id) || index}
+            key={appointmentId || `appointment-${index}`}
+            type="button"
             onClick={() => openTarget(appointment)}
-            className={cn(
-              "group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 text-left transition active:scale-[0.985] hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
-              isCancelledAppointmentStatus(status, firstString(appointment.notes)) && "opacity-60",
-            )}
+            className={cn(rowClassName, isCancelledAppointmentStatus(status, firstString(appointment.notes)) && "opacity-65")}
           >
             <div className="flex min-w-0 items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+              <div className={iconClassName}>
                 {appointmentType === "online" ? <Stethoscope className="h-4 w-4" /> : <Calendar className="h-4 w-4" />}
               </div>
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
-                  {patientName}
-                </p>
+                <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">{patientName}</p>
                 <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
-                  {time ? <span className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500 dark:text-zinc-400">{time}</span> : null}
+                  {time ? (
+                    <span className="truncate text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">
+                      {time}
+                    </span>
+                  ) : null}
                   <StatusBadge status={status} notes={firstString(appointment.notes)} />
                 </div>
               </div>
             </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover/item:translate-x-0.5 dark:text-zinc-500" />
+            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover/item:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0" />
           </button>
         );
       })}
@@ -298,10 +240,14 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
     ];
 
     return (
-      <button onClick={() => openTarget(data)} className="grid w-full grid-cols-2 gap-2 text-left transition active:scale-[0.985]">
+      <button
+        type="button"
+        onClick={() => openTarget(data)}
+        className="grid w-full grid-cols-1 gap-2 text-left transition-transform active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 sm:grid-cols-2"
+      >
         {metrics.map((metric) => (
-          <div key={metric.label} className="rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 dark:border-white/[0.07] dark:bg-white/[0.035]">
-            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">{metric.label}</p>
+          <div key={metric.label} className="rounded-2xl border border-border/45 bg-background/70 p-3.5 dark:border-white/[0.075] dark:bg-white/[0.04]">
+            <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">{metric.label}</p>
             <p className={cn("mt-1 truncate text-[15px] font-black tracking-[-0.03em]", metric.color)}>{formatCurrency(metric.value)}</p>
           </div>
         ))}
@@ -312,22 +258,17 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
   const renderGenericAction = () => {
     const data = dataArray[0] || rawData;
     return (
-      <button
-        onClick={() => openTarget(data)}
-        className="group/item flex w-full min-h-11 items-center justify-between rounded-2xl border border-zinc-200/70 bg-zinc-50 p-3.5 text-left transition active:scale-[0.985] hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]"
-      >
+      <button type="button" onClick={() => openTarget(data)} className={rowClassName}>
         <div className="flex min-w-0 items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-200 text-zinc-700 dark:bg-white/[0.07] dark:text-zinc-200">
+          <div className={iconClassName}>
             <CheckCircle2 className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-zinc-500 dark:text-zinc-400">Executado</p>
-            <p className="truncate text-[13px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
-              {actionLabel(type)}
-            </p>
+            <p className="text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground">Executado</p>
+            <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">{actionLabel(type)}</p>
           </div>
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-zinc-400 transition group-hover/item:translate-x-0.5 dark:text-zinc-500" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover/item:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/item:translate-x-0" />
       </button>
     );
   };
@@ -352,29 +293,31 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
   const headerLabel = (() => {
     if (normalizedType.includes("patient") || normalizedType.includes("paciente")) return "Paciente";
     if (normalizedType.includes("appointment") || normalizedType.includes("calendar") || normalizedType.includes("agenda")) return "Agenda";
-    if (normalizedType.includes("risk")) return "Alerta clínico";
+    if (normalizedType.includes("risk")) return "Alerta clinico";
     if (normalizedType.includes("finance") || normalizedType.includes("invoice")) return "Financeiro";
     if (normalizedType.includes("document")) return "Documento";
-    return "Ação do Synapse";
+    return "Acao do Synapse";
   })();
 
   return (
-    <div className={cn(
-      "my-3 overflow-hidden rounded-[22px] border border-zinc-200/70 bg-white shadow-[0_18px_55px_-45px_rgba(0,0,0,0.75)] dark:border-white/[0.08] dark:bg-[#0a0a0c]",
-      compact && "rounded-[18px]",
-    )}>
-      <div className="flex items-center gap-2.5 border-b border-zinc-100 px-4 py-3 dark:border-white/[0.05]">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 dark:bg-white/[0.07] dark:text-zinc-200">
+    <div
+      className={cn(
+        "notes-liquid-surface my-3 overflow-hidden rounded-[22px] border shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.75)]",
+        compact && "rounded-[18px]",
+      )}
+    >
+      <div className="flex items-center gap-2.5 border-b border-border/35 px-4 py-3 dark:border-white/[0.055]">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/70 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]">
           {icon}
         </div>
         <div className="min-w-0">
-          <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{headerLabel}</p>
-          <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-zinc-950 dark:text-zinc-100">
+          <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{headerLabel}</p>
+          <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-foreground">
             {firstString(normalizedWidget.title) || actionLabel(type)}
           </p>
         </div>
         {dataArray.length > 1 ? (
-          <span className="ml-auto rounded-full bg-zinc-100 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-zinc-500 dark:bg-white/[0.07] dark:text-zinc-400">
+          <span className="ml-auto rounded-full border border-border/35 bg-muted/55 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]">
             {dataArray.length}
           </span>
         ) : null}

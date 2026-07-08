@@ -1,6 +1,7 @@
 import { VoiceSpiral } from "@/components/ai-chat/VoiceSpiral";
 import { SynapseOrbAvatar } from "@/components/synapse/SynapseOrbAvatar";
-import { SynapseWidgetRenderer, parseSynapseWidgetFromContent } from "@/components/synapse/SynapseWidgetRenderer";
+import { SynapseWidgetRenderer } from "@/components/synapse/SynapseWidgetRenderer";
+import { parseSynapseWidgetFromContent } from "@/lib/synapse-widget-parser";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
 import type { Message } from "@/types";

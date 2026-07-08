@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
 import { useSynapse } from '@/context/SynapseProvider';
@@ -34,7 +34,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { SynapseWidgetRenderer, parseSynapseWidgetFromContent } from './SynapseWidgetRenderer';
+import { parseSynapseWidgetFromContent } from '@/lib/synapse-widget-parser';
+import { SynapseWidgetRenderer } from './SynapseWidgetRenderer';
 import { SynapseAllActionsModal } from './SynapseAllActionsModal';
 import { supabase } from '@/integrations/supabase/client';
 import { SynapseOrbAvatar } from './SynapseOrbAvatar';
@@ -167,6 +168,7 @@ const EXEC_STATE_LABELS = {
 } as const;
 
 export const SynapseCompactPanel = () => {
+    const shouldReduceMotion = useReducedMotion();
     const {
         shellState,
         setShellState,
@@ -394,9 +396,9 @@ export const SynapseCompactPanel = () => {
             <motion.div
                 layout
                 layoutId="synapse-shell"
-                initial={{ opacity: 0, scale: 0.9, y: 20, filter: 'blur(10px)' }}
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9, y: 20, filter: 'blur(10px)' }}
                 animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
-                exit={{
+                exit={shouldReduceMotion ? { opacity: 0 } : {
                     opacity: 0,
                     scale: 0.1,
                     y: 280,
@@ -408,7 +410,7 @@ export const SynapseCompactPanel = () => {
                         opacity: { duration: 0.25 }
                     }
                 }}
-                transition={{
+                transition={shouldReduceMotion ? { duration: 0 } : {
                     type: 'spring',
                     stiffness: 450,
                     damping: 38,
@@ -420,22 +422,12 @@ export const SynapseCompactPanel = () => {
                     'rounded-[36px]',
                     'relative overflow-hidden',
                     'flex flex-col',
-                    'bg-zinc-50/90 dark:bg-[#0a0a0c]/90 backdrop-blur-3xl',
-                    'border border-black/[0.04] dark:border-white/[0.06]',
-                    'shadow-[0_40px_100px_-20px_rgba(0,0,0,0.1),0_0_0_1px_rgba(0,0,0,0.02)] dark:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.02)]',
+                    'notes-liquid-surface border backdrop-blur-3xl',
+                    'shadow-[0_40px_100px_-42px_hsl(var(--foreground)/0.42)] dark:shadow-[0_40px_100px_-34px_rgba(0,0,0,0.72)]',
                 )}
             >
-                <div className="absolute inset-0 pointer-events-none">
-                    <div className="absolute inset-0 bg-transparent transition-colors duration-500" />
-                    <div className="block dark:hidden absolute inset-0 opacity-40">
-                        <div className="absolute top-[80%] left-[10%] w-[300px] h-[300px] bg-indigo-500/20 rounded-full blur-[80px]" />
-                        <div className="absolute top-[10%] right-[10%] w-[250px] h-[250px] bg-purple-500/20 rounded-full blur-[80px]" />
-                    </div>
-                    <div className="hidden dark:block absolute inset-0 opacity-40 mix-blend-screen">
-                        <div className="absolute top-[80%] left-[10%] w-[300px] h-[300px] bg-indigo-500/10 rounded-full blur-[80px]" />
-                        <div className="absolute top-[10%] right-[10%] w-[250px] h-[250px] bg-purple-500/10 rounded-full blur-[80px]" />
-                    </div>
-                </div>
+                <div className="notes-lumen-field pointer-events-none absolute inset-0 opacity-55" />
+                <div className="notes-retina-texture pointer-events-none absolute inset-0 opacity-45" />
 
                 <div className="relative z-10 flex flex-col h-full max-h-[620px]">
                     <div className="flex items-center justify-between px-7 pt-7 pb-4">
@@ -479,7 +471,9 @@ export const SynapseCompactPanel = () => {
                                 {voiceStatus === 'connected' ? (
                                     <>
                                         <PhoneOff className="h-4 w-4 relative z-10" />
-                                        <motion.div className="absolute inset-0 bg-indigo-500/10" animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }} />
+                                        {!shouldReduceMotion && (
+                                            <motion.div className="absolute inset-0 bg-foreground/10" animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }} />
+                                        )}
                                     </>
                                 ) : (
                                     <AudioLines className="h-4 w-4" />

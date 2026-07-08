@@ -58,6 +58,7 @@ export const ChatSidebar = ({
     }, {} as Record<string, ChatSession[]>);
 
     const groupOrder = ["Hoje", "Ontem", "7 Dias", "30 Dias", "Antigos"];
+    const hasVisibleSessions = groupOrder.some((label) => Boolean(groupedSessions?.[label]?.length));
 
     return (
         <div className="relative flex h-full flex-col overflow-hidden bg-transparent backdrop-blur-md">
@@ -105,7 +106,7 @@ export const ChatSidebar = ({
             {/* Session List */}
             <ScrollArea className="flex-1 px-3 relative z-10">
                 <div className="pb-20 space-y-6">
-                    {groupedSessions && groupOrder.map(label => {
+                    {hasVisibleSessions ? groupOrder.map(label => {
                         const list = groupedSessions[label];
                         if (!list || list.length === 0) return null;
 
@@ -217,7 +218,17 @@ export const ChatSidebar = ({
                                 </div>
                             </div>
                         );
-                    })}
+                    }) : (
+                        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/45 px-6 py-10 text-center dark:border-white/[0.075]">
+                            <History className="h-7 w-7 text-muted-foreground/55" />
+                            <p className="mt-4 text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                                {filter ? "Nenhuma conversa encontrada" : "Historico vazio"}
+                            </p>
+                            <p className="mt-2 max-w-[14rem] text-xs leading-relaxed text-muted-foreground/70">
+                                {filter ? "Ajuste a busca para localizar outra conversa." : "Crie uma conversa para iniciar o historico do Synapse."}
+                            </p>
+                        </div>
+                    )}
                 </div>
             </ScrollArea>
 

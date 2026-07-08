@@ -1,72 +1,74 @@
-import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
-import { Sparkles, MessageCircle, AudioLines, Mic, CheckCircle2, Circle, Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useSynapse } from '@/context/SynapseProvider';
-import { useAI } from '@/context/AIContext';
-import { useSynapseChat } from '@/hooks/use-synapse-chat';
-import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
+import { AudioLines, CheckCircle2, Circle, Loader2, MessageCircle, Mic, Sparkles } from "lucide-react";
 
-// ─── Context Display Names ────────────────────────────────────────────
+import { VoiceSpiral } from "@/components/ai-chat/VoiceSpiral";
+import { useAI } from "@/context/AIContext";
+import { useSynapse } from "@/context/SynapseProvider";
+import { useSynapseChat } from "@/hooks/use-synapse-chat";
+import { cn } from "@/lib/utils";
 
 const CONTEXT_DISPLAY: Record<string, string> = {
-    dashboard: 'Dashboard',
-    'patient-profile': 'Paciente',
-    patients: 'Pacientes',
-    calendar: 'Agenda',
-    finance: 'Financeiro',
-    session: 'Teleconsulta',
-    notes: 'Notas',
-    synapse: 'Synapse AI',
+    dashboard: "Dashboard",
+    "patient-profile": "Paciente",
+    patients: "Pacientes",
+    calendar: "Agenda",
+    finance: "Financeiro",
+    session: "Teleconsulta",
+    notes: "Notas",
+    synapse: "Synapse AI",
 };
 
-// ─── Component ────────────────────────────────────────────────────────
+const neutralButtonClassName =
+    "flex h-full flex-1 items-center justify-center gap-2 border border-border/35 bg-muted/35 text-muted-foreground transition-[background-color,color,transform] duration-200 hover:bg-muted hover:text-foreground active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.055] dark:bg-white/[0.035] dark:hover:bg-white/[0.07]";
 
 export const SynapsePill = () => {
     const {
-        execState, setShellState, shellState, setActiveTab,
-        voiceStatus, isVoiceSpeaking, getVoiceInputVolume, setIsVoiceExpanded,
-        quickActions, isIntelligenceLoading, scanProgress
+        execState,
+        setShellState,
+        shellState,
+        setActiveTab,
+        voiceStatus,
+        isVoiceSpeaking,
+        getVoiceInputVolume,
+        setIsVoiceExpanded,
+        quickActions,
+        isIntelligenceLoading,
+        scanProgress,
     } = useSynapse();
     const { currentContext } = useAI();
     const { messages, send, isSending } = useSynapseChat();
+    const shouldReduceMotion = useReducedMotion();
     const messageCount = messages.length;
-    const contextLabel = CONTEXT_DISPLAY[currentContext] || 'Synapse';
-    
+    const contextLabel = CONTEXT_DISPLAY[currentContext] || "Synapse";
+
     const [isHovered, setIsHovered] = useState(false);
     const pillRef = useRef<HTMLDivElement>(null);
     const wasSendingRef = useRef(isSending);
-
-    // ─── Proactive Expansion (Tópico: Expandir após resposta) ───────────
-    useEffect(() => {
-        // If we were sending and now we aren't, and we are in pill mode, expand.
-        if (wasSendingRef.current && !isSending && shellState === 'pill') {
-            const timeout = setTimeout(() => {
-                setShellState('compact');
-                setActiveTab('chat');
-            }, 600); // Small delay to appreciate the pill's success state
-            return () => clearTimeout(timeout);
-        }
-        wasSendingRef.current = isSending;
-    }, [isSending, shellState, setShellState, setActiveTab]);
-
-    // ─── Magnetic Effect (Tópico 1) ────────────────────────────────────
     const mouseX = useMotionValue(0);
     const mouseY = useMotionValue(0);
-
     const springConfig = { damping: 25, stiffness: 200, mass: 0.5 };
     const magneticX = useSpring(mouseX, springConfig);
     const magneticY = useSpring(mouseY, springConfig);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!pillRef.current) return;
+    useEffect(() => {
+        if (wasSendingRef.current && !isSending && shellState === "pill") {
+            const timeout = window.setTimeout(() => {
+                setShellState("compact");
+                setActiveTab("chat");
+            }, shouldReduceMotion ? 0 : 500);
+            return () => window.clearTimeout(timeout);
+        }
+        wasSendingRef.current = isSending;
+    }, [isSending, setActiveTab, setShellState, shellState, shouldReduceMotion]);
+
+    const handleMouseMove = (event: MouseEvent) => {
+        if (shouldReduceMotion || !pillRef.current) return;
         const rect = pillRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
-        
-        // Displacement
-        mouseX.set((e.clientX - centerX) * 0.15);
-        mouseY.set((e.clientY - centerY) * 0.15);
+        mouseX.set((event.clientX - centerX) * 0.08);
+        mouseY.set((event.clientY - centerY) * 0.08);
     };
 
     const handleMouseLeave = () => {
@@ -75,297 +77,211 @@ export const SynapsePill = () => {
         setIsHovered(false);
     };
 
-    if (shellState !== 'pill') return null;
+    if (shellState !== "pill") return null;
 
-    // ─── States ────────────────────────────────────────────────────────
-    const isVoiceActive = voiceStatus === 'connected';
-    const isThinking = execState === 'thinking' || execState === 'executing' || isIntelligenceLoading || isSending;
+    const isVoiceActive = voiceStatus === "connected";
+    const isThinking = execState === "thinking" || execState === "executing" || isIntelligenceLoading || isSending;
+    const width = isHovered ? 280 : isVoiceActive ? 64 : 140;
 
     return (
-        <>
-            {/* SVG Filter for Gooey Effect (Tópico 3) */}
-            <svg className="hidden">
-                <defs>
-                    <filter id="goo">
-                        <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
-                        <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" result="goo" />
-                        <feBlend in="SourceGraphic" in2="goo" />
-                    </filter>
-                </defs>
-            </svg>
-
-            <motion.div
-                ref={pillRef}
-                layoutId="synapse-shell"
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                onMouseEnter={() => setIsHovered(true)}
-                style={{ x: magneticX, y: magneticY }}
-                initial={{ scale: 0.2, opacity: 0, filter: 'blur(15px)' }}
-                animate={{ 
-                    scale: 1, 
-                    opacity: 1, 
-                    filter: 'blur(0px)',
-                    width: isHovered ? 280 : (isVoiceActive ? 64 : 140),
-                    backgroundColor: isIntelligenceLoading ? 'rgba(99, 102, 241, 0.08)' : undefined
-                }}
-                exit={{ 
-                    scale: 0.8, // More subtle exit scale for better morphing
-                    opacity: 0, 
-                    filter: 'blur(15px)',
-                    transition: { duration: 0.3 }
-                }}
-                transition={{ 
-                    type: 'spring', 
-                    stiffness: 450, // Slightly snappier
-                    damping: 35, 
-                    mass: 0.8,
-                    width: { type: 'spring', stiffness: 300, damping: 30 }
-                }}
-                className={cn(
-                    'group relative flex items-center p-1.5 gap-[3px]',
-                    'h-14 rounded-full overflow-hidden',
-                    'bg-white dark:bg-[#0a0a0c]',
-                    'backdrop-blur-3xl saturate-150',
-                    'border border-zinc-200 dark:border-white/[0.04]',
-                    'shadow-[0_8px_32px_rgba(0,0,0,0.10),0_0_0_1px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.3),0_0_0_1px_rgba(255,255,255,0.04)]',
-                    'transition-all duration-500',
-                    isVoiceActive && 'h-16 w-16 !p-0 !bg-indigo-50/80 dark:!bg-indigo-400/10 border-indigo-200 dark:border-indigo-500/30'
-                )}
-                aria-label="Controles do Synapse"
-            >
-                {/* ── Intelligence Scanning Beam ────────────────────────── */}
-                <AnimatePresence>
-                    {isIntelligenceLoading && (
-                        <motion.div
-                            initial={{ x: '-100%' }}
-                            animate={{ x: '200%' }}
-                            transition={{ repeat: Infinity, duration: 2.5, ease: "linear" }}
-                            className="absolute inset-0 w-1/2 bg-gradient-to-r from-transparent via-indigo-500/15 to-transparent skew-x-12 pointer-events-none"
+        <motion.div
+            ref={pillRef}
+            layoutId="synapse-shell"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+            onMouseEnter={() => setIsHovered(true)}
+            style={{ x: shouldReduceMotion ? 0 : magneticX, y: shouldReduceMotion ? 0 : magneticY }}
+            initial={shouldReduceMotion ? false : { scale: 0.96, opacity: 0, y: 8 }}
+            animate={{ scale: 1, opacity: 1, y: 0, width }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { scale: 0.96, opacity: 0, y: 8 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 34, width: { type: "spring", stiffness: 300, damping: 30 } }}
+            className={cn(
+                "notes-liquid-surface group relative flex h-14 items-center gap-1 overflow-hidden rounded-full border p-1.5 backdrop-blur-3xl",
+                "shadow-[0_18px_58px_-38px_hsl(var(--foreground)/0.42)]",
+                isVoiceActive && "h-16 !p-0",
+            )}
+            aria-label="Controles do Synapse"
+        >
+            <AnimatePresence>
+                {isThinking ? (
+                    <motion.svg
+                        initial={shouldReduceMotion ? false : { opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="pointer-events-none absolute inset-0 h-full w-full -rotate-90 text-foreground/35"
+                        aria-hidden="true"
+                    >
+                        <motion.circle
+                            cx="50%"
+                            cy="50%"
+                            r="48%"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeDasharray="100 100"
+                            animate={shouldReduceMotion ? undefined : { strokeDashoffset: [100, 0] }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 3, repeat: Infinity, ease: "linear" }}
                         />
-                    )}
-                </AnimatePresence>
+                    </motion.svg>
+                ) : null}
+            </AnimatePresence>
 
-                {/* ── Progress Ring ───────────────────────────────────── */}
-                <AnimatePresence>
-                    {isThinking && (
-                        <motion.svg
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none"
-                        >
-                            <motion.circle
-                                cx="50%"
-                                cy="50%"
-                                r="48%"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeDasharray="100 100"
-                                className={cn(
-                                    "transition-colors duration-500",
-                                    isIntelligenceLoading ? "text-indigo-500/40" : (execState === 'thinking' || isSending ? "text-purple-500/30" : "text-amber-500/30")
-                                )}
-                                animate={{ strokeDashoffset: [100, 0] }}
-                                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-                            />
-                        </motion.svg>
-                    )}
-                </AnimatePresence>
-
-                {/* ── Contextual Aura ─────────────────────────────────── */}
-                <AnimatePresence>
-                    {(isHovered || isIntelligenceLoading) && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0 }}
-                            animate={{ 
-                                opacity: 1, 
-                                scale: 1,
-                                y: [0, -4, 0]
-                            }}
-                            exit={{ opacity: 0, scale: 0 }}
-                            className={cn(
-                                "absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full z-20 shadow-[0_0_10px_rgba(99,102,241,0.5)]",
-                                isIntelligenceLoading ? "bg-purple-500" : "bg-indigo-500"
-                            )}
-                            transition={{
-                                y: { repeat: Infinity, duration: 2, ease: "easeInOut" },
-                                opacity: { duration: 0.2 },
-                                scale: { duration: 0.2 }
-                            }}
-                        />
-                    )}
-                </AnimatePresence>
-
-                {/* ── Voice Holographic Mode ──────────────────────────── */}
-                <AnimatePresence mode="wait">
-                    {isVoiceActive ? (
-                        <motion.button
-                            key="voice-active"
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            onClick={() => {
-                                setActiveTab('voice');
-                                setShellState('compact');
-                            }}
-                            className="w-full h-full flex items-center justify-center relative overflow-hidden rounded-full"
-                        >
-                            <div className="absolute inset-0 opacity-40">
+            <AnimatePresence mode="wait">
+                {isVoiceActive ? (
+                    <motion.button
+                        key="voice-active"
+                        type="button"
+                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.92 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.92 }}
+                        onClick={() => {
+                            setActiveTab("voice");
+                            setShellState("compact");
+                        }}
+                        className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-muted/45 text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-white/[0.055]"
+                        aria-label="Abrir modo voz do Synapse"
+                    >
+                        {shouldReduceMotion ? (
+                            <span className="absolute inset-2 rounded-full border border-foreground/10 bg-foreground/[0.035]" />
+                        ) : (
+                            <span className="absolute inset-0 opacity-45">
                                 <VoiceSpiral
-                                    totalDots={150}
+                                    totalDots={110}
                                     dotRadius={1}
                                     margin={0}
-                                    isListening={true}
+                                    isListening
                                     isProcessing={isVoiceSpeaking}
                                     getAudioVolume={getVoiceInputVolume}
-                                    className="w-full h-full mix-blend-screen"
+                                    className="h-full w-full mix-blend-multiply dark:mix-blend-screen"
                                     minScale={0.8}
-                                    maxScale={2}
+                                    maxScale={1.8}
                                 />
+                            </span>
+                        )}
+                        <Mic className="relative z-10 h-5 w-5" />
+                    </motion.button>
+                ) : (
+                    <motion.div
+                        key="idle-mode"
+                        initial={shouldReduceMotion ? false : { opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="flex h-full w-full items-center gap-1"
+                    >
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveTab("voice");
+                                setShellState("compact");
+                                setIsVoiceExpanded(true);
+                            }}
+                            className={cn(neutralButtonClassName, "rounded-l-full rounded-r-2xl")}
+                            aria-label="Abrir voz do Synapse"
+                        >
+                            <AudioLines className="h-[18px] w-[18px]" />
+                        </button>
+
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setActiveTab("chat");
+                                setShellState("compact");
+                            }}
+                            className={cn(neutralButtonClassName, "relative rounded-l-2xl rounded-r-full")}
+                            aria-label="Abrir chat do Synapse"
+                        >
+                            <MessageCircle className="h-[18px] w-[18px]" />
+                            {messageCount > 0 && execState === "idle" ? (
+                                <span className="absolute right-2.5 top-2 h-[6px] w-[6px] rounded-full bg-foreground/70 shadow-[0_0_0_2px_hsl(var(--background))]" />
+                            ) : null}
+                        </button>
+
+                        <AnimatePresence>
+                            {isHovered ? (
+                                <motion.div
+                                    initial={shouldReduceMotion ? false : { opacity: 0, x: -8 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -8 }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
+                                    className="ml-1 flex items-center gap-1.5 pr-2"
+                                >
+                                    <div className="mx-1 h-4 w-px bg-border/70 dark:bg-white/[0.08]" />
+                                    {quickActions.slice(0, 2).map((action) => (
+                                        <button
+                                            key={action.id}
+                                            type="button"
+                                            onClick={() => send(action.name)}
+                                            className="flex h-8 w-8 items-center justify-center rounded-xl border border-border/35 bg-background/68 text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.055] dark:bg-white/[0.045]"
+                                            aria-label={`Executar ${action.name}`}
+                                            title={action.name}
+                                        >
+                                            <Sparkles className="h-3.5 w-3.5" />
+                                        </button>
+                                    ))}
+                                </motion.div>
+                            ) : null}
+                        </AnimatePresence>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {!isHovered && !isVoiceActive ? (
+                    <motion.div
+                        initial={shouldReduceMotion ? false : { opacity: 0, x: 8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 8 }}
+                        className="pointer-events-none absolute right-full mr-4 flex flex-col items-end gap-1"
+                    >
+                        {isIntelligenceLoading ? (
+                            <div className="notes-liquid-surface min-w-[180px] rounded-2xl border px-4 py-3 shadow-2xl">
+                                <div className="mb-2 flex items-center justify-between border-b border-border/35 pb-1.5 dark:border-white/[0.055]">
+                                    <span className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Escaneamento global</span>
+                                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground motion-reduce:animate-none" />
+                                </div>
+                                <div className="space-y-1.5">
+                                    {scanProgress.map((item) => (
+                                        <div key={item.module} className="flex items-center justify-between gap-4">
+                                            <span className="text-[10px] font-medium text-foreground/70">{item.label}</span>
+                                            {item.status === "completed" ? (
+                                                <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                                            ) : item.status === "scanning" ? (
+                                                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground motion-reduce:animate-none" />
+                                            ) : (
+                                                <Circle className="h-3 w-3 text-muted-foreground/45" />
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <Mic className="w-5 h-5 text-indigo-500 dark:text-indigo-400 relative z-10" />
-                        </motion.button>
-                    ) : (
-                        <motion.div
-                            key="idle-mode"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="flex items-center w-full h-full gap-1"
-                            style={{ filter: isHovered ? 'url(#goo)' : 'none' }}
-                        >
-                            {/* Base Buttons */}
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => {
-                                    setActiveTab('voice');
-                                    setShellState('compact');
-                                    setIsVoiceExpanded(true);
-                                }}
-                                className={cn(
-                                    "flex-1 h-full rounded-l-full rounded-r-[16px] flex items-center justify-center gap-2",
-                                    "bg-black/[0.03] hover:bg-black/[0.06] dark:bg-white/[0.03] dark:hover:bg-white/[0.08]",
-                                    "border border-black/[0.02] dark:border-white/[0.02]",
-                                    "transition-all duration-300 group/voice ease-out active:scale-[0.96]"
-                                )}
-                            >
-                                <AudioLines className="w-[18px] h-[18px] text-zinc-500 dark:text-zinc-400 group-hover/voice:text-indigo-500 dark:group-hover/voice:text-indigo-400 transition-colors" />
-                            </motion.button>
+                        ) : execState === "idle" ? (
+                            <div className="notes-liquid-surface flex items-center gap-2 whitespace-nowrap rounded-xl border px-3 py-1.5 shadow-xl">
+                                <span className="h-1.5 w-1.5 rounded-full bg-foreground/55" />
+                                <span className="text-[10px] font-semibold tracking-wide text-muted-foreground">{contextLabel}</span>
+                            </div>
+                        ) : null}
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
 
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => {
-                                    setActiveTab('chat');
-                                    setShellState('compact');
-                                }}
-                                className={cn(
-                                    "flex-1 h-full rounded-r-full rounded-l-[16px] flex items-center justify-center gap-2 relative",
-                                    "bg-black/[0.03] hover:bg-black/[0.06] dark:bg-white/[0.03] dark:hover:bg-white/[0.08]",
-                                    "border border-black/[0.02] dark:border-white/[0.02]",
-                                    "transition-all duration-300 group/text ease-out active:scale-[0.96]"
-                                )}
-                            >
-                                <MessageCircle className="w-[18px] h-[18px] text-zinc-500 dark:text-zinc-400 group-hover/text:text-zinc-900 dark:group-hover/text:text-zinc-200 transition-colors" />
-                                {messageCount > 0 && execState === 'idle' && (
-                                    <div className="absolute top-2 right-2.5 w-[6px] h-[6px] rounded-full bg-indigo-500 dark:bg-indigo-400 shadow-[0_0_0_2px_rgba(255,255,255,1)] dark:shadow-[0_0_0_2px_rgba(10,10,12,1)]" />
-                                )}
-                            </motion.button>
-
-                            {/* Quick Actions Revealed on Hover */}
-                            <AnimatePresence>
-                                {isHovered && (
-                                    <motion.div
-                                        initial={{ opacity: 0, x: -10 }}
-                                        animate={{ opacity: 1, x: 0 }}
-                                        exit={{ opacity: 0, x: -10 }}
-                                        className="flex items-center gap-1.5 ml-1 pr-2"
-                                    >
-                                        <div className="w-[1px] h-4 bg-black/10 dark:bg-white/10 mx-1" />
-                                        {quickActions.slice(0, 2).map((action) => (
-                                            <motion.button
-                                                key={action.id}
-                                                whileHover={{ scale: 1.1 }}
-                                                whileTap={{ scale: 0.9 }}
-                                                onClick={() => send(action.name)}
-                                                className="w-8 h-8 rounded-xl bg-white/50 dark:bg-white/10 flex items-center justify-center border border-black/5 dark:border-white/5 shadow-sm hover:bg-white dark:hover:bg-white/20 transition-all"
-                                                title={action.name}
-                                            >
-                                                <Sparkles className="w-3.5 h-3.5 text-indigo-500 dark:text-indigo-400" />
-                                            </motion.button>
-                                        ))}
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* ── Context Label / Scan Tooltip (Only when idle or scanning) ── */}
-                <AnimatePresence>
-                    {!isHovered && !isVoiceActive && (
-                        <motion.div 
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: 10 }}
-                            className="absolute right-full mr-4 flex flex-col items-end gap-1 pointer-events-none"
-                        >
-                            {isIntelligenceLoading ? (
-                                <div className="px-4 py-3 rounded-2xl bg-white/95 dark:bg-zinc-950/95 border border-black/10 dark:border-white/10 backdrop-blur-3xl shadow-2xl min-w-[180px]">
-                                    <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-black/10 dark:border-white/10">
-                                        <span className="text-[9px] font-black uppercase tracking-[0.2em] text-indigo-500 dark:text-indigo-400">Escaneamento Global</span>
-                                        <Loader2 className="w-2.5 h-2.5 animate-spin text-indigo-500 dark:text-indigo-400" />
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        {scanProgress.map((p) => (
-                                            <div key={p.module} className="flex items-center justify-between gap-4">
-                                                <span className="text-[10px] font-medium text-zinc-900/70 dark:text-white/70">{p.label}</span>
-                                                {p.status === 'completed' ? (
-                                                    <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                                                ) : p.status === 'scanning' ? (
-                                                    <Loader2 className="w-3 h-3 animate-spin text-indigo-400" />
-                                                ) : (
-                                                    <Circle className="w-3 h-3 text-black/20 dark:text-white/20" />
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            ) : execState === 'idle' && (
-                                <div className="px-3 py-1.5 rounded-xl bg-white/90 dark:bg-zinc-900/90 border border-black/5 dark:border-white/[0.08] backdrop-blur-3xl whitespace-nowrap shadow-xl flex items-center gap-2">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-500/70 dark:bg-purple-400/70 animate-pulse" />
-                                    <span className="text-[10px] font-semibold text-zinc-700 dark:text-zinc-300 tracking-wide">
-                                        {contextLabel}
-                                    </span>
-                                </div>
+            <AnimatePresence>
+                {isThinking && !isIntelligenceLoading ? (
+                    <motion.div
+                        initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.96 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.96 }}
+                        className="absolute inset-0 z-10 flex items-center justify-center bg-background/78 backdrop-blur-md dark:bg-background/68"
+                    >
+                        <Sparkles
+                            className={cn(
+                                "h-5 w-5 text-muted-foreground",
+                                !shouldReduceMotion && execState === "executing" && "animate-spin-slow",
+                                !shouldReduceMotion && (execState === "thinking" || isSending) && "animate-pulse",
                             )}
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* ── Executing State Overlays ───────────────────────────── */}
-                <AnimatePresence>
-                    {(isThinking && !isIntelligenceLoading) && (
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.8 }}
-                            className="absolute inset-0 flex items-center justify-center bg-zinc-50/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md z-10"
-                        >
-                            <Sparkles
-                                className={cn(
-                                    'h-5 w-5 transition-colors duration-300',
-                                    (execState === 'thinking' || isSending) && 'text-purple-500 animate-pulse',
-                                    execState === 'executing' && 'text-amber-500 animate-spin-slow'
-                                )}
-                            />
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </motion.div>
-        </>
+                        />
+                    </motion.div>
+                ) : null}
+            </AnimatePresence>
+        </motion.div>
     );
 };

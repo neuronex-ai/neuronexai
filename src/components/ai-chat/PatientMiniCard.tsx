@@ -1,7 +1,8 @@
 import React from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { User, ArrowUpRight, Phone } from "lucide-react";
+import { ArrowUpRight, Phone, User } from "lucide-react";
+
 import { cn } from "@/lib/utils";
 
 export interface PatientCardData {
@@ -10,7 +11,7 @@ export interface PatientCardData {
     email?: string;
     phone?: string;
     lastAppointment?: string;
-    status?: 'active' | 'inactive' | 'pending';
+    status?: "active" | "inactive" | "pending";
 }
 
 interface PatientMiniCardProps {
@@ -18,66 +19,60 @@ interface PatientMiniCardProps {
     index?: number;
 }
 
+const getStatusColor = (status?: string) => {
+    switch (status) {
+        case "active":
+            return "bg-emerald-500";
+        case "pending":
+            return "bg-amber-500";
+        case "inactive":
+        default:
+            return "bg-muted-foreground/45";
+    }
+};
+
 export const PatientMiniCard = ({ patient, index = 0 }: PatientMiniCardProps) => {
     const navigate = useNavigate();
-
-    const handleClick = () => {
-        navigate(`/pacientes/${patient.id}`);
-    };
-
-    const getStatusColor = (status?: string) => {
-        switch (status) {
-            case 'active': return 'bg-emerald-500';
-            case 'inactive': return 'bg-zinc-500';
-            case 'pending': return 'bg-amber-500';
-            default: return 'bg-zinc-500';
-        }
-    };
+    const shouldReduceMotion = useReducedMotion();
 
     return (
         <motion.button
-            initial={{ opacity: 0, x: -20 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, x: -16 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            onClick={handleClick}
+            transition={shouldReduceMotion ? { duration: 0 } : { delay: index * 0.035, duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            type="button"
+            onClick={() => navigate(`/pacientes/${patient.id}`)}
             className={cn(
-                "flex-shrink-0 w-[280px] flex items-center gap-3 p-3 rounded-[16px] text-left",
-                "bg-white/[0.03] border border-white/[0.06]",
-                "hover:bg-white/[0.06] hover:border-white/[0.1] hover:scale-[1.02]",
-                "transition-all duration-300 ease-apple group",
-                "active:scale-[0.98] cursor-pointer"
+                "notes-liquid-surface group flex min-h-[76px] w-[280px] flex-shrink-0 items-center gap-3 rounded-[18px] border p-3 text-left",
+                "transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-foreground/12",
+                "active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
             )}
+            aria-label={`Abrir prontuario de ${patient.name}`}
         >
-            {/* Avatar */}
-            <div className="h-10 w-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center shrink-0 group-hover:bg-white/[0.08] transition-colors">
-                <User className="h-4 w-4 text-zinc-400 group-hover:text-zinc-300" />
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/70 text-muted-foreground transition-colors group-hover:bg-muted dark:border-white/[0.075] dark:bg-white/[0.055]">
+                <User className="h-4 w-4" />
             </div>
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-white truncate">
-                        {patient.name}
-                    </span>
-                    {patient.status && (
-                        <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", getStatusColor(patient.status))} />
-                    )}
+                    <span className="truncate text-xs font-black tracking-tight text-foreground">{patient.name}</span>
+                    {patient.status ? <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", getStatusColor(patient.status))} /> : null}
                 </div>
 
-                <div className="flex items-center gap-2 mt-0.5">
-                    {patient.phone && (
-                        <span className="text-[9px] text-zinc-500 flex items-center gap-1">
-                            <Phone className="h-2 w-2" />
+                <div className="mt-1 flex min-w-0 items-center gap-2">
+                    {patient.phone ? (
+                        <span className="flex min-w-0 items-center gap-1 truncate text-[10px] font-medium text-muted-foreground">
+                            <Phone className="h-2.5 w-2.5 shrink-0" />
                             {patient.phone}
                         </span>
+                    ) : (
+                        <span className="truncate text-[10px] font-medium text-muted-foreground">Abrir detalhes</span>
                     )}
                 </div>
             </div>
 
-            {/* Arrow */}
-            <div className="opacity-50 group-hover:opacity-100 transition-all duration-300">
-                <ArrowUpRight className="h-3.5 w-3.5 text-zinc-500 group-hover:text-white" />
-            </div>
+            <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
         </motion.button>
     );
 };
@@ -87,7 +82,9 @@ interface PatientListWidgetProps {
     title?: string;
 }
 
-export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: PatientListWidgetProps) => {
+export const PatientListWidget = ({ patients, title = "Lista de pacientes" }: PatientListWidgetProps) => {
+    const navigate = useNavigate();
+    const shouldReduceMotion = useReducedMotion();
     const showViewAll = patients.length > 5;
     const displayPatients = showViewAll ? patients.slice(0, 5) : patients;
     const scrollContainerRef = React.useRef<HTMLDivElement>(null);
@@ -95,80 +92,67 @@ export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: Pa
     const [startX, setStartX] = React.useState(0);
     const [scrollLeft, setScrollLeft] = React.useState(0);
 
-    const handleMouseDown = (e: React.MouseEvent) => {
+    const handleMouseDown = (event: React.MouseEvent) => {
         if (!scrollContainerRef.current) return;
         setIsDragging(true);
-        setStartX(e.pageX - scrollContainerRef.current.offsetLeft);
+        setStartX(event.pageX - scrollContainerRef.current.offsetLeft);
         setScrollLeft(scrollContainerRef.current.scrollLeft);
-        scrollContainerRef.current.style.cursor = 'grabbing';
+        scrollContainerRef.current.style.cursor = "grabbing";
     };
 
-    const handleMouseMove = (e: React.MouseEvent) => {
+    const handleMouseMove = (event: React.MouseEvent) => {
         if (!isDragging || !scrollContainerRef.current) return;
-        e.preventDefault();
-        const x = e.pageX - scrollContainerRef.current.offsetLeft;
-        const walk = (x - startX) * 2; // Multiply for faster scroll
+        event.preventDefault();
+        const x = event.pageX - scrollContainerRef.current.offsetLeft;
+        const walk = (x - startX) * 2;
         scrollContainerRef.current.scrollLeft = scrollLeft - walk;
     };
 
-    const handleMouseUp = () => {
+    const stopDragging = () => {
         setIsDragging(false);
         if (scrollContainerRef.current) {
-            scrollContainerRef.current.style.cursor = 'grab';
-        }
-    };
-
-    const handleMouseLeave = () => {
-        if (isDragging) {
-            setIsDragging(false);
-            if (scrollContainerRef.current) {
-                scrollContainerRef.current.style.cursor = 'grab';
-            }
+            scrollContainerRef.current.style.cursor = "grab";
         }
     };
 
     return (
         <motion.div
-            initial={{ opacity: 0, height: 0 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="my-6 rounded-[24px] bg-[#0A0A0B] border border-white/[0.06] overflow-hidden shadow-xl"
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+            className="notes-liquid-surface my-6 overflow-hidden rounded-[24px] border shadow-[0_22px_64px_-48px_hsl(var(--foreground)/0.78)]"
         >
-            {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.05] bg-white/[0.01]">
-                <div className="flex items-center gap-2.5">
-                    <div className="p-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08]">
-                        <User className="h-3.5 w-3.5 text-zinc-400" />
+            <div className="flex items-center justify-between border-b border-border/35 px-5 py-4 dark:border-white/[0.055]">
+                <div className="flex min-w-0 items-center gap-2.5">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border/45 bg-muted/70 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]">
+                        <User className="h-3.5 w-3.5" />
                     </div>
-                    <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-zinc-400">
+                    <span className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-muted-foreground">
                         {title}
                     </span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-600">
-                    {patients.length} {patients.length === 1 ? 'paciente' : 'pacientes'}
+                <span className="shrink-0 text-[10px] font-mono text-muted-foreground">
+                    {patients.length} {patients.length === 1 ? "paciente" : "pacientes"}
                 </span>
             </div>
 
-            {/* Horizontal Scrollable Patient List */}
             <div className="relative group/scroll">
-                {/* Gradient fade on left edge */}
-                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-[#0A0A0B] to-transparent z-10 pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
-
-                {/* Gradient fade on right edge */}
-                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0A0A0B] to-transparent z-10 pointer-events-none opacity-0 group-hover/scroll:opacity-100 transition-opacity" />
+                <div className="pointer-events-none absolute bottom-0 left-0 top-0 z-10 w-8 bg-gradient-to-r from-background/80 to-transparent opacity-0 transition-opacity group-hover/scroll:opacity-100 dark:from-background/70" />
+                <div className="pointer-events-none absolute bottom-0 right-0 top-0 z-10 w-8 bg-gradient-to-l from-background/80 to-transparent opacity-0 transition-opacity group-hover/scroll:opacity-100 dark:from-background/70" />
 
                 <div
                     ref={scrollContainerRef}
                     onMouseDown={handleMouseDown}
                     onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseLeave}
-                    className="flex gap-3 p-4 overflow-x-auto snap-x snap-mandatory scroll-smooth select-none"
+                    onMouseUp={stopDragging}
+                    onMouseLeave={stopDragging}
+                    className="flex snap-x snap-mandatory gap-3 overflow-x-auto p-4 scroll-smooth select-none motion-reduce:scroll-auto"
                     style={{
-                        cursor: 'grab',
-                        scrollbarWidth: 'thin',
-                        scrollbarColor: 'rgba(255, 255, 255, 0.1) transparent'
+                        cursor: "grab",
+                        scrollbarWidth: "thin",
+                        scrollbarColor: "hsl(var(--muted-foreground) / 0.2) transparent",
                     }}
+                    aria-label="Pacientes encontrados"
                 >
                     {displayPatients.map((patient, index) => (
                         <div key={patient.id} className="snap-start">
@@ -176,35 +160,31 @@ export const PatientListWidget = ({ patients, title = "Lista de Pacientes" }: Pa
                         </div>
                     ))}
 
-                    {/* View All Card */}
-                    {showViewAll && (
-                        <motion.div
-                            initial={{ opacity: 0, x: -20 }}
+                    {showViewAll ? (
+                        <motion.button
+                            initial={shouldReduceMotion ? false : { opacity: 0, x: -16 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: displayPatients.length * 0.05, duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                            className="flex-shrink-0 w-[280px] snap-start"
+                            transition={shouldReduceMotion ? { duration: 0 } : { delay: displayPatients.length * 0.035, duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                            type="button"
+                            onClick={() => navigate("/pacientes")}
+                            className="flex min-h-[76px] w-[280px] flex-shrink-0 snap-start items-center justify-center rounded-[18px] border border-dashed border-border/55 bg-muted/25 p-3 text-center transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.075] dark:bg-white/[0.025]"
                         >
-                            <div className="h-full flex items-center justify-center p-3 rounded-[16px] border border-dashed border-white/[0.1] bg-white/[0.01] hover:bg-white/[0.03] transition-all cursor-pointer group/viewall">
-                                <div className="text-center">
-                                    <div className="h-10 w-10 rounded-xl bg-white/[0.03] border border-white/[0.06] flex items-center justify-center mx-auto mb-2 group-hover/viewall:bg-white/[0.06] transition-colors">
-                                        <ArrowUpRight className="h-4 w-4 text-zinc-500 group-hover/viewall:text-zinc-300" />
-                                    </div>
-                                    <p className="text-[10px] text-zinc-500 font-medium">
-                                        Ver todos ({patients.length})
-                                    </p>
+                            <div>
+                                <div className="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl border border-border/45 bg-muted/65 text-muted-foreground dark:border-white/[0.075] dark:bg-white/[0.055]">
+                                    <ArrowUpRight className="h-4 w-4" />
                                 </div>
+                                <p className="text-[10px] font-bold text-muted-foreground">Ver todos ({patients.length})</p>
                             </div>
-                        </motion.div>
-                    )}
+                        </motion.button>
+                    ) : null}
                 </div>
             </div>
 
-            {/* Footer */}
-            <div className="px-4 py-2 bg-[#050505] border-t border-white/[0.05] flex justify-between items-center">
-                <span className="text-[9px] text-zinc-600 font-medium uppercase tracking-wider">
-                    Arraste para ver mais • Clique para abrir prontuário
+            <div className="flex items-center justify-between border-t border-border/30 bg-muted/25 px-4 py-2 dark:border-white/[0.045] dark:bg-white/[0.025]">
+                <span className="truncate text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
+                    Arraste para navegar. Clique para abrir prontuario.
                 </span>
-                <div className="h-1 w-1 rounded-full bg-emerald-500/50 animate-pulse" />
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500/70" aria-hidden="true" />
             </div>
         </motion.div>
     );

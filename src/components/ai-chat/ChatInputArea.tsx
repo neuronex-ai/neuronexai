@@ -132,7 +132,7 @@ export const ChatInputArea = ({
                 }}
                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 30 }}
                 className={cn(
-                    "relative flex items-end gap-3 rounded-[30px] border px-4 transition-[border-color,box-shadow,background-color] duration-300 sm:gap-4 sm:rounded-[34px] sm:px-6",
+                    "notes-liquid-surface relative flex items-end gap-3 rounded-[30px] border px-4 transition-[border-color,box-shadow,background-color] duration-300 sm:gap-4 sm:rounded-[34px] sm:px-6",
                     "border-border/45 bg-background/88 shadow-[0_18px_54px_-38px_hsl(var(--foreground)/0.38),inset_0_1px_0_hsl(var(--background))] backdrop-blur-2xl",
                     "dark:border-white/[0.075] dark:bg-[#09090b]/92 dark:shadow-[0_18px_58px_-38px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.04)]",
                     isFocused && "border-foreground/20 shadow-[0_26px_72px_-44px_hsl(var(--foreground)/0.5),inset_0_1px_0_hsl(var(--background))] dark:border-white/[0.13]"

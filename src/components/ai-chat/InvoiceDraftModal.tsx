@@ -10,16 +10,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useGenerateInvoice } from "@/hooks/use-generate-invoice";
 import { usePatients } from "@/hooks/use-patients";
 
+export type InvoiceDraftData = {
+  patientName?: string;
+  patientId?: string;
+  amount: number;
+  description: string;
+  dueDate?: string;
+};
+
 interface InvoiceDraftModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  initialData: {
-    patientName?: string;
-    patientId?: string;
-    amount: number;
-    description: string;
-    dueDate?: string;
-  } | null;
+  initialData: InvoiceDraftData | null;
   onSent: () => void;
 }
 
