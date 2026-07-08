@@ -6,6 +6,7 @@ import {
   NOTES_READ_TOOLS,
   summarizeNotesMutation,
 } from "./notes-tools.ts";
+import { executeNeuroNotesAgentTool } from "./neuro-notes-tools.ts";
 
 export interface AgentToolContext {
   admin: any;
@@ -239,6 +240,12 @@ function teleStatus(appointment: any) {
 
 export async function executeAgentTool(name: string, args: Record<string, any>, context: AgentToolContext): Promise<AgentToolResult> {
   if (MUTATING_TOOLS.has(name)) return stageMutation(name, args);
+  try {
+    const neuroNotesResult = await executeNeuroNotesAgentTool(name, args, context);
+    if (neuroNotesResult) return neuroNotesResult;
+  } catch (error) {
+    return { ok: false, grounded: true, error: error instanceof Error ? error.message : "Falha ao executar o agente de Notas." };
+  }
   if (NOTES_READ_TOOLS.has(name)) return executeNotesTool(name, args, context);
   const { admin, userId } = context;
   try {
@@ -418,13 +425,13 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
         return { ok: true, grounded: true, recordCount: documents.length, data: { documents }, structuredData: { type: "documents_list", data: { documents } } };
       }
       case "request_interface_action": {
-        const allowedActions = new Set(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"]);
+        const allowedActions = new Set(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
         const allowedTargets = new Set(["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"]);
         const action = cleanText(args.action, 50);
         const target = args.target ? cleanText(args.target, 50) : undefined;
         if (!allowedActions.has(action)) throw new Error("Ação visual inválida.");
         if (target && !allowedTargets.has(target)) throw new Error("Destino visual inválido.");
-        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
+        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
         return { ok: true, grounded: false, data: { action_requested: action }, clientAction };
       }
       default: return { ok: false, grounded: false, error: `Ferramenta não suportada: ${name}` };

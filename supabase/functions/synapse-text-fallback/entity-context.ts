@@ -136,7 +136,7 @@ export async function resolveAppointmentReference(admin: any, userId: string, ar
 }
 
 const PATIENT_REQUIRED_TOOLS = new Set([
-  "get_patient_details", "get_clinical_history", "get_patient_card_summary", "update_patient", "update_patient_basic_info", "inactivate_patient", "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment", "create_neurofinance_charge", "create_fiscal_invoice", "send_appointment_reminder", "send_patient_email", "get_patient_system_snapshot", "get_patient_payment_status", "get_patient_timeline",
+  "get_patient_details", "get_clinical_history", "get_patient_card_summary", "update_patient", "update_patient_basic_info", "inactivate_patient", "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment", "create_neurofinance_charge", "create_fiscal_invoice", "send_appointment_reminder", "send_patient_email", "get_patient_system_snapshot", "get_patient_payment_status", "get_patient_timeline", "analyze_neuroview_patient_patterns", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram",
 ]);
 const PATIENT_OPTIONAL_TOOLS = new Set([
   "get_calendar", "get_appointment_details", "get_teleconsultation_session_status", "get_teleconsultation_readiness", "list_financial_entries", "list_documents", "request_interface_action", "create_financial_entry", "list_neurofinance_charges", "get_neurofinance_charge", "list_fiscal_invoices", "get_fiscal_invoice", "create_personal_note", "search_patient_files", "list_files_by_patient", "link_file_to_patient",

@@ -31,6 +31,8 @@ import { MoodNode } from './nodes/MoodNode';
 import { TableNode } from './nodes/TableNode';
 import { TranscriptionNode } from './nodes/TranscriptionNode';
 import { NodeType, SegundoCerebro } from './SegundoCerebro';
+import { useSynapseNotesAgentRun } from '@/hooks/use-synapse-notes-agent-run';
+import { SynapseAgentRunOverlay } from './SynapseAgentRunOverlay';
 
 const nodeTypes = {
   start: NeuralNode,
@@ -81,8 +83,15 @@ const edgeTypes = {
 
 type SaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error' | 'conflict';
 
-const NeuroFlowContent = ({ flowId, onBack }: { flowId?: string, onBack?: () => void }) => {
+interface NeuroFlowContentProps {
+  flowId?: string;
+  synapseRunId?: string | null;
+  onBack?: () => void;
+}
+
+const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProps) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -558,6 +567,8 @@ const NeuroFlowContent = ({ flowId, onBack }: { flowId?: string, onBack?: () => 
           </div>
         </Panel>
       </ReactFlow>
+
+      <SynapseAgentRunOverlay run={synapseRun} title="Synapse / NeuroFlow" compact />
 
       <style>{`
         .react-flow__viewport {

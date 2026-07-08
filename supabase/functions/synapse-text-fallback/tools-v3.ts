@@ -143,6 +143,31 @@ const EXTRA_TOOLS = [
     }),
   ),
   fn(
+    "analyze_neuroview_patient_patterns",
+    "Analisa padroes reais das notas, tags, fluxos e NeuroPulse entries de um paciente e abre o NeuroView com trace visual do raciocinio. Use somente para pedidos explicitamente ligados a NeuroView, grafo de notas, padroes, curiosidades ou conexoes de um paciente.",
+    objectSchema({
+      ...patientReference,
+      focus: { type: "string", description: "Foco opcional da analise." },
+    }),
+  ),
+  fn(
+    "create_neuroflow_from_patient_history",
+    "Cria um NeuroFlow completo vinculado ao paciente a partir do historico real do sistema: notas, prontuario, fluxos, NeuroPulse e registros clinicos. Use somente quando o profissional pedir explicitamente criacao ou geracao de NeuroFlow.",
+    objectSchema({
+      ...patientReference,
+      objective: { type: "string", description: "Objetivo do fluxo ou processo a modelar." },
+    }),
+  ),
+  fn(
+    "create_neuropulse_cause_effect_diagram",
+    "Cria e salva um fluxograma Mermaid de causa e efeito no NeuroPulse, usando o paciente, historico do sistema e a conversa atual. Use somente quando o profissional pedir explicitamente NeuroPulse, fluxograma, diagrama causal ou causa e efeito.",
+    objectSchema({
+      ...patientReference,
+      prompt: { type: "string", description: "Relato, foco ou instrucao do profissional." },
+      lens: { type: "string", enum: ["psicanalise", "tcc", "sistemica", "humanista", "gestalt", "junguiana", "neuropsicologia"] },
+    }),
+  ),
+  fn(
     "create_neurofinance_charge",
     "Prepara uma cobrança real pelo NeuroFinance e exige confirmação separada. Resolva o paciente pelo nome e informe valor, vencimento e meio de pagamento.",
     objectSchema({
@@ -229,6 +254,9 @@ export const SYSTEM_DATA_TOOLS_V3 = new Set([
   "get_patient_system_snapshot",
   "get_patient_payment_status",
   "get_patient_timeline",
+  "analyze_neuroview_patient_patterns",
+  "create_neuroflow_from_patient_history",
+  "create_neuropulse_cause_effect_diagram",
   "list_fiscal_invoices",
   "get_fiscal_invoice",
 ]);

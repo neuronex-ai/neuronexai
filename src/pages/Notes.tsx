@@ -35,7 +35,7 @@ const NoteEditor = lazy(() =>
 
 const NOTES_LAYOUT_STORAGE_KEY = "neuronex:notes-layout";
 type NotesViewMode = "notes" | "tasks" | "neuroview" | "neuroflow" | "neuropulse" | "files" | "notion";
-const SYNAPSE_SUPPORTED_NOTES_VIEWS = new Set<SynapseNotesView>(["notes", "tasks", "files", "notion"]);
+const SYNAPSE_SUPPORTED_NOTES_VIEWS = new Set<SynapseNotesView>(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
 
 const loadLayoutPreference = () => {
     try {
@@ -91,6 +91,12 @@ export default function Notes() {
 
     const [isFocusMode, setIsFocusMode] = useState(false);
     const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
+    const [synapseRunId, setSynapseRunId] = useState<string | null>(null);
+    const [synapsePatientId, setSynapsePatientId] = useState<string | null>(null);
+    const [synapsePulseEntryId, setSynapsePulseEntryId] = useState<string | null>(null);
+    const [synapseNoteId, setSynapseNoteId] = useState<string | null>(null);
+    const [synapseMermaid, setSynapseMermaid] = useState<string | null>(null);
+    const [synapseTrace, setSynapseTrace] = useState<unknown>(null);
 
     const {
         notes,
@@ -145,8 +151,22 @@ export default function Notes() {
         if (actionName === "open_tasks_board") setViewMode("tasks");
         else if (actionName === "open_files_manager" || actionName === "open_file_preview") setViewMode("files");
         else if (actionName === "open_notion_panel") setViewMode("notion");
+        else if (actionName === "open_neuroview_reasoning") setViewMode("neuroview");
+        else if (actionName === "open_neuroflow_generation") setViewMode("neuroflow");
+        else if (actionName === "open_neuropulse_diagram") setViewMode("neuropulse");
         else if (notesView) setViewMode(notesView);
         else if (["open_notes_desktop", "open_note", "filter_notes", "open_new_note", "open_note_module"].includes(String(actionName))) setViewMode("notes");
+
+        if (action.runId) setSynapseRunId(action.runId);
+        if (action.patientId) setSynapsePatientId(action.patientId);
+        if (action.pulseEntryId) setSynapsePulseEntryId(action.pulseEntryId);
+        if (action.noteId) setSynapseNoteId(action.noteId);
+        if (typeof action.mermaid === "string") setSynapseMermaid(action.mermaid);
+        if (action.trace) setSynapseTrace(action.trace);
+        if (action.flowId) {
+            setSelectedFlowId(action.flowId);
+            setViewMode("neuroflow");
+        }
 
         if (typeof action.query === "string") {
             setSearchQuery(action.query);
@@ -159,7 +179,7 @@ export default function Notes() {
             if (isSidebarCollapsed) setIsSidebarCollapsed(false);
         }
 
-        if (action.noteId) {
+        if (action.noteId && actionName !== "open_neuropulse_diagram") {
             setSelectedNoteId(action.noteId);
             setViewMode("notes");
             if (isListCollapsed) setIsListCollapsed(false);
@@ -182,7 +202,7 @@ export default function Notes() {
 
     useEffect(() => {
         const state = (location.state || {}) as Record<string, any>;
-        if (!state.synapseAction && !state.synapseNotesView && !state.synapseNoteId && !state.synapseQuery && !state.synapseModuleId) return;
+        if (!state.synapseAction && !state.synapseNotesView && !state.synapseNoteId && !state.synapseQuery && !state.synapseModuleId && !state.synapseRunId && !state.synapseFlowId && !state.synapseMermaid) return;
         applySynapseNotesAction({
             action: state.synapseAction,
             notesView: state.synapseNotesView,
@@ -191,6 +211,12 @@ export default function Notes() {
             moduleId: state.synapseModuleId,
             taskId: state.synapseTaskId,
             fileId: state.synapseFileId,
+            flowId: state.synapseFlowId,
+            runId: state.synapseRunId,
+            patientId: state.synapsePatientId,
+            pulseEntryId: state.synapsePulseEntryId,
+            mermaid: state.synapseMermaid,
+            trace: state.synapseTrace,
         });
         window.history.replaceState({}, document.title, `${location.pathname}${location.search}`);
     }, [applySynapseNotesAction, location.pathname, location.search, location.state]);
@@ -199,7 +225,7 @@ export default function Notes() {
         const handleSynapseAction = (event: Event) => {
             const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
             if (!action) return;
-            if (!["open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"].includes(action.action)) return;
+            if (!["open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"].includes(action.action)) return;
             applySynapseNotesAction(action);
         };
         window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
@@ -293,20 +319,20 @@ export default function Notes() {
                 );
             case "neuroview":
                 return (
-                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden">
-                        <NeuroView />
+                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroview-graph">
+                        <NeuroView synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapseTrace={synapseTrace} />
                     </motion.div>
                 );
             case "neuroflow":
                 return (
-                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden">
-                        {selectedFlowId ? <NeuroFlow flowId={selectedFlowId} onBack={() => setSelectedFlowId(null)} /> : <NeuroFlowVault onOpenFlow={setSelectedFlowId} />}
+                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroflow-canvas">
+                        {selectedFlowId ? <NeuroFlow flowId={selectedFlowId} synapseRunId={synapseRunId} onBack={() => setSelectedFlowId(null)} /> : <NeuroFlowVault onOpenFlow={setSelectedFlowId} />}
                     </motion.div>
                 );
             case "neuropulse":
                 return (
-                    <motion.div {...motionProps} className="flex-1 h-full min-h-0 min-w-0">
-                        <NeuroPulse />
+                    <motion.div {...motionProps} className="flex-1 h-full min-h-0 min-w-0" data-synapse-target="neuropulse-panel">
+                        <NeuroPulse synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapsePulseEntryId={synapsePulseEntryId} synapseNoteId={synapseNoteId} synapseMermaid={synapseMermaid} />
                     </motion.div>
                 );
             default:

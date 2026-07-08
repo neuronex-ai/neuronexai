@@ -12,6 +12,9 @@ import { GraphDetailsPanel } from "./graph/GraphDetailsPanel";
 import { PersonalNote, Patient } from "@/types";
 import { NeuroViewUniverse } from "./NeuroViewUniverse";
 import { useTheme } from "@/hooks/use-theme";
+import { useSynapseNotesAgentRun, type SynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/use-synapse-notes-agent-run";
+import { SynapseAgentRunOverlay } from "./SynapseAgentRunOverlay";
+import { useReducedMotion } from "framer-motion";
 
 // --- DEFAULT CONFIG ---
 const DEFAULT_CONFIG: NeuroConfig = {
@@ -63,9 +66,20 @@ const getLinkKey = (link: GraphLink) => {
     return `${sourceId || "unknown"}->${targetId || "unknown"}`;
 };
 
-export const NeuroView = () => {
+interface NeuroViewProps {
+    synapseRunId?: string | null;
+    synapsePatientId?: string | null;
+    synapseTrace?: unknown;
+}
+
+const asTrace = (value: unknown): SynapseNotesAgentTrace | null =>
+    value && typeof value === "object" ? value as SynapseNotesAgentTrace : null;
+
+export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: NeuroViewProps) => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark";
+    const shouldReduceMotion = useReducedMotion();
+    const { run } = useSynapseNotesAgentRun(synapseRunId);
     // Universe mode
     const [isUniverseMode, setIsUniverseMode] = useState(false);
 
@@ -91,6 +105,7 @@ export const NeuroView = () => {
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
     const [isPatientSidebarOpen, setIsPatientSidebarOpen] = useState(true);
+    const [traceIndex, setTraceIndex] = useState(0);
 
     useEffect(() => {
         const targetNodeIds = new Set(targetGraphData.nodes.map((node) => node.id));
@@ -224,6 +239,50 @@ export const NeuroView = () => {
         }, {});
     }, [graphData.nodes]);
 
+    const activeTrace = useMemo(() => run?.trace || asTrace(synapseTrace), [run?.trace, synapseTrace]);
+    const traceNodeIds = useMemo(() => (
+        (activeTrace?.nodes || [])
+            .map((node) => node.id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0)
+    ), [activeTrace]);
+    const traceHoverNode = traceNodeIds.length ? nodeMap[traceNodeIds[Math.min(traceIndex, traceNodeIds.length - 1)]] || null : null;
+    const effectiveHoverNode = hoverNode || traceHoverNode;
+    const overlayRun = useMemo(() => {
+        if (run) return run;
+        if (!activeTrace) return null;
+        return {
+            id: synapseRunId || "inline-neuroview-trace",
+            product: "neuroview",
+            patient_id: synapsePatientId || null,
+            chat_session_id: null,
+            status: "completed",
+            intent: null,
+            progress: 100,
+            steps: activeTrace.steps || [],
+            trace: activeTrace,
+            result: {},
+            target_flow_id: null,
+            pulse_entry_id: null,
+            note_id: null,
+            error_message: null,
+            user_id: "",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            completed_at: new Date().toISOString(),
+        } as SynapseNotesAgentRun;
+    }, [activeTrace, run, synapsePatientId, synapseRunId]);
+
+    useEffect(() => {
+        if (!traceNodeIds.length || shouldReduceMotion) {
+            setTraceIndex(0);
+            return;
+        }
+        const interval = window.setInterval(() => {
+            setTraceIndex((current) => (current + 1) % traceNodeIds.length);
+        }, 980);
+        return () => window.clearInterval(interval);
+    }, [shouldReduceMotion, traceNodeIds.length]);
+
     useEffect(() => {
         const element = containerRef.current;
         if (!element) return;
@@ -277,10 +336,10 @@ export const NeuroView = () => {
                 let targetRadius = baseRadius;
                 let targetGlow = baseGlow;
 
-                if (hoverNode && n.id === hoverNode.id) {
+                if (effectiveHoverNode && n.id === effectiveHoverNode.id) {
                     targetRadius = baseRadius * 1.8;
                     targetGlow = baseGlow * 2.5;
-                } else if (hoverNode && hoverNode.neighbors?.includes(n)) {
+                } else if (effectiveHoverNode && effectiveHoverNode.neighbors?.includes(n)) {
                     targetRadius = baseRadius * 1.3;
                     targetGlow = baseGlow * 1.5;
                 }
@@ -307,7 +366,7 @@ export const NeuroView = () => {
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [graphData.nodes, graphData.links, hoverNode]);
+    }, [graphData.nodes, graphData.links, effectiveHoverNode]);
 
     // 5. Interaction Handlers
     const handleNodeClick = useCallback((node: GraphNode) => {
@@ -502,12 +561,12 @@ export const NeuroView = () => {
 
     // Canvas Objects Handlers
     const handleNodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        drawNode(node as GraphNode, ctx, globalScale, hoverNode, isDarkMode, timeRef.current, config.performanceMode);
-    }, [hoverNode, isDarkMode, config.performanceMode]);
+        drawNode(node as GraphNode, ctx, globalScale, effectiveHoverNode, isDarkMode, timeRef.current, config.performanceMode);
+    }, [effectiveHoverNode, isDarkMode, config.performanceMode]);
 
     const handleLinkCanvasObject = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        drawLink(link as GraphLink, ctx, globalScale, hoverNode, isDarkMode, timeRef.current, config.performanceMode);
-    }, [hoverNode, isDarkMode, config.performanceMode]);
+        drawLink(link as GraphLink, ctx, globalScale, effectiveHoverNode, isDarkMode, timeRef.current, config.performanceMode);
+    }, [effectiveHoverNode, isDarkMode, config.performanceMode]);
 
     return (
         <div
@@ -554,6 +613,8 @@ export const NeuroView = () => {
                 </div>
             )}
 
+            <SynapseAgentRunOverlay run={overlayRun} title="Synapse / NeuroView" />
+
             <div className="absolute inset-0 z-10 overflow-hidden">
                 <ForceGraph2D
                     ref={graphRef}
@@ -566,7 +627,7 @@ export const NeuroView = () => {
                     nodeRelSize={4}
                     linkColor={() => "transparent"}
                     linkCanvasObject={handleLinkCanvasObject}
-                    linkDirectionalParticles={hoverNode ? 2 : 0}
+                    linkDirectionalParticles={effectiveHoverNode ? 2 : 0}
                     linkDirectionalParticleWidth={1}
                     linkDirectionalParticleSpeed={0.003}
                     linkDirectionalParticleColor={() => "rgba(255, 255, 255, 0.48)"}

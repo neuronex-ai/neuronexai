@@ -24,6 +24,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { useSynapseNotesAgentRun } from "@/hooks/use-synapse-notes-agent-run";
+import { SynapseAgentRunOverlay } from "./SynapseAgentRunOverlay";
+import { normalizeNeuroPulseMermaid } from "@/lib/neuropulse-mermaid";
 
 const LENSES = [
     { value: "psicanalise", label: "Psicanálise" },
@@ -62,7 +65,21 @@ const NeuralBackground = () => {
 };
 
 
-export const NeuroPulse = () => {
+interface NeuroPulseProps {
+    synapseRunId?: string | null;
+    synapsePatientId?: string | null;
+    synapsePulseEntryId?: string | null;
+    synapseNoteId?: string | null;
+    synapseMermaid?: string | null;
+}
+
+export const NeuroPulse = ({
+    synapseRunId,
+    synapsePatientId,
+    synapsePulseEntryId,
+    synapseNoteId,
+    synapseMermaid,
+}: NeuroPulseProps) => {
     const [input, setInput] = useState("");
     const [selectedLens, setSelectedLens] = useState("tcc");
     const [selectedPatientId, setSelectedPatientId] = useState("none");
@@ -74,6 +91,7 @@ export const NeuroPulse = () => {
     const { theme } = useTheme();
     const { data: patients = [] } = usePatients();
     const { createNote } = usePersonalNotes();
+    const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
 
     // Hooks
     const { mutateAsync: createSession } = useCreateChatSession();
@@ -126,6 +144,15 @@ export const NeuroPulse = () => {
             if (recognitionRef.current) recognitionRef.current.stop();
         };
     }, []);
+
+    useEffect(() => {
+        const mermaid = synapseMermaid || (typeof synapseRun?.result?.mermaid === "string" ? synapseRun.result.mermaid : null);
+        if (mermaid) setDiagramCode(mermaid);
+        if (synapsePatientId) setSelectedPatientId(synapsePatientId);
+        if (synapseNoteId || synapseRun?.note_id) setSavedNoteId(synapseNoteId || synapseRun?.note_id || null);
+        const runIntent = typeof synapseRun?.intent === "string" ? synapseRun.intent : "";
+        if (runIntent && !input.trim()) setInput(runIntent);
+    }, [input, synapseMermaid, synapseNoteId, synapsePatientId, synapseRun]);
 
     const toggleListening = () => {
         if (!recognitionRef.current) {
@@ -189,6 +216,11 @@ Relato:
 
             // 4. Extract mermaid code
             let aiText = response.response;
+            aiText = normalizeNeuroPulseMermaid({
+                raw: aiText,
+                input,
+                lensLabel: LENSES.find(l => l.value === selectedLens)?.label || selectedLens,
+            });
 
             // Extract the actual mermaid block, ignoring conversational text
             const mermaidMatch = aiText.match(/(?:```mermaid\s*)?((?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|mindmap|timeline)[\s\S]*?)(?:```|$)/i);
@@ -284,6 +316,7 @@ Relato:
             isFullscreen ? "fixed inset-0 z-[100]" : ""
         )}>
             <NeuralBackground />
+            <SynapseAgentRunOverlay run={synapseRun} title="Synapse / NeuroPulse" compact />
             {/* HUD Overlay / Floating Controls */}
             <div className="absolute top-8 left-8 right-8 z-50 flex items-center justify-between pointer-events-none">
                 <div className="flex items-center gap-6 pointer-events-auto">
@@ -493,6 +526,11 @@ Relato:
                                     {savedNoteId && (
                                         <div className="hidden items-center rounded-xl border border-emerald-500/15 bg-emerald-500/10 px-3 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400 md:flex">
                                             Nota criada
+                                        </div>
+                                    )}
+                                    {(synapseRunId || synapsePulseEntryId) && (
+                                        <div className="hidden items-center rounded-xl border border-white/10 bg-white/10 px-3 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-300 [.light_&]:border-zinc-200 [.light_&]:bg-white/70 [.light_&]:text-zinc-700 md:flex">
+                                            Synapse
                                         </div>
                                     )}
                                     <div className="flex p-1 bg-white/80 dark:bg-black/60 backdrop-blur-2xl border border-zinc-200 dark:border-white/5 rounded-xl shadow-2xl">

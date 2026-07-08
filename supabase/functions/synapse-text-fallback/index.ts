@@ -36,6 +36,7 @@ const CONFIRM = /^\s*(confirmo|sim[,! ]*confirmo|pode executar|pode fazer|autori
 const CANCEL = /^\s*(cancelar|cancele|não confirmo|nao confirmo|desistir|desisto)\s*[.!]?\s*$/i;
 const SYSTEM_DATA = /\b(paciente|pacientes|consulta|consultas|agenda|agendamento|horário|horario|prontuário|prontuario|sessão|sessao|financeiro|neurofinance|saldo|receita|despesa|lançamento|lancamento|transação|transacao|nota fiscal|nfs-e|nfse|nota|notas|documento|arquivo|medicação|medicacao|risco|cobrança|cobranca|fatura|pagamento|email|e-mail|lembrete)\b/i;
 const MUTATION_INTENT = /\b(crie|criar|cadastre|cadastrar|agende|agendar|remarque|remarcar|cancele|cancelar|envie|enviar|registre|registrar|atualize|atualizar|emita|emitir|cobre|cobrar)\b/i;
+const NEURO_NOTES_AGENT_INTENT = /\b(neuroview|neuroflow|neuropulse|fluxograma|diagrama|mermaid|causa e efeito|grafo de notas|padrao|padroes|padrÃ£o|padrÃµes)\b/i;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 type MessageRow = {
@@ -132,6 +133,7 @@ async function saveAssistantMessage(
 }
 
 function groundingRequired(message: string, context: any) {
+  if (NEURO_NOTES_AGENT_INTENT.test(message)) return true;
   if (SYSTEM_DATA.test(message) || MUTATION_INTENT.test(message)) return true;
   const route = String(context?.currentContext || context?.route || "").toLowerCase();
   return /(pacient|agenda|finance|nota|document|prontu)/.test(route) &&
@@ -193,6 +195,7 @@ function buildSystemPrompt(context: any, state: SynapseConversationState, memory
     "Para agenda, você pode consultar horários, localizar vagas, criar, remarcar, cancelar e enviar lembretes por e-mail.",
     "Para NeuroFinance, diferencie gestão manual de dinheiro real. Consulte primeiro o status da conta. Se ela não existir ou estiver pendente, explique o estágio correto e não invente saldo.",
     "Para NFS-e, consulte dados reais. Uma solicitação de emissão não significa autorização municipal; descreva como solicitada, agendada ou em processamento até haver confirmação.",
+    "Para NeuroView, NeuroFlow e NeuroPulse dentro da Notas Desktop, use as ferramentas especializadas: analise padroes no NeuroView, gere fluxos pelo historico no NeuroFlow e crie diagramas causa-efeito no NeuroPulse. Nao responda esses pedidos apenas com texto solto.",
     "Nunca exponha rotas, URLs internas, JSON, SQL, nomes de tabelas, provedores de infraestrutura ou identificadores internos.",
     "Não narre ferramentas nem raciocínio interno. Execute silenciosamente e entregue apenas o resultado útil.",
     `CONTEXTO DURÁVEL:\n${formatContextForPrompt(state)}`,

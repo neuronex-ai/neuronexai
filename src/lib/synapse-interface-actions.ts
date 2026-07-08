@@ -20,7 +20,10 @@ export type SynapseInterfaceActionName =
   | "open_tasks_board"
   | "open_files_manager"
   | "open_notion_panel"
-  | "open_file_preview";
+  | "open_file_preview"
+  | "open_neuroview_reasoning"
+  | "open_neuroflow_generation"
+  | "open_neuropulse_diagram";
 
 export type SynapseNavigationTarget =
   | "dashboard"
@@ -31,7 +34,7 @@ export type SynapseNavigationTarget =
   | "teleconsultation"
   | "synapse";
 
-export type SynapseNotesView = "notes" | "tasks" | "files" | "notion";
+export type SynapseNotesView = "notes" | "tasks" | "files" | "notion" | "neuroview" | "neuroflow" | "neuropulse";
 
 export interface SynapseInterfaceAction {
   action: SynapseInterfaceActionName;
@@ -42,10 +45,15 @@ export interface SynapseInterfaceAction {
   moduleId?: string;
   taskId?: string;
   fileId?: string;
+  flowId?: string;
+  runId?: string;
+  pulseEntryId?: string;
+  mermaid?: string;
+  trace?: unknown;
   date?: string;
   query?: string;
   notesView?: SynapseNotesView;
-  element?: "next_appointment" | "daily_schedule" | "patient_header" | "financial_balance" | "transcription_decision" | "patient_invite" | "patients_search" | "patients_grid" | "notes_search" | "notes_editor" | "notes_list" | "notes_sidebar" | "tasks_board" | "files_manager" | "notion_panel";
+  element?: "next_appointment" | "daily_schedule" | "patient_header" | "financial_balance" | "transcription_decision" | "patient_invite" | "patients_search" | "patients_grid" | "notes_search" | "notes_editor" | "notes_list" | "notes_sidebar" | "tasks_board" | "files_manager" | "notion_panel" | "neuroview_graph" | "neuroflow_canvas" | "neuropulse_panel";
   modal?: "new_appointment" | "new_patient" | "new_transaction" | "patient_details" | "patient_invite" | "new_note";
   reason?: string;
 }
@@ -81,7 +89,8 @@ const MODAL_ROUTES: Record<NonNullable<SynapseInterfaceAction["modal"]>, string>
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{6,80}$/;
-const NOTES_VIEWS = new Set(["notes", "tasks", "files", "notion"]);
+const NOTES_VIEWS = new Set(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
+const ALLOWED_INTERFACE_ACTIONS = new Set<SynapseInterfaceActionName>(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
 
 const SCREEN_AGENT_EVENT = "synapse:screen-agent-state";
 const PAGE_ACTION_EVENT = "synapse:page-action";
@@ -132,12 +141,15 @@ const targetSelector = (action: SynapseInterfaceAction) => {
     tasks_board: "[data-synapse-target='tasks-board']",
     files_manager: "[data-synapse-target='files-manager']",
     notion_panel: "[data-synapse-target='notion-panel']",
+    neuroview_graph: "[data-synapse-target='neuroview-graph']",
+    neuroflow_canvas: "[data-synapse-target='neuroflow-canvas']",
+    neuropulse_panel: "[data-synapse-target='neuropulse-panel']",
   };
   return action.element ? selectors[action.element] : "";
 };
 
 async function recordTelemetry(action: SynapseInterfaceAction, channel: "text" | "voice", result: SynapseActionExecutionResult, error?: unknown) {
-  const safePayload = { action: action.action, target: action.target || null, has_patient_id: Boolean(action.patientId), has_appointment_id: Boolean(action.appointmentId), has_note_id: Boolean(action.noteId), has_file_id: Boolean(action.fileId), element: action.element || null, modal: action.modal || null };
+  const safePayload = { action: action.action, target: action.target || null, has_patient_id: Boolean(action.patientId), has_appointment_id: Boolean(action.appointmentId), has_note_id: Boolean(action.noteId), has_file_id: Boolean(action.fileId), has_flow_id: Boolean(action.flowId), has_run_id: Boolean(action.runId), has_pulse_entry_id: Boolean(action.pulseEntryId), element: action.element || null, modal: action.modal || null };
   try {
     await supabase.from("synapse_action_logs").insert({ channel, action_type: action.action, status: result.cancelled ? "cancelled" : result.success ? "success" : "error", duration_ms: result.durationMs, payload: safePayload, error_message: error instanceof Error ? error.message.slice(0, 500) : null });
   } catch {
@@ -159,8 +171,8 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
   const data = (envelope.data || envelope.payload || envelope) as Record<string, any>;
   if (envelope.type === "interface_action" || data.action) {
     const action = String(data.action || "") as SynapseInterfaceActionName;
-    if (!["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"].includes(action)) return null;
-    return { action, target: data.target, patientId: data.patientId || data.patient_id, appointmentId: data.appointmentId || data.appointment_id, noteId: data.noteId || data.note_id, moduleId: data.moduleId || data.module_id, taskId: data.taskId || data.task_id, fileId: data.fileId || data.file_id, date: data.date, query: data.query, notesView: safeNotesView(data.notesView || data.notes_view), element: data.element, modal: data.modal, reason: data.reason };
+    if (!ALLOWED_INTERFACE_ACTIONS.has(action)) return null;
+    return { action, target: data.target, patientId: data.patientId || data.patient_id, appointmentId: data.appointmentId || data.appointment_id, noteId: data.noteId || data.note_id, moduleId: data.moduleId || data.module_id, taskId: data.taskId || data.task_id, fileId: data.fileId || data.file_id, flowId: data.flowId || data.flow_id, runId: data.runId || data.run_id, pulseEntryId: data.pulseEntryId || data.pulse_entry_id, mermaid: data.mermaid, trace: data.trace, date: data.date, query: data.query, notesView: safeNotesView(data.notesView || data.notes_view), element: data.element, modal: data.modal, reason: data.reason };
   }
   if (envelope.type === "navigation_action" && typeof data.path === "string") {
     const path = data.path.replace(/\/$/, "") || "/";
@@ -263,16 +275,19 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
       case "open_tasks_board":
       case "open_files_manager":
       case "open_notion_panel":
-      case "open_file_preview": {
-        const notesView = action.action === "open_tasks_board" ? "tasks" : action.action === "open_files_manager" || action.action === "open_file_preview" ? "files" : action.action === "open_notion_panel" ? "notion" : action.notesView || "notes";
+      case "open_file_preview":
+      case "open_neuroview_reasoning":
+      case "open_neuroflow_generation":
+      case "open_neuropulse_diagram": {
+        const notesView = action.action === "open_tasks_board" ? "tasks" : action.action === "open_files_manager" || action.action === "open_file_preview" ? "files" : action.action === "open_notion_panel" ? "notion" : action.action === "open_neuroview_reasoning" ? "neuroview" : action.action === "open_neuroflow_generation" ? "neuroflow" : action.action === "open_neuropulse_diagram" ? "neuropulse" : action.notesView || "notes";
         const query = new URLSearchParams();
         if (action.noteId && validEntityId(action.noteId)) query.set("noteId", action.noteId);
         const path = query.toString() ? `/notas?${query.toString()}` : "/notas";
-        navigate(path, { state: { synapseNotesView: notesView, synapseQuery: action.query || "", synapseNoteId: action.noteId, synapseModuleId: action.moduleId, synapseTaskId: action.taskId, synapseFileId: action.fileId, synapseAction: action.action } });
+        navigate(path, { state: { synapseNotesView: notesView, synapseQuery: action.query || "", synapseNoteId: action.noteId, synapseModuleId: action.moduleId, synapseTaskId: action.taskId, synapseFileId: action.fileId, synapseFlowId: action.flowId, synapseRunId: action.runId, synapsePatientId: action.patientId, synapsePulseEntryId: action.pulseEntryId, synapseMermaid: action.mermaid, synapseTrace: action.trace, synapseAction: action.action } });
         await sleep(560, controller.signal);
         emitPageAction({ ...action, notesView });
         await sleep(180, controller.signal);
-        const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : action.query ? "notes_search" : "notes_editor");
+        const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : notesView === "neuroview" ? "neuroview_graph" : notesView === "neuroflow" ? "neuroflow_canvas" : notesView === "neuropulse" ? "neuropulse_panel" : action.query ? "notes_search" : "notes_editor");
         highlightNode(document.querySelector(targetSelector({ ...action, element })));
         break;
       }
