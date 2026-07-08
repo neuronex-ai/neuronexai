@@ -50,7 +50,7 @@ export const SynapseGlobalShell = () => {
                 className="fixed bottom-6 right-6 flex flex-col items-end gap-3"
                 style={{ zIndex: 9990 }}
             >
-                <AnimatePresence initial={false}>
+                <AnimatePresence initial={false} mode="wait">
                     {shellState === 'compact' ? (
                         <SynapseCompactPanel key="compact" />
                     ) : (
