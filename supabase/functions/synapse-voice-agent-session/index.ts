@@ -21,6 +21,7 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
+const DEFAULT_CARTESIA_PT_BR_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -126,46 +127,57 @@ function buildSpeakConfig() {
   const cartesiaVoiceId =
     Deno.env.get("CARTESIA_VOICE_ID") ||
     Deno.env.get("DEEPGRAM_CARTESIA_VOICE_ID") ||
-    "";
+    DEFAULT_CARTESIA_PT_BR_VOICE_ID;
   const cartesiaApiKey =
     Deno.env.get("CARTESIA_API_KEY") ||
     Deno.env.get("DEEPGRAM_CARTESIA_API_KEY") ||
     "";
   const cartesiaManaged = Deno.env.get("DEEPGRAM_MANAGED_CARTESIA") !== "false";
+  const modelId = Deno.env.get("CARTESIA_MODEL_ID") || "sonic-2";
+  const language = Deno.env.get("CARTESIA_LANGUAGE") || "pt-BR";
+  const speed = Deno.env.get("CARTESIA_SPEED") || "normal";
 
-  if (cartesiaVoiceId && (cartesiaApiKey || cartesiaManaged)) {
-    const speak: Record<string, unknown> = {
-      provider: {
-        type: "cartesia",
-        model_id: Deno.env.get("CARTESIA_MODEL_ID") || "sonic-2",
-        voice: {
-          mode: "id",
-          id: cartesiaVoiceId,
-        },
-        language: Deno.env.get("CARTESIA_LANGUAGE") || "pt-BR",
-        volume: Number(Deno.env.get("CARTESIA_VOLUME") || "1"),
+  const speak: Record<string, unknown> = {
+    provider: {
+      type: "cartesia",
+      model_id: modelId,
+      voice: {
+        mode: "id",
+        id: cartesiaVoiceId,
       },
+      language,
+      speed,
+      volume: Number(Deno.env.get("CARTESIA_VOLUME") || "1"),
+    },
+  };
+
+  if (cartesiaApiKey && !cartesiaManaged) {
+    speak.endpoint = {
+      url: Deno.env.get("CARTESIA_TTS_URL") || "https://api.cartesia.ai/tts/bytes",
+      headers: { "x-api-key": cartesiaApiKey },
     };
+  }
 
-    if (cartesiaApiKey) {
-      speak.endpoint = {
-        url: Deno.env.get("CARTESIA_TTS_URL") || "https://api.cartesia.ai/tts/bytes",
-        headers: { "x-api-key": cartesiaApiKey },
-      };
-    }
-
-    return { speak, ttsProvider: "cartesia", ttsVoice: cartesiaVoiceId };
+  if (Deno.env.get("DEEPGRAM_ENABLE_AURA_FALLBACK") === "true") {
+    return {
+      speak: [
+        speak,
+        {
+          provider: {
+            type: "deepgram",
+            model: Deno.env.get("DEEPGRAM_FALLBACK_TTS_MODEL") || "aura-2-thalia-en",
+          },
+        },
+      ],
+      ttsProvider: cartesiaManaged ? "deepgram-managed-cartesia+aura-fallback" : "byo-cartesia+aura-fallback",
+      ttsVoice: cartesiaVoiceId,
+    };
   }
 
   return {
-    speak: {
-      provider: {
-        type: "deepgram",
-        model: Deno.env.get("DEEPGRAM_FALLBACK_TTS_MODEL") || "aura-2-thalia-en",
-      },
-    },
-    ttsProvider: "deepgram-fallback",
-    ttsVoice: Deno.env.get("DEEPGRAM_FALLBACK_TTS_MODEL") || "aura-2-thalia-en",
+    speak,
+    ttsProvider: cartesiaManaged ? "deepgram-managed-cartesia" : "byo-cartesia",
+    ttsVoice: cartesiaVoiceId,
   };
 }
 
@@ -202,7 +214,7 @@ function buildAgentSettings(
             version: "v2",
             model: Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi",
             language: Deno.env.get("DEEPGRAM_LISTEN_LANGUAGE") || "pt-BR",
-            language_hints: ["pt-BR"],
+            language_hints: ["pt-BR", "pt"],
             eot_threshold: Number(Deno.env.get("DEEPGRAM_EOT_THRESHOLD") || "0.78"),
             eager_eot_threshold: Number(Deno.env.get("DEEPGRAM_EAGER_EOT_THRESHOLD") || "0.52"),
             eot_timeout_ms: Number(Deno.env.get("DEEPGRAM_EOT_TIMEOUT_MS") || "1800"),
@@ -223,6 +235,7 @@ function buildAgentSettings(
     },
     metadata: {
       listenModel: Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi",
+      listenLanguage: Deno.env.get("DEEPGRAM_LISTEN_LANGUAGE") || "pt-BR",
       thinkModel: Deno.env.get("DEEPGRAM_THINK_MODEL") || "gpt-4o-mini",
       ttsProvider,
       ttsVoice,
@@ -320,6 +333,7 @@ serve(async (request) => {
       model: metadata.thinkModel,
       voiceName: metadata.ttsVoice,
       listenModel: metadata.listenModel,
+      listenLanguage: metadata.listenLanguage,
       ttsProvider: metadata.ttsProvider,
       inputSampleRate: metadata.inputSampleRate,
       outputSampleRate: metadata.outputSampleRate,
