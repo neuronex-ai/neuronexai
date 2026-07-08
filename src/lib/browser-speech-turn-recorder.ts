@@ -3,6 +3,7 @@ export interface SpeechTurnRecorderOptions {
   silenceMs?: number;
   maxDurationMs?: number;
   onLevel?: (level: number) => void;
+  noiseSuppression?: boolean;
 }
 
 const preferredMimeType = () => {
@@ -20,6 +21,7 @@ export async function recordSpeechTurn({
   silenceMs = 900,
   maxDurationMs = 20_000,
   onLevel,
+  noiseSuppression = false,
 }: SpeechTurnRecorderOptions = {}): Promise<Blob | null> {
   if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === "undefined") {
     throw new Error("Gravação de áudio indisponível neste dispositivo.");
@@ -29,7 +31,7 @@ export async function recordSpeechTurn({
     audio: {
       channelCount: 1,
       echoCancellation: true,
-      noiseSuppression: true,
+      noiseSuppression,
       autoGainControl: true,
     },
   });
