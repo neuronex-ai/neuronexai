@@ -133,18 +133,20 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
             >
                 <div className="flex shrink-0 items-center justify-between gap-4 border-b border-zinc-100 px-5 py-5 dark:border-white/5 sm:px-8 sm:py-6">
                     <div>
-                        <h2 className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">Nova Cobrança</h2>
+                        <h2 id="create-billing-title" className="text-xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">Nova Cobrança</h2>
                         <p className="text-xs text-zinc-500 font-medium mt-1">Gere faturas profissionais para seus pacientes</p>
                     </div>
                     <button 
+                        type="button"
                         onClick={() => onOpenChange(false)}
-                        className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors"
+                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-zinc-400 transition-colors hover:bg-zinc-100 hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 dark:hover:bg-white/5 dark:hover:text-white dark:focus-visible:ring-white/25 motion-reduce:transition-none"
+                        aria-label="Fechar modal de nova cobrança"
                     >
                         <X className="w-5 h-5 text-zinc-400" />
                     </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-8 space-y-8 custom-scrollbar">
+                <div className="custom-scrollbar flex-1 overflow-y-auto p-5 sm:p-8">
                     <form id="billing-form" onSubmit={handleSubmit(onSubmit)} className="space-y-8">
                         <div className="space-y-4">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 flex items-center gap-2">
@@ -152,7 +154,7 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
                             </label>
                             <select 
                                 {...register("patient_id")}
-                                className="w-full h-14 px-5 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold focus:ring-2 focus:ring-zinc-900 dark:focus:ring-white transition-all outline-none"
+                                className={fieldClass}
                             >
                                 <option value="">Selecione um paciente</option>
                                 {patients.map(p => (
@@ -173,7 +175,7 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
                                         setValueAs: moneyInputToNumber,
                                         onChange: (event) => { event.target.value = formatMoneyInput(event.target.value); },
                                     })}
-                                    className="w-full h-14 px-5 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold focus:ring-2 focus:ring-zinc-900 transition-all"
+                                    className={fieldClass}
                                     placeholder="0,00"
                                 />
                             </div>
@@ -184,7 +186,7 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
                                 <input 
                                     type="date"
                                     {...register("dueDate")}
-                                    className="w-full h-14 px-5 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-bold focus:ring-2 focus:ring-zinc-900 transition-all"
+                                    className={fieldClass}
                                 />
                             </div>
                         </div>
@@ -203,7 +205,7 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
                                         type="button"
                                         onClick={() => setValue("billingType", method.id as any)}
                                         className={cn(
-                                            "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all gap-2 group",
+                                            "group flex min-h-[92px] flex-col items-center justify-center gap-2 rounded-2xl border-2 p-4 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-95 dark:focus-visible:ring-white/25 dark:focus-visible:ring-offset-zinc-950 motion-reduce:transition-none motion-reduce:active:scale-100",
                                             selectedType === method.id 
                                                 ? "bg-zinc-900 border-zinc-900 text-white dark:bg-white dark:border-white dark:text-black shadow-xl" 
                                                 : "bg-transparent border-zinc-100 dark:border-white/5 text-zinc-400 hover:border-zinc-300 dark:hover:border-white/20"
@@ -220,18 +222,18 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Descrição / Observações</label>
                             <textarea 
                                 {...register("description")}
-                                className="w-full h-24 p-5 rounded-2xl bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-sm font-medium focus:ring-2 focus:ring-zinc-900 transition-all resize-none"
+                                className={cn(fieldClass, "h-24 resize-none py-4 font-medium")}
                                 placeholder="Descreva o serviço realizado..."
                             />
                         </div>
                     </form>
                 </div>
 
-                <div className="px-8 py-6 bg-zinc-50 dark:bg-white/[0.02] border-t border-zinc-100 dark:border-white/5 shrink-0 flex items-center justify-end gap-4">
+                <div className="flex shrink-0 flex-col-reverse gap-3 border-t border-zinc-100 bg-zinc-50 px-5 py-5 dark:border-white/5 dark:bg-white/[0.02] sm:flex-row sm:items-center sm:justify-end sm:px-8 sm:py-6">
                     <button 
                         type="button"
                         onClick={() => onOpenChange(false)}
-                        className="h-14 px-8 rounded-2xl text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-zinc-900 transition-colors"
+                        className={cn(subtleButtonClass, "px-8 text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:hover:bg-white/5 dark:hover:text-white")}
                     >
                         Cancelar
                     </button>
@@ -239,7 +241,7 @@ export const CreateBillingModal = ({ open, onOpenChange, patients }: Props) => {
                         form="billing-form"
                         type="submit"
                         disabled={loading}
-                        className="h-14 px-10 rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-black text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl hover:opacity-90 active:scale-95 transition-all flex items-center gap-3 disabled:opacity-50"
+                        className={cn(subtleButtonClass, "flex items-center justify-center gap-3 bg-zinc-900 px-10 text-white shadow-2xl hover:bg-zinc-800 disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200")}
                     >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Gerar Cobrança"}
                         {!loading && <ArrowRight className="w-4 h-4" />}

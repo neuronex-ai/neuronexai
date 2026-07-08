@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Sidebar } from "@/components/agenda/Sidebar";
 import { CalendarView } from "@/components/agenda/CalendarView";
 import { useAppointments } from "@/hooks/use-appointments";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useAgendaRealtime } from "@/hooks/use-agenda-realtime";
 import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
@@ -16,6 +16,7 @@ import {
 
 export default function DesktopAgenda() {
     useAgendaRealtime();
+    const shouldReduceMotion = useReducedMotion();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -126,19 +127,19 @@ export default function DesktopAgenda() {
                                 key="agenda-sidebar-dismiss"
                                 type="button"
                                 aria-label="Fechar painel da agenda"
-                                initial={{ opacity: 0 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0 }}
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
-                                transition={{ duration: 0.16 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
                                 onClick={() => setSidebarOpen(false)}
-                                className="absolute inset-0 z-30 hidden cursor-default bg-zinc-950/[0.018] backdrop-blur-[1px] dark:bg-black/20 xl:block"
+                                className="absolute inset-0 z-30 hidden cursor-default bg-zinc-950/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 dark:bg-black/20 dark:focus-visible:ring-white/25 xl:block"
                             />
                             <motion.aside
                                 key="sidebar"
-                                initial={{ opacity: 0, x: -18, scale: 0.985 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, x: -18, scale: 0.985 }}
                                 animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={{ opacity: 0, x: -18, scale: 0.985 }}
-                                transition={{ type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
+                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -18, scale: 0.985 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
                                 className="absolute inset-y-3 left-3 z-40 hidden w-[318px] flex-col overflow-hidden xl:flex"
                             >
                                 <div className="relative h-full w-full rounded-[34px] border border-zinc-200/70 bg-white/84 p-2 shadow-[0_30px_90px_-46px_rgba(24,24,27,0.44),inset_0_1px_0_rgba(255,255,255,0.86)] backdrop-blur-3xl dark:border-white/[0.075] dark:bg-[#070708]/94 dark:shadow-[0_32px_94px_-50px_rgba(0,0,0,0.98),inset_0_1px_0_rgba(255,255,255,0.038)]">
