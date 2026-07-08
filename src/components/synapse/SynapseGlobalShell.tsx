@@ -34,18 +34,23 @@ export const SynapseGlobalShell = () => {
     return (
         <>
             <SynapseScreenAgentOverlay />
-            <div
+            <motion.div
                 className="fixed bottom-6 right-6 flex items-end"
                 style={{ zIndex: 9990 }}
+                layout
             >
                 <AnimatePresence initial={false} mode="wait">
                     {shellState === "compact" ? (
                         <motion.div
                             key="compact"
-                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            layout
+                            initial={{ opacity: 0, scale: 0.6, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            exit={{ opacity: 0, scale: 0.6, y: 20 }}
+                            transition={{
+                                duration: 0.25,
+                                ease: [0.16, 1, 0.3, 1],
+                            }}
                             style={{ transformOrigin: "bottom right" }}
                         >
                             <SynapseCompactPanel />
@@ -53,17 +58,21 @@ export const SynapseGlobalShell = () => {
                     ) : (
                         <motion.div
                             key="pill"
-                            initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                            layout
+                            initial={{ opacity: 0, scale: 0.6, y: 20 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 10 }}
-                            transition={{ duration: 0.2, ease: "easeOut" }}
+                            exit={{ opacity: 0, scale: 0.6, y: 20 }}
+                            transition={{
+                                duration: 0.25,
+                                ease: [0.16, 1, 0.3, 1],
+                            }}
                             style={{ transformOrigin: "bottom right" }}
                         >
                             <SynapsePill />
                         </motion.div>
                     )}
                 </AnimatePresence>
-            </div>
+            </motion.div>
         </>
     );
 };
