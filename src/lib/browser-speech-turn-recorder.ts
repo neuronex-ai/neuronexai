@@ -6,6 +6,8 @@ export interface SpeechTurnRecorderOptions {
   noiseSuppression?: boolean;
 }
 
+// Used only by the explicitly enabled legacy-cascade voice rollback path.
+// The default Synapse voice stack streams microphone audio through Deepgram Agent.
 const preferredMimeType = () => {
   if (typeof MediaRecorder === "undefined") return "";
   return [

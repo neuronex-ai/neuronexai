@@ -16,7 +16,19 @@ interface VoiceConfig {
     outputSampleRate?: number;
 }
 
-const LOCAL_CONFIG: VoiceConfig = {
+const DEEPGRAM_GATEWAY_URL = 'ws://localhost:8789/v1/synapse/voice';
+const DEFAULT_DEEPGRAM_CONFIG: VoiceConfig = {
+    token: null,
+    expiresAt: null,
+    newSessionExpiresAt: null,
+    model: 'gpt-4o-mini',
+    voiceName: 'cartesia-sonic',
+    provider: 'deepgram-agent',
+    gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null,
+    sessionId: null,
+};
+
+const LEGACY_CASCADE_CONFIG: VoiceConfig = {
     token: 'local-cascade',
     expiresAt: 'local',
     newSessionExpiresAt: 'local',
@@ -27,15 +39,14 @@ const LOCAL_CONFIG: VoiceConfig = {
     sessionId: null as string | null,
 };
 
+const isLegacyCascadeEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_ENABLED === 'true';
+
 export function useVoiceConfig() {
-    const [config, setConfig] = useState<VoiceConfig>({
-        ...LOCAL_CONFIG,
-        provider: import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER === 'legacy-cascade'
-            ? 'legacy-cascade'
-            : 'deepgram-agent',
-        gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || LOCAL_CONFIG.gatewayUrl,
-        model: 'gpt-4o-mini',
-        voiceName: 'cartesia-sonic',
+    const [config, setConfig] = useState<VoiceConfig>(() => {
+        if (import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER === 'legacy-cascade' && isLegacyCascadeEnabled()) {
+            return LEGACY_CASCADE_CONFIG;
+        }
+        return DEFAULT_DEEPGRAM_CONFIG;
     });
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -43,9 +54,12 @@ export function useVoiceConfig() {
     const refresh = useCallback(async (): Promise<VoiceConfig> => {
         const forcedProvider = import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER;
         if (forcedProvider === 'legacy-cascade') {
-            setConfig(LOCAL_CONFIG);
-            setError(null);
-            return LOCAL_CONFIG;
+            if (isLegacyCascadeEnabled()) {
+                setConfig(LEGACY_CASCADE_CONFIG);
+                setError(null);
+                return LEGACY_CASCADE_CONFIG;
+            }
+            console.warn('[Synapse Voice] legacy-cascade solicitado, mas isolado; usando deepgram-agent.');
         }
 
         setIsLoading(true);
@@ -76,14 +90,14 @@ export function useVoiceConfig() {
         } catch (caught) {
             const message = caught instanceof Error ? caught.message : 'Nao foi possivel preparar o agente de voz.';
             const gatewayFallback: VoiceConfig = {
-                ...LOCAL_CONFIG,
+                ...DEFAULT_DEEPGRAM_CONFIG,
                 token: null,
                 expiresAt: null,
                 newSessionExpiresAt: null,
                 model: 'gpt-4o-mini',
                 voiceName: 'cartesia-sonic',
                 provider: 'deepgram-agent',
-                gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || 'ws://localhost:8789/v1/synapse/voice',
+                gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || DEEPGRAM_GATEWAY_URL,
             };
 
             if (import.meta.env.DEV || import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL) {
@@ -93,13 +107,9 @@ export function useVoiceConfig() {
                 return gatewayFallback;
             }
 
-            const fallback: VoiceConfig = {
-                ...LOCAL_CONFIG,
-                provider: 'legacy-cascade',
-            };
-            setError(null);
-            setConfig(fallback);
-            return fallback;
+            setError(message);
+            setConfig(DEFAULT_DEEPGRAM_CONFIG);
+            throw new Error(message);
         } finally {
             setIsLoading(false);
         }

@@ -23,6 +23,8 @@ const jsonResponse = (payload: unknown, status = 200) =>
   });
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
+const legacyCascadeEnabled = () => Deno.env.get("SYNAPSE_ENABLE_LEGACY_CASCADE") === "true";
+const legacyGroqFallbackEnabled = () => Deno.env.get("SYNAPSE_LEGACY_CASCADE_ALLOW_GROQ_STT") === "true";
 
 const toDeepgramListenUrl = () => {
   const url = new URL("https://api.deepgram.com/v1/listen");
@@ -112,6 +114,15 @@ serve(async (req) => {
     if (authError || !authData.user) return jsonResponse({ error: "Token inválido" }, 401);
 
     const incoming = await req.formData();
+    if (!legacyCascadeEnabled()) {
+      return jsonResponse({ error: "synapse-voice-transcribe esta isolado para legacy-cascade e desativado neste ambiente." }, 410);
+    }
+
+    const provider = clean(incoming.get("provider"), 80).toLowerCase();
+    if (provider !== "legacy-cascade") {
+      return jsonResponse({ error: "synapse-voice-transcribe aceita somente provider=legacy-cascade." }, 400);
+    }
+
     const audio = incoming.get("audio");
     if (!(audio instanceof File)) return jsonResponse({ error: "Arquivo de áudio ausente" }, 400);
     if (audio.size === 0) return jsonResponse({ error: "Arquivo de áudio vazio" }, 400);
@@ -123,18 +134,19 @@ serve(async (req) => {
     }
 
     const deepgramKey = Deno.env.get("DEEPGRAM_API_KEY")?.trim();
-    const groqKey = Deno.env.get("GROQ_API_KEY")?.trim();
-    const prefer = (Deno.env.get("SYNAPSE_STT_PROVIDER") || "deepgram").trim().toLowerCase();
+    const groqKey = legacyGroqFallbackEnabled() ? Deno.env.get("GROQ_API_KEY")?.trim() : "";
 
     let result: Awaited<ReturnType<typeof transcribeWithDeepgram>> | Awaited<ReturnType<typeof transcribeWithGroq>> | null = null;
     let fallbackReason: string | null = null;
 
-    if (prefer !== "groq" && deepgramKey) {
+    if (deepgramKey) {
       try {
         result = await transcribeWithDeepgram(audio, deepgramKey);
       } catch (error) {
         fallbackReason = error instanceof Error ? error.message : "Deepgram indisponível";
-        console.warn("[synapse-voice-transcribe] Deepgram failed; trying fallback", fallbackReason);
+        if (groqKey) {
+          console.warn("[synapse-voice-transcribe] Deepgram failed; trying legacy Groq fallback", fallbackReason);
+        }
       }
     }
 
@@ -142,18 +154,19 @@ serve(async (req) => {
       result = await transcribeWithGroq(audio, groqKey);
     }
 
-    if (!result && deepgramKey) {
-      result = await transcribeWithDeepgram(audio, deepgramKey);
-    }
-
     if (!result) {
-      return jsonResponse({ error: "Configure DEEPGRAM_API_KEY ou GROQ_API_KEY para transcrição de voz." }, 503);
+      return jsonResponse({
+        error: legacyGroqFallbackEnabled()
+          ? "Configure DEEPGRAM_API_KEY ou GROQ_API_KEY para transcricao legacy-cascade."
+          : "Configure DEEPGRAM_API_KEY para transcricao legacy-cascade.",
+      }, 503);
     }
 
     return jsonResponse({
       ...result,
       fallbackReason,
-      primaryProvider: prefer,
+      primaryProvider: "deepgram",
+      legacyCascade: true,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Erro interno";

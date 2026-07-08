@@ -6,6 +6,7 @@ import { recordSpeechTurn } from "@/lib/browser-speech-turn-recorder";
 type ClientAction = { type?: string; payload?: unknown; data?: unknown };
 
 interface Options {
+  enabled?: boolean;
   sessionId?: string | null;
   onSessionIdChange?: (id: string) => void;
   onTranscript?: (text: string, isFinal: boolean) => void;
@@ -24,6 +25,9 @@ interface NeuralSpeechPayload {
   voice?: string;
   error?: string;
 }
+
+const LEGACY_DISABLED_MESSAGE = "legacy-cascade esta isolado. Ative VITE_SYNAPSE_LEGACY_CASCADE_ENABLED=true somente para rollback diagnostico.";
+const isLegacyCloudSttEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_CLOUD_STT === "true";
 
 const cleanForSpeech = (value: string) => value
   .replace(/```json\s+synapse_widget[\s\S]*?```/gi, "")
@@ -60,6 +64,7 @@ const base64ToBlob = (value: string, mimeType: string) => {
 };
 
 export function useSynapseCascadeVoice({
+  enabled = false,
   sessionId,
   onSessionIdChange,
   onTranscript,
@@ -267,6 +272,7 @@ export function useSynapseCascadeVoice({
   }, [onSessionIdChange]);
 
   const submitTranscript = useCallback(async (rawText: string) => {
+    if (!enabled) return;
     const text = rawText.trim();
     if (!text || processingRef.current || !activeRef.current || !listeningEnabledRef.current) return;
 
@@ -289,7 +295,7 @@ export function useSynapseCascadeVoice({
         body: {
           message: text,
           sessionId: currentSessionId,
-          context: { route: "voice", source: "free-cascade", aiProvider: "groq" },
+          context: { route: "voice", source: "legacy-cascade", aiProvider: "groq" },
         },
       });
 
@@ -310,9 +316,10 @@ export function useSynapseCascadeVoice({
       processingRef.current = false;
       setIsProcessing(false);
     }
-  }, [ensureSession, onClientAction, onSessionIdChange, onTranscript, speak, stopInput, stopSpeech]);
+  }, [enabled, ensureSession, onClientAction, onSessionIdChange, onTranscript, speak, stopInput, stopSpeech]);
 
   const transcribeAudio = useCallback(async (blob: Blob) => {
+    if (!enabled) return;
     if (blob.size < 1000 || !activeRef.current || !listeningEnabledRef.current) return;
 
     processingRef.current = true;
@@ -324,6 +331,7 @@ export function useSynapseCascadeVoice({
       const form = new FormData();
       const type = blob.type || "audio/webm";
       form.append("audio", new File([blob], `synapse-voice.${audioExtension(type)}`, { type }));
+      form.append("provider", "legacy-cascade");
       const { data, error: invokeError } = await supabase.functions.invoke("synapse-voice-transcribe", {
         body: form,
       });
@@ -338,7 +346,7 @@ export function useSynapseCascadeVoice({
     }
 
     if (text) await submitTranscript(text);
-  }, [submitTranscript]);
+  }, [enabled, submitTranscript]);
 
   const recognition = useSpeechRecognition({
     lang: "pt-BR",
@@ -358,6 +366,12 @@ export function useSynapseCascadeVoice({
   }, [recognition.startListening, recognition.stopListening]);
 
   const startWhisperFallback = useCallback(async () => {
+    if (!enabled) return;
+    if (!isLegacyCloudSttEnabled()) {
+      setError("STT em nuvem do legacy-cascade esta desativado.");
+      return;
+    }
+
     if (
       recorderAbortRef.current
       || !activeRef.current
@@ -385,9 +399,10 @@ export function useSynapseCascadeVoice({
       setFallbackListening(false);
       updateAudioLevel(0);
     }
-  }, [transcribeAudio, updateAudioLevel]);
+  }, [enabled, transcribeAudio, updateAudioLevel]);
 
   useEffect(() => {
+    if (!enabled) return;
     const browserListening = recognition.isSupported && recognition.isListening;
     if (
       !activeRef.current
@@ -405,9 +420,13 @@ export function useSynapseCascadeVoice({
     }, 260);
 
     return () => window.clearTimeout(timer);
-  }, [fallbackListening, isProcessing, isSpeaking, listeningEnabled, recognition.isListening, recognition.isSupported, startWhisperFallback]);
+  }, [enabled, fallbackListening, isProcessing, isSpeaking, listeningEnabled, recognition.isListening, recognition.isSupported, startWhisperFallback]);
 
   const startSession = useCallback(async () => {
+    if (!enabled) {
+      setError(LEGACY_DISABLED_MESSAGE);
+      throw new Error(LEGACY_DISABLED_MESSAGE);
+    }
     activeRef.current = true;
     listeningEnabledRef.current = true;
     setListeningEnabled(true);
@@ -416,8 +435,19 @@ export function useSynapseCascadeVoice({
     setIsConnected(true);
 
     if (recognition.isSupported) startListeningRef.current();
-    else void startWhisperFallback();
-  }, [recognition.isSupported, startWhisperFallback]);
+    else {
+      if (!isLegacyCloudSttEnabled()) {
+        const message = "Reconhecimento de voz do navegador indisponivel; ative VITE_SYNAPSE_LEGACY_CASCADE_CLOUD_STT=true para usar STT legado em nuvem.";
+        activeRef.current = false;
+        listeningEnabledRef.current = false;
+        setListeningEnabled(false);
+        setIsConnected(false);
+        setError(message);
+        throw new Error(message);
+      }
+      void startWhisperFallback();
+    }
+  }, [enabled, recognition.isSupported, startWhisperFallback]);
 
   const endSession = useCallback(() => {
     activeRef.current = false;
@@ -456,9 +486,9 @@ export function useSynapseCascadeVoice({
       }
     },
     sendTextMessage: (text: string) => void submitTranscript(text),
-    error: error || recognition.error,
+    error: error || recognition.lastError,
     provider: "legacy-cascade" as const,
-    inputProvider: recognition.isSupported ? "browser-speech" : "deepgram-stt-fallback",
+    inputProvider: recognition.isSupported ? "browser-speech" : isLegacyCloudSttEnabled() ? "deepgram-stt-fallback" : "unavailable",
     outputProvider: "neural-or-local-speech",
   };
 }

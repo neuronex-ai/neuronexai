@@ -22,6 +22,7 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const DEFAULT_CARTESIA_PT_BR_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
+const SUPPORTED_PROVIDER = "deepgram-agent";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -29,6 +30,9 @@ const publicGatewayUrl = () =>
   Deno.env.get("SYNAPSE_VOICE_GATEWAY_URL") ||
   Deno.env.get("PUBLIC_SYNAPSE_VOICE_GATEWAY_URL") ||
   DEFAULT_GATEWAY_URL;
+
+const configuredVoiceProvider = () =>
+  clean(Deno.env.get("SYNAPSE_VOICE_PROVIDER") || SUPPORTED_PROVIDER, 80).toLowerCase();
 
 const toDeepgramFunction = (tool: any) => {
   const fn = tool?.function || {};
@@ -293,6 +297,13 @@ serve(async (request) => {
     }
 
     const body = await request.json().catch(() => ({}));
+    if (configuredVoiceProvider() !== SUPPORTED_PROVIDER) {
+      return json({
+        error: "synapse-voice-agent-session atende somente o provider deepgram-agent.",
+        provider: SUPPORTED_PROVIDER,
+      }, 409);
+    }
+
     const includeSettings = Boolean(body.includeSettings);
     const gatewaySecret = Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET") || "";
     const gatewayAuthorized = gatewaySecret &&

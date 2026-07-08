@@ -3,6 +3,14 @@ import { useDeepgramAgentVoice } from "@/hooks/use-deepgram-agent-voice";
 import { useSynapseCascadeVoice } from "@/hooks/use-synapse-cascade-voice";
 
 type ClientAction = { type?: string; payload?: unknown; data?: unknown };
+type SynapseVoiceProvider = "deepgram-agent" | "legacy-cascade";
+
+const DEFAULT_PROVIDER: SynapseVoiceProvider = "deepgram-agent";
+const LEGACY_PROVIDER: SynapseVoiceProvider = "legacy-cascade";
+const legacyCascadeEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_ENABLED === "true";
+
+const normalizeProvider = (provider?: string | null): SynapseVoiceProvider =>
+  provider === LEGACY_PROVIDER ? LEGACY_PROVIDER : DEFAULT_PROVIDER;
 
 interface UseGeminiVoiceOptions {
   token: string | null;
@@ -23,9 +31,10 @@ interface UseGeminiVoiceOptions {
 }
 
 export function useGeminiVoice(options: UseGeminiVoiceOptions) {
-  const [usingFallback, setUsingFallback] = useState(false);
-  const preferredProvider = options.provider || import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER || "deepgram-agent";
-  const shouldUseDeepgram = preferredProvider !== "legacy-cascade" && !usingFallback;
+  const [forcedLegacy, setForcedLegacy] = useState(false);
+  const preferredProvider = normalizeProvider(options.provider || import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER);
+  const canUseLegacyCascade = legacyCascadeEnabled();
+  const shouldUseLegacyCascade = canUseLegacyCascade && (forcedLegacy || preferredProvider === LEGACY_PROVIDER);
 
   const deepgram = useDeepgramAgentVoice({
     gatewayUrl: options.gatewayUrl,
@@ -42,6 +51,7 @@ export function useGeminiVoice(options: UseGeminiVoiceOptions) {
   });
 
   const cascade = useSynapseCascadeVoice({
+    enabled: canUseLegacyCascade,
     sessionId: options.sessionId,
     onSessionIdChange: options.onSessionIdChange,
     onSpeakingStart: options.onSpeakingStart,
@@ -64,38 +74,33 @@ export function useGeminiVoice(options: UseGeminiVoiceOptions) {
     provider?: string | null;
     sessionId?: string | null;
   }) => {
-    const provider = _override?.provider || preferredProvider;
-    const fallbackEnabled = import.meta.env.VITE_SYNAPSE_VOICE_DISABLE_FALLBACK !== "true";
+    const provider = normalizeProvider(_override?.provider || preferredProvider);
 
-    if (provider === "legacy-cascade") {
-      setUsingFallback(true);
+    if (provider === LEGACY_PROVIDER) {
+      if (!legacyCascadeEnabled()) {
+        throw new Error("legacy-cascade esta isolado. Defina VITE_SYNAPSE_LEGACY_CASCADE_ENABLED=true somente para rollback diagnostico.");
+      }
+      setForcedLegacy(true);
       await cascadeStartSession();
       return;
     }
 
-    setUsingFallback(false);
-    try {
-      await deepgramStartSession(_override);
-    } catch (error) {
-      if (!fallbackEnabled) throw error;
-      console.warn("[Synapse Voice] Deepgram indisponivel; usando cascade legado.", error);
-      setUsingFallback(true);
-      await cascadeStartSession();
-    }
+    setForcedLegacy(false);
+    await deepgramStartSession({ ..._override, provider: DEFAULT_PROVIDER });
   }, [cascadeStartSession, deepgramStartSession, preferredProvider]);
 
   const endSession = useCallback(() => {
     deepgramEndSession();
     cascadeEndSession();
-    setUsingFallback(false);
+    setForcedLegacy(false);
   }, [cascadeEndSession, deepgramEndSession]);
 
-  const active = shouldUseDeepgram ? deepgram : cascade;
+  const active = shouldUseLegacyCascade ? cascade : deepgram;
 
   const provider = useMemo(() => {
-    if (!shouldUseDeepgram) return cascade.provider;
+    if (shouldUseLegacyCascade) return cascade.provider;
     return deepgram.provider;
-  }, [cascade.provider, deepgram.provider, shouldUseDeepgram]);
+  }, [cascade.provider, deepgram.provider, shouldUseLegacyCascade]);
 
   const voicePhase = "voicePhase" in active ? active.voicePhase : active.isConnected ? "listening" : "idle";
   const activeTool = "activeTool" in active ? active.activeTool : null;
