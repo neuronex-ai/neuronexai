@@ -840,7 +840,7 @@ export const SynapseCompactPanel = () => {
                                             <div className={cn(
                                                 'relative group max-w-[85%]',
                                                 msg.role === 'user'
-                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-[#1a1a1a] shadow-xl'
+                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-primary-foreground shadow-xl'
                                                     : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground dark:text-white shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
                                             )}>
                                                 {msg.role === "assistant" && (
@@ -857,7 +857,7 @@ export const SynapseCompactPanel = () => {
                                                     'prose prose-sm max-w-none break-words text-[13px] leading-relaxed',
                                                     'prose-p:text-current prose-strong:text-current prose-li:text-current prose-code:text-current',
                                                     msg.role === 'user'
-                                                        ? 'text-[#1a1a1a] [&_*]:!text-[#1a1a1a] prose-headings:!text-[#1a1a1a]'
+                                                        ? 'text-primary-foreground [&_*]:!text-primary-foreground prose-headings:!text-primary-foreground'
                                                         : 'text-foreground dark:text-white dark:prose-invert [&_p]:text-current [&_strong]:text-current [&_li]:text-current [&_code]:text-current [&_ol]:text-current [&_ul]:text-current'
                                                 )}>
                                                     {(() => {
