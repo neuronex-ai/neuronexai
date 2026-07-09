@@ -1,3 +1,9 @@
+import type { Tables } from "@/integrations/supabase/database.types";
+
+export type FinancialAccountSafeRow = Tables<"financial_accounts_safe_v">;
+export type NbPaymentSafeRow = Tables<"nb_payments_safe_v">;
+export type NbPayoutSafeRow = Tables<"nb_payouts_safe_v">;
+
 export const FINANCIAL_ACCOUNTS_READ_TABLE = "financial_accounts_safe_v";
 export const NB_PAYMENTS_READ_TABLE = "nb_payments_safe_v";
 export const NB_PAYOUTS_READ_TABLE = "nb_payouts_safe_v";
