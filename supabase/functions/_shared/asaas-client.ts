@@ -1,5 +1,5 @@
 /**
- * Shared Asaas Client for NeuroBank Edge Functions
+ * Shared Asaas client for NeuroFinance Edge Functions
  *
  * Centraliza:
  * - Asaas REST API v3 (BaaS) client
@@ -252,14 +252,6 @@ function base64ToBytes(value: string) {
     return bytes;
 }
 
-function isMissingPrivateCredentialTable(error: any) {
-    return (
-        String(error?.code || "") === "42P01" ||
-        String(error?.message || "").includes("asaas_account_credentials") ||
-        String(error?.message || "").includes("schema \"private\"")
-    );
-}
-
 async function getAsaasCredentialCryptoKey() {
     if (!ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET) {
         throw new Error("ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET is required for private Asaas credentials.");
@@ -352,22 +344,20 @@ export async function storeAsaasAccountApiKey(
 
 export async function getFinancialAccountAsaasApiKey(financialAccount: any): Promise<string> {
     const financialAccountId = financialAccount?.id;
-    if (financialAccountId) {
-        const { data, error } = await supabaseAdmin
-            .schema("private")
-            .from("asaas_account_credentials")
-            .select("key_ciphertext,key_iv,key_tag,key_algorithm,key_version,status")
-            .eq("financial_account_id", financialAccountId)
-            .eq("status", "active")
-            .maybeSingle();
+    if (!financialAccountId) return "";
 
-        if (error && !isMissingPrivateCredentialTable(error)) throw error;
-        if (data) return decryptAsaasCredential(data);
-    }
+    const { data, error } = await supabaseAdmin
+        .schema("private")
+        .from("asaas_account_credentials")
+        .select("key_ciphertext,key_iv,key_tag,key_algorithm,key_version,status")
+        .eq("financial_account_id", financialAccountId)
+        .eq("status", "active")
+        .maybeSingle();
 
-    // Transitional fallback for deployments before the private-credential migration.
-    // New writes are stripped from financial_accounts by upsertFinancialAccountRecord.
-    return financialAccount?.asaas_api_key?.trim?.() || "";
+    if (error) throw error;
+    if (!data) return "";
+
+    return decryptAsaasCredential(data);
 }
 
 export async function recordBaasOperation(
@@ -1698,134 +1688,3 @@ export async function markAsaasEventFailed(eventId: string, errorMessage?: strin
 // Ledger helpers (internal accounting)
 // ─────────────────────────────────────────────────────────────
 
-type LedgerAccountType = "main" | "pending" | "available" | "reserved" | "fees";
-
-function isMissingLedgerTableError(error: unknown) {
-    const message = String((error as { message?: string })?.message || error || "").toLowerCase();
-    const code = String((error as { code?: string })?.code || "");
-    return (
-        code === "PGRST205" ||
-        message.includes("ledger_accounts") ||
-        message.includes("ledger_entries") ||
-        message.includes("schema cache")
-    );
-}
-
-export async function ensureLedgerAccounts(
-    userId: string,
-    financialAccountId: string
-) {
-    const accountTypes: LedgerAccountType[] = [
-        "main",
-        "pending",
-        "available",
-        "reserved",
-        "fees",
-    ];
-
-    // Create missing ledger accounts (unique on user_id + account_type)
-    for (const accountType of accountTypes) {
-        const { error } = await supabaseAdmin.from("ledger_accounts").upsert(
-            {
-                user_id: userId,
-                financial_account_id: financialAccountId,
-                account_type: accountType,
-                currency: "brl",
-                is_active: true,
-                updated_at: new Date().toISOString(),
-            },
-            { onConflict: "user_id,account_type" }
-        );
-        if (error) {
-            if (isMissingLedgerTableError(error)) {
-                console.warn("[asaas-ledger] Ledger tables are not available; skipping ledger account setup.");
-                return;
-            }
-            throw error;
-        }
-    }
-}
-
-export async function createLedgerEntries(
-    userId: string,
-    entries: Array<{
-        accountType: LedgerAccountType;
-        direction: "credit" | "debit";
-        entryType:
-            | "payment_received"
-            | "fee"
-            | "payout"
-            | "refund"
-            | "adjustment"
-            | "invoice_issued"
-            | "reserve"
-            | "release";
-        amount: number; // centavos
-        status: "pending" | "posted" | "cancelled";
-        referenceType?: "payment" | "payout" | "invoice" | "patient" | "appointment" | "adjustment";
-        referenceId?: string;
-        providerObjectId?: string;
-        description?: string;
-        metadata?: Record<string, unknown>;
-    }>
-) {
-    // Fetch all ledger accounts for this user once
-    const { data: accounts, error: accErr } = await supabaseAdmin
-        .from("ledger_accounts")
-        .select("id,account_type")
-        .eq("user_id", userId);
-    if (accErr) {
-        if (isMissingLedgerTableError(accErr)) {
-            console.warn("[asaas-ledger] Ledger tables are not available; skipping ledger entries.");
-            return;
-        }
-        throw accErr;
-    }
-
-    const idByType = new Map<string, string>();
-    for (const a of accounts || []) {
-        idByType.set(a.account_type, a.id);
-    }
-
-    if (!idByType.size) {
-        console.warn("[asaas-ledger] No ledger accounts configured; skipping ledger entries.");
-        return;
-    }
-
-    const missingAccountTypes = entries
-        .map((entry) => entry.accountType)
-        .filter((accountType) => !idByType.has(accountType));
-    if (missingAccountTypes.length) {
-        console.warn(`[asaas-ledger] Missing ledger account types (${missingAccountTypes.join(", ")}); skipping ledger entries.`);
-        return;
-    }
-
-    const rows = entries.map((e) => {
-        const ledgerAccountId = idByType.get(e.accountType)!;
-        return {
-            ledger_account_id: ledgerAccountId,
-            user_id: userId,
-            direction: e.direction,
-            entry_type: e.entryType,
-            amount: e.amount,
-            currency: "brl",
-            status: e.status,
-            reference_type: e.referenceType || null,
-            reference_id: e.referenceId || null,
-            provider_object_id: e.providerObjectId || null,
-            description: e.description || null,
-            metadata: e.metadata || {},
-            occurred_at: new Date().toISOString(),
-            created_at: new Date().toISOString(),
-        };
-    });
-
-    const { error } = await supabaseAdmin.from("ledger_entries").insert(rows);
-    if (error) {
-        if (isMissingLedgerTableError(error)) {
-            console.warn("[asaas-ledger] Ledger entries table is not available; skipping ledger entries.");
-            return;
-        }
-        throw error;
-    }
-}

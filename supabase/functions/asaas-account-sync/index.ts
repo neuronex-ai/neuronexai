@@ -88,6 +88,31 @@ async function markConnectionUnavailable(financialAccount: any, err: any) {
     };
 }
 
+async function recoverMissingPrivateCredential(user: any, financialAccount: any) {
+    const existingSubAccount = await findExistingSubAccount(user, financialAccount);
+    if (!existingSubAccount?.apiKey) return { financialAccount, apiKey: "" };
+
+    const recoveredAt = new Date().toISOString();
+    const updatedAccount = await upsertFinancialAccountRecord(user.id, {
+        asaas_account_id: existingSubAccount.id,
+        asaas_wallet_id: existingSubAccount.walletId,
+        asaas_api_key: existingSubAccount.apiKey,
+        asaas_environment: ASAAS_ENV,
+        last_sync_error: null,
+        metadata: {
+            ...(financialAccount?.metadata || {}),
+            provider_connection: {
+                status: 'credential_recovered',
+                recovered_at: recoveredAt,
+                source: 'asaas_account_discovery',
+                previous_account_id: financialAccount?.asaas_account_id || null,
+            },
+        },
+    });
+
+    return { financialAccount: updatedAccount, apiKey: existingSubAccount.apiKey };
+}
+
 Deno.serve(async (req: Request) => {
     if (req.method === 'OPTIONS') return corsResponse();
 
@@ -134,7 +159,13 @@ Deno.serve(async (req: Request) => {
             }
         }
 
-        const asaasApiKey = await getFinancialAccountAsaasApiKey(financialAccount);
+        let asaasApiKey = await getFinancialAccountAsaasApiKey(financialAccount);
+        if (!asaasApiKey) {
+            const recovered = await recoverMissingPrivateCredential(user, financialAccount);
+            financialAccount = recovered.financialAccount;
+            asaasApiKey = recovered.apiKey;
+        }
+
         if (!asaasApiKey) {
             return jsonResponse({
                 status: financialAccount.status || 'not_started',

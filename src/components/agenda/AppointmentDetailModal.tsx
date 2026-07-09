@@ -18,6 +18,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
+import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
 import {
   APPOINTMENT_STATUS_META,
   APPOINTMENT_STATUS_VALUES,
@@ -164,11 +165,15 @@ export const AppointmentDetailModal = ({
       setPatientData(null);
     }
 
-    const { data: transaction } = await supabase
-      .from("transactions")
+    const { data: financialEntry } = await supabase
+      .from("financial_entries")
       .select("*")
+      .eq("professional_id", appointment.user_id)
       .eq("appointment_id", appointment.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
+    const transaction = financialEntry ? mapFinancialEntryToTransaction(financialEntry as any) : null;
     setTransactionData(transaction);
 
     const packageId = transaction?.package_id || currentMetadata.financial?.packageId;

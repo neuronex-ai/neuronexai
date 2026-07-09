@@ -125,7 +125,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: financialAccount, error: accountError } = await supabaseAdmin
       .from("financial_accounts")
-      .select("id, user_id, asaas_account_id, asaas_api_key, metadata")
+      .select("id, user_id, asaas_account_id, metadata")
       .eq("user_id", user.id)
       .maybeSingle();
 

@@ -55,12 +55,14 @@ const updateTransaction = async ({ id, updates }: UpdateTransactionData, userId:
   if (updates.attachment_url !== undefined) metadataUpdates.attachment_url = updates.attachment_url;
 
   if (Object.keys(metadataUpdates).length > 0) {
-    const { data: existingEntry } = await supabase
+    const { data: existingEntry, error: existingError } = await supabase
       .from('financial_entries')
       .select('metadata')
       .eq('id', id)
       .eq('professional_id', userId)
       .maybeSingle();
+
+    if (existingError) throw new Error(existingError.message);
 
     entryPatch.metadata = {
       ...((existingEntry?.metadata as Record<string, unknown> | null) || {}),
@@ -68,37 +70,17 @@ const updateTransaction = async ({ id, updates }: UpdateTransactionData, userId:
     };
   }
 
-  const { data: entry, error: entryError } = await supabase
+  const { data: entry, error } = await supabase
     .from('financial_entries')
     .update(entryPatch)
     .eq('id', id)
     .eq('professional_id', userId)
     .select()
-    .maybeSingle();
-
-  if (!entryError && entry) {
-    return mapFinancialEntryToTransaction(entry as any);
-  }
-
-  const formattedUpdates: Record<string, unknown> = { ...updates };
-  if (updates.date) {
-    formattedUpdates.date = normalizeDate(updates.date);
-  }
-
-  const { data, error } = await supabase
-    .from('transactions')
-    .update(formattedUpdates)
-    .eq('id', id)
-    .eq('user_id', userId)
-    .select()
     .single();
 
-  if (error) {
-    console.error('Erro ao atualizar transacao:', error);
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
-  return data;
+  return mapFinancialEntryToTransaction(entry as any);
 };
 
 export const useUpdateTransaction = () => {

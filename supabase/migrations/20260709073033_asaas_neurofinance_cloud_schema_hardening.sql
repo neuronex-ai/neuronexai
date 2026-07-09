@@ -16,6 +16,7 @@ create schema if not exists private;
 revoke all on schema private from public;
 revoke all on schema private from anon;
 revoke all on schema private from authenticated;
+grant usage on schema private to authenticated;
 grant usage on schema private to service_role;
 
 create table if not exists private.asaas_account_credentials (

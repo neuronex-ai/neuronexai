@@ -205,27 +205,7 @@ const resolveTransactionQuery = async (normalized: string, userId: string) => {
     .order("created_at", { ascending: false })
     .limit(30);
 
-  if (entriesError) {
-    const { data: transactions, error: transactionsError } = await supabase
-      .from("transactions")
-      .select("id,type,description,amount,date,status,patient_name")
-      .eq("user_id", userId)
-      .order("date", { ascending: false })
-      .limit(30);
-
-    if (transactionsError) throw new Error(transactionsError.message);
-
-    const rows = transactions || [];
-    if (rows.length === 0) {
-      return {
-        response: "Consultei o sistema agora e nao encontrei lancamentos financeiros.",
-        source: isMetrics ? ("financial_metrics" as const) : ("transactions" as const),
-        count: 0,
-      };
-    }
-
-    return formatTransactions(rows, isMetrics);
-  }
+  if (entriesError) throw new Error(entriesError.message);
 
   const rows = (entries || []).map((entry: any) => ({
     id: entry.id,
@@ -255,7 +235,7 @@ const formatTransactions = (rows: any[], metricsOnly: boolean): GroundedSynapseR
 
   if (metricsOnly) {
     return {
-      response: `Consultei o sistema agora.\n\nResumo financeiro dos ultimos lancamentos consultados:\nReceitas: ${currency(income)}\nDespesas: ${currency(expense)}\nSaldo: ${currency(balance)}\n\nFonte: financial_entries/transactions.`,
+      response: `Consultei o sistema agora.\n\nResumo financeiro dos ultimos lancamentos consultados:\nReceitas: ${currency(income)}\nDespesas: ${currency(expense)}\nSaldo: ${currency(balance)}\n\nFonte: financial_entries.`,
       source: "financial_metrics",
       count: rows.length,
     };
@@ -271,7 +251,7 @@ const formatTransactions = (rows: any[], metricsOnly: boolean): GroundedSynapseR
     .join("\n");
 
   return {
-    response: `Consultei o sistema agora.\n\nLancamentos financeiros (${rows.length} consultados):\n${list}\n\nResumo: receitas ${currency(income)}, despesas ${currency(expense)}, saldo ${currency(balance)}.\nFonte: financial_entries/transactions.`,
+    response: `Consultei o sistema agora.\n\nLancamentos financeiros (${rows.length} consultados):\n${list}\n\nResumo: receitas ${currency(income)}, despesas ${currency(expense)}, saldo ${currency(balance)}.\nFonte: financial_entries.`,
     source: "transactions",
     count: rows.length,
   };

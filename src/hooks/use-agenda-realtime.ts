@@ -33,11 +33,11 @@ export const useAgendaRealtime = () => {
                 {
                     event: '*',
                     schema: 'public',
-                    table: 'transactions',
-                    filter: `user_id=eq.${user.id}`,
+                    table: 'financial_entries',
+                    filter: `professional_id=eq.${user.id}`,
                 },
                 () => {
-                    console.log('Realtime transaction change');
+                    console.log('Realtime financial entry change');
                     queryClient.invalidateQueries({ queryKey: ['transactions'] });
                     queryClient.invalidateQueries({ queryKey: ['appointments'] });
                     queryClient.invalidateQueries({ queryKey: ['financial_metrics'] });

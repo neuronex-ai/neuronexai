@@ -86,37 +86,9 @@ const addAppointmentTransaction = async (data: NewAppointmentTransactionData, us
         .single();
 
   const { data: entry, error } = await query;
+  if (error) throw error;
 
-  if (!error && entry) {
-    return mapFinancialEntryToTransaction(entry as any);
-  }
-
-  console.warn('Falha ao salvar consulta em financial_entries; usando transactions legado:', error?.message);
-  const { data: legacyTransaction, error: legacyError } = await supabase
-    .from('transactions')
-    .insert({
-      user_id: userId,
-      appointment_id: data.appointmentId,
-      description: data.description,
-      amount: data.amount,
-      type: data.type,
-      category: data.category || 'Sessao',
-      date: format(data.date, 'yyyy-MM-dd'),
-      payment_method: data.payment_method || 'pix',
-      installments: data.installments || 1,
-      patient_id: data.patient_id || null,
-      package_id: data.package_id || null,
-      status: data.status || 'pending',
-    })
-    .select()
-    .single();
-
-  if (legacyError) {
-    console.error('Erro ao adicionar transacao de consulta:', legacyError);
-    throw new Error(legacyError.message);
-  }
-
-  return legacyTransaction;
+  return mapFinancialEntryToTransaction(entry as any);
 };
 
 export const useAddAppointmentTransaction = () => {
