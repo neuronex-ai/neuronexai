@@ -248,10 +248,10 @@ export function MobileSynapseWidgetRenderer({ widgetData }: MobileSynapseWidgetR
           onClick={() => openTarget(data)}
           className="grid w-full grid-cols-2 gap-2 text-left"
         >
-          {[
+          {([
             ["Projetado", projected],
             ["Pendente", pending],
-          ].map(([label, value]) => (
+          ] as [string, unknown][]).map(([label, value]) => (
             <span key={label} className="synapse-control rounded-[17px] p-3">
               <span className="block text-[8px] font-black uppercase tracking-[0.14em] synapse-tertiary-text">{label}</span>
               <span className="mt-1 block truncate text-[14px] font-black" style={{ color: "var(--synapse-text-primary)" }}>
