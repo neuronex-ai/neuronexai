@@ -160,7 +160,7 @@ async function invoke<T>(
 
   if (error || (responseError && !explicitSuccess)) {
     const message = await extractFunctionError(error, responseError);
-    throw new Error(message || "Nao foi possivel concluir a operacao.");
+    throw new Error(message || "Não foi possível concluir a operação.");
     throw new Error(
       responseError || error?.message || "Não foi possível concluir a operação.",
     );
@@ -200,7 +200,7 @@ export const createNeuroFinanceCharge = (payload: {
 export const consultBillPayment = (input: string) => {
   const normalized = normalizeBoletoInput(input);
   if (!normalized.isValid) {
-    throw new Error("Informe uma linha digitavel ou codigo de barras valido.");
+    throw new Error("Informe uma linha digitável ou código de barras válido.");
   }
 
   return invoke<{ success: true; consultation: BillConsultation }>(

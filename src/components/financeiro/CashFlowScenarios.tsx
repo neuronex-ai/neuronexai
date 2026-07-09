@@ -44,7 +44,7 @@ export const CashFlowScenarios = () => {
   const exportCsv = () => {
     const rows = chartData || [];
     if (rows.length === 0) {
-      toast.info("Nao ha dados para exportar.");
+      toast.info("Não há dados para exportar.");
       return;
     }
 

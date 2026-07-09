@@ -544,7 +544,7 @@ function PaymentsCalendarPanel({
       toast.success("Status do pagamento atualizado.");
     } catch (error) {
       console.error("Falha ao atualizar status do pagamento:", error);
-      toast.error("Nao foi possivel atualizar o status.");
+      toast.error("Não foi possível atualizar o status.");
     }
   };
 
@@ -715,12 +715,12 @@ function PaymentsCalendarPanel({
                         </span>
                       </TableCell>
                       <TableCell className="text-xs font-bold text-zinc-700 dark:text-zinc-200">
-                        {item.beneficiaryName || "Nao informado"}
+                        {item.beneficiaryName || "Não informado"}
                       </TableCell>
                       <TableCell>
                         <p className="max-w-56 truncate text-xs font-black text-zinc-950 dark:text-white">{item.description}</p>
                         <p className="mt-1 text-[8px] font-bold uppercase tracking-widest text-zinc-400">
-                          {item.paymentMethod || "Metodo nao informado"}
+                          {item.paymentMethod || "Método não informado"}
                         </p>
                       </TableCell>
                       <TableCell>

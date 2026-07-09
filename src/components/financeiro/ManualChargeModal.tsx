@@ -67,7 +67,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const { data: patients = [] } = usePatients();
   const { data: agreements = [] } = usePatientInsuranceAgreements();
   const [patientId, setPatientId] = useState("");
-  const [description, setDescription] = useState("Cobranca manual");
+  const [description, setDescription] = useState("Cobrança manual");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState(formatDateInput(new Date()));
   const [paymentMethod, setPaymentMethod] = useState<FinancialEntryPaymentMethod>("manual");
@@ -92,7 +92,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     cards.push({
       icon: ShieldCheck,
       label: "Plano financeiro",
-      value: PLAN_LABELS[planType] || "Sem configuracao financeira",
+      value: PLAN_LABELS[planType] || "Sem configuração financeira",
       tone: planType === "exempt" ? "warning" : undefined,
     });
 
@@ -115,7 +115,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       cards.push({
         icon: PackageCheck,
         label: "Pacotes ativos",
-        value: `${activePackages.data.length} pacote(s), ${remaining} sessao(oes) restantes`,
+        value: `${activePackages.data.length} pacote(s), ${remaining} sessão(ões) restantes`,
         tone: "success",
       });
     }
@@ -128,7 +128,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   useEffect(() => {
     if (!open) return;
     if (!patientId) {
-      setDescription("Cobranca manual");
+      setDescription("Cobrança manual");
       setAmount("");
       setDueDate(formatDateInput(new Date()));
       setPaymentMethod("manual");
@@ -166,7 +166,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     }
 
     if (financial.plan_type === "exempt") {
-      setDescription("Cobranca manual com isencao configurada");
+      setDescription("Cobrança manual com isenção configurada");
       setAmount("");
       setPaymentMethod("manual");
       setOverrideExempt(false);
@@ -181,13 +181,13 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       : 0;
     setDescription(`Sessao de pacote - ${selectedPackage.description || selectedPackage.name || "pacote"}`);
     if (valuePerSession > 0) setAmount(String(valuePerSession.toFixed(2)).replace(".", ","));
-    setNotes((current) => current || `${remaining} sessao(oes) restantes no pacote selecionado.`);
+    setNotes((current) => current || `${remaining} sessão(ões) restantes no pacote selecionado.`);
   }, [selectedPackage]);
 
   const resetAndClose = () => {
     onOpenChange(false);
     setPatientId("");
-    setDescription("Cobranca manual");
+    setDescription("Cobrança manual");
     setAmount("");
     setDueDate(formatDateInput(new Date()));
     setPaymentMethod("manual");
@@ -198,7 +198,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
   const handleSubmit = async () => {
     if (!description.trim()) {
-      toast.error("Informe uma descricao para a cobranca.");
+      toast.error("Informe uma descrição para a cobrança.");
       return;
     }
 
@@ -209,7 +209,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     }
 
     if (isExempt && !overrideExempt) {
-      toast.error("Paciente isento. Confirme o override para criar a cobranca.");
+      toast.error("Paciente isento. Confirme o override para criar a cobrança.");
       return;
     }
 
@@ -236,11 +236,11 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
         },
       });
 
-      toast.success("Cobranca manual criada como pendente.");
+      toast.success("Cobrança manual criada como pendente.");
       resetAndClose();
     } catch (error) {
-      console.error("Falha ao criar cobranca manual:", error);
-      toast.error("Nao foi possivel criar a cobranca manual.");
+      console.error("Falha ao criar cobrança manual:", error);
+      toast.error("Não foi possível criar a cobrança manual.");
     }
   };
 
@@ -248,9 +248,9 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/10 dark:bg-zinc-950">
         <div className="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
-          <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">Nova cobranca manual</DialogTitle>
+          <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">Nova cobrança manual</DialogTitle>
           <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-            Registro gerencial em aberto. Nao gera cobranca bancaria NeuroFinance nem movimentacao em conta.
+            Registro gerencial em aberto. Não gera cobrança bancária NeuroFinance nem movimentação em conta.
           </DialogDescription>
         </div>
 
@@ -275,7 +275,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label>Descricao</Label>
+                <Label>Descrição</Label>
                 <Input value={description} onChange={(event) => setDescription(event.target.value)} className="h-12 rounded-[14px]" />
               </div>
               <div className="space-y-2">
@@ -311,7 +311,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
                     <SelectValue placeholder="Opcional" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Nao vincular pacote</SelectItem>
+                    <SelectItem value="none">Não vincular pacote</SelectItem>
                     {activePackages.data.map((item) => {
                       const remaining = Math.max(0, item.total_sessions - item.sessions_used);
                       const valuePerSession = item.price && item.total_sessions > 0 ? Number(item.price) / item.total_sessions : 0;
@@ -329,7 +329,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
             {isExempt ? (
               <label className="flex items-start gap-3 rounded-[18px] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
                 <Checkbox checked={overrideExempt} onCheckedChange={(checked) => setOverrideExempt(Boolean(checked))} />
-                <span>Este paciente esta marcado como isento. Confirmo que quero criar uma cobranca manual mesmo assim.</span>
+                <span>Este paciente está marcado como isento. Confirmo que quero criar uma cobrança manual mesmo assim.</span>
               </label>
             ) : null}
 
@@ -382,7 +382,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
             {isExempt ? (
               <div className="flex gap-3 rounded-[20px] border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
                 <AlertCircle className="h-4 w-4 shrink-0" />
-                <p>Ha uma isencao financeira ativa. O override fica registrado nos metadados da cobranca.</p>
+                <p>Há uma isenção financeira ativa. O override fica registrado nos metadados da cobrança.</p>
               </div>
             ) : null}
           </aside>
@@ -398,7 +398,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
             </Button>
             <Button type="button" onClick={handleSubmit} disabled={createEntry.isPending} className="rounded-[14px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
               {createEntry.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              Criar cobranca
+              Criar cobrança
             </Button>
           </div>
         </div>

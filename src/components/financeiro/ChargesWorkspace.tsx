@@ -139,7 +139,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
   const selectedRows = useMemo(() => charges.filter((charge) => selectedIds.includes(charge.id)), [charges, selectedIds]);
 
   const patientName = (row: ChargeRow) =>
-    row.patientName || patients.find((patient) => patient.id === row.patientId)?.name || (row.patientId ? "Paciente" : "Nao informado");
+    row.patientName || patients.find((patient) => patient.id === row.patientId)?.name || (row.patientId ? "Paciente" : "Não informado");
 
   const toggleStatus = (id: ChargeStatusFilter) => {
     setPage(1);
@@ -184,10 +184,10 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
         cancelledAt: status === "cancelled" ? new Date() : null,
         cancelledReason: status === "cancelled" ? "manual_charge_cancelled" : null,
       });
-      toast.success("Cobranca atualizada.");
+      toast.success("Cobrança atualizada.");
     } catch (error) {
-      console.error("Falha ao atualizar cobranca:", error);
-      toast.error("Nao foi possivel atualizar a cobranca.");
+      console.error("Falha ao atualizar cobrança:", error);
+      toast.error("Não foi possível atualizar a cobrança.");
     }
   };
 
@@ -195,7 +195,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
     if (!row.neurofinancePaymentId) return;
     try {
       await invoiceActions.runAction.mutateAsync({ id: row.neurofinancePaymentId, action });
-      toast.success(action === "sync" ? "Cobranca sincronizada." : "Cobranca cancelada.");
+      toast.success(action === "sync" ? "Cobrança sincronizada." : "Cobrança cancelada.");
     } catch (error) {
       toast.error(getUserFacingErrorMessage(error, action === "sync" ? "load" : "delete"));
     }
@@ -203,14 +203,14 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
 
   const runBatchAction = async (action: "sync" | "copy" | "paid" | "pending" | "cancel") => {
     if (!selectedRows.length) {
-      toast.info("Selecione pelo menos uma cobranca.");
+      toast.info("Selecione pelo menos uma cobrança.");
       return;
     }
 
     if (action === "copy") {
       const links = selectedRows.map(getPaymentLink).filter(Boolean);
       if (!links.length) {
-        toast.info("As cobrancas selecionadas nao possuem links.");
+        toast.info("As cobranças selecionadas não possuem links.");
         return;
       }
       await navigator.clipboard.writeText(links.join("\n"));
@@ -237,7 +237,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
     return (
       <div className="flex flex-col items-center justify-center space-y-4 py-32">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-300 dark:text-zinc-700" />
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Buscando cobrancas...</p>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-400">Buscando cobranças...</p>
       </div>
     );
   }
@@ -252,8 +252,8 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
                 <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
                 <input
                   type="search"
-                  aria-label="Buscar cobrancas"
-                  placeholder={scope === "management" ? "Buscar por paciente, descricao ou metodo" : "Buscar por descricao ou numero"}
+                  aria-label="Buscar cobranças"
+                  placeholder={scope === "management" ? "Buscar por paciente, descrição ou método" : "Buscar por descrição ou número"}
                   value={searchQuery}
                   onChange={(event) => {
                     setSearchQuery(event.target.value);
@@ -317,7 +317,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
                     className="h-12 rounded-[14px] bg-zinc-950 px-6 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
                   >
                     <Plus className="mr-2 h-4 w-4" />
-                    Nova cobranca
+                    Nova cobrança
                   </Button>
                   <ManualChargeModal open={manualModalOpen} onOpenChange={setManualModalOpen} />
                 </>
@@ -325,7 +325,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
                 <NewInvoiceModal>
                   <Button className="h-12 rounded-[14px] bg-zinc-950 px-6 text-[10px] font-black uppercase tracking-[0.16em] text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100">
                     <Plus className="mr-2 h-4 w-4" />
-                    Nova cobranca
+                    Nova cobrança
                   </Button>
                 </NewInvoiceModal>
               )}
@@ -334,13 +334,13 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
 
           {initialStatusFilters.includes("overdue") && statusFilters.includes("overdue") ? (
             <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
-              Filtro legado de inadimplencia aplicado: exibindo cobrancas vencidas dentro de Cobrancas.
+              Exibindo cobranças vencidas dentro de Cobranças.
             </div>
           ) : null}
 
           <div className="overflow-hidden rounded-[20px] border border-zinc-200/75 bg-white/70 dark:border-white/[0.08] dark:bg-white/[0.018]">
             <div className="grid grid-cols-[42px_minmax(190px,1.1fr)_120px_minmax(180px,1.2fr)_150px_145px_150px] gap-4 border-b border-zinc-200/70 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-400 dark:border-white/[0.08]">
-              <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} aria-label="Selecionar cobrancas visiveis" />
+              <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} aria-label="Selecionar cobranças visíveis" />
               <span>Paciente</span>
               <span>Valor</span>
               <span>Descricao</span>
@@ -353,9 +353,9 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
               {charges.length === 0 ? (
                 <div className="flex min-h-[220px] flex-col items-center justify-center px-6 text-center">
                   <WalletCards className="mb-4 h-9 w-9 text-zinc-300 dark:text-zinc-700" />
-                  <p className="text-sm font-black uppercase tracking-tight text-zinc-900 dark:text-white">Nenhuma cobranca encontrada</p>
+                  <p className="text-sm font-black uppercase tracking-tight text-zinc-900 dark:text-white">Nenhuma cobrança encontrada</p>
                   <p className="mt-2 max-w-sm text-xs font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-                    Ajuste os filtros ou crie uma nova cobranca para controle gerencial.
+                    Ajuste os filtros ou crie uma nova cobrança para controle gerencial.
                   </p>
                 </div>
               ) : (
@@ -369,7 +369,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
                     onOpen={() => setSelectedCharge(charge)}
                     onCopyLink={async () => {
                       const link = getPaymentLink(charge);
-                      if (!link) return toast.info("Esta cobranca nao possui link.");
+                      if (!link) return toast.info("Esta cobrança não possui link.");
                       await navigator.clipboard.writeText(link);
                       toast.success("Link copiado.");
                     }}
@@ -386,10 +386,10 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
 
           <div className="flex flex-col gap-3 px-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400 sm:flex-row sm:items-center sm:justify-between">
             <span>
-              {charges.length} cobranca{charges.length === 1 ? "" : "s"} nesta pagina, somando {formatCurrency(totalAmount)}
+              {charges.length} cobrança{charges.length === 1 ? "" : "s"} nesta página, somando {formatCurrency(totalAmount)}
             </span>
             <div className="flex items-center gap-3">
-              <span className="text-zinc-400">{isFetching ? "Atualizando..." : `${total} cobranca${total === 1 ? "" : "s"} no total`}</span>
+              <span className="text-zinc-400">{isFetching ? "Atualizando..." : `${total} cobrança${total === 1 ? "" : "s"} no total`}</span>
               <Button variant="outline" size="sm" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page <= 1} className="h-9 rounded-full">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
@@ -408,7 +408,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
           onOpenChange={(open) => !open && setSelectedCharge(null)}
           onCopyLink={async (row) => {
             const link = getPaymentLink(row);
-            if (!link) return toast.info("Esta cobranca nao possui link.");
+            if (!link) return toast.info("Esta cobrança não possui link.");
             await navigator.clipboard.writeText(link);
             toast.success("Link copiado.");
           }}
@@ -469,7 +469,7 @@ function ChargeRowItem({
       <p className="font-black tabular-nums text-zinc-950 dark:text-white">{formatCurrency(charge.amount)}</p>
       <button type="button" onClick={onOpen} className="min-w-0 text-left">
         <p className="truncate font-bold text-zinc-900 dark:text-white">{charge.description}</p>
-        <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">{charge.paymentMethod || "Metodo nao informado"}</p>
+        <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">{charge.paymentMethod || "Método não informado"}</p>
       </button>
       <span className={cn("inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em]", status.tone)}>
         <StatusIcon className="h-3.5 w-3.5" />
@@ -573,8 +573,8 @@ function AdvancedFilters({
           <FilterDateGroup title="Periodo de vencimento" start={dueStart} end={dueEnd} onStart={setDueStart} onEnd={setDueEnd} />
           <FilterDateGroup title="Periodo de recebimento" start={receivedStart} end={receivedEnd} onStart={setReceivedStart} onEnd={setReceivedEnd} />
         </div>
-        <FilterCheckGroup title="Tipos de cobranca" options={typeOptions} selected={typeFilters} onToggle={toggleType} />
-        <FilterCheckGroup title="Situacao das cobrancas" options={filterStatusOptions} selected={statusFilters} onToggle={toggleStatus} twoColumns />
+        <FilterCheckGroup title="Tipos de cobrança" options={typeOptions} selected={typeFilters} onToggle={toggleType} />
+        <FilterCheckGroup title="Situação das cobranças" options={filterStatusOptions} selected={statusFilters} onToggle={toggleStatus} twoColumns />
       </div>
     </SharedAdvancedFilterPopover>
   );
@@ -666,7 +666,7 @@ function ChargeDetailDialog({
             <div className="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
               <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">{charge.description}</DialogTitle>
               <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
-                {charge.scope === "management" ? "Cobranca gerencial" : "Cobranca bancaria NeuroFinance"}
+                {charge.scope === "management" ? "Cobrança gerencial" : "Cobrança bancária NeuroFinance"}
               </DialogDescription>
             </div>
             <div className="space-y-4 p-6">
@@ -674,7 +674,7 @@ function ChargeDetailDialog({
                 <Detail label="Paciente" value={patientName} />
                 <Detail label="Valor" value={formatCurrency(charge.amount)} />
                 <Detail label="Origem" value={sourceLabels[charge.source] || sourceLabels[charge.origin] || charge.source} />
-                <Detail label="Metodo" value={charge.paymentMethod || "Nao informado"} />
+                <Detail label="Método" value={charge.paymentMethod || "Não informado"} />
                 <Detail label="Vencimento" value={dateLabel(charge.dueDate)} />
                 <Detail label="Recebimento" value={dateLabel(charge.paidAt)} />
               </div>

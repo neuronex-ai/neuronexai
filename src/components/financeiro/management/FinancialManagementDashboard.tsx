@@ -474,7 +474,7 @@ const CashFlowTable = ({ metrics, onSelect }: { metrics: Metrics; onSelect?: (tr
             </div>
           ) : (
             <div className="p-6">
-              <EmptyHint title="Sem movimentos no fluxo" description="Receitas e despesas cadastradas aparecem aqui em ordem de vencimento ou realizacao." icon={LineChart} />
+              <EmptyHint title="Sem movimentos no fluxo" description="Receitas e despesas cadastradas aparecem aqui em ordem de vencimento ou realização." icon={LineChart} />
             </div>
           )}
         </div>
@@ -639,7 +639,7 @@ const PlanningPanel = ({ metrics, compact = false, setActiveView }: { metrics: M
       toast.success("Meta financeira salva.");
     } catch (error) {
       console.error("Falha ao salvar planejamento:", error);
-      toast.error("Nao foi possivel salvar a meta financeira.");
+      toast.error("Não foi possível salvar a meta financeira.");
     }
   };
 
@@ -822,7 +822,7 @@ export const FinancialManagementDashboard = (props: ManagementProps) => {
     case "gestao-cobrancas":
       return withEntryModal(<div className="px-6 py-6"><RouteFrame eyebrow="Gestão Financeira" title="Cobranças" description="Acompanhe cobranças abertas, a vencer, vencidas e recorrentes de forma gerencial." setActiveView={props.setActiveView}><ChargesWorkspace scope="management" title="Cobranças gerenciais" /><ActionQueue {...common} /></RouteFrame></div>);
     case "gestao-inadimplencia":
-      return withEntryModal(<div className="px-6 py-6"><RouteFrame eyebrow="Gestão Financeira" title="Cobranças" description="Filtro legado de inadimplência: cobranças vencidas dentro da área de Cobranças." setActiveView={props.setActiveView}><ChargesWorkspace scope="management" title="Cobranças vencidas" initialStatusFilters={["overdue"]} /></RouteFrame></div>);
+      return withEntryModal(<div className="px-6 py-6"><RouteFrame eyebrow="Gestão Financeira" title="Cobranças" description="Cobranças vencidas dentro da área de Cobranças." setActiveView={props.setActiveView}><ChargesWorkspace scope="management" title="Cobranças vencidas" initialStatusFilters={["overdue"]} /></RouteFrame></div>);
     case "gestao-planejamento":
       return withEntryModal(<div className="px-6 py-6"><RouteFrame eyebrow="Gestão Financeira" title="Planejamento" description="Metas, ponto de equilíbrio, ticket médio e cenários de crescimento." setActiveView={props.setActiveView} onCreateEntry={openEntryModal}><PlanningPanel {...common} /><RecurringManager /><ActionQueue {...common} /></RouteFrame></div>);
     case "gestao-relatorios":

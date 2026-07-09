@@ -62,13 +62,13 @@ const formatHints = {
 const copy = {
   pix: {
     title: "Ler QR Code Pix",
-    description: "Aponte a camera para o QR Code. O Pix sera consultado antes da confirmacao.",
-    hint: "Nenhum pagamento e enviado a partir da leitura.",
+    description: "Aponte a câmera para o QR Code. O Pix será consultado antes da confirmação.",
+    hint: "Nenhum pagamento é enviado a partir da leitura.",
   },
   boleto: {
-    title: "Ler codigo de barras",
-    description: "Enquadre as barras horizontais do boleto de ponta a ponta. Os dados serao validados antes do PIN.",
-    hint: "QR Codes nao sao usados para boleto. A leitura apenas preenche a consulta.",
+    title: "Ler código de barras",
+    description: "Enquadre as barras horizontais do boleto de ponta a ponta. Os dados serão validados antes do PIN.",
+    hint: "QR Codes não são usados para boleto. A leitura apenas preenche a consulta.",
   },
 } satisfies Record<ScannerMode, { title: string; description: string; hint: string }>;
 
@@ -121,7 +121,7 @@ export function MobileCodeScannerSheet({
           }
           const detectedValue = normalizeDetectedValue(mode, value);
           if (!detectedValue) {
-            throw new Error("Codigo nao encontrado.");
+            throw new Error("Código não encontrado.");
           }
           detectedRef.current = true;
           onOpenChange(false);
@@ -131,7 +131,7 @@ export function MobileCodeScannerSheet({
           setError(
             cause instanceof Error
               ? cause.message
-              : "Nao foi possivel ler o codigo pela camera.",
+              : "Não foi possível ler o código pela câmera.",
           );
           setState("error");
         }
@@ -141,7 +141,7 @@ export function MobileCodeScannerSheet({
       const videoElement = await waitForVideoElement(videoRef, () => cancelled);
 
       if (!navigator.mediaDevices?.getUserMedia || !videoElement) {
-        setError("Camera indisponivel neste navegador ou contexto.");
+        setError("Câmera indisponível neste navegador ou contexto.");
         setState("error");
         return;
       }
@@ -160,7 +160,7 @@ export function MobileCodeScannerSheet({
             const now = Date.now();
             if (now - lastInvalidToastRef.current > 1800) {
               lastInvalidToastRef.current = now;
-              toast.error("Codigo lido nao parece boleto. Vire o celular e enquadre as barras.");
+              toast.error("Código lido não parece boleto. Vire o celular e enquadre as barras.");
             }
           },
         }).catch((cause) => {
@@ -209,7 +209,7 @@ export function MobileCodeScannerSheet({
               const now = Date.now();
               if (now - lastInvalidToastRef.current > 1800) {
                 lastInvalidToastRef.current = now;
-                toast.error("Codigo lido nao parece boleto. Aponte para as barras horizontais.");
+                toast.error("Código lido não parece boleto. Aponte para as barras horizontais.");
               }
               return;
             }
@@ -220,7 +220,7 @@ export function MobileCodeScannerSheet({
               toast.error(
                 cause instanceof Error
                   ? cause.message
-                  : "Codigo lido, mas nao foi possivel validar.",
+                  : "Código lido, mas não foi possível validar.",
               );
             });
           },
@@ -263,7 +263,7 @@ export function MobileCodeScannerSheet({
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
-              Camera segura
+              Câmera segura
             </p>
             <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em]">
               {content.title}
@@ -326,15 +326,15 @@ export function MobileCodeScannerSheet({
                   {state === "native"
                     ? "Abrindo leitor nativo"
                     : mode === "boleto"
-                      ? "Abrindo camera em paisagem"
-                      : "Solicitando camera"}
+                      ? "Abrindo câmera em paisagem"
+                      : "Solicitando câmera"}
                 </p>
               </div>
             ) : null}
             {state === "error" ? (
               <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/82 p-5 text-center text-white">
                 <Camera className="h-7 w-7 opacity-75" />
-                <p className="mt-4 text-sm font-semibold">Nao conseguimos iniciar a camera.</p>
+                <p className="mt-4 text-sm font-semibold">Não conseguimos iniciar a câmera.</p>
                 <p className="mt-2 text-xs leading-5 text-white/64">{error}</p>
               </div>
             ) : null}
@@ -361,7 +361,7 @@ export function MobileCodeScannerSheet({
             className="mt-4 w-full"
             onClick={() => onOpenChange(false)}
           >
-            Inserir codigo manualmente
+            Inserir código manualmente
           </MobileFinanceButton>
         )}
       </div>
@@ -372,19 +372,19 @@ export function MobileCodeScannerSheet({
 function cameraErrorMessage(cause: unknown) {
   if (cause instanceof DOMException) {
     if (cause.name === "NotAllowedError") {
-      return "Permita o acesso a camera nas configuracoes do navegador ou do app.";
+      return "Permita o acesso à câmera nas configurações do navegador ou do app.";
     }
     if (cause.name === "NotFoundError") {
-      return "Nenhuma camera foi encontrada neste dispositivo.";
+      return "Nenhuma câmera foi encontrada neste dispositivo.";
     }
     if (cause.name === "NotReadableError") {
-      return "A camera esta em uso por outro aplicativo.";
+      return "A câmera está em uso por outro aplicativo.";
     }
   }
 
   return cause instanceof Error
     ? cause.message
-    : "Verifique a permissao de camera e tente novamente.";
+    : "Verifique a permissão de câmera e tente novamente.";
 }
 
 function normalizeDetectedValue(mode: ScannerMode, value?: string | null) {
@@ -463,7 +463,7 @@ async function startNativeBoletoScanner({
     } catch (error) {
       stop();
       console.warn("[BoletoScanner] BarcodeDetector stopped", error);
-      toast.error("Nao foi possivel manter a leitura nativa do boleto.");
+      toast.error("Não foi possível manter a leitura nativa do boleto.");
       return;
     }
     if (!stopped) frame = window.requestAnimationFrame(scan);
