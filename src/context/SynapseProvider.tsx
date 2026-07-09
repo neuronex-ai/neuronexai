@@ -87,6 +87,47 @@ interface SynapseContextType {
 
 const SynapseContext = createContext<SynapseContextType | undefined>(undefined);
 
+const VOICE_TOOL_LABELS: Record<string, string> = {
+    navigate_system: 'Navegação',
+    search_patients: 'Busca de paciente',
+    list_patients: 'Lista de pacientes',
+    get_patient_details: 'Prontuário',
+    report_all_patients: 'Resumo de pacientes',
+    search_clinical_history: 'Histórico clínico',
+    generate_patient_insights: 'Insights clínicos',
+    suggest_treatment_approach: 'Plano terapêutico',
+    detect_risk_patterns: 'Análise de risco',
+    get_calendar: 'Agenda',
+    create_appointment: 'Novo agendamento',
+    reschedule_appointment: 'Remarcação',
+    cancel_appointment: 'Cancelamento',
+    find_available_slots: 'Horários disponíveis',
+    create_patient: 'Cadastro de paciente',
+    update_patient_info: 'Atualização do paciente',
+    add_patient_medication: 'Medicação',
+    create_session_note: 'Nota clínica',
+    send_whatsapp_message: 'WhatsApp',
+    read_whatsapp_conversations: 'Conversas do WhatsApp',
+    send_email: 'E-mail',
+    draft_email: 'Rascunho de e-mail',
+    get_financial_metrics: 'Resumo financeiro',
+    list_transactions: 'Lançamentos financeiros',
+    create_transaction: 'Lançamento financeiro',
+    generate_financial_report: 'Relatório financeiro',
+    send_payment_reminder: 'Lembrete de pagamento',
+    draft_invoice: 'Cobrança',
+    generate_document: 'Documento',
+    draft_official_document: 'Documento oficial',
+    search_medical_articles: 'Referências clínicas',
+    search_cid10: 'CID-10',
+    get_medication_info: 'Informações de medicação',
+    get_latest_scientific_updates: 'Atualizações científicas',
+    search_normative_docs: 'Normas profissionais',
+};
+
+const humanVoiceToolLabel = (toolName: string) =>
+    VOICE_TOOL_LABELS[toolName.trim().toLowerCase()] || 'Ação do Synapse';
+
 // ─── Provider ─────────────────────────────────────────────────────────
 
 export const SynapseProvider = ({ children }: { children: ReactNode }) => {

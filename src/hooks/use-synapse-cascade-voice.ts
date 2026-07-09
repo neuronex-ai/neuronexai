@@ -26,8 +26,8 @@ interface NeuralSpeechPayload {
   error?: string;
 }
 
-const LEGACY_DISABLED_MESSAGE = "legacy-cascade esta isolado. Ative VITE_SYNAPSE_LEGACY_CASCADE_ENABLED=true somente para rollback diagnostico.";
-const isLegacyCloudSttEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_CLOUD_STT === "true";
+const LEGACY_DISABLED_MESSAGE = "A conversa por voz alternativa esta desativada neste ambiente.";
+const isLegacyCloudSttEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_CLOUD_STT_DISABLED !== "true";
 
 const cleanForSpeech = (value: string) => value
   .replace(/```json\s+synapse_widget[\s\S]*?```/gi, "")
@@ -368,7 +368,7 @@ export function useSynapseCascadeVoice({
   const startWhisperFallback = useCallback(async () => {
     if (!enabled) return;
     if (!isLegacyCloudSttEnabled()) {
-      setError("STT em nuvem do legacy-cascade esta desativado.");
+      setError("A transcricao em nuvem esta desativada neste ambiente.");
       return;
     }
 
@@ -437,7 +437,7 @@ export function useSynapseCascadeVoice({
     if (recognition.isSupported) startListeningRef.current();
     else {
       if (!isLegacyCloudSttEnabled()) {
-        const message = "Reconhecimento de voz do navegador indisponivel; ative VITE_SYNAPSE_LEGACY_CASCADE_CLOUD_STT=true para usar STT legado em nuvem.";
+        const message = "Reconhecimento de voz indisponivel neste dispositivo.";
         activeRef.current = false;
         listeningEnabledRef.current = false;
         setListeningEnabled(false);
