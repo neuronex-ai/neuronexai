@@ -57,7 +57,7 @@ export function useGeminiVoice(options: UseGeminiVoiceOptions) {
   const startSession = useCallback(async (_override?: SynapseVoiceStartOverride) => {
     const provider = _override?.provider || preferredProvider;
     if (!isSupportedProvider(provider)) {
-      throw new Error("O Synapse de voz esta configurado para um provider invalido.");
+      throw new Error("Nao consegui preparar o canal de voz do Synapse.");
     }
     await deepgramStartSession({ ..._override, provider: DEFAULT_PROVIDER });
   }, [deepgramStartSession, preferredProvider]);

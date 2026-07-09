@@ -66,7 +66,7 @@ export function useVoiceConfig() {
             const voiceSessionId = typeof data?.voiceSessionId === 'string' ? data.voiceSessionId : null;
 
             if (provider !== 'deepgram-agent') {
-                throw new Error('Provider de voz invalido para o Synapse.');
+                throw new Error('Config de voz invalida para o Synapse.');
             }
 
             const next: SynapseVoiceConfig = {

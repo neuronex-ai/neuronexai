@@ -26,7 +26,6 @@ const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
 const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
 const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "xNGAXaCH8MaasNuo7Hr7";
-const SUPPORTED_PROVIDER = "deepgram-agent";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -59,9 +58,6 @@ const publicGatewayUrl = (originHeader?: string | null) => {
   return DEFAULT_GATEWAY_URL;
 };
 
-const configuredVoiceProvider = () =>
-  clean(Deno.env.get("SYNAPSE_VOICE_PROVIDER") || SUPPORTED_PROVIDER, 80).toLowerCase();
-
 const toDeepgramFunction = (tool: any) => {
   const fn = tool?.function || {};
   return {
@@ -70,19 +66,6 @@ const toDeepgramFunction = (tool: any) => {
     parameters: fn.parameters || { type: "object", properties: {} },
   };
 };
-
-function parseJsonEnv(name: string) {
-  const raw = clean(Deno.env.get(name), 5000);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? parsed as Record<string, unknown>
-      : null;
-  } catch {
-    throw new Error(`${name} deve ser um JSON valido.`);
-  }
-}
 
 function professionalNameFromProfile(profile: any) {
   const joined = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
@@ -297,13 +280,6 @@ serve(async (request) => {
     }
 
     const body = await request.json().catch(() => ({}));
-    if (configuredVoiceProvider() !== SUPPORTED_PROVIDER) {
-      return json({
-        error: "synapse-voice-agent-session atende somente o provider deepgram-agent.",
-        provider: SUPPORTED_PROVIDER,
-      }, 409);
-    }
-
     const includeSettings = Boolean(body.includeSettings);
     const gatewaySecret = Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET") || "";
     const gatewayAuthorized = gatewaySecret &&

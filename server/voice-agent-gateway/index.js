@@ -78,17 +78,6 @@ function parseJson(data) {
   }
 }
 
-function parseJsonEnv(name) {
-  const raw = clean(process.env[name], 5000);
-  if (!raw) return null;
-  try {
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-  } catch {
-    throw new Error(`${name} deve ser um JSON valido.`);
-  }
-}
-
 function isOpen(ws) {
   return ws && ws.readyState === WebSocket.OPEN;
 }
@@ -706,6 +695,7 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: "synapse-voice-agent-gateway",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
+      elevenLabsConfigured: Boolean(process.env.ELEVENLABS_API_KEY || process.env.DEEPGRAM_ELEVENLABS_API_KEY),
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),
       forceLocalSettings: process.env.SYNAPSE_VOICE_FORCE_LOCAL_SETTINGS === "true",

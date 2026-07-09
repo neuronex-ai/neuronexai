@@ -1,7 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useRef, useState, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useGeminiLive } from '@/hooks/use-gemini-live';
-import { ALL_VOICE_TOOLS, executeVoiceTool } from '@/lib/voice-tools';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getToolsForRoute, getQuickActionsForRoute, SynapseTool } from '@/lib/synapse-tool-catalog';
@@ -125,9 +124,6 @@ const VOICE_TOOL_LABELS: Record<string, string> = {
     search_normative_docs: 'Normas profissionais',
 };
 
-const humanVoiceToolLabel = (toolName: string) =>
-    VOICE_TOOL_LABELS[toolName.trim().toLowerCase()] || 'Ação do Synapse';
-
 const sanitizeTimelineText = (value?: string) => {
     if (!value) return value;
     let next = value;
@@ -145,9 +141,8 @@ const sanitizeTimelineText = (value?: string) => {
 // ─── Provider ─────────────────────────────────────────────────────────
 
 export const SynapseProvider = ({ children }: { children: ReactNode }) => {
-    const { user, session } = useAuth();
+    const { user } = useAuth();
     const location = useLocation();
-    const navigate = useNavigate();
 
     // Shell state
     const [shellState, setShellState] = useState<SynapseShellState>('pill');
@@ -355,37 +350,6 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
         setExecState('idle');
     }, [activeTab, geminiLive.isSpeaking, geminiLive.isToolActive, geminiLive.status]);
 
-    const buildClientTools = useCallback(() => {
-        const accessToken = session?.access_token;
-        if (!accessToken) return {};
-
-        const tools: Record<string, (params: unknown) => Promise<string>> = {};
-
-        for (const toolName of ALL_VOICE_TOOLS) {
-            tools[toolName] = async (params: unknown) => {
-                const toolParams = params && typeof params === 'object' ? params as Record<string, unknown> : {};
-                addTimelineEntry({
-                    label: `🎙️ Voz: ${toolName}`,
-                    state: 'thinking',
-                    detail: JSON.stringify(toolParams).slice(0, 100),
-                });
-                const result = await executeVoiceTool(toolName, toolParams, accessToken, navigate);
-                try {
-                    const parsed = JSON.parse(result);
-                    addTimelineEntry({
-                        label: `✅ ${toolName} concluído`,
-                        state: parsed.success ? 'success' : 'error',
-                        detail: parsed.response?.slice(0, 120) || parsed.error || '',
-                    });
-                } catch {
-                    addTimelineEntry({ label: `✅ ${toolName} concluído`, state: 'success' });
-                }
-                return result;
-            };
-        }
-        return tools;
-    }, [session?.access_token, navigate, addTimelineEntry]);
-
     const toggleVoiceMode = useCallback(async () => {
         if (geminiLive.status === 'connected') {
             await geminiLive.endSession();
@@ -396,8 +360,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
             setExecState('thinking');
             try {
                 console.log('[Synapse Global Voice] Iniciando sessão...');
-                const clientTools = buildClientTools();
-                await geminiLive.startSession({ clientTools });
+                await geminiLive.startSession();
             } catch (err) {
                 console.error("[Synapse Global Voice] Falha ao iniciar:", err);
                 setExecState('error');
@@ -407,7 +370,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 }, 2500);
             }
         }
-    }, [geminiLive, buildClientTools, setActiveTab, setExecState]);
+    }, [geminiLive, setActiveTab, setExecState]);
     // ─────────────────────────────────────────────────────────────────────
 
     return (

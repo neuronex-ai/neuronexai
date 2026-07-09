@@ -157,21 +157,6 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/synapse-voice-tool/index.ts"
 
-[functions.synapse-voice-turn]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/synapse-voice-turn/index.ts"
-
-[functions.synapse-voice-transcribe]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/synapse-voice-transcribe/index.ts"
-
-[functions.synapse-voice-speak]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/synapse-voice-speak/index.ts"
-
 [functions.synapse-whatsapp-in]
 enabled = true
 verify_jwt = false

@@ -8,6 +8,46 @@ const TOOL_TIMEOUT_MS = Number(process.env.SYNAPSE_VOICE_TOOL_TIMEOUT_MS || "180
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
+const TOOL_LABELS = {
+  confirm_pending_action: "confirmacao pendente",
+  cancel_pending_action: "cancelamento pendente",
+  navigate_system: "navegacao",
+  search_patients: "busca de paciente",
+  list_patients: "lista de pacientes",
+  get_patient_details: "prontuario",
+  report_all_patients: "resumo de pacientes",
+  search_clinical_history: "historico clinico",
+  generate_patient_insights: "insights clinicos",
+  suggest_treatment_approach: "plano terapeutico",
+  detect_risk_patterns: "analise de risco",
+  get_calendar: "agenda",
+  create_appointment: "novo agendamento",
+  reschedule_appointment: "remarcacao",
+  cancel_appointment: "cancelamento",
+  find_available_slots: "horarios disponiveis",
+  create_patient: "cadastro de paciente",
+  update_patient_info: "atualizacao do paciente",
+  add_patient_medication: "medicacao",
+  create_session_note: "nota clinica",
+  send_whatsapp_message: "mensagem",
+  read_whatsapp_conversations: "conversas",
+  send_email: "email",
+  draft_email: "rascunho de email",
+  get_financial_metrics: "resumo financeiro",
+  list_transactions: "lancamentos financeiros",
+  create_transaction: "lancamento financeiro",
+  generate_financial_report: "relatorio financeiro",
+  send_payment_reminder: "lembrete de pagamento",
+  draft_invoice: "cobranca",
+  generate_document: "documento",
+  draft_official_document: "documento oficial",
+  search_medical_articles: "referencias clinicas",
+  search_cid10: "CID-10",
+  get_medication_info: "informacoes de medicacao",
+  get_latest_scientific_updates: "atualizacoes cientificas",
+  search_normative_docs: "normas profissionais",
+};
+
 function safeJsonParse(value) {
   if (!value) return {};
   if (typeof value === "object" && !Array.isArray(value)) return value;
@@ -20,7 +60,15 @@ function safeJsonParse(value) {
 }
 
 function titleize(value) {
-  return clean(value, 160)
+  const raw = clean(value, 160);
+  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (TOOL_LABELS[key]) return TOOL_LABELS[key];
+  if (/appointment|calendar|agenda/i.test(raw)) return "agenda";
+  if (/patient|paciente|clinical|history|prontuario/i.test(raw)) return "paciente";
+  if (/finance|invoice|payment|transaction|cobranca/i.test(raw)) return "financeiro";
+  if (/document|note|nota/i.test(raw)) return "documento";
+  if (/[_{}[\]"]/.test(raw)) return "acao do Synapse";
+  return raw
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();

@@ -628,7 +628,7 @@ export function useDeepgramAgentVoice({
 
     const targetGatewayUrl = override?.gatewayUrl || gatewayUrl || gatewayUrlFromEnv();
     if (!targetGatewayUrl) {
-      throw new Error("Gateway de voz nao configurado. Defina VITE_SYNAPSE_VOICE_GATEWAY_URL.");
+      throw new Error("Nao consegui encontrar o canal seguro de voz do Synapse.");
     }
 
     const { data: authData } = await supabase.auth.getSession();
