@@ -44,6 +44,8 @@ export interface SynapseVoiceStartOverride {
   sessionId?: string | null;
   conversationId?: string | null;
   voiceSessionId?: string | null;
+  inputSampleRate?: number;
+  outputSampleRate?: number;
 }
 
 export interface SynapseVoiceConfig {

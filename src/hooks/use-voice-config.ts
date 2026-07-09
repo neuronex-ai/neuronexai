@@ -10,10 +10,12 @@ const DEFAULT_DEEPGRAM_CONFIG: SynapseVoiceConfig = {
     model: 'nemotron-3-nano-30B-A3B',
     voiceName: 'UgBBYS2sOqTuMpoF3BR0',
     provider: 'deepgram-agent',
-    gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null,
+    gatewayUrl: null,
     sessionId: null,
     conversationId: null,
     voiceSessionId: null,
+    inputSampleRate: 48000,
+    outputSampleRate: 24000,
 };
 
 const isLocalGatewayUrl = (value: string) =>
@@ -34,14 +36,9 @@ const localBrowserGatewayUrl = () => {
 const isSecureGatewayUrl = (value: string) => /^wss:\/\//i.test(value);
 
 const resolveGatewayUrl = (remoteGatewayUrl: unknown) => {
-    const configured = import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null;
     const remote = typeof remoteGatewayUrl === 'string' ? remoteGatewayUrl.trim() : '';
     const localRuntime = isLocalBrowserRuntime();
-    const candidate = localRuntime
-        ? configured && !isLocalGatewayUrl(configured)
-            ? configured
-            : localBrowserGatewayUrl()
-        : configured || remote || null;
+    const candidate = localRuntime ? localBrowserGatewayUrl() : remote || null;
     if (!candidate) {
         throw new Error('Gateway publico de voz nao configurado.');
     }
@@ -93,26 +90,17 @@ export function useVoiceConfig() {
                 voiceSessionId,
                 listenModel: typeof data?.listenModel === 'string' ? data.listenModel : undefined,
                 ttsProvider: typeof data?.ttsProvider === 'string' ? data.ttsProvider : undefined,
-                inputSampleRate: typeof data?.inputSampleRate === 'number' ? data.inputSampleRate : undefined,
-                outputSampleRate: typeof data?.outputSampleRate === 'number' ? data.outputSampleRate : undefined,
+                inputSampleRate: typeof data?.inputSampleRate === 'number' ? data.inputSampleRate : DEFAULT_DEEPGRAM_CONFIG.inputSampleRate,
+                outputSampleRate: typeof data?.outputSampleRate === 'number' ? data.outputSampleRate : DEFAULT_DEEPGRAM_CONFIG.outputSampleRate,
                 functionsCount: typeof data?.functionsCount === 'number' ? data.functionsCount : undefined,
             };
             setConfig(next);
             return next;
         } catch (caught) {
             const message = caught instanceof Error ? caught.message : 'Nao foi possivel preparar o agente de voz.';
-            if (isLocalBrowserRuntime()) {
-                const gatewayFallback: SynapseVoiceConfig = {
-                    ...DEFAULT_DEEPGRAM_CONFIG,
-                    gatewayUrl: resolveGatewayUrl(import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || localBrowserGatewayUrl()),
-                };
-                console.warn('[Synapse Voice] Config remota indisponivel; usando gateway local Deepgram Agent.', message);
-                setError(null);
-                setConfig(gatewayFallback);
-                return gatewayFallback;
-            }
-
-            const userMessage = 'Nao consegui preparar a voz do Synapse. Verifique o gateway de voz em producao.';
+            const userMessage = isLocalBrowserRuntime()
+                ? `Nao consegui preparar a voz do Synapse. Verifique se as Edge Functions de voz estao deployadas e se o gateway local esta configurado. Detalhe: ${message}`
+                : 'Nao consegui preparar a voz do Synapse. Verifique o gateway de voz em producao.';
             console.warn('[Synapse Voice] Config remota indisponivel.', message);
             setError(userMessage);
             throw new Error(userMessage);
@@ -134,6 +122,8 @@ export function useVoiceConfig() {
         voiceSessionId: config.voiceSessionId,
         listenModel: config.listenModel,
         ttsProvider: config.ttsProvider,
+        inputSampleRate: config.inputSampleRate,
+        outputSampleRate: config.outputSampleRate,
         functionsCount: config.functionsCount,
         isLoading,
         error,

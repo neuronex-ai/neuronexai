@@ -15,6 +15,8 @@ interface Options {
   sessionId?: string | null;
   conversationId?: string | null;
   voiceSessionId?: string | null;
+  inputSampleRate?: number;
+  outputSampleRate?: number;
   systemInstruction?: string;
   language?: string;
   onSessionIdChange?: (id: string) => void;
@@ -69,12 +71,15 @@ const toNumber = (value: unknown, fallback = 0) => {
 };
 
 const gatewayUrlFromEnv = () => {
-  const configured = import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL;
   if (isLocalBrowserRuntime()) {
-    return configured && !isLocalGatewayUrl(configured) ? configured : localBrowserGatewayUrl();
+    return localBrowserGatewayUrl();
   }
-  if (configured && !isLocalGatewayUrl(configured) && /^wss:\/\//i.test(configured)) return configured;
   return "";
+};
+
+const normalizeSampleRate = (value: unknown, fallback: number) => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 8000 && parsed <= 96000 ? Math.round(parsed) : fallback;
 };
 
 const parseMessage = (value: unknown) => {

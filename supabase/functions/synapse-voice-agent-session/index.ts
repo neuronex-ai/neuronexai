@@ -24,8 +24,8 @@ const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
 const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
-const DEFAULT_ELEVENLABS_VOICE_ID = "xNGAXaCH8MaasNuo7Hr7";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_multilingual_v2";
+const DEFAULT_ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -161,12 +161,8 @@ function buildVoiceFunctions() {
 
 function buildSpeakConfig() {
   const modelId = Deno.env.get("DEEPGRAM_ELEVENLABS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID;
-  const voiceId =
-    Deno.env.get("DEEPGRAM_ELEVENLABS_VOICE_ID") ||
-    Deno.env.get("ELEVENLABS_BRAZILIAN_MALE_VOICE_ID") ||
-    DEFAULT_ELEVENLABS_VOICE_ID;
+  const voiceId = Deno.env.get("DEEPGRAM_ELEVENLABS_VOICE_ID") || DEFAULT_ELEVENLABS_VOICE_ID;
   const languageCode = Deno.env.get("DEEPGRAM_ELEVENLABS_LANGUAGE_CODE") || "pt-BR";
-  const elevenLabsApiKey = Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("DEEPGRAM_ELEVENLABS_API_KEY") || "";
 
   const speak: Record<string, unknown> = {
     provider: {
@@ -177,17 +173,9 @@ function buildSpeakConfig() {
     },
   };
 
-  if (elevenLabsApiKey) {
-    speak.endpoint = {
-      url: Deno.env.get("ELEVENLABS_TTS_URL") ||
-        `wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/multi-stream-input`,
-      headers: { "xi-api-key": elevenLabsApiKey },
-    };
-  }
-
   return {
     speak,
-    ttsProvider: elevenLabsApiKey ? "byo-elevenlabs-via-deepgram-agent" : "deepgram-managed-elevenlabs",
+    ttsProvider: "deepgram-managed-elevenlabs",
     ttsVoice: voiceId,
   };
 }
@@ -224,7 +212,7 @@ function buildAgentSettings(
     thinkProvider,
     Deno.env.get("DEEPGRAM_THINK_MODEL") || DEFAULT_DEEPGRAM_THINK_MODEL,
   );
-  const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "16000");
+  const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "48000");
   const outputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000");
 
   return {

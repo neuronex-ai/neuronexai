@@ -21,6 +21,8 @@ interface UseSynapseVoiceOptions {
   sessionId?: string | null;
   conversationId?: string | null;
   voiceSessionId?: string | null;
+  inputSampleRate?: number;
+  outputSampleRate?: number;
   onSessionIdChange?: (sessionId: string) => void;
   onConversationIdChange?: (conversationId: string) => void;
   onVoiceSessionIdChange?: (voiceSessionId: string) => void;
@@ -33,12 +35,14 @@ interface UseSynapseVoiceOptions {
 }
 
 export function useSynapseVoice(options: UseSynapseVoiceOptions) {
-  const preferredProvider = options.provider || import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER || DEFAULT_PROVIDER;
+  const preferredProvider = options.provider || DEFAULT_PROVIDER;
   const deepgram = useDeepgramAgentVoice({
     gatewayUrl: options.gatewayUrl,
     sessionId: options.sessionId,
     conversationId: options.conversationId,
     voiceSessionId: options.voiceSessionId,
+    inputSampleRate: options.inputSampleRate,
+    outputSampleRate: options.outputSampleRate,
     systemInstruction: options.systemInstruction,
     language: options.language,
     onSessionIdChange: options.onSessionIdChange,

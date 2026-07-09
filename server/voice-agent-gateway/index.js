@@ -27,13 +27,8 @@ loadLocalEnv();
 const PORT = Number(process.env.SYNAPSE_VOICE_GATEWAY_PORT || process.env.PORT || "8789");
 const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
-const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
-const DEFAULT_ELEVENLABS_VOICE_ID = "xNGAXaCH8MaasNuo7Hr7";
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
-const newId = () => globalThis.crypto?.randomUUID?.() || `voice-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 function jsonResponse(res, status, payload) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -66,7 +61,6 @@ function edgeFunctionMissingMessage(functionName) {
   return [
     `Edge Function ${functionName} nao esta deployada no projeto Supabase configurado.`,
     "Deploy necessario: supabase functions deploy synapse-voice-agent-session synapse-voice-tool --project-ref krewdaklcyzqfxkkgvqr.",
-    "Enquanto isso, use SYNAPSE_VOICE_FORCE_LOCAL_SETTINGS=true apenas para diagnostico local sem tools reais.",
   ].join(" ");
 }
 
@@ -82,15 +76,6 @@ function isOpen(ws) {
   return ws && ws.readyState === WebSocket.OPEN;
 }
 
-function normalizeThinkModel(provider, model) {
-  const cleanProvider = clean(provider, 80).toLowerCase();
-  const cleanModel = clean(model, 160);
-  if (cleanProvider !== "nvidia") return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
-  if (/^nvidia\/nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
-  if (/^nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
-  return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
-}
-
 function conversationText(event) {
   const role = clean(event?.role || event?.speaker || event?.channel?.role, 40);
   const content = clean(event?.content || event?.text || event?.transcript || event?.message, 20000);
@@ -98,139 +83,11 @@ function conversationText(event) {
   return { role, content };
 }
 
-function buildLocalSpeak() {
-  const modelId = process.env.DEEPGRAM_ELEVENLABS_MODEL_ID || DEFAULT_ELEVENLABS_MODEL_ID;
-  const voiceId =
-    process.env.DEEPGRAM_ELEVENLABS_VOICE_ID ||
-    process.env.ELEVENLABS_BRAZILIAN_MALE_VOICE_ID ||
-    DEFAULT_ELEVENLABS_VOICE_ID;
-  const languageCode = process.env.DEEPGRAM_ELEVENLABS_LANGUAGE_CODE || "pt-BR";
-  const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY || process.env.DEEPGRAM_ELEVENLABS_API_KEY || "";
-
-  const speak = {
-    speak: {
-      provider: {
-        type: "eleven_labs",
-        model_id: modelId,
-        voice_id: voiceId,
-        language_code: languageCode,
-      },
-    },
-    ttsProvider: elevenLabsApiKey ? "byo-elevenlabs-via-deepgram-agent" : "deepgram-managed-elevenlabs",
-    ttsVoice: voiceId,
-  };
-
-  if (elevenLabsApiKey) {
-    speak.speak.endpoint = {
-      url: process.env.ELEVENLABS_TTS_URL || `wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/multi-stream-input`,
-      headers: { "xi-api-key": elevenLabsApiKey },
-    };
-  }
-
-  return speak;
-}
-
-function buildLocalSpeakConfig() {
-  return buildLocalSpeak().speak;
-}
-
-function buildLocalAgentSettings(payload) {
-  const listenModel = process.env.DEEPGRAM_LISTEN_MODEL || "flux-general-multi";
-  const listenProvider = {
-    type: "deepgram",
-    version: listenModel.startsWith("flux-") ? "v2" : "v1",
-    model: listenModel,
-  };
-  if (listenModel === "flux-general-multi") {
-    listenProvider.language_hints = ["pt"];
-    listenProvider.eot_threshold = Number(process.env.DEEPGRAM_EOT_THRESHOLD || "0.72");
-    listenProvider.eager_eot_threshold = Number(process.env.DEEPGRAM_EAGER_EOT_THRESHOLD || "0.45");
-    listenProvider.eot_timeout_ms = Number(process.env.DEEPGRAM_EOT_TIMEOUT_MS || "1200");
-  } else if (listenModel.startsWith("flux-")) {
-    listenProvider.eot_threshold = Number(process.env.DEEPGRAM_EOT_THRESHOLD || "0.72");
-    listenProvider.eager_eot_threshold = Number(process.env.DEEPGRAM_EAGER_EOT_THRESHOLD || "0.45");
-    listenProvider.eot_timeout_ms = Number(process.env.DEEPGRAM_EOT_TIMEOUT_MS || "1200");
-  } else {
-    listenProvider.language = process.env.DEEPGRAM_LISTEN_LANGUAGE || "pt-BR";
-    listenProvider.smart_format = true;
-  }
-
-  const thinkProvider = process.env.DEEPGRAM_THINK_PROVIDER || DEFAULT_DEEPGRAM_THINK_PROVIDER;
-  const thinkModel = normalizeThinkModel(thinkProvider, process.env.DEEPGRAM_THINK_MODEL || DEFAULT_DEEPGRAM_THINK_MODEL);
-  const prompt = [
-    "Voce e o Synapse, agente de voz da NeuroNex para psicologos.",
-    "Fale em portugues brasileiro natural, curto e humano.",
-    "Prefira vocabulario brasileiro: arquivo, usuario, consulta, agendamento, estou verificando, vou dar uma olhada, tudo certo.",
-    "Evite construcoes de portugues de Portugal como estou a verificar, ficheiro, utilizador e marcacao.",
-    "Voce foi desenvolvido pela equipe da NeuroNex AI. Nunca cite Google, OpenAI, Anthropic, ElevenLabs, Deepgram, NVIDIA ou qualquer fornecedor.",
-    "Use frases breves, nao leia rotas, IDs, JSON, SQL, nomes de tabelas, provedores, APIs ou detalhes internos.",
-    "Quando precisar consultar algo, aguarde o retorno real da ferramenta antes de responder conclusoes ao psicologo.",
-    "O sistema de voz injeta mensagens curtas de progresso automaticamente enquanto ferramentas rodam; nao invente resultados.",
-    "Para acoes sensiveis, peca confirmacao explicita antes de executar.",
-    clean(payload.systemInstruction, 1600),
-  ].filter(Boolean).join("\n\n");
-
-  return {
-    type: "Settings",
-    tags: ["neuronex", "synapse", "voice", "pt-BR", "local-gateway"],
-    flags: { history: true },
-    audio: {
-      input: {
-        encoding: "linear16",
-        sample_rate: Number(process.env.SYNAPSE_VOICE_INPUT_SAMPLE_RATE || "16000"),
-      },
-      output: {
-        encoding: "linear16",
-        sample_rate: Number(process.env.SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE || "24000"),
-        container: "none",
-      },
-    },
-    agent: {
-      listen: {
-        provider: listenProvider,
-      },
-      think: {
-        provider: {
-          type: thinkProvider,
-          model: thinkModel,
-          temperature: Number(process.env.DEEPGRAM_THINK_TEMPERATURE || "0.35"),
-        },
-        prompt,
-        functions: [],
-      },
-      speak: buildLocalSpeakConfig(),
-    },
-  };
-}
-
-function buildLocalSessionConfig(payload, reason) {
-  const conversationId = clean(payload.conversationId || payload.sessionId, 120) || `voice-local-${Date.now()}`;
-  const voiceSessionId = clean(payload.voiceSessionId, 120) || newId();
-  const speak = buildLocalSpeak();
-  return {
-    provider: "deepgram-agent-local",
-    sessionId: conversationId,
-    conversationId,
-    voiceSessionId,
-    deepgramUrl: process.env.DEEPGRAM_AGENT_URL || DEFAULT_DEEPGRAM_URL,
-    agentSettings: buildLocalAgentSettings(payload),
-    model: normalizeThinkModel(
-      process.env.DEEPGRAM_THINK_PROVIDER || DEFAULT_DEEPGRAM_THINK_PROVIDER,
-      process.env.DEEPGRAM_THINK_MODEL || DEFAULT_DEEPGRAM_THINK_MODEL,
-    ),
-    voiceName: speak.ttsVoice,
-    ttsProvider: speak.ttsProvider,
-    functionsCount: 0,
-    outputSampleRate: Number(process.env.SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE || "24000"),
-    localFallbackReason: reason,
-  };
-}
-
 function gatewayErrorType(error) {
   const text = clean(error?.message || error, 1200).toLowerCase();
   if (/sessao|token|auth|unauthorized|401|403|gateway nao autorizado/.test(text)) return "auth_error";
   if (/settings|config|api[_ -]?key|secret|supabase nao configurado|ausentes|missing/.test(text)) return "config_error";
-  if (/deepgram|eleven|cartesia|provider|websocket|socket|1005|failed_to_speak/.test(text)) return "provider_error";
+  if (/deepgram|eleven|provider|websocket|socket|1005|failed_to_speak/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
   if (/permiss|permission|ownership|rls/.test(text)) return "permission_error";
@@ -348,10 +205,6 @@ class SynapseVoiceSession {
   }
 
   async fetchSessionConfig(payload) {
-    if (process.env.SYNAPSE_VOICE_FORCE_LOCAL_SETTINGS === "true") {
-      return buildLocalSessionConfig(payload, "forced_local_settings");
-    }
-
     if (!getGatewaySecret() || !getSupabaseUrl() || !getSupabaseAnonKey()) {
       throw new Error("Gateway de voz seguro incompleto. Configure Supabase URL, anon key e SYNAPSE_VOICE_GATEWAY_SECRET.");
     }
@@ -694,11 +547,11 @@ const server = http.createServer((req, res) => {
     jsonResponse(res, 200, {
       ok: true,
       service: "synapse-voice-agent-gateway",
+      path: PATHNAME,
+      voicePath: "deepgram-agent-elevenlabs-managed",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
-      elevenLabsConfigured: Boolean(process.env.ELEVENLABS_API_KEY || process.env.DEEPGRAM_ELEVENLABS_API_KEY),
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),
-      forceLocalSettings: process.env.SYNAPSE_VOICE_FORCE_LOCAL_SETTINGS === "true",
     });
     return;
   }
