@@ -32,7 +32,7 @@ interface UseGeminiVoiceOptions {
   onClientAction?: (action: ClientAction) => void;
 }
 
-export function useGeminiVoice(options: UseGeminiVoiceOptions) {
+export function useSynapseVoice(options: UseGeminiVoiceOptions) {
   const preferredProvider = options.provider || import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER || DEFAULT_PROVIDER;
   const deepgram = useDeepgramAgentVoice({
     gatewayUrl: options.gatewayUrl,

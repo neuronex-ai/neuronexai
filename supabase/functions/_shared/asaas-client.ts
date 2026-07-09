@@ -828,8 +828,8 @@ export async function ensureAsaasOperationalWebhook(apiKey: string) {
         ? config.events.filter((event) => !Array.isArray(existing.events) || !existing.events.includes(event))
         : config.events;
 
-    if (existing && missingEvents.length === 0 && existing.enabled !== false) {
-        return { configured: true, updated: false, webhookId: existing.id };
+    if (existing && missingEvents.length === 0 && existing.enabled !== false && existing.interrupted !== true) {
+        return { configured: true, updated: false, backoffRemoved: false, webhookId: existing.id };
     }
 
     const payload = existing
@@ -838,6 +838,7 @@ export async function ensureAsaasOperationalWebhook(apiKey: string) {
             url: config.url,
             sendType: config.sendType,
             enabled: true,
+            interrupted: false,
             ...(ASAAS_WEBHOOK_TOKEN ? { authToken: ASAAS_WEBHOOK_TOKEN } : {}),
             events: config.events,
         }
@@ -849,9 +850,19 @@ export async function ensureAsaasOperationalWebhook(apiKey: string) {
         apiKey,
     );
 
+    if (existing?.id && existing.interrupted === true) {
+        await asaasRequest<Record<string, unknown>>(
+            `/webhooks/${existing.id}/removeBackoff`,
+            "POST",
+            {},
+            apiKey,
+        );
+    }
+
     return {
         configured: true,
         updated: Boolean(existing),
+        backoffRemoved: existing?.interrupted === true,
         webhookId: (webhook as any)?.id || existing?.id || null,
     };
 }
@@ -1482,10 +1493,10 @@ export async function upsertFinancialAccountRecord(
     patch: Record<string, unknown>
 ) {
     const existing = await getFinancialAccount(userId);
-    const pendingAsaasApiKey =
-        typeof patch.asaas_api_key === "string" ? patch.asaas_api_key.trim() : "";
+    const pendingAsaasPrivateApiKey =
+        typeof patch.asaasPrivateApiKey === "string" ? patch.asaasPrivateApiKey.trim() : "";
     const safePatch = { ...patch };
-    delete safePatch.asaas_api_key;
+    delete safePatch.asaasPrivateApiKey;
 
     if (existing) {
         const { data, error } = await supabaseAdmin
@@ -1499,7 +1510,7 @@ export async function upsertFinancialAccountRecord(
             .single();
 
         if (error) throw error;
-        await storeAsaasAccountApiKey(data, pendingAsaasApiKey, "financial_account_upsert");
+        await storeAsaasAccountApiKey(data, pendingAsaasPrivateApiKey, "financial_account_upsert");
         return data;
     }
 
@@ -1514,7 +1525,7 @@ export async function upsertFinancialAccountRecord(
         .single();
 
     if (error) throw error;
-    await storeAsaasAccountApiKey(data, pendingAsaasApiKey, "financial_account_upsert");
+    await storeAsaasAccountApiKey(data, pendingAsaasPrivateApiKey, "financial_account_upsert");
     return data;
 }
 

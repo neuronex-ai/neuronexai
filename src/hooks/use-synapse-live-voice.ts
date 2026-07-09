@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGeminiVoice } from "@/hooks/use-gemini-voice";
+import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
-import type { GeminiLiveStatus } from "@/lib/gemini-live-client";
 import {
   executeSynapseInterfaceAction,
   normalizeSynapseClientAction,
 } from "@/lib/synapse-interface-actions";
 
 type ClientToolMap = Record<string, (params: unknown) => Promise<unknown> | unknown>;
+type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
 const SYNAPSE_GLOBAL_VOICE_PROMPT = [
   "Voce e o Synapse AI, assistente operacional inteligente da NeuroNex AI.",
@@ -26,7 +26,7 @@ interface UseGeminiLiveOptions {
   onClientAction?: (action: unknown) => void;
 }
 
-export function useGeminiLive(options?: UseGeminiLiveOptions) {
+export function useSynapseLiveVoice(options?: UseGeminiLiveOptions) {
   const navigate = useNavigate();
   const connectedRef = useRef(false);
   const optionsRef = useRef(options);
@@ -42,7 +42,7 @@ export function useGeminiLive(options?: UseGeminiLiveOptions) {
     voiceSessionId,
   } = useVoiceConfig();
 
-  const voice = useGeminiVoice({
+  const voice = useSynapseVoice({
     token: null,
     language: "pt-BR",
     provider,
@@ -64,7 +64,7 @@ export function useGeminiLive(options?: UseGeminiLiveOptions) {
     },
   });
 
-  const status = useMemo<GeminiLiveStatus>(() => {
+  const status = useMemo<SynapseLiveVoiceStatus>(() => {
     if (voice.error || voiceConfigError) return "error";
     if (voice.isConnected) return "connected";
     if (voice.isProcessing || isVoiceConfigLoading) return "connecting";

@@ -142,11 +142,6 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/gemini-text-chat/index.ts"
 
-[functions.get-voice-config]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/get-voice-config/index.ts"
-
 [functions.synapse-voice-agent-session]
 enabled = true
 verify_jwt = true

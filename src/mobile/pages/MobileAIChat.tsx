@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { useChatSessions, useCreateChatSession, useDeleteChatSession, useSendChatMessage, useSessionMessages } from "@/hooks/use-ai-chat";
-import { useGeminiVoice } from "@/hooks/use-gemini-voice";
+import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
 import { getR2DocumentDownloadUrl, uploadDocumentToR2 } from "@/lib/r2-documents-client";
@@ -130,7 +130,7 @@ export const MobileAIChat = () => {
     endSession: endVoiceSession,
     toggleListening: toggleVoiceListening,
     error: voiceRuntimeError,
-  } = useGeminiVoice({
+  } = useSynapseVoice({
     token: voiceToken,
     model: voiceModel,
     voiceName,

@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useRef, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useGeminiLive } from '@/hooks/use-gemini-live';
+import { useSynapseLiveVoice } from '@/hooks/use-synapse-live-voice';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getToolsForRoute, getQuickActionsForRoute, SynapseTool } from '@/lib/synapse-tool-catalog';
@@ -308,7 +308,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const clearTimeline = useCallback(() => setTimeline([]), []);
 
     // ─── Voice Integration (Gemini Live) ──────────────────────────────────
-    const geminiLive = useGeminiLive({
+    const synapseVoice = useSynapseLiveVoice({
         onConnect: () => {
             console.log('[Synapse Global Voice] Conectado ao Gemini Live');
             setExecState('listening');
@@ -331,28 +331,28 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         if (activeTab !== 'voice') return;
-        if (geminiLive.status === 'error') {
+        if (synapseVoice.status === 'error') {
             setExecState('error');
             return;
         }
-        if (geminiLive.isToolActive) {
+        if (synapseVoice.isToolActive) {
             setExecState('executing');
             return;
         }
-        if (geminiLive.status === 'connecting') {
+        if (synapseVoice.status === 'connecting') {
             setExecState('thinking');
             return;
         }
-        if (geminiLive.status === 'connected') {
-            setExecState(geminiLive.isSpeaking ? 'thinking' : 'listening');
+        if (synapseVoice.status === 'connected') {
+            setExecState(synapseVoice.isSpeaking ? 'thinking' : 'listening');
             return;
         }
         setExecState('idle');
-    }, [activeTab, geminiLive.isSpeaking, geminiLive.isToolActive, geminiLive.status]);
+    }, [activeTab, synapseVoice.isSpeaking, synapseVoice.isToolActive, synapseVoice.status]);
 
     const toggleVoiceMode = useCallback(async () => {
-        if (geminiLive.status === 'connected') {
-            await geminiLive.endSession();
+        if (synapseVoice.status === 'connected') {
+            await synapseVoice.endSession();
             setActiveTab('chat');
             setExecState('idle');
         } else {
@@ -360,7 +360,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
             setExecState('thinking');
             try {
                 console.log('[Synapse Global Voice] Iniciando sessão...');
-                await geminiLive.startSession();
+                await synapseVoice.startSession();
             } catch (err) {
                 console.error("[Synapse Global Voice] Falha ao iniciar:", err);
                 setExecState('error');
@@ -370,7 +370,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 }, 2500);
             }
         }
-    }, [geminiLive, setActiveTab, setExecState]);
+    }, [synapseVoice, setActiveTab, setExecState]);
     // ─────────────────────────────────────────────────────────────────────
 
     return (
@@ -393,13 +393,13 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 inputDraft,
                 setInputDraft,
                 isVisible,
-                voiceStatus: geminiLive.status,
-                isVoiceSpeaking: geminiLive.isSpeaking,
-                voicePhase: String(geminiLive.voicePhase || geminiLive.status),
-                isVoiceToolActive: geminiLive.isToolActive,
-                voiceActivityLabel: geminiLive.activeToolLabel,
-                voiceActivityMessage: geminiLive.activeToolMessage,
-                getVoiceInputVolume: geminiLive.getInputVolume,
+                voiceStatus: synapseVoice.status,
+                isVoiceSpeaking: synapseVoice.isSpeaking,
+                voicePhase: String(synapseVoice.voicePhase || synapseVoice.status),
+                isVoiceToolActive: synapseVoice.isToolActive,
+                voiceActivityLabel: synapseVoice.activeToolLabel,
+                voiceActivityMessage: synapseVoice.activeToolMessage,
+                getVoiceInputVolume: synapseVoice.getInputVolume,
                 toggleVoiceMode,
                 isVoiceExpanded,
                 setIsVoiceExpanded,

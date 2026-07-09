@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Mic, MicOff, Phone, PhoneOff, RefreshCcw, Volume2, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useGeminiVoice } from "@/hooks/use-gemini-voice";
+import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
 import { VoiceSpiral } from "./VoiceSpiral";
 
@@ -60,7 +60,7 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
     endSession,
     toggleListening,
     error: runtimeError,
-  } = useGeminiVoice({
+  } = useSynapseVoice({
     token: null,
     provider: voiceProvider,
     gatewayUrl: voiceGatewayUrl,
