@@ -249,6 +249,10 @@ export const SynapseCompactPanel = () => {
         }
     }, [shellState, activeTab, voiceStatus, toggleVoiceMode]);
 
+    // Handle updates safely
+    const stableSetInputDraft = useRef(setInputDraft);
+    useEffect(() => { stableSetInputDraft.current = setInputDraft; }, [setInputDraft]);
+
     const inputDraftRef = useRef(inputDraft);
     useEffect(() => { inputDraftRef.current = inputDraft; }, [inputDraft]);
 
@@ -265,7 +269,7 @@ export const SynapseCompactPanel = () => {
                 recognition.onresult = (event: SpeechRecognitionEventLike) => {
                     const transcript = event.results[event.results.length - 1][0].transcript;
                     const current = inputDraftRef.current;
-                    setInputDraft(current ? current + ' ' + transcript : transcript);
+                    stableSetInputDraft.current(current ? current + ' ' + transcript : transcript);
                 };
 
                 recognition.onerror = (event: { error: string }) => {
@@ -280,7 +284,7 @@ export const SynapseCompactPanel = () => {
                 recognitionRef.current = recognition;
             }
         }
-    }, [setInputDraft]);
+    }, []);
 
     const toggleListening = () => {
         if (!recognitionRef.current) return;
@@ -836,8 +840,8 @@ export const SynapseCompactPanel = () => {
                                             <div className={cn(
                                                 'relative group max-w-[85%]',
                                                 msg.role === 'user'
-                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-[#1a1a1a] shadow-xl dark:text-white'
-                                                    : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
+                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-[#1a1a1a] shadow-xl'
+                                                    : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground dark:text-white shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
                                             )}>
                                                 {msg.role === "assistant" && (
                                                     <button
@@ -853,8 +857,8 @@ export const SynapseCompactPanel = () => {
                                                     'prose prose-sm max-w-none break-words text-[13px] leading-relaxed',
                                                     'prose-p:text-current prose-strong:text-current prose-li:text-current prose-code:text-current',
                                                     msg.role === 'user'
-                                                        ? '[&_*]:!text-current prose-headings:!text-current'
-                                                        : ''
+                                                        ? 'text-[#1a1a1a] [&_*]:!text-[#1a1a1a] prose-headings:!text-[#1a1a1a]'
+                                                        : 'text-foreground dark:text-white dark:prose-invert [&_p]:text-current [&_strong]:text-current [&_li]:text-current [&_code]:text-current [&_ol]:text-current [&_ul]:text-current'
                                                 )}>
                                                     {(() => {
                                                         const parsedMessage = msg.role === "assistant"
@@ -953,11 +957,11 @@ export const SynapseCompactPanel = () => {
                             transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
                             className={cn(
                                 'flex items-end gap-3 rounded-[26px]',
-                                'notes-liquid-surface',
+                                'notes-liquid-surface border',
                                 'px-4 py-3 transition-[border-color,box-shadow] duration-300 backdrop-blur-2xl',
                                 isInputFocused
-                                    ? 'border-foreground/55 dark:border-foreground/70'
-                                    : 'border-border/45 dark:border-white/[0.075]'
+                                    ? 'border-foreground/25 dark:border-white/[0.15]'
+                                    : 'border-border/45 dark:border-white/[0.05]'
                             )}
                         >
                             <textarea
@@ -970,7 +974,7 @@ export const SynapseCompactPanel = () => {
                                 placeholder="Pergunte ao Synapse..."
                                 rows={1}
                                 disabled={!sessionReady || isSending}
-                                className="min-h-9 flex-1 resize-none bg-transparent py-2 text-[13px] font-medium text-foreground outline-none placeholder:text-muted-foreground/55 disabled:opacity-50"
+                                className="min-h-9 flex-1 resize-none bg-transparent py-2 text-[13px] font-medium text-foreground border-0 focus:ring-0 focus-visible:ring-0 focus:outline-none outline-none placeholder:text-muted-foreground/55 disabled:opacity-50"
                             />
                             <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
                                 <motion.button
