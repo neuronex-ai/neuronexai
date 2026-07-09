@@ -118,20 +118,7 @@ const StatusBadge = ({ status, notes }: { status?: string | null; notes?: string
   );
 };
 
-const actionLabel = (type: string) => {
-  return humanizeSynapseActionType(type);
-  const normalized = normalizeSynapseWidgetType(type);
-  const labels: Record<string, string> = {
-    create_appointment: "Agendamento criado",
-    send_email: "E-mail enviado",
-    create_invoice: "Cobranca gerada",
-    update_patient: "Paciente atualizado",
-    create_patient: "Paciente cadastrado",
-    generate_document: "Documento gerado",
-    clinical_history: "Prontuario atualizado",
-  };
-  return labels[normalized] || normalized.replace(/_/g, " ");
-};
+const actionLabel = (type: string) => humanizeSynapseActionType(type);
 
 const rowClassName =
   "group/item flex min-h-11 w-full items-center justify-between rounded-2xl border border-border/40 bg-background/70 p-3.5 text-left shadow-[inset_0_1px_0_hsl(var(--background)/0.78)] transition-[background-color,border-color,box-shadow,transform] duration-200 hover:border-foreground/12 hover:bg-muted/55 active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.04] dark:bg-white/[0.028] dark:hover:border-white/[0.06] dark:hover:bg-white/[0.045]";
