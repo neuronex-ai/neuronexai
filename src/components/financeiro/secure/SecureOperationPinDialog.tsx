@@ -40,7 +40,7 @@ export function SecureOperationPinDialog({
       preventClose={isLoading}
       size="sm"
       eyebrow="Assinatura digital"
-      title="Autorizar operacao"
+      title="Autorizar operação"
       description={`Digite seu PIN de 6 digitos para autorizar ${actionLabel} de ${formatCurrency(value)} para ${recipient || "o destino revisado"}.`}
       heroIcon={<ModalHeroIcon icon={isLoading ? Loader2 : LockKeyhole} state={isLoading ? "loading" : errorMessage ? "error" : "neutral"} tone="status" ariaLabel="Confirmacao por PIN" />}
       footer={

@@ -51,7 +51,7 @@ export function MobileBillPaymentFlow({
   const consult = useCallback(async (nextLine = line) => {
     const normalized = normalizeBoletoInput(nextLine);
     if (!normalized.isValid) {
-      toast.error("Informe uma linha digitavel ou codigo de barras valido.");
+      toast.error("Informe uma linha digitável ou código de barras válido.");
       return;
     }
     setLine(normalized.digits);
@@ -69,7 +69,7 @@ export function MobileBillPaymentFlow({
   const handleScannedBill = useCallback(async (value: string) => {
     const normalized = normalizeBoletoInput(value);
     if (!normalized.isValid) {
-      toast.error("Codigo de boleto invalido.");
+      toast.error("Código de boleto inválido.");
       return;
     }
     await consult(normalized.digits);
@@ -296,7 +296,7 @@ export function MobileBillPaymentFlow({
                   className="h-14 rounded-[20px] text-xs font-semibold uppercase tracking-[0.12em]"
                 >
                   <Camera className="mr-2 h-4 w-4" />
-                  Ler codigo
+                  Ler código
                 </Button>
                 <Button
                   disabled={busy || !normalizeBoletoInput(line).isValid}

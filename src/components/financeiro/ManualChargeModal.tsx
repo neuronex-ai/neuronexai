@@ -287,7 +287,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
                 <Input type="date" value={dueDate} onChange={(event) => setDueDate(event.target.value)} className="h-12 rounded-[14px]" />
               </div>
               <div className="space-y-2">
-                <Label>Metodo previsto</Label>
+                <Label>Método previsto</Label>
                 <Select value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as FinancialEntryPaymentMethod)}>
                   <SelectTrigger className="h-12 rounded-[14px]">
                     <SelectValue />

@@ -98,11 +98,11 @@ export const useAddAppointmentTransaction = () => {
 
   return useMutation({
     mutationFn: (data: NewAppointmentTransactionData) => {
-      if (!userId) throw new Error('Usuario nao autenticado.');
+      if (!userId) throw new Error('Usuário não autenticado.');
       return addAppointmentTransaction(data, userId);
     },
     onSuccess: () => {
-      toast.success('Transacao de consulta registrada com sucesso!');
+      toast.success('Transação de consulta registrada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['financialEntries'] });
       queryClient.invalidateQueries({ queryKey: ['patientTransactions'] });
@@ -110,7 +110,7 @@ export const useAddAppointmentTransaction = () => {
       queryClient.invalidateQueries({ queryKey: ['advancedCashFlow'] });
     },
     onError: (error) => {
-      console.error('[useAddAppointmentTransaction] Falha ao registrar movimentacao', error);
+      console.error('[useAddAppointmentTransaction] Falha ao registrar movimentação', error);
       toast.error(getUserFacingErrorMessage(error, 'save'));
     },
   });

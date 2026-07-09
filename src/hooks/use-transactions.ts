@@ -26,7 +26,7 @@ export const useTransactions = (startDate?: Date, endDate?: Date, limit: number 
   return useQuery<Transaction[], Error>({
     queryKey: ['transactions', userId, startStr, endStr, limit],
     queryFn: () => {
-      if (!userId) throw new Error('Usuario nao autenticado');
+      if (!userId) throw new Error('Usuário não autenticado');
       return fetchTransactions({ startDate, endDate, userId, limit });
     },
     enabled: !!userId,

@@ -90,18 +90,18 @@ export const useUpdateTransaction = () => {
 
   return useMutation({
     mutationFn: (data: UpdateTransactionData) => {
-      if (!userId) throw new Error('Usuario nao autenticado.');
+      if (!userId) throw new Error('Usuário não autenticado.');
       return updateTransaction(data, userId);
     },
     onSuccess: () => {
-      toast.success('Transacao atualizada com sucesso!');
+      toast.success('Transação atualizada com sucesso!');
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['transactionsByDateRange'] });
       queryClient.invalidateQueries({ queryKey: ['patientTransactions'] });
       queryClient.invalidateQueries({ queryKey: ['financialEntries'] });
     },
     onError: (error) => {
-      toast.error(`Falha ao atualizar transacao: ${error.message}`);
+      toast.error(`Falha ao atualizar transação: ${error.message}`);
     },
   });
 };

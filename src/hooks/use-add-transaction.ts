@@ -97,7 +97,7 @@ export const useAddTransaction = () => {
 
   return useMutation({
     mutationFn: (data: ExtendedTransactionData) => {
-      if (!userId) throw new Error('Usuario nao autenticado.');
+      if (!userId) throw new Error('Usuário não autenticado.');
       return addTransaction(data, userId);
     },
     onSuccess: (_, variables) => {

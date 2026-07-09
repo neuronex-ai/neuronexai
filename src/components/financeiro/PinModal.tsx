@@ -77,7 +77,7 @@ export const PinModal = ({ open, onOpenChange, onSuccess }: PinModalProps) => {
       size="sm"
       eyebrow="Cofre financeiro"
       title={isSuccess ? "Acesso permitido" : "Confirme seu PIN"}
-      description={error ? "PIN incorreto. Tente novamente." : isSuccess ? "Desbloqueando ambiente seguro..." : "Digite seu codigo de seis digitos para continuar."}
+      description={error ? "PIN incorreto. Tente novamente." : isSuccess ? "Desbloqueando ambiente seguro..." : "Digite seu código de seis dígitos para continuar."}
       heroIcon={<ModalHeroIcon icon={HeroIcon} state={heroState} tone="status" ariaLabel="Status do PIN financeiro" />}
       footer={
         <Button

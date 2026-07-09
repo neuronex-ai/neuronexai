@@ -52,7 +52,7 @@ export function MobilePixPaymentFlow({
   const consult = useCallback(async (nextPayload = payload) => {
     const trimmedPayload = nextPayload.trim();
     if (!trimmedPayload || trimmedPayload.length < 10) {
-      toast.error("Codigo Pix invalido.");
+      toast.error("Código Pix inválido.");
       return;
     }
     setPayload(trimmedPayload);
@@ -70,7 +70,7 @@ export function MobilePixPaymentFlow({
   const handleScannedPix = useCallback(async (value: string) => {
     const scannedPayload = value.trim();
     if (scannedPayload.length < 10) {
-      toast.error("QR Code Pix invalido.");
+      toast.error("QR Code Pix inválido.");
       return;
     }
     await consult(scannedPayload);

@@ -172,7 +172,7 @@ export const DEFAULT_FINANCIAL_CATEGORIES: Record<FinancialEntryType, { name: st
     { name: 'Mensalidade', color: '#059669', icon: 'repeat' },
     { name: 'Convenio', color: '#0f766e', icon: 'users' },
     { name: 'Comissao', color: '#52525b', icon: 'percent' },
-    { name: 'Receitas nao categorizadas', color: '#71717a', icon: 'wallet' },
+    { name: 'Receitas não categorizadas', color: '#71717a', icon: 'wallet' },
   ],
   expense: [
     { name: 'Aluguel', color: '#18181b', icon: 'home' },
@@ -180,7 +180,7 @@ export const DEFAULT_FINANCIAL_CATEGORIES: Record<FinancialEntryType, { name: st
     { name: 'Alimentacao', color: '#71717a', icon: 'utensils' },
     { name: 'Adiantamento', color: '#3f3f46', icon: 'arrow-up-right' },
     { name: 'Ajuste de caixa', color: '#27272a', icon: 'settings' },
-    { name: 'Despesas nao categorizadas', color: '#a1a1aa', icon: 'wallet' },
+    { name: 'Despesas não categorizadas', color: '#a1a1aa', icon: 'wallet' },
   ],
 };
 
@@ -502,7 +502,7 @@ export function useFinancialCategories(type?: FinancialEntryType) {
   return useQuery<FinancialCategory[], Error>({
     queryKey: ['financialCategories', userId, type || 'all'],
     queryFn: () => {
-      if (!userId) throw new Error('Usuario nao autenticado');
+      if (!userId) throw new Error('Usuário não autenticado');
       return fetchFinancialCategories(userId, type);
     },
     enabled: !!userId,
@@ -517,7 +517,7 @@ export function useCreateFinancialCategory() {
 
   return useMutation({
     mutationFn: async ({ type, name }: { type: FinancialEntryType; name: string }) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
       const normalizedName = name.trim();
       if (!normalizedName) throw new Error('Informe o nome da categoria');
 
@@ -550,7 +550,7 @@ export function useFinancialAutomationSettings() {
   return useQuery<FinancialAutomationSettings | null, Error>({
     queryKey: ['financialAutomationSettings', userId],
     queryFn: () => {
-      if (!userId) throw new Error('Usuario nao autenticado');
+      if (!userId) throw new Error('Usuário não autenticado');
       return fetchFinancialAutomationSettings(userId);
     },
     enabled: !!userId,
@@ -565,7 +565,7 @@ export function useSaveFinancialAutomationSettings() {
 
   return useMutation({
     mutationFn: async (input: UpdateFinancialAutomationSettingsInput) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
 
       const payload = {
         professional_id: user.id,
@@ -634,7 +634,7 @@ export function useFinancialEntries(filters: FinancialEntryFilters = {}) {
       filters.limit || 500,
     ],
     queryFn: () => {
-      if (!userId) throw new Error('Usuario nao autenticado');
+      if (!userId) throw new Error('Usuário não autenticado');
       return fetchFinancialEntries(userId, filters);
     },
     enabled: !!userId,
@@ -649,7 +649,7 @@ export function useCreateFinancialEntry() {
 
   return useMutation({
     mutationFn: async (input: NewFinancialEntryInput) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
 
       const status = input.status || (input.paidAt ? 'paid' : 'pending');
       const paidAt = input.paidAt ? input.paidAt.toISOString() : null;
@@ -696,7 +696,7 @@ export function useCreateRecurringFinancialEntry() {
 
   return useMutation({
     mutationFn: async (input: NewRecurringFinancialEntryInput) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
 
       const { data, error } = await supabase
         .from('recurring_financial_entries')
@@ -771,7 +771,7 @@ export function useUpdateFinancialEntry() {
 
   return useMutation({
     mutationFn: async (input: UpdateFinancialEntryInput) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
 
       const { data, error } = await supabase
         .from('financial_entries')
@@ -800,7 +800,7 @@ export function useDeleteFinancialEntries() {
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
       if (ids.length === 0) return [];
 
       const { data: rows, error: fetchError } = await supabase
@@ -889,7 +889,7 @@ export function useHardDeleteFinancialEntriesUnsafe() {
 
   return useMutation({
     mutationFn: async (ids: string[]) => {
-      if (!user?.id) throw new Error('Usuario nao autenticado');
+      if (!user?.id) throw new Error('Usuário não autenticado');
       if (ids.length === 0) return [];
 
       const { data, error } = await supabase
