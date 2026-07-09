@@ -82,7 +82,7 @@ export function NeuroFinanceMovementsTimeline({
           </div>
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.24em] text-zinc-400">NeuroFinance</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-zinc-950 dark:text-white">Proximos movimentos da conta</h2>
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-zinc-950 dark:text-white">Próximos movimentos da conta</h2>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -134,7 +134,7 @@ export function NeuroFinanceMovementsTimeline({
           <p className="text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Saldo previsto dos movimentos</p>
           <h3 className="mt-4 text-3xl font-black tracking-tight">{currency(projectedTotal)}</h3>
           <p className="mt-4 text-sm font-medium leading-relaxed opacity-62">
-            Visao bancaria curta. Calendario operacional fica na Gestao Financeira.
+            Visão bancária curta. Calendário operacional fica na Gestão Financeira.
           </p>
         </div>
       </div>

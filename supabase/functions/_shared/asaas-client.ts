@@ -231,8 +231,7 @@ export async function storeAsaasAccountApiKey(
     }
 
     const { error } = await supabaseAdmin
-        .schema("private")
-        .rpc("store_asaas_account_api_key", {
+        .rpc("store_asaas_account_api_key_for_edge", {
             p_financial_account_id: financialAccount.id,
             p_user_id: financialAccount.user_id,
             p_asaas_account_id: financialAccount.asaas_account_id || null,
@@ -248,8 +247,7 @@ export async function getFinancialAccountAsaasApiKey(financialAccount: any): Pro
     if (!financialAccountId) return "";
 
     const { data, error } = await supabaseAdmin
-        .schema("private")
-        .rpc("get_asaas_account_api_key", {
+        .rpc("get_asaas_account_api_key_for_edge", {
             p_financial_account_id: financialAccountId,
         });
 
@@ -1595,4 +1593,3 @@ export async function markAsaasEventFailed(eventId: string, errorMessage?: strin
 // ─────────────────────────────────────────────────────────────
 // Ledger helpers (internal accounting)
 // ─────────────────────────────────────────────────────────────
-

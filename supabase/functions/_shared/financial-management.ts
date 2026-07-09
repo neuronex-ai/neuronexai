@@ -139,7 +139,7 @@ export async function ensureFinancialEntryForCharge(input: {
             .maybeSingle();
 
         if (error) throw error;
-        if (!entry) throw new Error("Lancamento financeiro nao encontrado para vincular a cobranca.");
+        if (!entry) throw new Error("Lançamento financeiro não encontrado para vincular a cobrança.");
         return entry;
     }
 
@@ -372,8 +372,8 @@ async function ensureFinancialEntryReversal(input: {
             ? `Chargeback - ${input.originalEntry.title || input.payment.description || "Cobranca NeuroFinance"}`
             : `Estorno - ${input.originalEntry.title || input.payment.description || "Cobranca NeuroFinance"}`,
         description: input.reason === "chargeback"
-            ? `Reversao por chargeback da cobranca ${input.payment.provider_payment_id || input.payment.id}`
-            : `Reversao por estorno da cobranca ${input.payment.provider_payment_id || input.payment.id}`,
+            ? `Reversão por chargeback da cobrança ${input.payment.provider_payment_id || input.payment.id}`
+            : `Reversão por estorno da cobrança ${input.payment.provider_payment_id || input.payment.id}`,
         amount,
         due_date: input.now.slice(0, 10),
         competence_date: input.now.slice(0, 10),

@@ -93,7 +93,7 @@ Deno.serve(async (req: Request) => {
 
         let asaasApiKey = await getFinancialAccountAsaasApiKey(financialAccount);
         if (!asaasApiKey) {
-            return errorResponse('Credencial privada da subconta Asaas nao configurada.', 409, {
+            return errorResponse('Credencial privada da subconta Asaas não configurada.', 409, {
                 code: 'ASAAS_PRIVATE_CREDENTIAL_MISSING',
                 financial_account_id: financialAccount.id,
             });

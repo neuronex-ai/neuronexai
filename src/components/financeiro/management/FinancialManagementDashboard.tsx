@@ -451,7 +451,7 @@ const CashFlowTable = ({ metrics, onSelect }: { metrics: Metrics; onSelect?: (tr
                           {format(dateOf(transaction), "dd MMM yyyy", { locale: ptBR })}
                         </td>
                         <td className="max-w-[280px] px-5 py-4">
-                          <p className="truncate text-sm font-black text-zinc-950 dark:text-white">{transaction.description || "Movimentacao financeira"}</p>
+                          <p className="truncate text-sm font-black text-zinc-950 dark:text-white">{transaction.description || "Movimentação financeira"}</p>
                           <p className="mt-1 text-[10px] font-bold text-zinc-400 dark:text-white/32">{income ? "Entrada" : "Saida"}</p>
                         </td>
                         <td className="px-5 py-4 text-xs font-bold text-zinc-500 dark:text-white/44">{transaction.category || "Sem categoria"}</td>

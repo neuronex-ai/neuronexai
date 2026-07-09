@@ -138,7 +138,7 @@ Deno.serve(async (req: Request) => {
                 });
             } catch (err) {
                 console.error('Error syncing existing account:', err);
-                return errorResponse((err as any)?.message || 'Nao foi possivel sincronizar a subconta Asaas existente.', 502, {
+                return errorResponse((err as any)?.message || 'Não foi possível sincronizar a subconta Asaas existente.', 502, {
                     code: 'ASAAS_EXISTING_ACCOUNT_SYNC_FAILED',
                     already_exists: true,
                     financial_account_id: existingAccount.id,

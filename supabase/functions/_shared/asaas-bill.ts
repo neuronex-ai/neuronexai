@@ -78,6 +78,6 @@ export function validateNormalizedBillSimulation(bill: NormalizedBillSimulation)
     if (!bill.dueDate) missing.push("vencimento");
     if (!bill.beneficiaryName) missing.push("beneficiario");
     if (!bill.beneficiaryDocument) missing.push("documento do beneficiario");
-    if (!bill.bankCode && !bill.bankName) missing.push("instituicao bancaria");
+    if (!bill.bankCode && !bill.bankName) missing.push("instituição bancária");
     return missing;
 }

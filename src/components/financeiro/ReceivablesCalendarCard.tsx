@@ -78,7 +78,7 @@ const SOURCE_CELL_ACCENTS: Record<ReceivableSource, string> = {
 };
 
 const PAYMENT_SOURCE_LABELS: Record<FinancialPaymentSource, string> = {
-  management: "Gestao Financeira",
+  management: "Gestão Financeira",
   neurofinance: "NeuroFinance",
 };
 

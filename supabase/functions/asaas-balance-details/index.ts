@@ -71,12 +71,12 @@ function shouldSyncSnapshot(snapshot: any, body: any) {
 async function syncStatementForDetails(userId: string, body: any) {
     const financialAccount = await getFinancialAccount(userId);
     if (!financialAccount) {
-        throw Object.assign(new Error("Sua conta NeuroFinance ainda nao foi ativada."), { status: 404 });
+        throw Object.assign(new Error("Sua conta NeuroFinance ainda não foi ativada."), { status: 404 });
     }
 
     const apiKey = await getFinancialAccountAsaasApiKey(financialAccount);
     if (!apiKey || financialAccount.status === "account_missing") {
-        throw Object.assign(new Error("Credencial privada da subconta Asaas nao configurada."), { status: 409 });
+        throw Object.assign(new Error("Credencial privada da subconta Asaas não configurada."), { status: 409 });
     }
 
     const startDate = body.start_date || daysAgo(45);
@@ -103,7 +103,7 @@ async function syncStatementForDetails(userId: string, body: any) {
             movementType: movementType(transaction.type, direction),
             direction,
             amount: Math.abs(Math.round(value * 100)),
-            description: transaction.description || transaction.type || "Movimentacao da conta",
+            description: transaction.description || transaction.type || "Movimentação da conta",
             referenceType: transaction.paymentId
                 ? "payment"
                 : transaction.transferId

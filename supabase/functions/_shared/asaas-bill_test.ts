@@ -46,6 +46,6 @@ Deno.test("rejects a simulation that cannot identify the real recipient", () => 
 
     assertEquals(validateNormalizedBillSimulation(bill), [
         "documento do beneficiario",
-        "instituicao bancaria",
+        "instituição bancária",
     ]);
 });
