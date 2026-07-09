@@ -7,7 +7,7 @@ type SynapseVoiceProvider = "deepgram-agent" | "legacy-cascade";
 
 const DEFAULT_PROVIDER: SynapseVoiceProvider = "deepgram-agent";
 const LEGACY_PROVIDER: SynapseVoiceProvider = "legacy-cascade";
-const legacyCascadeEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_ENABLED === "true";
+const cascadeFallbackEnabled = () => import.meta.env.VITE_SYNAPSE_VOICE_CASCADE_FALLBACK_DISABLED !== "true";
 
 const normalizeProvider = (provider?: string | null): SynapseVoiceProvider =>
   provider === LEGACY_PROVIDER ? LEGACY_PROVIDER : DEFAULT_PROVIDER;
@@ -33,7 +33,7 @@ interface UseGeminiVoiceOptions {
 export function useGeminiVoice(options: UseGeminiVoiceOptions) {
   const [forcedLegacy, setForcedLegacy] = useState(false);
   const preferredProvider = normalizeProvider(options.provider || import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER);
-  const canUseLegacyCascade = legacyCascadeEnabled();
+  const canUseLegacyCascade = cascadeFallbackEnabled();
   const shouldUseLegacyCascade = canUseLegacyCascade && (forcedLegacy || preferredProvider === LEGACY_PROVIDER);
 
   const deepgram = useDeepgramAgentVoice({
@@ -77,17 +77,23 @@ export function useGeminiVoice(options: UseGeminiVoiceOptions) {
     const provider = normalizeProvider(_override?.provider || preferredProvider);
 
     if (provider === LEGACY_PROVIDER) {
-      if (!legacyCascadeEnabled()) {
-        throw new Error("legacy-cascade esta isolado. Defina VITE_SYNAPSE_LEGACY_CASCADE_ENABLED=true somente para rollback diagnostico.");
-      }
+      if (!canUseLegacyCascade) throw new Error("O modo de voz alternativo esta desativado neste ambiente.");
       setForcedLegacy(true);
       await cascadeStartSession();
       return;
     }
 
     setForcedLegacy(false);
-    await deepgramStartSession({ ..._override, provider: DEFAULT_PROVIDER });
-  }, [cascadeStartSession, deepgramStartSession, preferredProvider]);
+    try {
+      await deepgramStartSession({ ..._override, provider: DEFAULT_PROVIDER });
+    } catch (error) {
+      if (!canUseLegacyCascade) throw error;
+      console.warn("[Synapse Voice] Gateway indisponivel; usando conversa por voz alternativa.", error);
+      deepgramEndSession();
+      setForcedLegacy(true);
+      await cascadeStartSession();
+    }
+  }, [canUseLegacyCascade, cascadeStartSession, deepgramEndSession, deepgramStartSession, preferredProvider]);
 
   const endSession = useCallback(() => {
     deepgramEndSession();
