@@ -22,11 +22,10 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const DEFAULT_CARTESIA_MALE_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
 const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
 const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_multilingual_v2";
-const DEFAULT_ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const DEFAULT_ELEVENLABS_VOICE_ID = "xNGAXaCH8MaasNuo7Hr7";
 const SUPPORTED_PROVIDER = "deepgram-agent";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
@@ -40,16 +39,28 @@ function normalizeThinkModel(provider: string, model: string) {
   return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
 }
 
-const publicGatewayUrl = () =>
-  Deno.env.get("SYNAPSE_VOICE_GATEWAY_URL") ||
-  Deno.env.get("PUBLIC_SYNAPSE_VOICE_GATEWAY_URL") ||
-  DEFAULT_GATEWAY_URL;
+const publicGatewayUrl = (originHeader?: string | null) => {
+  const configured =
+    Deno.env.get("SYNAPSE_VOICE_GATEWAY_URL") ||
+    Deno.env.get("PUBLIC_SYNAPSE_VOICE_GATEWAY_URL");
+  if (configured) return configured;
+
+  try {
+    const origin = originHeader ? new URL(originHeader) : null;
+    const host = origin?.hostname || "";
+    if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(host)) return DEFAULT_GATEWAY_URL;
+    if (/^(www\.)?neuronexai\.com\.br$/i.test(host)) {
+      return `wss://${origin!.host}/v1/synapse/voice`;
+    }
+  } catch {
+    // Fall through to the local development gateway default.
+  }
+
+  return DEFAULT_GATEWAY_URL;
+};
 
 const configuredVoiceProvider = () =>
   clean(Deno.env.get("SYNAPSE_VOICE_PROVIDER") || SUPPORTED_PROVIDER, 80).toLowerCase();
-
-const configuredTtsProvider = () =>
-  clean(Deno.env.get("SYNAPSE_VOICE_TTS_PROVIDER") || "deepgram-elevenlabs", 80).toLowerCase();
 
 const toDeepgramFunction = (tool: any) => {
   const fn = tool?.function || {};
@@ -157,94 +168,35 @@ function buildVoiceFunctions() {
 }
 
 function buildSpeakConfig() {
-  const ttsProvider = configuredTtsProvider();
-
-  const speakProviderOverride = parseJsonEnv("SYNAPSE_VOICE_SPEAK_PROVIDER_JSON");
-  if (speakProviderOverride) {
-    return {
-      speak: {
-        provider: speakProviderOverride,
-      },
-      ttsProvider: `deepgram-managed-${clean(speakProviderOverride.type || "custom", 80)}`,
-      ttsVoice: clean(
-        speakProviderOverride.voice ||
-          speakProviderOverride.voice_id ||
-          speakProviderOverride.model_id ||
-          speakProviderOverride.model,
-        160,
-      ),
-    };
-  }
-
-  if (ttsProvider === "deepgram-elevenlabs" || ttsProvider === "eleven_labs") {
-    const modelId = Deno.env.get("DEEPGRAM_ELEVENLABS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID;
-    const voiceId = Deno.env.get("DEEPGRAM_ELEVENLABS_VOICE_ID") || DEFAULT_ELEVENLABS_VOICE_ID;
-    return {
-      speak: {
-        provider: {
-          type: "eleven_labs",
-          model_id: modelId,
-          voice_id: voiceId,
-          language_code: Deno.env.get("DEEPGRAM_ELEVENLABS_LANGUAGE_CODE") || "pt-BR",
-        },
-      },
-      ttsProvider: "deepgram-managed-elevenlabs",
-      ttsVoice: voiceId,
-    };
-  }
-
-  const cartesiaVoiceId =
-    Deno.env.get("CARTESIA_VOICE_ID") ||
-    Deno.env.get("DEEPGRAM_CARTESIA_VOICE_ID") ||
-    DEFAULT_CARTESIA_MALE_VOICE_ID;
-  const cartesiaApiKey =
-    Deno.env.get("CARTESIA_API_KEY") ||
-    Deno.env.get("DEEPGRAM_CARTESIA_API_KEY") ||
-    "";
-  const cartesiaManaged = Deno.env.get("DEEPGRAM_MANAGED_CARTESIA") !== "false" && ttsProvider !== "cartesia-byo";
-  const modelId = Deno.env.get("CARTESIA_MODEL_ID") || "sonic-2";
+  const modelId = Deno.env.get("DEEPGRAM_ELEVENLABS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID;
+  const voiceId =
+    Deno.env.get("DEEPGRAM_ELEVENLABS_VOICE_ID") ||
+    Deno.env.get("ELEVENLABS_BRAZILIAN_MALE_VOICE_ID") ||
+    DEFAULT_ELEVENLABS_VOICE_ID;
+  const languageCode = Deno.env.get("DEEPGRAM_ELEVENLABS_LANGUAGE_CODE") || "pt-BR";
+  const elevenLabsApiKey = Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("DEEPGRAM_ELEVENLABS_API_KEY") || "";
 
   const speak: Record<string, unknown> = {
     provider: {
-      type: "cartesia",
+      type: "eleven_labs",
       model_id: modelId,
-      voice: {
-        mode: "id",
-        id: cartesiaVoiceId,
-      },
-      language: Deno.env.get("CARTESIA_LANGUAGE") || "pt-BR",
-      speed: Deno.env.get("CARTESIA_SPEED") || "normal",
-      volume: Number(Deno.env.get("CARTESIA_VOLUME") || "1"),
+      voice_id: voiceId,
+      language_code: languageCode,
     },
   };
 
-  if (cartesiaApiKey && !cartesiaManaged) {
+  if (elevenLabsApiKey) {
     speak.endpoint = {
-      url: Deno.env.get("CARTESIA_TTS_URL") || "https://api.cartesia.ai/tts/bytes",
-      headers: { "x-api-key": cartesiaApiKey },
-    };
-  }
-
-  if (Deno.env.get("DEEPGRAM_ENABLE_AURA_FALLBACK") === "true") {
-    return {
-      speak: [
-        speak,
-        {
-          provider: {
-            type: "deepgram",
-            model: Deno.env.get("DEEPGRAM_FALLBACK_TTS_MODEL") || "aura-2-thalia-en",
-          },
-        },
-      ],
-      ttsProvider: cartesiaManaged ? "deepgram-managed-cartesia+aura-fallback" : "byo-cartesia+aura-fallback",
-      ttsVoice: cartesiaVoiceId,
+      url: Deno.env.get("ELEVENLABS_TTS_URL") ||
+        `wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/multi-stream-input`,
+      headers: { "xi-api-key": elevenLabsApiKey },
     };
   }
 
   return {
     speak,
-    ttsProvider: cartesiaManaged ? "deepgram-managed-cartesia" : "byo-cartesia",
-    ttsVoice: cartesiaVoiceId,
+    ttsProvider: elevenLabsApiKey ? "byo-elevenlabs-via-deepgram-agent" : "deepgram-managed-elevenlabs",
+    ttsVoice: voiceId,
   };
 }
 
@@ -415,7 +367,7 @@ serve(async (request) => {
       sessionId: conversationId,
       conversationId,
       voiceSessionId,
-      gatewayUrl: publicGatewayUrl(),
+      gatewayUrl: publicGatewayUrl(request.headers.get("Origin")),
       deepgramUrl: includeSettings ? Deno.env.get("DEEPGRAM_AGENT_URL") || DEFAULT_DEEPGRAM_URL : undefined,
       expiresAt,
       model: metadata.thinkModel,

@@ -18,7 +18,9 @@ const friendlyError = (error: string | null) => {
   if (!error) return null;
   if (error.includes("microfone") || error.includes("Microfone")) return error;
   if (error.includes("Sessao invalida") || error.includes("Sessão inválida")) return "Sua sessao expirou. Entre novamente para usar o modo voz.";
-  if (/deepgram|gateway|settings|cartesia|websocket|DEEPGRAM_API_KEY/i.test(error)) return error;
+  if (/deepgram|gateway|settings|cartesia|websocket|eleven|api[_ -]?key|secret|provider/i.test(error)) {
+    return "Nao consegui iniciar a voz do Synapse agora. Verifique a conexao e tente novamente.";
+  }
   return "Nao consegui continuar a conversa por voz. Tente reiniciar a sessao.";
 };
 
@@ -35,6 +37,8 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
     provider: voiceProvider,
     gatewayUrl: voiceGatewayUrl,
     sessionId: voiceSessionId,
+    conversationId: voiceConversationId,
+    voiceSessionId: voiceRunSessionId,
   } = useVoiceConfig();
 
   const handleResponseText = useCallback((text: string) => {
@@ -61,6 +65,8 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
     provider: voiceProvider,
     gatewayUrl: voiceGatewayUrl,
     sessionId: voiceSessionId,
+    conversationId: voiceConversationId,
+    voiceSessionId: voiceRunSessionId,
     systemInstruction: SYSTEM_INSTRUCTION,
     language: "pt-BR",
     onResponseText: handleResponseText,
@@ -82,6 +88,8 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
         gatewayUrl: config.gatewayUrl,
         provider: config.provider,
         sessionId: config.sessionId,
+        conversationId: config.conversationId,
+        voiceSessionId: config.voiceSessionId,
       });
     } catch (caught: unknown) {
       const message = caught instanceof Error ? caught.message : "Não foi possível iniciar o modo voz.";

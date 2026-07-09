@@ -1,4 +1,4 @@
-export type SynapseVoiceProvider = "deepgram-agent" | "legacy-cascade";
+export type SynapseVoiceProvider = "deepgram-agent";
 
 export type SynapseVoicePhase =
   | "idle"

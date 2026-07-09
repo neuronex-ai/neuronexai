@@ -1,23 +1,9 @@
 import { useCallback, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-
-interface VoiceConfig {
-    token: string | null;
-    expiresAt: string | null;
-    newSessionExpiresAt: string | null;
-    model: string;
-    voiceName: string;
-    provider: string;
-    gatewayUrl: string | null;
-    sessionId: string | null;
-    listenModel?: string;
-    ttsProvider?: string;
-    inputSampleRate?: number;
-    outputSampleRate?: number;
-}
+import type { SynapseVoiceConfig } from '@/types/synapse-voice';
 
 const DEEPGRAM_GATEWAY_URL = 'ws://localhost:8789/v1/synapse/voice';
-const DEFAULT_DEEPGRAM_CONFIG: VoiceConfig = {
+const DEFAULT_DEEPGRAM_CONFIG: SynapseVoiceConfig = {
     token: null,
     expiresAt: null,
     newSessionExpiresAt: null,
@@ -26,52 +12,44 @@ const DEFAULT_DEEPGRAM_CONFIG: VoiceConfig = {
     provider: 'deepgram-agent',
     gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null,
     sessionId: null,
-};
-
-const LEGACY_CASCADE_CONFIG: VoiceConfig = {
-    token: 'local-cascade',
-    expiresAt: 'local',
-    newSessionExpiresAt: 'local',
-    model: 'groq-cascade',
-    voiceName: 'device-pt-BR',
-    provider: 'legacy-cascade',
-    gatewayUrl: null as string | null,
-    sessionId: null as string | null,
+    conversationId: null,
+    voiceSessionId: null,
 };
 
 const isLocalGatewayUrl = (value: string) =>
     /^wss?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(?:\/|$)/i.test(value);
 
+const isLocalBrowserRuntime = () => {
+    if (typeof window === 'undefined') return import.meta.env.DEV;
+    return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname);
+};
+
+const isSecureGatewayUrl = (value: string) => /^wss:\/\//i.test(value);
+
 const resolveGatewayUrl = (remoteGatewayUrl: unknown) => {
-    if (import.meta.env.DEV && import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL) {
-        return import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL;
-    }
     const configured = import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null;
     const remote = typeof remoteGatewayUrl === 'string' ? remoteGatewayUrl.trim() : '';
-    const candidate = configured || remote || null;
-    if (!candidate) return null;
-    if (!import.meta.env.DEV && isLocalGatewayUrl(candidate)) return null;
+    const localRuntime = isLocalBrowserRuntime();
+    const candidate = configured || remote || (localRuntime ? DEEPGRAM_GATEWAY_URL : null);
+    if (!candidate) {
+        throw new Error('Gateway publico de voz nao configurado.');
+    }
+    if (localRuntime) return candidate;
+    if (isLocalGatewayUrl(candidate)) {
+        throw new Error('Gateway local de voz nao pode ser usado em producao.');
+    }
+    if (!isSecureGatewayUrl(candidate)) {
+        throw new Error('Gateway de voz em producao precisa usar WSS.');
+    }
     return candidate;
 };
 
 export function useVoiceConfig() {
-    const [config, setConfig] = useState<VoiceConfig>(() => {
-        if (import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER === 'legacy-cascade') {
-            return LEGACY_CASCADE_CONFIG;
-        }
-        return DEFAULT_DEEPGRAM_CONFIG;
-    });
+    const [config, setConfig] = useState<SynapseVoiceConfig>(DEFAULT_DEEPGRAM_CONFIG);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    const refresh = useCallback(async (): Promise<VoiceConfig> => {
-        const forcedProvider = import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER;
-        if (forcedProvider === 'legacy-cascade') {
-            setConfig(LEGACY_CASCADE_CONFIG);
-            setError(null);
-            return LEGACY_CASCADE_CONFIG;
-        }
-
+    const refresh = useCallback(async (): Promise<SynapseVoiceConfig> => {
         setIsLoading(true);
         setError(null);
         try {
@@ -84,15 +62,14 @@ export function useVoiceConfig() {
             const gatewayUrl = resolveGatewayUrl(data?.gatewayUrl);
             const provider = String(data?.provider || 'deepgram-agent');
             const sessionId = typeof data?.sessionId === 'string' ? data.sessionId : null;
+            const conversationId = typeof data?.conversationId === 'string' ? data.conversationId : sessionId;
+            const voiceSessionId = typeof data?.voiceSessionId === 'string' ? data.voiceSessionId : null;
 
-            if (provider === 'deepgram-agent' && !gatewayUrl) {
-                const fallback = { ...LEGACY_CASCADE_CONFIG, sessionId };
-                console.warn('[Synapse Voice] Gateway remoto ausente; usando conversa por voz alternativa.');
-                setConfig(fallback);
-                return fallback;
+            if (provider !== 'deepgram-agent') {
+                throw new Error('Provider de voz invalido para o Synapse.');
             }
 
-            const next: VoiceConfig = {
+            const next: SynapseVoiceConfig = {
                 token: null,
                 expiresAt: String(data?.expiresAt || ''),
                 newSessionExpiresAt: String(data?.expiresAt || ''),
@@ -101,32 +78,33 @@ export function useVoiceConfig() {
                 provider,
                 gatewayUrl,
                 sessionId,
+                conversationId,
+                voiceSessionId,
                 listenModel: typeof data?.listenModel === 'string' ? data.listenModel : undefined,
                 ttsProvider: typeof data?.ttsProvider === 'string' ? data.ttsProvider : undefined,
                 inputSampleRate: typeof data?.inputSampleRate === 'number' ? data.inputSampleRate : undefined,
                 outputSampleRate: typeof data?.outputSampleRate === 'number' ? data.outputSampleRate : undefined,
+                functionsCount: typeof data?.functionsCount === 'number' ? data.functionsCount : undefined,
             };
             setConfig(next);
             return next;
         } catch (caught) {
             const message = caught instanceof Error ? caught.message : 'Nao foi possivel preparar o agente de voz.';
-            const gatewayUrl = resolveGatewayUrl(import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || DEEPGRAM_GATEWAY_URL);
-
-            if (gatewayUrl) {
-                const gatewayFallback: VoiceConfig = {
+            if (isLocalBrowserRuntime()) {
+                const gatewayFallback: SynapseVoiceConfig = {
                     ...DEFAULT_DEEPGRAM_CONFIG,
-                    gatewayUrl,
+                    gatewayUrl: resolveGatewayUrl(import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || DEEPGRAM_GATEWAY_URL),
                 };
-                console.warn('[Synapse Voice] Config remota indisponivel; usando gateway configurado.', message);
+                console.warn('[Synapse Voice] Config remota indisponivel; usando gateway local Deepgram Agent.', message);
                 setError(null);
                 setConfig(gatewayFallback);
                 return gatewayFallback;
             }
 
-            console.warn('[Synapse Voice] Config remota indisponivel; usando conversa por voz alternativa.', message);
-            setError(null);
-            setConfig(LEGACY_CASCADE_CONFIG);
-            return LEGACY_CASCADE_CONFIG;
+            const userMessage = 'Nao consegui preparar a voz do Synapse. Verifique o gateway de voz em producao.';
+            console.warn('[Synapse Voice] Config remota indisponivel.', message);
+            setError(userMessage);
+            throw new Error(userMessage);
         } finally {
             setIsLoading(false);
         }
@@ -141,8 +119,11 @@ export function useVoiceConfig() {
         provider: config.provider,
         gatewayUrl: config.gatewayUrl,
         sessionId: config.sessionId,
+        conversationId: config.conversationId,
+        voiceSessionId: config.voiceSessionId,
         listenModel: config.listenModel,
         ttsProvider: config.ttsProvider,
+        functionsCount: config.functionsCount,
         isLoading,
         error,
         refresh,

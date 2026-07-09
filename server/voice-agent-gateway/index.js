@@ -29,8 +29,8 @@ const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
 const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_multilingual_v2";
-const DEFAULT_ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const DEFAULT_ELEVENLABS_VOICE_ID = "xNGAXaCH8MaasNuo7Hr7";
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 const newId = () => globalThis.crypto?.randomUUID?.() || `voice-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -110,54 +110,35 @@ function conversationText(event) {
 }
 
 function buildLocalSpeak() {
-  const ttsProvider = clean(process.env.SYNAPSE_VOICE_TTS_PROVIDER || "deepgram-elevenlabs", 80).toLowerCase();
-  const speakProviderOverride = parseJsonEnv("SYNAPSE_VOICE_SPEAK_PROVIDER_JSON");
-  if (speakProviderOverride) {
-    return {
-      speak: { provider: speakProviderOverride },
-      ttsProvider: `deepgram-managed-${clean(speakProviderOverride.type || "custom", 80)}`,
-      ttsVoice: clean(speakProviderOverride.voice || speakProviderOverride.voice_id || speakProviderOverride.model_id || speakProviderOverride.model, 160),
-    };
-  }
+  const modelId = process.env.DEEPGRAM_ELEVENLABS_MODEL_ID || DEFAULT_ELEVENLABS_MODEL_ID;
+  const voiceId =
+    process.env.DEEPGRAM_ELEVENLABS_VOICE_ID ||
+    process.env.ELEVENLABS_BRAZILIAN_MALE_VOICE_ID ||
+    DEFAULT_ELEVENLABS_VOICE_ID;
+  const languageCode = process.env.DEEPGRAM_ELEVENLABS_LANGUAGE_CODE || "pt-BR";
+  const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY || process.env.DEEPGRAM_ELEVENLABS_API_KEY || "";
 
-  if (ttsProvider === "deepgram-elevenlabs" || ttsProvider === "eleven_labs") {
-    const modelId = process.env.DEEPGRAM_ELEVENLABS_MODEL_ID || DEFAULT_ELEVENLABS_MODEL_ID;
-    const voiceId = process.env.DEEPGRAM_ELEVENLABS_VOICE_ID || DEFAULT_ELEVENLABS_VOICE_ID;
-    return {
-      speak: {
-        provider: {
-          type: "eleven_labs",
-          model_id: modelId,
-          voice_id: voiceId,
-          language_code: process.env.DEEPGRAM_ELEVENLABS_LANGUAGE_CODE || "pt-BR",
-        },
-      },
-      ttsProvider: "deepgram-managed-elevenlabs",
-      ttsVoice: voiceId,
-    };
-  }
-
-  const cartesiaVoiceId =
-    process.env.CARTESIA_VOICE_ID ||
-    process.env.DEEPGRAM_CARTESIA_VOICE_ID ||
-    "a167e0f3-df7e-4d52-a9c3-f949145efdab";
-
-  return {
+  const speak = {
     speak: {
       provider: {
-        type: "cartesia",
-        model_id: process.env.CARTESIA_MODEL_ID || "sonic-2",
-        language: process.env.CARTESIA_LANGUAGE || "pt-BR",
-        voice: {
-          mode: "id",
-          id: cartesiaVoiceId,
-        },
-        speed: process.env.CARTESIA_SPEED || "normal",
+        type: "eleven_labs",
+        model_id: modelId,
+        voice_id: voiceId,
+        language_code: languageCode,
       },
     },
-    ttsProvider: "deepgram-managed-cartesia",
-    ttsVoice: cartesiaVoiceId,
+    ttsProvider: elevenLabsApiKey ? "byo-elevenlabs-via-deepgram-agent" : "deepgram-managed-elevenlabs",
+    ttsVoice: voiceId,
   };
+
+  if (elevenLabsApiKey) {
+    speak.speak.endpoint = {
+      url: process.env.ELEVENLABS_TTS_URL || `wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/multi-stream-input`,
+      headers: { "xi-api-key": elevenLabsApiKey },
+    };
+  }
+
+  return speak;
 }
 
 function buildLocalSpeakConfig() {
@@ -190,9 +171,13 @@ function buildLocalAgentSettings(payload) {
   const prompt = [
     "Voce e o Synapse, agente de voz da NeuroNex para psicologos.",
     "Fale em portugues brasileiro natural, curto e humano.",
-    "Use frases breves, nao leia rotas, IDs, JSON, SQL, nomes de tabelas ou detalhes internos.",
+    "Prefira vocabulario brasileiro: arquivo, usuario, consulta, agendamento, estou verificando, vou dar uma olhada, tudo certo.",
+    "Evite construcoes de portugues de Portugal como estou a verificar, ficheiro, utilizador e marcacao.",
+    "Voce foi desenvolvido pela equipe da NeuroNex AI. Nunca cite Google, OpenAI, Anthropic, ElevenLabs, Deepgram, NVIDIA ou qualquer fornecedor.",
+    "Use frases breves, nao leia rotas, IDs, JSON, SQL, nomes de tabelas, provedores, APIs ou detalhes internos.",
     "Quando precisar consultar algo, aguarde o retorno real da ferramenta antes de responder conclusoes ao psicologo.",
     "O sistema de voz injeta mensagens curtas de progresso automaticamente enquanto ferramentas rodam; nao invente resultados.",
+    "Para acoes sensiveis, peca confirmacao explicita antes de executar.",
     clean(payload.systemInstruction, 1600),
   ].filter(Boolean).join("\n\n");
 

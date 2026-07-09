@@ -28,9 +28,33 @@ interface Options {
   onAudioIntensity?: (intensity: number) => void;
 }
 
-const DEFAULT_GATEWAY_URL = "ws://localhost:8080/v1/synapse/voice";
+const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
+
+const isLocalBrowserRuntime = () => {
+  if (typeof window === "undefined") return import.meta.env.DEV;
+  return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname);
+};
+
+const isLocalGatewayUrl = (value: string) =>
+  /^wss?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(?:\/|$)/i.test(value);
+
+const userFacingVoiceError = (errorType: unknown, rawError: unknown) => {
+  const type = clean(errorType, 80);
+  const message = clean(rawError, 1000);
+
+  if (/auth|permission/i.test(type) || /sess[aã]o|token|auth|unauthorized|401|403/i.test(message)) {
+    return "Sua sessao expirou. Entre novamente para usar o Synapse por voz.";
+  }
+  if (/microfone|microphone|getUserMedia|permission denied|notallowed/i.test(message)) {
+    return "Nao consegui acessar o microfone. Verifique a permissao do navegador e tente novamente.";
+  }
+  if (/config|provider|gateway|network|voice|socket|deepgram|eleven|api[_ -]?key|secret/i.test(`${type} ${message}`)) {
+    return "Nao consegui iniciar a voz do Synapse agora. Verifique a conexao e tente novamente.";
+  }
+  return message || "Nao consegui continuar a conversa por voz. Tente reiniciar a sessao.";
+};
 
 const toNumber = (value: unknown, fallback = 0) => {
   const parsed = Number(value);
@@ -39,9 +63,9 @@ const toNumber = (value: unknown, fallback = 0) => {
 
 const gatewayUrlFromEnv = () => {
   const configured = import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL;
-  if (configured) return configured;
-  if (typeof window !== "undefined" && window.location.protocol === "https:") return "";
-  return DEFAULT_GATEWAY_URL;
+  if (isLocalBrowserRuntime()) return configured || DEFAULT_GATEWAY_URL;
+  if (configured && !isLocalGatewayUrl(configured) && /^wss:\/\//i.test(configured)) return configured;
+  return "";
 };
 
 const parseMessage = (value: unknown) => {
@@ -491,7 +515,8 @@ export function useDeepgramAgentVoice({
     }
 
     if (type === "gateway_error") {
-      const message = clean(payload.error || "Nao foi possivel continuar a voz.", 1000);
+      console.warn("[Synapse Voice] Gateway error", payload);
+      const message = userFacingVoiceError(payload.errorType, payload.error);
       setError(message);
       setIsProcessing(false);
       setVoicePhase("error");
