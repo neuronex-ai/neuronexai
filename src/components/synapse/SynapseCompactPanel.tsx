@@ -834,11 +834,11 @@ export const SynapseCompactPanel = () => {
                                             )}
 
                                             <div className={cn(
-                                                                                            'relative group max-w-[85%]',
-                                                                                            msg.role === 'user'
-                                                                                                ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-primary-foreground shadow-xl'
-                                                                                                : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035] dark:text-white'
-                                                                                        )}>
+                                                'relative group max-w-[85%]',
+                                                msg.role === 'user'
+                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-[#1a1a1a] shadow-xl dark:text-white'
+                                                    : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
+                                            )}>
                                                 {msg.role === "assistant" && (
                                                     <button
                                                         onClick={() => handleCopy(msg.id, msg.content)}
