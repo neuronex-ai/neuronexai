@@ -14,6 +14,11 @@ import {
 
 import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import {
+  humanizeSynapseActionType,
+  humanizeSynapseWidgetTitle,
+  sanitizeSynapseDisplayText,
+} from "@/lib/synapse-humanize";
+import {
   firstString,
   isRecord,
   normalizeSynapseDataArray,
@@ -44,6 +49,7 @@ const toBrazilTime = (iso?: unknown) => {
 };
 
 const actionLabel = (type: string) => {
+  return humanizeSynapseActionType(type);
   const normalized = normalizeSynapseWidgetType(type);
   const labels: Record<string, string> = {
     create_appointment: "Agendamento criado",
@@ -170,7 +176,7 @@ export function MobileSynapseWidgetRenderer({ widgetData }: MobileSynapseWidgetR
   const normalizedType = normalizeSynapseWidgetType(type);
   const rawData = normalizedWidget.data ?? normalizedWidget.payload ?? normalizedWidget;
   const dataArray = normalizeSynapseDataArray(rawData);
-  const title = firstString(normalizedWidget.title) || actionLabel(type);
+  const title = humanizeSynapseWidgetTitle(firstString(normalizedWidget.title), type);
 
   const openTarget = (data: unknown = rawData) => {
     const path = getTargetPath(type, data);
@@ -188,8 +194,8 @@ export function MobileSynapseWidgetRenderer({ widgetData }: MobileSynapseWidgetR
         {dataArray.map((item, index) => {
           const patient = isRecord(item) ? item : {};
           const patientId = firstString(patient.id, patient.patient_id);
-          const patientName = firstString(patient.name, patient.patient_name) || "Paciente";
-          const detail = firstString(patient.email, patient.phone, patient.diagnosis) || "Abrir detalhes";
+          const patientName = sanitizeSynapseDisplayText(firstString(patient.name, patient.patient_name), "Paciente");
+          const detail = sanitizeSynapseDisplayText(firstString(patient.email, patient.phone, patient.diagnosis), "Abrir detalhes");
           return (
             <ActionRow
               key={patientId || `patient-${index}`}
@@ -217,8 +223,8 @@ export function MobileSynapseWidgetRenderer({ widgetData }: MobileSynapseWidgetR
             appointment.time,
             start ? `${toBrazilTime(start)}${end ? ` às ${toBrazilTime(end)}` : ""}` : undefined,
           );
-          const patientName = firstString(appointment.patient_name, patient.name, appointment.title) || "Agendamento";
-          const appointmentType = firstString(appointment.type) || "presencial";
+          const patientName = sanitizeSynapseDisplayText(firstString(appointment.patient_name, patient.name, appointment.title), "Agendamento");
+          const appointmentType = sanitizeSynapseDisplayText(firstString(appointment.type), "presencial");
           const status = firstString(appointment.status) || "confirmed";
           const meta = getAppointmentStatusMeta(status, firstString(appointment.notes));
           const Icon = appointmentType === "online" ? Stethoscope : Calendar;

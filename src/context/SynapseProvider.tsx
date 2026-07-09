@@ -135,7 +135,7 @@ const sanitizeTimelineText = (value?: string) => {
         next = next.replace(new RegExp(toolName, 'gi'), label);
     }
     return next
-        .replace(/[{}[\]"]/g, '')
+        .replace(/[{}\[\]"]/g, '')
         .replace(/\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientAction|function_call)\b/gi, '')
         .replace(/\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi, 'ação')
         .replace(/\s+/g, ' ')
