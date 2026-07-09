@@ -172,23 +172,23 @@ export const ChatInputArea = ({
 
                 {/* Text Input Area */}
                 <div className="relative flex h-full min-w-0 flex-1 items-center">
-                        <Textarea
-                            ref={textareaRef}
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onFocus={() => setIsFocused(true)}
-                            onBlur={() => setIsFocused(false)}
-                            onKeyDown={handleKeyDown}
-                            placeholder="Pergunte sobre pacientes, agenda ou financeiro..."
-                            aria-label="Mensagem para o Synapse"
-                            className={cn(
-                                "max-h-[240px] w-full resize-none border-none bg-transparent p-0 px-2 text-[15px] font-medium leading-relaxed text-foreground shadow-none outline-none scrollbar-none transition-all duration-300",
-                                "placeholder:text-zinc-500/58 focus:border-transparent focus:outline-none focus:ring-0 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-0 dark:placeholder:text-white/32",
-                                isFocused ? "min-h-[60px]" : "min-h-[24px]"
-                            )}
-                            rows={1}
-                            disabled={isComposerBusy}
-                        />
+                    <Textarea
+                        ref={textareaRef}
+                        value={inputValue}
+                        onChange={(e) => setInputValue(e.target.value)}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
+                        onKeyDown={handleKeyDown}
+                        placeholder="Pergunte sobre pacientes, agenda ou financeiro..."
+                        aria-label="Mensagem para o Synapse"
+                        className={cn(
+                            "max-h-[240px] w-full resize-none border-0 bg-transparent p-0 px-2 text-[15px] font-medium leading-relaxed text-foreground shadow-none outline-none ring-0 scrollbar-none transition-all duration-300",
+                            "placeholder:text-zinc-500/58 focus:border-transparent focus:outline-none focus:ring-0 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 dark:placeholder:text-white/32",
+                            isFocused ? "min-h-[60px]" : "min-h-[24px]",
+                        )}
+                        rows={1}
+                        disabled={isComposerBusy}
+                    />
                     <AnimatePresence>
                         {isListening && (
                             <motion.div
@@ -198,7 +198,11 @@ export const ChatInputArea = ({
                                 transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
                                 className="pointer-events-none absolute -bottom-6 left-2 right-2 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-300"
                             >
-                                <AudioWaveform isListening />
+                                <AudioWaveform
+                                    isListening
+                                    className="h-3.5 gap-0.5"
+                                    barClassName="w-0.5 from-emerald-500/55 to-emerald-500 dark:from-emerald-300/45 dark:to-emerald-200"
+                                />
                                 <span>Transcrevendo</span>
                             </motion.div>
                         )}
@@ -218,7 +222,7 @@ export const ChatInputArea = ({
                                     ? "bg-emerald-500 text-white shadow-[0_18px_46px_-24px_rgba(16,185,129,0.55)]"
                                     : "text-zinc-500 hover:bg-zinc-950/[0.055] hover:text-zinc-950 dark:text-white/52 dark:hover:bg-white/[0.075] dark:hover:text-white"
                             )}
-                            aria-label={isListening ? "Parar transcrição de voz" : "Iniciar transcrição de voz"}
+                            aria-label={isListening ? "Parar transcricao de voz" : "Iniciar transcricao de voz"}
                             disabled={isComposerBusy}
                         >
                             {isListening ? (

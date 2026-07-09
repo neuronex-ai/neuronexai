@@ -126,49 +126,82 @@ Deno.serve(async (req: Request) => {
             }
             : null;
 
-        // Persist the NeuroNex snapshot before contacting Asaas. The local profile
-        // remains usable even while the provider is reviewing or rejecting fields.
+        const snapshotPatch = {
+            provider: 'asaas',
+            asaas_environment: ASAAS_ENV,
+            holder_name: fullName || null,
+            cpf_cnpj: cpfCnpj || null,
+            birth_date: body.birthDate || null,
+            mobile_phone: sanitizeDigits(body.mobilePhone || body.phone) || null,
+            pep_status: profile.political_exposure || null,
+            address_street: body.address || null,
+            address_number: body.addressNumber || null,
+            address_complement: body.complement || null,
+            address_neighborhood: body.province || null,
+            address_city: profile.city || null,
+            address_state: profile.state || null,
+            address_postal_code: sanitizeDigits(body.postalCode) || null,
+            company_type: body.companyType || null,
+            income_value: body.incomeValue || null,
+            business_url: body.site || null,
+            business_description: businessProfile.product_description || null,
+            business_mcc: businessProfile.mcc || null,
+            bank_code: bankCode || null,
+            bank_name: bankCode || financialAccount.bank_name || null,
+            bank_agency: agency || null,
+            bank_account: normalizedAccount.account || null,
+            bank_account_digit: normalizedAccount.accountDigit || null,
+            bank_account_type: body.account_type || bankAccount.account_type || 'CONTA_CORRENTE',
+            bank_holder_name: ownerName || null,
+            bank_holder_cpf_cnpj: cpfCnpj || null,
+            bank_account_last4: normalizedAccount.accountDisplay.slice(-4) || null,
+            document_front_id: body.documents?.front_file_id || null,
+            document_back_id: body.documents?.back_file_id || null,
+            tos_accepted_at: body.tos?.accepted ? (financialAccount.tos_accepted_at || now) : financialAccount.tos_accepted_at,
+            onboarding_payload: body,
+            ...(metadataPatch ? { metadata: metadataPatch } : {}),
+            updated_at: now,
+        };
+
+        let commercialResult = null;
+        let bankResult = null;
+
+        if (Object.keys(updatePayload).length > 0) {
+            commercialResult = await asaasRequest(
+                '/myAccount/commercialInfo',
+                'POST',
+                updatePayload,
+                subApiKey
+            );
+        }
+
+        if (bankCode && agency && normalizedAccount.account) {
+            bankResult = await asaasRequest(
+                '/bankAccountInfo',
+                'POST',
+                {
+                    bank: { code: bankCode },
+                    accountName: ownerName,
+                    ownerName,
+                    cpfCnpj,
+                    agency,
+                    account: normalizedAccount.account,
+                    accountDigit: normalizedAccount.accountDigit,
+                    bankAccountType: body.account_type || bankAccount.account_type || 'CONTA_CORRENTE',
+                },
+                subApiKey
+            );
+        }
+
+        const accountStatus = await getAsaasAccountStatus(subApiKey);
+        const requirements = buildAsaasRequirementSnapshot(accountStatus, 'sync');
+
         const { error: snapshotError } = await supabaseAdmin
             .from('financial_accounts')
-            .update({
-                provider: 'asaas',
-                asaas_environment: ASAAS_ENV,
-                holder_name: fullName || null,
-                cpf_cnpj: cpfCnpj || null,
-                birth_date: body.birthDate || null,
-                mobile_phone: sanitizeDigits(body.mobilePhone || body.phone) || null,
-                pep_status: profile.political_exposure || null,
-                address_street: body.address || null,
-                address_number: body.addressNumber || null,
-                address_complement: body.complement || null,
-                address_neighborhood: body.province || null,
-                address_city: profile.city || null,
-                address_state: profile.state || null,
-                address_postal_code: sanitizeDigits(body.postalCode) || null,
-                company_type: body.companyType || null,
-                income_value: body.incomeValue || null,
-                business_url: body.site || null,
-                business_description: businessProfile.product_description || null,
-                business_mcc: businessProfile.mcc || null,
-                bank_code: bankCode || null,
-                bank_name: bankCode || financialAccount.bank_name || null,
-                bank_agency: agency || null,
-                bank_account: normalizedAccount.account || null,
-                bank_account_digit: normalizedAccount.accountDigit || null,
-                bank_account_type: body.account_type || bankAccount.account_type || 'CONTA_CORRENTE',
-                bank_holder_name: ownerName || null,
-                bank_holder_cpf_cnpj: cpfCnpj || null,
-                bank_account_last4: normalizedAccount.accountDisplay.slice(-4) || null,
-                document_front_id: body.documents?.front_file_id || null,
-                document_back_id: body.documents?.back_file_id || null,
-                tos_accepted_at: body.tos?.accepted ? (financialAccount.tos_accepted_at || now) : financialAccount.tos_accepted_at,
-                onboarding_payload: body,
-                ...(metadataPatch ? { metadata: metadataPatch } : {}),
-                updated_at: now,
-            })
+            .update(snapshotPatch)
             .eq('id', financialAccount.id);
-
         if (snapshotError) throw snapshotError;
+
         if (acceptance) {
             await recordFinancialOnboardingAcceptances({
                 userId: user.id,
@@ -180,63 +213,11 @@ Deno.serve(async (req: Request) => {
                 },
             });
         }
-
-        const warnings: string[] = [];
-        let commercialResult = null;
-        let bankResult = null;
-
-        if (Object.keys(updatePayload).length > 0) {
-            try {
-                commercialResult = await asaasRequest(
-                    '/myAccount/commercialInfo',
-                    'POST',
-                    updatePayload,
-                    subApiKey
-                );
-            } catch (error: any) {
-                console.warn('[asaas-account-update] Commercial sync deferred:', error);
-                warnings.push(error?.message || 'Dados comerciais aguardando sincronização com a Asaas.');
-            }
-        }
-
-        if (bankCode && agency && normalizedAccount.account) {
-            try {
-                bankResult = await asaasRequest(
-                    '/bankAccountInfo',
-                    'POST',
-                    {
-                        bank: { code: bankCode },
-                        accountName: ownerName,
-                        ownerName,
-                        cpfCnpj,
-                        agency,
-                        account: normalizedAccount.account,
-                        accountDigit: normalizedAccount.accountDigit,
-                        bankAccountType: body.account_type || bankAccount.account_type || 'CONTA_CORRENTE',
-                    },
-                    subApiKey
-                );
-            } catch (error: any) {
-                console.warn('[asaas-account-update] Bank account sync deferred:', error);
-                warnings.push(error?.message || 'Conta bancária aguardando sincronização com a Asaas.');
-            }
-        }
-
-        let accountStatus = null;
-        let requirements = null;
-        try {
-            accountStatus = await getAsaasAccountStatus(subApiKey);
-            requirements = buildAsaasRequirementSnapshot(accountStatus, 'sync');
-            await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'sync');
-        } catch (statusError: any) {
-            console.warn('[asaas-account-update] Status sync deferred:', statusError);
-            warnings.push(statusError?.message || 'Situação cadastral aguardando sincronização com a Asaas.');
-        }
+        await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'sync');
 
         return jsonResponse({
             success: true,
-            sync_status: warnings.length ? 'deferred' : 'synced',
-            warnings,
+            sync_status: 'synced',
             commercial_info: commercialResult,
             bank_info: bankResult,
             account_status: accountStatus,

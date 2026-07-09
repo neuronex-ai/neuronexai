@@ -56,7 +56,6 @@ interface UseSpeechRecognitionProps {
 }
 
 const browserSpeechServiceErrors = new Set([
-  'network',
   'service-not-allowed',
   'language-not-supported',
 ]);
@@ -104,6 +103,7 @@ export const useSpeechRecognition = ({
     if (!Recognition || !isSupported) {
       setIsSupported(false);
       setLastError('unsupported');
+      toast.error('Transcricao por voz indisponivel neste navegador.');
       onError?.('unsupported');
       return;
     }
@@ -146,6 +146,17 @@ export const useSpeechRecognition = ({
       };
 
       recognition.onerror = (event: SpeechRecognitionErrorEventLike) => {
+        if (event.error === 'network') {
+          shouldRestartRef.current = false;
+          recognitionRef.current = null;
+          setIsListening(false);
+          setInterimTranscript('');
+          setLastError('network');
+          toast.error('Falha na transcricao de voz. Verifique a conexao e tente novamente.');
+          onError?.('network');
+          return;
+        }
+
         if (browserSpeechServiceErrors.has(event.error)) {
           shouldRestartRef.current = false;
           recognitionRef.current = null;
@@ -153,6 +164,7 @@ export const useSpeechRecognition = ({
           setInterimTranscript('');
           setIsSupported(false);
           setLastError('unsupported');
+          toast.error('Transcricao por voz indisponivel neste navegador.');
           onError?.('unsupported');
           return;
         }
@@ -163,13 +175,13 @@ export const useSpeechRecognition = ({
         if (event.error === 'not-allowed') {
           shouldRestartRef.current = false;
           setIsListening(false);
-          toast.error('Permissão de microfone negada.');
+          toast.error('Permissao de microfone negada.');
         }
 
         if (event.error === 'audio-capture') {
           shouldRestartRef.current = false;
           setIsListening(false);
-          toast.error('Nenhum microfone disponível para a transcrição.');
+          toast.error('Nenhum microfone disponivel para a transcricao.');
         }
       };
 
@@ -202,6 +214,7 @@ export const useSpeechRecognition = ({
 
       setIsSupported(false);
       setLastError('unsupported');
+      toast.error('Transcricao por voz indisponivel neste navegador.');
       onError?.('unsupported');
     }
   }, [continuous, isListening, isSupported, lang, onError, onInterimResult, onResult]);

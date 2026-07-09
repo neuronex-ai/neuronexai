@@ -39,11 +39,11 @@ export const ChatSidebar = ({
         });
     };
 
-    const filteredSessions = sessions?.filter(s =>
+    const filteredSessions = (sessions ?? []).filter(s =>
         s.title?.toLowerCase().includes(filter.toLowerCase())
     );
 
-    const groupedSessions = filteredSessions?.reduce((acc, session) => {
+    const groupedSessions = filteredSessions.reduce((acc, session) => {
         const date = new Date(session.created_at);
         let key = "Antigos";
 
@@ -58,7 +58,7 @@ export const ChatSidebar = ({
     }, {} as Record<string, ChatSession[]>);
 
     const groupOrder = ["Hoje", "Ontem", "7 Dias", "30 Dias", "Antigos"];
-    const hasVisibleSessions = groupOrder.some((label) => Boolean(groupedSessions?.[label]?.length));
+    const hasVisibleSessions = groupOrder.some((label) => Boolean(groupedSessions[label]?.length));
 
     return (
         <div className="relative flex h-full flex-col overflow-hidden bg-transparent backdrop-blur-md">

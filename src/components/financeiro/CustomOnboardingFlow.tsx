@@ -917,15 +917,8 @@ export const CustomOnboardingFlow = ({
                 // Immediately attempt to upload documents if provided
                 toast.info("Conta criada! Sincronizando dados...");
                 
-                try {
-                    const docs = await uploadDocumentsIfNeeded();
-                    const updateResult = await updateAccount.mutateAsync(buildOnboardingPayload(formData, docs));
-                    if (updateResult?.sync_status === "deferred") {
-                        toast.warning("Dados salvos. Alguns campos ainda aguardam validação da Asaas.");
-                    }
-                } catch (docErr) {
-                    console.warn("Upload imediato falhou, será tentado novamente:", docErr);
-                }
+                const docs = await uploadDocumentsIfNeeded();
+                await updateAccount.mutateAsync(buildOnboardingPayload(formData, docs));
 
                 // Poll for status update (Asaas sync window)
                 const synced = await pollAccountStatus();
@@ -936,17 +929,10 @@ export const CustomOnboardingFlow = ({
                 // Account already exists - update it and upload docs
                 const docs = await uploadDocumentsIfNeeded();
                 const payload = buildOnboardingPayload(formData, docs);
-                const updateResult = await updateAccount.mutateAsync(payload);
-                if (updateResult?.sync_status === "deferred") {
-                    toast.warning("Dados salvos. A sincronização com a Asaas seguirá em segundo plano.");
-                }
+                await updateAccount.mutateAsync(payload);
                 
                 // Light sync
-                try {
-                    await syncAccount.mutateAsync();
-                } catch (syncError) {
-                    console.warn("[Onboarding] Final sync deferred:", syncError);
-                }
+                await syncAccount.mutateAsync();
             }
 
             setStep("success");

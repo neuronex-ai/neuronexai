@@ -21,7 +21,14 @@ const isLocalGatewayUrl = (value: string) =>
 
 const isLocalBrowserRuntime = () => {
     if (typeof window === 'undefined') return import.meta.env.DEV;
+    if (import.meta.env.DEV) return true;
     return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname);
+};
+
+const localBrowserGatewayUrl = () => {
+    if (typeof window === 'undefined') return DEEPGRAM_GATEWAY_URL;
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    return `${protocol}//${window.location.host}/v1/synapse/voice`;
 };
 
 const isSecureGatewayUrl = (value: string) => /^wss:\/\//i.test(value);
@@ -30,7 +37,11 @@ const resolveGatewayUrl = (remoteGatewayUrl: unknown) => {
     const configured = import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null;
     const remote = typeof remoteGatewayUrl === 'string' ? remoteGatewayUrl.trim() : '';
     const localRuntime = isLocalBrowserRuntime();
-    const candidate = configured || remote || (localRuntime ? DEEPGRAM_GATEWAY_URL : null);
+    const candidate = localRuntime
+        ? configured && !isLocalGatewayUrl(configured)
+            ? configured
+            : localBrowserGatewayUrl()
+        : configured || remote || null;
     if (!candidate) {
         throw new Error('Gateway publico de voz nao configurado.');
     }
@@ -93,7 +104,7 @@ export function useVoiceConfig() {
             if (isLocalBrowserRuntime()) {
                 const gatewayFallback: SynapseVoiceConfig = {
                     ...DEFAULT_DEEPGRAM_CONFIG,
-                    gatewayUrl: resolveGatewayUrl(import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || DEEPGRAM_GATEWAY_URL),
+                    gatewayUrl: resolveGatewayUrl(import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || localBrowserGatewayUrl()),
                 };
                 console.warn('[Synapse Voice] Config remota indisponivel; usando gateway local Deepgram Agent.', message);
                 setError(null);

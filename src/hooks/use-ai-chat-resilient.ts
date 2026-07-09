@@ -45,9 +45,15 @@ async function invokeProvider(name: string, input: SendInput) {
 
 async function sendWithFallback(input: SendInput) {
   try {
-    return await invokeProvider("synapse-text-fallback", input);
+    return await invokeProvider("synapse-text-gateway", input);
   } catch (agentError) {
     console.warn("[Synapse] Agente principal indisponível.", agentError);
+
+    try {
+      return await invokeProvider("synapse-text-fallback", input);
+    } catch (fallbackError) {
+      console.warn("[Synapse] Agente principal indisponivel.", fallbackError);
+    }
 
     if (INTERNAL_DATA.test(input.message)) {
       return {

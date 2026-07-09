@@ -492,40 +492,25 @@ export function MobileNeuroFinanceOnboardingSheet({
       if (currentAccountId) {
         const front = await uploadDocument(frontFile);
         const back = await uploadDocument(backFile);
-        const result = await account.updateAccount.mutateAsync(buildPayload(form, {
+        await account.updateAccount.mutateAsync(buildPayload(form, {
           front: front || currentDocs.front,
           back: back || currentDocs.back,
         }));
-        if ((result as any)?.sync_status === "deferred") {
-          toast.warning("Dados salvos. A sincronização com a Asaas seguirá em segundo plano.");
-        }
       } else {
         const onboardingResult = await account.startOnboarding.mutateAsync(buildPayload(form, currentDocs));
         if (!(onboardingResult as any)?.asaas_account_id) {
           throw new Error("Não foi possível criar a conta conectada.");
         }
 
-        try {
-          const front = await uploadDocument(frontFile);
-          const back = await uploadDocument(backFile);
-          const result = await account.updateAccount.mutateAsync(buildPayload(form, {
-            front: front || currentDocs.front,
-            back: back || currentDocs.back,
-          }));
-          if ((result as any)?.sync_status === "deferred") {
-            toast.warning("Conta criada. Alguns dados ainda aguardam validação da Asaas.");
-          }
-        } catch (documentError) {
-          console.warn("[MobileNeuroFinanceOnboarding] Document update deferred:", documentError);
-          toast.warning("Conta criada. Se algum documento ficar pendente, você poderá enviar em Saúde da Conta.");
-        }
+        const front = await uploadDocument(frontFile);
+        const back = await uploadDocument(backFile);
+        await account.updateAccount.mutateAsync(buildPayload(form, {
+          front: front || currentDocs.front,
+          back: back || currentDocs.back,
+        }));
       }
 
-      try {
-        await account.syncAccount.mutateAsync();
-      } catch (syncError) {
-        console.warn("[MobileNeuroFinanceOnboarding] Final sync deferred:", syncError);
-      }
+      await account.syncAccount.mutateAsync();
 
       toast.success("Conta NeuroFinance enviada para análise.");
       await account.refetch();

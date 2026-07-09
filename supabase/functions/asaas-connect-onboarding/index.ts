@@ -115,45 +115,17 @@ Deno.serve(async (req: Request) => {
                         already_exists: true,
                     },
                 });
-                let existingApiKey = await getFinancialAccountAsaasApiKey(existingAccount);
+                const existingApiKey = await getFinancialAccountAsaasApiKey(existingAccount);
                 if (!existingApiKey) {
-                    const recoveredProviderAccount =
-                        (resolvedEmail ? await findAsaasSubAccountByEmail(resolvedEmail) : null) ||
-                        (cpfCnpjDigits ? await findAsaasSubAccountByCpfCnpj(cpfCnpjDigits) : null);
-
-                    if (recoveredProviderAccount?.apiKey) {
-                        existingAccount = await upsertFinancialAccountRecord(user.id, {
-                            provider: 'asaas',
-                            asaas_account_id: recoveredProviderAccount.id,
-                            asaas_wallet_id: recoveredProviderAccount.walletId || existingAccount.asaas_wallet_id,
-                            asaas_onboarding_url: recoveredProviderAccount.onboardingUrl || existingAccount.asaas_onboarding_url,
-                            asaas_environment: ASAAS_ENV,
-                            asaas_api_key: recoveredProviderAccount.apiKey,
-                            last_sync_error: null,
-                            metadata: {
-                                ...(existingAccount.metadata || {}),
-                                provider_connection: {
-                                    status: 'credential_recovered',
-                                    recovered_at: new Date().toISOString(),
-                                    source: 'asaas_account_discovery',
-                                    previous_account_id: existingAccount.asaas_account_id,
-                                },
-                            },
-                        });
-                        existingApiKey = recoveredProviderAccount.apiKey;
-                    }
-                }
-                if (!existingApiKey) {
-                    return errorResponse('Subconta Asaas existente sem chave de acesso configurada.', 409);
+                    return errorResponse('Subconta Asaas existente sem credencial privada configurada.', 409, {
+                        code: 'ASAAS_PRIVATE_CREDENTIAL_MISSING',
+                    });
                 }
                 const status = await getAsaasAccountStatus(existingApiKey);
                 const uiStatus = deriveUiStatusFromAsaasAccount(status);
                 const requirements = buildAsaasRequirementSnapshot(status, 'sync');
                 await syncFinancialAccountFromAsaas(existingAccount.id, status, 'sync');
-                const webhook = await ensureAsaasOperationalWebhook(existingApiKey).catch((webhookErr) => ({
-                    configured: false,
-                    reason: webhookErr?.message || 'webhook_sync_failed',
-                }));
+                const webhook = await ensureAsaasOperationalWebhook(existingApiKey);
 
                 return jsonResponse({
                     success: true,
@@ -168,11 +140,9 @@ Deno.serve(async (req: Request) => {
                 });
             } catch (err) {
                 console.error('Error syncing existing account:', err);
-                return jsonResponse({
-                    success: true,
+                return errorResponse((err as any)?.message || 'Nao foi possivel sincronizar a subconta Asaas existente.', 502, {
+                    code: 'ASAAS_EXISTING_ACCOUNT_SYNC_FAILED',
                     already_exists: true,
-                    sync_status: 'deferred',
-                    warnings: [(err as any)?.message || 'A sincronização com a Asaas será tentada novamente.'],
                     financial_account_id: existingAccount.id,
                     asaas_account_id: existingAccount.asaas_account_id,
                     status: existingAccount.status || 'pending_review',
@@ -198,25 +168,21 @@ Deno.serve(async (req: Request) => {
 
             let bankUpdateResult = null;
             if (bankCode && agency && normalizedAccount.account) {
-                try {
-                    bankUpdateResult = await asaasRequest(
-                        '/bankAccountInfo',
-                        'POST',
-                        {
-                            bank: { code: bankCode },
-                            accountName: ownerName,
-                            ownerName,
-                            cpfCnpj: cpfCnpjDigits,
-                            agency,
-                            account: normalizedAccount.account,
-                            accountDigit: normalizedAccount.accountDigit,
-                            bankAccountType: bankAccount.account_type || 'CONTA_CORRENTE',
-                        },
-                        providerExistingAccount.apiKey
-                    );
-                } catch (bankErr) {
-                    console.warn('[asaas-connect-onboarding] Existing account bank update deferred:', bankErr);
-                }
+                bankUpdateResult = await asaasRequest(
+                    '/bankAccountInfo',
+                    'POST',
+                    {
+                        bank: { code: bankCode },
+                        accountName: ownerName,
+                        ownerName,
+                        cpfCnpj: cpfCnpjDigits,
+                        agency,
+                        account: normalizedAccount.account,
+                        accountDigit: normalizedAccount.accountDigit,
+                        bankAccountType: bankAccount.account_type || 'CONTA_CORRENTE',
+                    },
+                    providerExistingAccount.apiKey
+                );
             }
 
             const financialAccount = await upsertFinancialAccountRecord(user.id, {
@@ -230,7 +196,7 @@ Deno.serve(async (req: Request) => {
                 charges_enabled: false,
                 payouts_enabled: false,
                 details_submitted: false,
-                asaas_api_key: providerExistingAccount.apiKey,
+                asaasPrivateApiKey: providerExistingAccount.apiKey,
                 holder_name: name,
                 cpf_cnpj: cpfCnpjDigits,
                 birth_date: birthDate || null,
@@ -294,21 +260,11 @@ Deno.serve(async (req: Request) => {
                 },
             });
 
-            let status = 'onboarding';
-            let accountStatus = null;
-            let requirements = null;
-            const webhook = await ensureAsaasOperationalWebhook(providerExistingAccount.apiKey).catch((webhookErr) => ({
-                configured: false,
-                reason: webhookErr?.message || 'webhook_sync_failed',
-            }));
-            try {
-                accountStatus = await getAsaasAccountStatus(providerExistingAccount.apiKey);
-                status = deriveUiStatusFromAsaasAccount(accountStatus);
-                requirements = buildAsaasRequirementSnapshot(accountStatus, 'onboarding');
-                await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'onboarding');
-            } catch (statusErr) {
-                console.warn('[asaas-connect-onboarding] Existing account status sync deferred:', statusErr);
-            }
+            const webhook = await ensureAsaasOperationalWebhook(providerExistingAccount.apiKey);
+            const accountStatus = await getAsaasAccountStatus(providerExistingAccount.apiKey);
+            const status = deriveUiStatusFromAsaasAccount(accountStatus);
+            const requirements = buildAsaasRequirementSnapshot(accountStatus, 'onboarding');
+            await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'onboarding');
 
             return jsonResponse({
                 success: true,
@@ -349,25 +305,21 @@ Deno.serve(async (req: Request) => {
 
         let bankUpdateResult = null;
         if (bankCode && agency && normalizedAccount.account) {
-            try {
-                bankUpdateResult = await asaasRequest(
-                    '/bankAccountInfo',
-                    'POST',
-                    {
-                        bank: { code: bankCode },
-                        accountName: ownerName,
-                        ownerName,
-                        cpfCnpj: cpfCnpjDigits,
-                        agency,
-                        account: normalizedAccount.account,
-                        accountDigit: normalizedAccount.accountDigit,
-                        bankAccountType: bankAccount.account_type || 'CONTA_CORRENTE',
-                    },
-                    subAccount.apiKey
-                );
-            } catch (bankErr) {
-                console.warn('[asaas-connect-onboarding] Bank account update deferred:', bankErr);
-            }
+            bankUpdateResult = await asaasRequest(
+                '/bankAccountInfo',
+                'POST',
+                {
+                    bank: { code: bankCode },
+                    accountName: ownerName,
+                    ownerName,
+                    cpfCnpj: cpfCnpjDigits,
+                    agency,
+                    account: normalizedAccount.account,
+                    accountDigit: normalizedAccount.accountDigit,
+                    bankAccountType: bankAccount.account_type || 'CONTA_CORRENTE',
+                },
+                subAccount.apiKey
+            );
         }
 
         // 3. Persist in financial_accounts
@@ -382,7 +334,7 @@ Deno.serve(async (req: Request) => {
             charges_enabled: false,
             payouts_enabled: false,
             details_submitted: false,
-            asaas_api_key: subAccount.apiKey,
+            asaasPrivateApiKey: subAccount.apiKey,
             holder_name: name,
             cpf_cnpj: cpfCnpjDigits,
             birth_date: birthDate || null,
@@ -444,21 +396,11 @@ Deno.serve(async (req: Request) => {
             },
         });
 
-        let status = 'onboarding';
-        let accountStatus = null;
-        let requirements = null;
-        const webhook = await ensureAsaasOperationalWebhook(subAccount.apiKey).catch((webhookErr) => ({
-            configured: false,
-            reason: webhookErr?.message || 'webhook_sync_failed',
-        }));
-        try {
-            accountStatus = await getAsaasAccountStatus(subAccount.apiKey);
-            status = deriveUiStatusFromAsaasAccount(accountStatus);
-            requirements = buildAsaasRequirementSnapshot(accountStatus, 'onboarding');
-            await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'onboarding');
-        } catch (statusErr) {
-            console.warn('[asaas-connect-onboarding] Initial status sync deferred:', statusErr);
-        }
+        const webhook = await ensureAsaasOperationalWebhook(subAccount.apiKey);
+        const accountStatus = await getAsaasAccountStatus(subAccount.apiKey);
+        const status = deriveUiStatusFromAsaasAccount(accountStatus);
+        const requirements = buildAsaasRequirementSnapshot(accountStatus, 'onboarding');
+        await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'onboarding');
 
         // 4. Create onboarding session record
         await supabaseAdmin

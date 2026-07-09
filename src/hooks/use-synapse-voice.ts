@@ -10,7 +10,7 @@ const DEFAULT_PROVIDER: SynapseVoiceProvider = "deepgram-agent";
 const isSupportedProvider = (provider?: string | null) =>
   !provider || provider === DEFAULT_PROVIDER;
 
-interface UseGeminiVoiceOptions {
+interface UseSynapseVoiceOptions {
   token: string | null;
   model?: string;
   systemInstruction?: string;
@@ -32,7 +32,7 @@ interface UseGeminiVoiceOptions {
   onClientAction?: (action: ClientAction) => void;
 }
 
-export function useSynapseVoice(options: UseGeminiVoiceOptions) {
+export function useSynapseVoice(options: UseSynapseVoiceOptions) {
   const preferredProvider = options.provider || import.meta.env.VITE_SYNAPSE_VOICE_PROVIDER || DEFAULT_PROVIDER;
   const deepgram = useDeepgramAgentVoice({
     gatewayUrl: options.gatewayUrl,

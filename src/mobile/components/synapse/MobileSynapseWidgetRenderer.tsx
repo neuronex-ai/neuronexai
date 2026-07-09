@@ -116,22 +116,24 @@ const WidgetShell = ({
   count?: number;
   children: ReactNode;
 }) => (
-  <section className="synapse-widget-surface mt-3 overflow-hidden rounded-[21px]">
-    <header className="flex items-center gap-3 border-b px-3.5 py-3" style={{ borderColor: "var(--synapse-border-subtle)" }}>
-      <div className="synapse-control flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px]">
-        {icon}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[8px] font-black uppercase tracking-[0.16em] synapse-tertiary-text">{label}</p>
-        <h4 className="mt-0.5 truncate text-[13px] font-black tracking-[-0.01em]" style={{ color: "var(--synapse-text-primary)" }}>
-          {title}
-        </h4>
-      </div>
-      {count && count > 1 ? (
-        <span className="synapse-control rounded-full px-2 py-1 text-[8px] font-black">{count}</span>
-      ) : null}
-    </header>
-    <div className="space-y-2.5 p-3">{children}</div>
+  <section className="mt-3 bg-transparent">
+    <div className="synapse-widget-surface overflow-hidden rounded-[21px]">
+      <header className="flex items-center gap-3 border-b px-3.5 py-3" style={{ borderColor: "var(--synapse-border-subtle)" }}>
+        <div className="synapse-control flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px]">
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[8px] font-black uppercase tracking-[0.16em] synapse-tertiary-text">{label}</p>
+          <h4 className="mt-0.5 truncate text-[13px] font-black tracking-[-0.01em]" style={{ color: "var(--synapse-text-primary)" }}>
+            {title}
+          </h4>
+        </div>
+        {count && count > 1 ? (
+          <span className="synapse-control rounded-full px-2 py-1 text-[8px] font-black">{count}</span>
+        ) : null}
+      </header>
+      <div className="space-y-2.5 p-3">{children}</div>
+    </div>
   </section>
 );
 

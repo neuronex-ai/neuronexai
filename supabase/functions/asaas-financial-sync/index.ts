@@ -73,21 +73,6 @@ function isProviderAccountUnavailable(error: any) {
     );
 }
 
-function isTransientProviderError(error: any) {
-    const status = Number(error?.status || 0);
-    return status === 429 || status >= 500;
-}
-
-async function getLastKnownAvailableBalance(financialAccountId: string) {
-    const { data, error } = await supabaseAdmin
-        .from("neurofinance_overview_snapshots")
-        .select("available_balance")
-        .eq("financial_account_id", financialAccountId)
-        .maybeSingle();
-    if (error) throw error;
-    return Number(data?.available_balance || 0);
-}
-
 async function recordSyncFailure(financialAccount: any, error: any) {
     const accountUnavailable = isProviderAccountUnavailable(error);
     const occurredAt = new Date().toISOString();
@@ -135,46 +120,6 @@ async function recordSyncFailure(financialAccount: any, error: any) {
     ]);
 
     return accountUnavailable ? "account_unavailable" : "sync_failed";
-}
-
-async function recordTransientSyncDeferral(financialAccount: any, error: any) {
-    const occurredAt = new Date().toISOString();
-    const metadata = {
-        ...(financialAccount.metadata || {}),
-        provider_connection: {
-            ...((financialAccount.metadata || {}).provider_connection || {}),
-            status: "connected",
-            transient_sync_status: "deferred",
-            deferred_at: occurredAt,
-            error_code: Number(error?.status || 0) || "TRANSIENT_PROVIDER_ERROR",
-            error_message: error?.message || "Asaas temporariamente indisponivel.",
-            support_required: false,
-        },
-    };
-
-    await Promise.all([
-        supabaseAdmin
-            .from("financial_accounts")
-            .update({
-                last_sync_error: null,
-                metadata,
-                updated_at: occurredAt,
-            })
-            .eq("id", financialAccount.id),
-        supabaseAdmin
-            .from("neurofinance_overview_snapshots")
-            .update({
-                is_stale: false,
-                last_sync_error: null,
-                updated_at: occurredAt,
-            })
-            .eq("financial_account_id", financialAccount.id),
-    ]);
-
-    return {
-        account_id: financialAccount.id,
-        reason: "provider_rate_limited_or_temporarily_unavailable",
-    };
 }
 
 async function reconcilePaymentsMissingFromProvider(
@@ -228,16 +173,7 @@ async function syncAccount(financialAccount: any, mode: "incremental" | "full") 
     const dateFrom = mode === "incremental" ? daysAgo(45) : undefined;
     const maxPages = mode === "full" ? MAX_FULL_PAGES : MAX_INCREMENTAL_PAGES;
 
-    let balance: any = null;
-    let balanceSyncWarning: string | null = null;
-    try {
-        balance = await getAsaasBalance(apiKey);
-    } catch (error: any) {
-        if (!isTransientProviderError(error)) throw error;
-        console.warn("[asaas-financial-sync] Balance sync deferred:", error?.message || error);
-        balanceSyncWarning = error?.message || "Saldo Asaas temporariamente indisponivel.";
-        balance = { balance: (await getLastKnownAvailableBalance(financialAccount.id)) / 100 };
-    }
+    const balance = await getAsaasBalance(apiKey);
 
     const [payments, transfers, statement] = await Promise.all([
         collectPages(
@@ -372,9 +308,7 @@ async function syncAccount(financialAccount: any, mode: "incremental" | "full") 
     await refreshOverviewSnapshot(
         financialAccount.id,
         availableBalance,
-        balanceSyncWarning
-            ? mode === "full" ? "full_reconciliation_partial_balance" : "incremental_reconciliation_partial_balance"
-            : mode === "full" ? "full_reconciliation" : "incremental_reconciliation"
+        mode === "full" ? "full_reconciliation" : "incremental_reconciliation"
     );
 
     const currentMetadata = financialAccount.metadata || {};
@@ -394,20 +328,10 @@ async function syncAccount(financialAccount: any, mode: "incremental" | "full") 
                     error_message: null,
                     support_required: false,
                 },
-                ...(balanceSyncWarning
-                    ? {
-                        balance_sync: {
-                            status: "deferred",
-                            reason: balanceSyncWarning,
-                            detected_at: recoveredAt,
-                        },
-                    }
-                    : {
-                        balance_sync: {
-                            status: "ok",
-                            recovered_at: recoveredAt,
-                        },
-                    }),
+                balance_sync: {
+                    status: "ok",
+                    recovered_at: recoveredAt,
+                },
             },
             updated_at: recoveredAt,
         })
@@ -450,16 +374,13 @@ Deno.serve(async (req: Request) => {
                     results.push({ success: true, ...(await syncAccount(account, mode)) });
                 } catch (error: any) {
                     console.error("[asaas-financial-sync] Account sync failed:", account.id, error);
-                    if (isTransientProviderError(error)) {
-                        results.push({
-                            success: true,
-                            deferred: true,
-                            ...(await recordTransientSyncDeferral(account, error)),
-                        });
-                        continue;
-                    }
                     const reason = await recordSyncFailure(account, error);
-                    results.push({ success: false, account_id: account.id, reason });
+                    results.push({
+                        success: false,
+                        account_id: account.id,
+                        reason,
+                        error: error?.message || "sync_failed",
+                    });
                 }
             }
 
@@ -497,14 +418,6 @@ Deno.serve(async (req: Request) => {
                 result: await syncAccount(financialAccount, mode),
             });
         } catch (error: any) {
-            if (isTransientProviderError(error)) {
-                return jsonResponse({
-                    success: true,
-                    mode,
-                    deferred: true,
-                    result: await recordTransientSyncDeferral(financialAccount, error),
-                });
-            }
             await recordSyncFailure(financialAccount, error);
             throw error;
         }

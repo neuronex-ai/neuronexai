@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import { useRef, useEffect, useState } from 'react';
+import type { KeyboardEvent } from 'react';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
 import { ChatMessageItem } from '@/components/ai-chat/ChatMessageItem';
@@ -7,8 +8,7 @@ import {
     ArrowUp, 
     Loader2, 
     Sparkles, 
-    Mic, 
-    MessageSquare,
+    Mic,
     ChevronLeft,
     Trash2,
     Plus
@@ -17,7 +17,6 @@ import { useNavigate } from 'react-router-dom';
 import { SynapseOrbAvatar } from '@/components/synapse/SynapseOrbAvatar';
 
 export default function SynapseAI() {
-    const shouldReduceMotion = useReducedMotion();
     const { send, messages, isSending, sessionReady, clearSession } = useSynapseChat();
     const navigate = useNavigate();
     
@@ -38,7 +37,7 @@ export default function SynapseAI() {
         setInput('');
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             if (!isSending) handleSend();

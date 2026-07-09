@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Loader2, Mic, Send, Sparkles, X } from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Loader2, Mic, Send, Sparkles } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
@@ -42,11 +42,32 @@ export function MobileSynapseComposer({
 
   return (
     <div className="mx-auto w-full max-w-lg">
-      {isUploading ? (
-        <p className="mb-2 text-center text-[8px] font-black uppercase tracking-[0.16em] synapse-tertiary-text">
-          Enviando anexos...
-        </p>
-      ) : null}
+      <AnimatePresence mode="wait">
+        {isListening ? (
+          <motion.p
+            key="listening"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-2 flex items-center justify-center gap-2 text-[8px] font-black uppercase tracking-[0.16em] text-emerald-600 dark:text-emerald-300"
+          >
+            <span className="synapse-dictation-dot" aria-hidden="true" />
+            Transcrevendo para texto
+          </motion.p>
+        ) : isUploading ? (
+          <motion.p
+            key="uploading"
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+            className="mb-2 text-center text-[8px] font-black uppercase tracking-[0.16em] synapse-tertiary-text"
+          >
+            Enviando anexos...
+          </motion.p>
+        ) : null}
+      </AnimatePresence>
       <motion.div
         data-state={state}
         animate={shouldReduceMotion ? undefined : { y: isFocused ? -2 : 0, scale: isFocused ? 1.006 : 1 }}
@@ -73,14 +94,24 @@ export function MobileSynapseComposer({
           <motion.button
             type="button"
             onClick={() => (isListening ? onStopListening() : onStartListening())}
+            disabled={isProcessing || isUploading}
             whileTap={shouldReduceMotion ? undefined : { scale: 0.94 }}
             className={cn(
-              "synapse-focusable absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[15px] transition",
-              isListening ? "synapse-control-active" : "synapse-control",
+              "synapse-focusable absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center overflow-hidden rounded-[15px] transition disabled:opacity-45",
+              isListening ? "synapse-dictation-active" : "synapse-control",
             )}
-            aria-label={isListening ? "Parar gravação" : "Falar"}
+            aria-label={isListening ? "Parar transcricao" : "Transcrever por voz"}
+            aria-pressed={isListening}
           >
-            {isListening ? <X className="h-4.5 w-4.5" /> : <Mic className="h-4.5 w-4.5" />}
+            {isListening && !shouldReduceMotion ? (
+              <motion.span
+                aria-hidden="true"
+                className="absolute inset-1 rounded-[13px] border border-current/22"
+                animate={{ opacity: [0.28, 0.7, 0.28], scale: [0.92, 1.04, 0.92] }}
+                transition={{ repeat: Infinity, duration: 1.65, ease: "easeInOut" }}
+              />
+            ) : null}
+            <Mic className="relative z-10 h-4.5 w-4.5" />
           </motion.button>
         </div>
 

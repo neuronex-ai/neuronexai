@@ -103,7 +103,14 @@ export const MobileAIChat = () => {
   const { mutate: deleteSession } = useDeleteChatSession();
   const { mutate: sendMessage, isPending: isProcessing } = useSendChatMessage();
 
-  const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition();
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition();
   const {
     token: voiceToken,
     model: voiceModel,
@@ -147,6 +154,10 @@ export const MobileAIChat = () => {
 
   const sessionList = useMemo(() => (Array.isArray(sessions) ? sessions : []), [sessions]);
   const messageList = useMemo(() => (Array.isArray(messages) ? messages : []), [messages]);
+  const speechTranscript = useMemo(
+    () => [transcript, interimTranscript].filter(Boolean).join(" ").trim(),
+    [interimTranscript, transcript],
+  );
 
   const createNewChat = useCallback(() => {
     createSession(undefined, {
@@ -175,8 +186,8 @@ export const MobileAIChat = () => {
   }, [messageList, isProcessing, richMessages]);
 
   useEffect(() => {
-    if (transcript) setInputValue(transcript);
-  }, [transcript]);
+    if (speechTranscript) setInputValue(speechTranscript);
+  }, [speechTranscript]);
 
   const handleDeleteSession = (id: string) => {
     deleteSession(id);

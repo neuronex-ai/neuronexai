@@ -1,20 +1,129 @@
 /**
- * Compatibility endpoint for older clients.
- * Reads the local NeuroFinance snapshot and detail views only; it never waits
- * for the provider API. Fresh data is maintained by webhooks and reconciliation.
+ * Account balance/detail endpoint.
+ * Uses the private Asaas credential to refresh the provider statement whenever
+ * the local NeuroFinance snapshot is missing, stale, or explicitly forced.
  */
 
 import {
     corsResponse,
     errorResponse,
+    getAsaasBalance,
+    getAsaasFinancialTransactions,
     getAuthenticatedUser,
+    getFinancialAccount,
+    getFinancialAccountAsaasApiKey,
     jsonResponse,
     supabaseAdmin,
 } from "../_shared/asaas-client.ts";
 import {
+    refreshOverviewSnapshot,
+    upsertAccountMovement,
+} from "../_shared/neurofinance-financial.ts";
+import {
     requireEntitlementForUser,
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+
+const PAGE_SIZE = 100;
+const MAX_PAGES = 20;
+
+function dateOnly(date: Date) {
+    return date.toISOString().slice(0, 10);
+}
+
+function daysAgo(days: number) {
+    const date = new Date();
+    date.setUTCDate(date.getUTCDate() - days);
+    return dateOnly(date);
+}
+
+async function collectPages(fetchPage: (offset: number, limit: number) => Promise<any>) {
+    const rows: any[] = [];
+    for (let page = 0; page < MAX_PAGES; page += 1) {
+        const result = await fetchPage(page * PAGE_SIZE, PAGE_SIZE);
+        const batch = Array.isArray(result?.data) ? result.data : [];
+        rows.push(...batch);
+        if (!result?.hasMore || batch.length < PAGE_SIZE) break;
+    }
+    return rows;
+}
+
+function movementType(providerType?: string, direction?: "credit" | "debit") {
+    const type = String(providerType || "ADJUSTMENT").toUpperCase();
+    if (type === "TRANSFER_FEE") return "transfer_fee";
+    if (type.includes("FEE")) return type.includes("PAYMENT") ? "payment_fee" : "service_fee";
+    if (type === "TRANSFER") return "transfer";
+    if (type.includes("CHARGEBACK")) return "chargeback";
+    if (type.includes("REFUND") || type.includes("REVERSAL")) return "refund";
+    if (direction === "credit" && type.includes("PAYMENT")) return "payment_credit";
+    return direction === "credit" ? "credit_adjustment" : "debit_adjustment";
+}
+
+function shouldSyncSnapshot(snapshot: any, body: any) {
+    if (body?.force === true) return true;
+    if (!snapshot) return true;
+    if (snapshot.is_stale || snapshot.last_sync_error) return true;
+    const providerAsOf = snapshot.provider_as_of || snapshot.updated_at;
+    const updatedAt = providerAsOf ? new Date(providerAsOf).getTime() : 0;
+    return !updatedAt || Date.now() - updatedAt > 10 * 60 * 1000;
+}
+
+async function syncStatementForDetails(userId: string, body: any) {
+    const financialAccount = await getFinancialAccount(userId);
+    if (!financialAccount) {
+        throw Object.assign(new Error("Sua conta NeuroFinance ainda nao foi ativada."), { status: 404 });
+    }
+
+    const apiKey = await getFinancialAccountAsaasApiKey(financialAccount);
+    if (!apiKey || financialAccount.status === "account_missing") {
+        throw Object.assign(new Error("Credencial privada da subconta Asaas nao configurada."), { status: 409 });
+    }
+
+    const startDate = body.start_date || daysAgo(45);
+    const finishDate = body.finish_date || dateOnly(new Date());
+
+    const [balance, statement] = await Promise.all([
+        getAsaasBalance(apiKey),
+        collectPages((offset, limit) => getAsaasFinancialTransactions(apiKey, {
+            offset,
+            limit,
+            startDate,
+            finishDate,
+        })),
+    ]);
+
+    for (const transaction of statement) {
+        const value = Number(transaction.value || 0);
+        const direction = value >= 0 ? "credit" : "debit";
+
+        await upsertAccountMovement({
+            userId: financialAccount.user_id,
+            financialAccountId: financialAccount.id,
+            providerMovementId: transaction.id || null,
+            movementType: movementType(transaction.type, direction),
+            direction,
+            amount: Math.abs(Math.round(value * 100)),
+            description: transaction.description || transaction.type || "Movimentacao da conta",
+            referenceType: transaction.paymentId
+                ? "payment"
+                : transaction.transferId
+                    ? "payout"
+                    : "provider_transaction",
+            referenceId: transaction.paymentId || transaction.transferId || transaction.id || null,
+            occurredAt: transaction.date || new Date().toISOString(),
+            metadata: {
+                provider_type: transaction.type || null,
+                source: "provider_statement",
+            },
+        });
+    }
+
+    await refreshOverviewSnapshot(
+        financialAccount.id,
+        Math.round(Number(balance.balance || 0) * 100),
+        "balance_details_statement_sync",
+    );
+}
 
 function toTransaction(item: any) {
     return {
@@ -47,12 +156,23 @@ Deno.serve(async (req: Request) => {
         );
         const body = await req.json().catch(() => ({}));
 
-        const { data: snapshot, error: snapshotError } = await supabaseAdmin
+        let { data: snapshot, error: snapshotError } = await supabaseAdmin
             .from("neurofinance_overview_snapshot_v")
             .select("*")
             .eq("user_id", user.id)
             .maybeSingle();
         if (snapshotError) throw snapshotError;
+
+        if (shouldSyncSnapshot(snapshot, body)) {
+            await syncStatementForDetails(user.id, body);
+            const refreshed = await supabaseAdmin
+                .from("neurofinance_overview_snapshot_v")
+                .select("*")
+                .eq("user_id", user.id)
+                .maybeSingle();
+            if (refreshed.error) throw refreshed.error;
+            snapshot = refreshed.data;
+        }
 
         const requestedView = String(body.view || "all");
         const overviewGroup = requestedView === "total"
@@ -101,7 +221,7 @@ Deno.serve(async (req: Request) => {
         console.error("[asaas-balance-details] Read failed:", error);
         return errorResponse(
             "Não conseguimos abrir os detalhes agora. Tente novamente em instantes.",
-            500,
+            Number((error as any)?.status || 500),
             { code: "FINANCIAL_DETAILS_UNAVAILABLE" }
         );
     }

@@ -7,7 +7,6 @@ import {
   normalizeSynapseClientAction,
 } from "@/lib/synapse-interface-actions";
 
-type ClientToolMap = Record<string, (params: unknown) => Promise<unknown> | unknown>;
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
 const SYNAPSE_GLOBAL_VOICE_PROMPT = [
@@ -19,14 +18,14 @@ const SYNAPSE_GLOBAL_VOICE_PROMPT = [
   "Antes de acoes sensiveis, confirme de forma clara e execute somente apos confirmacao.",
 ].join(" ");
 
-interface UseGeminiLiveOptions {
+interface UseSynapseLiveVoiceOptions {
   onConnect?: () => void;
   onDisconnect?: () => void;
   onError?: (error: string) => void;
   onClientAction?: (action: unknown) => void;
 }
 
-export function useSynapseLiveVoice(options?: UseGeminiLiveOptions) {
+export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const navigate = useNavigate();
   const connectedRef = useRef(false);
   const optionsRef = useRef(options);
@@ -98,7 +97,7 @@ export function useSynapseLiveVoice(options?: UseGeminiLiveOptions) {
   const activeToolElapsedMs = "activeToolElapsedMs" in voice ? Number(voice.activeToolElapsedMs || 0) : 0;
   const lastFunctionStatus = "lastFunctionStatus" in voice ? voice.lastFunctionStatus : null;
 
-  const startSession = useCallback(async (_args?: { clientTools?: ClientToolMap }) => {
+  const startSession = useCallback(async () => {
     const config = await refreshVoiceConfig();
     await voiceStartSession({
       token: config.token,

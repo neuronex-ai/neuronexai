@@ -29,6 +29,12 @@ const DEFAULT_ELEVENLABS_VOICE_ID = "xNGAXaCH8MaasNuo7Hr7";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
+const isLocalDevelopmentHost = (host: string) =>
+  /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(host) ||
+  /^10\./.test(host) ||
+  /^192\.168\./.test(host) ||
+  /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+
 function normalizeThinkModel(provider: string, model: string) {
   const cleanProvider = clean(provider, 80).toLowerCase();
   const cleanModel = clean(model, 160);
@@ -47,7 +53,10 @@ const publicGatewayUrl = (originHeader?: string | null) => {
   try {
     const origin = originHeader ? new URL(originHeader) : null;
     const host = origin?.hostname || "";
-    if (/^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(host)) return DEFAULT_GATEWAY_URL;
+    if (isLocalDevelopmentHost(host)) {
+      const protocol = origin?.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${origin!.host}/v1/synapse/voice`;
+    }
     if (/^(www\.)?neuronexai\.com\.br$/i.test(host)) {
       return `wss://${origin!.host}/v1/synapse/voice`;
     }

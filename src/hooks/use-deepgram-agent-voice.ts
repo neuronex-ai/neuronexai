@@ -34,11 +34,18 @@ const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0
 
 const isLocalBrowserRuntime = () => {
   if (typeof window === "undefined") return import.meta.env.DEV;
+  if (import.meta.env.DEV) return true;
   return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname);
 };
 
 const isLocalGatewayUrl = (value: string) =>
   /^wss?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(?:\/|$)/i.test(value);
+
+const localBrowserGatewayUrl = () => {
+  if (typeof window === "undefined") return DEFAULT_GATEWAY_URL;
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${window.location.host}/v1/synapse/voice`;
+};
 
 const userFacingVoiceError = (errorType: unknown, rawError: unknown) => {
   const type = clean(errorType, 80);
@@ -63,7 +70,9 @@ const toNumber = (value: unknown, fallback = 0) => {
 
 const gatewayUrlFromEnv = () => {
   const configured = import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL;
-  if (isLocalBrowserRuntime()) return configured || DEFAULT_GATEWAY_URL;
+  if (isLocalBrowserRuntime()) {
+    return configured && !isLocalGatewayUrl(configured) ? configured : localBrowserGatewayUrl();
+  }
   if (configured && !isLocalGatewayUrl(configured) && /^wss:\/\//i.test(configured)) return configured;
   return "";
 };

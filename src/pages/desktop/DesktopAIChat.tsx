@@ -1,5 +1,5 @@
 import type { MouseEvent } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { History, PanelLeftClose, Phone } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -89,8 +89,19 @@ export default function DesktopAIChat() {
     const { data: messages } = useSessionMessages(currentSessionId);
     const { mutate: sendMessage, isPending: isSending } = useSendChatMessage();
     const [searchParams, setSearchParams] = useSearchParams();
-    const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition();
+    const {
+        isListening,
+        transcript,
+        interimTranscript,
+        startListening,
+        stopListening,
+        resetTranscript,
+    } = useSpeechRecognition();
     const { speak } = useTextToSpeech();
+    const speechTranscript = useMemo(
+        () => [transcript, interimTranscript].filter(Boolean).join(" ").trim(),
+        [interimTranscript, transcript],
+    );
 
     useEffect(() => {
         if (!scrollRef.current) return;
@@ -370,7 +381,7 @@ export default function DesktopAIChat() {
                             isUploading={isUploading}
                             onStartListening={startListening}
                             onStopListening={stopListening}
-                            transcript={transcript}
+                            transcript={speechTranscript}
                         />
                     </div>
                 </div>

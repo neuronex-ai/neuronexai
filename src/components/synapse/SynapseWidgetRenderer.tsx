@@ -293,29 +293,32 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
   })();
 
   return (
-    <div
-      className={cn(
-        "notes-liquid-surface my-3 overflow-hidden rounded-[22px] border shadow-[0_18px_55px_-45px_hsl(var(--foreground)/0.75)] dark:border-white/[0.04] dark:shadow-[0_22px_58px_-46px_rgba(0,0,0,0.98)]",
-        compact && "rounded-[18px]",
-      )}
-    >
-      <div className="flex items-center gap-2.5 border-b border-border/30 px-4 py-3 dark:border-white/[0.035]">
-        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-muted/70 text-muted-foreground dark:border-white/[0.04] dark:bg-white/[0.032]">
-          {icon}
+    <section className={cn("my-3 bg-transparent", compact && "my-2")}>
+      <div
+        className={cn(
+          "overflow-hidden rounded-[22px] border border-zinc-950/[0.085] bg-white/72 shadow-[0_18px_55px_-45px_rgba(24,24,27,0.58),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-2xl",
+          "dark:border-white/[0.055] dark:bg-white/[0.032] dark:shadow-[0_22px_58px_-46px_rgba(0,0,0,0.98),inset_0_1px_0_rgba(255,255,255,0.032)]",
+          compact && "rounded-[18px]",
+        )}
+      >
+        <div className="flex items-center gap-2.5 border-b border-zinc-950/[0.06] px-4 py-3 dark:border-white/[0.035]">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-zinc-950/[0.08] bg-zinc-950/[0.045] text-muted-foreground dark:border-white/[0.045] dark:bg-white/[0.04]">
+            {icon}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{headerLabel}</p>
+            <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-foreground">
+              {humanizeSynapseWidgetTitle(firstString(normalizedWidget.title), type)}
+            </p>
+          </div>
+          {dataArray.length > 1 ? (
+            <span className="ml-auto rounded-full border border-zinc-950/[0.07] bg-zinc-950/[0.04] px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.045] dark:bg-white/[0.035]">
+              {dataArray.length}
+            </span>
+          ) : null}
         </div>
-        <div className="min-w-0">
-          <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{headerLabel}</p>
-          <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-foreground">
-            {humanizeSynapseWidgetTitle(firstString(normalizedWidget.title), type)}
-          </p>
-        </div>
-        {dataArray.length > 1 ? (
-          <span className="ml-auto rounded-full border border-border/30 bg-muted/55 px-2 py-1 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.04] dark:bg-white/[0.032]">
-            {dataArray.length}
-          </span>
-        ) : null}
+        <div className="p-3">{renderContent()}</div>
       </div>
-      <div className="p-3">{renderContent()}</div>
-    </div>
+    </section>
   );
 };
