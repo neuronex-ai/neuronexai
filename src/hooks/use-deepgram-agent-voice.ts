@@ -70,6 +70,63 @@ const phaseFromToolStatus = (status: string): SynapseVoicePhase => {
   return "tool_active";
 };
 
+const TOOL_LABELS: Record<string, string> = {
+  navigate_system: "Navegação",
+  search_patients: "Busca de paciente",
+  list_patients: "Lista de pacientes",
+  get_patient_details: "Prontuário",
+  report_all_patients: "Resumo de pacientes",
+  search_clinical_history: "Histórico clínico",
+  generate_patient_insights: "Insights clínicos",
+  suggest_treatment_approach: "Plano terapêutico",
+  detect_risk_patterns: "Análise de risco",
+  get_calendar: "Agenda",
+  create_appointment: "Novo agendamento",
+  reschedule_appointment: "Remarcação",
+  cancel_appointment: "Cancelamento",
+  find_available_slots: "Horários disponíveis",
+  create_patient: "Cadastro de paciente",
+  update_patient_info: "Atualização do paciente",
+  add_patient_medication: "Medicação",
+  create_session_note: "Nota clínica",
+  send_whatsapp_message: "WhatsApp",
+  read_whatsapp_conversations: "Conversas do WhatsApp",
+  send_email: "E-mail",
+  draft_email: "Rascunho de e-mail",
+  get_financial_metrics: "Resumo financeiro",
+  list_transactions: "Lançamentos financeiros",
+  create_transaction: "Lançamento financeiro",
+  generate_financial_report: "Relatório financeiro",
+  send_payment_reminder: "Lembrete de pagamento",
+  draft_invoice: "Cobrança",
+  generate_document: "Documento",
+  draft_official_document: "Documento oficial",
+  search_medical_articles: "Referências clínicas",
+  search_cid10: "CID-10",
+  get_medication_info: "Informações de medicação",
+  get_latest_scientific_updates: "Atualizações científicas",
+  search_normative_docs: "Normas profissionais",
+};
+
+const toHumanToolLabel = (value: unknown) => {
+  const raw = clean(value, 160);
+  const key = raw.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
+  if (TOOL_LABELS[key]) return TOOL_LABELS[key];
+  if (/appointment|calendar|agenda/i.test(raw)) return "Agenda";
+  if (/patient|paciente|clinical|history/i.test(raw)) return "Paciente";
+  if (/finance|invoice|payment|transaction/i.test(raw)) return "Financeiro";
+  if (/document|note|prontuario/i.test(raw)) return "Documento";
+  if (!raw || /[_{}[\]"]/.test(raw) || /^[a-z0-9_\s-]+$/i.test(raw)) return "Ação do Synapse";
+  return raw;
+};
+
+const sanitizeToolMessage = (value: unknown) => clean(value, 800)
+  .replace(/[{}[\]"]/g, "")
+  .replace(/\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientAction|function_call)\b/gi, "")
+  .replace(/\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi, "ação")
+  .replace(/\s+/g, " ")
+  .trim();
+
 export function useDeepgramAgentVoice({
   gatewayUrl,
   sessionId,
@@ -186,8 +243,8 @@ export function useDeepgramAgentVoice({
     const startedAt = toNumber(source.startedAt, existing?.startedAt || Date.now());
     const elapsedMs = toNumber(source.elapsedMs, Math.max(0, Date.now() - startedAt));
     const name = clean(source.name || existing?.name || "synapse_tool", 120);
-    const label = clean(source.label || existing?.label || name.replace(/[_-]+/g, " "), 160);
-    const message = clean(source.message || existing?.message || "", 800);
+    const label = toHumanToolLabel(source.label || existing?.label || name);
+    const message = sanitizeToolMessage(source.message || existing?.message || "");
     const confirmationRequired = Boolean(source.confirmationRequired || existing?.confirmationRequired);
 
     return {

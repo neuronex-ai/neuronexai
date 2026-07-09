@@ -128,6 +128,20 @@ const VOICE_TOOL_LABELS: Record<string, string> = {
 const humanVoiceToolLabel = (toolName: string) =>
     VOICE_TOOL_LABELS[toolName.trim().toLowerCase()] || 'Ação do Synapse';
 
+const sanitizeTimelineText = (value?: string) => {
+    if (!value) return value;
+    let next = value;
+    for (const [toolName, label] of Object.entries(VOICE_TOOL_LABELS)) {
+        next = next.replace(new RegExp(toolName, 'gi'), label);
+    }
+    return next
+        .replace(/[{}[\]"]/g, '')
+        .replace(/\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientAction|function_call)\b/gi, '')
+        .replace(/\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi, 'ação')
+        .replace(/\s+/g, ' ')
+        .trim();
+};
+
 // ─── Provider ─────────────────────────────────────────────────────────
 
 export const SynapseProvider = ({ children }: { children: ReactNode }) => {
@@ -283,9 +297,14 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const addTimelineEntry = useCallback(
         (entry: Omit<SynapseTimelineEntry, 'id' | 'timestamp'>) => {
             const id = `tl-${++timelineIdCounter.current}`;
+            const safeEntry = {
+                ...entry,
+                label: sanitizeTimelineText(entry.label) || 'Atividade do Synapse',
+                detail: sanitizeTimelineText(entry.detail),
+            };
             setTimeline((prev) => [
                 ...prev.slice(-19), // keep last 20 entries
-                { ...entry, id, timestamp: new Date() },
+                { ...safeEntry, id, timestamp: new Date() },
             ]);
         },
         []
