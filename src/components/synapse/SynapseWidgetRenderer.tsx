@@ -14,6 +14,11 @@ import { toast } from "sonner";
 
 import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import {
+  humanizeSynapseActionType,
+  humanizeSynapseWidgetTitle,
+  sanitizeSynapseDisplayText,
+} from "@/lib/synapse-humanize";
+import {
   firstString,
   isRecord,
   normalizeSynapseDataArray,
@@ -114,6 +119,7 @@ const StatusBadge = ({ status, notes }: { status?: string | null; notes?: string
 };
 
 const actionLabel = (type: string) => {
+  return humanizeSynapseActionType(type);
   const normalized = normalizeSynapseWidgetType(type);
   const labels: Record<string, string> = {
     create_appointment: "Agendamento criado",
@@ -171,10 +177,10 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
               </div>
               <div className="min-w-0">
                 <p className="truncate text-[13px] font-black tracking-[-0.01em] text-foreground">
-                  {firstString(patient.name, patient.patient_name) || "Paciente"}
+                  {sanitizeSynapseDisplayText(firstString(patient.name, patient.patient_name), "Paciente")}
                 </p>
                 <p className="mt-0.5 truncate text-[10px] font-medium text-muted-foreground">
-                  {firstString(patient.email, patient.phone, patient.diagnosis) || "Abrir detalhes"}
+                  {sanitizeSynapseDisplayText(firstString(patient.email, patient.phone, patient.diagnosis), "Abrir detalhes")}
                 </p>
               </div>
             </div>
@@ -197,7 +203,7 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
           appointment.time,
           start ? `${toBrazilTime(start)}${end ? ` as ${toBrazilTime(end)}` : ""}` : undefined,
         );
-        const patientName = firstString(appointment.patient_name, patient.name, appointment.title) || "Agendamento";
+        const patientName = sanitizeSynapseDisplayText(firstString(appointment.patient_name, patient.name, appointment.title), "Agendamento");
         const appointmentType = firstString(appointment.type) || "presencial";
         const status = firstString(appointment.status) || "confirmed";
         const appointmentId = firstString(appointment.id, appointment.appointment_id);
@@ -313,7 +319,7 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
         <div className="min-w-0">
           <p className="truncate text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{headerLabel}</p>
           <p className="mt-0.5 truncate text-[12px] font-black tracking-[-0.01em] text-foreground">
-            {firstString(normalizedWidget.title) || actionLabel(type)}
+            {humanizeSynapseWidgetTitle(firstString(normalizedWidget.title), type)}
           </p>
         </div>
         {dataArray.length > 1 ? (
