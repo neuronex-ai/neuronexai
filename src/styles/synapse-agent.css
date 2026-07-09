@@ -1,1 +1,1 @@
-.synapse-interface-highlight{outline:2px solid rgb(99 102 241/.5);outline-offset:5px;box-shadow:0 0 0 8px rgb(99 102 241/.08);scroll-margin-block:25vh;transition:outline-color .25s ease,box-shadow .25s ease}
+.synapse-interface-highlight{outline:2px solid var(--synapse-focus-ring);outline-offset:5px;box-shadow:0 0 0 8px var(--synapse-focus-glow);scroll-margin-block:25vh;transition:outline-color .25s ease,box-shadow .25s ease}

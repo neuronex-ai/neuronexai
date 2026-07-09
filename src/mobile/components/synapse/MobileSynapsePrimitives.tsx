@@ -1,9 +1,9 @@
 import { VoiceSpiral } from "@/components/ai-chat/VoiceSpiral";
 import { SynapseOrbAvatar } from "@/components/synapse/SynapseOrbAvatar";
-import { SynapseWidgetRenderer } from "@/components/synapse/SynapseWidgetRenderer";
 import { parseSynapseWidgetFromContent } from "@/lib/synapse-widget-parser";
 import { Drawer, DrawerContent } from "@/components/ui/drawer";
 import { cn } from "@/lib/utils";
+import { MobileSynapseWidgetRenderer } from "./MobileSynapseWidgetRenderer";
 import type { Message } from "@/types";
 import { motion } from "framer-motion";
 import {
@@ -29,7 +29,7 @@ import { useNavigate } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 
 export const mobileSynapseInputClassName =
-  "mt-2 h-[52px] w-full rounded-[17px] border border-border/50 bg-card px-4 text-sm font-medium text-foreground outline-none transition placeholder:text-muted-foreground/42 focus:border-foreground/25 focus-visible:ring-2 focus-visible:ring-foreground/12 dark:border-white/10 dark:bg-white/[0.035]";
+  "synapse-composer synapse-input mt-2 h-[52px] w-full rounded-[17px] px-4 text-sm font-medium transition";
 
 export function MobileSynapseEyebrow({ children, className }: { children: ReactNode; className?: string }) {
   return (
@@ -53,7 +53,7 @@ export function MobileSynapseIconButton({
       type="button"
       aria-label={label}
       className={cn(
-        "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-zinc-200/80 bg-white/78 text-zinc-950 shadow-[0_16px_40px_-28px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl transition active:scale-95 dark:border-white/10 dark:bg-white/[0.055] dark:text-white",
+        "synapse-control synapse-focusable flex h-11 w-11 shrink-0 items-center justify-center rounded-full backdrop-blur-2xl",
         className,
       )}
       {...props}
@@ -80,11 +80,11 @@ export function MobileSynapseButton({
       type={type}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex min-h-11 items-center justify-center gap-2 rounded-[15px] px-4 text-[9px] font-black uppercase tracking-[0.14em] transition active:scale-[0.985] disabled:pointer-events-none disabled:opacity-45",
-        variant === "primary" && "bg-foreground text-background shadow-sm",
-        variant === "secondary" && "border border-border/45 bg-card/78 text-foreground dark:border-white/10 dark:bg-white/[0.04]",
-        variant === "ghost" && "bg-transparent text-muted-foreground active:bg-foreground/[0.045]",
-        variant === "light" && "bg-background text-foreground hover:bg-background/90",
+        "synapse-focusable inline-flex min-h-11 items-center justify-center gap-2 rounded-[15px] px-4 text-[9px] font-black uppercase tracking-[0.14em] disabled:pointer-events-none disabled:opacity-45",
+        variant === "primary" && "synapse-control-active",
+        variant === "secondary" && "synapse-control",
+        variant === "ghost" && "bg-transparent synapse-muted-text active:bg-[var(--synapse-control)]",
+        variant === "light" && "synapse-control",
         variant === "danger" && "border border-rose-500/20 bg-rose-500/[0.07] text-rose-600 dark:text-rose-300",
         className,
       )}
@@ -108,22 +108,22 @@ export function MobileSynapseHero({
   status: string;
 }) {
   return (
-    <section className="overflow-hidden rounded-[26px] border border-zinc-200/80 bg-white p-5 text-zinc-950 shadow-[0_22px_70px_-54px_rgba(0,0,0,0.7)] dark:border-white/10 dark:bg-[#09090b] dark:text-white">
+    <section className="synapse-surface overflow-hidden rounded-[26px] p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <MobileSynapseEyebrow className="text-zinc-500 dark:text-white/48">{modeLabel}</MobileSynapseEyebrow>
-          <h1 className="mt-2 text-[2.28rem] font-black leading-[0.9] tracking-[-0.065em] text-zinc-950 dark:text-white">
+          <MobileSynapseEyebrow className="synapse-tertiary-text">{modeLabel}</MobileSynapseEyebrow>
+          <h1 className="mt-2 text-[2.28rem] font-black leading-[0.9] tracking-[-0.065em]" style={{ color: "var(--synapse-text-primary)" }}>
             {title}
           </h1>
         </div>
         <SynapseOrbAvatar className="h-12 w-12 rounded-[17px]" />
       </div>
-      <p className="mt-4 text-xs font-semibold leading-relaxed text-zinc-600 dark:text-white/68">
+      <p className="mt-4 text-xs font-semibold leading-relaxed synapse-muted-text">
         {description}
       </p>
-      <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-zinc-200/80 bg-zinc-50 px-3 py-2 dark:border-white/10 dark:bg-white/10">
-        <span className="h-1.5 w-1.5 rounded-full bg-zinc-950 dark:bg-white" />
-        <span className="text-[8px] font-black uppercase tracking-[0.15em] text-zinc-500 dark:text-white/68">{status}</span>
+      <div className="synapse-control mt-5 inline-flex items-center gap-2 rounded-full px-3 py-2">
+        <span className="h-1.5 w-1.5 rounded-full" style={{ background: "var(--synapse-success)" }} />
+        <span className="text-[8px] font-black uppercase tracking-[0.15em] synapse-muted-text">{status}</span>
       </div>
     </section>
   );
@@ -142,12 +142,12 @@ export function MobileSynapsePromptCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex min-h-[112px] flex-col items-start justify-between rounded-[22px] border border-zinc-200/85 bg-white p-4 text-left shadow-[0_16px_45px_-38px_rgba(0,0,0,0.5)] transition active:scale-[0.985] dark:border-white/10 dark:bg-white/[0.035]"
+      className="synapse-control synapse-focusable flex min-h-[112px] flex-col items-start justify-between rounded-[22px] p-4 text-left"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-zinc-100 text-zinc-500 dark:bg-white/[0.06] dark:text-white/48">
+      <div className="flex h-10 w-10 items-center justify-center rounded-[14px]" style={{ background: "var(--synapse-control-hover)", color: "var(--synapse-text-secondary)" }}>
         <Icon className="h-[18px] w-[18px]" />
       </div>
-      <p className="text-[13px] font-black leading-tight tracking-[-0.015em] text-zinc-950 dark:text-white">{label}</p>
+      <p className="text-[13px] font-black leading-tight tracking-[-0.015em]" style={{ color: "var(--synapse-text-primary)" }}>{label}</p>
     </button>
   );
 }
@@ -170,13 +170,13 @@ export function MobileSynapseSessionRow({
       className={cn(
         "flex items-center gap-3 rounded-[20px] border p-3.5",
         active
-          ? "border-foreground bg-foreground text-background"
-          : "border-border/40 bg-card/72 text-foreground dark:border-white/10 dark:bg-white/[0.03]",
+          ? "synapse-control-active"
+          : "synapse-control",
       )}
     >
       <button type="button" onClick={onClick} className="min-w-0 flex-1 text-left">
         <p className="truncate text-[13px] font-black tracking-[-0.015em]">{title}</p>
-        <p className={cn("mt-1 text-[9px] font-medium", active ? "text-background/58" : "text-muted-foreground/62")}>
+        <p className={cn("mt-1 text-[9px] font-medium", active ? "opacity-70" : "synapse-muted-text")}>
           {description}
         </p>
       </button>
@@ -185,7 +185,7 @@ export function MobileSynapseSessionRow({
         onClick={onDelete}
         className={cn(
           "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] transition active:scale-95",
-          active ? "bg-background/10 text-background/72" : "bg-foreground/[0.045] text-muted-foreground",
+          active ? "bg-white/10 opacity-80" : "synapse-control",
         )}
         aria-label="Excluir conversa"
       >
@@ -245,16 +245,16 @@ export function MobileSynapseActionCard({ action }: { action: RichAction }) {
     <button
       type="button"
       onClick={() => path ? navigate(path) : undefined}
-      className="mt-3 flex w-full items-center gap-3 rounded-[19px] border border-border/40 bg-background/78 p-3.5 text-left transition active:scale-[0.99] dark:border-white/10 dark:bg-black/35"
+      className="synapse-control synapse-focusable mt-3 flex w-full items-center gap-3 rounded-[19px] p-3.5 text-left"
     >
-      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-foreground/[0.05] text-muted-foreground">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px]" style={{ background: "var(--synapse-control-hover)" }}>
         <Icon className="h-[18px] w-[18px]" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-black capitalize tracking-[-0.01em] text-foreground">{meta.title}</p>
-        <p className="mt-0.5 line-clamp-2 text-[10px] font-medium leading-relaxed text-muted-foreground/66">{meta.description}</p>
+        <p className="truncate text-[12px] font-black capitalize tracking-[-0.01em]" style={{ color: "var(--synapse-text-primary)" }}>{meta.title}</p>
+        <p className="mt-0.5 line-clamp-2 text-[10px] font-medium leading-relaxed synapse-muted-text">{meta.description}</p>
       </div>
-      {path ? <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground/35" /> : null}
+      {path ? <ArrowRight className="h-4 w-4 shrink-0 synapse-tertiary-text" /> : null}
     </button>
   );
 }
@@ -285,10 +285,10 @@ export function MobileSynapseMessage({
   return (
     <article
       className={cn(
-        "rounded-[24px] border p-4 shadow-[0_18px_48px_-42px_rgba(24,24,27,0.58)] backdrop-blur-xl",
+        "rounded-[24px] p-4 backdrop-blur-xl",
         isAssistant
-          ? "border-zinc-200/80 bg-white text-zinc-950 dark:border-white/10 dark:bg-white/[0.045] dark:text-white"
-          : "border-zinc-950 bg-zinc-950 text-white dark:border-white/[0.09] dark:bg-[#101114] dark:text-white",
+          ? "synapse-message-assistant"
+          : "synapse-message-user",
       )}
     >
       <div className="flex items-center justify-between gap-3">
@@ -301,10 +301,10 @@ export function MobileSynapseMessage({
             </div>
           )}
           <div className="min-w-0">
-            <p className={cn("truncate text-[9px] font-black uppercase tracking-[0.16em]", isAssistant ? "text-zinc-500 dark:text-white/52" : "text-white/62")}>
+            <p className={cn("truncate text-[9px] font-black uppercase tracking-[0.16em]", isAssistant ? "synapse-tertiary-text" : "opacity-70")}>
               {isAssistant ? "Synapse" : "Você"}
             </p>
-            <p className={cn("mt-0.5 text-[8px] font-medium", isAssistant ? "text-zinc-400 dark:text-white/38" : "text-white/45")}>
+            <p className={cn("mt-0.5 text-[8px] font-medium", isAssistant ? "synapse-tertiary-text" : "opacity-55")}>
               {new Date(message.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </p>
           </div>
@@ -314,7 +314,7 @@ export function MobileSynapseMessage({
           onClick={copyMessage}
           className={cn(
             "flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition active:scale-95",
-            isAssistant ? "bg-zinc-100 text-zinc-500 dark:bg-white/[0.06] dark:text-white/52" : "bg-white/10 text-white/72",
+            isAssistant ? "synapse-control" : "bg-white/10 text-white/72",
           )}
           aria-label="Copiar mensagem"
         >
@@ -326,19 +326,19 @@ export function MobileSynapseMessage({
         <div
           className={cn(
             "mt-3 max-w-none text-[14px] font-semibold leading-relaxed",
-            isAssistant ? "text-zinc-800 dark:text-white/86" : "text-white",
+            isAssistant ? "synapse-prose" : "text-white",
             "[&_a]:font-bold [&_a]:underline [&_a]:underline-offset-4",
             "[&_code]:rounded [&_code]:px-1.5 [&_code]:py-0.5 [&_code]:text-[12px]",
-            isAssistant ? "[&_code]:bg-zinc-950/[0.06] dark:[&_code]:bg-white/[0.08]" : "[&_code]:bg-white/10",
+            isAssistant ? "[&_code]:bg-[var(--synapse-control)]" : "[&_code]:bg-white/10",
             "[&_li]:my-1 [&_ol]:pl-5 [&_p]:my-2 [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-[16px] [&_pre]:border [&_pre]:p-3 [&_pre]:text-[12px] [&_table]:my-3 [&_table]:w-full [&_table]:text-left [&_td]:border-t [&_td]:border-zinc-200/70 dark:[&_td]:border-white/10 [&_td]:py-2 [&_td]:pr-3 [&_th]:py-2 [&_th]:pr-3 [&_ul]:pl-5",
-            isAssistant ? "[&_pre]:border-zinc-200/80 [&_pre]:bg-zinc-50 dark:[&_pre]:border-white/10 dark:[&_pre]:bg-white/[0.045]" : "[&_pre]:border-white/10 [&_pre]:bg-white/10",
+            isAssistant ? "[&_pre]:border-[var(--synapse-border-subtle)] [&_pre]:bg-[var(--synapse-control)]" : "[&_pre]:border-white/10 [&_pre]:bg-white/10",
           )}
         >
           <ReactMarkdown remarkPlugins={[remarkGfm]}>{cleanContent}</ReactMarkdown>
         </div>
       ) : null}
 
-      {widgetData ? <SynapseWidgetRenderer widgetData={widgetData} compact /> : null}
+      {widgetData ? <MobileSynapseWidgetRenderer widgetData={widgetData} /> : null}
     </article>
   );
 }
@@ -362,14 +362,15 @@ export function MobileSynapseThinking() {
           ],
         }}
         transition={{ repeat: Infinity, duration: 2.4, ease: "easeInOut" }}
-        className="flex items-center gap-1.5 rounded-[20px] rounded-bl-[8px] border border-zinc-200/80 bg-white/82 px-4 py-3 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.045]"
+        className="synapse-message-assistant flex items-center gap-1.5 rounded-[20px] rounded-bl-[8px] px-4 py-3 backdrop-blur-xl"
       >
         {[0, 0.16, 0.32].map((delay) => (
           <motion.span
             key={delay}
             animate={{ y: [0, -3, 0], opacity: [0.35, 1, 0.35], scale: [1, 1.18, 1] }}
             transition={{ repeat: Infinity, duration: 0.9, delay, ease: "easeInOut" }}
-            className="h-1.5 w-1.5 rounded-full bg-zinc-950/60 dark:bg-white/70"
+            className="h-1.5 w-1.5 rounded-full"
+            style={{ background: "var(--synapse-text-secondary)" }}
           />
         ))}
       </motion.div>
@@ -424,8 +425,8 @@ export function MobileSynapseVoicePanel({
       : "Toque no microfone para iniciar a conversa por voz.");
 
   return (
-    <section className="relative flex h-full min-h-[100dvh] flex-col overflow-hidden bg-[#f8f8f7] px-4 pb-[calc(0.9rem+env(safe-area-inset-bottom))] pt-[calc(6.35rem+env(safe-area-inset-top))] text-zinc-950 dark:bg-[#020204] dark:text-white">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_32%,rgba(99,102,241,0.13),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.78),rgba(248,248,247,0.92))] dark:bg-[radial-gradient(circle_at_50%_34%,rgba(99,102,241,0.16),transparent_42%),linear-gradient(180deg,rgba(10,10,12,0.98),rgba(0,0,0,1))]" />
+    <section className="synapse-canvas relative flex h-full min-h-[100dvh] flex-col overflow-hidden px-4 pb-[calc(0.9rem+env(safe-area-inset-bottom))] pt-[calc(6.35rem+env(safe-area-inset-top))]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_32%,color-mix(in_srgb,var(--synapse-voice-active)_15%,transparent),transparent_42%),linear-gradient(180deg,color-mix(in_srgb,var(--synapse-canvas)_82%,white),var(--synapse-canvas))]" />
 
       <div className="relative flex min-h-0 flex-1 translate-y-[clamp(0.35rem,2dvh,1.1rem)] flex-col items-center justify-center">
         <div
@@ -468,7 +469,7 @@ export function MobileSynapseVoicePanel({
                   ? "border-indigo-500/20 bg-indigo-500/10 text-indigo-600 dark:text-indigo-300"
                 : isListening
                   ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-500"
-                  : "border-border/45 bg-card/55 text-muted-foreground dark:border-white/10 dark:bg-white/[0.055]",
+                  : "synapse-control synapse-muted-text",
             )}
           >
             {isListening ? (
@@ -485,7 +486,7 @@ export function MobileSynapseVoicePanel({
 
           <p className={cn(
             "mt-3 line-clamp-4 text-xs font-semibold leading-relaxed",
-            error ? "text-rose-500" : "text-muted-foreground/78 dark:text-white/68",
+            error ? "text-rose-500" : "synapse-muted-text",
           )}>
             {description}
           </p>
@@ -497,7 +498,7 @@ export function MobileSynapseVoicePanel({
           type="button"
           onClick={onReset}
           disabled={isProcessing && !isToolActive}
-          className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200/75 bg-white/82 text-zinc-500 shadow-sm backdrop-blur-xl transition active:scale-95 disabled:opacity-45 dark:border-white/10 dark:bg-white/[0.06] dark:text-white/55"
+          className="synapse-control synapse-focusable flex h-12 w-12 items-center justify-center rounded-full shadow-sm backdrop-blur-xl disabled:opacity-45"
           aria-label="Reiniciar conversa"
         >
           <RefreshCcw className="h-5 w-5" />
@@ -508,10 +509,10 @@ export function MobileSynapseVoicePanel({
           onClick={onToggleRecording}
           disabled={isProcessing && !isToolActive}
           className={cn(
-            "flex h-[4.6rem] w-[4.6rem] items-center justify-center rounded-full border text-white shadow-[0_22px_62px_-28px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.2)] transition active:scale-95 disabled:opacity-60",
+            "synapse-focusable flex h-[4.6rem] w-[4.6rem] items-center justify-center rounded-full border text-white shadow-[0_22px_62px_-28px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.2)] transition active:scale-95 disabled:opacity-60",
             error
               ? "border-rose-400/30 bg-rose-500"
-              : "border-white/15 bg-zinc-950 dark:bg-white dark:text-black",
+              : "synapse-control-active",
           )}
           aria-label={isListening ? "Pausar microfone" : "Ativar microfone"}
         >
@@ -527,7 +528,7 @@ export function MobileSynapseVoicePanel({
         <div className="h-12 w-12" aria-hidden="true" />
       </div>
 
-      <p className="relative z-20 mt-3 text-center text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground/45">
+      <p className="relative z-20 mt-3 text-center text-[8px] font-black uppercase tracking-[0.15em] synapse-tertiary-text">
         Voz neural · baixa latência
       </p>
     </section>
@@ -561,22 +562,22 @@ export function MobileSynapseSheet({
     <Drawer open={open} onOpenChange={onOpenChange}>
       <DrawerContent
         className={cn(
-          "[&>div:first-child]:hidden z-[130] flex h-[min(92dvh,46rem)] max-h-[92dvh] overflow-hidden rounded-t-[30px] border-border/40 bg-background p-0 shadow-2xl dark:border-white/10",
+          "synapse-surface synapse-elevated [&>div:first-child]:hidden z-[130] flex h-[min(92dvh,46rem)] max-h-[92dvh] overflow-hidden rounded-t-[30px] p-0",
           contentClassName,
         )}
       >
-        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full bg-foreground/14" />
+        <div className="mx-auto mt-3 h-1 w-10 shrink-0 rounded-full" style={{ background: "var(--synapse-border-strong)" }} />
         <header className="shrink-0 px-5 pb-4 pt-5">
           <div className="flex items-start gap-3">
             {Icon ? (
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-border/40 bg-card/72 dark:border-white/10 dark:bg-white/[0.03]">
+              <div className="synapse-control flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px]">
                 <Icon className="h-5 w-5" />
               </div>
             ) : null}
             <div className="min-w-0">
               {eyebrow ? <MobileSynapseEyebrow>{eyebrow}</MobileSynapseEyebrow> : null}
-              {title ? <h2 className="mt-1 text-2xl font-black leading-none tracking-[-0.05em] text-foreground">{title}</h2> : null}
-              {description ? <p className="mt-2 text-xs font-medium leading-relaxed text-muted-foreground/70">{description}</p> : null}
+              {title ? <h2 className="mt-1 text-2xl font-black leading-none tracking-[-0.05em]" style={{ color: "var(--synapse-text-primary)" }}>{title}</h2> : null}
+              {description ? <p className="mt-2 text-xs font-medium leading-relaxed synapse-muted-text">{description}</p> : null}
             </div>
           </div>
         </header>
@@ -590,7 +591,7 @@ export function MobileSynapseSheet({
           {children}
         </div>
         {footer ? (
-          <footer className="shrink-0 border-t border-border/40 bg-background/94 px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl dark:border-white/10">
+          <footer className="shrink-0 border-t px-5 pb-[calc(16px+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl" style={{ borderColor: "var(--synapse-border-subtle)", background: "color-mix(in srgb, var(--synapse-surface) 92%, transparent)" }}>
             {footer}
           </footer>
         ) : null}
@@ -610,11 +611,11 @@ export function MobileSynapseField({
 }) {
   return (
     <label className="block">
-      <span className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground/62">
+      <span className="text-[9px] font-black uppercase tracking-[0.16em] synapse-tertiary-text">
         {label}
       </span>
       {children}
-      {hint ? <span className="mt-2 block text-[10px] font-medium leading-relaxed text-muted-foreground/62">{hint}</span> : null}
+      {hint ? <span className="mt-2 block text-[10px] font-medium leading-relaxed synapse-tertiary-text">{hint}</span> : null}
     </label>
   );
 }

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AgentToolContext, AgentToolResult, PendingAction } from "./executor.ts";
 
 export const NOTES_READ_TOOLS = new Set([

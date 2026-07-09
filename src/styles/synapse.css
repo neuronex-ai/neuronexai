@@ -1,0 +1,298 @@
+:root {
+  --synapse-canvas: #f6f7f8;
+  --synapse-canvas-strong: #eef0f2;
+  --synapse-surface: rgba(255, 255, 255, 0.9);
+  --synapse-surface-raised: rgba(255, 255, 255, 0.96);
+  --synapse-glass: rgba(255, 255, 255, 0.78);
+  --synapse-glass-strong: rgba(255, 255, 255, 0.9);
+  --synapse-control: rgba(18, 20, 24, 0.055);
+  --synapse-control-hover: rgba(18, 20, 24, 0.09);
+  --synapse-control-active: #101216;
+  --synapse-text-primary: #111318;
+  --synapse-text-secondary: rgba(17, 19, 24, 0.72);
+  --synapse-text-tertiary: rgba(17, 19, 24, 0.5);
+  --synapse-border-subtle: rgba(17, 19, 24, 0.1);
+  --synapse-border-strong: rgba(17, 19, 24, 0.18);
+  --synapse-focus-ring: rgba(59, 130, 246, 0.38);
+  --synapse-focus-glow: rgba(59, 130, 246, 0.17);
+  --synapse-message-user: #111318;
+  --synapse-message-user-text: #ffffff;
+  --synapse-message-assistant: rgba(255, 255, 255, 0.92);
+  --synapse-widget: rgba(255, 255, 255, 0.88);
+  --synapse-error: #dc2626;
+  --synapse-error-soft: rgba(220, 38, 38, 0.1);
+  --synapse-success: #059669;
+  --synapse-success-soft: rgba(5, 150, 105, 0.1);
+  --synapse-voice-active: #4f46e5;
+  --synapse-voice-soft: rgba(79, 70, 229, 0.12);
+  --synapse-shadow-soft: 0 18px 54px -38px rgba(17, 19, 24, 0.46);
+  --synapse-shadow-raised: 0 28px 84px -52px rgba(17, 19, 24, 0.58);
+  --synapse-shadow-focus: 0 0 0 1px var(--synapse-focus-ring), 0 18px 58px -38px var(--synapse-focus-glow);
+  --synapse-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+}
+
+.dark {
+  --synapse-canvas: #030406;
+  --synapse-canvas-strong: #080a0d;
+  --synapse-surface: rgba(15, 17, 22, 0.94);
+  --synapse-surface-raised: rgba(21, 24, 31, 0.98);
+  --synapse-glass: rgba(17, 20, 27, 0.82);
+  --synapse-glass-strong: rgba(23, 27, 35, 0.94);
+  --synapse-control: rgba(255, 255, 255, 0.075);
+  --synapse-control-hover: rgba(255, 255, 255, 0.125);
+  --synapse-control-active: #f8fafc;
+  --synapse-text-primary: #f8fafc;
+  --synapse-text-secondary: rgba(248, 250, 252, 0.78);
+  --synapse-text-tertiary: rgba(248, 250, 252, 0.56);
+  --synapse-border-subtle: rgba(248, 250, 252, 0.105);
+  --synapse-border-strong: rgba(248, 250, 252, 0.18);
+  --synapse-focus-ring: rgba(147, 197, 253, 0.48);
+  --synapse-focus-glow: rgba(96, 165, 250, 0.24);
+  --synapse-message-user: #f8fafc;
+  --synapse-message-user-text: #090b10;
+  --synapse-message-assistant: rgba(19, 22, 29, 0.96);
+  --synapse-widget: rgba(20, 23, 30, 0.94);
+  --synapse-error: #fb7185;
+  --synapse-error-soft: rgba(251, 113, 133, 0.13);
+  --synapse-success: #34d399;
+  --synapse-success-soft: rgba(52, 211, 153, 0.13);
+  --synapse-voice-active: #a5b4fc;
+  --synapse-voice-soft: rgba(165, 180, 252, 0.15);
+  --synapse-shadow-soft: 0 18px 58px -40px rgba(0, 0, 0, 0.9);
+  --synapse-shadow-raised: 0 34px 100px -54px rgba(0, 0, 0, 0.98);
+  --synapse-shadow-focus: 0 0 0 1px var(--synapse-focus-ring), 0 20px 70px -42px var(--synapse-focus-glow);
+  --synapse-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+}
+
+.synapse-canvas {
+  background:
+    radial-gradient(circle at 22% -8%, color-mix(in srgb, var(--synapse-text-primary) 5%, transparent), transparent 36rem),
+    linear-gradient(180deg, var(--synapse-canvas), var(--synapse-canvas-strong));
+  color: var(--synapse-text-primary);
+}
+
+.synapse-surface,
+.synapse-glass,
+.synapse-widget-surface {
+  position: relative;
+  color: var(--synapse-text-primary);
+  border: 1px solid var(--synapse-border-subtle);
+  box-shadow: var(--synapse-shadow-soft), var(--synapse-inset-highlight);
+  backdrop-filter: blur(26px) saturate(1.16);
+  -webkit-backdrop-filter: blur(26px) saturate(1.16);
+}
+
+.synapse-surface {
+  background: var(--synapse-surface);
+}
+
+.synapse-glass {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.12), transparent 42%),
+    var(--synapse-glass);
+}
+
+.dark .synapse-glass {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 42%),
+    var(--synapse-glass);
+}
+
+.synapse-widget-surface {
+  background: var(--synapse-widget);
+}
+
+.synapse-elevated {
+  background: var(--synapse-surface-raised);
+  box-shadow: var(--synapse-shadow-raised), var(--synapse-inset-highlight);
+}
+
+.synapse-muted-text {
+  color: var(--synapse-text-secondary);
+}
+
+.synapse-tertiary-text {
+  color: var(--synapse-text-tertiary);
+}
+
+.synapse-divider {
+  background: var(--synapse-border-subtle);
+}
+
+.synapse-control {
+  color: var(--synapse-text-secondary);
+  background: var(--synapse-control);
+  border: 1px solid var(--synapse-border-subtle);
+  box-shadow: var(--synapse-inset-highlight);
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 160ms ease,
+    box-shadow 180ms ease;
+}
+
+.synapse-control:hover {
+  color: var(--synapse-text-primary);
+  background: var(--synapse-control-hover);
+  border-color: var(--synapse-border-strong);
+}
+
+.synapse-control:active {
+  transform: translateY(1px) scale(0.975);
+}
+
+.synapse-control-active {
+  color: var(--synapse-message-user-text);
+  background: var(--synapse-control-active);
+  border-color: transparent;
+  box-shadow: var(--synapse-shadow-soft), var(--synapse-inset-highlight);
+}
+
+.dark .synapse-control-active {
+  color: #090b10;
+}
+
+.synapse-focusable {
+  outline: none;
+}
+
+.synapse-focusable:focus-visible {
+  outline: none;
+  box-shadow: var(--synapse-shadow-focus), var(--synapse-inset-highlight);
+  border-color: var(--synapse-focus-ring);
+}
+
+.synapse-composer {
+  color: var(--synapse-text-primary);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.18), transparent 46%),
+    var(--synapse-glass-strong);
+  border: 1px solid var(--synapse-border-subtle);
+  box-shadow: var(--synapse-shadow-soft), var(--synapse-inset-highlight);
+  backdrop-filter: blur(28px) saturate(1.18);
+  -webkit-backdrop-filter: blur(28px) saturate(1.18);
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease,
+    background-color 220ms ease,
+    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.dark .synapse-composer {
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.052), transparent 46%),
+    var(--synapse-glass-strong);
+}
+
+.synapse-composer:hover {
+  border-color: var(--synapse-border-strong);
+}
+
+.synapse-composer[data-state="focused"],
+.synapse-composer:focus-within {
+  border-color: var(--synapse-focus-ring);
+  box-shadow: var(--synapse-shadow-focus), var(--synapse-inset-highlight);
+}
+
+.synapse-composer[data-state="disabled"] {
+  opacity: 0.58;
+}
+
+.synapse-composer[data-state="sending"],
+.synapse-composer[data-state="loading"],
+.synapse-composer[data-state="voice-listening"] {
+  border-color: color-mix(in srgb, var(--synapse-voice-active) 42%, var(--synapse-border-subtle));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--synapse-voice-active) 32%, transparent),
+    0 18px 58px -40px var(--synapse-voice-soft),
+    var(--synapse-inset-highlight);
+}
+
+.synapse-composer[data-state="error"] {
+  border-color: color-mix(in srgb, var(--synapse-error) 54%, var(--synapse-border-subtle));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--synapse-error) 28%, transparent),
+    0 18px 58px -42px var(--synapse-error-soft),
+    var(--synapse-inset-highlight);
+}
+
+.synapse-input {
+  color: var(--synapse-text-primary);
+  caret-color: var(--synapse-voice-active);
+  background: transparent;
+  outline: none;
+}
+
+.synapse-input::placeholder {
+  color: var(--synapse-text-tertiary);
+}
+
+.synapse-message-user,
+.synapse-message-assistant {
+  border: 1px solid var(--synapse-border-subtle);
+  box-shadow: var(--synapse-shadow-soft);
+}
+
+.synapse-message-user {
+  color: var(--synapse-message-user-text);
+  background: var(--synapse-message-user);
+}
+
+.synapse-message-assistant {
+  color: var(--synapse-text-primary);
+  background: var(--synapse-message-assistant);
+  box-shadow: var(--synapse-shadow-soft), var(--synapse-inset-highlight);
+}
+
+.synapse-prose {
+  color: var(--synapse-text-primary);
+}
+
+.synapse-prose :where(p, li, td) {
+  color: var(--synapse-text-secondary);
+}
+
+.synapse-prose :where(strong, h1, h2, h3, h4) {
+  color: var(--synapse-text-primary);
+}
+
+.synapse-prose :where(code) {
+  color: var(--synapse-text-primary);
+  background: var(--synapse-control);
+}
+
+.synapse-status-success {
+  color: var(--synapse-success);
+  background: var(--synapse-success-soft);
+}
+
+.synapse-status-error {
+  color: var(--synapse-error);
+  background: var(--synapse-error-soft);
+}
+
+.synapse-voice-active {
+  color: var(--synapse-voice-active);
+  background: var(--synapse-voice-soft);
+  border-color: color-mix(in srgb, var(--synapse-voice-active) 26%, transparent);
+}
+
+.synapse-interface-highlight {
+  outline: 2px solid var(--synapse-focus-ring);
+  outline-offset: 5px;
+  box-shadow: 0 0 0 8px var(--synapse-focus-glow);
+  scroll-margin-block: 25vh;
+  transition: outline-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .synapse-control,
+  .synapse-composer {
+    transition-duration: 0.01ms !important;
+  }
+
+  .synapse-control:active {
+    transform: none;
+  }
+}

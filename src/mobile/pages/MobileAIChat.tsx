@@ -6,7 +6,6 @@ import { useGeminiVoice } from "@/hooks/use-gemini-voice";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
 import { getR2DocumentDownloadUrl, uploadDocumentToR2 } from "@/lib/r2-documents-client";
-import { cn } from "@/lib/utils";
 import { format, isToday, isYesterday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AnimatePresence, motion } from "framer-motion";
@@ -19,11 +18,8 @@ import {
   MessageSquare,
   Mic,
   Plus,
-  Send,
-  Sparkles,
   SquarePen,
   Users,
-  X,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -40,6 +36,7 @@ import {
   MobileSynapseThinking,
   MobileSynapseVoicePanel,
 } from "../components/synapse/MobileSynapsePrimitives";
+import { MobileSynapseComposer } from "../components/synapse/MobileSynapseComposer";
 import {
   MobileSynapseEmailDraftSheet,
   MobileSynapseInvoiceDraftSheet,
@@ -92,7 +89,6 @@ export const MobileAIChat = () => {
   const [mode, setMode] = useState<SynapseMode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
-  const [inputFocused, setInputFocused] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isEmailSheetOpen, setIsEmailSheetOpen] = useState(false);
@@ -144,7 +140,6 @@ export const MobileAIChat = () => {
   });
 
   const scrollRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const sessionList = useMemo(() => (Array.isArray(sessions) ? sessions : []), [sessions]);
   const messageList = useMemo(() => (Array.isArray(messages) ? messages : []), [messages]);
@@ -321,8 +316,8 @@ export const MobileAIChat = () => {
     <MobileLayout
       showNav={false}
       showBottomNav={false}
-      shellClassName="bg-[#f8f8f7] dark:bg-[#020204]"
-      className="min-h-0 overflow-hidden bg-[#f8f8f7] px-0 pb-0 pt-0 text-zinc-950 dark:bg-[#020204] dark:text-white"
+      shellClassName="synapse-canvas"
+      className="synapse-canvas min-h-0 overflow-hidden px-0 pb-0 pt-0"
     >
       <header className="pointer-events-none fixed left-0 right-0 top-0 z-[105] px-4 pt-[calc(0.55rem+env(safe-area-inset-top))]">
         <div className="flex items-center justify-between gap-3">
@@ -331,11 +326,11 @@ export const MobileAIChat = () => {
             <MobileSynapseIconButton icon={History} label="Histórico" onClick={() => setIsHistoryOpen(true)} />
           </div>
 
-          <div className="pointer-events-auto min-w-0 flex-1 rounded-full border border-zinc-200/80 bg-white/78 px-3 py-2 text-center shadow-[0_14px_34px_-24px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.055]">
-            <p className="truncate text-[9px] font-black uppercase tracking-[0.17em] text-zinc-500 dark:text-white/48">
+          <div className="synapse-glass pointer-events-auto min-w-0 flex-1 rounded-full px-3 py-2 text-center">
+            <p className="truncate text-[9px] font-black uppercase tracking-[0.17em] synapse-tertiary-text">
               Synapse AI
             </p>
-            <p className="mt-0.5 truncate text-[11px] font-black tracking-[-0.01em] text-zinc-950 dark:text-white">
+            <p className="mt-0.5 truncate text-[11px] font-black tracking-[-0.01em]" style={{ color: "var(--synapse-text-primary)" }}>
               {activeSession?.title || (mode === "voice" ? "Modo voz" : "Nova conversa")}
             </p>
           </div>
@@ -417,75 +412,18 @@ export const MobileAIChat = () => {
               )}
             </div>
 
-            <div className="fixed bottom-0 left-0 right-0 z-[95] bg-gradient-to-t from-[#f8f8f7] via-[#f8f8f7]/96 to-transparent px-4 pb-[calc(0.9rem+env(safe-area-inset-bottom))] pt-12 dark:from-[#020204] dark:via-[#020204]/96">
-              <div className="mx-auto max-w-lg">
-                {isUploading ? (
-                  <p className="mb-2 text-center text-[8px] font-black uppercase tracking-[0.16em] text-zinc-500 dark:text-white/45">
-                    Enviando anexos...
-                  </p>
-                ) : null}
-                <motion.div
-                  animate={{
-                    y: inputFocused ? -2 : 0,
-                    scale: inputFocused ? 1.01 : 1,
-                    boxShadow: inputFocused
-                      ? "0 28px 82px -48px rgba(0,0,0,0.72)"
-                      : "0 22px 70px -52px rgba(0,0,0,0.68)",
-                  }}
-                  transition={{ type: "spring", stiffness: 420, damping: 34 }}
-                  className="flex items-center gap-2.5 rounded-[26px] border border-zinc-200/80 bg-white/88 p-2 backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.06]"
-                >
-                  <div className="relative min-w-0 flex-1">
-                    <input
-                      ref={inputRef}
-                      value={inputValue}
-                      onChange={(event) => setInputValue(event.target.value)}
-                      onFocus={() => setInputFocused(true)}
-                      onBlur={() => setInputFocused(false)}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter" && !event.shiftKey) {
-                          event.preventDefault();
-                          void handleSend();
-                        }
-                      }}
-                      placeholder="Mensagem..."
-                      className="h-12 w-full rounded-[18px] border-0 bg-transparent px-4 pr-12 text-base font-medium text-zinc-950 outline-none placeholder:text-zinc-400 dark:text-white dark:placeholder:text-white/35"
-                    />
-                    <motion.button
-                      type="button"
-                      onClick={() => isListening ? stopListening() : startListening()}
-                      whileTap={{ scale: 0.94 }}
-                      className={cn(
-                        "absolute right-1 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-[15px] transition",
-                        isListening
-                          ? "bg-zinc-950 text-white dark:bg-white dark:text-black"
-                          : "text-zinc-500 active:bg-zinc-950/[0.05] dark:text-white/48 dark:active:bg-white/[0.08]",
-                      )}
-                      aria-label={isListening ? "Parar gravação" : "Falar"}
-                    >
-                      {isListening ? <X className="h-4.5 w-4.5" /> : <Mic className="h-4.5 w-4.5" />}
-                    </motion.button>
-                  </div>
-
-                  <motion.button
-                    type="button"
-                    onClick={() => inputValue.trim() ? void handleSend() : toggleVoiceMode()}
-                    disabled={isProcessing}
-                    whileTap={{ scale: 0.94 }}
-                    animate={{ rotate: inputValue.trim() ? 0 : -6 }}
-                    transition={{ type: "spring", stiffness: 520, damping: 30 }}
-                    className={cn(
-                      "flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] transition disabled:opacity-50",
-                      inputValue.trim()
-                        ? "bg-zinc-950 text-white dark:bg-white dark:text-black"
-                        : "border border-zinc-200/80 bg-zinc-50 text-zinc-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/58",
-                    )}
-                    aria-label={inputValue.trim() ? "Enviar mensagem" : "Abrir modo voz"}
-                  >
-                    {inputValue.trim() ? <Send className="h-5 w-5" /> : <Sparkles className="h-5 w-5" />}
-                  </motion.button>
-                </motion.div>
-              </div>
+            <div className="fixed bottom-0 left-0 right-0 z-[95] bg-gradient-to-t from-[var(--synapse-canvas)] via-[color-mix(in_srgb,var(--synapse-canvas)_94%,transparent)] to-transparent px-4 pb-[calc(0.9rem+env(safe-area-inset-bottom))] pt-12">
+              <MobileSynapseComposer
+                value={inputValue}
+                onChange={setInputValue}
+                onSend={() => void handleSend()}
+                onVoiceMode={toggleVoiceMode}
+                isListening={isListening}
+                onStartListening={startListening}
+                onStopListening={stopListening}
+                isProcessing={isProcessing}
+                isUploading={isUploading}
+              />
             </div>
           </motion.div>
         )}

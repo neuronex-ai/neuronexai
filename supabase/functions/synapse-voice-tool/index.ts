@@ -57,6 +57,9 @@ type MessageRow = {
 };
 
 type PendingReference = { row: MessageRow; action: PendingAction; attachments: any[] };
+type AuthResult =
+  | { error: Response }
+  | { authorization: string; admin: any; user: { id: string } };
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const arrayValue = (value: unknown) =>
@@ -197,7 +200,7 @@ function normalizeFunctionPayload(payload: Record<string, unknown>) {
   };
 }
 
-async function authenticate(request: Request) {
+async function authenticate(request: Request): Promise<AuthResult> {
   const authorization = request.headers.get("Authorization") || "";
   if (!authorization.startsWith("Bearer ")) return { error: json({ error: "Sessao ausente." }, 401) };
 
@@ -260,7 +263,7 @@ async function logVoiceAction(
   }
 }
 
-serve(async (request) => {
+serve(async (request): Promise<Response> => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (request.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
 

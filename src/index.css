@@ -1,5 +1,6 @@
 /* Liquid Glass Design System - Must be at the very top */
 @import './styles/liquid-glass.css';
+@import './styles/synapse.css';
 
 @tailwind base;
 @tailwind components;
