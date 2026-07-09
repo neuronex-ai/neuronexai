@@ -2,7 +2,8 @@
  * asaas-connect-onboarding
  *
  * Creates a white-label sub-account (subconta) for a psychologist via Asaas API.
- * Stores the sub-account's `apiKey` and `walletId` in `financial_accounts`.
+ * Stores the sub-account walletId in `financial_accounts` and the apiKey in
+ * the private credential vault.
  * Returns onboarding URL if additional documents are needed.
  *
  * POST /asaas-connect-onboarding
@@ -96,7 +97,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // 1. Check if user already has a financial account with Asaas
-        const { data: existingAccount } = await supabaseAdmin
+        let { data: existingAccount } = await supabaseAdmin
             .from('financial_accounts')
             .select('*')
             .eq('user_id', user.id)
@@ -114,7 +115,34 @@ Deno.serve(async (req: Request) => {
                         already_exists: true,
                     },
                 });
-                const existingApiKey = await getFinancialAccountAsaasApiKey(existingAccount);
+                let existingApiKey = await getFinancialAccountAsaasApiKey(existingAccount);
+                if (!existingApiKey) {
+                    const recoveredProviderAccount =
+                        (resolvedEmail ? await findAsaasSubAccountByEmail(resolvedEmail) : null) ||
+                        (cpfCnpjDigits ? await findAsaasSubAccountByCpfCnpj(cpfCnpjDigits) : null);
+
+                    if (recoveredProviderAccount?.apiKey) {
+                        existingAccount = await upsertFinancialAccountRecord(user.id, {
+                            provider: 'asaas',
+                            asaas_account_id: recoveredProviderAccount.id,
+                            asaas_wallet_id: recoveredProviderAccount.walletId || existingAccount.asaas_wallet_id,
+                            asaas_onboarding_url: recoveredProviderAccount.onboardingUrl || existingAccount.asaas_onboarding_url,
+                            asaas_environment: ASAAS_ENV,
+                            asaas_api_key: recoveredProviderAccount.apiKey,
+                            last_sync_error: null,
+                            metadata: {
+                                ...(existingAccount.metadata || {}),
+                                provider_connection: {
+                                    status: 'credential_recovered',
+                                    recovered_at: new Date().toISOString(),
+                                    source: 'asaas_account_discovery',
+                                    previous_account_id: existingAccount.asaas_account_id,
+                                },
+                            },
+                        });
+                        existingApiKey = recoveredProviderAccount.apiKey;
+                    }
+                }
                 if (!existingApiKey) {
                     return errorResponse('Subconta Asaas existente sem chave de acesso configurada.', 409);
                 }
