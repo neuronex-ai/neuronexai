@@ -10,6 +10,16 @@ import {
   saveConversationContext,
   updateContextFromResult,
 } from "../synapse-text-fallback/entity-context.ts";
+import {
+  sanitizeVoiceAuditPayload,
+  validateVoiceToolCall,
+  voicePolicyFailurePayload,
+} from "../_shared/synapse-voice-policy.ts";
+import {
+  assertVoiceSessionOwnership,
+  recordVoiceTurn,
+  updateVoiceSession,
+} from "../_shared/synapse-voice-session.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -32,6 +42,8 @@ type PendingAction = {
   status: "pending" | "executing" | "executed" | "cancelled" | "failed";
   createdAt: string;
   expiresAt: string;
+  conversationId?: string;
+  voiceSessionId?: string | null;
   errorMessage?: string;
   updatedAt?: string;
 };
@@ -213,6 +225,41 @@ async function authenticate(request: Request) {
   return { authorization, admin, user };
 }
 
+async function logVoiceAction(
+  admin: any,
+  input: {
+    userId: string;
+    conversationId: string;
+    voiceSessionId?: string | null;
+    toolName: string;
+    status: "success" | "error" | "cancelled";
+    durationMs: number;
+    confirmationRequired?: boolean;
+    riskLevel?: string;
+    payload?: Record<string, unknown>;
+    errorMessage?: string | null;
+  },
+) {
+  try {
+    await admin.from("synapse_action_logs").insert({
+      user_id: input.userId,
+      session_id: input.conversationId,
+      voice_session_id: input.voiceSessionId || null,
+      channel: "voice",
+      action_type: "tool_call",
+      tool_name: clean(input.toolName, 120),
+      status: input.status,
+      duration_ms: Math.max(0, Math.floor(input.durationMs || 0)),
+      confirmation_required: Boolean(input.confirmationRequired),
+      risk_level: input.riskLevel || null,
+      payload: sanitizeVoiceAuditPayload(input.payload || {}),
+      error_message: input.errorMessage ? clean(input.errorMessage, 1200) : null,
+    });
+  } catch (error) {
+    console.warn("[synapse-voice-tool] action log failed", error instanceof Error ? error.message : error);
+  }
+}
+
 serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (request.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
@@ -223,7 +270,8 @@ serve(async (request) => {
 
     const body = await request.json().catch(() => ({}));
     const action = clean(body.action, 80) || "execute_tool";
-    const sessionId = clean(body.sessionId || body.session_id, 120);
+    const sessionId = clean(body.conversationId || body.conversation_id || body.sessionId || body.session_id, 120);
+    const voiceSessionId = clean(body.voiceSessionId || body.voice_session_id, 120);
     if (!sessionId) return json({ error: "Conversa ausente." }, 400);
 
     const { data: session, error: sessionError } = await auth.admin
@@ -234,11 +282,45 @@ serve(async (request) => {
       .maybeSingle();
     if (sessionError || !session) return json({ error: "Conversa nao encontrada." }, 404);
 
+    await assertVoiceSessionOwnership(auth.admin, auth.user.id, sessionId, voiceSessionId);
+
+    if (action === "update_voice_session") {
+      if (!voiceSessionId) return json({ error: "Sessao de voz ausente." }, 400);
+      await updateVoiceSession(auth.admin, auth.user.id, voiceSessionId, {
+        status: clean(body.status, 40),
+        closeCode: typeof body.closeCode === "number" ? body.closeCode : null,
+        closeReason: clean(body.closeReason, 500) || null,
+        latencyMs: body.latencyMs && typeof body.latencyMs === "object" ? body.latencyMs : undefined,
+        metadata: body.metadata && typeof body.metadata === "object" ? body.metadata : undefined,
+      });
+      return json({ ok: true });
+    }
+
     if (action === "persist_message") {
       const role = clean(body.role, 20);
       if (!["user", "assistant", "system"].includes(role)) return json({ error: "Papel invalido." }, 400);
-      await saveMessage(auth.admin, auth.user.id, sessionId, role as "user" | "assistant" | "system", clean(body.content, 20000));
-      return json({ ok: true });
+      const content = clean(body.content, 20000);
+      const turn = await recordVoiceTurn(auth.admin, {
+        userId: auth.user.id,
+        conversationId: sessionId,
+        voiceSessionId,
+        role: role as "user" | "assistant" | "system",
+        content,
+        origin: clean(body.origin, 120) || "deepgram_conversation_text",
+        isFinal: body.isFinal !== false,
+        metadata: {
+          provider: "deepgram-agent",
+          confidence: typeof body.confidence === "number" ? body.confidence : null,
+        },
+      });
+      await saveMessage(auth.admin, auth.user.id, sessionId, role as "user" | "assistant" | "system", content, [{
+        source: "voice",
+        provider: "deepgram-agent",
+        voice_session_id: voiceSessionId || null,
+        turn_id: turn?.id || null,
+        confidence: typeof body.confidence === "number" ? body.confidence : null,
+      }]);
+      return json({ ok: true, turnId: turn?.id || null });
     }
 
     const rows = await loadRows(auth.admin, auth.user.id, sessionId);
@@ -252,7 +334,17 @@ serve(async (request) => {
     };
 
     if (action === "cancel_pending_action" || clean(body.name, 120) === "cancel_pending_action") {
+      const startedAt = Date.now();
       if (!pending) {
+        await logVoiceAction(auth.admin, {
+          userId: auth.user.id,
+          conversationId: sessionId,
+          voiceSessionId,
+          toolName: "cancel_pending_action",
+          status: "success",
+          durationMs: Date.now() - startedAt,
+          payload: { cancelled: false },
+        });
         return json({
           ok: true,
           content: functionContent({
@@ -260,6 +352,17 @@ serve(async (request) => {
             tool: "cancel_pending_action",
             cancelled: false,
             message: "Nao havia acao pendente para cancelar.",
+          }),
+        });
+      }
+      if (pending.action.conversationId && pending.action.conversationId !== sessionId) {
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: false,
+            tool: "cancel_pending_action",
+            message: "A acao pendente pertence a outra conversa e nao foi alterada.",
+            retryable: false,
           }),
         });
       }
@@ -272,6 +375,15 @@ serve(async (request) => {
         toolsUsed: ["cancel_pending_action"],
         generatedAt: new Date().toISOString(),
       }]);
+      await logVoiceAction(auth.admin, {
+        userId: auth.user.id,
+        conversationId: sessionId,
+        voiceSessionId,
+        toolName: "cancel_pending_action",
+        status: "cancelled",
+        durationMs: Date.now() - startedAt,
+        payload: { actionId: pending.action.actionId, toolName: pending.action.toolName },
+      });
       return json({
         ok: true,
         content: functionContent({
@@ -284,13 +396,36 @@ serve(async (request) => {
     }
 
     if (action === "confirm_pending_action" || clean(body.name, 120) === "confirm_pending_action") {
+      const startedAt = Date.now();
       if (!pending) {
+        await logVoiceAction(auth.admin, {
+          userId: auth.user.id,
+          conversationId: sessionId,
+          voiceSessionId,
+          toolName: "confirm_pending_action",
+          status: "error",
+          durationMs: Date.now() - startedAt,
+          payload: { hasPendingAction: false },
+          errorMessage: "Nenhuma acao pendente para confirmar.",
+        });
         return json({
           ok: true,
           content: functionContent({
             ok: false,
             tool: "confirm_pending_action",
             message: "Nao ha nenhuma acao pendente para confirmar.",
+            needs_clarification: false,
+            retryable: false,
+          }),
+        });
+      }
+      if (pending.action.conversationId && pending.action.conversationId !== sessionId) {
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: false,
+            tool: "confirm_pending_action",
+            message: "A acao pendente pertence a outra conversa e nao pode ser confirmada aqui.",
             needs_clarification: false,
             retryable: false,
           }),
@@ -313,6 +448,22 @@ serve(async (request) => {
         recordsFound: result.recordCount || 0,
         generatedAt: new Date().toISOString(),
       }]);
+      await logVoiceAction(auth.admin, {
+        userId: auth.user.id,
+        conversationId: sessionId,
+        voiceSessionId,
+        toolName: pending.action.toolName,
+        status: result.ok ? "success" : "error",
+        durationMs: Date.now() - startedAt,
+        confirmationRequired: true,
+        riskLevel: "high",
+        payload: {
+          actionId: pending.action.actionId,
+          arguments: pending.action.arguments,
+          result: result.data || null,
+        },
+        errorMessage: result.ok ? null : result.error || message,
+      });
       return json({
         ok: true,
         content: functionContent({
@@ -332,6 +483,29 @@ serve(async (request) => {
     const name = clean(body.name || body.functionName, 120);
     const args = parseArgs(body.arguments || body.args);
     if (!name) return json({ error: "Ferramenta ausente." }, 400);
+    const startedAt = Date.now();
+    let policy: ReturnType<typeof validateVoiceToolCall>;
+
+    try {
+      policy = validateVoiceToolCall(name);
+    } catch (policyError) {
+      const payload = voicePolicyFailurePayload(policyError, name);
+      await logVoiceAction(auth.admin, {
+        userId: auth.user.id,
+        conversationId: sessionId,
+        voiceSessionId,
+        toolName: name,
+        status: "error",
+        durationMs: Date.now() - startedAt,
+        riskLevel: "blocked",
+        payload: { arguments: args },
+        errorMessage: payload.error,
+      });
+      return json({
+        ok: true,
+        content: functionContent(payload),
+      });
+    }
 
     const loadedContext = await loadConversationContext(auth.admin, auth.user.id, sessionId);
     const execution = await executeAgentToolV3(name, args, toolContext, loadedContext.state);
@@ -340,7 +514,11 @@ serve(async (request) => {
     const result = execution.result;
     let toolMessage = result.message || result.error || null;
     if (result.pendingAction) {
-      const pendingAction = result.pendingAction as PendingAction;
+      const pendingAction = {
+        ...(result.pendingAction as PendingAction),
+        conversationId: sessionId,
+        voiceSessionId: voiceSessionId || null,
+      } as PendingAction;
       const message = `Antes de executar, preciso da sua confirmacao: ${pendingAction.summary}.`;
       toolMessage = message;
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [
@@ -354,6 +532,25 @@ serve(async (request) => {
         },
       ]);
     }
+
+    await logVoiceAction(auth.admin, {
+      userId: auth.user.id,
+      conversationId: sessionId,
+      voiceSessionId,
+      toolName: name,
+      status: result.ok ? "success" : "error",
+      durationMs: Date.now() - startedAt,
+      confirmationRequired: policy.confirmationRequired || Boolean(result.pendingAction),
+      riskLevel: policy.riskLevel,
+      payload: {
+        arguments: args,
+        resolvedArgs: execution.resolvedArgs,
+        grounded: result.grounded,
+        recordCount: result.recordCount || 0,
+        pendingAction: Boolean(result.pendingAction),
+      },
+      errorMessage: result.ok ? null : result.error || toolMessage || "Falha ao consultar o sistema.",
+    });
 
     return json({
       ok: true,

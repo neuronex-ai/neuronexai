@@ -1,11 +1,12 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
+import { buildSynapseVoicePrompt } from "../_shared/synapse-voice-prompt.ts";
 import {
-  formatContextForPrompt,
-  loadConversationContext,
-  type SynapseConversationState,
-} from "../synapse-text-fallback/entity-context.ts";
+  ensureVoiceConversation,
+  ensureVoiceSessionRecord,
+} from "../_shared/synapse-voice-session.ts";
+import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
+import { loadConversationContext } from "../synapse-text-fallback/entity-context.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -21,10 +22,23 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const DEFAULT_CARTESIA_PT_BR_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
+const DEFAULT_CARTESIA_MALE_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
+const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
+const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_multilingual_v2";
+const DEFAULT_ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
 const SUPPORTED_PROVIDER = "deepgram-agent";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
+
+function normalizeThinkModel(provider: string, model: string) {
+  const cleanProvider = clean(provider, 80).toLowerCase();
+  const cleanModel = clean(model, 160);
+  if (cleanProvider !== "nvidia") return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
+  if (/^nvidia\/nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
+  if (/^nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
+  return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
+}
 
 const publicGatewayUrl = () =>
   Deno.env.get("SYNAPSE_VOICE_GATEWAY_URL") ||
@@ -34,6 +48,9 @@ const publicGatewayUrl = () =>
 const configuredVoiceProvider = () =>
   clean(Deno.env.get("SYNAPSE_VOICE_PROVIDER") || SUPPORTED_PROVIDER, 80).toLowerCase();
 
+const configuredTtsProvider = () =>
+  clean(Deno.env.get("SYNAPSE_VOICE_TTS_PROVIDER") || "cartesia-managed", 80).toLowerCase();
+
 const toDeepgramFunction = (tool: any) => {
   const fn = tool?.function || {};
   return {
@@ -42,6 +59,19 @@ const toDeepgramFunction = (tool: any) => {
     parameters: fn.parameters || { type: "object", properties: {} },
   };
 };
+
+function parseJsonEnv(name: string) {
+  const raw = clean(Deno.env.get(name), 5000);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    throw new Error(`${name} deve ser um JSON valido.`);
+  }
+}
 
 function professionalNameFromProfile(profile: any) {
   const joined = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
@@ -62,6 +92,36 @@ async function loadProfessionalProfile(admin: any, userId: string) {
     professionalName: professionalNameFromProfile(data),
     clinicName: clean(data?.clinic_name, 160),
   };
+}
+
+async function loadPendingActionSummary(admin: any, userId: string, conversationId: string) {
+  const { data, error } = await admin
+    .from("messages")
+    .select("attachments,created_at")
+    .eq("user_id", userId)
+    .eq("session_id", conversationId)
+    .eq("role", "assistant")
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) {
+    console.warn("[synapse-voice-agent-session] pending action load failed", error.message);
+    return "";
+  }
+
+  for (const row of data || []) {
+    const attachments = Array.isArray(row.attachments)
+      ? row.attachments
+      : row.attachments && typeof row.attachments === "object"
+        ? [row.attachments]
+        : [];
+    const pending = attachments.find((item: any) =>
+      item?.kind === "synapse_pending_action" &&
+      item?.status === "pending" &&
+      new Date(item.expiresAt).getTime() > Date.now()
+    );
+    if (pending?.summary) return clean(pending.summary, 800);
+  }
+  return "";
 }
 
 const VOICE_ONLY_TOOLS = [
@@ -89,57 +149,60 @@ const VOICE_ONLY_TOOLS = [
   },
 ];
 
-function buildVoicePrompt(
-  systemInstruction: string,
-  state: SynapseConversationState,
-  memorySummary: string,
-  context: Record<string, unknown>,
-  professionalName: string,
-) {
-  const now = new Intl.DateTimeFormat("pt-BR", {
-    timeZone: "America/Sao_Paulo",
-    dateStyle: "full",
-    timeStyle: "short",
-  }).format(new Date());
-
+function buildVoiceFunctions() {
   return [
-    "Voce e o Synapse, agente operacional por voz da NeuroNex para psicologos.",
-    "Fale em portugues brasileiro natural, curto e humano. Evite listas longas em voz alta.",
-    "Use vocabulario, ritmo e construcoes de portugues brasileiro; evite expressoes de portugues europeu.",
-    `Data e hora de Brasilia: ${now}.`,
-    professionalName ? `Profissional conectado: ${professionalName}. Chame pelo primeiro nome quando soar natural, sem repetir em toda fala.` : "",
-    "Use ferramentas para qualquer dado real do sistema: pacientes, agenda, prontuarios, financeiro, NeuroFinance, NFS-e, documentos e comunicacoes.",
-    "Nunca invente nomes, horarios, valores, saldos, pagamentos, notas fiscais, diagnosticos ou resultado de acoes.",
-    "Nunca peca IDs, UUIDs, rotas, nomes de tabelas, JSON ou codigos internos ao profissional.",
-    "Quando chamar uma ferramenta, aguarde o FunctionCallResponse real antes de entregar conclusoes. O gateway de voz vai falar os feedbacks de progresso automaticamente enquanto a ferramenta roda.",
-    "Se uma ferramenta retornar retryable=true, voce pode solicitar nova tentativa apenas uma vez ou explicar a oscilacao de forma breve. Se needs_clarification=true, faca uma pergunta curta.",
-    "Se confirmation_required=true, peça confirmacao explicita antes de qualquer acao mutavel.",
-    "Se o usuario interromper para cancelar, use cancel_pending_action quando houver acao pendente ou em andamento.",
-    "Se o usuario interromper para complementar, incorpore a informacao nova e continue sem cancelar automaticamente.",
-    "Acoes que alteram dados, enviam mensagens, criam cobrancas ou emitem NFS-e exigem confirmacao separada antes da execucao final.",
-    "Nao narre nomes de ferramentas nem raciocinio interno. Entregue apenas o resultado util.",
-    systemInstruction ? `INSTRUCAO DE TELA:\n${clean(systemInstruction, 1400)}` : "",
-    `CONTEXTO DURAVEL:\n${formatContextForPrompt(state)}`,
-    memorySummary ? `RESUMO ANTERIOR DA CONVERSA:\n${clean(memorySummary, 5000)}` : "",
-    context?.route || context?.currentContext
-      ? `TELA ATUAL INFORMADA PELO APP: ${clean(context.route || context.currentContext, 180)}`
-      : "",
-  ].filter(Boolean).join("\n\n");
+    ...VOICE_ONLY_TOOLS,
+    ...AGENT_TOOLS_V3.map(toDeepgramFunction).filter((item) => item.name),
+  ];
 }
 
 function buildSpeakConfig() {
+  const ttsProvider = configuredTtsProvider();
+
+  const speakProviderOverride = parseJsonEnv("SYNAPSE_VOICE_SPEAK_PROVIDER_JSON");
+  if (speakProviderOverride) {
+    return {
+      speak: {
+        provider: speakProviderOverride,
+      },
+      ttsProvider: `deepgram-managed-${clean(speakProviderOverride.type || "custom", 80)}`,
+      ttsVoice: clean(
+        speakProviderOverride.voice ||
+          speakProviderOverride.voice_id ||
+          speakProviderOverride.model_id ||
+          speakProviderOverride.model,
+        160,
+      ),
+    };
+  }
+
+  if (ttsProvider === "deepgram-elevenlabs" || ttsProvider === "eleven_labs") {
+    const modelId = Deno.env.get("DEEPGRAM_ELEVENLABS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID;
+    const voiceId = Deno.env.get("DEEPGRAM_ELEVENLABS_VOICE_ID") || DEFAULT_ELEVENLABS_VOICE_ID;
+    return {
+      speak: {
+        provider: {
+          type: "eleven_labs",
+          model_id: modelId,
+          voice_id: voiceId,
+          language_code: Deno.env.get("DEEPGRAM_ELEVENLABS_LANGUAGE_CODE") || "pt-BR",
+        },
+      },
+      ttsProvider: "deepgram-managed-elevenlabs",
+      ttsVoice: voiceId,
+    };
+  }
+
   const cartesiaVoiceId =
     Deno.env.get("CARTESIA_VOICE_ID") ||
     Deno.env.get("DEEPGRAM_CARTESIA_VOICE_ID") ||
-    DEFAULT_CARTESIA_PT_BR_VOICE_ID;
+    DEFAULT_CARTESIA_MALE_VOICE_ID;
   const cartesiaApiKey =
     Deno.env.get("CARTESIA_API_KEY") ||
     Deno.env.get("DEEPGRAM_CARTESIA_API_KEY") ||
     "";
-  const cartesiaManaged = Deno.env.get("DEEPGRAM_MANAGED_CARTESIA") !== "false";
+  const cartesiaManaged = Deno.env.get("DEEPGRAM_MANAGED_CARTESIA") !== "false" && ttsProvider !== "cartesia-byo";
   const modelId = Deno.env.get("CARTESIA_MODEL_ID") || "sonic-2";
-  const language = Deno.env.get("CARTESIA_LANGUAGE") || "pt-BR";
-  const speed = Deno.env.get("CARTESIA_SPEED") || "normal";
 
   const speak: Record<string, unknown> = {
     provider: {
@@ -149,8 +212,8 @@ function buildSpeakConfig() {
         mode: "id",
         id: cartesiaVoiceId,
       },
-      language,
-      speed,
+      language: Deno.env.get("CARTESIA_LANGUAGE") || "pt-BR",
+      speed: Deno.env.get("CARTESIA_SPEED") || "normal",
       volume: Number(Deno.env.get("CARTESIA_VOLUME") || "1"),
     },
   };
@@ -188,12 +251,37 @@ function buildSpeakConfig() {
 function buildAgentSettings(
   prompt: string,
   context: Record<string, unknown>,
+  functions: Array<Record<string, unknown>>,
 ) {
   const { speak, ttsProvider, ttsVoice } = buildSpeakConfig();
-  const functions = [
-    ...VOICE_ONLY_TOOLS,
-    ...AGENT_TOOLS_V3.map(toDeepgramFunction).filter((item) => item.name),
-  ];
+  const listenModel = Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi";
+  const listenProvider: Record<string, unknown> = {
+    type: "deepgram",
+    version: listenModel.startsWith("flux-") ? "v2" : "v1",
+    model: listenModel,
+  };
+
+  if (listenModel === "flux-general-multi") {
+    listenProvider.language_hints = ["pt"];
+    listenProvider.eot_threshold = Number(Deno.env.get("DEEPGRAM_EOT_THRESHOLD") || "0.72");
+    listenProvider.eager_eot_threshold = Number(Deno.env.get("DEEPGRAM_EAGER_EOT_THRESHOLD") || "0.45");
+    listenProvider.eot_timeout_ms = Number(Deno.env.get("DEEPGRAM_EOT_TIMEOUT_MS") || "1200");
+  } else if (listenModel.startsWith("flux-")) {
+    listenProvider.eot_threshold = Number(Deno.env.get("DEEPGRAM_EOT_THRESHOLD") || "0.72");
+    listenProvider.eager_eot_threshold = Number(Deno.env.get("DEEPGRAM_EAGER_EOT_THRESHOLD") || "0.45");
+    listenProvider.eot_timeout_ms = Number(Deno.env.get("DEEPGRAM_EOT_TIMEOUT_MS") || "1200");
+  } else {
+    listenProvider.language = Deno.env.get("DEEPGRAM_LISTEN_LANGUAGE") || "pt-BR";
+    listenProvider.smart_format = true;
+  }
+
+  const thinkProvider = Deno.env.get("DEEPGRAM_THINK_PROVIDER") || DEFAULT_DEEPGRAM_THINK_PROVIDER;
+  const thinkModel = normalizeThinkModel(
+    thinkProvider,
+    Deno.env.get("DEEPGRAM_THINK_MODEL") || DEFAULT_DEEPGRAM_THINK_MODEL,
+  );
+  const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "16000");
+  const outputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000");
 
   return {
     settings: {
@@ -203,32 +291,23 @@ function buildAgentSettings(
       audio: {
         input: {
           encoding: "linear16",
-          sample_rate: Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "16000"),
+          sample_rate: inputSampleRate,
         },
         output: {
           encoding: "linear16",
-          sample_rate: Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000"),
+          sample_rate: outputSampleRate,
           container: "none",
         },
       },
       agent: {
         listen: {
-          provider: {
-            type: "deepgram",
-            version: "v2",
-            model: Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi",
-            language: Deno.env.get("DEEPGRAM_LISTEN_LANGUAGE") || "pt-BR",
-            language_hints: ["pt-BR", "pt"],
-            eot_threshold: Number(Deno.env.get("DEEPGRAM_EOT_THRESHOLD") || "0.78"),
-            eager_eot_threshold: Number(Deno.env.get("DEEPGRAM_EAGER_EOT_THRESHOLD") || "0.52"),
-            eot_timeout_ms: Number(Deno.env.get("DEEPGRAM_EOT_TIMEOUT_MS") || "1800"),
-            smart_format: true,
-          },
+          provider: listenProvider,
         },
         think: {
           provider: {
-            type: Deno.env.get("DEEPGRAM_THINK_PROVIDER") || "open_ai",
-            model: Deno.env.get("DEEPGRAM_THINK_MODEL") || "gpt-4o-mini",
+            type: thinkProvider,
+            model: thinkModel,
+            temperature: Number(Deno.env.get("DEEPGRAM_THINK_TEMPERATURE") || "0.35"),
           },
           prompt,
           functions,
@@ -238,47 +317,16 @@ function buildAgentSettings(
       },
     },
     metadata: {
-      listenModel: Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi",
+      listenModel,
       listenLanguage: Deno.env.get("DEEPGRAM_LISTEN_LANGUAGE") || "pt-BR",
-      thinkModel: Deno.env.get("DEEPGRAM_THINK_MODEL") || "gpt-4o-mini",
+      thinkModel,
       ttsProvider,
       ttsVoice,
-      inputSampleRate: Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "16000"),
-      outputSampleRate: Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000"),
+      inputSampleRate,
+      outputSampleRate,
       functionsCount: functions.length,
     },
   };
-}
-
-async function ensureVoiceSession(admin: any, userId: string, requestedSessionId: string) {
-  if (requestedSessionId) {
-    const { data, error } = await admin
-      .from("chat_sessions")
-      .select("id")
-      .eq("id", requestedSessionId)
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (error) throw error;
-    if (data?.id) return data.id as string;
-  }
-
-  const { data: latest, error: latestError } = await admin
-    .from("chat_sessions")
-    .select("id")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (latestError) throw latestError;
-  if (latest?.id) return latest.id as string;
-
-  const { data, error } = await admin
-    .from("chat_sessions")
-    .insert({ user_id: userId, title: "Conversa por voz" })
-    .select("id")
-    .single();
-  if (error || !data?.id) throw error || new Error("Nao foi possivel criar a conversa por voz.");
-  return data.id as string;
 }
 
 serve(async (request) => {
@@ -321,23 +369,52 @@ serve(async (request) => {
     const user = authData.user;
     if (authError || !user) return json({ error: "Sessao invalida." }, 401);
 
-    const sessionId = await ensureVoiceSession(admin, user.id, clean(body.sessionId, 120));
-    const loadedContext = await loadConversationContext(admin, user.id, sessionId);
-    const profile = await loadProfessionalProfile(admin, user.id);
     const context = body.context && typeof body.context === "object" ? body.context : {};
-    const prompt = buildVoicePrompt(
-      clean(body.systemInstruction, 1600),
-      loadedContext.state,
-      loadedContext.memorySummary,
-      context,
-      profile.professionalName,
+    const conversationId = await ensureVoiceConversation(
+      admin,
+      user.id,
+      clean(body.conversationId || body.conversation_id || body.sessionId, 120),
     );
-    const { settings, metadata } = buildAgentSettings(prompt, context);
+    const loadedContext = await loadConversationContext(admin, user.id, conversationId);
+    const profile = await loadProfessionalProfile(admin, user.id);
+    const functions = buildVoiceFunctions();
+    const pendingActionSummary = await loadPendingActionSummary(admin, user.id, conversationId);
+    const prompt = buildSynapseVoicePrompt({
+      systemInstruction: clean(body.systemInstruction, 1600),
+      state: loadedContext.state,
+      memorySummary: loadedContext.memorySummary,
+      context,
+      professionalName: profile.professionalName,
+      pendingActionSummary,
+      tools: functions,
+    });
+    const { settings, metadata } = buildAgentSettings(prompt, context, functions);
+    const voiceSessionId = await ensureVoiceSessionRecord(
+      admin,
+      user.id,
+      conversationId,
+      clean(body.voiceSessionId || body.voice_session_id, 120),
+      {
+        provider: "deepgram-agent",
+        sttProvider: "deepgram-flux",
+        ttsProvider: String(metadata.ttsProvider),
+        voiceId: String(metadata.ttsVoice),
+        listenModel: String(metadata.listenModel),
+        thinkModel: String(metadata.thinkModel),
+        metadata: {
+          includeSettings,
+          route: clean(context.route || context.currentContext, 180),
+          functionsCount: metadata.functionsCount,
+        },
+      },
+    );
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
 
     return json({
       provider: "deepgram-agent",
-      sessionId,
+      sessionId: conversationId,
+      conversationId,
+      voiceSessionId,
       gatewayUrl: publicGatewayUrl(),
       deepgramUrl: includeSettings ? Deno.env.get("DEEPGRAM_AGENT_URL") || DEFAULT_DEEPGRAM_URL : undefined,
       expiresAt,

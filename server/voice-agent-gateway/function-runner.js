@@ -1,9 +1,10 @@
 import { classifyInterruption } from "./intent.js";
 
-const SLOW_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_SLOW_FUNCTION_MS || "2500");
-const FOLLOWUP_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_FOLLOWUP_FUNCTION_MS || "8000");
+const SLOW_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_SLOW_FUNCTION_MS || "5500");
+const FOLLOWUP_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_FOLLOWUP_FUNCTION_MS || "9000");
 const MAX_PROGRESS_MESSAGES = Number(process.env.SYNAPSE_VOICE_MAX_PROGRESS_MESSAGES || "2");
 const MAX_TOOL_RETRIES = Number(process.env.SYNAPSE_VOICE_MAX_TOOL_RETRIES || "1");
+const TOOL_TIMEOUT_MS = Number(process.env.SYNAPSE_VOICE_TOOL_TIMEOUT_MS || "18000");
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -67,6 +68,12 @@ function makeAbortError(message = "Operacao cancelada.") {
   return error;
 }
 
+function makeTimeoutError(message = "A consulta demorou mais que o esperado.") {
+  const error = new Error(message);
+  error.name = "TimeoutError";
+  return error;
+}
+
 function wait(ms, signal) {
   if (!ms) return Promise.resolve();
   if (signal?.aborted) return Promise.reject(makeAbortError());
@@ -82,6 +89,7 @@ function wait(ms, signal) {
 }
 
 function isTransientError(value) {
+  if (value?.name === "TimeoutError") return true;
   const text = clean(value?.message || value?.error || value, 1000).toLowerCase();
   if (!text) return false;
   return /timeout|timed out|temporari|temporary|network|socket|fetch|econn|5\d\d|rate limit|too many|indisponivel|instavel|oscila|gateway|service unavailable/.test(text);
@@ -115,10 +123,16 @@ function normalizePayload(name, result) {
   };
 }
 
+function humanFailureMessage(error, aborted) {
+  if (aborted) return "A acao foi cancelada antes de concluir.";
+  if (error?.name === "TimeoutError") {
+    return "Essa consulta demorou mais que o esperado e nao voltou com seguranca. Posso tentar de novo em seguida.";
+  }
+  return "Tentei consultar aqui, mas nao recebi um retorno confiavel. Posso tentar de novo?";
+}
+
 function failurePayload(name, error, aborted) {
-  const message = aborted
-    ? "A acao foi cancelada antes de concluir."
-    : clean(error?.message || "Falha ao executar ferramenta de voz.", 1000);
+  const message = humanFailureMessage(error, aborted);
   return {
     ok: false,
     tool: name,
@@ -130,6 +144,7 @@ function failurePayload(name, error, aborted) {
     confirmation_required: false,
     data: null,
     error: aborted ? null : message,
+    internal_error: aborted ? null : clean(error?.message || error, 1200),
   };
 }
 
@@ -207,13 +222,20 @@ export class VoiceFunctionRunner {
 
   handleFunctionCallRequest(event) {
     const functions = Array.isArray(event?.functions) ? event.functions : [];
-    this.queue = this.queue
-      .catch(() => undefined)
-      .then(async () => {
-        for (const fn of functions) {
-          await this.runFunction(fn);
-        }
-      });
+    const runBatch = async () => {
+      for (const fn of functions) {
+        await this.runFunction(fn);
+      }
+    };
+
+    const shouldPrioritizeNewTurn =
+      this.tasks.size > 0 && Date.now() - this.lastInterruptionAt < 15_000;
+    if (shouldPrioritizeNewTurn) {
+      for (const task of this.tasks.values()) task.interrupted = true;
+      return runBatch();
+    }
+
+    this.queue = this.queue.catch(() => undefined).then(runBatch);
     return this.queue;
   }
 
@@ -245,6 +267,7 @@ export class VoiceFunctionRunner {
     this.sendVoiceState("tool_active", task);
     this.injectAgentMessage(firstMessage, "queue");
     this.scheduleProgress(task, SLOW_FUNCTION_MS);
+    let keepAwaitingConfirmation = false;
 
     try {
       const { result, payload } = await this.invokeWithRetry(task);
@@ -254,17 +277,30 @@ export class VoiceFunctionRunner {
         this.sendClient({ type: "client_action", action: result.clientAction });
       }
 
+      if (task.interrupted && payload.ok) {
+        payload.interrupted = true;
+        payload.message = `Resultado anterior pronto: ${payload.message}`;
+        payload.spoken_summary = payload.message;
+      }
+
       this.sendFunctionResponse(id, name, payload);
-      this.sendStatus(task, payload.ok ? "completed" : "failed", {
+      const completedStatus = payload.confirmation_required ? "confirmation_required" : "completed";
+      keepAwaitingConfirmation = payload.ok && payload.confirmation_required;
+      this.sendStatus(task, payload.ok ? completedStatus : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,
         retryable: payload.retryable,
         needs_clarification: payload.needs_clarification,
         confirmation_required: payload.confirmation_required,
       });
-      this.sendVoiceState(payload.ok ? "tool_completed" : "tool_failed", task, {
-        message: payload.spoken_summary,
-      });
+      this.sendVoiceState(
+        payload.ok ? (payload.confirmation_required ? "awaiting_confirmation" : "tool_completed") : "tool_failed",
+        task,
+        {
+          message: payload.spoken_summary,
+          confirmationRequired: payload.confirmation_required,
+        },
+      );
     } catch (error) {
       const aborted = controller.signal.aborted || error?.name === "AbortError";
       const payload = failurePayload(name, error, aborted);
@@ -280,7 +316,9 @@ export class VoiceFunctionRunner {
     } finally {
       for (const timer of task.timers) clearTimeout(timer);
       this.tasks.delete(id);
-      this.sendVoiceState(this.tasks.size ? "tool_active" : "thinking");
+      if (!keepAwaitingConfirmation) {
+        this.sendVoiceState(this.tasks.size ? "tool_active" : "thinking");
+      }
     }
   }
 
@@ -318,12 +356,7 @@ export class VoiceFunctionRunner {
       }
 
       try {
-        const result = await this.invokeTool({
-          id: task.id,
-          name: task.name,
-          arguments: task.args,
-          signal: task.controller.signal,
-        });
+        const result = await this.invokeToolWithTimeout(task);
         const payload = normalizePayload(task.name, result);
         const shouldRetry = !payload.ok && payload.retryable && attempt < MAX_TOOL_RETRIES;
         if (!shouldRetry) return { result, payload };
@@ -335,6 +368,39 @@ export class VoiceFunctionRunner {
     }
 
     throw lastError || new Error("Falha ao executar ferramenta de voz.");
+  }
+
+  async invokeToolWithTimeout(task) {
+    if (!TOOL_TIMEOUT_MS || TOOL_TIMEOUT_MS < 1000) {
+      return this.invokeTool({
+        id: task.id,
+        name: task.name,
+        arguments: task.args,
+        signal: task.controller.signal,
+      });
+    }
+
+    const attemptController = new AbortController();
+    const onAbort = () => attemptController.abort(task.controller.signal.reason || "user_cancelled");
+    task.controller.signal.addEventListener("abort", onAbort, { once: true });
+    const timer = setTimeout(() => attemptController.abort("tool_timeout"), TOOL_TIMEOUT_MS);
+
+    try {
+      return await this.invokeTool({
+        id: task.id,
+        name: task.name,
+        arguments: task.args,
+        signal: attemptController.signal,
+      });
+    } catch (error) {
+      if (attemptController.signal.aborted && !task.controller.signal.aborted) {
+        throw makeTimeoutError();
+      }
+      throw error;
+    } finally {
+      clearTimeout(timer);
+      task.controller.signal.removeEventListener("abort", onAbort);
+    }
   }
 
   onUserStartedSpeaking() {

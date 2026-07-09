@@ -47,7 +47,7 @@ describe("VoiceFunctionRunner", () => {
     expect(deepgram[0]).toMatchObject({ type: "InjectAgentMessage", behavior: "queue" });
     expect(client.some((event) => event.type === "function_status" && event.status === "started")).toBe(true);
 
-    await vi.advanceTimersByTimeAsync(2500);
+    await vi.advanceTimersByTimeAsync(5500);
     expect(deepgram.some((event) => event.type === "InjectAgentMessage" && String(event.content).includes("Ana"))).toBe(true);
     expect(client.some((event) => event.type === "function_status" && event.status === "progress")).toBe(true);
 
@@ -74,6 +74,47 @@ describe("VoiceFunctionRunner", () => {
 
     expect(invokeTool).toHaveBeenCalledTimes(2);
     expect(client.some((event) => event.type === "function_status" && event.status === "retrying")).toBe(true);
+  });
+
+  it("retries once when a tool call times out", async () => {
+    let attempts = 0;
+    const invokeTool = vi.fn(({ signal }: { signal: AbortSignal }) => {
+      attempts += 1;
+      if (attempts === 1) {
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener("abort", () => reject(new Error("aborted by timeout")));
+        });
+      }
+      return Promise.resolve(toolResponse({ ok: true, spoken_summary: "Consegui na segunda tentativa." }));
+    });
+    const { runner, client } = createHarness(invokeTool);
+
+    const task = runner.handleFunctionCallRequest({
+      functions: [{ id: "fn-timeout", name: "get_patient_system_snapshot", arguments: "{}" }],
+    });
+    await tick();
+    await vi.advanceTimersByTimeAsync(18000);
+    await vi.advanceTimersByTimeAsync(650);
+    await task;
+
+    expect(invokeTool).toHaveBeenCalledTimes(2);
+    expect(client.some((event) => event.type === "function_status" && event.status === "retrying")).toBe(true);
+    expect(client.some((event) => event.type === "function_status" && event.status === "completed")).toBe(true);
+  });
+
+  it("keeps a prepared sensitive action awaiting confirmation", async () => {
+    const { runner, client } = createHarness(vi.fn(async () => toolResponse({
+      ok: true,
+      confirmation_required: true,
+      spoken_summary: "Preparei o agendamento. Posso confirmar?",
+    })));
+
+    await runner.handleFunctionCallRequest({
+      functions: [{ id: "fn-confirm", name: "create_appointment", arguments: "{}" }],
+    });
+
+    expect(client.some((event) => event.type === "function_status" && event.status === "confirmation_required")).toBe(true);
+    expect(client.some((event) => event.type === "voice_state" && event.phase === "awaiting_confirmation")).toBe(true);
   });
 
   it("aborts an active function when the user asks to cancel", async () => {

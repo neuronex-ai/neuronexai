@@ -62,6 +62,13 @@ export default defineConfig(({ mode, command }) => {
     server: {
       host: "::",
       port: 8080,
+      proxy: {
+        "/v1/synapse/voice": {
+          target: "ws://localhost:8789",
+          ws: true,
+          changeOrigin: true,
+        },
+      },
     },
     plugins: [
       mode === 'development' && dyadComponentTagger(),

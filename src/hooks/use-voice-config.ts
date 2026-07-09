@@ -21,8 +21,8 @@ const DEFAULT_DEEPGRAM_CONFIG: VoiceConfig = {
     token: null,
     expiresAt: null,
     newSessionExpiresAt: null,
-    model: 'gpt-4o-mini',
-    voiceName: 'cartesia-sonic',
+    model: 'nemotron-3-nano-30B-A3B',
+    voiceName: 'UgBBYS2sOqTuMpoF3BR0',
     provider: 'deepgram-agent',
     gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null,
     sessionId: null,
@@ -40,6 +40,12 @@ const LEGACY_CASCADE_CONFIG: VoiceConfig = {
 };
 
 const isLegacyCascadeEnabled = () => import.meta.env.VITE_SYNAPSE_LEGACY_CASCADE_ENABLED === 'true';
+const resolveGatewayUrl = (remoteGatewayUrl: unknown) => {
+    if (import.meta.env.DEV && import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL) {
+        return import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL;
+    }
+    return typeof remoteGatewayUrl === 'string' ? remoteGatewayUrl : import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null;
+};
 
 export function useVoiceConfig() {
     const [config, setConfig] = useState<VoiceConfig>(() => {
@@ -75,10 +81,10 @@ export function useVoiceConfig() {
                 token: null,
                 expiresAt: String(data?.expiresAt || ''),
                 newSessionExpiresAt: String(data?.expiresAt || ''),
-                model: String(data?.model || 'gpt-4o-mini'),
-                voiceName: String(data?.voiceName || 'cartesia-sonic'),
+                model: String(data?.model || 'nemotron-3-nano-30B-A3B'),
+                voiceName: String(data?.voiceName || 'UgBBYS2sOqTuMpoF3BR0'),
                 provider: String(data?.provider || 'deepgram-agent'),
-                gatewayUrl: typeof data?.gatewayUrl === 'string' ? data.gatewayUrl : import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || null,
+                gatewayUrl: resolveGatewayUrl(data?.gatewayUrl),
                 sessionId: typeof data?.sessionId === 'string' ? data.sessionId : null,
                 listenModel: typeof data?.listenModel === 'string' ? data.listenModel : undefined,
                 ttsProvider: typeof data?.ttsProvider === 'string' ? data.ttsProvider : undefined,
@@ -94,8 +100,8 @@ export function useVoiceConfig() {
                 token: null,
                 expiresAt: null,
                 newSessionExpiresAt: null,
-                model: 'gpt-4o-mini',
-                voiceName: 'cartesia-sonic',
+                model: 'nemotron-3-nano-30B-A3B',
+                voiceName: 'UgBBYS2sOqTuMpoF3BR0',
                 provider: 'deepgram-agent',
                 gatewayUrl: import.meta.env.VITE_SYNAPSE_VOICE_GATEWAY_URL || DEEPGRAM_GATEWAY_URL,
             };
