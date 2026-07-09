@@ -51,6 +51,23 @@ function getGatewaySecret() {
   return process.env.SYNAPSE_VOICE_GATEWAY_SECRET || "";
 }
 
+function missingGatewayConfiguration() {
+  return [
+    !process.env.DEEPGRAM_API_KEY ? "DEEPGRAM_API_KEY" : "",
+    !getSupabaseUrl() ? "SUPABASE_URL ou VITE_SUPABASE_URL" : "",
+    !getSupabaseAnonKey() ? "SUPABASE_ANON_KEY ou VITE_SUPABASE_ANON_KEY" : "",
+    !getGatewaySecret() ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
+  ].filter(Boolean);
+}
+
+function assertGatewayConfiguration() {
+  const missing = missingGatewayConfiguration();
+  if (!missing.length) return;
+  console.error("[voice-agent-gateway] configuracao obrigatoria ausente:", missing.join(", "));
+  console.error("[voice-agent-gateway] o Synapse de voz usa somente Deepgram Agent + ElevenLabs gerenciado pela Deepgram.");
+  process.exit(1);
+}
+
 function isFunctionNotFound(response, data) {
   const code = clean(data?.code || data?.error_code || data?.sb_error_code, 120).toUpperCase();
   const message = clean(data?.message || data?.error, 500).toLowerCase();
@@ -542,6 +559,8 @@ class SynapseVoiceSession {
   }
 }
 
+assertGatewayConfiguration();
+
 const server = http.createServer((req, res) => {
   if (req.url === "/health" || req.url === `${PATHNAME}/health`) {
     jsonResponse(res, 200, {
@@ -552,6 +571,7 @@ const server = http.createServer((req, res) => {
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),
+      missing: missingGatewayConfiguration(),
     });
     return;
   }

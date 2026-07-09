@@ -9,6 +9,11 @@ import type {
 } from "@/types/synapse-voice";
 
 type ClientAction = { type?: string; payload?: unknown; data?: unknown };
+type PendingStart = {
+  resolve: () => void;
+  reject: (error: Error) => void;
+  timeoutId: ReturnType<typeof window.setTimeout>;
+};
 
 interface Options {
   gatewayUrl?: string | null;
@@ -170,6 +175,8 @@ export function useDeepgramAgentVoice({
   sessionId,
   conversationId,
   voiceSessionId,
+  inputSampleRate,
+  outputSampleRate,
   systemInstruction,
   language = "pt-BR",
   onSessionIdChange,
@@ -212,6 +219,11 @@ export function useDeepgramAgentVoice({
   const conversationIdRef = useRef<string | null>(conversationId || sessionId || null);
   const voiceSessionIdRef = useRef<string | null>(voiceSessionId || null);
   const activeToolRef = useRef<SynapseVoiceToolState | null>(null);
+  const pendingStartRef = useRef<PendingStart | null>(null);
+  const targetInputSampleRate = normalizeSampleRate(inputSampleRate, 48000);
+  const targetOutputSampleRate = normalizeSampleRate(outputSampleRate, 24000);
+  const inputSampleRateRef = useRef(targetInputSampleRate);
+  const outputSampleRateRef = useRef(targetOutputSampleRate);
   const callbacksRef = useRef({
     onSessionIdChange,
     onConversationIdChange,
@@ -235,6 +247,11 @@ export function useDeepgramAgentVoice({
     onSpeakingEnd,
     onAudioIntensity,
   };
+
+  useEffect(() => {
+    inputSampleRateRef.current = targetInputSampleRate;
+    outputSampleRateRef.current = targetOutputSampleRate;
+  }, [targetInputSampleRate, targetOutputSampleRate]);
 
   useEffect(() => {
     const nextConversationId = conversationId || sessionId || null;
@@ -266,6 +283,22 @@ export function useDeepgramAgentVoice({
     activeToolRef.current = tool;
     setActiveTool(tool);
     setElapsedTick(Date.now());
+  }, []);
+
+  const resolvePendingStart = useCallback(() => {
+    const pending = pendingStartRef.current;
+    if (!pending) return;
+    pendingStartRef.current = null;
+    window.clearTimeout(pending.timeoutId);
+    pending.resolve();
+  }, []);
+
+  const rejectPendingStart = useCallback((error: Error) => {
+    const pending = pendingStartRef.current;
+    if (!pending) return;
+    pendingStartRef.current = null;
+    window.clearTimeout(pending.timeoutId);
+    pending.reject(error);
   }, []);
 
   const buildToolState = useCallback((
@@ -339,7 +372,7 @@ export function useDeepgramAgentVoice({
   const ensurePlayer = useCallback(() => {
     if (!playerRef.current) {
       playerRef.current = new PcmAudioPlayer(
-        24000,
+        outputSampleRateRef.current,
         () => {
           setIsSpeaking(true);
           setIsProcessing(Boolean(activeToolRef.current));
@@ -360,6 +393,11 @@ export function useDeepgramAgentVoice({
     activeRef.current = false;
     readyRef.current = false;
     listeningRef.current = false;
+    const pending = pendingStartRef.current;
+    if (pending) {
+      pendingStartRef.current = null;
+      window.clearTimeout(pending.timeoutId);
+    }
     const ws = wsRef.current;
     wsRef.current = null;
     if (ws && ws.readyState === WebSocket.OPEN) {
@@ -396,14 +434,15 @@ export function useDeepgramAgentVoice({
         autoGainControl: true,
       },
     });
-    const context = new AudioContext({ sampleRate: 16000 });
+    const effectiveInputSampleRate = inputSampleRateRef.current;
+    const context = new AudioContext({ sampleRate: effectiveInputSampleRate });
     await context.audioWorklet.addModule("/worklets/deepgram-agent-recorder.js");
 
     const source = context.createMediaStreamSource(stream);
     const configuredFrameMs = Number(import.meta.env.VITE_SYNAPSE_VOICE_FRAME_MS || "20");
     const worklet = new AudioWorkletNode(context, "deepgram-agent-recorder", {
       processorOptions: {
-        targetSampleRate: 16000,
+        targetSampleRate: effectiveInputSampleRate,
         frameMs: Number.isFinite(configuredFrameMs) && configuredFrameMs > 0 ? configuredFrameMs : 20,
       },
     });
@@ -457,6 +496,7 @@ export function useDeepgramAgentVoice({
       setIsConnected(true);
       setIsListening(listeningRef.current);
       applyRestingPhase();
+      resolvePendingStart();
       return;
     }
 
@@ -499,7 +539,7 @@ export function useDeepgramAgentVoice({
         callbacksRef.current.onResponseText?.(text);
       }
     }
-  }, [applyRestingPhase, stopPlayback]);
+  }, [applyRestingPhase, resolvePendingStart, stopPlayback]);
 
   const handleGatewayMessage = useCallback((payload: Record<string, unknown>) => {
     const type = clean(payload.type, 80);
@@ -518,12 +558,16 @@ export function useDeepgramAgentVoice({
         setIsConnected(true);
         setIsListening(listeningRef.current);
         applyRestingPhase();
+        resolvePendingStart();
       } else if (["connecting_deepgram", "waiting_welcome", "settings_sent"].includes(status)) {
         setIsProcessing(true);
         setVoicePhase("connecting");
       } else if (status === "deepgram_closed") {
         setActiveToolState(null);
         setVoicePhase("idle");
+        if (!readyRef.current) {
+          rejectPendingStart(new Error("A conversa por voz foi encerrada antes de ficar pronta."));
+        }
       }
       return;
     }
@@ -534,6 +578,7 @@ export function useDeepgramAgentVoice({
       setError(message);
       setIsProcessing(false);
       setVoicePhase("error");
+      rejectPendingStart(new Error(message));
       return;
     }
 
@@ -618,7 +663,7 @@ export function useDeepgramAgentVoice({
     if (type === "client_action" && payload.action && typeof payload.action === "object") {
       callbacksRef.current.onClientAction?.(payload.action as ClientAction);
     }
-  }, [applyRestingPhase, buildToolState, handleDeepgramEvent, persistConversationId, persistVoiceSessionId, setActiveToolState, stopPlayback]);
+  }, [applyRestingPhase, buildToolState, handleDeepgramEvent, persistConversationId, persistVoiceSessionId, rejectPendingStart, resolvePendingStart, setActiveToolState, stopPlayback]);
 
   const handleBinaryAudio = useCallback(async (value: Blob | ArrayBuffer) => {
     const buffer = value instanceof Blob ? await value.arrayBuffer() : value;
@@ -649,6 +694,9 @@ export function useDeepgramAgentVoice({
     const accessToken = authData.session?.access_token || override?.token || "";
     if (!accessToken) throw new Error("Sessao invalida.");
 
+    inputSampleRateRef.current = normalizeSampleRate(override?.inputSampleRate ?? inputSampleRate, 48000);
+    outputSampleRateRef.current = normalizeSampleRate(override?.outputSampleRate ?? outputSampleRate, 24000);
+
     const ws = new WebSocket(targetGatewayUrl);
     ws.binaryType = "arraybuffer";
     wsRef.current = ws;
@@ -665,6 +713,7 @@ export function useDeepgramAgentVoice({
     };
 
     ws.onclose = () => {
+      const wasReady = readyRef.current;
       readyRef.current = false;
       setIsConnected(false);
       setIsListening(false);
@@ -672,43 +721,55 @@ export function useDeepgramAgentVoice({
       setIsSpeaking(false);
       setActiveToolState(null);
       setVoicePhase("idle");
+      if (!wasReady) {
+        rejectPendingStart(new Error("A conexao de voz fechou antes do Synapse ficar pronto."));
+      }
     };
 
-    await new Promise<void>((resolve, reject) => {
-      const timeout = window.setTimeout(() => reject(new Error("Timeout ao conectar no gateway de voz.")), 12000);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const timeoutId = window.setTimeout(() => {
+          rejectPendingStart(new Error("Timeout ao preparar a conversa por voz."));
+        }, 22000);
+        pendingStartRef.current = { resolve, reject, timeoutId };
 
-      ws.onopen = () => {
-        window.clearTimeout(timeout);
-        const nextConversationId = override?.conversationId
-          || override?.sessionId
-          || conversationIdRef.current
-          || sessionIdRef.current
-          || undefined;
-        const nextVoiceSessionId = override?.voiceSessionId
-          || voiceSessionIdRef.current
-          || undefined;
-        ws.send(JSON.stringify({
-          type: "start",
-          authorization: `Bearer ${accessToken}`,
-          sessionId: nextConversationId,
-          conversationId: nextConversationId,
-          voiceSessionId: nextVoiceSessionId,
-          systemInstruction,
-          language,
-          context: { route: "voice", source: "deepgram-agent" },
-        }));
-        void startInput().catch((caught) => {
-          setError(caught instanceof Error ? caught.message : "Falha ao iniciar microfone.");
-          void closeEverything();
-        });
-        resolve();
-      };
-      ws.onerror = () => {
-        window.clearTimeout(timeout);
-        reject(new Error("Falha ao conectar no gateway de voz."));
-      };
-    });
-  }, [closeEverything, gatewayUrl, handleBinaryAudio, handleGatewayMessage, language, setActiveToolState, startInput, systemInstruction]);
+        ws.onopen = () => {
+          const nextConversationId = override?.conversationId
+            || override?.sessionId
+            || conversationIdRef.current
+            || sessionIdRef.current
+            || undefined;
+          const nextVoiceSessionId = override?.voiceSessionId
+            || voiceSessionIdRef.current
+            || undefined;
+          ws.send(JSON.stringify({
+            type: "start",
+            authorization: `Bearer ${accessToken}`,
+            sessionId: nextConversationId,
+            conversationId: nextConversationId,
+            voiceSessionId: nextVoiceSessionId,
+            systemInstruction,
+            language,
+            context: { route: "voice", source: "deepgram-agent" },
+          }));
+          void startInput().catch((caught) => {
+            const inputError = caught instanceof Error ? caught : new Error("Falha ao iniciar microfone.");
+            setError(inputError.message);
+            rejectPendingStart(inputError);
+            void closeEverything();
+          });
+        };
+        ws.onerror = () => {
+          rejectPendingStart(new Error("Falha ao conectar no gateway de voz."));
+        };
+      });
+    } catch (caught) {
+      const startError = caught instanceof Error ? caught : new Error("Nao foi possivel iniciar a voz do Synapse.");
+      setError(startError.message);
+      await closeEverything();
+      throw startError;
+    }
+  }, [closeEverything, gatewayUrl, handleBinaryAudio, handleGatewayMessage, inputSampleRate, language, outputSampleRate, rejectPendingStart, setActiveToolState, startInput, systemInstruction]);
 
   const endSession = useCallback(() => {
     void closeEverything();

@@ -39,6 +39,8 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
     sessionId: voiceSessionId,
     conversationId: voiceConversationId,
     voiceSessionId: voiceRunSessionId,
+    inputSampleRate: voiceInputSampleRate,
+    outputSampleRate: voiceOutputSampleRate,
   } = useVoiceConfig();
 
   const handleResponseText = useCallback((text: string) => {
@@ -67,6 +69,8 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
     sessionId: voiceSessionId,
     conversationId: voiceConversationId,
     voiceSessionId: voiceRunSessionId,
+    inputSampleRate: voiceInputSampleRate,
+    outputSampleRate: voiceOutputSampleRate,
     systemInstruction: SYSTEM_INSTRUCTION,
     language: "pt-BR",
     onResponseText: handleResponseText,
@@ -90,6 +94,8 @@ export const DesktopVoiceOverlay = ({ isOpen, onClose }: DesktopVoiceOverlayProp
         sessionId: config.sessionId,
         conversationId: config.conversationId,
         voiceSessionId: config.voiceSessionId,
+        inputSampleRate: config.inputSampleRate,
+        outputSampleRate: config.outputSampleRate,
       });
     } catch (caught: unknown) {
       const message = caught instanceof Error ? caught.message : "Não foi possível iniciar o modo voz.";

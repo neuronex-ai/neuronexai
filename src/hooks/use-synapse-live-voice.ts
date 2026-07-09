@@ -39,6 +39,8 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     sessionId,
     conversationId,
     voiceSessionId,
+    inputSampleRate,
+    outputSampleRate,
   } = useVoiceConfig();
 
   const voice = useSynapseVoice({
@@ -49,6 +51,8 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     sessionId,
     conversationId,
     voiceSessionId,
+    inputSampleRate,
+    outputSampleRate,
     systemInstruction: SYNAPSE_GLOBAL_VOICE_PROMPT,
     onClientAction: (rawAction) => {
       optionsRef.current?.onClientAction?.(rawAction);
@@ -108,6 +112,8 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
       sessionId: config.sessionId,
       conversationId: config.conversationId,
       voiceSessionId: config.voiceSessionId,
+      inputSampleRate: config.inputSampleRate,
+      outputSampleRate: config.outputSampleRate,
     });
   }, [refreshVoiceConfig, voiceStartSession]);
 

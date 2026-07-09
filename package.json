@@ -19,7 +19,7 @@
     "test:coverage": "vitest run --coverage",
     "voice:gateway": "node scripts/start-voice-gateway-dev.cjs",
     "voice:gateway:raw": "node server/voice-agent-gateway/index.js",
-    "voice:gateway:local": "node scripts/start-voice-gateway-dev.cjs --local",
+    "voice:gateway:local": "npm run voice:gateway",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:8080 && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron .\"",
     "electron:preview": "vite build && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron .",
     "electron:build": "vite build && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron-builder --win --config electron-builder.json5",

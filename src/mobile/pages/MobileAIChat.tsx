@@ -120,6 +120,8 @@ export const MobileAIChat = () => {
     sessionId: voiceAgentSessionId,
     conversationId: voiceConversationId,
     voiceSessionId,
+    inputSampleRate: voiceInputSampleRate,
+    outputSampleRate: voiceOutputSampleRate,
     isLoading: isVoiceConfigLoading,
     error: voiceConfigError,
     refresh: refreshVoiceConfig,
@@ -146,6 +148,8 @@ export const MobileAIChat = () => {
     sessionId: voiceAgentSessionId || sessionId,
     conversationId: voiceConversationId || sessionId,
     voiceSessionId,
+    inputSampleRate: voiceInputSampleRate,
+    outputSampleRate: voiceOutputSampleRate,
     language: "pt-BR",
     systemInstruction: "Você é o Synapse AI mobile do NeuroNex. Converse por voz em português brasileiro com respostas curtas, naturais e úteis para a rotina clínica, agenda, pacientes e financeiro.",
   });
@@ -270,6 +274,8 @@ export const MobileAIChat = () => {
         sessionId: config.sessionId || sessionId,
         conversationId: config.conversationId || sessionId,
         voiceSessionId: config.voiceSessionId,
+        inputSampleRate: config.inputSampleRate,
+        outputSampleRate: config.outputSampleRate,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Não foi possível iniciar o modo voz.";
@@ -290,6 +296,8 @@ export const MobileAIChat = () => {
         sessionId: config.sessionId || sessionId,
         conversationId: config.conversationId || sessionId,
         voiceSessionId: config.voiceSessionId,
+        inputSampleRate: config.inputSampleRate,
+        outputSampleRate: config.outputSampleRate,
       });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Nao foi possivel reiniciar o modo voz.";
