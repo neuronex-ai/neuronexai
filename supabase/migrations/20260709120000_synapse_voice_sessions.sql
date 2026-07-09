@@ -8,7 +8,7 @@ create table if not exists public.synapse_voice_sessions (
   psychologist_id uuid not null references auth.users(id) on delete cascade,
   provider text not null default 'deepgram-agent',
   stt_provider text not null default 'deepgram-flux',
-  tts_provider text not null default 'deepgram-managed-cartesia',
+  tts_provider text not null default 'deepgram-managed-elevenlabs',
   voice_id text,
   listen_model text,
   think_model text,

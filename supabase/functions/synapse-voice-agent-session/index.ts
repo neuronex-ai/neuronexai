@@ -49,7 +49,7 @@ const configuredVoiceProvider = () =>
   clean(Deno.env.get("SYNAPSE_VOICE_PROVIDER") || SUPPORTED_PROVIDER, 80).toLowerCase();
 
 const configuredTtsProvider = () =>
-  clean(Deno.env.get("SYNAPSE_VOICE_TTS_PROVIDER") || "cartesia-managed", 80).toLowerCase();
+  clean(Deno.env.get("SYNAPSE_VOICE_TTS_PROVIDER") || "deepgram-elevenlabs", 80).toLowerCase();
 
 const toDeepgramFunction = (tool: any) => {
   const fn = tool?.function || {};
