@@ -88,6 +88,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/asaas-pix-payment/index.ts"
 
+[functions.asaas-pix-static-qrcode]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/asaas-pix-static-qrcode/index.ts"
+
 [functions.asaas-bill-payment]
 enabled = true
 verify_jwt = true
