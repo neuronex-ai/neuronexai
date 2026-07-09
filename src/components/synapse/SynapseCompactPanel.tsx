@@ -836,7 +836,7 @@ export const SynapseCompactPanel = () => {
                                             <div className={cn(
                                                 'relative group max-w-[85%]',
                                                 msg.role === 'user'
-                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-primary-foreground shadow-xl'
+                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-[#1a1a1a] shadow-xl dark:text-white'
                                                     : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
                                             )}>
                                                 {msg.role === "assistant" && (
@@ -851,9 +851,9 @@ export const SynapseCompactPanel = () => {
 
                                                 <div className={cn(
                                                     'prose prose-sm max-w-none break-words text-[13px] leading-relaxed',
-                                                    'prose-p:text-foreground/88 prose-strong:text-foreground prose-li:text-foreground/78 prose-code:text-foreground',
+                                                    'prose-p:text-current prose-strong:text-current prose-li:text-current prose-code:text-current',
                                                     msg.role === 'user'
-                                                        ? 'prose-invert'
+                                                        ? '[&_*]:!text-current prose-headings:!text-current'
                                                         : ''
                                                 )}>
                                                     {(() => {
@@ -947,14 +947,17 @@ export const SynapseCompactPanel = () => {
                                 y: isInputFocused ? -2 : 0,
                                 scale: isInputFocused ? 1.008 : 1,
                                 boxShadow: isInputFocused
-                                    ? '0 24px 70px -42px rgba(0,0,0,0.45)'
+                                    ? '0 24px 70px -42px rgba(0,0,0,0.55)'
                                     : '0 16px 48px -44px rgba(0,0,0,0.35)',
                             }}
                             transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
                             className={cn(
                                 'flex items-end gap-3 rounded-[26px]',
-                                'notes-liquid-surface border',
-                                'px-4 py-3 transition-colors duration-300 backdrop-blur-2xl'
+                                'notes-liquid-surface',
+                                'px-4 py-3 transition-[border-color,box-shadow] duration-300 backdrop-blur-2xl',
+                                isInputFocused
+                                    ? 'border-foreground/55 dark:border-foreground/70'
+                                    : 'border-border/45 dark:border-white/[0.075]'
                             )}
                         >
                             <textarea
