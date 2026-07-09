@@ -383,7 +383,7 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
             transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             className={cn(
                 "group relative flex w-full flex-col gap-3 overflow-hidden rounded-[30px] border border-transparent px-4 py-6 transition-colors duration-300 md:gap-4 md:rounded-[40px] md:px-8 md:py-8",
-                !isAssistant && "notes-liquid-surface border-border/45 shadow-[0_24px_70px_-52px_hsl(var(--foreground)/0.7)] dark:border-white/[0.07]",
+                !isAssistant ? "bg-primary shadow-[0_24px_70px_-52px_hsl(var(--foreground)/0.7)]" : "notes-liquid-surface border-border/45 dark:border-white/[0.07]",
             )}
         >
             {isAssistant ? (
@@ -401,14 +401,14 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
             ) : (
                 <div className="mb-1 flex shrink-0 items-center justify-between">
                     <div className="flex min-w-0 items-center gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border/40 bg-primary text-primary-foreground shadow-[0_18px_44px_-30px_hsl(var(--foreground)/0.75)]">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/20 bg-black/10 text-primary-foreground shadow-sm">
                             <User className="h-4.5 w-4.5" strokeWidth={2} />
                         </div>
                         <div className="flex min-w-0 flex-col gap-0">
-                            <span className="truncate text-[10px] font-black uppercase leading-none tracking-[0.24em] text-muted-foreground">
+                            <span className="truncate text-[10px] font-black uppercase leading-none tracking-[0.24em] text-primary-foreground/70">
                                 Sua conta
                             </span>
-                            <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/55">
+                            <span className="text-[8px] font-bold uppercase tracking-widest text-primary-foreground/50">
                                 {new Date(message.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                             </span>
                         </div>
@@ -419,13 +419,14 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
             <div
                 className={cn(
                     "prose max-w-none flex-1 overflow-hidden break-words px-0.5 md:px-0",
-                    "prose-p:my-2 prose-p:text-[15px] prose-p:font-medium prose-p:leading-[1.58] prose-p:text-foreground/92 md:prose-p:text-[17px]",
-                    "prose-strong:break-words prose-strong:font-black prose-strong:text-foreground",
-                    "prose-headings:my-3 prose-headings:break-words prose-headings:font-black prose-headings:tracking-tight prose-headings:text-foreground",
+                    "prose-p:my-2 prose-p:text-[15px] prose-p:font-medium prose-p:leading-[1.58] md:prose-p:text-[17px]",
+                    "prose-strong:break-words prose-strong:font-black",
+                    "prose-headings:my-3 prose-headings:break-words prose-headings:font-black prose-headings:tracking-tight",
                     "prose-ul:my-4 prose-ul:list-disc prose-ul:pl-6 md:prose-ul:my-6 md:prose-ul:pl-8",
-                    "prose-li:my-1 prose-li:break-words prose-li:pl-1 prose-li:text-foreground/78 prose-li:marker:text-muted-foreground/55",
-                    "prose-a:text-foreground prose-code:text-foreground prose-blockquote:text-foreground/72",
-                    "dark:prose-p:text-foreground/92 dark:prose-li:text-foreground/78 dark:prose-strong:text-foreground dark:prose-headings:text-foreground",
+                    "prose-li:my-1 prose-li:break-words prose-li:pl-1 prose-li:marker:text-muted-foreground/55",
+                    !isAssistant 
+                        ? "text-primary-foreground prose-p:text-primary-foreground prose-strong:text-primary-foreground prose-headings:text-primary-foreground prose-li:text-primary-foreground/90 prose-code:text-primary-foreground" 
+                        : "text-foreground/92 dark:text-white prose-p:text-foreground/92 dark:prose-p:text-white prose-strong:text-foreground dark:prose-strong:text-white prose-headings:text-foreground dark:prose-headings:text-white prose-li:text-foreground/78 dark:prose-li:text-white/80 dark:prose-invert",
                 )}
             >
                 {parsedContent.cleanContent ? (
@@ -478,12 +479,17 @@ export const ChatMessageItem = ({ message, richData }: ChatMessageItemProps) => 
                 <button
                     type="button"
                     onClick={handleCopy}
-                    className="flex min-h-9 items-center gap-1.5 rounded-xl border border-border/35 bg-muted/35 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.055] dark:bg-white/[0.035]"
+                    className={cn(
+                        "flex min-h-9 items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        !isAssistant 
+                            ? "border-white/20 bg-black/10 text-primary-foreground hover:bg-black/20" 
+                            : "border-border/35 bg-muted/35 text-muted-foreground hover:bg-muted hover:text-foreground dark:border-white/[0.055] dark:bg-white/[0.035]"
+                    )}
                     aria-label="Copiar mensagem"
                 >
                     {copied ? (
                         <>
-                            <Check className="h-3 w-3 text-emerald-500" />
+                            <Check className="h-3 w-3 text-emerald-400" />
                             Copiado
                         </>
                     ) : (
