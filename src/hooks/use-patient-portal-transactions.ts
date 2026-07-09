@@ -15,29 +15,10 @@ const fetchPatientPortalTransactions = async (_userId: string, patientId?: strin
     entriesQuery = entriesQuery.eq('patient_id', patientId);
   }
 
-  const { data: entries, error: entriesError } = await entriesQuery;
+  const { data: entries, error } = await entriesQuery;
+  if (error) throw new Error(error.message);
 
-  if (!entriesError && entries && entries.length > 0) {
-    return entries.map((entry) => mapFinancialEntryToTransaction(entry as any));
-  }
-
-  let legacyQuery = supabase
-    .from('transactions')
-    .select('*')
-    .order('date', { ascending: false });
-
-  if (patientId) {
-    legacyQuery = legacyQuery.eq('patient_id', patientId);
-  }
-
-  const { data, error } = await legacyQuery;
-
-  if (error) {
-    console.error('Erro ao buscar transações do paciente no portal:', error);
-    throw new Error(error.message);
-  }
-
-  return data || [];
+  return (entries || []).map((entry) => mapFinancialEntryToTransaction(entry as any));
 };
 
 export const usePatientPortalTransactions = (patientId?: string) => {

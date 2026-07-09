@@ -1,11 +1,12 @@
-export const FINANCIAL_ACCOUNTS_READ_TABLE = "financial_accounts";
-export const NB_PAYMENTS_READ_TABLE = "nb_payments";
-export const NB_PAYOUTS_READ_TABLE = "nb_payouts";
+export const FINANCIAL_ACCOUNTS_READ_TABLE = "financial_accounts_safe_v";
+export const NB_PAYMENTS_READ_TABLE = "nb_payments_safe_v";
+export const NB_PAYOUTS_READ_TABLE = "nb_payouts_safe_v";
 
 export const FINANCIAL_ACCOUNT_SAFE_SELECT = [
   "id",
   "user_id",
   "status",
+  "ui_status",
   "provider",
   "onboarding_started_at",
   "onboarding_completed_at",
@@ -24,6 +25,7 @@ export const FINANCIAL_ACCOUNT_SAFE_SELECT = [
   "asaas_account_id",
   "asaas_wallet_id",
   "requirements",
+  "account_status",
   "asaas_onboarding_url",
   "asaas_environment",
   "last_asaas_event_type",
@@ -54,6 +56,9 @@ export const FINANCIAL_ACCOUNT_SAFE_SELECT = [
   "bank_holder_cpf_cnpj",
   "tos_accepted_at",
   "pix_key_consent_at",
+  "neuronex_terms_version",
+  "asaas_terms_reference",
+  "asaas_privacy_policy_reference",
 ].join(",");
 
 export const NB_PAYMENTS_SAFE_SELECT = [
@@ -79,6 +84,9 @@ export const NB_PAYMENTS_SAFE_SELECT = [
   "checkout_url",
   "boleto_url",
   "boleto_pdf",
+  "invoice_url",
+  "bank_slip_url",
+  "receipt_url",
   "refund_amount",
   "paid_at",
   "expires_at",
@@ -90,6 +98,7 @@ export const NB_PAYMENTS_SAFE_SELECT = [
   "dispute_status",
   "dispute_reason",
   "dispute_amount",
+  "cancelable",
   "anticipable",
   "anticipated",
   "provider_due_date",
@@ -120,6 +129,9 @@ export const NB_PAYOUTS_SAFE_SELECT = [
   "fee_amount",
   "destination_type",
   "destination_summary",
+  "receipt_url",
+  "error_code",
+  "error_message",
   "requested_at",
   "processed_at",
   "completed_at",
@@ -141,8 +153,6 @@ export const FORBIDDEN_NB_PAYMENT_FIELDS = [
   "metadata",
   "provider_payload",
   "provider_payment_id",
-  "stripe_payment_intent_id",
-  "stripe_checkout_session_id",
   "fee_rule_id",
   "reconciliation_status",
   "reconciled_at",
@@ -155,7 +165,6 @@ export const FORBIDDEN_NB_PAYOUT_FIELDS = [
   "provider_payload",
   "destination_payload",
   "provider_payout_id",
-  "stripe_payout_id",
   "pix_key",
   "reconciliation_status",
   "reconciled_at",
