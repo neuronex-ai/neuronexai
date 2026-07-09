@@ -4,9 +4,6 @@
  * Synchronizes a psychologist's Asaas sub-account status with the DB.
  * Retrieves account status + balance from Asaas API, updates financial_accounts.
  *
- * If no local record exists, it tries to discover an existing subconta
- * on Asaas by the user's email and auto-link it.
- *
  * POST /asaas-account-sync
  */
 
@@ -39,7 +36,7 @@ async function markConnectionUnavailable(financialAccount: any, err: any) {
         provider_connection: {
             status: 'account_missing',
             detected_at: now,
-            recovery_attempted_at: now,
+            connection_checked_at: now,
             error_code: err?.status || 'PROVIDER_CONNECTION_ERROR',
             error_message: err?.message || message,
             support_required: true,
@@ -65,7 +62,7 @@ async function markConnectionUnavailable(financialAccount: any, err: any) {
         financial_account_id: financialAccount.id,
         asaas_account_id: financialAccount.asaas_account_id,
         message,
-        recovery_required: true,
+        support_required: true,
         charges_enabled: false,
         payouts_enabled: false,
         metadata,

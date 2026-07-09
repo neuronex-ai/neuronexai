@@ -426,7 +426,7 @@ Deno.serve(async (req: Request) => {
         if (accessResponse) return accessResponse;
         console.error("[asaas-financial-sync] Fatal error:", error);
         return errorResponse(
-            "Não conseguimos atualizar os dados financeiros agora. Os últimos valores continuam disponíveis.",
+            "Não conseguimos atualizar os dados financeiros agora. A sincronização não foi concluída.",
             Number(error?.status || 500),
             { code: "FINANCIAL_SYNC_UNAVAILABLE" }
         );

@@ -146,7 +146,6 @@ export const NB_PAYOUTS_SAFE_SELECT = [
 ].join(",");
 
 export const FORBIDDEN_FINANCIAL_ACCOUNT_FIELDS = [
-  "asaas_api_key",
   "metadata",
   "onboarding_payload",
   "bank_account",

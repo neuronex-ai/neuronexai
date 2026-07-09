@@ -35,7 +35,6 @@ export interface FinancialEntry {
   origin: string;
   neurofinance_transaction_id: string | null;
   neurofinance_charge_id: string | null;
-  legacy_transaction_id: string | null;
   idempotency_key: string | null;
   reversal_of_entry_id: string | null;
   reversal_reason: string | null;
@@ -806,7 +805,7 @@ export function useDeleteFinancialEntries() {
 
       const { data: rows, error: fetchError } = await supabase
         .from('financial_entries')
-        .select('id,status,origin,appointment_id,neurofinance_charge_id,neurofinance_transaction_id,legacy_transaction_id')
+        .select('id,status,origin,appointment_id,neurofinance_charge_id,neurofinance_transaction_id')
         .eq('professional_id', user.id)
         .in('id', ids);
 
@@ -819,8 +818,7 @@ export function useDeleteFinancialEntries() {
           entry.origin === 'manual' &&
           !entry.appointment_id &&
           !entry.neurofinance_charge_id &&
-          !entry.neurofinance_transaction_id &&
-          !entry.legacy_transaction_id
+          !entry.neurofinance_transaction_id
         )
         .map((entry) => entry.id);
 

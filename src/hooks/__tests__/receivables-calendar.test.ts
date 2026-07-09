@@ -28,7 +28,6 @@ const baseEntry: FinancialEntry = {
   origin: "manual",
   neurofinance_transaction_id: null,
   neurofinance_charge_id: null,
-  legacy_transaction_id: null,
   idempotency_key: null,
   reversal_of_entry_id: null,
   reversal_reason: null,

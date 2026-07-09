@@ -40,8 +40,6 @@ import {
     asaasRequest,
     getFinancialAccountAsaasApiKey,
     normalizeAccountNumber,
-    findAsaasSubAccountByEmail,
-    findAsaasSubAccountByCpfCnpj,
     ensureAsaasOperationalWebhook,
     ASAAS_ENV,
     recordFinancialOnboardingAcceptances,
@@ -149,137 +147,6 @@ Deno.serve(async (req: Request) => {
                     onboarding_url: existingAccount.asaas_onboarding_url,
                 });
             }
-        }
-
-        const providerExistingAccount =
-            (resolvedEmail ? await findAsaasSubAccountByEmail(resolvedEmail) : null) ||
-            (cpfCnpjDigits ? await findAsaasSubAccountByCpfCnpj(cpfCnpjDigits) : null);
-
-        if (providerExistingAccount?.id) {
-            if (!providerExistingAccount.apiKey) {
-                return errorResponse(
-                    'Encontramos uma conta Asaas para estes dados, mas a chave de integração não foi retornada. Acione o suporte para vincular a conta com segurança.',
-                    409,
-                    { code: 'ASAAS_ACCOUNT_ALREADY_EXISTS_WITHOUT_API_KEY', asaas_account_id: providerExistingAccount.id }
-                );
-            }
-
-            console.log(`[asaas-connect-onboarding] Linking existing Asaas subconta: ${providerExistingAccount.id}`);
-
-            let bankUpdateResult = null;
-            if (bankCode && agency && normalizedAccount.account) {
-                bankUpdateResult = await asaasRequest(
-                    '/bankAccountInfo',
-                    'POST',
-                    {
-                        bank: { code: bankCode },
-                        accountName: ownerName,
-                        ownerName,
-                        cpfCnpj: cpfCnpjDigits,
-                        agency,
-                        account: normalizedAccount.account,
-                        accountDigit: normalizedAccount.accountDigit,
-                        bankAccountType: bankAccount.account_type || 'CONTA_CORRENTE',
-                    },
-                    providerExistingAccount.apiKey
-                );
-            }
-
-            const financialAccount = await upsertFinancialAccountRecord(user.id, {
-                provider: 'asaas',
-                asaas_account_id: providerExistingAccount.id,
-                asaas_wallet_id: providerExistingAccount.walletId,
-                asaas_onboarding_url: providerExistingAccount.onboardingUrl || null,
-                asaas_environment: ASAAS_ENV,
-                status: 'onboarding',
-                onboarding_started_at: new Date().toISOString(),
-                charges_enabled: false,
-                payouts_enabled: false,
-                details_submitted: false,
-                asaasPrivateApiKey: providerExistingAccount.apiKey,
-                holder_name: name,
-                cpf_cnpj: cpfCnpjDigits,
-                birth_date: birthDate || null,
-                mobile_phone: sanitizeDigits(mobilePhone || phone) || null,
-                pep_status: profile.political_exposure || null,
-                address_street: address || null,
-                address_number: addressNumber || null,
-                address_complement: complement || null,
-                address_neighborhood: province || null,
-                address_city: profile.city || null,
-                address_state: profile.state || null,
-                address_postal_code: sanitizeDigits(postalCode) || null,
-                company_type: companyType || null,
-                income_value: incomeValue || null,
-                business_url: body.site || null,
-                business_description: businessProfile.product_description || null,
-                business_mcc: businessProfile.mcc || null,
-                bank_code: bankCode || null,
-                bank_name: bankCode || null,
-                bank_agency: agency || null,
-                bank_account: normalizedAccount.account || null,
-                bank_account_digit: normalizedAccount.accountDigit || null,
-                bank_account_type: bankAccount.account_type || 'CONTA_CORRENTE',
-                bank_holder_name: ownerName || null,
-                bank_holder_cpf_cnpj: cpfCnpjDigits || null,
-                bank_account_last4: normalizedAccount.accountDisplay.slice(-4) || null,
-                document_front_id: body.documents?.front_file_id || null,
-                document_back_id: body.documents?.back_file_id || null,
-                tos_accepted_at: body.tos?.accepted ? now : null,
-                onboarding_payload: body,
-                metadata: {
-                    ...(existingAccount?.metadata || {}),
-                    asaas_wallet_id: providerExistingAccount.walletId,
-                    asaas_account_id: providerExistingAccount.id,
-                    linked_existing_provider_account: true,
-                    linked_existing_provider_account_at: now,
-                    bank_account_info_submitted: Boolean(bankUpdateResult),
-                    payout_destination: body.payout_destination || null,
-                    destinations: {
-                        ...(pixDestination?.key ? {
-                            pix: {
-                                type: pixDestination.type || 'manual',
-                                key: pixDestination.key,
-                                normalized_key: pixDestination.normalized_key || pixDestination.normalizedKey || pixDestination.key,
-                                updated_at: now,
-                            },
-                        } : {}),
-                        updated_at: now,
-                    },
-                },
-            });
-
-            await recordFinancialOnboardingAcceptances({
-                userId: user.id,
-                financialAccountId: financialAccount.id,
-                flowOrigin: acceptance.flowOrigin,
-                metadata: {
-                    endpoint: 'asaas-connect-onboarding',
-                    linked_existing_provider_account: true,
-                    asaas_account_id: providerExistingAccount.id,
-                },
-            });
-
-            const webhook = await ensureAsaasOperationalWebhook(providerExistingAccount.apiKey);
-            const accountStatus = await getAsaasAccountStatus(providerExistingAccount.apiKey);
-            const status = deriveUiStatusFromAsaasAccount(accountStatus);
-            const requirements = buildAsaasRequirementSnapshot(accountStatus, 'onboarding');
-            await syncFinancialAccountFromAsaas(financialAccount.id, accountStatus, 'onboarding');
-
-            return jsonResponse({
-                success: true,
-                already_exists: true,
-                linked_existing_provider_account: true,
-                financial_account_id: financialAccount.id,
-                asaas_account_id: providerExistingAccount.id,
-                wallet_id: providerExistingAccount.walletId,
-                onboarding_url: providerExistingAccount.onboardingUrl || null,
-                status,
-                account_status: accountStatus,
-                requirements,
-                webhook,
-                account_number: providerExistingAccount.accountNumber || null,
-            });
         }
 
         // 2. Create sub-account in Asaas
@@ -391,7 +258,6 @@ Deno.serve(async (req: Request) => {
             flowOrigin: acceptance.flowOrigin,
             metadata: {
                 endpoint: 'asaas-connect-onboarding',
-                linked_existing_provider_account: false,
                 asaas_account_id: subAccount.id,
             },
         });

@@ -219,98 +219,6 @@ export function toNullableString(value?: string | null) {
     return v ? v : undefined;
 }
 
-const ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET =
-    Deno.env.get("ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET")?.trim() ||
-    Deno.env.get("ASAAS_CREDENTIAL_ENCRYPTION_SECRET")?.trim() ||
-    "";
-
-const ASAAS_CREDENTIAL_KEY_VERSION =
-    Deno.env.get("ASAAS_ACCOUNT_KEY_VERSION")?.trim() || "v1";
-
-type EncryptedAsaasCredential = {
-    key_ciphertext: string;
-    key_iv: string;
-    key_tag: string;
-    key_algorithm?: string | null;
-    key_version?: string | null;
-};
-
-function bytesToBase64(bytes: Uint8Array) {
-    let binary = "";
-    bytes.forEach((byte) => {
-        binary += String.fromCharCode(byte);
-    });
-    return btoa(binary);
-}
-
-function base64ToBytes(value: string) {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) {
-        bytes[index] = binary.charCodeAt(index);
-    }
-    return bytes;
-}
-
-async function getAsaasCredentialCryptoKey() {
-    if (!ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET) {
-        throw new Error("ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET is required for private Asaas credentials.");
-    }
-
-    const secretDigest = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(ASAAS_ACCOUNT_KEY_ENCRYPTION_SECRET),
-    );
-
-    return crypto.subtle.importKey(
-        "raw",
-        secretDigest,
-        { name: "AES-GCM" },
-        false,
-        ["encrypt", "decrypt"],
-    );
-}
-
-async function encryptAsaasApiKey(apiKey: string) {
-    const trimmedApiKey = apiKey.trim();
-    if (!trimmedApiKey) throw new Error("Empty Asaas API key cannot be stored.");
-
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const key = await getAsaasCredentialCryptoKey();
-    const encrypted = new Uint8Array(
-        await crypto.subtle.encrypt(
-            { name: "AES-GCM", iv },
-            key,
-            new TextEncoder().encode(trimmedApiKey),
-        ),
-    );
-
-    const tagLength = 16;
-    const ciphertext = encrypted.slice(0, encrypted.length - tagLength);
-    const tag = encrypted.slice(encrypted.length - tagLength);
-
-    return {
-        key_ciphertext: bytesToBase64(ciphertext),
-        key_iv: bytesToBase64(iv),
-        key_tag: bytesToBase64(tag),
-        key_algorithm: "AES-256-GCM",
-        key_version: ASAAS_CREDENTIAL_KEY_VERSION,
-    };
-}
-
-async function decryptAsaasCredential(row: EncryptedAsaasCredential) {
-    if (!row?.key_ciphertext || !row?.key_iv || !row?.key_tag) return "";
-
-    const encrypted = new Uint8Array([
-        ...base64ToBytes(row.key_ciphertext),
-        ...base64ToBytes(row.key_tag),
-    ]);
-    const iv = base64ToBytes(row.key_iv);
-    const key = await getAsaasCredentialCryptoKey();
-    const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, encrypted);
-    return new TextDecoder().decode(plain).trim();
-}
-
 export async function storeAsaasAccountApiKey(
     financialAccount: any,
     apiKey?: string | null,
@@ -322,22 +230,15 @@ export async function storeAsaasAccountApiKey(
         throw new Error("Financial account id and user id are required to store Asaas credentials.");
     }
 
-    const encrypted = await encryptAsaasApiKey(trimmedApiKey);
-    const payload = {
-        financial_account_id: financialAccount.id,
-        user_id: financialAccount.user_id,
-        asaas_account_id: financialAccount.asaas_account_id || null,
-        ...encrypted,
-        status: "active",
-        source,
-        rotated_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-    };
-
     const { error } = await supabaseAdmin
         .schema("private")
-        .from("asaas_account_credentials")
-        .upsert(payload, { onConflict: "financial_account_id" });
+        .rpc("store_asaas_account_api_key", {
+            p_financial_account_id: financialAccount.id,
+            p_user_id: financialAccount.user_id,
+            p_asaas_account_id: financialAccount.asaas_account_id || null,
+            p_api_key: trimmedApiKey,
+            p_source: source,
+        });
 
     if (error) throw error;
 }
@@ -348,16 +249,12 @@ export async function getFinancialAccountAsaasApiKey(financialAccount: any): Pro
 
     const { data, error } = await supabaseAdmin
         .schema("private")
-        .from("asaas_account_credentials")
-        .select("key_ciphertext,key_iv,key_tag,key_algorithm,key_version,status")
-        .eq("financial_account_id", financialAccountId)
-        .eq("status", "active")
-        .maybeSingle();
+        .rpc("get_asaas_account_api_key", {
+            p_financial_account_id: financialAccountId,
+        });
 
     if (error) throw error;
-    if (!data) return "";
-
-    return decryptAsaasCredential(data);
+    return String(data || "").trim();
 }
 
 export async function recordBaasOperation(
