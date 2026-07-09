@@ -303,6 +303,9 @@ serve(async (request) => {
     const loadedContext = await loadConversationContext(admin, user.id, conversationId);
     const profile = await loadProfessionalProfile(admin, user.id);
     const functions = buildVoiceFunctions();
+    if (functions.length <= VOICE_ONLY_TOOLS.length) {
+      return json({ error: "Ferramentas reais do Synapse nao foram registradas para o modo voz." }, 500);
+    }
     const pendingActionSummary = await loadPendingActionSummary(admin, user.id, conversationId);
     const prompt = buildSynapseVoicePrompt({
       systemInstruction: clean(body.systemInstruction, 1600),
