@@ -28,7 +28,7 @@ const DEFAULT_VOICE_LLM_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
 const DEFAULT_VOICE_LLM_PROVIDER_TYPE = "open_ai";
 const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
+const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -73,7 +73,7 @@ function nvidiaThinkingOff() {
 function voiceThinkTemperature() {
   const explicit = clean(Deno.env.get("SYNAPSE_VOICE_THINK_TEMPERATURE"), 20);
   if (explicit) return Number(explicit);
-  return nvidiaThinkingOff() ? 0 : 0.35;
+  return 0.35;
 }
 
 function voiceTtsModelId() {
