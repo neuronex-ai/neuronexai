@@ -80,7 +80,7 @@ function assertGatewayConfiguration() {
   const missing = missingGatewayConfiguration();
   if (!missing.length) return;
   console.error("[voice-agent-gateway] configuracao obrigatoria ausente:", missing.join(", "));
-  console.error("[voice-agent-gateway] o Synapse de voz usa somente Deepgram Agent + ElevenLabs gerenciado pela Deepgram.");
+  console.error("[voice-agent-gateway] o Synapse de voz usa somente Deepgram Agent + NVIDIA BYO + ElevenLabs.");
   process.exit(1);
 }
 
