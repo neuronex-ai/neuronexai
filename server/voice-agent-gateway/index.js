@@ -4,6 +4,7 @@ import path from "node:path";
 import { WebSocket, WebSocketServer } from "ws";
 import { VoiceFunctionRunner } from "./function-runner.js";
 import { isAssistantRole, isUserRole } from "./intent.js";
+import { normalizeVoiceText } from "./speech-normalizer.js";
 
 function loadLocalEnv() {
   for (const file of [".env.local", ".env"]) {
@@ -27,12 +28,12 @@ loadLocalEnv();
 const PORT = Number(process.env.SYNAPSE_VOICE_GATEWAY_PORT || process.env.PORT || "8789");
 const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
-const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
-const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
-const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const ELEVENLABS_LANGUAGE_CODE = "pt";
+const DEFAULT_VOICE_LLM_ENDPOINT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const DEFAULT_VOICE_LLM_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
+const DEFAULT_VOICE_LLM_PROVIDER_TYPE = "open_ai";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
+const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -65,10 +66,48 @@ function getNvidiaVoiceApiKey() {
   return process.env.NVIDIA_VOICE_API_KEY || "";
 }
 
+function voiceLlmProviderType() {
+  return clean(process.env.SYNAPSE_VOICE_LLM_PROVIDER_TYPE || DEFAULT_VOICE_LLM_PROVIDER_TYPE, 80);
+}
+
+function voiceLlmModel() {
+  return clean(process.env.SYNAPSE_VOICE_LLM_MODEL || DEFAULT_VOICE_LLM_MODEL, 180);
+}
+
+function voiceLlmEndpointUrl() {
+  return clean(process.env.SYNAPSE_VOICE_LLM_ENDPOINT_URL || DEFAULT_VOICE_LLM_ENDPOINT_URL, 500);
+}
+
+function voiceLlmApiKey() {
+  return clean(process.env.SYNAPSE_VOICE_LLM_API_KEY || getNvidiaVoiceApiKey(), 8000);
+}
+
+function nvidiaThinkingOff() {
+  return clean(process.env.SYNAPSE_VOICE_NVIDIA_THINKING || "off", 20).toLowerCase() !== "on";
+}
+
+function voiceThinkTemperature() {
+  const explicit = clean(process.env.SYNAPSE_VOICE_THINK_TEMPERATURE, 20);
+  if (explicit) return Number(explicit);
+  return nvidiaThinkingOff() ? 0 : 0.35;
+}
+
+function voiceTtsModelId() {
+  return clean(process.env.SYNAPSE_VOICE_TTS_MODEL_ID || DEFAULT_ELEVENLABS_MODEL_ID, 120);
+}
+
+function voiceTtsVoiceId() {
+  return clean(process.env.SYNAPSE_VOICE_TTS_VOICE_ID || DEFAULT_ELEVENLABS_VOICE_ID, 160);
+}
+
+function voiceTtsLanguageCode() {
+  return clean(process.env.SYNAPSE_VOICE_TTS_LANGUAGE_CODE || DEFAULT_ELEVENLABS_LANGUAGE_CODE, 20);
+}
+
 function missingGatewayConfiguration() {
   return [
     !process.env.DEEPGRAM_API_KEY ? "DEEPGRAM_API_KEY" : "",
-    !getNvidiaVoiceApiKey() ? "NVIDIA_VOICE_API_KEY" : "",
+    voiceLlmEndpointUrl() && !voiceLlmApiKey() ? "SYNAPSE_VOICE_LLM_API_KEY ou NVIDIA_VOICE_API_KEY" : "",
     !getElevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !getSupabaseUrl() ? "SUPABASE_URL ou VITE_SUPABASE_URL" : "",
     !getSupabaseAnonKey() ? "SUPABASE_ANON_KEY ou VITE_SUPABASE_ANON_KEY" : "",
@@ -79,7 +118,7 @@ function missingGatewayConfiguration() {
 function assertGatewayConfiguration() {
   const missing = missingGatewayConfiguration();
   if (!missing.length) return;
-  console.error("[voice-agent-gateway] configuracao obrigatoria ausente:", missing.join(", "));
+  console.error("[voice-agent-gateway] configuração obrigatória ausente:", missing.join(", "));
   console.error("[voice-agent-gateway] o Synapse de voz usa somente Deepgram Agent + NVIDIA BYO + ElevenLabs.");
   process.exit(1);
 }
@@ -92,8 +131,8 @@ function isFunctionNotFound(response, data) {
 
 function edgeFunctionMissingMessage(functionName) {
   return [
-    `Edge Function ${functionName} nao esta deployada no projeto Supabase configurado.`,
-    "Deploy necessario: supabase functions deploy synapse-voice-agent-session synapse-voice-tool --project-ref krewdaklcyzqfxkkgvqr.",
+    `Edge Function ${functionName} não está deployada no projeto Supabase configurado.`,
+    "Deploy necessário: supabase functions deploy synapse-voice-agent-session synapse-voice-tool --project-ref krewdaklcyzqfxkkgvqr.",
   ].join(" ");
 }
 
@@ -118,8 +157,8 @@ function conversationText(event) {
 
 function gatewayErrorType(error) {
   const text = clean(error?.message || error, 1200).toLowerCase();
-  if (/sessao|token|auth|unauthorized|401|403|jwt|gateway nao autorizado/.test(text)) return "auth_error";
-  if (/settings|config|api[_ -]?key|secret|supabase nao configurado|ausentes|missing/.test(text)) return "config_error";
+  if (/sessao|sessão|token|auth|unauthorized|401|403|jwt|gateway nao autorizado|gateway não autorizado/.test(text)) return "auth_error";
+  if (/settings|config|api[_ -]?key|secret|supabase nao configurado|supabase não configurado|ausentes|missing/.test(text)) return "config_error";
   if (/deepgram|eleven|nvidia|provider|websocket|socket|1005|failed_to_speak|failed_to_think/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
@@ -151,18 +190,27 @@ function normalizeAgentSettings(settings) {
   agent.think = think;
   const thinkProvider = think.provider && typeof think.provider === "object" ? think.provider : {};
   think.provider = thinkProvider;
-  thinkProvider.type = "open_ai";
-  thinkProvider.model = NVIDIA_VOICE_MODEL;
-  thinkProvider.temperature = SYNAPSE_VOICE_THINK_TEMPERATURE;
-  const thinkEndpoint = think.endpoint && typeof think.endpoint === "object" ? think.endpoint : {};
-  think.endpoint = thinkEndpoint;
-  thinkEndpoint.url = NVIDIA_VOICE_CHAT_URL;
-  thinkEndpoint.headers = {
-    ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers : {}),
-    authorization: `Bearer ${getNvidiaVoiceApiKey()}`,
-  };
-  if (!clean(thinkEndpoint.url, 500) || !getNvidiaVoiceApiKey()) {
-    throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
+  thinkProvider.type = voiceLlmProviderType();
+  thinkProvider.model = voiceLlmModel();
+  thinkProvider.temperature = voiceThinkTemperature();
+  if (nvidiaThinkingOff() && clean(process.env.SYNAPSE_VOICE_ENABLE_REASONING_EFFORT, 20).toLowerCase() === "true") {
+    thinkProvider.reasoning_effort = "low";
+  }
+
+  const llmEndpointUrl = voiceLlmEndpointUrl();
+  if (llmEndpointUrl) {
+    const thinkEndpoint = think.endpoint && typeof think.endpoint === "object" ? think.endpoint : {};
+    think.endpoint = thinkEndpoint;
+    thinkEndpoint.url = llmEndpointUrl;
+    thinkEndpoint.headers = {
+      ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers : {}),
+      authorization: `Bearer ${voiceLlmApiKey()}`,
+    };
+    if (!voiceLlmApiKey()) {
+      throw new Error("Settings de voz incompletos: endpoint LLM ou chave de LLM de voz ausente.");
+    }
+  } else {
+    delete think.endpoint;
   }
 
   const listenProvider = settings?.agent?.listen?.provider;
@@ -185,9 +233,9 @@ function normalizeAgentSettings(settings) {
   if (speakProvider?.type !== "eleven_labs") {
     throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
   }
-  speakProvider.model_id = ELEVENLABS_MODEL_ID;
-  speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
-  const voiceId = clean(speakProvider.voice_id, 160) || ELEVENLABS_VOICE_ID;
+  speakProvider.model_id = voiceTtsModelId();
+  speakProvider.language_code = voiceTtsLanguageCode();
+  const voiceId = clean(speakProvider.voice_id, 160) || voiceTtsVoiceId();
   if ("voice_id" in speakProvider) {
     delete speakProvider.voice_id;
   }
@@ -225,11 +273,16 @@ class SynapseVoiceSession {
     this.startedAt = Date.now();
     this.latencyMs = {};
     this.firstAudioByteSeen = false;
+    this.lastUserTranscriptAt = 0;
+    this.lastFunctionResponseAt = 0;
+    this.waitingAudioAfterUser = false;
+    this.waitingAudioAfterFunction = false;
     this.lastProviderEvent = null;
     this.runner = new VoiceFunctionRunner({
       sendDeepgram: (payload) => this.sendDeepgram(payload),
       sendClient: (payload) => this.sendClient(payload),
       invokeTool: (call) => this.invokeTool(call),
+      markLatency: (event, data) => this.markRunnerLatency(event, data),
     });
   }
 
@@ -263,7 +316,7 @@ class SynapseVoiceSession {
     if (!this.authorization) throw new Error("Sessao ausente para iniciar voz.");
 
     const deepgramKey = process.env.DEEPGRAM_API_KEY;
-    if (!deepgramKey) throw new Error("DEEPGRAM_API_KEY nao configurada no gateway.");
+    if (!deepgramKey) throw new Error("DEEPGRAM_API_KEY não configurada no gateway.");
     const sessionConfig = await this.fetchSessionConfig(payload);
     const settings = sessionConfig.agentSettings;
     if (!settings) throw new Error("Settings Deepgram ausentes na resposta segura do Supabase.");
@@ -375,6 +428,14 @@ class SynapseVoiceSession {
             this.firstAudioByteSeen = true;
             this.latencyMs.first_audio_byte_ms = Date.now() - this.startedAt;
           }
+          if (this.waitingAudioAfterUser && this.lastUserTranscriptAt) {
+            this.waitingAudioAfterUser = false;
+            this.latencyMs.first_audio_after_last_user_ms = Date.now() - this.lastUserTranscriptAt;
+          }
+          if (this.waitingAudioAfterFunction && this.lastFunctionResponseAt) {
+            this.waitingAudioAfterFunction = false;
+            this.latencyMs.first_audio_after_last_function_ms = Date.now() - this.lastFunctionResponseAt;
+          }
           this.sendClient(data, true);
           return;
         }
@@ -445,6 +506,10 @@ class SynapseVoiceSession {
         break;
       case "FunctionCallRequest":
         this.latencyMs.first_tool_request_ms ??= Date.now() - this.startedAt;
+        this.latencyMs.last_tool_request_ms = Date.now() - this.startedAt;
+        if (this.lastUserTranscriptAt) {
+          this.latencyMs.last_transcript_to_tool_request_ms = Date.now() - this.lastUserTranscriptAt;
+        }
         void this.runner.handleFunctionCallRequest(event);
         break;
       case "UserStartedSpeaking":
@@ -456,7 +521,12 @@ class SynapseVoiceSession {
         if (!text) break;
         if (isUserRole(text.role)) this.runner.onUserTranscript(text.content);
         if (isUserRole(text.role) || isAssistantRole(text.role)) {
-          if (isUserRole(text.role)) this.latencyMs.first_transcript_ms ??= Date.now() - this.startedAt;
+          if (isUserRole(text.role)) {
+            this.latencyMs.first_transcript_ms ??= Date.now() - this.startedAt;
+            this.latencyMs.last_user_transcript_ms = Date.now() - this.startedAt;
+            this.lastUserTranscriptAt = Date.now();
+            this.waitingAudioAfterUser = true;
+          }
           void this.persistMessage(text.role, text.content, event);
         }
         break;
@@ -481,6 +551,27 @@ class SynapseVoiceSession {
         break;
       default:
         break;
+    }
+  }
+
+  markRunnerLatency(event, data = {}) {
+    const now = Date.now();
+    if (event === "tool_started") {
+      this.latencyMs.last_tool_started_ms = now - this.startedAt;
+      if (this.lastUserTranscriptAt) {
+        this.latencyMs.last_transcript_to_tool_started_ms = now - this.lastUserTranscriptAt;
+      }
+      return;
+    }
+    if (event === "tool_completed") {
+      this.latencyMs.last_tool_completed_ms = now - this.startedAt;
+      this.latencyMs.last_tool_duration_ms = Math.max(0, Number(data.durationMs || 0));
+      return;
+    }
+    if (event === "function_response_sent") {
+      this.lastFunctionResponseAt = now;
+      this.waitingAudioAfterFunction = true;
+      this.latencyMs.last_function_response_sent_ms = now - this.startedAt;
     }
   }
 
@@ -587,7 +678,7 @@ class SynapseVoiceSession {
   }
 
   injectUserMessage(message) {
-    const text = clean(message, 2000);
+    const text = normalizeVoiceText(clean(message, 2000));
     if (!text) return;
     this.sendDeepgram({ type: "InjectUserMessage", message: text });
   }
@@ -613,7 +704,7 @@ class SynapseVoiceSession {
         this.sendClient({
           type: "gateway_error",
           errorType: gatewayErrorType(error),
-          error: clean(error?.message || "Nao foi possivel iniciar voz.", 1000),
+          error: clean(error?.message || "Não foi possível iniciar voz.", 1000),
         });
         void this.updateVoiceSession("error", { closeReason: error?.message || "start_failed" });
         this.close();
@@ -667,6 +758,14 @@ const server = http.createServer((req, res) => {
       voicePath: "deepgram-agent-nvidia-byo-elevenlabs",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
       nvidiaVoiceConfigured: Boolean(getNvidiaVoiceApiKey()),
+      voiceLlmProvider: voiceLlmProviderType(),
+      voiceLlmModel: voiceLlmModel(),
+      voiceLlmEndpointConfigured: Boolean(voiceLlmEndpointUrl()),
+      nvidiaThinking: nvidiaThinkingOff() ? "off" : "on",
+      voiceThinkTemperature: voiceThinkTemperature(),
+      voiceTtsModel: voiceTtsModelId(),
+      voiceTtsVoiceId: voiceTtsVoiceId(),
+      voiceTtsLanguageCode: voiceTtsLanguageCode(),
       elevenLabsConfigured: Boolean(getElevenLabsApiKey()),
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),

@@ -8,6 +8,7 @@ export class VoiceFunctionRunner {
       arguments: Record<string, unknown>;
       signal?: AbortSignal;
     }) => Promise<Record<string, unknown>>;
+    markLatency?: (event: string, data?: Record<string, unknown>) => void;
   });
   handleFunctionCallRequest(payload: {
     functions: Array<{

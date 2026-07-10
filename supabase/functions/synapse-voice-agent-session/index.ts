@@ -23,12 +23,12 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const SUPABASE_EDGE_GATEWAY_PATH = "/functions/v1/synapse-voice-gateway";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
-const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
+const DEFAULT_VOICE_LLM_ENDPOINT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const DEFAULT_VOICE_LLM_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
+const DEFAULT_VOICE_LLM_PROVIDER_TYPE = "open_ai";
 const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt";
+const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -41,17 +41,51 @@ const isLocalDevelopmentHost = (host: string) =>
 function elevenLabsApiKey() {
   const value = clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000);
   if (!value) {
-    throw new Error("ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY nao configurada para o Synapse de voz.");
+    throw new Error("ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY não configurada para o Synapse de voz.");
   }
   return value;
 }
 
 function nvidiaVoiceApiKey() {
-  const value = clean(Deno.env.get("NVIDIA_VOICE_API_KEY"), 8000);
+  const value = clean(Deno.env.get("SYNAPSE_VOICE_LLM_API_KEY") || Deno.env.get("NVIDIA_VOICE_API_KEY"), 8000);
   if (!value) {
-    throw new Error("NVIDIA_VOICE_API_KEY nao configurada para o Synapse de voz.");
+    throw new Error("SYNAPSE_VOICE_LLM_API_KEY ou NVIDIA_VOICE_API_KEY não configurada para o Synapse de voz.");
   }
   return value;
+}
+
+function voiceLlmProviderType() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_PROVIDER_TYPE") || DEFAULT_VOICE_LLM_PROVIDER_TYPE, 80);
+}
+
+function voiceLlmModel() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_MODEL") || DEFAULT_VOICE_LLM_MODEL, 180);
+}
+
+function voiceLlmEndpointUrl() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_ENDPOINT_URL") || DEFAULT_VOICE_LLM_ENDPOINT_URL, 500);
+}
+
+function nvidiaThinkingOff() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_NVIDIA_THINKING") || "off", 20).toLowerCase() !== "on";
+}
+
+function voiceThinkTemperature() {
+  const explicit = clean(Deno.env.get("SYNAPSE_VOICE_THINK_TEMPERATURE"), 20);
+  if (explicit) return Number(explicit);
+  return nvidiaThinkingOff() ? 0 : 0.35;
+}
+
+function voiceTtsModelId() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_TTS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID, 120);
+}
+
+function voiceTtsVoiceId() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_TTS_VOICE_ID") || DEFAULT_ELEVENLABS_VOICE_ID, 160);
+}
+
+function voiceTtsLanguageCode() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_TTS_LANGUAGE_CODE") || DEFAULT_ELEVENLABS_LANGUAGE_CODE, 20);
 }
 
 const supabaseEdgeGatewayUrl = () => {
@@ -153,7 +187,7 @@ const VOICE_ONLY_TOOLS = [
   {
     name: "confirm_pending_action",
     description:
-      "Use quando o profissional confirmar verbalmente uma acao pendente preparada anteriormente, como 'confirmo', 'pode executar' ou 'pode prosseguir'.",
+      "Use quando o profissional confirmar verbalmente uma ação pendente preparada anteriormente, como 'confirmo', 'pode executar' ou 'pode prosseguir'.",
     parameters: {
       type: "object",
       properties: {},
@@ -163,7 +197,7 @@ const VOICE_ONLY_TOOLS = [
   {
     name: "cancel_pending_action",
     description:
-      "Use quando o profissional cancelar uma acao pendente ou uma execucao em andamento, como 'cancela', 'deixa', 'nao precisa' ou 'para isso'.",
+      "Use quando o profissional cancelar uma ação pendente ou uma execução em andamento, como 'cancela', 'deixa', 'não precisa' ou 'para isso'.",
     parameters: {
       type: "object",
       properties: {
@@ -182,9 +216,9 @@ function buildVoiceFunctions() {
 }
 
 function buildSpeakConfig() {
-  const modelId = DEFAULT_ELEVENLABS_MODEL_ID;
-  const voiceId = DEFAULT_ELEVENLABS_VOICE_ID;
-  const languageCode = DEFAULT_ELEVENLABS_LANGUAGE_CODE;
+  const modelId = voiceTtsModelId();
+  const voiceId = voiceTtsVoiceId();
+  const languageCode = voiceTtsLanguageCode();
   const elevenLabsKey = elevenLabsApiKey();
 
   const speak: Record<string, unknown> = {
@@ -212,21 +246,31 @@ function buildThinkConfig(
   prompt: string,
   functions: Array<Record<string, unknown>>,
 ) {
-  return {
+  const think: Record<string, unknown> = {
     provider: {
-      type: "open_ai",
-      model: NVIDIA_VOICE_MODEL,
-      temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
-    },
-    endpoint: {
-      url: NVIDIA_VOICE_CHAT_URL,
-      headers: {
-        authorization: `Bearer ${nvidiaVoiceApiKey()}`,
-      },
+      type: voiceLlmProviderType(),
+      model: voiceLlmModel(),
+      temperature: voiceThinkTemperature(),
     },
     prompt,
     functions,
   };
+
+  if (nvidiaThinkingOff() && clean(Deno.env.get("SYNAPSE_VOICE_ENABLE_REASONING_EFFORT"), 20).toLowerCase() === "true") {
+    (think.provider as Record<string, unknown>).reasoning_effort = "low";
+  }
+
+  const endpointUrl = voiceLlmEndpointUrl();
+  if (endpointUrl) {
+    think.endpoint = {
+      url: endpointUrl,
+      headers: {
+        authorization: `Bearer ${nvidiaVoiceApiKey()}`,
+      },
+    };
+  }
+
+  return think;
 }
 
 function buildAgentSettings(
@@ -256,7 +300,7 @@ function buildAgentSettings(
     listenProvider.smart_format = true;
   }
 
-  const thinkModel = NVIDIA_VOICE_MODEL;
+  const thinkModel = voiceLlmModel();
   const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "48000");
   const outputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000");
 
@@ -300,7 +344,7 @@ function buildAgentSettings(
 
 serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (request.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
+  if (request.method !== "POST") return json({ error: "Método não permitido." }, 405);
 
   try {
     const authorization = request.headers.get("Authorization") || "";
@@ -310,7 +354,7 @@ serve(async (request) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if (!supabaseUrl || !anonKey || !serviceKey) {
-      return json({ error: "Supabase nao configurado para voz." }, 500);
+      return json({ error: "Supabase não configurado para voz." }, 500);
     }
 
     const body = await request.json().catch(() => ({}));
@@ -319,7 +363,7 @@ serve(async (request) => {
     const gatewayAuthorized = gatewaySecret &&
       request.headers.get("x-synapse-gateway-secret") === gatewaySecret;
     if (includeSettings && !gatewayAuthorized) {
-      return json({ error: "Gateway nao autorizado." }, 403);
+      return json({ error: "Gateway não autorizado." }, 403);
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
@@ -341,7 +385,7 @@ serve(async (request) => {
     const profile = await loadProfessionalProfile(admin, user.id);
     const functions = buildVoiceFunctions();
     if (functions.length <= VOICE_ONLY_TOOLS.length) {
-      return json({ error: "Ferramentas reais do Synapse nao foram registradas para o modo voz." }, 500);
+      return json({ error: "Ferramentas reais do Synapse não foram registradas para o modo voz." }, 500);
     }
     const pendingActionSummary = await loadPendingActionSummary(admin, user.id, conversationId);
     const prompt = buildSynapseVoicePrompt({
