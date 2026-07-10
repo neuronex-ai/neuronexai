@@ -21,6 +21,7 @@ const json = (payload: Record<string, unknown>, status = 200) =>
   });
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
+const SUPABASE_EDGE_GATEWAY_PATH = "/functions/v1/synapse-voice-gateway";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
 const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
@@ -44,6 +45,21 @@ function normalizeThinkModel(provider: string, model: string) {
   return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
 }
 
+const supabaseEdgeGatewayUrl = () => {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  if (!supabaseUrl) return DEFAULT_GATEWAY_URL;
+  try {
+    const url = new URL(supabaseUrl);
+    url.protocol = "wss:";
+    url.pathname = SUPABASE_EDGE_GATEWAY_PATH;
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return DEFAULT_GATEWAY_URL;
+  }
+};
+
 const publicGatewayUrl = (originHeader?: string | null) => {
   const configured =
     Deno.env.get("SYNAPSE_VOICE_GATEWAY_URL") ||
@@ -57,14 +73,11 @@ const publicGatewayUrl = (originHeader?: string | null) => {
       const protocol = origin?.protocol === "https:" ? "wss:" : "ws:";
       return `${protocol}//${origin!.host}/v1/synapse/voice`;
     }
-    if (/^(www\.)?neuronexai\.com\.br$/i.test(host)) {
-      return `wss://${origin!.host}/v1/synapse/voice`;
-    }
   } catch {
-    // Fall through to the local development gateway default.
+    // Fall through to the Supabase Edge gateway default.
   }
 
-  return DEFAULT_GATEWAY_URL;
+  return supabaseEdgeGatewayUrl();
 };
 
 const toDeepgramFunction = (tool: any) => {

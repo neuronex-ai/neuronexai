@@ -152,6 +152,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/synapse-voice-agent-session/index.ts"
 
+[functions.synapse-voice-gateway]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/synapse-voice-gateway/index.ts"
+
 [functions.synapse-voice-tool]
 enabled = true
 verify_jwt = true

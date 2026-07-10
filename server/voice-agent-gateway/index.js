@@ -102,7 +102,7 @@ function conversationText(event) {
 
 function gatewayErrorType(error) {
   const text = clean(error?.message || error, 1200).toLowerCase();
-  if (/sessao|token|auth|unauthorized|401|403|gateway nao autorizado/.test(text)) return "auth_error";
+  if (/sessao|token|auth|unauthorized|401|403|jwt|gateway nao autorizado/.test(text)) return "auth_error";
   if (/settings|config|api[_ -]?key|secret|supabase nao configurado|ausentes|missing/.test(text)) return "config_error";
   if (/deepgram|eleven|provider|websocket|socket|1005|failed_to_speak/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
