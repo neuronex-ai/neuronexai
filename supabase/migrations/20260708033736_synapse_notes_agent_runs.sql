@@ -49,6 +49,7 @@ create policy "Users can view own Synapse notes agent runs"
 revoke all on public.synapse_notes_agent_runs from anon;
 revoke all on public.synapse_notes_agent_runs from authenticated;
 grant select on public.synapse_notes_agent_runs to authenticated;
+grant all on public.synapse_notes_agent_runs to service_role;
 
 do $$
 begin

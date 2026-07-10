@@ -111,20 +111,49 @@ function gatewayErrorType(error) {
   return "voice_error";
 }
 
+function providerEventMessage(event) {
+  return clean(event?.description || event?.message || event?.error || event?.reason || "", 1000);
+}
+
+function sanitizeProviderEvent(event) {
+  const message = providerEventMessage(event);
+  return {
+    type: clean(event?.type, 80),
+    code: clean(event?.code || event?.error_code || event?.status, 120) || undefined,
+    message,
+    errorType: gatewayErrorType(message || event?.type),
+  };
+}
+
 function normalizeAgentSettings(settings) {
   const listenProvider = settings?.agent?.listen?.provider;
-  if (!listenProvider || typeof listenProvider !== "object") return settings;
-
-  const listenModel = clean(listenProvider.model, 120);
-  const listenVersion = clean(listenProvider.version, 40);
-  if (listenModel.startsWith("flux-") || listenVersion === "v2") {
-    delete listenProvider.language;
-    delete listenProvider.smart_format;
-    if (listenModel === "flux-general-multi") {
-      listenProvider.language_hints = ["pt"];
-    } else {
-      delete listenProvider.language_hints;
+  if (listenProvider && typeof listenProvider === "object") {
+    const listenModel = clean(listenProvider.model, 120);
+    const listenVersion = clean(listenProvider.version, 40);
+    if (listenModel.startsWith("flux-") || listenVersion === "v2") {
+      delete listenProvider.language;
+      delete listenProvider.smart_format;
+      if (listenModel === "flux-general-multi") {
+        listenProvider.language_hints = ["pt"];
+      } else {
+        delete listenProvider.language_hints;
+      }
     }
+  }
+
+  const speak = settings?.agent?.speak;
+  const speakProvider = speak?.provider;
+  if (speakProvider?.type !== "eleven_labs") {
+    throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
+  }
+  if ("voice_id" in speakProvider) {
+    delete speakProvider.voice_id;
+  }
+  const endpoint = speak?.endpoint;
+  const endpointUrl = clean(endpoint?.url, 500);
+  const apiKey = clean(endpoint?.headers?.["xi-api-key"], 8000);
+  if (!endpointUrl || !apiKey) {
+    throw new Error("Settings de voz incompletos: endpoint ElevenLabs ou ELEVENLABS_API_KEY ausente.");
   }
 
   return settings;
@@ -148,6 +177,7 @@ class SynapseVoiceSession {
     this.startedAt = Date.now();
     this.latencyMs = {};
     this.firstAudioByteSeen = false;
+    this.lastProviderEvent = null;
     this.runner = new VoiceFunctionRunner({
       sendDeepgram: (payload) => this.sendDeepgram(payload),
       sendClient: (payload) => this.sendClient(payload),
@@ -203,6 +233,7 @@ class SynapseVoiceSession {
       smartFormat: settings?.agent?.listen?.provider?.smart_format,
       ttsProvider: sessionConfig.ttsProvider || settings?.agent?.speak?.provider?.type,
       functionsCount: Array.isArray(settings?.agent?.think?.functions) ? settings.agent.think.functions.length : 0,
+      elevenLabsEndpointConfigured: Boolean(settings?.agent?.speak?.endpoint?.url),
     });
     this.sendClient({
       type: "gateway_status",
@@ -312,10 +343,9 @@ class SynapseVoiceSession {
         const wasSettled = settled;
         clearTimeout(failTimer);
         this.deepgramReady = false;
-        this.settingsApplied = false;
         void this.updateVoiceSession(wasSettled ? "ended" : "error", {
           closeCode: code,
-          closeReason: reason?.toString?.() || "",
+          closeReason: reason?.toString?.() || this.lastProviderEvent?.message || "",
         });
         this.sendClient({
           type: "gateway_status",
@@ -324,8 +354,9 @@ class SynapseVoiceSession {
           reason: reason?.toString?.() || "",
         });
         if (!wasSettled) {
-          const detail = reason?.toString?.() || `codigo ${code}`;
+          const detail = reason?.toString?.() || this.lastProviderEvent?.message || `codigo ${code}`;
           settleFailure(new Error(`Conexao com a Deepgram encerrada antes de ficar pronta (${detail}).`));
+          this.settingsApplied = false;
         }
       });
 
@@ -348,6 +379,7 @@ class SynapseVoiceSession {
         this.deepgramReady = true;
         this.latencyMs.deepgram_welcome_ms = Date.now() - this.startedAt;
         this.sendDeepgram(settings);
+        this.latencyMs.settings_sent_ms = Date.now() - this.startedAt;
         this.sendClient({ type: "gateway_status", status: "settings_sent" });
         break;
       case "SettingsApplied":
@@ -381,12 +413,21 @@ class SynapseVoiceSession {
       }
       case "Error":
       case "Warning":
+        this.lastProviderEvent = sanitizeProviderEvent(event);
         this.sendClient({
           type: event.type === "Error" ? "gateway_error" : "gateway_warning",
-          errorType: gatewayErrorType(event.description || event.message || event.error),
-          error: clean(event.description || event.message || event.error, 1000),
-          event,
+          errorType: this.lastProviderEvent.errorType,
+          error: this.lastProviderEvent.message,
+          providerEvent: this.lastProviderEvent,
         });
+        if (event.type === "Error") {
+          void this.updateVoiceSession("error", {
+            closeReason: this.lastProviderEvent.message,
+            metadata: {
+              providerLastEvent: this.lastProviderEvent,
+            },
+          });
+        }
         break;
       default:
         break;
@@ -395,6 +436,15 @@ class SynapseVoiceSession {
 
   async updateVoiceSession(status, extra = {}) {
     if (!this.voiceSessionId || !this.conversationId) return;
+    const metadata = {
+      provider: "deepgram-agent",
+      runtime: "node-local",
+      settingsApplied: this.settingsApplied,
+      firstAudioByteSeen: this.firstAudioByteSeen,
+      ...(this.lastProviderEvent ? { providerLastEvent: this.lastProviderEvent } : {}),
+      ...(extra.metadata && typeof extra.metadata === "object" ? extra.metadata : {}),
+    };
+    const { metadata: _ignoredMetadata, ...rest } = extra;
     try {
       await fetch(`${getFunctionsUrl()}/synapse-voice-tool`, {
         method: "POST",
@@ -411,11 +461,8 @@ class SynapseVoiceSession {
           voiceSessionId: this.voiceSessionId,
           status,
           latencyMs: this.latencyMs,
-          metadata: {
-            provider: "deepgram-agent",
-            firstAudioByteSeen: this.firstAudioByteSeen,
-          },
-          ...extra,
+          ...rest,
+          metadata,
         }),
       });
     } catch (error) {
@@ -567,7 +614,7 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: "synapse-voice-agent-gateway",
       path: PATHNAME,
-      voicePath: "deepgram-agent-elevenlabs-managed",
+      voicePath: "deepgram-agent-elevenlabs",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),

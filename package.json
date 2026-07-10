@@ -7,9 +7,9 @@
   "description": "NeuroNex Desktop — Gestão Inteligente para Psicólogos",
   "author": "NeuroNex",
   "scripts": {
-    "dev": "concurrently -k -n vite,voice \"vite\" \"npm run voice:gateway\"",
+    "dev": "node scripts/start-dev.cjs",
     "dev:web": "vite",
-    "dev:voice": "npm run dev",
+    "dev:voice": "npm run voice:gateway",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",

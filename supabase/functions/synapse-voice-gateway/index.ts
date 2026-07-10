@@ -52,6 +52,7 @@ function gatewaySecret() {
 function missingConfig() {
   return [
     !Deno.env.get("DEEPGRAM_API_KEY") ? "DEEPGRAM_API_KEY" : "",
+    !Deno.env.get("ELEVENLABS_API_KEY") ? "ELEVENLABS_API_KEY" : "",
     !Deno.env.get("SUPABASE_URL") ? "SUPABASE_URL" : "",
     !anonKey() ? "SUPABASE_ANON_KEY" : "",
     !gatewaySecret() ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
@@ -66,6 +67,56 @@ function gatewayErrorType(error: unknown) {
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
   return "voice_error";
+}
+
+function providerEventMessage(event: Record<string, unknown>) {
+  return clean(event.description || event.message || event.error || event.reason || "", 1000);
+}
+
+function sanitizeProviderEvent(event: Record<string, unknown>) {
+  const message = providerEventMessage(event);
+  return {
+    type: clean(event.type, 80),
+    code: clean(event.code || event.error_code || event.status, 120) || undefined,
+    message,
+    errorType: gatewayErrorType(message || event.type),
+  };
+}
+
+function validateAgentSettings(settings: Record<string, unknown>) {
+  const agent = settings.agent as Record<string, unknown> | undefined;
+  const listen = agent?.listen as Record<string, unknown> | undefined;
+  const listenProvider = listen?.provider as Record<string, unknown> | undefined;
+  if (listenProvider && typeof listenProvider === "object") {
+    const listenModel = clean(listenProvider.model, 120);
+    const listenVersion = clean(listenProvider.version, 40);
+    if (listenModel.startsWith("flux-") || listenVersion === "v2") {
+      delete listenProvider.language;
+      delete listenProvider.smart_format;
+      if (listenModel === "flux-general-multi") {
+        listenProvider.language_hints = ["pt"];
+      } else {
+        delete listenProvider.language_hints;
+      }
+    }
+  }
+
+  const speak = agent?.speak as Record<string, unknown> | undefined;
+  const speakProvider = speak?.provider as Record<string, unknown> | undefined;
+  if (speakProvider?.type !== "eleven_labs") {
+    throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
+  }
+  if ("voice_id" in speakProvider) {
+    delete speakProvider.voice_id;
+  }
+  const endpoint = speak?.endpoint as Record<string, unknown> | undefined;
+  const headers = endpoint?.headers as Record<string, unknown> | undefined;
+  const endpointUrl = clean(endpoint?.url, 500);
+  const apiKey = clean(headers?.["xi-api-key"], 8000);
+  if (!endpointUrl || !apiKey) {
+    throw new Error("Settings de voz incompletos: endpoint ElevenLabs ou ELEVENLABS_API_KEY ausente.");
+  }
+  return settings;
 }
 
 function conversationText(event: Record<string, unknown>) {
@@ -592,6 +643,7 @@ class EdgeSynapseVoiceSession {
   private persistQueue: Promise<void> = Promise.resolve();
   private persistenceDisabled = false;
   private closed = false;
+  private lastProviderEvent: Record<string, unknown> | null = null;
 
   constructor(client: WebSocket) {
     this.client = client;
@@ -626,6 +678,7 @@ class EdgeSynapseVoiceSession {
     const sessionConfig = await this.fetchSessionConfig(payload);
     const settings = sessionConfig.agentSettings;
     if (!settings) throw new Error("Settings Deepgram ausentes na resposta segura do Supabase.");
+    validateAgentSettings(settings as Record<string, unknown>);
 
     this.conversationId = clean(sessionConfig.conversationId || sessionConfig.sessionId || payload.conversationId || payload.sessionId, 120);
     this.voiceSessionId = clean(sessionConfig.voiceSessionId || payload.voiceSessionId, 120);
@@ -641,6 +694,7 @@ class EdgeSynapseVoiceSession {
       ttsProvider: sessionConfig.ttsProvider,
       functionsCount: sessionConfig.functionsCount,
       outputSampleRate: sessionConfig.outputSampleRate,
+      elevenLabsEndpointConfigured: Boolean((settings as any)?.agent?.speak?.endpoint?.url),
     });
 
     this.connectDeepgram(clean(sessionConfig.deepgramUrl, 500) || DEFAULT_DEEPGRAM_URL, settings as Record<string, unknown>);
@@ -708,16 +762,24 @@ class EdgeSynapseVoiceSession {
 
     ws.onclose = (event) => {
       if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+      const closeReason = clean(event.reason || this.lastProviderEvent?.message || "", 500);
       void this.updateVoiceSession(this.settingsApplied ? "ended" : "error", {
         closeCode: event.code,
-        closeReason: event.reason,
+        closeReason,
       });
       this.sendClient({
         type: "gateway_status",
         status: "deepgram_closed",
         code: event.code,
-        reason: event.reason,
+        reason: closeReason,
       });
+      if (!this.settingsApplied) {
+        this.sendClient({
+          type: "gateway_error",
+          errorType: "provider_error",
+          error: closeReason || `Conexao de voz encerrada antes de ficar pronta (codigo ${event.code}).`,
+        });
+      }
       if (isOpen(this.client)) this.client.close(1000, "deepgram_closed");
     };
   }
@@ -729,6 +791,7 @@ class EdgeSynapseVoiceSession {
       case "Welcome":
         this.latencyMs.deepgram_welcome_ms = Date.now() - this.startedAt;
         this.sendDeepgram(settings);
+        this.latencyMs.settings_sent_ms = Date.now() - this.startedAt;
         this.sendClient({ type: "gateway_status", status: "settings_sent" });
         break;
       case "SettingsApplied":
@@ -764,12 +827,21 @@ class EdgeSynapseVoiceSession {
       }
       case "Error":
       case "Warning":
+        this.lastProviderEvent = sanitizeProviderEvent(event);
         this.sendClient({
           type: event.type === "Error" ? "gateway_error" : "gateway_warning",
-          errorType: gatewayErrorType(event.description || event.message || event.error),
-          error: clean(event.description || event.message || event.error, 1000),
-          event,
+          errorType: this.lastProviderEvent.errorType,
+          error: this.lastProviderEvent.message,
+          providerEvent: this.lastProviderEvent,
         });
+        if (event.type === "Error") {
+          void this.updateVoiceSession("error", {
+            closeReason: clean(this.lastProviderEvent.message, 500),
+            metadata: {
+              providerLastEvent: this.lastProviderEvent,
+            },
+          });
+        }
         break;
       default:
         break;
@@ -810,6 +882,16 @@ class EdgeSynapseVoiceSession {
 
   async updateVoiceSession(status: string, extra: Record<string, unknown> = {}) {
     if (!this.voiceSessionId || !this.conversationId) return;
+    const extraMetadata = extra.metadata && typeof extra.metadata === "object" ? extra.metadata as Record<string, unknown> : {};
+    const { metadata: _ignoredMetadata, ...rest } = extra;
+    const metadata = {
+      provider: "deepgram-agent",
+      runtime: "supabase-edge",
+      settingsApplied: this.settingsApplied,
+      firstAudioByteSeen: this.firstAudioByteSeen,
+      ...(this.lastProviderEvent ? { providerLastEvent: this.lastProviderEvent } : {}),
+      ...extraMetadata,
+    };
     try {
       await fetch(`${functionsUrl()}/synapse-voice-tool`, {
         method: "POST",
@@ -826,12 +908,8 @@ class EdgeSynapseVoiceSession {
           voiceSessionId: this.voiceSessionId,
           status,
           latencyMs: this.latencyMs,
-          metadata: {
-            provider: "deepgram-agent",
-            runtime: "supabase-edge",
-            firstAudioByteSeen: this.firstAudioByteSeen,
-          },
-          ...extra,
+          ...rest,
+          metadata,
         }),
       });
     } catch (error) {
@@ -948,8 +1026,9 @@ Deno.serve((request) => {
       ok: true,
       service: "synapse-voice-gateway",
       runtime: "supabase-edge",
-      voicePath: "deepgram-agent-elevenlabs-managed",
+      voicePath: "deepgram-agent-elevenlabs",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
+      elevenLabsConfigured: Boolean(Deno.env.get("ELEVENLABS_API_KEY")),
       supabaseConfigured: Boolean(Deno.env.get("SUPABASE_URL") && anonKey()),
       gatewaySecretConfigured: Boolean(gatewaySecret()),
       missing: missingConfig(),

@@ -25,8 +25,9 @@ const SUPABASE_EDGE_GATEWAY_PATH = "/functions/v1/synapse-voice-gateway";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
 const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_multilingual_v2";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
+const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -43,6 +44,14 @@ function normalizeThinkModel(provider: string, model: string) {
   if (/^nvidia\/nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
   if (/^nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
   return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
+}
+
+function requiredSecret(name: string) {
+  const value = clean(Deno.env.get(name), 8000);
+  if (!value) {
+    throw new Error(`${name} nao configurada para o Synapse de voz.`);
+  }
+  return value;
 }
 
 const supabaseEdgeGatewayUrl = () => {
@@ -173,22 +182,28 @@ function buildVoiceFunctions() {
 }
 
 function buildSpeakConfig() {
-  const modelId = Deno.env.get("DEEPGRAM_ELEVENLABS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID;
-  const voiceId = Deno.env.get("DEEPGRAM_ELEVENLABS_VOICE_ID") || DEFAULT_ELEVENLABS_VOICE_ID;
-  const languageCode = Deno.env.get("DEEPGRAM_ELEVENLABS_LANGUAGE_CODE") || "pt-BR";
+  const modelId = DEFAULT_ELEVENLABS_MODEL_ID;
+  const voiceId = DEFAULT_ELEVENLABS_VOICE_ID;
+  const languageCode = DEFAULT_ELEVENLABS_LANGUAGE_CODE;
+  const elevenLabsApiKey = requiredSecret("ELEVENLABS_API_KEY");
 
   const speak: Record<string, unknown> = {
     provider: {
       type: "eleven_labs",
       model_id: modelId,
-      voice_id: voiceId,
       language_code: languageCode,
+    },
+    endpoint: {
+      url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`,
+      headers: {
+        "xi-api-key": elevenLabsApiKey,
+      },
     },
   };
 
   return {
     speak,
-    ttsProvider: "deepgram-managed-elevenlabs",
+    ttsProvider: "deepgram-elevenlabs",
     ttsVoice: voiceId,
   };
 }
