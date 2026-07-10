@@ -5,6 +5,9 @@ const CORS = {
 };
 
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
+const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
+const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
 const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
 const ELEVENLABS_LANGUAGE_CODE = "pt-BR";
@@ -56,9 +59,14 @@ function elevenLabsApiKey() {
   return Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY") || "";
 }
 
+function nvidiaVoiceApiKey() {
+  return Deno.env.get("NVIDIA_VOICE_API_KEY") || "";
+}
+
 function missingConfig() {
   return [
     !Deno.env.get("DEEPGRAM_API_KEY") ? "DEEPGRAM_API_KEY" : "",
+    !nvidiaVoiceApiKey() ? "NVIDIA_VOICE_API_KEY" : "",
     !elevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !Deno.env.get("SUPABASE_URL") ? "SUPABASE_URL" : "",
     !anonKey() ? "SUPABASE_ANON_KEY" : "",
@@ -70,7 +78,7 @@ function gatewayErrorType(error: unknown) {
   const text = clean(error instanceof Error ? error.message : error, 1200).toLowerCase();
   if (/sessao|token|auth|unauthorized|401|403|jwt|gateway nao autorizado/.test(text)) return "auth_error";
   if (/settings|config|api[_ -]?key|secret|supabase nao configurado|missing/.test(text)) return "config_error";
-  if (/deepgram|eleven|provider|websocket|socket|1005|failed_to_speak/.test(text)) return "provider_error";
+  if (/deepgram|eleven|nvidia|provider|websocket|socket|1005|failed_to_speak|failed_to_think/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
   return "voice_error";
@@ -92,6 +100,34 @@ function sanitizeProviderEvent(event: Record<string, unknown>) {
 
 function validateAgentSettings(settings: Record<string, unknown>) {
   const agent = settings.agent as Record<string, unknown> | undefined;
+  if (!agent || typeof agent !== "object") {
+    throw new Error("Settings de voz invalidos: agent ausente.");
+  }
+
+  const think = agent.think && typeof agent.think === "object"
+    ? agent.think as Record<string, unknown>
+    : {};
+  agent.think = think;
+  const thinkProvider = think.provider && typeof think.provider === "object"
+    ? think.provider as Record<string, unknown>
+    : {};
+  think.provider = thinkProvider;
+  thinkProvider.type = "open_ai";
+  thinkProvider.model = NVIDIA_VOICE_MODEL;
+  thinkProvider.temperature = SYNAPSE_VOICE_THINK_TEMPERATURE;
+  const thinkEndpoint = think.endpoint && typeof think.endpoint === "object"
+    ? think.endpoint as Record<string, unknown>
+    : {};
+  think.endpoint = thinkEndpoint;
+  thinkEndpoint.url = NVIDIA_VOICE_CHAT_URL;
+  thinkEndpoint.headers = {
+    ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers as Record<string, unknown> : {}),
+    authorization: `Bearer ${nvidiaVoiceApiKey()}`,
+  };
+  if (!clean(thinkEndpoint.url, 500) || !nvidiaVoiceApiKey()) {
+    throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
+  }
+
   const listen = agent?.listen as Record<string, unknown> | undefined;
   const listenProvider = listen?.provider as Record<string, unknown> | undefined;
   if (listenProvider && typeof listenProvider === "object") {
@@ -1047,6 +1083,7 @@ Deno.serve((request) => {
       runtime: "supabase-edge",
       voicePath: "deepgram-agent-elevenlabs",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
+      nvidiaVoiceConfigured: Boolean(nvidiaVoiceApiKey()),
       elevenLabsConfigured: Boolean(elevenLabsApiKey()),
       supabaseConfigured: Boolean(Deno.env.get("SUPABASE_URL") && anonKey()),
       gatewaySecretConfigured: Boolean(gatewaySecret()),
