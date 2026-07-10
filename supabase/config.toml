@@ -23,6 +23,11 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/asaas-webhook/index.ts"
 
+[functions.asaas-notifications-webhook]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/asaas-notifications-webhook/index.ts"
+
 [functions.asaas-connect-onboarding]
 enabled = true
 verify_jwt = true
