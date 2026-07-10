@@ -5,6 +5,9 @@ const CORS = {
 };
 
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
+const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
+const ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const json = (payload: Record<string, unknown>, status = 200) =>
@@ -49,10 +52,14 @@ function gatewaySecret() {
   return Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET") || "";
 }
 
+function elevenLabsApiKey() {
+  return Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY") || "";
+}
+
 function missingConfig() {
   return [
     !Deno.env.get("DEEPGRAM_API_KEY") ? "DEEPGRAM_API_KEY" : "",
-    !Deno.env.get("ELEVENLABS_API_KEY") ? "ELEVENLABS_API_KEY" : "",
+    !elevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !Deno.env.get("SUPABASE_URL") ? "SUPABASE_URL" : "",
     !anonKey() ? "SUPABASE_ANON_KEY" : "",
     !gatewaySecret() ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
@@ -102,17 +109,29 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   }
 
   const speak = agent?.speak as Record<string, unknown> | undefined;
+  if (!speak || typeof speak !== "object") {
+    throw new Error("Settings de voz invalidos: agent.speak ausente.");
+  }
   const speakProvider = speak?.provider as Record<string, unknown> | undefined;
   if (speakProvider?.type !== "eleven_labs") {
     throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
   }
+  speakProvider.model_id = ELEVENLABS_MODEL_ID;
+  speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
+  const voiceId = clean(speakProvider.voice_id, 160) || ELEVENLABS_VOICE_ID;
   if ("voice_id" in speakProvider) {
     delete speakProvider.voice_id;
   }
-  const endpoint = speak?.endpoint as Record<string, unknown> | undefined;
-  const headers = endpoint?.headers as Record<string, unknown> | undefined;
-  const endpointUrl = clean(endpoint?.url, 500);
-  const apiKey = clean(headers?.["xi-api-key"], 8000);
+  const endpoint = speak.endpoint && typeof speak.endpoint === "object" ? speak.endpoint as Record<string, unknown> : {};
+  speak.endpoint = endpoint;
+  endpoint.url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`;
+  endpoint.headers = {
+    ...(endpoint.headers && typeof endpoint.headers === "object" ? endpoint.headers as Record<string, unknown> : {}),
+    "xi-api-key": elevenLabsApiKey(),
+  };
+  const headers = endpoint.headers as Record<string, unknown>;
+  const endpointUrl = clean(endpoint.url, 500);
+  const apiKey = clean(headers["xi-api-key"], 8000);
   if (!endpointUrl || !apiKey) {
     throw new Error("Settings de voz incompletos: endpoint ElevenLabs ou ELEVENLABS_API_KEY ausente.");
   }
@@ -1028,7 +1047,7 @@ Deno.serve((request) => {
       runtime: "supabase-edge",
       voicePath: "deepgram-agent-elevenlabs",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
-      elevenLabsConfigured: Boolean(Deno.env.get("ELEVENLABS_API_KEY")),
+      elevenLabsConfigured: Boolean(elevenLabsApiKey()),
       supabaseConfigured: Boolean(Deno.env.get("SUPABASE_URL") && anonKey()),
       gatewaySecretConfigured: Boolean(gatewaySecret()),
       missing: missingConfig(),

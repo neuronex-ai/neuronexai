@@ -27,6 +27,9 @@ loadLocalEnv();
 const PORT = Number(process.env.SYNAPSE_VOICE_GATEWAY_PORT || process.env.PORT || "8789");
 const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
+const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
+const ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -49,6 +52,10 @@ function getFunctionsUrl() {
 
 function getGatewaySecret() {
   return process.env.SYNAPSE_VOICE_GATEWAY_SECRET || "";
+}
+
+function getElevenLabsApiKey() {
+  return process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || "";
 }
 
 function missingGatewayConfiguration() {
@@ -146,10 +153,19 @@ function normalizeAgentSettings(settings) {
   if (speakProvider?.type !== "eleven_labs") {
     throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
   }
+  speakProvider.model_id = ELEVENLABS_MODEL_ID;
+  speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
+  const voiceId = clean(speakProvider.voice_id, 160) || ELEVENLABS_VOICE_ID;
   if ("voice_id" in speakProvider) {
     delete speakProvider.voice_id;
   }
-  const endpoint = speak?.endpoint;
+  const endpoint = speak.endpoint && typeof speak.endpoint === "object" ? speak.endpoint : {};
+  speak.endpoint = endpoint;
+  endpoint.url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`;
+  endpoint.headers = {
+    ...(endpoint.headers && typeof endpoint.headers === "object" ? endpoint.headers : {}),
+    "xi-api-key": getElevenLabsApiKey(),
+  };
   const endpointUrl = clean(endpoint?.url, 500);
   const apiKey = clean(endpoint?.headers?.["xi-api-key"], 8000);
   if (!endpointUrl || !apiKey) {

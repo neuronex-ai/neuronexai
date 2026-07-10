@@ -46,10 +46,10 @@ function normalizeThinkModel(provider: string, model: string) {
   return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
 }
 
-function requiredSecret(name: string) {
-  const value = clean(Deno.env.get(name), 8000);
+function elevenLabsApiKey() {
+  const value = clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000);
   if (!value) {
-    throw new Error(`${name} nao configurada para o Synapse de voz.`);
+    throw new Error("ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY nao configurada para o Synapse de voz.");
   }
   return value;
 }
@@ -185,7 +185,7 @@ function buildSpeakConfig() {
   const modelId = DEFAULT_ELEVENLABS_MODEL_ID;
   const voiceId = DEFAULT_ELEVENLABS_VOICE_ID;
   const languageCode = DEFAULT_ELEVENLABS_LANGUAGE_CODE;
-  const elevenLabsApiKey = requiredSecret("ELEVENLABS_API_KEY");
+  const elevenLabsKey = elevenLabsApiKey();
 
   const speak: Record<string, unknown> = {
     provider: {
@@ -196,7 +196,7 @@ function buildSpeakConfig() {
     endpoint: {
       url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`,
       headers: {
-        "xi-api-key": elevenLabsApiKey,
+        "xi-api-key": elevenLabsKey,
       },
     },
   };
