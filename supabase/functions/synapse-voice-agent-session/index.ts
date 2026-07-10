@@ -23,8 +23,9 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const SUPABASE_EDGE_GATEWAY_PATH = "/functions/v1/synapse-voice-gateway";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const DEFAULT_DEEPGRAM_THINK_PROVIDER = "nvidia";
-const DEFAULT_DEEPGRAM_THINK_MODEL = "nemotron-3-nano-30B-A3B";
+const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
+const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
 const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
 const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
@@ -37,19 +38,18 @@ const isLocalDevelopmentHost = (host: string) =>
   /^192\.168\./.test(host) ||
   /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
 
-function normalizeThinkModel(provider: string, model: string) {
-  const cleanProvider = clean(provider, 80).toLowerCase();
-  const cleanModel = clean(model, 160);
-  if (cleanProvider !== "nvidia") return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
-  if (/^nvidia\/nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
-  if (/^nemotron-3-nano-30b-a3b$/i.test(cleanModel)) return DEFAULT_DEEPGRAM_THINK_MODEL;
-  return cleanModel || DEFAULT_DEEPGRAM_THINK_MODEL;
-}
-
 function elevenLabsApiKey() {
   const value = clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000);
   if (!value) {
     throw new Error("ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY nao configurada para o Synapse de voz.");
+  }
+  return value;
+}
+
+function nvidiaVoiceApiKey() {
+  const value = clean(Deno.env.get("NVIDIA_VOICE_API_KEY"), 8000);
+  if (!value) {
+    throw new Error("NVIDIA_VOICE_API_KEY nao configurada para o Synapse de voz.");
   }
   return value;
 }
@@ -208,6 +208,27 @@ function buildSpeakConfig() {
   };
 }
 
+function buildThinkConfig(
+  prompt: string,
+  functions: Array<Record<string, unknown>>,
+) {
+  return {
+    provider: {
+      type: "open_ai",
+      model: NVIDIA_VOICE_MODEL,
+      temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
+    },
+    endpoint: {
+      url: NVIDIA_VOICE_CHAT_URL,
+      headers: {
+        authorization: `Bearer ${nvidiaVoiceApiKey()}`,
+      },
+    },
+    prompt,
+    functions,
+  };
+}
+
 function buildAgentSettings(
   prompt: string,
   context: Record<string, unknown>,
@@ -235,11 +256,7 @@ function buildAgentSettings(
     listenProvider.smart_format = true;
   }
 
-  const thinkProvider = Deno.env.get("DEEPGRAM_THINK_PROVIDER") || DEFAULT_DEEPGRAM_THINK_PROVIDER;
-  const thinkModel = normalizeThinkModel(
-    thinkProvider,
-    Deno.env.get("DEEPGRAM_THINK_MODEL") || DEFAULT_DEEPGRAM_THINK_MODEL,
-  );
+  const thinkModel = NVIDIA_VOICE_MODEL;
   const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "48000");
   const outputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000");
 
@@ -263,15 +280,7 @@ function buildAgentSettings(
         listen: {
           provider: listenProvider,
         },
-        think: {
-          provider: {
-            type: thinkProvider,
-            model: thinkModel,
-            temperature: Number(Deno.env.get("DEEPGRAM_THINK_TEMPERATURE") || "0.35"),
-          },
-          prompt,
-          functions,
-        },
+        think: buildThinkConfig(prompt, functions),
         speak,
         greeting: clean(context?.greeting, 280) || undefined,
       },

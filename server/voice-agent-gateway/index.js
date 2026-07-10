@@ -27,6 +27,9 @@ loadLocalEnv();
 const PORT = Number(process.env.SYNAPSE_VOICE_GATEWAY_PORT || process.env.PORT || "8789");
 const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
+const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
+const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
 const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const ELEVENLABS_VOICE_ID = "UgBBYS2sOqTuMpoF3BR0";
 const ELEVENLABS_LANGUAGE_CODE = "pt-BR";
@@ -58,9 +61,15 @@ function getElevenLabsApiKey() {
   return process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || "";
 }
 
+function getNvidiaVoiceApiKey() {
+  return process.env.NVIDIA_VOICE_API_KEY || "";
+}
+
 function missingGatewayConfiguration() {
   return [
     !process.env.DEEPGRAM_API_KEY ? "DEEPGRAM_API_KEY" : "",
+    !getNvidiaVoiceApiKey() ? "NVIDIA_VOICE_API_KEY" : "",
+    !getElevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !getSupabaseUrl() ? "SUPABASE_URL ou VITE_SUPABASE_URL" : "",
     !getSupabaseAnonKey() ? "SUPABASE_ANON_KEY ou VITE_SUPABASE_ANON_KEY" : "",
     !getGatewaySecret() ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
@@ -111,7 +120,7 @@ function gatewayErrorType(error) {
   const text = clean(error?.message || error, 1200).toLowerCase();
   if (/sessao|token|auth|unauthorized|401|403|jwt|gateway nao autorizado/.test(text)) return "auth_error";
   if (/settings|config|api[_ -]?key|secret|supabase nao configurado|ausentes|missing/.test(text)) return "config_error";
-  if (/deepgram|eleven|provider|websocket|socket|1005|failed_to_speak/.test(text)) return "provider_error";
+  if (/deepgram|eleven|nvidia|provider|websocket|socket|1005|failed_to_speak|failed_to_think/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
   if (/permiss|permission|ownership|rls/.test(text)) return "permission_error";
@@ -133,6 +142,29 @@ function sanitizeProviderEvent(event) {
 }
 
 function normalizeAgentSettings(settings) {
+  const agent = settings?.agent;
+  if (!agent || typeof agent !== "object") {
+    throw new Error("Settings de voz invalidos: agent ausente.");
+  }
+
+  const think = agent.think && typeof agent.think === "object" ? agent.think : {};
+  agent.think = think;
+  const thinkProvider = think.provider && typeof think.provider === "object" ? think.provider : {};
+  think.provider = thinkProvider;
+  thinkProvider.type = "open_ai";
+  thinkProvider.model = NVIDIA_VOICE_MODEL;
+  thinkProvider.temperature = SYNAPSE_VOICE_THINK_TEMPERATURE;
+  const thinkEndpoint = think.endpoint && typeof think.endpoint === "object" ? think.endpoint : {};
+  think.endpoint = thinkEndpoint;
+  thinkEndpoint.url = NVIDIA_VOICE_CHAT_URL;
+  thinkEndpoint.headers = {
+    ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers : {}),
+    authorization: `Bearer ${getNvidiaVoiceApiKey()}`,
+  };
+  if (!clean(thinkEndpoint.url, 500) || !getNvidiaVoiceApiKey()) {
+    throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
+  }
+
   const listenProvider = settings?.agent?.listen?.provider;
   if (listenProvider && typeof listenProvider === "object") {
     const listenModel = clean(listenProvider.model, 120);
@@ -263,6 +295,8 @@ class SynapseVoiceSession {
       ttsProvider: sessionConfig.ttsProvider,
       functionsCount: sessionConfig.functionsCount,
       outputSampleRate: sessionConfig.outputSampleRate,
+      thinkProvider: settings?.agent?.think?.provider?.type,
+      thinkModel: settings?.agent?.think?.provider?.model,
     });
 
     await this.connectDeepgram(sessionConfig.deepgramUrl || DEFAULT_DEEPGRAM_URL, settings);
@@ -632,6 +666,8 @@ const server = http.createServer((req, res) => {
       path: PATHNAME,
       voicePath: "deepgram-agent-elevenlabs",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
+      nvidiaVoiceConfigured: Boolean(getNvidiaVoiceApiKey()),
+      elevenLabsConfigured: Boolean(getElevenLabsApiKey()),
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),
       missing: missingGatewayConfiguration(),
