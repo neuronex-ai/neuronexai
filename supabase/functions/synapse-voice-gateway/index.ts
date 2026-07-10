@@ -1081,7 +1081,7 @@ Deno.serve((request) => {
       ok: true,
       service: "synapse-voice-gateway",
       runtime: "supabase-edge",
-      voicePath: "deepgram-agent-elevenlabs",
+      voicePath: "deepgram-agent-nvidia-byo-elevenlabs",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
       nvidiaVoiceConfigured: Boolean(nvidiaVoiceApiKey()),
       elevenLabsConfigured: Boolean(elevenLabsApiKey()),

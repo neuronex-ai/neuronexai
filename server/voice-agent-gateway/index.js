@@ -664,7 +664,7 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: "synapse-voice-agent-gateway",
       path: PATHNAME,
-      voicePath: "deepgram-agent-elevenlabs",
+      voicePath: "deepgram-agent-nvidia-byo-elevenlabs",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
       nvidiaVoiceConfigured: Boolean(getNvidiaVoiceApiKey()),
       elevenLabsConfigured: Boolean(getElevenLabsApiKey()),
