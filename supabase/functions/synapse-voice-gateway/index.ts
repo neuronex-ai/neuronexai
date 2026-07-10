@@ -446,16 +446,18 @@ class EdgeVoiceFunctionRunner {
   injectAgentMessage(message: string, behavior = "queue") {
     const text = clean(message, 420);
     if (!text) return;
-    this.sendDeepgram({ type: "InjectAgentMessage", content: text, message: text, behavior });
+    this.sendDeepgram({ type: "InjectAgentMessage", message: text, behavior });
   }
 
-  sendFunctionResponse(id: string, name: string, content: unknown) {
-    this.sendDeepgram({
+  sendFunctionResponse(id: string, name: string, content: unknown, thoughtSignature = "") {
+    const response: Record<string, unknown> = {
       type: "FunctionCallResponse",
       id,
       name,
       content: typeof content === "string" ? content : JSON.stringify(content),
-    });
+    };
+    if (thoughtSignature) response.thought_signature = thoughtSignature;
+    this.sendDeepgram(response);
   }
 
   sendStatus(task: VoiceTask | null, status: string, extra: Record<string, unknown> = {}) {
@@ -504,8 +506,10 @@ class EdgeVoiceFunctionRunner {
   }
 
   async runFunction(fn: Record<string, unknown>) {
+    if (fn.client_side === false) return;
     const id = clean(fn.id || crypto.randomUUID(), 120);
     const name = clean(fn.name, 120);
+    const thoughtSignature = clean(fn.thought_signature, 4000);
     const args = safeJsonParse(fn.arguments);
     if (!name) return;
 
@@ -544,7 +548,7 @@ class EdgeVoiceFunctionRunner {
         payload.spoken_summary = payload.message;
       }
 
-      this.sendFunctionResponse(id, name, payload);
+      this.sendFunctionResponse(id, name, payload, thoughtSignature);
       const completedStatus = payload.confirmation_required ? "confirmation_required" : "completed";
       keepAwaitingConfirmation = Boolean(payload.ok && payload.confirmation_required);
       this.sendStatus(task, payload.ok ? completedStatus : "failed", {
@@ -562,7 +566,7 @@ class EdgeVoiceFunctionRunner {
     } catch (error) {
       const aborted = controller.signal.aborted || (error as { name?: string })?.name === "AbortError";
       const payload = failurePayload(name, error, aborted);
-      this.sendFunctionResponse(id, name, payload);
+      this.sendFunctionResponse(id, name, payload, thoughtSignature);
       this.sendStatus(task, aborted ? "cancelled" : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,

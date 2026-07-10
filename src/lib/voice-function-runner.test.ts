@@ -48,7 +48,8 @@ describe("VoiceFunctionRunner", () => {
     expect(client.some((event) => event.type === "function_status" && event.status === "started")).toBe(true);
 
     await vi.advanceTimersByTimeAsync(5500);
-    expect(deepgram.some((event) => event.type === "InjectAgentMessage" && String(event.content).includes("Ana"))).toBe(true);
+    expect(deepgram.some((event) => event.type === "InjectAgentMessage" && String(event.message).includes("Ana"))).toBe(true);
+    expect(deepgram.filter((event) => event.type === "InjectAgentMessage").every((event) => !("content" in event))).toBe(true);
     expect(client.some((event) => event.type === "function_status" && event.status === "progress")).toBe(true);
 
     resolveTool?.(toolResponse({ ok: true, spoken_summary: "Achei o resumo de Ana." }));

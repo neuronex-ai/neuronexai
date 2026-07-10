@@ -224,19 +224,20 @@ export class VoiceFunctionRunner {
     if (!text) return;
     this.sendDeepgram({
       type: "InjectAgentMessage",
-      content: text,
       message: text,
       behavior,
     });
   }
 
-  sendFunctionResponse(id, name, content) {
-    this.sendDeepgram({
+  sendFunctionResponse(id, name, content, thoughtSignature = "") {
+    const response = {
       type: "FunctionCallResponse",
       id,
       name,
       content: typeof content === "string" ? content : JSON.stringify(content),
-    });
+    };
+    if (thoughtSignature) response.thought_signature = thoughtSignature;
+    this.sendDeepgram(response);
   }
 
   sendStatus(task, status, extra = {}) {
@@ -288,8 +289,10 @@ export class VoiceFunctionRunner {
   }
 
   async runFunction(fn) {
+    if (fn?.client_side === false) return;
     const id = clean(fn?.id || crypto.randomUUID(), 120);
     const name = clean(fn?.name, 120);
+    const thoughtSignature = clean(fn?.thought_signature, 4000);
     const args = safeJsonParse(fn?.arguments);
     if (!name) return;
 
@@ -331,7 +334,7 @@ export class VoiceFunctionRunner {
         payload.spoken_summary = payload.message;
       }
 
-      this.sendFunctionResponse(id, name, payload);
+      this.sendFunctionResponse(id, name, payload, thoughtSignature);
       const completedStatus = payload.confirmation_required ? "confirmation_required" : "completed";
       keepAwaitingConfirmation = payload.ok && payload.confirmation_required;
       this.sendStatus(task, payload.ok ? completedStatus : "failed", {
@@ -352,7 +355,7 @@ export class VoiceFunctionRunner {
     } catch (error) {
       const aborted = controller.signal.aborted || error?.name === "AbortError";
       const payload = failurePayload(name, error, aborted);
-      this.sendFunctionResponse(id, name, payload);
+      this.sendFunctionResponse(id, name, payload, thoughtSignature);
       this.sendStatus(task, aborted ? "cancelled" : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,
