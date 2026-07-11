@@ -103,6 +103,7 @@ async function findPaymentMovementId(payment: any) {
 export async function ensureFinancialEntryForCharge(input: {
     userId: string;
     financialEntryId?: string | null;
+    operationId?:string|null;
     patientId?: string | null;
     appointmentId?: string | null;
     amount: number;
@@ -112,8 +113,12 @@ export async function ensureFinancialEntryForCharge(input: {
     neurofinanceChargeId?: string | null;
 }) {
     const paymentMethod = normalizeManagerialPaymentMethod(input.paymentMethod);
+    const operationId=input.operationId?.trim()||null;const operationKey=operationId?`neurofinance:operation:${operationId}`:null;let existingEntry:any=null;
 
     if (input.financialEntryId) {
+        const{data,error}=await supabaseAdmin.from("financial_entries").select("*").eq("id",input.financialEntryId).eq("professional_id",input.userId).maybeSingle();if(error)throw error;if(!data)throw new Error("Lançamento financeiro não encontrado para vincular a cobrança.");existingEntry=data;
+    } else if(operationKey){const{data,error}=await supabaseAdmin.from("financial_entries").select("*").eq("professional_id",input.userId).eq("idempotency_key",operationKey).maybeSingle();if(error)throw error;existingEntry=data;}
+    if(existingEntry){
         const existingPatch: Record<string, unknown> = {
             patient_id: input.patientId || null,
             appointment_id: input.appointmentId || null,
@@ -121,7 +126,8 @@ export async function ensureFinancialEntryForCharge(input: {
             due_date: input.dueDate || null,
             competence_date: input.dueDate || null,
             payment_method: paymentMethod,
-            origin: "neurofinance",
+            origin:input.neurofinanceChargeId?"neurofinance":existingEntry.origin||"manual",
+            metadata:{...(existingEntry.metadata||{}),source:"asaas-create-payment",neurofinance_operation_id:operationId},
             updated_at: new Date().toISOString(),
         };
 
@@ -133,7 +139,7 @@ export async function ensureFinancialEntryForCharge(input: {
         const { data: entry, error } = await supabaseAdmin
             .from("financial_entries")
             .update(existingPatch)
-            .eq("id", input.financialEntryId)
+            .eq("id", existingEntry.id)
             .eq("professional_id", input.userId)
             .select()
             .maybeSingle();
@@ -157,13 +163,14 @@ export async function ensureFinancialEntryForCharge(input: {
             competence_date: input.dueDate || null,
             status: "pending",
             payment_method: paymentMethod,
-            origin: "neurofinance",
+            origin:input.neurofinanceChargeId?"neurofinance":"manual",
             neurofinance_charge_id: input.neurofinanceChargeId || null,
             idempotency_key: input.neurofinanceChargeId
                 ? `neurofinance:charge:${input.neurofinanceChargeId}`
-                : null,
+                : operationKey,
             metadata: {
                 source: "asaas-create-payment",
+                neurofinance_operation_id:operationId,
             },
         })
         .select()

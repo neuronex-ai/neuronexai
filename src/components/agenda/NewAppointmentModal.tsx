@@ -386,6 +386,7 @@ export function NewAppointmentModal({
 
     const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000);
     const recurrenceCount = values.recurrence ? values.recurrenceCount || 1 : 1;
+    if(values.eventType==="session"&&values.usePackage&&selectedPackage&&remainingSessions<recurrenceCount){toast.error(`O pacote possui ${remainingSessions} sess${remainingSessions===1?"ão disponível":"ões disponíveis"}, mas a recorrência cria ${recurrenceCount}.`);return;}
     const recurrenceMetadata = values.recurrence
       ? {
           enabled: true,
@@ -451,38 +452,17 @@ export function NewAppointmentModal({
           ...appointmentPayload,
           start_time: occurrenceStart,
           end_time: occurrenceEnd,
+          metadata:{...metadata,recurrence:{...recurrenceMetadata,occurrence:index+1}},
         } as any);
 
         createdAppointments.push(result.newAppointment);
         if (!createdPrimaryAppointment) {
           createdPrimaryAppointment = result.newAppointment;
         }
+        if(values.eventType==="session"&&result.newAppointment){if(values.usePackage&&selectedPackage?.id&&values.patientId){await debitPackageSession({packageId:selectedPackage.id,patientId:values.patientId,appointmentId:result.newAppointment.id,idempotencyKey:`appointment:${result.newAppointment.id}`,reason:`Sessão ${index+1} de ${recurrenceCount} vinculada ao agendamento`});}else if(values.shouldCreateTransaction){await createAppointmentTransaction({appointmentId:result.newAppointment.id,description:`Sessão - ${patients?.find(p=>p.id===values.patientId)?.name||"Paciente"}`,amount:values.transactionAmount||0,type:"income",category:"Sessão",date:occurrenceStart,payment_method:values.transactionMethod||"pix",installments:values.installments||1,patient_id:values.patientId||null,package_id:null,status:"pending"});}}
       }
 
       createdPrimaryAppointment = createdAppointments[0] || createdPrimaryAppointment;
-
-      if (values.eventType === "session" && createdPrimaryAppointment) {
-        if (values.usePackage && selectedPackage?.id && values.patientId) {
-          await debitPackageSession({
-            packageId: selectedPackage.id,
-            patientId: values.patientId,
-          });
-        } else if (values.shouldCreateTransaction) {
-          await createAppointmentTransaction({
-            appointmentId: createdPrimaryAppointment.id,
-            description: `Sessão - ${patients?.find((patient) => patient.id === values.patientId)?.name || "Paciente"}`,
-            amount: values.transactionAmount || 0,
-            type: "income",
-            category: "Sessão",
-            date: startDateTime,
-            payment_method: values.transactionMethod || "pix",
-            installments: values.installments || 1,
-            patient_id: values.patientId || null,
-            package_id: null,
-            status: "pending",
-          });
-        }
-      }
 
       onOpenChange(false);
       form.reset();

@@ -23,8 +23,10 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
     const { data: profile } = useProfile();
     const printRef = useRef<HTMLDivElement>(null);
     const [isSending, setIsSending] = useState(false);
+    const metadata=(transaction.metadata||{})as Record<string,unknown>;const isNeuroFinance=Boolean(transaction.origin==="gateway_auto"||metadata.neurofinance_charge_id||metadata.neurofinance_transaction_id||metadata.asaas_payment_id);const documentBrand=isNeuroFinance?"NeuroFinance":"NeuroNex";
 
     const handlePrint = () => {
+        if(!canIssueReceipt){toast.error("Complete seu nome profissional e CRP no perfil antes de emitir o recibo.");return;}
         const content = printRef.current;
         if (!content) return;
 
@@ -45,6 +47,7 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
     };
 
     const handleSendEmail = async () => {
+        if(!canIssueReceipt){toast.error("Complete seu nome profissional e CRP no perfil antes de emitir o recibo.");return;}
         if (!patientEmail) {
             toast.error("Email do paciente não disponível para envio.");
             return;
@@ -67,18 +70,18 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
             const { error } = await supabase.functions.invoke('send-document-email', {
                 body: {
                     to: patientEmail,
-                    subject: `Recibo NeuroFinance - ${patientName}`,
+                    subject: `Recibo ${documentBrand} - ${patientName}`,
                     htmlBody: `
                     <div style="font-family: sans-serif; color: #333;">
                         <h2>Olá, ${patientName}.</h2>
-                        <p>Segue em anexo o seu recibo NeuroFinance referente à ${transaction.description}.</p>
+                        <p>Segue em anexo o seu recibo ${documentBrand} referente à ${transaction.description}.</p>
                         <p><strong>Valor:</strong> ${formatCurrency(transaction.amount)}</p>
                         <p><strong>Data:</strong> ${dateStr}</p>
                         <br/>
                         <p>Atenciosamente,<br/>${professionalName}</p>
                     </div>
                 `,
-                    documentType: "Recibo NeuroFinance",
+                    documentType: `Recibo ${documentBrand}`,
                     pdfAttachment: {
                         filename: `recibo_${patientName.replace(/\s+/g, '_')}_${format(new Date(), 'yyyyMMdd')}.pdf`,
                         content: pdfBase64,
@@ -97,10 +100,11 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
         }
     };
 
-    const professionalName = profile ? `${profile.first_name} ${profile.last_name}` : "Psicólogo Responsável";
-    const professionalRegistry = profile?.crp ? `CRP: ${profile.crp}` : "";
+    const professionalName = [profile?.first_name,profile?.last_name].filter(Boolean).join(" ").trim()||profile?.full_name?.trim()||profile?.name?.trim()||"";
+    const professionalRegistry = profile?.crp?.trim() ? `CRP: ${profile.crp.trim()}` : "";
+    const canIssueReceipt=Boolean(professionalName&&professionalRegistry);
     const dateStr = format(new Date(transaction.date), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-    const locationCity = (profile?.address ? profile.address.split('-').pop()?.trim() : "São Paulo, SP") || "São Paulo, SP";
+    const locationCity = profile?.address?.trim()||"Local não informado";
     const patientName = (transaction as any).patient_name || (transaction as any).patients?.name || transaction.description.replace('Sessão - ', '') || "Paciente";
 
     return (
@@ -115,7 +119,7 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
                     <div className="h-16 border-b border-border/10 dark:border-white/5 bg-card dark:bg-[#0A0A0B] flex items-center justify-between px-8 shrink-0">
                         <div className="flex items-center gap-2 text-foreground dark:text-white">
                             <FileCheck className="h-5 w-5 text-primary" />
-                            <span className="font-bold text-sm tracking-wide">Recibo NeuroFinance</span>
+                            <span className="font-bold text-sm tracking-wide">Recibo {documentBrand}</span>
                         </div>
                         <div className="flex gap-2">
                             <div className="hidden items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground md:flex dark:border-white/10 dark:bg-white/[0.035]">
@@ -126,7 +130,7 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
                                 size="sm"
                                 variant="ghost"
                                 onClick={handleSendEmail}
-                                disabled={isSending}
+                                disabled={isSending||!canIssueReceipt}
                                 className="h-9 rounded-full hover:bg-secondary/10 dark:hover:bg-white/10 text-muted-foreground hover:text-foreground dark:hover:text-white transition-all text-xs font-bold uppercase tracking-wider"
                             >
                                 {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5 mr-2" />}
@@ -135,6 +139,7 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
                             <Button
                                 size="sm"
                                 onClick={handlePrint}
+                                disabled={!canIssueReceipt}
                                 className="h-9 px-6 rounded-full bg-foreground text-background hover:bg-foreground/90 dark:bg-white dark:text-black dark:hover:bg-white/90 font-bold text-xs uppercase tracking-widest shadow-lg"
                             >
                                 <Printer className="h-3.5 w-3.5 mr-2" /> Imprimir

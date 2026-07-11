@@ -18,6 +18,8 @@ export type { FinanceView };
 
 const FINANCE_ROUTE_LABELS: Partial<Record<FinanceView, { groupLabel: string; viewLabel: string }>> = {
   "gestao-visao-geral": { groupLabel: "Gestão Financeira", viewLabel: "Visão Geral" },
+  "gestao-lancamentos":{groupLabel:"Gestão Financeira",viewLabel:"Lançamentos"},
+  "gestao-recebimentos":{groupLabel:"Gestão Financeira",viewLabel:"Recebimentos"},
   "gestao-fluxo-caixa": { groupLabel: "Gestão Financeira", viewLabel: "Fluxo de Caixa" },
   "gestao-receitas": { groupLabel: "Gestão Financeira", viewLabel: "Receitas" },
   "gestao-despesas": { groupLabel: "Gestão Financeira", viewLabel: "Despesas" },
@@ -155,7 +157,7 @@ export const FinanceiroMainContent = (props: FinancialDashboardProps) => {
     setSelectedRequirement(null);
   };
 
-  if (isLoading) {
+  if (neuroFinanceView && isLoading) {
     return (
       <div className="space-y-6 p-6">
         <Skeleton className="h-32 w-full rounded-[32px]" />

@@ -19,11 +19,8 @@ const fetchActivePatientPackages = async (patientId: string, userId: string): Pr
     throw new Error(error.message);
   }
 
-  // Filtro adicional no cliente para garantir que total_sessions > sessions_used e a data de fim não expirou
-  return data.filter(pkg =>
-    pkg.total_sessions > pkg.sessions_used &&
-    (!pkg.end_date || new Date(pkg.end_date + 'T23:59:59') >= new Date())
-  ) || [];
+  const inactive=new Set(['paused','completed','cancelled','inactive']);
+  return (data||[]).filter(pkg=>{const legacy=typeof pkg.active==='string'?!['false','inactive','cancelled','completed'].includes(pkg.active.toLowerCase()):pkg.active!==false;return legacy&&!inactive.has(String(pkg.package_status||'active').toLowerCase())&&pkg.total_sessions>pkg.sessions_used&&(!pkg.end_date||new Date(`${pkg.end_date}T23:59:59`)>=new Date());});
 };
 
 export const useActivePatientPackages = (patientId: string) => {

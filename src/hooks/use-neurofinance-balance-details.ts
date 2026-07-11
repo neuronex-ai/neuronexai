@@ -52,7 +52,7 @@ function mapItem(item: AccountMovement, userId: string): Transaction {
     };
 }
 
-export const useNeuroFinanceBalanceDetails = (view: BalanceDetailView) => {
+export const useNeuroFinanceBalanceDetails = (view: BalanceDetailView,enabled=true) => {
     const { user } = useAuth();
 
     return useQuery<Transaction[], Error>({
@@ -74,7 +74,7 @@ export const useNeuroFinanceBalanceDetails = (view: BalanceDetailView) => {
             if (error) throw error;
             return ((data || []) as AccountMovement[]).map((item) => mapItem(item, user.id));
         },
-        enabled: Boolean(user?.id),
+        enabled: Boolean(user?.id)&&enabled,
         staleTime: 1000 * 60 * 5,
     });
 };

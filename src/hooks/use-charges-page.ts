@@ -63,7 +63,7 @@ export interface ChargesPageResult {
   pageSize: number;
 }
 
-const MANAGEMENT_ORIGINS = ["manual", "appointment", "package", "convenio"];
+const MANAGEMENT_ORIGINS = ["manual", "appointment", "package", "convenio","subscription","recurring"];
 const OPEN_STATUSES: FinancialEntryStatus[] = ["planned", "pending", "overdue"];
 
 const normalizeDateKey = (date?: string | null) => date?.slice(0, 10) || null;
@@ -85,6 +85,7 @@ export function getManagementChargeType(entry: Pick<FinancialEntry, "origin" | "
   if (origin === "appointment") return "appointment";
   if (origin === "package") return "package";
   if (origin === "convenio") return "insurance";
+  if(origin==="subscription"||origin==="recurring")return "subscription";
   const text = `${entry.title || ""} ${entry.description || ""}`.toLowerCase();
   if (text.includes("mensal") || text.includes("recorr")) return "subscription";
   if (text.includes("parcela")) return "installment";
@@ -221,7 +222,7 @@ async function fetchManagementChargesPage(userId: string, params: ChargesPagePar
 
   let query = supabase
     .from("financial_entries")
-    .select("*, patients(name,email)")
+    .select("*, patients(name,email), financial_categories(name), financial_entry_settlements(id,amount,settled_at,payment_method,status)")
     .eq("professional_id", userId)
     .eq("type", "income")
     .in("origin", MANAGEMENT_ORIGINS)
@@ -239,8 +240,7 @@ async function fetchManagementChargesPage(userId: string, params: ChargesPagePar
   const { data, error } = await query;
   if (error) throw error;
 
-  const rows = ((data || []) as FinancialEntry[])
-    .filter((entry) => !entry.neurofinance_charge_id && !entry.neurofinance_transaction_id)
+  const rows = ((data || []) as unknown as FinancialEntry[])
     .map(mapFinancialEntryToChargeRow)
     .sort((left, right) => {
       const leftDate = left.dueDate || "9999-12-31";

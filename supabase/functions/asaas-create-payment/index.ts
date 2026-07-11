@@ -7,6 +7,7 @@
 
 import {
     ASAAS_ENV,
+    asaasRequest,
     corsResponse,
     createAsaasPayment,
     errorResponse,
@@ -65,6 +66,7 @@ Deno.serve(async (req: Request) => {
             patient_cpf,
             patient_email,
             financial_entry_id,
+            operation_id,
         } = body;
 
         const resolvedMethod =
@@ -75,6 +77,8 @@ Deno.serve(async (req: Request) => {
         if (!amount || amount <= 0) {
             return errorResponse('Valor inválido.', 400);
         }
+        const operationId=String(operation_id||financial_entry_id||crypto.randomUUID()).trim();
+        if(operationId.length<8||operationId.length>120)return errorResponse('Identificador da operação inválido.',400);
 
         const financialAccount = await getFinancialAccount(user.id);
         const subApiKey = await getFinancialAccountAsaasApiKey(financialAccount);
@@ -121,13 +125,19 @@ Deno.serve(async (req: Request) => {
         const valueReais = amount / 100;
         const today = new Date().toISOString().split('T')[0];
 
-        const asaasPayment = await createAsaasPayment(subApiKey, {
+        const financialEntry=await ensureFinancialEntryForCharge({userId:user.id,financialEntryId:financial_entry_id||null,operationId,patientId:patient_id||null,appointmentId:appointment_id||null,amount,description:description||'Cobranca NeuroFinance',dueDate:due_date||today,paymentMethod:normalizedMethod});
+        const{data:previous,error:previousError}=await supabaseAdmin.from('nb_payments').select('*').eq('user_id',user.id).eq('financial_entry_id',financialEntry.id).filter('metadata->>operation_id','eq',operationId).order('created_at',{ascending:false}).limit(1).maybeSingle();if(previousError)throw previousError;if(previous)return jsonResponse({success:true,payment_id:previous.id,financial_entry_id:financialEntry.id,asaas_payment_id:previous.provider_payment_id,status:previous.normalized_status||previous.status,amount,checkout_url:previous.checkout_url,invoice_url:previous.checkout_url,bank_slip_url:previous.metadata?.asaas_bank_slip_url||null,pix_qr_code:previous.pix_qr_code,pix_copy_paste:previous.pix_copy_paste,expires_at:previous.expires_at,billing_type:previous.metadata?.billing_type||null,asaas_environment:ASAAS_ENV,idempotent_replay:true});
+
+        const providerList=await asaasRequest<{data?:any[]}>(`/payments?externalReference=${encodeURIComponent(operationId)}&limit=1`,'GET',undefined,subApiKey);
+        let asaasPayment=providerList.data?.[0]||null;
+
+        if(!asaasPayment)asaasPayment=await createAsaasPayment(subApiKey, {
             customer: asaasCustomer.id,
             billingType,
             value: valueReais,
             dueDate: due_date || today,
             description: description || 'Cobrança NeuroFinance',
-            externalReference: appointment_id || patient_id || user.id,
+            externalReference: operationId,
         });
 
         let pixQrCode = null;
@@ -142,17 +152,6 @@ Deno.serve(async (req: Request) => {
                 console.error('[asaas-create-payment] QR code fetch error:', qrErr);
             }
         }
-
-        const financialEntry = await ensureFinancialEntryForCharge({
-            userId: user.id,
-            financialEntryId: financial_entry_id || null,
-            patientId: patient_id || null,
-            appointmentId: appointment_id || null,
-            amount,
-            description: description || 'Cobranca NeuroFinance',
-            dueDate: due_date || today,
-            paymentMethod: normalizedMethod,
-        });
 
         const { data: paymentRecord, error: insertErr } = await supabaseAdmin
             .from('nb_payments')
@@ -186,6 +185,7 @@ Deno.serve(async (req: Request) => {
                 expires_at: due_date || null,
                 metadata: {
                     financial_entry_id: financialEntry?.id || null,
+                    operation_id:operationId,
                     asaas_payment_id: asaasPayment.id,
                     asaas_customer_id: asaasCustomer.id,
                     asaas_invoice_url: asaasPayment.invoiceUrl,
@@ -204,6 +204,7 @@ Deno.serve(async (req: Request) => {
                 .from('financial_entries')
                 .update({
                     neurofinance_charge_id: paymentRecord.id,
+                    origin:'neurofinance',
                     idempotency_key: financialEntry.idempotency_key || `neurofinance:charge:${paymentRecord.id}`,
                     updated_at: new Date().toISOString(),
                 })

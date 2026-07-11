@@ -209,7 +209,9 @@ export interface PatientPackage {
   patient_id: string;
   description: string;
   name?: string; // Alias for description
-  active?: boolean;
+  active?: boolean | string | null;
+  billing_mode?: 'upfront' | 'per_session' | 'installment' | null;
+  package_status?: 'active' | 'paused' | 'completed' | 'cancelled' | null;
   total_sessions: number;
   sessions_used: number;
   price: number | null;

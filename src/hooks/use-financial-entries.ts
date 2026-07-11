@@ -47,6 +47,8 @@ export interface FinancialEntry {
     name: string;
     email: string | null;
   } | null;
+  financial_categories?: { name: string } | null;
+  financial_entry_settlements?: Array<{id:string;amount:number;settled_at:string;payment_method:FinancialEntryPaymentMethod;status:'posted'|'reversed'}>;
 }
 
 export interface FinancialCategory {
@@ -114,6 +116,9 @@ export interface UpdateFinancialEntryInput extends Partial<NewFinancialEntryInpu
   reversalOfEntryId?: string | null;
   reversalReason?: string | null;
 }
+export type FinancialEntryTransitionAction='settle'|'cancel'|'reopen'|'reverse';
+export interface FinancialEntryTransitionInput{id:string;action:FinancialEntryTransitionAction;amount?:number|null;effectiveAt?:Date;paymentMethod?:FinancialEntryPaymentMethod;reason?:string|null;idempotencyKey?:string|null}
+export interface FinancialEntryTransitionResult{entry:FinancialEntry;settlement_id:string|null;reversal_id:string|null;settled_amount:number;remaining_amount:number}
 
 export interface NewRecurringFinancialEntryInput {
   type: FinancialEntryType;
@@ -344,8 +349,17 @@ export function mapFinancialEntryToTransaction(entry: FinancialEntry): Transacti
   const metadata = entry.metadata || {};
   const transactionMetadata = {
     ...metadata,
+    financial_entry_id: entry.id,
+    financial_entry_status: entry.status,
+    due_date: entry.due_date,
+    competence_date: entry.competence_date,
+    paid_at: entry.paid_at,
     financial_entry_origin: entry.origin,
     financial_entry_payment_method: entry.payment_method,
+    neurofinance_charge_id: entry.neurofinance_charge_id,
+    neurofinance_transaction_id: entry.neurofinance_transaction_id,
+    reversal_of_entry_id: entry.reversal_of_entry_id,
+    settlements:(entry.financial_entry_settlements||[]).map(s=>({id:s.id,amount:Number(s.amount),settled_at:s.settled_at,payment_method:s.payment_method,status:s.status})),
   };
   const date =
     entry.paid_at?.slice(0, 10) ||
@@ -359,7 +373,7 @@ export function mapFinancialEntryToTransaction(entry: FinancialEntry): Transacti
     description: entry.description || entry.title,
     amount: Number(entry.amount || 0),
     type: entry.type,
-    category: typeof metadata.category === 'string' ? metadata.category : null,
+    category: entry.financial_categories?.name || (typeof metadata.category === 'string' ? metadata.category : null),
     date,
     appointment_id: entry.appointment_id,
     created_at: entry.created_at,
@@ -380,7 +394,7 @@ export function mapFinancialEntryToTransaction(entry: FinancialEntry): Transacti
 export async function fetchFinancialEntries(userId: string, filters: FinancialEntryFilters = {}) {
   let query = supabase
     .from('financial_entries')
-    .select('*, patients(name, email)')
+    .select('*, patients(name, email), financial_categories(name), financial_entry_settlements(id, amount, settled_at, payment_method, status)')
     .eq('professional_id', userId)
     .order('due_date', { ascending: false })
     .order('created_at', { ascending: false })
@@ -794,6 +808,14 @@ export function useUpdateFinancialEntry() {
   });
 }
 
+export function useTransitionFinancialEntry(){
+  const {user}=useAuth();const queryClient=useQueryClient();
+  return useMutation<FinancialEntryTransitionResult,Error,FinancialEntryTransitionInput>({
+    mutationFn:async(input)=>{if(!user?.id)throw new Error('Usuário não autenticado');const{data,error}=await(supabase as any).rpc('transition_financial_entry',{p_entry_id:input.id,p_action:input.action,p_amount:input.amount??null,p_effective_at:(input.effectiveAt||new Date()).toISOString(),p_payment_method:input.paymentMethod||'manual',p_reason:input.reason?.trim()||null,p_idempotency_key:input.idempotencyKey||null});if(error)throw error;return data as FinancialEntryTransitionResult;},
+    onSuccess:()=>{['financialEntries','financialEntrySettlements','transactions','patientTransactions','financialMetrics','advancedCashFlow','charges-page'].forEach(key=>queryClient.invalidateQueries({queryKey:[key]}));},
+  });
+}
+
 export function useDeleteFinancialEntries() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -870,16 +892,10 @@ export function useDeleteFinancialEntries() {
 }
 
 export function useCancelFinancialEntry() {
-  const updateFinancialEntry = useUpdateFinancialEntry();
+  const transition = useTransitionFinancialEntry();
 
   return useMutation({
-    mutationFn: async ({ id, reason = 'user_cancelled' }: { id: string; reason?: string }) => updateFinancialEntry.mutateAsync({
-      id,
-      status: 'cancelled',
-      paidAt: null,
-      cancelledAt: new Date(),
-      cancelledReason: reason,
-    }),
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => transition.mutateAsync({id,action:'cancel',reason,idempotencyKey:buildFinancialEntryIdempotencyKey(['cancel',id,reason])}),
   });
 }
 
@@ -913,18 +929,15 @@ export function useHardDeleteFinancialEntriesUnsafe() {
 }
 
 export function useMarkFinancialEntryPaid() {
-  const updateFinancialEntry = useUpdateFinancialEntry();
+  const transition = useTransitionFinancialEntry();
 
   return useMutation({
-    mutationFn: async ({ id, paidAt = new Date(), paymentMethod = 'manual' }: {
+    mutationFn: async ({ id, amount, paidAt = new Date(), paymentMethod = 'manual', idempotencyKey }: {
       id: string;
+      amount?:number;
       paidAt?: Date;
       paymentMethod?: FinancialEntryPaymentMethod;
-    }) => updateFinancialEntry.mutateAsync({
-      id,
-      status: 'paid',
-      paidAt,
-      paymentMethod,
-    }),
+      idempotencyKey?:string;
+    }) => transition.mutateAsync({id,action:'settle',amount,effectiveAt:paidAt,paymentMethod,idempotencyKey}),
   });
 }
