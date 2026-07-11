@@ -30,6 +30,10 @@ const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
 const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
+const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
+const OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
+const OPENAI_TTS_VOICE = "marin";
+const OPENAI_TTS_LANGUAGE = "multi";
 const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
 const ELEVENLABS_LANGUAGE_CODE = "pt";
@@ -93,15 +97,34 @@ function getElevenLabsApiKey() {
   return process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || "";
 }
 
+function getOpenAiApiKey() {
+  return process.env.OPENAI_API_KEY || "";
+}
+
+function requestedSpeakProvider() {
+  return clean(process.env.SPEAK_PROVIDER_TYPE || "open_ai", 40).toLowerCase() === "eleven_labs"
+    ? "eleven_labs"
+    : "open_ai";
+}
+
+function activeSpeakProvider() {
+  const requested = requestedSpeakProvider();
+  if (requested === "open_ai" && getOpenAiApiKey()) return "open_ai";
+  if (getElevenLabsApiKey()) return "eleven_labs";
+  return requested;
+}
+
 function getNvidiaVoiceApiKey() {
   return process.env.NVIDIA_VOICE_API_KEY || "";
 }
 
 function missingGatewayConfiguration() {
+  const speakProvider = activeSpeakProvider();
   return [
     !process.env.DEEPGRAM_API_KEY ? "DEEPGRAM_API_KEY" : "",
     !getNvidiaVoiceApiKey() ? "NVIDIA_VOICE_API_KEY" : "",
-    !getElevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
+    speakProvider === "open_ai" && !getOpenAiApiKey() ? "OPENAI_API_KEY" : "",
+    speakProvider === "eleven_labs" && !getElevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !getSupabaseUrl() ? "SUPABASE_URL ou VITE_SUPABASE_URL" : "",
     !getSupabaseAnonKey() ? "SUPABASE_ANON_KEY ou VITE_SUPABASE_ANON_KEY" : "",
     !getGatewaySecret() ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
@@ -112,7 +135,7 @@ function assertGatewayConfiguration() {
   const missing = missingGatewayConfiguration();
   if (!missing.length) return;
   console.error("[voice-agent-gateway] configuracao obrigatoria ausente:", missing.join(", "));
-  console.error("[voice-agent-gateway] o Synapse de voz usa somente Deepgram Agent + NVIDIA BYO + ElevenLabs.");
+  console.error("[voice-agent-gateway] o Synapse de voz usa Deepgram Agent + NVIDIA BYO + OpenAI TTS.");
   process.exit(1);
 }
 
@@ -152,7 +175,7 @@ function gatewayErrorType(error) {
   const text = clean(error?.message || error, 1200).toLowerCase();
   if (/sessao|token|auth|unauthorized|401|403|jwt|gateway nao autorizado/.test(text)) return "auth_error";
   if (/settings|config|api[_ -]?key|secret|supabase nao configurado|ausentes|missing/.test(text)) return "config_error";
-  if (/deepgram|eleven|nvidia|provider|websocket|socket|1005|failed_to_speak|failed_to_think/.test(text)) return "provider_error";
+  if (/deepgram|eleven|openai|nvidia|provider|websocket|socket|1005|failed_to_speak|failed_to_think/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
   if (/permiss|permission|ownership|rls/.test(text)) return "permission_error";
@@ -219,27 +242,42 @@ function normalizeAgentSettings(settings) {
   }
 
   const speak = settings?.agent?.speak;
-  const speakProvider = speak?.provider;
-  if (speakProvider?.type !== "eleven_labs") {
-    throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
-  }
-  speakProvider.model_id = ELEVENLABS_MODEL_ID;
-  speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
-  const voiceId = clean(speakProvider.voice_id, 160) || ELEVENLABS_VOICE_ID;
-  if ("voice_id" in speakProvider) {
-    delete speakProvider.voice_id;
-  }
+  if (!speak || typeof speak !== "object") throw new Error("Settings de voz invalidos: agent.speak ausente.");
+  const speakProvider = speak.provider && typeof speak.provider === "object" ? speak.provider : {};
+  speak.provider = speakProvider;
   const endpoint = speak.endpoint && typeof speak.endpoint === "object" ? speak.endpoint : {};
   speak.endpoint = endpoint;
-  endpoint.url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`;
-  endpoint.headers = {
-    ...(endpoint.headers && typeof endpoint.headers === "object" ? endpoint.headers : {}),
-    "xi-api-key": getElevenLabsApiKey(),
-  };
-  const endpointUrl = clean(endpoint?.url, 500);
-  const apiKey = clean(endpoint?.headers?.["xi-api-key"], 8000);
-  if (!endpointUrl || !apiKey) {
-    throw new Error("Settings de voz incompletos: endpoint ElevenLabs ou ELEVENLABS_API_KEY ausente.");
+  const incomingHeaders = endpoint.headers && typeof endpoint.headers === "object" ? endpoint.headers : {};
+  const incomingOpenAiAuthorization = clean(incomingHeaders.authorization, 8000);
+  const useOpenAi = activeSpeakProvider() === "open_ai" ||
+    (speakProvider.type === "open_ai" && Boolean(incomingOpenAiAuthorization));
+
+  if (useOpenAi) {
+    const authorization = getOpenAiApiKey()
+      ? `Bearer ${getOpenAiApiKey()}`
+      : incomingOpenAiAuthorization;
+    speakProvider.type = "open_ai";
+    speakProvider.model = clean(process.env.SPEAK_PROVIDER_MODEL_ID || OPENAI_TTS_MODEL, 120);
+    speakProvider.voice = clean(process.env.SPEAK_PROVIDER_VOICE_ID || OPENAI_TTS_VOICE, 120);
+    speakProvider.language = clean(process.env.SPEAK_PROVIDER_LANGUAGE_CODE || OPENAI_TTS_LANGUAGE, 40);
+    delete speakProvider.model_id;
+    delete speakProvider.voice_id;
+    delete speakProvider.language_code;
+    endpoint.url = OPENAI_TTS_URL;
+    endpoint.headers = { authorization };
+    if (!authorization) throw new Error("Settings de voz incompletos: autorizacao OpenAI ausente.");
+  } else {
+    speakProvider.type = "eleven_labs";
+    speakProvider.model_id = ELEVENLABS_MODEL_ID;
+    speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
+    delete speakProvider.model;
+    delete speakProvider.voice;
+    delete speakProvider.language;
+    endpoint.url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID)}/multi-stream-input`;
+    endpoint.headers = { "xi-api-key": getElevenLabsApiKey() };
+    if (!getElevenLabsApiKey()) {
+      throw new Error("Settings de voz incompletos: ELEVENLABS_API_KEY ausente para fallback.");
+    }
   }
 
   return settings;
@@ -702,10 +740,15 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: "synapse-voice-agent-gateway",
       path: PATHNAME,
-      voicePath: "deepgram-agent-nvidia-byo-elevenlabs",
+      voicePath: `deepgram-agent-nvidia-byo-${activeSpeakProvider() === "open_ai" ? "openai-tts" : "elevenlabs-tts"}`,
+      requestedSpeakProvider: requestedSpeakProvider(),
+      activeSpeakProvider: activeSpeakProvider(),
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
       nvidiaVoiceConfigured: Boolean(getNvidiaVoiceApiKey()),
+      openAiConfigured: Boolean(getOpenAiApiKey()),
+      openAiViaSessionSupported: true,
       elevenLabsConfigured: Boolean(getElevenLabsApiKey()),
+      ttsFallbackActive: requestedSpeakProvider() === "open_ai" && activeSpeakProvider() !== "open_ai",
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),
       missing: missingGatewayConfiguration(),

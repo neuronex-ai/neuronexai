@@ -78,7 +78,7 @@ export async function ensureVoiceSessionRecord(
       psychologist_id: userId,
       provider: metadata.provider || "deepgram-agent",
       stt_provider: metadata.sttProvider || "deepgram-flux",
-      tts_provider: metadata.ttsProvider || "deepgram-elevenlabs",
+      tts_provider: metadata.ttsProvider || "deepgram-openai",
       voice_id: metadata.voiceId || null,
       listen_model: metadata.listenModel || null,
       think_model: metadata.thinkModel || null,

@@ -26,6 +26,10 @@ const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
 const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
+const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
+const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
+const DEFAULT_OPENAI_TTS_VOICE = "marin";
+const DEFAULT_OPENAI_TTS_LANGUAGE = "multi";
 const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
 const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt";
@@ -56,6 +60,25 @@ function elevenLabsApiKey() {
     throw new Error("ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY nao configurada para o Synapse de voz.");
   }
   return value;
+}
+
+function openAiApiKey() {
+  return clean(Deno.env.get("OPENAI_API_KEY"), 8000);
+}
+
+function requestedSpeakProvider() {
+  return clean(Deno.env.get("SPEAK_PROVIDER_TYPE") || "open_ai", 40).toLowerCase() === "eleven_labs"
+    ? "eleven_labs"
+    : "open_ai";
+}
+
+function activeSpeakProvider() {
+  const requested = requestedSpeakProvider();
+  if (requested === "open_ai" && openAiApiKey()) return "open_ai";
+  if (clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000)) {
+    return "eleven_labs";
+  }
+  return requested;
 }
 
 function nvidiaVoiceApiKey() {
@@ -194,6 +217,25 @@ function buildVoiceFunctions() {
 }
 
 function buildSpeakConfig() {
+  if (activeSpeakProvider() === "open_ai") {
+    const model = clean(Deno.env.get("SPEAK_PROVIDER_MODEL_ID") || DEFAULT_OPENAI_TTS_MODEL, 120);
+    const voice = clean(Deno.env.get("SPEAK_PROVIDER_VOICE_ID") || DEFAULT_OPENAI_TTS_VOICE, 120);
+    const language = clean(Deno.env.get("SPEAK_PROVIDER_LANGUAGE_CODE") || DEFAULT_OPENAI_TTS_LANGUAGE, 40);
+    const apiKey = openAiApiKey();
+    if (!apiKey) throw new Error("OPENAI_API_KEY nao configurada para o Synapse de voz.");
+    return {
+      speak: {
+        provider: { type: "open_ai", model, voice, language },
+        endpoint: {
+          url: OPENAI_TTS_URL,
+          headers: { authorization: `Bearer ${apiKey}` },
+        },
+      },
+      ttsProvider: "deepgram-openai",
+      ttsVoice: voice,
+    };
+  }
+
   const modelId = DEFAULT_ELEVENLABS_MODEL_ID;
   const voiceId = DEFAULT_ELEVENLABS_VOICE_ID;
   const languageCode = DEFAULT_ELEVENLABS_LANGUAGE_CODE;
