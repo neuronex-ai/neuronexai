@@ -64,11 +64,11 @@ const FINANCE_ROUTE_LABELS: Partial<Record<FinanceView, { groupLabel: string; vi
 
 const NeuroFinanceActivationScreen = ({ onStart }: { onStart: () => void }) => (
   <div className="px-6 py-6">
-    <div className="relative overflow-hidden rounded-[34px] border border-border/65 bg-card/78 p-8 text-card-foreground shadow-[0_28px_90px_-70px_hsl(var(--foreground)/0.7)] backdrop-blur-xl dark:border-white/[0.08] dark:bg-white/[0.04] md:p-12">
+    <div className="relative overflow-hidden rounded-[34px] border border-border/60 bg-card/78 p-8 text-card-foreground shadow-[0_28px_90px_-70px_rgba(0,0,0,0.42)] backdrop-blur-xl dark:border-black/75 dark:bg-zinc-900/52 dark:shadow-[0_30px_92px_-58px_rgba(0,0,0,0.98)] md:p-12">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_22%_12%,hsl(var(--foreground)/0.045),transparent_34%),radial-gradient(circle_at_90%_86%,hsl(var(--foreground)/0.035),transparent_36%)]" />
       <div className="relative z-10 grid gap-10 xl:grid-cols-[minmax(0,1fr)_390px] xl:items-end">
         <div>
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-border/65 bg-background/55 px-4 py-2 text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-border/60 bg-background/55 px-4 py-2 text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground dark:border-black/70 dark:bg-black/28">
             <Landmark className="h-4 w-4" /> NeuroFinance
           </div>
           <h1 className="mt-9 max-w-4xl text-[clamp(2.75rem,5.5vw,5.75rem)] font-black leading-[0.9] tracking-tight">
@@ -81,14 +81,14 @@ const NeuroFinanceActivationScreen = ({ onStart }: { onStart: () => void }) => (
             {["Pix, boleto e cartão", "Saques e transferências", "Pagamentos e antecipação"].map((item) => (
               <div
                 key={item}
-                className="rounded-[20px] border border-border/65 bg-background/55 p-4 text-[10px] font-black uppercase leading-relaxed tracking-[0.14em] text-muted-foreground"
+                className="rounded-[20px] border border-border/60 bg-background/55 p-4 text-[10px] font-black uppercase leading-relaxed tracking-[0.14em] text-muted-foreground dark:border-black/70 dark:bg-black/24"
               >
                 {item}
               </div>
             ))}
           </div>
         </div>
-        <div className="rounded-[28px] border border-border/65 bg-background/62 p-6 shadow-sm">
+        <div className="rounded-[28px] border border-border/60 bg-background/62 p-6 shadow-sm dark:border-black/75 dark:bg-black/28 dark:shadow-[0_20px_54px_-42px_rgba(0,0,0,0.96)]">
           <ShieldCheck className="h-7 w-7 text-muted-foreground" />
           <h3 className="mt-8 text-3xl font-black leading-tight tracking-tight">Onboarding seguro e guiado.</h3>
           <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground">

@@ -74,7 +74,7 @@ export function NeuroFinanceMovementsTimeline({
   const projectedTotal = movements.reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <section className="relative overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white/80 p-6 shadow-[0_22px_70px_-54px_rgba(24,24,27,0.7)] dark:border-white/[0.08] dark:bg-white/[0.025]">
+    <section className="relative overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white/80 p-6 shadow-[0_22px_70px_-54px_rgba(24,24,27,0.7)] dark:border-black/75 dark:bg-zinc-900/42 dark:shadow-[0_24px_70px_-48px_rgba(0,0,0,0.98)]">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
@@ -86,17 +86,17 @@ export function NeuroFinanceMovementsTimeline({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={onOpenFutureStatement} className="h-11 rounded-2xl border-zinc-200 bg-white/70 text-[9px] font-black uppercase tracking-[0.16em] dark:border-white/10 dark:bg-white/[0.035]">
+          <Button variant="outline" onClick={onOpenFutureStatement} className="h-11 rounded-2xl border-zinc-200 bg-white/70 text-[9px] font-black uppercase tracking-[0.16em] dark:border-black/75 dark:bg-black/28">
             Extrato futuro <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <Button variant="outline" onClick={onOpenScheduledPayments} className="h-11 rounded-2xl border-zinc-200 bg-white/70 text-[9px] font-black uppercase tracking-[0.16em] dark:border-white/10 dark:bg-white/[0.035]">
+          <Button variant="outline" onClick={onOpenScheduledPayments} className="h-11 rounded-2xl border-zinc-200 bg-white/70 text-[9px] font-black uppercase tracking-[0.16em] dark:border-black/75 dark:bg-black/28">
             Pagamentos agendados <CalendarClock className="ml-2 h-4 w-4" />
           </Button>
         </div>
       </div>
 
       <div className="mt-6 grid gap-5 xl:grid-cols-[1fr_260px]">
-        <div className="overflow-hidden rounded-[24px] border border-zinc-200/70 bg-white/70 dark:border-white/10 dark:bg-white/[0.025]">
+        <div className="overflow-hidden rounded-[24px] border border-zinc-200/70 bg-white/70 dark:border-black/75 dark:bg-black/24">
           {isLoading ? (
             <div className="flex min-h-52 items-center justify-center">
               <Loader2 className="h-7 w-7 animate-spin text-zinc-300" />

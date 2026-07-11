@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ElementType } from "react";
+import type { ElementType, FocusEvent } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { isAfter, subDays } from "date-fns";
@@ -146,8 +146,8 @@ const FINANCE_NAV: NavItem[] = [
   { id: "bank-settings-root", label: "Ajustes", icon: Settings, subItems: [{ id: "saude-conta", label: "Saúde da conta", icon: ShieldCheck }] },
 ];
 
-const SIDEBAR_COLLAPSED_WIDTH = 280;
-const SIDEBAR_EXPANDED_WIDTH = 280;
+const SIDEBAR_COLLAPSED_WIDTH = 88;
+const SIDEBAR_EXPANDED_WIDTH = 318;
 const SIDEBAR_EASE = [0.22, 1, 0.36, 1] as const;
 const SIDEBAR_ENTER_DELAY = 45;
 const SIDEBAR_LEAVE_DELAY = 90;
@@ -176,8 +176,8 @@ const DesktopFinanceiro = () => {
   const [extratoTab, setExtratoTab] = useState<"realizado" | "futuro" | "assinaturas">("realizado");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
-  const [showSidebarDetails, setShowSidebarDetails] = useState(true);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
+  const [showSidebarDetails, setShowSidebarDetails] = useState(false);
   const [agentTransactionModalOpen, setAgentTransactionModalOpen] = useState(false);
   const sidebarIntentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarDetailsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -256,7 +256,6 @@ const DesktopFinanceiro = () => {
   useEffect(() => () => clearSidebarTimers(), [clearSidebarTimers]);
 
   const setSidebarExpandedWithIntent = useCallback((expanded: boolean) => {
-    if(!expanded){setIsSidebarExpanded(true);setShowSidebarDetails(true);return;}
     clearSidebarTimers();
 
     if (shouldReduceSidebarMotion) {
@@ -276,6 +275,11 @@ const DesktopFinanceiro = () => {
       sidebarWidthTimer.current = setTimeout(() => setIsSidebarExpanded(false), SIDEBAR_WIDTH_COLLAPSE_DELAY);
     }, expanded ? SIDEBAR_ENTER_DELAY : SIDEBAR_LEAVE_DELAY);
   }, [clearSidebarTimers, shouldReduceSidebarMotion]);
+
+  const handleSidebarBlur = useCallback((event: FocusEvent<HTMLElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setSidebarExpandedWithIntent(false);
+  }, [setSidebarExpandedWithIntent]);
 
   const handleGroupClick = (group: NavItem) => {
     if (!showSidebarDetails) {
@@ -310,24 +314,30 @@ const DesktopFinanceiro = () => {
   };
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col bg-background pt-10 font-sans text-foreground selection:bg-primary/20">
+    <div className="finance-desktop relative flex min-h-screen w-full flex-col bg-background pt-10 font-sans text-foreground selection:bg-primary/20">
       <NewTransactionModal
         open={agentTransactionModalOpen}
         onOpenChange={setAgentTransactionModalOpen}
         showTrigger={false}
       />
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_10%,hsl(var(--foreground)/0.035),transparent_34%)] dark:bg-[radial-gradient(circle_at_50%_10%,hsl(var(--foreground)/0.045),transparent_34%)]" />
-      <div className="relative z-10 mx-auto flex w-full max-w-[2200px] flex-1 gap-6 px-6 pb-12 md:px-8 lg:px-12 xl:px-16">
-        <motion.nav
-          initial={{ opacity: 0, x: -18 }}
-          animate={{ opacity: 1, x: 0, width: isSidebarExpanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH }}
-          transition={sidebarTransition}
-          onMouseEnter={() => setSidebarExpandedWithIntent(true)}
-          onMouseLeave={() => setSidebarExpandedWithIntent(false)}
-          style={{ willChange: "width, transform" }}
-          className="relative z-30 hidden shrink-0 lg:flex"
+      <div className="pointer-events-none fixed inset-0 z-0 bg-[url('/noise.png')] bg-repeat opacity-[0.018] mix-blend-soft-light dark:opacity-[0.025]" />
+      <div className="relative z-10 mx-auto flex w-full max-w-[2200px] flex-1 gap-5 px-5 pb-10 md:px-7 lg:gap-6 lg:px-10 xl:px-14 2xl:px-16">
+        <nav
+          aria-label="Navegação do Financeiro"
+          onPointerEnter={() => setSidebarExpandedWithIntent(true)}
+          onPointerLeave={() => setSidebarExpandedWithIntent(false)}
+          onFocusCapture={() => setSidebarExpandedWithIntent(true)}
+          onBlurCapture={handleSidebarBlur}
+          className="relative z-30 hidden w-[88px] shrink-0 lg:block"
         >
-          <div className="sticky top-10 flex max-h-[calc(100vh-5rem)] w-full flex-col overflow-hidden rounded-[30px] border border-border/70 bg-card/78 p-3 shadow-[0_24px_74px_-54px_hsl(var(--foreground)/0.76)] ring-1 ring-foreground/[0.025] backdrop-blur-xl dark:border-white/[0.08] dark:bg-white/[0.035] dark:ring-white/[0.035]">
+          <motion.div
+            initial={{ opacity: 0, x: -18, width: SIDEBAR_COLLAPSED_WIDTH }}
+            animate={{ opacity: 1, x: 0, width: isSidebarExpanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH }}
+            transition={sidebarTransition}
+            style={{ willChange: "width, transform" }}
+            className="sticky top-10 flex max-h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-[30px] border border-border/60 bg-card/82 p-3 shadow-[0_24px_74px_-54px_hsl(var(--foreground)/0.42)] ring-1 ring-foreground/[0.02] backdrop-blur-2xl dark:border-black/80 dark:bg-zinc-950/88 dark:shadow-[0_28px_80px_-52px_rgba(0,0,0,0.96)] dark:ring-black/70"
+          >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.62),transparent_28%),radial-gradient(circle_at_0%_0%,hsl(var(--foreground)/0.035),transparent_34%)]" />
             <div className={cn("relative z-10 flex flex-col gap-2 overflow-y-auto overflow-x-hidden no-scrollbar", showSidebarDetails ? "pr-1" : "items-center pr-0")}>
               {FINANCE_NAV.map((group) => {
@@ -342,18 +352,21 @@ const DesktopFinanceiro = () => {
                       </div>
                     )}
                     <button
+                      type="button"
                       onClick={() => handleGroupClick(group)}
                       title={group.label}
+                      aria-label={group.label}
+                      aria-current={hasActiveSub ? "page" : undefined}
                       aria-expanded={showSidebarDetails ? isGroupExpanded : undefined}
                       className={cn(
-                        "group relative flex h-12 items-center rounded-2xl transition-colors duration-200 ease-out",
+                        "group relative flex h-12 items-center rounded-2xl transition-[background-color,color,box-shadow,transform] duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
                         showSidebarDetails ? "w-full gap-3 px-3" : "w-14 justify-center px-0",
                         hasActiveSub
-                          ? "bg-foreground text-background shadow-[0_16px_38px_-26px_hsl(var(--foreground)/0.9)]"
-                          : "text-muted-foreground hover:bg-foreground/[0.045] hover:text-foreground",
+                          ? "bg-foreground/[0.085] text-foreground shadow-[inset_0_0_0_1px_hsl(var(--foreground)/0.08),0_14px_32px_-26px_rgba(0,0,0,0.7)] dark:bg-white/[0.075] dark:text-white"
+                          : "text-muted-foreground hover:bg-foreground/[0.045] hover:text-foreground dark:hover:bg-white/[0.045]",
                       )}
                     >
-                      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all", hasActiveSub ? "bg-background/14" : "border border-border/60 bg-background/55")}>
+                      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-[background-color,border-color,transform] duration-200 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100", hasActiveSub ? "bg-background/65 dark:bg-black/55" : "border border-border/60 bg-background/55 dark:border-black/70 dark:bg-black/35")}>
                         <group.icon className="h-5 w-5" />
                       </div>
                       <AnimatePresence initial={false}>
@@ -384,10 +397,12 @@ const DesktopFinanceiro = () => {
                             const isSubActive = activeView === sub.id || sub.subItems?.some((nested) => nested.id === activeView);
                             return (
                               <button
+                                type="button"
                                 key={sub.id}
                                 onClick={() => setActiveView(sub.id)}
+                                aria-current={isSubActive ? "page" : undefined}
                                 className={cn(
-                                  "group/sub relative flex min-h-10 w-full items-center gap-3 rounded-[15px] px-3 py-2 transition-all duration-200",
+                                  "group/sub relative flex min-h-10 w-full items-center gap-3 rounded-[15px] px-3 py-2 transition-[background-color,color,transform] duration-200 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100",
                                   isSubActive
                                     ? "bg-foreground/[0.075] text-foreground"
                                     : "text-muted-foreground hover:bg-foreground/[0.045] hover:text-foreground",
@@ -406,10 +421,10 @@ const DesktopFinanceiro = () => {
                 );
               })}
             </div>
-          </div>
-        </motion.nav>
+          </motion.div>
+        </nav>
 
-        <div className="relative flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/42 shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.7)] backdrop-blur-sm dark:border-white/[0.04] dark:bg-white/[0.02]">
+        <div className="relative min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/42 shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.45)] backdrop-blur-sm dark:border-black/75 dark:bg-black/28 dark:shadow-[0_28px_96px_-68px_rgba(0,0,0,0.98)]">
           <AnimatePresence mode="wait">
             <FinanceiroMainContent
               selectedTransaction={selectedTransaction}

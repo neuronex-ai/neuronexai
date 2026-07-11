@@ -49,6 +49,10 @@ import {
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/types";
 import type { FinanceView } from "../FinancialDashboard";
+
+const FINANCE_PANEL_SURFACE =
+  "border-border/55 bg-background/76 shadow-[0_24px_74px_-58px_rgba(0,0,0,0.34)] dark:border-black/75 dark:bg-zinc-900/58 dark:shadow-[0_26px_74px_-52px_rgba(0,0,0,0.96)] dark:ring-black/50";
+
 export interface NeuroFinanceManagementContext {
   enabled: boolean;
   connected: boolean;
@@ -97,7 +101,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <DesktopWorkspacePanel className="p-5 lg:p-6">
+    <DesktopWorkspacePanel className={cn(FINANCE_PANEL_SURFACE, "p-5 lg:p-6")}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold">{title}</h2>
         {action}
@@ -119,14 +123,14 @@ function Rows({
 }) {
   if (!rows.length)
     return (
-      <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+      <div className="rounded-2xl border border-dashed border-border/60 p-8 text-center text-sm text-muted-foreground dark:border-black/70">
         Nenhum registro neste recorte.
       </div>
     );
   return (
-    <div className="overflow-x-auto rounded-2xl border">
+    <div className="overflow-x-auto rounded-2xl border border-border/60 dark:border-black/75">
       <table className="w-full min-w-[720px] text-sm">
-        <thead className="border-b bg-muted/35 text-left text-muted-foreground">
+        <thead className="border-b border-border/55 bg-muted/35 text-left text-muted-foreground dark:border-black/70 dark:bg-black/20">
           <tr>
             <th className="p-3">Data</th>
             <th className="p-3">Descrição</th>
@@ -136,16 +140,17 @@ function Rows({
             <th />
           </tr>
         </thead>
-        <tbody className="divide-y">
+        <tbody className="divide-y divide-border/55 dark:divide-black/70">
           {rows.map((t) => {
             const open = managementOutstandingAmountOf(t) > 0;
             return (
-              <tr key={t.id} className="hover:bg-muted/30">
+              <tr key={t.id} className="transition-colors duration-150 hover:bg-muted/30 dark:hover:bg-white/[0.025]">
                 <td className="p-3 text-muted-foreground">{date(t, basis)}</td>
                 <td className="max-w-[280px] p-3">
                   <button
+                    type="button"
                     onClick={() => onOpen(t)}
-                    className="block max-w-full truncate font-medium hover:underline"
+                    className="block max-w-full truncate rounded-sm font-medium hover:underline"
                   >
                     {t.description}
                   </button>
@@ -161,8 +166,8 @@ function Rows({
                     className={cn(
                       "rounded-full px-2 py-1 text-xs",
                       managementStatusOf(t) === "paid"
-                        ? "bg-emerald-500/10 text-emerald-700"
-                        : "bg-amber-500/10 text-amber-700",
+                        ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                        : "bg-amber-500/10 text-amber-700 dark:text-amber-400",
                     )}
                   >
                     {managementStatusOf(t) === "paid" ? "Pago" : "Em aberto"}
@@ -171,7 +176,7 @@ function Rows({
                 <td
                   className={cn(
                     "p-3 text-right font-semibold",
-                    t.type === "income" ? "text-emerald-700" : "text-rose-700",
+                    t.type === "income" ? "text-emerald-700 dark:text-emerald-400" : "text-rose-700 dark:text-rose-400",
                   )}
                 >
                   {t.type === "income" ? "+" : "−"} {money(amount(t))}
@@ -245,7 +250,7 @@ function Planning({
   return (
     <div className="space-y-4">
       <div className="grid gap-4 xl:grid-cols-[.7fr_1.3fr]">
-        <DesktopWorkspacePanel highContrast className="p-6">
+        <DesktopWorkspacePanel highContrast className="border-foreground/90 p-6 shadow-[0_22px_60px_-46px_rgba(0,0,0,0.52)] dark:border-black/80 dark:shadow-[0_24px_64px_-42px_rgba(0,0,0,0.96)]">
           <Target className="h-5 w-5 opacity-60" />
           <p className="mt-8 text-sm opacity-60">Meta mensal</p>
           <p className="mt-2 text-4xl font-bold">{money(parse(revenue))}</p>
@@ -254,7 +259,7 @@ function Planning({
           </p>
         </DesktopWorkspacePanel>
         <Panel title="Metas do período">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label>Meta de receita</Label>
               <Input
@@ -282,7 +287,7 @@ function Planning({
           </Button>
         </Panel>
       </div>
-      <details className="rounded-[28px] border bg-background/60 p-5">
+      <details className="rounded-[28px] border border-border/55 bg-background/60 p-5 shadow-sm dark:border-black/75 dark:bg-zinc-900/52 dark:shadow-[0_18px_48px_-38px_rgba(0,0,0,0.95)]">
         <summary className="cursor-pointer text-sm font-semibold">
           Gerenciar recorrências
         </summary>
@@ -361,7 +366,7 @@ export const FinancialManagementDashboard = (props: Props) => {
       </div>
     );
   return (
-    <div className="p-4 lg:p-5">
+    <div className="p-3 sm:p-4 lg:p-5">
       <NewTransactionModal
         open={entryOpen}
         onOpenChange={setEntryOpen}
@@ -376,16 +381,16 @@ export const FinancialManagementDashboard = (props: Props) => {
           if (!v) setSettlement(null);
         }}
       />
-      <DesktopWorkspaceShell>
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border bg-background/76 p-4">
-          <DesktopWorkspaceIcon icon={CircleDollarSign} />
+      <DesktopWorkspaceShell className="border-border/45 bg-background/70 shadow-[0_26px_90px_-68px_rgba(0,0,0,0.46)] dark:border-black/80 dark:bg-black/32 dark:shadow-[0_28px_90px_-58px_rgba(0,0,0,0.98)] dark:ring-black/60">
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border border-border/55 bg-background/76 p-4 shadow-[0_18px_54px_-44px_rgba(0,0,0,0.38)] dark:border-black/75 dark:bg-zinc-900/58 dark:shadow-[0_22px_58px_-40px_rgba(0,0,0,0.96)]">
+          <DesktopWorkspaceIcon icon={CircleDollarSign} className="dark:border-black/75 dark:bg-black/35" />
           <div className="min-w-48 flex-1">
             <h1 className="text-xl font-bold">Gestão financeira</h1>
             <p className="text-sm text-muted-foreground">
               Consultório, cobranças e planejamento
             </p>
           </div>
-          <div className="flex items-center rounded-xl border">
+          <div className="flex items-center rounded-xl border border-border/60 bg-background/45 dark:border-black/75 dark:bg-black/25">
             <Button
               variant="ghost"
               size="icon"
@@ -404,14 +409,14 @@ export const FinancialManagementDashboard = (props: Props) => {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex rounded-xl border p-1">
+          <div className="flex rounded-xl border border-border/60 bg-background/45 p-1 dark:border-black/75 dark:bg-black/25">
             {(["cash", "competence"] as const).map((x) => (
               <button
                 key={x}
                 onClick={() => setBasis(x)}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-xs",
-                  basis === x && "bg-foreground text-background",
+                  "min-h-9 rounded-lg px-3 py-2 text-xs transition-[background-color,color,transform] duration-150 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
+                  basis === x && "bg-foreground text-background shadow-sm dark:bg-white dark:text-zinc-950 dark:shadow-[0_8px_20px_-14px_rgba(0,0,0,0.9)]",
                 )}
               >
                 {x === "cash" ? "Caixa" : "Competência"}
@@ -433,8 +438,9 @@ export const FinancialManagementDashboard = (props: Props) => {
         </div>
         {view === "gestao-visao-geral" ? (
           <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 accent
                 label="Resultado"
                 value={compact(metrics.result)}
@@ -443,22 +449,25 @@ export const FinancialManagementDashboard = (props: Props) => {
                 }
               />
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 tone="success"
                 label="Recebido"
                 value={compact(metrics.received)}
               />
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 label="Despesas pagas"
                 value={compact(metrics.paidExpenses)}
               />
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 tone={metrics.overdueCount ? "warning" : "default"}
                 label="A receber"
                 value={compact(metrics.receivable)}
                 detail={`${metrics.overdueCount} vencida(s)`}
               />
             </div>
-            <div className="flex items-center gap-3 rounded-2xl border p-4">
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/55 bg-background/42 p-4 dark:border-black/75 dark:bg-black/24">
               <Landmark className="h-4 w-4" />
               <p className="flex-1 text-sm text-muted-foreground">
                 {props.neurofinance?.connected
@@ -474,7 +483,7 @@ export const FinancialManagementDashboard = (props: Props) => {
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
-            <div className="grid gap-4 xl:grid-cols-[1fr_380px]">
+            <div className="grid min-w-0 gap-4 2xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
               <Panel title="Movimentações recentes">
                 <Rows
                   rows={metrics.recent}
@@ -492,7 +501,7 @@ export const FinancialManagementDashboard = (props: Props) => {
                         onClick={() =>
                           props.setSelectedTransaction(x.transaction)
                         }
-                        className="flex w-full items-center gap-3 rounded-xl border p-3 text-left"
+                        className="flex w-full items-center gap-3 rounded-xl border border-border/55 p-3 text-left transition-[background-color,transform] duration-150 hover:bg-muted/35 active:scale-[0.99] dark:border-black/70 dark:hover:bg-white/[0.025] motion-reduce:transition-none motion-reduce:active:scale-100"
                       >
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
                         <span className="min-w-0 flex-1">
@@ -547,20 +556,23 @@ export const FinancialManagementDashboard = (props: Props) => {
         ) : null}
         {view === "gestao-recebimentos" ? (
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 tone={metrics.overdueCount ? "warning" : "default"}
                 label="Vencidas"
                 value={metrics.overdueCount}
                 detail={money(metrics.overdueAmount)}
               />
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 label="A vencer"
                 value={
                   metrics.openIncomeTransactions.length - metrics.overdueCount
                 }
               />
               <DesktopMiniStat
+                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 accent
                 label="Total em aberto"
                 value={compact(metrics.receivable)}
