@@ -576,6 +576,587 @@
       0 16px 38px -30px rgba(0, 0, 0, 0.9);
   }
 
+  .synapse-optical-shell {
+    --synapse-light-x: 50%;
+    --synapse-light-y: 8%;
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-color: transparent;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.79), rgba(255, 255, 255, 0.59)) padding-box,
+      linear-gradient(132deg, rgba(255, 255, 255, 0.95), rgba(39, 39, 42, 0.11) 42%, rgba(151, 216, 255, 0.14) 66%, rgba(202, 183, 255, 0.11) 79%, rgba(39, 39, 42, 0.1)) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.88),
+      inset 0 -1px 0 rgba(24, 24, 27, 0.055),
+      0 34px 92px -38px rgba(24, 24, 27, 0.58),
+      0 12px 34px -26px rgba(24, 24, 27, 0.28);
+    backdrop-filter: blur(42px) saturate(1.18) contrast(1.015);
+    -webkit-backdrop-filter: blur(42px) saturate(1.18) contrast(1.015);
+  }
+
+  .synapse-optical-shell::before,
+  .synapse-optical-shell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .synapse-optical-shell::before {
+    inset: -18%;
+    background:
+      radial-gradient(46% 34% at var(--synapse-light-x) var(--synapse-light-y), rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0.08) 42%, transparent 74%),
+      linear-gradient(118deg, transparent 18%, rgba(151, 216, 255, 0.04) 43%, rgba(202, 183, 255, 0.038) 54%, transparent 78%);
+    opacity: 0.92;
+    mix-blend-mode: soft-light;
+  }
+
+  .synapse-optical-shell::after {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent 14%, transparent 80%, rgba(24, 24, 27, 0.075)),
+      repeating-linear-gradient(90deg, rgba(24, 24, 27, 0.012) 0 1px, transparent 1px 5px),
+      repeating-linear-gradient(0deg, rgba(24, 24, 27, 0.008) 0 1px, transparent 1px 7px);
+    background-size: 100% 100%, 5px 5px, 7px 7px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      inset 0 18px 40px -34px rgba(255, 255, 255, 0.76),
+      inset 0 -28px 50px -44px rgba(24, 24, 27, 0.28);
+    opacity: 0.62;
+    mix-blend-mode: soft-light;
+  }
+
+  .synapse-optical-shell > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .dark .synapse-optical-shell {
+    background:
+      linear-gradient(180deg, rgba(18, 18, 21, 0.88), rgba(7, 7, 9, 0.82)) padding-box,
+      linear-gradient(132deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.035) 38%, rgba(144, 211, 255, 0.1) 66%, rgba(196, 174, 255, 0.085) 80%, rgba(255, 255, 255, 0.035)) border-box;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.095),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+      0 42px 108px -36px rgba(0, 0, 0, 0.96),
+      0 15px 40px -25px rgba(0, 0, 0, 0.82);
+    backdrop-filter: blur(44px) saturate(1.16) contrast(1.025);
+    -webkit-backdrop-filter: blur(44px) saturate(1.16) contrast(1.025);
+  }
+
+  .dark .synapse-optical-shell::before {
+    background:
+      radial-gradient(48% 35% at var(--synapse-light-x) var(--synapse-light-y), rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.025) 45%, transparent 75%),
+      linear-gradient(118deg, transparent 18%, rgba(137, 207, 255, 0.035) 43%, rgba(194, 172, 255, 0.03) 55%, transparent 78%);
+    opacity: 0.82;
+    mix-blend-mode: screen;
+  }
+
+  .dark .synapse-optical-shell::after {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.085), transparent 15%, transparent 80%, rgba(0, 0, 0, 0.34)),
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 6px),
+      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.011) 0 1px, transparent 1px 8px);
+    background-size: 100% 100%, 6px 6px, 8px 8px;
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.025),
+      inset 0 20px 44px -38px rgba(255, 255, 255, 0.18),
+      inset 0 -34px 58px -46px rgba(0, 0, 0, 0.86);
+    opacity: 0.7;
+  }
+
+  .synapse-optical-chrome {
+    border-bottom: 1px solid rgba(24, 24, 27, 0.075);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.36), rgba(255, 255, 255, 0.12)),
+      rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.24);
+  }
+
+  .dark .synapse-optical-chrome {
+    border-bottom-color: rgba(255, 255, 255, 0.055);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent),
+      rgba(0, 0, 0, 0.1);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.38);
+  }
+
+  .synapse-header-mark,
+  .synapse-empty-mark {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(24, 24, 27, 0.1);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.42)),
+      rgba(255, 255, 255, 0.52);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 16px 36px -28px rgba(24, 24, 27, 0.75);
+  }
+
+  .synapse-header-mark {
+    border-radius: 13px;
+  }
+
+  .synapse-empty-mark {
+    border-radius: 22px;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.94),
+      0 24px 64px -34px rgba(24, 24, 27, 0.68);
+  }
+
+  .synapse-header-mark::before,
+  .synapse-empty-mark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, rgba(255, 255, 255, 0.56), transparent 48%),
+      linear-gradient(118deg, transparent 32%, rgba(151, 216, 255, 0.08), rgba(202, 183, 255, 0.07), transparent 72%);
+    pointer-events: none;
+    mix-blend-mode: soft-light;
+  }
+
+  .dark .synapse-header-mark,
+  .dark .synapse-empty-mark {
+    border-color: rgba(255, 255, 255, 0.085);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.022)),
+      rgba(255, 255, 255, 0.025);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      0 20px 48px -30px rgba(0, 0, 0, 0.96);
+  }
+
+  .synapse-header-control,
+  .synapse-composer-control {
+    border-radius: 13px;
+    border: 1px solid transparent;
+    transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+  }
+
+  .synapse-header-control:hover,
+  .synapse-composer-control:hover:not(:disabled) {
+    border-color: rgba(24, 24, 27, 0.075);
+    background: rgba(255, 255, 255, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+  }
+
+  .synapse-header-control:active,
+  .synapse-composer-control:active:not(:disabled) {
+    transform: translateY(1px) scale(0.96);
+    box-shadow: inset 0 1px 3px rgba(24, 24, 27, 0.1);
+  }
+
+  .dark .synapse-header-control:hover,
+  .dark .synapse-composer-control:hover:not(:disabled) {
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.055);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  }
+
+  .synapse-mode-switcher {
+    border: 1px solid rgba(24, 24, 27, 0.075);
+    border-radius: 15px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.44), rgba(255, 255, 255, 0.2)),
+      rgba(255, 255, 255, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.68),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .dark .synapse-mode-switcher {
+    border-color: rgba(255, 255, 255, 0.055);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.012)),
+      rgba(0, 0, 0, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+  }
+
+  .synapse-mode-active {
+    border: 1px solid rgba(24, 24, 27, 0.085);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(255, 255, 255, 0.55)),
+      rgba(255, 255, 255, 0.64);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 12px 28px -23px rgba(24, 24, 27, 0.72);
+  }
+
+  .dark .synapse-mode-active {
+    border-color: rgba(255, 255, 255, 0.085);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.082), rgba(255, 255, 255, 0.036)),
+      rgba(255, 255, 255, 0.028);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      0 14px 30px -22px rgba(0, 0, 0, 0.94);
+  }
+
+  .synapse-thread-viewport {
+    overscroll-behavior: contain;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 12%, transparent 84%, rgba(24, 24, 27, 0.025)),
+      linear-gradient(105deg, transparent 34%, rgba(255, 255, 255, 0.065) 48%, transparent 62%);
+    mask-image: linear-gradient(to bottom, transparent 0, black 18px, black calc(100% - 20px), transparent 100%);
+    -webkit-mask-image: linear-gradient(to bottom, transparent 0, black 18px, black calc(100% - 20px), transparent 100%);
+  }
+
+  .dark .synapse-thread-viewport {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 12%, transparent 84%, rgba(0, 0, 0, 0.14)),
+      linear-gradient(105deg, transparent 34%, rgba(255, 255, 255, 0.012) 48%, transparent 62%);
+  }
+
+  .synapse-message-mark {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(24, 24, 27, 0.09);
+    border-radius: 11px;
+    color: hsl(var(--muted-foreground));
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.42)),
+      rgba(255, 255, 255, 0.52);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.84),
+      0 13px 28px -24px rgba(24, 24, 27, 0.72);
+  }
+
+  .synapse-message-mark::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(132deg, rgba(255, 255, 255, 0.45), transparent 48%, rgba(151, 216, 255, 0.07), rgba(202, 183, 255, 0.055));
+    mix-blend-mode: soft-light;
+  }
+
+  .dark .synapse-message-mark {
+    border-color: rgba(255, 255, 255, 0.075);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.026)),
+      rgba(255, 255, 255, 0.022);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 14px 30px -22px rgba(0, 0, 0, 0.94);
+  }
+
+  .synapse-message-bubble {
+    overflow-wrap: anywhere;
+    letter-spacing: 0;
+  }
+
+  .synapse-message-assistant {
+    border: 1px solid rgba(24, 24, 27, 0.09);
+    border-radius: 17px 17px 17px 5px;
+    color: hsl(var(--foreground));
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.72), rgba(255, 255, 255, 0.46)),
+      rgba(255, 255, 255, 0.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 20px 46px -38px rgba(24, 24, 27, 0.72);
+  }
+
+  .dark .synapse-message-assistant {
+    border-color: rgba(255, 255, 255, 0.075);
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.026)),
+      rgba(255, 255, 255, 0.02);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.055),
+      0 20px 46px -34px rgba(0, 0, 0, 0.96);
+  }
+
+  .synapse-message-user {
+    border: 1px solid hsl(var(--foreground) / 0.86);
+    border-radius: 17px 17px 5px 17px;
+    color: hsl(var(--background));
+    background:
+      linear-gradient(150deg, hsl(var(--foreground)), hsl(var(--foreground) / 0.91)),
+      hsl(var(--foreground));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.18),
+      0 20px 44px -34px hsl(var(--foreground) / 0.72);
+  }
+
+  .synapse-message-prose {
+    font-size: 14px;
+    font-weight: 450;
+    line-height: 1.55;
+    letter-spacing: 0;
+  }
+
+  .synapse-message-prose > :first-child {
+    margin-top: 0;
+  }
+
+  .synapse-message-prose > :last-child {
+    margin-bottom: 0;
+  }
+
+  .synapse-message-prose p,
+  .synapse-message-prose ul,
+  .synapse-message-prose ol,
+  .synapse-message-prose blockquote,
+  .synapse-message-prose pre,
+  .synapse-message-prose table {
+    margin: 0.58em 0;
+  }
+
+  .synapse-message-prose ul,
+  .synapse-message-prose ol {
+    padding-left: 1.25rem;
+  }
+
+  .synapse-message-prose ul {
+    list-style: disc;
+  }
+
+  .synapse-message-prose ol {
+    list-style: decimal;
+  }
+
+  .synapse-message-prose strong {
+    color: inherit;
+    font-weight: 700;
+  }
+
+  .synapse-message-prose a {
+    color: inherit;
+    text-decoration: underline;
+    text-decoration-color: currentColor;
+    text-underline-offset: 3px;
+  }
+
+  .synapse-message-prose code {
+    border: 1px solid hsl(var(--foreground) / 0.08);
+    border-radius: 6px;
+    background: hsl(var(--foreground) / 0.055);
+    padding: 0.12rem 0.3rem;
+    font-size: 0.9em;
+  }
+
+  .synapse-message-prose pre {
+    max-width: 100%;
+    overflow-x: auto;
+    border: 1px solid hsl(var(--foreground) / 0.1);
+    border-radius: 12px;
+    background: hsl(var(--foreground) / 0.055);
+    padding: 0.8rem;
+  }
+
+  .synapse-message-prose pre code {
+    border: 0;
+    background: transparent;
+    padding: 0;
+  }
+
+  .synapse-message-prose blockquote {
+    border-left: 2px solid hsl(var(--foreground) / 0.28);
+    padding-left: 0.8rem;
+    color: hsl(var(--muted-foreground));
+  }
+
+  .synapse-message-prose table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    border-collapse: collapse;
+  }
+
+  .synapse-message-prose th,
+  .synapse-message-prose td {
+    border-bottom: 1px solid hsl(var(--foreground) / 0.1);
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+  }
+
+  .synapse-message-prose-user,
+  .synapse-message-prose-user * {
+    color: inherit;
+  }
+
+  .synapse-message-prose-user code,
+  .synapse-message-prose-user pre {
+    border-color: hsl(var(--background) / 0.18);
+    background: hsl(var(--background) / 0.11);
+  }
+
+  .synapse-thinking-surface {
+    border: 1px solid rgba(24, 24, 27, 0.085);
+    border-radius: 15px 15px 15px 5px;
+    color: hsl(var(--foreground) / 0.68);
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.66), rgba(255, 255, 255, 0.4)),
+      rgba(255, 255, 255, 0.48);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+  }
+
+  .dark .synapse-thinking-surface {
+    border-color: rgba(255, 255, 255, 0.07);
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.022)),
+      rgba(255, 255, 255, 0.018);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  }
+
+  .synapse-prompt-chip {
+    border: 1px solid rgba(24, 24, 27, 0.085);
+    border-radius: 13px;
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0.37)),
+      rgba(255, 255, 255, 0.42);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+    transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .synapse-prompt-chip:hover {
+    border-color: rgba(24, 24, 27, 0.14);
+    color: hsl(var(--foreground));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.8),
+      0 15px 32px -28px rgba(24, 24, 27, 0.72);
+  }
+
+  .dark .synapse-prompt-chip {
+    border-color: rgba(255, 255, 255, 0.07);
+    background:
+      linear-gradient(155deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.02)),
+      rgba(255, 255, 255, 0.016);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  }
+
+  .dark .synapse-prompt-chip:hover {
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: rgba(255, 255, 255, 0.035);
+  }
+
+  .synapse-composer-dock {
+    border-top: 1px solid rgba(24, 24, 27, 0.075);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.34)),
+      rgba(255, 255, 255, 0.12);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  }
+
+  .dark .synapse-composer-dock {
+    border-top-color: rgba(255, 255, 255, 0.055);
+    background:
+      linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.24)),
+      rgba(0, 0, 0, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+  }
+
+  .synapse-optical-composer {
+    position: relative;
+    isolation: isolate;
+    border: 1px solid rgba(24, 24, 27, 0.11);
+    border-radius: 18px;
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.76), rgba(255, 255, 255, 0.48)),
+      rgba(255, 255, 255, 0.56);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.84),
+      0 20px 46px -38px rgba(24, 24, 27, 0.78);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .synapse-optical-composer::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: linear-gradient(118deg, transparent 28%, rgba(151, 216, 255, 0.055), rgba(202, 183, 255, 0.045), transparent 72%);
+    opacity: 0;
+    transition: opacity 180ms ease;
+    pointer-events: none;
+  }
+
+  .synapse-optical-composer:focus-within {
+    border-color: hsl(var(--foreground) / 0.2);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.9),
+      0 0 0 3px hsl(var(--foreground) / 0.055),
+      0 22px 50px -38px rgba(24, 24, 27, 0.82);
+  }
+
+  .synapse-optical-composer:focus-within::before {
+    opacity: 1;
+  }
+
+  .dark .synapse-optical-composer {
+    border-color: rgba(255, 255, 255, 0.085);
+    background:
+      linear-gradient(160deg, rgba(255, 255, 255, 0.062), rgba(255, 255, 255, 0.024)),
+      rgba(255, 255, 255, 0.018);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.055),
+      0 22px 50px -34px rgba(0, 0, 0, 0.96);
+  }
+
+  .dark .synapse-optical-composer:focus-within {
+    border-color: rgba(255, 255, 255, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      0 0 0 3px rgba(255, 255, 255, 0.035),
+      0 22px 52px -34px rgba(0, 0, 0, 0.98);
+  }
+
+  .synapse-composer-control {
+    color: hsl(var(--muted-foreground));
+  }
+
+  .synapse-composer-control:disabled {
+    opacity: 0.42;
+  }
+
+  .synapse-composer-control-active,
+  .synapse-send-control-active {
+    border-color: hsl(var(--foreground) / 0.84);
+    color: hsl(var(--background));
+    background: hsl(var(--foreground));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.18),
+      0 13px 28px -22px hsl(var(--foreground) / 0.76);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .synapse-optical-shell {
+      background: hsl(var(--background)) padding-box, hsl(var(--border)) border-box;
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+
+    .synapse-message-assistant,
+    .synapse-optical-composer,
+    .synapse-mode-switcher,
+    .synapse-mode-active {
+      background: hsl(var(--background));
+    }
+  }
+
+  @media (forced-colors: active) {
+    .synapse-optical-shell,
+    .synapse-message-assistant,
+    .synapse-message-user,
+    .synapse-optical-composer,
+    .synapse-mode-switcher,
+    .synapse-mode-active {
+      border: 1px solid CanvasText;
+      background: Canvas;
+      color: CanvasText;
+      box-shadow: none;
+    }
+  }
+
   .notes-neuroview-backdrop {
     background:
       radial-gradient(ellipse at center, rgba(255, 255, 255, 0) 0%, rgba(24, 24, 27, 0.046) 100%),
