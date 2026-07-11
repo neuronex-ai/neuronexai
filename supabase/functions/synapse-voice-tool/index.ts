@@ -15,7 +15,6 @@ import {
   validateVoiceToolCall,
   voicePolicyFailurePayload,
 } from "../_shared/synapse-voice-policy.ts";
-import { normalizeVoicePayload, normalizeVoiceText } from "../_shared/synapse-voice-speech.ts";
 import {
   assertVoiceSessionOwnership,
   recordVoiceTurn,
@@ -178,11 +177,11 @@ function needsClarification(value: unknown) {
 function normalizeFunctionPayload(payload: Record<string, unknown>) {
   const ok = payload.ok === undefined ? !payload.error : Boolean(payload.ok);
   const rawMessage = clean(payload.spoken_summary || payload.message || payload.error, 1400);
-  const spoken = normalizeVoiceText(rawMessage || (ok ? "Consulta concluída." : "Não consegui concluir essa ação agora."));
+  const spoken = rawMessage || (ok ? "Consulta concluida." : "Nao consegui concluir essa acao agora.");
   const confirmationRequired = Boolean(payload.confirmation_required ?? payload.confirmationRequired);
   const retryable = Boolean(payload.retryable ?? (!ok && isRetryableError(payload.error || spoken)));
 
-  return normalizeVoicePayload({
+  return {
     ok,
     tool: clean(payload.tool, 120) || undefined,
     label: clean(payload.label, 180) || undefined,
@@ -198,7 +197,7 @@ function normalizeFunctionPayload(payload: Record<string, unknown>) {
     grounded: Boolean(payload.grounded),
     recordCount: Number(payload.recordCount || 0),
     structuredData: payload.structuredData || null,
-  }) as Record<string, unknown>;
+  };
 }
 
 async function authenticate(request: Request): Promise<AuthResult> {
@@ -207,14 +206,14 @@ async function authenticate(request: Request): Promise<AuthResult> {
 
   const gatewaySecret = Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET") || "";
   if (gatewaySecret && request.headers.get("x-synapse-gateway-secret") !== gatewaySecret) {
-        return { error: json({ error: "Gateway não autorizado." }, 403) };
+    return { error: json({ error: "Gateway nao autorizado." }, 403) };
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !anonKey || !serviceKey) {
-    return { error: json({ error: "Supabase não configurado para voz." }, 500) };
+    return { error: json({ error: "Supabase nao configurado para voz." }, 500) };
   }
 
   const userClient = createClient(supabaseUrl, anonKey, {
@@ -266,7 +265,7 @@ async function logVoiceAction(
 
 serve(async (request): Promise<Response> => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (request.method !== "POST") return json({ error: "Método não permitido." }, 405);
+  if (request.method !== "POST") return json({ error: "Metodo nao permitido." }, 405);
 
   try {
     const auth = await authenticate(request);
@@ -284,7 +283,7 @@ serve(async (request): Promise<Response> => {
       .eq("id", sessionId)
       .eq("user_id", auth.user.id)
       .maybeSingle();
-    if (sessionError || !session) return json({ error: "Conversa não encontrada." }, 404);
+    if (sessionError || !session) return json({ error: "Conversa nao encontrada." }, 404);
 
     await assertVoiceSessionOwnership(auth.admin, auth.user.id, sessionId, voiceSessionId);
 
@@ -355,7 +354,7 @@ serve(async (request): Promise<Response> => {
             ok: true,
             tool: "cancel_pending_action",
             cancelled: false,
-            message: "Não havia ação pendente para cancelar.",
+            message: "Nao havia acao pendente para cancelar.",
           }),
         });
       }
@@ -365,13 +364,13 @@ serve(async (request): Promise<Response> => {
           content: functionContent({
             ok: false,
             tool: "cancel_pending_action",
-            message: "A ação pendente pertence a outra conversa e não foi alterada.",
+            message: "A acao pendente pertence a outra conversa e nao foi alterada.",
             retryable: false,
           }),
         });
       }
       await updatePending(auth.admin, pending, "cancelled");
-      const message = "A ação pendente foi cancelada. Nenhuma alteração foi realizada.";
+      const message = "A acao pendente foi cancelada. Nenhuma alteracao foi realizada.";
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [{
         kind: "synapse_grounding",
         provider: "deepgram-agent",
@@ -410,14 +409,14 @@ serve(async (request): Promise<Response> => {
           status: "error",
           durationMs: Date.now() - startedAt,
           payload: { hasPendingAction: false },
-          errorMessage: "Nenhuma ação pendente para confirmar.",
+          errorMessage: "Nenhuma acao pendente para confirmar.",
         });
         return json({
           ok: true,
           content: functionContent({
             ok: false,
             tool: "confirm_pending_action",
-            message: "Não há nenhuma ação pendente para confirmar.",
+            message: "Nao ha nenhuma acao pendente para confirmar.",
             needs_clarification: false,
             retryable: false,
           }),
@@ -429,7 +428,7 @@ serve(async (request): Promise<Response> => {
           content: functionContent({
             ok: false,
             tool: "confirm_pending_action",
-            message: "A ação pendente pertence a outra conversa e não pode ser confirmada aqui.",
+            message: "A acao pendente pertence a outra conversa e nao pode ser confirmada aqui.",
             needs_clarification: false,
             retryable: false,
           }),
@@ -442,8 +441,8 @@ serve(async (request): Promise<Response> => {
       const nextState = updateContextFromResult(loadedContext.state, pending.action.toolName, pending.action.arguments, result);
       await saveConversationContext(auth.admin, auth.user.id, sessionId, nextState);
       const message = result.ok
-        ? result.message || "Ação concluída."
-        : `Não consegui executar: ${result.error || "erro desconhecido"}.`;
+        ? result.message || "Acao concluida."
+        : `Nao consegui executar: ${result.error || "erro desconhecido"}.`;
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [{
         kind: "synapse_grounding",
         provider: "deepgram-agent",
@@ -523,7 +522,7 @@ serve(async (request): Promise<Response> => {
         conversationId: sessionId,
         voiceSessionId: voiceSessionId || null,
       } as PendingAction;
-      const message = `Antes de executar, preciso da sua confirmação: ${pendingAction.summary}.`;
+      const message = `Antes de executar, preciso da sua confirmacao: ${pendingAction.summary}.`;
       toolMessage = message;
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [
         pendingAction,

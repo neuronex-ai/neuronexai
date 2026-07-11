@@ -1,5 +1,4 @@
 import { classifyInterruption } from "./intent.js";
-import { normalizeVoicePayload, normalizeVoiceText } from "./speech-normalizer.js";
 
 const SLOW_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_SLOW_FUNCTION_MS || "5500");
 const FOLLOWUP_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_FOLLOWUP_FUNCTION_MS || "9000");
@@ -10,42 +9,42 @@ const TOOL_TIMEOUT_MS = Number(process.env.SYNAPSE_VOICE_TOOL_TIMEOUT_MS || "180
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
 const TOOL_LABELS = {
-  confirm_pending_action: "confirmação pendente",
+  confirm_pending_action: "confirmacao pendente",
   cancel_pending_action: "cancelamento pendente",
-  navigate_system: "navegação",
+  navigate_system: "navegacao",
   search_patients: "busca de paciente",
   list_patients: "lista de pacientes",
-  get_patient_details: "prontuário",
+  get_patient_details: "prontuario",
   report_all_patients: "resumo de pacientes",
-  search_clinical_history: "histórico clínico",
-  generate_patient_insights: "insights clínicos",
-  suggest_treatment_approach: "plano terapêutico",
-  detect_risk_patterns: "análise de risco",
+  search_clinical_history: "historico clinico",
+  generate_patient_insights: "insights clinicos",
+  suggest_treatment_approach: "plano terapeutico",
+  detect_risk_patterns: "analise de risco",
   get_calendar: "agenda",
   create_appointment: "novo agendamento",
-  reschedule_appointment: "remarcação",
+  reschedule_appointment: "remarcacao",
   cancel_appointment: "cancelamento",
-  find_available_slots: "horários disponíveis",
+  find_available_slots: "horarios disponiveis",
   create_patient: "cadastro de paciente",
-  update_patient_info: "atualização do paciente",
-  add_patient_medication: "medicação",
-  create_session_note: "nota clínica",
+  update_patient_info: "atualizacao do paciente",
+  add_patient_medication: "medicacao",
+  create_session_note: "nota clinica",
   send_whatsapp_message: "mensagem",
   read_whatsapp_conversations: "conversas",
   send_email: "email",
   draft_email: "rascunho de email",
   get_financial_metrics: "resumo financeiro",
-  list_transactions: "lançamentos financeiros",
-  create_transaction: "lançamento financeiro",
-  generate_financial_report: "relatório financeiro",
+  list_transactions: "lancamentos financeiros",
+  create_transaction: "lancamento financeiro",
+  generate_financial_report: "relatorio financeiro",
   send_payment_reminder: "lembrete de pagamento",
-  draft_invoice: "cobrança",
+  draft_invoice: "cobranca",
   generate_document: "documento",
   draft_official_document: "documento oficial",
-  search_medical_articles: "referências clínicas",
+  search_medical_articles: "referencias clinicas",
   search_cid10: "CID-10",
-  get_medication_info: "informações de medicação",
-  get_latest_scientific_updates: "atualizações científicas",
+  get_medication_info: "informacoes de medicacao",
+  get_latest_scientific_updates: "atualizacoes cientificas",
   search_normative_docs: "normas profissionais",
 };
 
@@ -68,7 +67,7 @@ function titleize(value) {
   if (/patient|paciente|clinical|history|prontuario/i.test(raw)) return "paciente";
   if (/finance|invoice|payment|transaction|cobranca/i.test(raw)) return "financeiro";
   if (/document|note|nota/i.test(raw)) return "documento";
-  if (/[_{}[\]"]/.test(raw)) return "ação do Synapse";
+  if (/[_{}[\]"]/.test(raw)) return "acao do Synapse";
   return raw
     .replace(/[_-]+/g, " ")
     .replace(/\s+/g, " ")
@@ -90,7 +89,7 @@ function taskLabel(name, args = {}) {
 
 function initialMessage(name, args) {
   const patient = patientFromArgs(args);
-  if (patient) return `Vou conferir as informações de ${patient} no sistema.`;
+  if (patient) return `Vou conferir as informacoes de ${patient} no sistema.`;
   return `Vou consultar ${taskLabel(name, args)} no sistema.`;
 }
 
@@ -99,19 +98,19 @@ function progressMessage(name, args, count) {
   const base = taskLabel(name, args);
   if (patient) {
     return count === 0
-      ? `Ainda estou buscando as informações de ${patient}, só mais um instante.`
-      : `Continuo conferindo ${base}; já volto com o resultado.`;
+      ? `Ainda estou buscando as informacoes de ${patient}, so mais um instante.`
+      : `Continuo conferindo ${base}; ja volto com o resultado.`;
   }
   return count === 0
-    ? `Ainda estou conferindo ${base}, só mais um instante.`
-    : `Continuo trabalhando nisso; já volto com o resultado.`;
+    ? `Ainda estou conferindo ${base}, so mais um instante.`
+    : `Continuo trabalhando nisso; ja volto com o resultado.`;
 }
 
 function retryMessage(name, args) {
   return `A consulta oscilou por aqui. Vou tentar ${taskLabel(name, args)} mais uma vez.`;
 }
 
-function makeAbortError(message = "Operação cancelada.") {
+function makeAbortError(message = "Operacao cancelada.") {
   const error = new Error(message);
   error.name = "AbortError";
   return error;
@@ -149,14 +148,13 @@ function normalizePayload(name, result) {
   const explicitOk = parsed.ok;
   const hasError = Boolean(parsed.error || result?.error);
   const ok = explicitOk === undefined ? !hasError : Boolean(explicitOk);
-  const spoken = normalizeVoiceText(
+  const spoken =
     clean(parsed.spoken_summary, 1200) ||
     clean(parsed.message, 1200) ||
     clean(parsed.error || result?.error, 1200) ||
-    (ok ? "Ferramenta concluída." : "Não consegui concluir a ferramenta agora.")
-  );
+    (ok ? "Ferramenta concluida." : "Nao consegui concluir a ferramenta agora.");
 
-  return normalizeVoicePayload({
+  return {
     ok,
     tool: clean(parsed.tool || name, 120),
     spoken_summary: spoken,
@@ -170,15 +168,15 @@ function normalizePayload(name, result) {
     grounded: Boolean(parsed.grounded),
     recordCount: Number(parsed.recordCount || 0),
     structuredData: parsed.structuredData || null,
-  });
+  };
 }
 
 function humanFailureMessage(error, aborted) {
-  if (aborted) return "A ação foi cancelada antes de concluir.";
+  if (aborted) return "A acao foi cancelada antes de concluir.";
   if (error?.name === "TimeoutError") {
-    return "Essa consulta demorou mais que o esperado e não voltou com segurança. Posso tentar de novo em seguida.";
+    return "Essa consulta demorou mais que o esperado e nao voltou com seguranca. Posso tentar de novo em seguida.";
   }
-  return "Tentei consultar aqui, mas não recebi um retorno confiável. Posso tentar de novo?";
+  return "Tentei consultar aqui, mas nao recebi um retorno confiavel. Posso tentar de novo?";
 }
 
 function failurePayload(name, error, aborted) {
@@ -212,18 +210,17 @@ function clientTask(task) {
 }
 
 export class VoiceFunctionRunner {
-  constructor({ sendDeepgram, sendClient, invokeTool, markLatency }) {
+  constructor({ sendDeepgram, sendClient, invokeTool }) {
     this.sendDeepgram = sendDeepgram;
     this.sendClient = sendClient;
     this.invokeTool = invokeTool;
-    this.markLatency = typeof markLatency === "function" ? markLatency : () => {};
     this.tasks = new Map();
     this.lastInterruptionAt = 0;
     this.queue = Promise.resolve();
   }
 
   injectAgentMessage(message, behavior = "queue") {
-    const text = normalizeVoiceText(clean(message, 420));
+    const text = clean(message, 420);
     if (!text) return;
     this.sendDeepgram({
       type: "InjectAgentMessage",
@@ -233,12 +230,11 @@ export class VoiceFunctionRunner {
   }
 
   sendFunctionResponse(id, name, content, thoughtSignature = "") {
-    const normalizedContent = typeof content === "string" ? normalizeVoiceText(content) : normalizeVoicePayload(content);
     const response = {
       type: "FunctionCallResponse",
       id,
       name,
-      content: typeof normalizedContent === "string" ? normalizedContent : JSON.stringify(normalizedContent),
+      content: typeof content === "string" ? content : JSON.stringify(content),
     };
     if (thoughtSignature) response.thought_signature = thoughtSignature;
     this.sendDeepgram(response);
@@ -315,7 +311,6 @@ export class VoiceFunctionRunner {
       message: "",
     };
     this.tasks.set(id, task);
-    this.markLatency("tool_started", { name, id });
 
     const firstMessage = initialMessage(name, args);
     task.message = firstMessage;
@@ -340,7 +335,6 @@ export class VoiceFunctionRunner {
       }
 
       this.sendFunctionResponse(id, name, payload, thoughtSignature);
-      this.markLatency("function_response_sent", { name, id, ok: payload.ok });
       const completedStatus = payload.confirmation_required ? "confirmation_required" : "completed";
       keepAwaitingConfirmation = payload.ok && payload.confirmation_required;
       this.sendStatus(task, payload.ok ? completedStatus : "failed", {
@@ -362,7 +356,6 @@ export class VoiceFunctionRunner {
       const aborted = controller.signal.aborted || error?.name === "AbortError";
       const payload = failurePayload(name, error, aborted);
       this.sendFunctionResponse(id, name, payload, thoughtSignature);
-      this.markLatency("function_response_sent", { name, id, ok: false });
       this.sendStatus(task, aborted ? "cancelled" : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,
@@ -429,18 +422,13 @@ export class VoiceFunctionRunner {
   }
 
   async invokeToolWithTimeout(task) {
-    const startedAt = Date.now();
     if (!TOOL_TIMEOUT_MS || TOOL_TIMEOUT_MS < 1000) {
-      try {
-        return await this.invokeTool({
-          id: task.id,
-          name: task.name,
-          arguments: task.args,
-          signal: task.controller.signal,
-        });
-      } finally {
-        this.markLatency("tool_completed", { name: task.name, id: task.id, durationMs: Date.now() - startedAt });
-      }
+      return this.invokeTool({
+        id: task.id,
+        name: task.name,
+        arguments: task.args,
+        signal: task.controller.signal,
+      });
     }
 
     const attemptController = new AbortController();
@@ -461,7 +449,6 @@ export class VoiceFunctionRunner {
       }
       throw error;
     } finally {
-      this.markLatency("tool_completed", { name: task.name, id: task.id, durationMs: Date.now() - startedAt });
       clearTimeout(timer);
       task.controller.signal.removeEventListener("abort", onAbort);
     }
@@ -484,7 +471,7 @@ export class VoiceFunctionRunner {
       for (const task of this.tasks.values()) {
         task.controller.abort("user_cancelled");
         this.sendStatus(task, "cancelling", {
-          message: "Cancelando a execução em andamento.",
+          message: "Cancelando a execucao em andamento.",
         });
         this.sendVoiceState("tool_cancelling", task);
       }
@@ -495,7 +482,7 @@ export class VoiceFunctionRunner {
       for (const task of this.tasks.values()) {
         task.interrupted = false;
         this.sendStatus(task, "complement_received", {
-          message: "Complemento recebido; mantendo a execução ativa.",
+          message: "Complemento recebido; mantendo a execucao ativa.",
         });
         this.sendVoiceState("tool_active", task);
       }

@@ -1,5 +1,3 @@
-import { normalizeVoicePayload, normalizeVoiceText } from "../_shared/synapse-voice-speech.ts";
-
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization,x-client-info,apikey,content-type",
@@ -7,12 +5,12 @@ const CORS = {
 };
 
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const DEFAULT_VOICE_LLM_ENDPOINT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const DEFAULT_VOICE_LLM_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
-const DEFAULT_VOICE_LLM_PROVIDER_TYPE = "open_ai";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
-const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt";
+const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
+const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
+const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
+const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
+const ELEVENLABS_LANGUAGE_CODE = "pt";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const json = (payload: Record<string, unknown>, status = 200) =>
@@ -65,48 +63,10 @@ function nvidiaVoiceApiKey() {
   return Deno.env.get("NVIDIA_VOICE_API_KEY") || "";
 }
 
-function voiceLlmProviderType() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_PROVIDER_TYPE") || DEFAULT_VOICE_LLM_PROVIDER_TYPE, 80);
-}
-
-function voiceLlmModel() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_MODEL") || DEFAULT_VOICE_LLM_MODEL, 180);
-}
-
-function voiceLlmEndpointUrl() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_ENDPOINT_URL") || DEFAULT_VOICE_LLM_ENDPOINT_URL, 500);
-}
-
-function voiceLlmApiKey() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_LLM_API_KEY") || nvidiaVoiceApiKey(), 8000);
-}
-
-function nvidiaThinkingOff() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_NVIDIA_THINKING") || "off", 20).toLowerCase() !== "on";
-}
-
-function voiceThinkTemperature() {
-  const explicit = clean(Deno.env.get("SYNAPSE_VOICE_THINK_TEMPERATURE"), 20);
-  if (explicit) return Number(explicit);
-  return 0.35;
-}
-
-function voiceTtsModelId() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_TTS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID, 120);
-}
-
-function voiceTtsVoiceId() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_TTS_VOICE_ID") || DEFAULT_ELEVENLABS_VOICE_ID, 160);
-}
-
-function voiceTtsLanguageCode() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_TTS_LANGUAGE_CODE") || DEFAULT_ELEVENLABS_LANGUAGE_CODE, 20);
-}
-
 function missingConfig() {
   return [
     !Deno.env.get("DEEPGRAM_API_KEY") ? "DEEPGRAM_API_KEY" : "",
-    voiceLlmEndpointUrl() && !voiceLlmApiKey() ? "SYNAPSE_VOICE_LLM_API_KEY ou NVIDIA_VOICE_API_KEY" : "",
+    !nvidiaVoiceApiKey() ? "NVIDIA_VOICE_API_KEY" : "",
     !elevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !Deno.env.get("SUPABASE_URL") ? "SUPABASE_URL" : "",
     !anonKey() ? "SUPABASE_ANON_KEY" : "",
@@ -116,8 +76,8 @@ function missingConfig() {
 
 function gatewayErrorType(error: unknown) {
   const text = clean(error instanceof Error ? error.message : error, 1200).toLowerCase();
-  if (/sessao|sessão|token|auth|unauthorized|401|403|jwt|gateway nao autorizado|gateway não autorizado/.test(text)) return "auth_error";
-  if (/settings|config|api[_ -]?key|secret|supabase nao configurado|supabase não configurado|missing/.test(text)) return "config_error";
+  if (/sessao|token|auth|unauthorized|401|403|jwt|gateway nao autorizado/.test(text)) return "auth_error";
+  if (/settings|config|api[_ -]?key|secret|supabase nao configurado|missing/.test(text)) return "config_error";
   if (/deepgram|eleven|nvidia|provider|websocket|socket|1005|failed_to_speak|failed_to_think/.test(text)) return "provider_error";
   if (/tool|ferramenta/.test(text)) return "tool_error";
   if (/network|fetch|timeout|econn|gateway|503|502|504/.test(text)) return "network_error";
@@ -138,17 +98,6 @@ function sanitizeProviderEvent(event: Record<string, unknown>) {
   };
 }
 
-function normalizeDeepgramClientPayload(payload: unknown) {
-  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
-  const record = payload as Record<string, unknown>;
-  if (record.type !== "InjectUserMessage") return payload;
-
-  const content = clean(record.content || record.message, 4000);
-  const next: Record<string, unknown> = { ...record, content };
-  delete next.message;
-  return next;
-}
-
 function validateAgentSettings(settings: Record<string, unknown>) {
   const agent = settings.agent as Record<string, unknown> | undefined;
   if (!agent || typeof agent !== "object") {
@@ -163,29 +112,20 @@ function validateAgentSettings(settings: Record<string, unknown>) {
     ? think.provider as Record<string, unknown>
     : {};
   think.provider = thinkProvider;
-  thinkProvider.type = voiceLlmProviderType();
-  thinkProvider.model = voiceLlmModel();
-  thinkProvider.temperature = voiceThinkTemperature();
-  if (nvidiaThinkingOff() && clean(Deno.env.get("SYNAPSE_VOICE_ENABLE_REASONING_EFFORT"), 20).toLowerCase() === "true") {
-    thinkProvider.reasoning_effort = "low";
-  }
-
-  const llmEndpointUrl = voiceLlmEndpointUrl();
-  if (llmEndpointUrl) {
-    const thinkEndpoint = think.endpoint && typeof think.endpoint === "object"
-      ? think.endpoint as Record<string, unknown>
-      : {};
-    think.endpoint = thinkEndpoint;
-    thinkEndpoint.url = llmEndpointUrl;
-    thinkEndpoint.headers = {
-      ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers as Record<string, unknown> : {}),
-      authorization: `Bearer ${voiceLlmApiKey()}`,
-    };
-    if (!voiceLlmApiKey()) {
-      throw new Error("Settings de voz incompletos: endpoint LLM ou chave de LLM de voz ausente.");
-    }
-  } else {
-    delete think.endpoint;
+  thinkProvider.type = "open_ai";
+  thinkProvider.model = NVIDIA_VOICE_MODEL;
+  thinkProvider.temperature = SYNAPSE_VOICE_THINK_TEMPERATURE;
+  const thinkEndpoint = think.endpoint && typeof think.endpoint === "object"
+    ? think.endpoint as Record<string, unknown>
+    : {};
+  think.endpoint = thinkEndpoint;
+  thinkEndpoint.url = NVIDIA_VOICE_CHAT_URL;
+  thinkEndpoint.headers = {
+    ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers as Record<string, unknown> : {}),
+    authorization: `Bearer ${nvidiaVoiceApiKey()}`,
+  };
+  if (!clean(thinkEndpoint.url, 500) || !nvidiaVoiceApiKey()) {
+    throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
   }
 
   const listen = agent?.listen as Record<string, unknown> | undefined;
@@ -212,9 +152,9 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   if (speakProvider?.type !== "eleven_labs") {
     throw new Error("Settings de voz invalidos: o Synapse usa somente ElevenLabs via Deepgram.");
   }
-  speakProvider.model_id = voiceTtsModelId();
-  speakProvider.language_code = voiceTtsLanguageCode();
-  const voiceId = clean(speakProvider.voice_id, 160) || voiceTtsVoiceId();
+  speakProvider.model_id = ELEVENLABS_MODEL_ID;
+  speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
+  const voiceId = clean(speakProvider.voice_id, 160) || ELEVENLABS_VOICE_ID;
   if ("voice_id" in speakProvider) {
     delete speakProvider.voice_id;
   }
@@ -270,42 +210,42 @@ const MAX_TOOL_RETRIES = Number(Deno.env.get("SYNAPSE_VOICE_MAX_TOOL_RETRIES") |
 const TOOL_TIMEOUT_MS = Number(Deno.env.get("SYNAPSE_VOICE_TOOL_TIMEOUT_MS") || "18000");
 
 const TOOL_LABELS: Record<string, string> = {
-  confirm_pending_action: "confirmação pendente",
+  confirm_pending_action: "confirmacao pendente",
   cancel_pending_action: "cancelamento pendente",
-  navigate_system: "navegação",
+  navigate_system: "navegacao",
   search_patients: "busca de paciente",
   list_patients: "lista de pacientes",
-  get_patient_details: "prontuário",
+  get_patient_details: "prontuario",
   report_all_patients: "resumo de pacientes",
-  search_clinical_history: "histórico clínico",
-  generate_patient_insights: "insights clínicos",
-  suggest_treatment_approach: "plano terapêutico",
-  detect_risk_patterns: "análise de risco",
+  search_clinical_history: "historico clinico",
+  generate_patient_insights: "insights clinicos",
+  suggest_treatment_approach: "plano terapeutico",
+  detect_risk_patterns: "analise de risco",
   get_calendar: "agenda",
   create_appointment: "novo agendamento",
-  reschedule_appointment: "remarcação",
+  reschedule_appointment: "remarcacao",
   cancel_appointment: "cancelamento",
-  find_available_slots: "horários disponíveis",
+  find_available_slots: "horarios disponiveis",
   create_patient: "cadastro de paciente",
-  update_patient_info: "atualização do paciente",
-  add_patient_medication: "medicação",
-  create_session_note: "nota clínica",
+  update_patient_info: "atualizacao do paciente",
+  add_patient_medication: "medicacao",
+  create_session_note: "nota clinica",
   send_whatsapp_message: "mensagem",
   read_whatsapp_conversations: "conversas",
   send_email: "email",
   draft_email: "rascunho de email",
   get_financial_metrics: "resumo financeiro",
-  list_transactions: "lançamentos financeiros",
-  create_transaction: "lançamento financeiro",
-  generate_financial_report: "relatório financeiro",
+  list_transactions: "lancamentos financeiros",
+  create_transaction: "lancamento financeiro",
+  generate_financial_report: "relatorio financeiro",
   send_payment_reminder: "lembrete de pagamento",
-  draft_invoice: "cobrança",
+  draft_invoice: "cobranca",
   generate_document: "documento",
   draft_official_document: "documento oficial",
-  search_medical_articles: "referências clínicas",
+  search_medical_articles: "referencias clinicas",
   search_cid10: "CID-10",
-  get_medication_info: "informações de medicação",
-  get_latest_scientific_updates: "atualizações científicas",
+  get_medication_info: "informacoes de medicacao",
+  get_latest_scientific_updates: "atualizacoes cientificas",
   search_normative_docs: "normas profissionais",
 };
 
@@ -328,7 +268,7 @@ const titleizeTool = (value: unknown) => {
   if (/patient|paciente|clinical|history|prontuario/i.test(raw)) return "paciente";
   if (/finance|invoice|payment|transaction|cobranca/i.test(raw)) return "financeiro";
   if (/document|note|nota/i.test(raw)) return "documento";
-  if (/[_{}[\]"]/.test(raw)) return "ação do Synapse";
+  if (/[_{}[\]"]/.test(raw)) return "acao do Synapse";
   return raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
 };
 
@@ -346,7 +286,7 @@ const taskLabel = (name: string, args: Record<string, unknown> = {}) => {
 
 const initialMessage = (name: string, args: Record<string, unknown>) => {
   const patient = patientFromArgs(args);
-  if (patient) return `Vou conferir as informações de ${patient} no sistema.`;
+  if (patient) return `Vou conferir as informacoes de ${patient} no sistema.`;
   return `Vou consultar ${taskLabel(name, args)} no sistema.`;
 };
 
@@ -355,18 +295,18 @@ const progressMessage = (name: string, args: Record<string, unknown>, count: num
   const base = taskLabel(name, args);
   if (patient) {
     return count === 0
-      ? `Ainda estou buscando as informações de ${patient}, só mais um instante.`
-      : `Continuo conferindo ${base}; já volto com o resultado.`;
+      ? `Ainda estou buscando as informacoes de ${patient}, so mais um instante.`
+      : `Continuo conferindo ${base}; ja volto com o resultado.`;
   }
   return count === 0
-    ? `Ainda estou conferindo ${base}, só mais um instante.`
-    : "Continuo trabalhando nisso; já volto com o resultado.";
+    ? `Ainda estou conferindo ${base}, so mais um instante.`
+    : "Continuo trabalhando nisso; ja volto com o resultado.";
 };
 
 const retryMessage = (name: string, args: Record<string, unknown>) =>
   `A consulta oscilou por aqui. Vou tentar ${taskLabel(name, args)} mais uma vez.`;
 
-const makeAbortError = (message = "Operação cancelada.") => {
+const makeAbortError = (message = "Operacao cancelada.") => {
   const error = new Error(message);
   error.name = "AbortError";
   return error;
@@ -403,14 +343,13 @@ const normalizeToolPayload = (name: string, result: Record<string, unknown>) => 
   const explicitOk = parsed.ok;
   const hasError = Boolean(parsed.error || result?.error);
   const ok = explicitOk === undefined ? !hasError : Boolean(explicitOk);
-  const spoken = normalizeVoiceText(
+  const spoken =
     clean(parsed.spoken_summary, 1200) ||
     clean(parsed.message, 1200) ||
     clean(parsed.error || result?.error, 1200) ||
-    (ok ? "Ferramenta concluída." : "Não consegui concluir a ferramenta agora.")
-  );
+    (ok ? "Ferramenta concluida." : "Nao consegui concluir a ferramenta agora.");
 
-  return normalizeVoicePayload({
+  return {
     ok,
     tool: clean(parsed.tool || name, 120),
     spoken_summary: spoken,
@@ -425,16 +364,16 @@ const normalizeToolPayload = (name: string, result: Record<string, unknown>) => 
     grounded: Boolean(parsed.grounded),
     recordCount: Number(parsed.recordCount || 0),
     structuredData: parsed.structuredData || null,
-  }) as any;
+  };
 };
 
 const failurePayload = (name: string, error: unknown, aborted: boolean) => {
   const typed = error as { name?: string; message?: string };
   const message = aborted
-    ? "A ação foi cancelada antes de concluir."
+    ? "A acao foi cancelada antes de concluir."
     : typed?.name === "TimeoutError"
-      ? "Essa consulta demorou mais que o esperado e não voltou com segurança. Posso tentar de novo em seguida."
-      : "Tentei consultar aqui, mas não recebi um retorno confiável. Posso tentar de novo?";
+      ? "Essa consulta demorou mais que o esperado e nao voltou com seguranca. Posso tentar de novo em seguida."
+      : "Tentei consultar aqui, mas nao recebi um retorno confiavel. Posso tentar de novo?";
   return {
     ok: false,
     tool: name,
@@ -485,7 +424,6 @@ class EdgeVoiceFunctionRunner {
     arguments: Record<string, unknown>;
     signal?: AbortSignal;
   }) => Promise<Record<string, unknown>>;
-  private markLatency: (event: string, data?: Record<string, unknown>) => void;
   private tasks = new Map<string, VoiceTask>();
   private lastInterruptionAt = 0;
   private queue: Promise<void> = Promise.resolve();
@@ -499,27 +437,24 @@ class EdgeVoiceFunctionRunner {
       arguments: Record<string, unknown>;
       signal?: AbortSignal;
     }) => Promise<Record<string, unknown>>;
-    markLatency?: (event: string, data?: Record<string, unknown>) => void;
   }) {
     this.sendDeepgram = options.sendDeepgram;
     this.sendClient = options.sendClient;
     this.invokeTool = options.invokeTool;
-    this.markLatency = options.markLatency || (() => {});
   }
 
   injectAgentMessage(message: string, behavior = "queue") {
-    const text = normalizeVoiceText(clean(message, 420));
+    const text = clean(message, 420);
     if (!text) return;
     this.sendDeepgram({ type: "InjectAgentMessage", message: text, behavior });
   }
 
   sendFunctionResponse(id: string, name: string, content: unknown, thoughtSignature = "") {
-    const normalizedContent = typeof content === "string" ? normalizeVoiceText(content) : normalizeVoicePayload(content);
     const response: Record<string, unknown> = {
       type: "FunctionCallResponse",
       id,
       name,
-      content: typeof normalizedContent === "string" ? normalizedContent : JSON.stringify(normalizedContent),
+      content: typeof content === "string" ? content : JSON.stringify(content),
     };
     if (thoughtSignature) response.thought_signature = thoughtSignature;
     this.sendDeepgram(response);
@@ -593,7 +528,6 @@ class EdgeVoiceFunctionRunner {
       message: "",
     };
     this.tasks.set(id, task);
-    this.markLatency("tool_started", { name, id });
 
     const firstMessage = initialMessage(name, args);
     task.message = firstMessage;
@@ -615,7 +549,6 @@ class EdgeVoiceFunctionRunner {
       }
 
       this.sendFunctionResponse(id, name, payload, thoughtSignature);
-      this.markLatency("function_response_sent", { name, id, ok: payload.ok });
       const completedStatus = payload.confirmation_required ? "confirmation_required" : "completed";
       keepAwaitingConfirmation = Boolean(payload.ok && payload.confirmation_required);
       this.sendStatus(task, payload.ok ? completedStatus : "failed", {
@@ -634,7 +567,6 @@ class EdgeVoiceFunctionRunner {
       const aborted = controller.signal.aborted || (error as { name?: string })?.name === "AbortError";
       const payload = failurePayload(name, error, aborted);
       this.sendFunctionResponse(id, name, payload, thoughtSignature);
-      this.markLatency("function_response_sent", { name, id, ok: false });
       this.sendStatus(task, aborted ? "cancelled" : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,
@@ -694,18 +626,13 @@ class EdgeVoiceFunctionRunner {
   }
 
   async invokeToolWithTimeout(task: VoiceTask) {
-    const startedAt = Date.now();
     if (!TOOL_TIMEOUT_MS || TOOL_TIMEOUT_MS < 1000) {
-      try {
-        return await this.invokeTool({
-          id: task.id,
-          name: task.name,
-          arguments: task.args,
-          signal: task.controller.signal,
-        });
-      } finally {
-        this.markLatency("tool_completed", { name: task.name, id: task.id, durationMs: Date.now() - startedAt });
-      }
+      return this.invokeTool({
+        id: task.id,
+        name: task.name,
+        arguments: task.args,
+        signal: task.controller.signal,
+      });
     }
 
     const attemptController = new AbortController();
@@ -724,7 +651,6 @@ class EdgeVoiceFunctionRunner {
       if (attemptController.signal.aborted && !task.controller.signal.aborted) throw makeTimeoutError();
       throw error;
     } finally {
-      this.markLatency("tool_completed", { name: task.name, id: task.id, durationMs: Date.now() - startedAt });
       clearTimeout(timer);
       task.controller.signal.removeEventListener("abort", onAbort);
     }
@@ -742,7 +668,7 @@ class EdgeVoiceFunctionRunner {
     if (intent === "cancel") {
       for (const task of this.tasks.values()) {
         task.controller.abort("user_cancelled");
-        this.sendStatus(task, "cancelling", { message: "Cancelando a execução em andamento." });
+        this.sendStatus(task, "cancelling", { message: "Cancelando a execucao em andamento." });
         this.sendVoiceState("tool_cancelling", task);
       }
       return;
@@ -751,7 +677,7 @@ class EdgeVoiceFunctionRunner {
       for (const task of this.tasks.values()) {
         task.interrupted = false;
         this.sendStatus(task, "complement_received", {
-          message: "Complemento recebido; mantendo a execução ativa.",
+          message: "Complemento recebido; mantendo a execucao ativa.",
         });
         this.sendVoiceState("tool_active", task);
       }
@@ -777,13 +703,6 @@ class EdgeSynapseVoiceSession {
   private persistenceDisabled = false;
   private closed = false;
   private lastProviderEvent: Record<string, unknown> | null = null;
-  private lastUserTranscriptAt = 0;
-  private lastResponseActivityAt = 0;
-  private noResponseRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
-  private noResponseRecoveryCount = 0;
-  private lastFunctionResponseAt = 0;
-  private waitingAudioAfterUser = false;
-  private waitingAudioAfterFunction = false;
 
   constructor(client: WebSocket) {
     this.client = client;
@@ -791,7 +710,6 @@ class EdgeSynapseVoiceSession {
       sendDeepgram: (payload) => this.sendDeepgram(payload),
       sendClient: (payload) => this.sendClient(payload),
       invokeTool: (input) => this.invokeTool(input),
-      markLatency: (event, data) => this.markRunnerLatency(event, data),
     });
   }
 
@@ -803,12 +721,12 @@ class EdgeSynapseVoiceSession {
   sendDeepgram(payload: unknown, binary = false) {
     const socket = this.deepgram;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(binary ? payload as ArrayBuffer : JSON.stringify(normalizeDeepgramClientPayload(payload)));
+    socket.send(binary ? payload as ArrayBuffer : JSON.stringify(payload));
   }
 
   async start(payload: Record<string, unknown>) {
     const missing = missingConfig();
-    if (missing.length) throw new Error(`Configuração de voz ausente: ${missing.join(", ")}.`);
+    if (missing.length) throw new Error(`Configuracao de voz ausente: ${missing.join(", ")}.`);
 
     this.authorization = clean(payload.authorization || payload.token, 4000);
     if (this.authorization && !this.authorization.startsWith("Bearer ")) {
@@ -879,18 +797,9 @@ class EdgeSynapseVoiceSession {
 
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
-        this.markAgentActivity();
         if (!this.firstAudioByteSeen) {
           this.firstAudioByteSeen = true;
           this.latencyMs.first_audio_byte_ms = Date.now() - this.startedAt;
-        }
-        if (this.waitingAudioAfterUser && this.lastUserTranscriptAt) {
-          this.waitingAudioAfterUser = false;
-          this.latencyMs.first_audio_after_last_user_ms = Date.now() - this.lastUserTranscriptAt;
-        }
-        if (this.waitingAudioAfterFunction && this.lastFunctionResponseAt) {
-          this.waitingAudioAfterFunction = false;
-          this.latencyMs.first_audio_after_last_function_ms = Date.now() - this.lastFunctionResponseAt;
         }
         this.sendClient(event.data, true);
         return;
@@ -912,7 +821,6 @@ class EdgeSynapseVoiceSession {
 
     ws.onclose = (event) => {
       if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
-      this.clearNoResponseRecovery();
       const closeReason = clean(event.reason || this.lastProviderEvent?.message || "", 500);
       void this.updateVoiceSession(this.settingsApplied ? "ended" : "error", {
         closeCode: event.code,
@@ -959,36 +867,19 @@ class EdgeSynapseVoiceSession {
         });
         break;
       case "FunctionCallRequest":
-        this.markAgentActivity();
         this.latencyMs.first_tool_request_ms ??= Date.now() - this.startedAt;
-        this.latencyMs.last_tool_request_ms = Date.now() - this.startedAt;
-        if (this.lastUserTranscriptAt) {
-          this.latencyMs.last_transcript_to_tool_request_ms = Date.now() - this.lastUserTranscriptAt;
-        }
         void this.runner.handleFunctionCallRequest(event);
         break;
       case "UserStartedSpeaking":
       case "AgentAudioInterrupted":
         this.runner.onUserStartedSpeaking();
         break;
-      case "AgentThinking":
-      case "AgentStartedSpeaking":
-        this.markAgentActivity();
-        break;
       case "ConversationText": {
         const text = conversationText(event);
         if (!text) break;
         if (isUserRole(text.role)) this.runner.onUserTranscript(text.content);
         if (isUserRole(text.role) || isAssistantRole(text.role)) {
-          if (isUserRole(text.role)) {
-            this.latencyMs.first_transcript_ms ??= Date.now() - this.startedAt;
-            this.latencyMs.last_user_transcript_ms = Date.now() - this.startedAt;
-            this.lastUserTranscriptAt = Date.now();
-            this.waitingAudioAfterUser = true;
-            this.armNoResponseRecovery(text.content);
-          } else if (isAssistantRole(text.role)) {
-            this.markAgentActivity();
-          }
+          if (isUserRole(text.role)) this.latencyMs.first_transcript_ms ??= Date.now() - this.startedAt;
           void this.persistMessage(text.role, text.content, event);
         }
         break;
@@ -1013,73 +904,6 @@ class EdgeSynapseVoiceSession {
         break;
       default:
         break;
-    }
-  }
-
-  markAgentActivity() {
-    this.lastResponseActivityAt = Date.now();
-    this.clearNoResponseRecovery();
-  }
-
-  clearNoResponseRecovery() {
-    if (!this.noResponseRecoveryTimer) return;
-    clearTimeout(this.noResponseRecoveryTimer);
-    this.noResponseRecoveryTimer = null;
-  }
-
-  armNoResponseRecovery(text: string) {
-    this.clearNoResponseRecovery();
-    this.noResponseRecoveryCount = 0;
-    const transcript = normalizeVoiceText(clean(text, 1600));
-    if (!transcript) return;
-
-    const runRecovery = () => {
-      if (this.closed || !this.settingsApplied || !isOpen(this.deepgram)) return;
-      if (!this.lastUserTranscriptAt || this.lastResponseActivityAt >= this.lastUserTranscriptAt) return;
-
-      this.noResponseRecoveryCount += 1;
-      if (this.noResponseRecoveryCount === 1) {
-        this.latencyMs.last_silent_transcript_reinject_ms = Date.now() - this.startedAt;
-        this.sendDeepgram({ type: "InjectUserMessage", content: transcript });
-        this.sendClient({
-          type: "gateway_warning",
-          errorType: "voice_recovery",
-          error: "O comando foi ouvido, mas o agente demorou para responder. Reenviei a fala para manter a conversa.",
-        });
-        this.noResponseRecoveryTimer = setTimeout(runRecovery, 8500);
-        return;
-      }
-
-      this.latencyMs.last_silent_transcript_fallback_ms = Date.now() - this.startedAt;
-      this.sendDeepgram({
-        type: "InjectAgentMessage",
-        message: "Estou te ouvindo, mas a resposta demorou mais que o normal. Pode repetir o comando de forma mais direta?",
-        behavior: "queue",
-      });
-      this.noResponseRecoveryTimer = null;
-    };
-
-    this.noResponseRecoveryTimer = setTimeout(runRecovery, 6000);
-  }
-
-  markRunnerLatency(event: string, data: Record<string, unknown> = {}) {
-    const now = Date.now();
-    if (event === "tool_started") {
-      this.latencyMs.last_tool_started_ms = now - this.startedAt;
-      if (this.lastUserTranscriptAt) {
-        this.latencyMs.last_transcript_to_tool_started_ms = now - this.lastUserTranscriptAt;
-      }
-      return;
-    }
-    if (event === "tool_completed") {
-      this.latencyMs.last_tool_completed_ms = now - this.startedAt;
-      this.latencyMs.last_tool_duration_ms = Math.max(0, Number(data.durationMs || 0));
-      return;
-    }
-    if (event === "function_response_sent") {
-      this.lastFunctionResponseAt = now;
-      this.waitingAudioAfterFunction = true;
-      this.latencyMs.last_function_response_sent_ms = now - this.startedAt;
     }
   }
 
@@ -1189,9 +1013,9 @@ class EdgeSynapseVoiceSession {
   }
 
   injectUserMessage(message: unknown) {
-    const text = normalizeVoiceText(clean(message, 2000));
+    const text = clean(message, 2000);
     if (!text) return;
-    this.sendDeepgram({ type: "InjectUserMessage", content: text });
+    this.sendDeepgram({ type: "InjectUserMessage", message: text });
   }
 
   startKeepAlive() {
@@ -1215,7 +1039,7 @@ class EdgeSynapseVoiceSession {
         this.sendClient({
           type: "gateway_error",
           errorType: gatewayErrorType(error),
-          error: clean(error instanceof Error ? error.message : "Não foi possível iniciar voz.", 1000),
+          error: clean(error instanceof Error ? error.message : "Nao foi possivel iniciar voz.", 1000),
         });
         this.close();
       });
@@ -1244,7 +1068,6 @@ class EdgeSynapseVoiceSession {
     if (this.closed) return;
     this.closed = true;
     if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
-    this.clearNoResponseRecovery();
     void this.updateVoiceSession(this.settingsApplied ? "ended" : "cancelled", {
       closeReason: "client_closed",
     });
@@ -1265,14 +1088,6 @@ Deno.serve((request) => {
       voicePath: "deepgram-agent-nvidia-byo-elevenlabs",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
       nvidiaVoiceConfigured: Boolean(nvidiaVoiceApiKey()),
-      voiceLlmProvider: voiceLlmProviderType(),
-      voiceLlmModel: voiceLlmModel(),
-      voiceLlmEndpointConfigured: Boolean(voiceLlmEndpointUrl()),
-      nvidiaThinking: nvidiaThinkingOff() ? "off" : "on",
-      voiceThinkTemperature: voiceThinkTemperature(),
-      voiceTtsModel: voiceTtsModelId(),
-      voiceTtsVoiceId: voiceTtsVoiceId(),
-      voiceTtsLanguageCode: voiceTtsLanguageCode(),
       elevenLabsConfigured: Boolean(elevenLabsApiKey()),
       supabaseConfigured: Boolean(Deno.env.get("SUPABASE_URL") && anonKey()),
       gatewaySecretConfigured: Boolean(gatewaySecret()),
