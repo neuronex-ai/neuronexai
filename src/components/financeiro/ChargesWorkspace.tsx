@@ -37,7 +37,7 @@ import {
   type ChargeTypeFilter,
   useChargesPage,
 } from "@/hooks/use-charges-page";
-import { useUpdateFinancialEntry } from "@/hooks/use-financial-entries";
+import{buildFinancialEntryIdempotencyKey,toFinancialPaymentMethod,useTransitionFinancialEntry}from"@/hooks/use-financial-entries";
 import { useInvoiceActions } from "@/hooks/use-invoices";
 import { usePatients } from "@/hooks/use-patients";
 import { cn, formatCurrency } from "@/lib/utils";
@@ -101,7 +101,7 @@ const getPaymentLink = (row: ChargeRow) => row.links.paymentUrl || row.links.pdf
 export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: ChargesWorkspaceProps) {
   const { data: patients = [] } = usePatients();
   const invoiceActions = useInvoiceActions();
-  const updateEntry = useUpdateFinancialEntry();
+  const updateEntry=useTransitionFinancialEntry();
   const [page, setPage] = useState(1);
   const [pageSize] = useState(25);
   const [searchQuery, setSearchQuery] = useState("");
@@ -177,13 +177,8 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
   const updateManagementStatus = async (row: ChargeRow, status: ChargeStatusFilter) => {
     if (!row.financialEntryId) return;
     try {
-      await updateEntry.mutateAsync({
-        id: row.financialEntryId,
-        status,
-        paidAt: status === "paid" ? new Date() : null,
-        cancelledAt: status === "cancelled" ? new Date() : null,
-        cancelledReason: status === "cancelled" ? "manual_charge_cancelled" : null,
-      });
+      if(status==="pending")throw new Error("Lançamentos pagos não podem voltar para pendente. Use estorno.");
+      await updateEntry.mutateAsync(status==="paid"?{id:row.financialEntryId,action:"settle",amount:row.amount,effectiveAt:new Date(),paymentMethod:toFinancialPaymentMethod(row.paymentMethod),idempotencyKey:buildFinancialEntryIdempotencyKey(["charge-settle",row.financialEntryId,crypto.randomUUID()])}:{id:row.financialEntryId,action:"cancel",reason:"Cancelamento solicitado na Gestão Financeira",idempotencyKey:buildFinancialEntryIdempotencyKey(["charge-cancel",row.financialEntryId,crypto.randomUUID()])});
       toast.success("Cobrança atualizada.");
     } catch (error) {
       console.error("Falha ao atualizar cobrança:", error);

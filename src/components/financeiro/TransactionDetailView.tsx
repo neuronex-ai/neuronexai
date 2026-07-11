@@ -46,7 +46,7 @@ const openDocument = (url: string, unavailableMessage: string) => {
 
 const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewProps) => {
     const isIncome = transaction.type === "income";
-    const isNeuro = Boolean(transaction.external_reference || transaction.origin === "gateway_auto");
+    const metadata=((transaction as any).metadata||{})as Record<string,any>;const financialStatus=String(metadata.financial_entry_status||transaction.status||"pending").toLowerCase();const isPaid=financialStatus==="paid"||transaction.status==="completed";const isCancelled=["cancelled","canceled"].includes(financialStatus);const isNeuro=Boolean(transaction.origin==="gateway_auto"||metadata.neurofinance_charge_id||metadata.neurofinance_transaction_id||metadata.provider_payment_id||metadata.asaas_payment_id);const isReconciled=Boolean(metadata.neurofinance_transaction_id||metadata.reconciliation_id||metadata.reconciliation_status==="matched");
     const patientName = (transaction as any).patient_name || (transaction as any).patients?.name;
     const invoiceUrl = getDocumentUrl(transaction, "invoice");
     const patientEmail = (transaction as any).patient_email || (transaction as any).patients?.email;
@@ -75,12 +75,12 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                     <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
                 </Button>
                 <div className="flex items-center gap-2">
-                    <ReceiptModal transaction={transaction} patientEmail={patientEmail}>
+                    {isPaid?<ReceiptModal transaction={transaction} patientEmail={patientEmail}>
                         <Button variant="outline" size="sm" className="h-10 rounded-full border-zinc-200 px-6 text-[10px] font-black uppercase tracking-widest dark:border-white/10">
                             <Receipt className="mr-2 h-3.5 w-3.5" /> Recibo
                         </Button>
-                    </ReceiptModal>
-                    {isNeuro && (
+                    </ReceiptModal>:null}
+                    {isNeuro && invoiceUrl && (
                         <Button onClick={() => openDocument(invoiceUrl, "Fatura ainda não disponível para esta movimentação.")} variant="outline" size="sm" className="h-10 rounded-full border-zinc-200 px-6 text-[10px] font-black uppercase tracking-widest dark:border-white/10">
                             <FileText className="mr-2 h-3.5 w-3.5" /> Fatura
                         </Button>
@@ -117,8 +117,8 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                 <InfoRow
                     icon={ShieldCheck}
                     label="Status da operação"
-                    value={transaction.status === "completed" ? "Efetivado" : "Pendente"}
-                    subValue={isNeuro ? "Conciliado no NeuroFinance" : "Registro manual"}
+                    value={isCancelled?"Cancelado":isPaid?"Efetivado":financialStatus==="overdue"?"Vencido":"Pendente"}
+                    subValue={isNeuro?(isReconciled?"Conciliado no NeuroFinance":"Vinculado ao NeuroFinance"):"Registro da gestão financeira"}
                 />
                 {patientName && <InfoRow icon={User} label="Paciente vinculado" value={patientName} />}
                 <InfoRow
@@ -147,7 +147,7 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                     <div className="relative z-10 flex items-center justify-between">
                         <div>
                             <h4 className="mb-1 text-[11px] font-black uppercase tracking-[0.2em] opacity-70">Movimentação segura</h4>
-                            <p className="text-[13px] font-black uppercase tracking-tight">Processada e conciliada no NeuroFinance</p>
+                            <p className="text-[13px] font-black uppercase tracking-tight">{isReconciled?"Processada e conciliada no NeuroFinance":"Cobrança vinculada ao NeuroFinance"}</p>
                         </div>
                         <ShieldCheck className="h-8 w-8 opacity-40 transition-transform duration-500 group-hover:scale-110" />
                     </div>

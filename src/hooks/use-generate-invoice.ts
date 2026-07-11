@@ -13,6 +13,7 @@ interface GenerateInvoiceData {
   billingType?: string;
   paymentMethodType?: string[];
   financialEntryId?: string | null;
+  operationId?:string;
 }
 
 interface GenerateInvoiceResponse {
@@ -72,6 +73,7 @@ export const useGenerateInvoice = () => {
           payment_methods: methods,       // array as backup
           due_date: data.dueDate.toISOString().split('T')[0],
           financial_entry_id: data.financialEntryId || null,
+          operation_id:data.operationId||crypto.randomUUID(),
         }),
       });
 

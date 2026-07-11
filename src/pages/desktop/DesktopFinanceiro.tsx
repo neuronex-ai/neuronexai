@@ -4,11 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ElementType } from "react";
 import { useLocation } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { isAfter, subDays, subMonths } from "date-fns";
+import { isAfter, subDays } from "date-fns";
 import {
   Activity,
   ArrowDownLeft,
-  ArrowUpRight,
   BadgeCent,
   Barcode,
   CalendarClock,
@@ -19,7 +18,6 @@ import {
   History,
   Key,
   Landmark,
-  Loader2,
   PlusCircle,
   QrCode,
   Receipt,
@@ -35,7 +33,6 @@ import {
 
 import { cn } from "@/lib/utils";
 import { useTransactions } from "@/hooks/use-transactions";
-import { useFinancialSettings } from "@/hooks/use-financial-settings";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
 import { useNeuroFinanceStatement } from "@/hooks/use-neurofinance-statement";
 import { useNeuroFinanceBalanceDetails } from "@/hooks/use-neurofinance-balance-details";
@@ -74,12 +71,10 @@ const FINANCE_NAV: NavItem[] = [
     icon: Landmark,
     subItems: [
       { id: "gestao-visao-geral", label: "Visão Geral", icon: Landmark, description: "Resultado, previsão, recebíveis e pendências do consultório" },
-      { id: "gestao-fluxo-caixa", label: "Fluxo de Caixa", icon: TrendingUp, description: "Realizado, previsto, projetado e cenários" },
-      { id: "gestao-receitas", label: "Receitas", icon: ArrowUpRight, description: "Entradas confirmadas, ticket médio e fontes de receita" },
-      { id: "gestao-despesas", label: "Despesas", icon: ArrowDownLeft, description: "Custos fixos, variáveis e categorias" },
+      { id: "gestao-lancamentos", label: "Lançamentos", icon: Receipt, description: "Receitas e despesas" },
       { id: "gestao-cobrancas", label: "Cobranças", icon: WalletCards, description: "Cobranças abertas, vencidas e recorrentes" },
-      { id: "gestao-planejamento", label: "Planejamento", icon: Sparkles, description: "Metas, ponto de equilíbrio e previsibilidade" },
-      { id: "gestao-relatorios", label: "Relatórios", icon: FileText, description: "DRE simplificada, fluxo e resumo para contador" },
+      { id: "gestao-recebimentos", label: "Recebimentos", icon: ArrowDownLeft, description: "Baixas e valores em aberto" },
+      { id: "gestao-planejamento", label: "Planejamento", icon: Sparkles, description: "Metas e recorrências" },
     ],
   },
   { id: "account-balance-root", sectionLabel: "NeuroFinance", label: "Conta e Saldo", icon: CreditCard, subItems: [{ id: "conta-digital", label: "Conta e Saldo", icon: CreditCard }] },
@@ -151,8 +146,8 @@ const FINANCE_NAV: NavItem[] = [
   { id: "bank-settings-root", label: "Ajustes", icon: Settings, subItems: [{ id: "saude-conta", label: "Saúde da conta", icon: ShieldCheck }] },
 ];
 
-const SIDEBAR_COLLAPSED_WIDTH = 88;
-const SIDEBAR_EXPANDED_WIDTH = 318;
+const SIDEBAR_COLLAPSED_WIDTH = 280;
+const SIDEBAR_EXPANDED_WIDTH = 280;
 const SIDEBAR_EASE = [0.22, 1, 0.36, 1] as const;
 const SIDEBAR_ENTER_DELAY = 45;
 const SIDEBAR_LEAVE_DELAY = 90;
@@ -172,18 +167,17 @@ const getInitialFinanceView = (pathname: string, search: string): FinanceView =>
 const DesktopFinanceiro = () => {
   const location = useLocation();
   const shouldReduceSidebarMotion = useReducedMotion();
-  const { isLoading: isLoadingConnect } = useFinancialAccount();
-  const { data: transactions, isLoading: isLoadingTransactions } = useTransactions(subMonths(new Date(), 3));
+  const financialAccount=useFinancialAccount();
+  const { data: transactions, isLoading: isLoadingTransactions } = useTransactions(undefined,undefined,5000);
   const { data: nbStatement, isLoading: isNbStatementLoading } = useNeuroFinanceStatement(subDays(new Date(), 30), new Date());
   const { data: nbFutureDetails, isLoading: isNbFutureLoading } = useNeuroFinanceBalanceDetails("futuro");
-  const { isLoading: isLoadingSettings } = useFinancialSettings();
 
   const [activeView, setActiveView] = useState<FinanceView>(() => getInitialFinanceView(location.pathname, location.search));
   const [extratoTab, setExtratoTab] = useState<"realizado" | "futuro" | "assinaturas">("realizado");
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
-  const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
-  const [showSidebarDetails, setShowSidebarDetails] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [showSidebarDetails, setShowSidebarDetails] = useState(true);
   const [agentTransactionModalOpen, setAgentTransactionModalOpen] = useState(false);
   const sidebarIntentTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarDetailsTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -262,6 +256,7 @@ const DesktopFinanceiro = () => {
   useEffect(() => () => clearSidebarTimers(), [clearSidebarTimers]);
 
   const setSidebarExpandedWithIntent = useCallback((expanded: boolean) => {
+    if(!expanded){setIsSidebarExpanded(true);setShowSidebarDetails(true);return;}
     clearSidebarTimers();
 
     if (shouldReduceSidebarMotion) {
@@ -313,14 +308,6 @@ const DesktopFinanceiro = () => {
     exit: { opacity: 0, x: -20, filter: "blur(10px)" },
     transition: { duration: shouldReduceSidebarMotion ? 0 : 0.28, ease: SIDEBAR_EASE },
   };
-
-  if (isLoadingConnect || isLoadingSettings) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background font-sans">
-        <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return (
     <div className="relative flex min-h-screen w-full flex-col bg-background pt-10 font-sans text-foreground selection:bg-primary/20">
@@ -430,6 +417,8 @@ const DesktopFinanceiro = () => {
               activeView={activeView}
               setActiveView={setActiveView}
               allTransactions={allTransactions}
+              managementTransactions={transactions||[]}
+              neurofinance={{enabled:Boolean(financialAccount.isConnected),connected:financialAccount.isConnected}}
               isLoadingTransactions={isLoadingTransactions}
               motionProps={motionProps}
               extratoTab={extratoTab}

@@ -56,10 +56,13 @@ import { ChargebacksPanel } from "@/components/financeiro/cobrancas/ChargebacksP
 import { AsaasAccountStatusTimeline } from "@/components/financeiro/AsaasAccountStatusTimeline";
 import { DetailedStatementPanel } from "@/components/financeiro/DetailedStatementPanel";
 import { FinancialManagementDashboard } from "@/components/financeiro/management/FinancialManagementDashboard";
+import type{NeuroFinanceManagementContext}from"@/components/financeiro/management/FinancialManagementDashboard";
 import type { Transaction } from "@/types";
 
 export type FinanceView =
     | "gestao-visao-geral"
+    | "gestao-lancamentos"
+    | "gestao-recebimentos"
     | "gestao-fluxo-caixa"
     | "gestao-receitas"
     | "gestao-despesas"
@@ -197,6 +200,8 @@ export interface FinancialDashboardProps {
     activeView: FinanceView;
     setActiveView: (view: FinanceView) => void;
     allTransactions: Transaction[];
+    managementTransactions?:Transaction[];
+    neurofinance?:NeuroFinanceManagementContext;
     isLoadingTransactions: boolean;
     motionProps: HTMLMotionProps<"div">;
     extratoTab: "realizado" | "futuro" | "assinaturas";
@@ -213,6 +218,8 @@ export function FinancialDashboard({
     activeView,
     setActiveView,
     allTransactions,
+    managementTransactions,
+    neurofinance,
     isLoadingTransactions,
     motionProps,
     extratoTab,
@@ -236,6 +243,8 @@ export function FinancialDashboard({
 
     switch (activeView) {
         case "gestao-visao-geral":
+        case "gestao-lancamentos":
+        case "gestao-recebimentos":
         case "gestao-fluxo-caixa":
         case "gestao-receitas":
         case "gestao-despesas":
@@ -249,6 +258,8 @@ export function FinancialDashboard({
                         activeView={activeView}
                         setActiveView={setActiveView}
                         allTransactions={allTransactions}
+                        managementTransactions={managementTransactions}
+                        neurofinance={neurofinance}
                         realizedTransactions={realizedTransactions}
                         futureTransactions={futureTransactions}
                         subscriptionTransactions={subscriptionTransactions}

@@ -77,7 +77,7 @@ function mapSnapshot(snapshot: FinancialOverviewSnapshot | null): NeuroFinanceBa
     };
 }
 
-export const useNeuroFinanceBalanceSnapshot = () => {
+export const useNeuroFinanceBalanceSnapshot = (enabled=true) => {
     const { user } = useAuth();
     const queryKey = ["neurofinance-overview", user?.id];
 
@@ -95,7 +95,7 @@ export const useNeuroFinanceBalanceSnapshot = () => {
             if (error) throw error;
             return mapSnapshot(data as FinancialOverviewSnapshot | null);
         },
-        enabled: Boolean(user?.id),
+        enabled: Boolean(user?.id)&&enabled,
         staleTime: 1000 * 60 * 10,
         placeholderData: EMPTY_BALANCE,
     });

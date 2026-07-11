@@ -2,19 +2,15 @@ import type { FinanceView } from "./FinancialDashboard";
 
 export const MANAGEMENT_FINANCE_VIEWS: FinanceView[] = [
   "gestao-visao-geral",
-  "gestao-fluxo-caixa",
-  "gestao-receitas",
-  "gestao-despesas",
+  "gestao-lancamentos",
   "gestao-cobrancas",
-  "gestao-inadimplencia",
+  "gestao-recebimentos",
   "gestao-planejamento",
-  "gestao-relatorios",
 ];
 
 export const LEGACY_MANAGEMENT_VIEW_REDIRECTS: Partial<Record<FinanceView, FinanceView>> = {
-  "fluxo-caixa": "gestao-fluxo-caixa",
-  receitas: "gestao-receitas",
-  despesas: "gestao-despesas",
+  "gestao-fluxo-caixa":"gestao-visao-geral","gestao-receitas":"gestao-lancamentos","gestao-despesas":"gestao-lancamentos","gestao-inadimplencia":"gestao-recebimentos","gestao-relatorios":"gestao-lancamentos",
+  "fluxo-caixa":"gestao-visao-geral",receitas:"gestao-lancamentos",despesas:"gestao-lancamentos",
 };
 
 export const isManagementFinanceView = (view: FinanceView) => MANAGEMENT_FINANCE_VIEWS.includes(view);
