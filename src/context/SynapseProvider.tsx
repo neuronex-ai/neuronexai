@@ -153,114 +153,13 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const isMobile = useIsMobile();
 
     // Visibility
-  const isDevShellPreview = import.meta.env.DEV && new URLSearchParams(window.location.search).get('synapse-preview') === '1';
-  const isVisible = isDevShellPreview || (!isMobile && !!user);
+    const isVisible = !isMobile && !!user;
 
     // Derived: tools for current route
     const baseTools = getToolsForRoute(location.pathname);
-    const staticQuickActions = getQuickActionsForRoute(location.pathname);
-    
-    // Merge static quick actions with daily intelligence
-    const currentModule = location.pathname.split('/')[1] || 'dashboard';
-    const currentDailyActions = dailyActions[currentModule] || [];
-    
-    const quickActions = [
-        ...currentDailyActions.map(a => ({
-            id: a.id,
-            name: a.name,
-            description: a.description,
-            status: 'active' as const,
-            category: 'clinical' as const,
-            allowedRoutes: ['*'],
-            hiddenInProduction: false,
-            riskLevel: 'low' as const
-        })),
-        ...staticQuickActions
-    ].slice(0, 6);
+    const quickActions = getQuickActionsForRoute(location.pathname).slice(0, 6);
 
     const availableTools = baseTools;
-
-    // ─── Intelligence Logic (Global Sync) ────────────────────────────────
-
-    const syncDailyIntelligence = useCallback(async () => {
-        if (!user || isIntelligenceLoading) return;
-        
-        const today = new Date().toISOString().split('T')[0];
-        const globalSyncKey = `synapse_global_sync_${user.id}`;
-        const lastSync = localStorage.getItem(globalSyncKey);
-        
-        if (lastSync === today) {
-            // Restore from cache if possible
-            const cachedActions = localStorage.getItem(`synapse_daily_actions_${user.id}`);
-            if (cachedActions) {
-                setDailyActions(JSON.parse(cachedActions));
-                setScanProgress(prev => prev.map(p => ({ ...p, status: 'completed' })));
-                return;
-            }
-        }
-
-        console.log('[Synapse Intelligence] Iniciando varredura global diária...');
-        setIsIntelligenceLoading(true);
-        setExecState('thinking');
-
-        try {
-            const modules = ['dashboard', 'agenda', 'pacientes', 'financeiro', 'teleconsulta', 'notas'];
-            const allSuggestions: Record<string, { id: string; name: string; description: string }[]> = {
-                dashboard: [
-                    { id: 'suggest_1', name: 'Revisar faturamento semanal', description: 'O faturamento está 15% acima da média.' },
-                    { id: 'suggest_2', name: 'Notas pendentes de ontem', description: 'Você esqueceu de finalizar 2 notas.' }
-                ],
-                agenda: [
-                    { id: 'suggest_3', name: 'Encaixar Carlos às 15h?', description: 'Houve um cancelamento e Carlos solicitou prioridade.' },
-                    { id: 'suggest_4', name: 'Confirmar horários Online', description: '3 pacientes ainda não receberam o link da sessão.' }
-                ],
-                pacientes: [
-                    { id: 'suggest_5', name: 'Enviar anamnese para Pedro', description: 'Novo paciente ainda não preencheu os dados.' },
-                    { id: 'suggest_6', name: 'Ver histórico: João Silva', description: 'João apresentou piora nos sintomas relatados.' }
-                ],
-                financeiro: [
-                    { id: 'suggest_7', name: 'Cobrar fatura: Pedro', description: 'A sessão de segunda ainda não foi faturada.' },
-                    { id: 'suggest_8', name: 'Conciliar 5 recebimentos', description: 'Existem depósitos não identificados no extrato.' }
-                ],
-                teleconsulta: [
-                    { id: 'suggest_9', name: 'Preparar roteiro: Ana', description: 'Sessão de hoje foca em exposição cognitiva.' },
-                    { id: 'suggest_10', name: 'Verificar conexão de rede', description: 'A estabilidade da rede está oscilando.' }
-                ],
-                notas: [
-                    { id: 'suggest_11', name: 'Transcrever áudio de ontem', description: 'Você gravou um insight importante pós-sessão.' },
-                    { id: 'suggest_12', name: 'Revisar metas da semana', description: '3 pacientes atingiram marcos terapêuticos.' }
-                ]
-            };
-
-            // Process each module with a visual delay
-            for (const mod of modules) {
-                setScanProgress(prev => prev.map(p => p.module === mod ? { ...p, status: 'scanning' } : p));
-                await new Promise(resolve => setTimeout(resolve, 800)); // Simulating deep scan
-                setScanProgress(prev => prev.map(p => p.module === mod ? { ...p, status: 'completed' } : p));
-            }
-
-            setDailyActions(allSuggestions);
-            localStorage.setItem(globalSyncKey, today);
-            localStorage.setItem(`synapse_daily_actions_${user.id}`, JSON.stringify(allSuggestions));
-            setExecState('success');
-            
-        } catch (err) {
-            console.error('[Synapse Intelligence] Erro ao sincronizar globalmente:', err);
-            setExecState('error');
-        } finally {
-            setIsIntelligenceLoading(false);
-            setTimeout(() => setExecState('idle'), 2000);
-        }
-    }, [user, isIntelligenceLoading]);
-
-    useEffect(() => {
-        if (user && !hasSyncRunThisSession.current) {
-            hasSyncRunThisSession.current = true;
-            syncDailyIntelligence();
-        }
-    }, [user, syncDailyIntelligence]);
-
-    // ─────────────────────────────────────────────────────────────────────
 
     const toggleCompact = useCallback(() => {
         setShellState((prev) => (prev === 'compact' ? 'pill' : 'compact'));
@@ -380,10 +279,6 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 toggleVoiceMode,
                 isVoiceExpanded,
                 setIsVoiceExpanded,
-                dailyActions,
-                isIntelligenceLoading,
-                scanProgress,
-                syncDailyIntelligence,
             }}
         >
             {children}

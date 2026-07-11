@@ -92,7 +92,6 @@ const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{6,80}$/;
 const NOTES_VIEWS = new Set(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
 const ALLOWED_INTERFACE_ACTIONS = new Set<SynapseInterfaceActionName>(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
 
-const SCREEN_AGENT_EVENT = "synapse:screen-agent-state";
 const PAGE_ACTION_EVENT = "synapse:page-action";
 
 let activeController: AbortController | null = null;
@@ -106,7 +105,6 @@ const sleep = (milliseconds: number, signal: AbortSignal) =>
 
 const validEntityId = (value?: string) => Boolean(value && (UUID_PATTERN.test(value) || SAFE_ID_PATTERN.test(value)));
 const safeNotesView = (value?: string): SynapseNotesView | undefined => value && NOTES_VIEWS.has(value) ? value as SynapseNotesView : undefined;
-const emitScreenState = (detail: Record<string, unknown>) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(SCREEN_AGENT_EVENT, { detail })); };
 const emitPageAction = (action: SynapseInterfaceAction) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PAGE_ACTION_EVENT, { detail: action })); };
 
 const highlightNode = (node: Element | null) => {
@@ -162,7 +160,6 @@ async function recordTelemetry(action: SynapseInterfaceAction, channel: "text" |
 export function cancelSynapseInterfaceAction() {
   activeController?.abort();
   activeController = null;
-  emitScreenState({ active: false, cancelled: true, label: "Ação cancelada" });
 }
 
 export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAction | null {
@@ -198,9 +195,6 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
   cancelSynapseInterfaceAction();
   const controller = new AbortController();
   activeController = controller;
-  const label = action.reason || "Synapse está utilizando sua tela";
-  emitScreenState({ active: true, action: action.action, label });
-
   try {
     const { navigate } = options;
     switch (action.action) {
@@ -308,18 +302,15 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
     }
     const result: SynapseActionExecutionResult = { success: true, action: action.action, message: "Ação executada com segurança.", durationMs: Math.round(performance.now() - startedAt) };
     await recordTelemetry(action, options.channel, result);
-    emitScreenState({ active: false, completed: true, action: action.action, label: "Ação concluída" });
     return result;
   } catch (error) {
     const cancelled = error instanceof DOMException && error.name === "AbortError";
     const result: SynapseActionExecutionResult = { success: false, cancelled, action: action.action, message: cancelled ? "Ação cancelada." : error instanceof Error ? error.message : "Falha na ação.", durationMs: Math.round(performance.now() - startedAt) };
     await recordTelemetry(action, options.channel, result, error);
-    emitScreenState({ active: false, cancelled, error: !cancelled, label: result.message });
     return result;
   } finally {
     if (activeController === controller) activeController = null;
   }
 }
 
-export const SYNAPSE_SCREEN_AGENT_EVENT = SCREEN_AGENT_EVENT;
 export const SYNAPSE_PAGE_ACTION_EVENT = PAGE_ACTION_EVENT;

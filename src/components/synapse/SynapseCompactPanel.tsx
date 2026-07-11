@@ -24,18 +24,10 @@ import {
     PhoneOff,
     MessageSquare,
     Smartphone,
-    MousePointer2,
-    RefreshCw,
-    Target,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { SynapseAllActionsModal } from './SynapseAllActionsModal';
 import { SynapseComposer, SynapseConversation } from './SynapseConversation';
 import { supabase } from '@/integrations/supabase/client';
-import {
-    executeSynapseInterfaceAction,
-    type SynapseInterfaceAction,
-} from '@/lib/synapse-interface-actions';
 
 const CONTEXT_LABELS: Record<string, { icon: React.ReactNode; label: string }> = {
     dashboard: { icon: <TrendingUp className="h-3.5 w-3.5" />, label: 'Dashboard' },
@@ -50,22 +42,13 @@ const CONTEXT_LABELS: Record<string, { icon: React.ReactNode; label: string }> =
 
 const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.ElementType<{ className?: string }> }> = [
     { id: 'chat', label: 'Chat', icon: MessageSquare },
+    { id: 'voice', label: 'Voz', icon: AudioLines },
     { id: 'history', label: 'Histórico', icon: History },
     { id: 'timeline', label: 'Atividade', icon: Activity },
-    { id: 'agent', label: 'Agente', icon: MousePointer2 },
-    { id: 'voice', label: 'Voz', icon: AudioLines },
 ];
 
 const HISTORY_FETCH_BATCH = 48;
 const TIMELINE_RENDER_LIMIT = 80;
-
-type AgentActionItem = {
-    id: string;
-    label: string;
-    description: string;
-    icon: React.ElementType<{ className?: string }>;
-    action: SynapseInterfaceAction;
-};
 
 type ChatSessionRow = {
     id: string;
@@ -103,66 +86,6 @@ type WindowWithSpeechRecognition = Window & typeof globalThis & {
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
 };
 
-const AGENT_ACTIONS: AgentActionItem[] = [
-    {
-        id: 'open-daily-schedule',
-        label: 'Agenda do dia',
-        description: 'Abre a agenda diária e destaca a grade.',
-        icon: Calendar,
-        action: { action: 'open_daily_schedule', reason: 'Abrindo agenda diária' },
-    },
-    {
-        id: 'new-appointment',
-        label: 'Novo agendamento',
-        description: 'Abre o modal completo de agendamento.',
-        icon: Plus,
-        action: { action: 'open_modal', modal: 'new_appointment', reason: 'Abrindo novo agendamento' },
-    },
-    {
-        id: 'new-patient',
-        label: 'Novo paciente',
-        description: 'Abre o cadastro de prontuário.',
-        icon: Users,
-        action: { action: 'open_modal', modal: 'new_patient', reason: 'Abrindo cadastro de paciente' },
-    },
-    {
-        id: 'new-transaction',
-        label: 'Novo lançamento',
-        description: 'Abre o registro financeiro manual.',
-        icon: TrendingUp,
-        action: { action: 'open_modal', modal: 'new_transaction', reason: 'Abrindo lançamento financeiro' },
-    },
-    {
-        id: 'go-patients',
-        label: 'Ir a pacientes',
-        description: 'Navega para a lista de pacientes.',
-        icon: Users,
-        action: { action: 'navigate', target: 'patients', reason: 'Abrindo pacientes' },
-    },
-    {
-        id: 'go-finance',
-        label: 'Ir ao financeiro',
-        description: 'Navega para a gestão financeira.',
-        icon: TrendingUp,
-        action: { action: 'navigate', target: 'finance', reason: 'Abrindo financeiro' },
-    },
-    {
-        id: 'highlight-schedule',
-        label: 'Destacar agenda',
-        description: 'Realca a area principal da agenda.',
-        icon: Target,
-        action: { action: 'highlight_element', element: 'daily_schedule', reason: 'Destacando agenda' },
-    },
-];
-
-const EXEC_STATE_LABELS = {
-    idle: 'Pronto',
-    listening: 'Ouvindo',
-    thinking: 'Analisando',
-    executing: 'Executando',
-    success: 'Concluído',
-    error: 'Atenção',
-} as const;
 
 export const SynapseCompactPanel = () => {
     const shouldReduceMotion = useReducedMotion();
@@ -174,11 +97,8 @@ export const SynapseCompactPanel = () => {
         inputDraft,
         setInputDraft,
         timeline,
-        addTimelineEntry,
         activeTab,
         setActiveTab,
-        execState,
-        setExecState,
         voiceStatus,
         isVoiceSpeaking,
         isVoiceToolActive,
@@ -187,15 +107,9 @@ export const SynapseCompactPanel = () => {
         getVoiceInputVolume,
         toggleVoiceMode,
         setActiveSessionId,
-        dailyActions,
-        isIntelligenceLoading,
-        scanProgress,
-        syncDailyIntelligence,
     } = useSynapse();
     const { currentContext } = useAI();
     const { send, messages, isSending, sessionReady, clearSession } = useSynapseChat();
-    const navigate = useNavigate();
-
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -314,39 +228,7 @@ export const SynapseCompactPanel = () => {
         setShowAllActions(false);
     };
 
-    const dailyActionCount = Object.values(dailyActions).reduce((total, actions) => total + actions.length, 0);
-    const recentAgentTimeline = timeline.slice(-4).reverse();
     const visibleTimeline = timeline.slice(-TIMELINE_RENDER_LIMIT).reverse();
-    const agentBusy = execState === 'thinking' || execState === 'executing' || isIntelligenceLoading;
-
-    const runAgentAction = async (item: AgentActionItem) => {
-        setActiveTab('agent');
-        setExecState('executing');
-        addTimelineEntry({
-            label: `Agente: ${item.label}`,
-            state: 'executing',
-            detail: item.description,
-        });
-
-        const result = await executeSynapseInterfaceAction(item.action, { navigate, channel: 'text' });
-        addTimelineEntry({
-            label: result.success ? `${item.label} concluído` : `${item.label} falhou`,
-            state: result.success ? 'success' : 'error',
-            detail: result.message,
-        });
-        setExecState(result.success ? 'success' : 'error');
-        window.setTimeout(() => setExecState('idle'), 1400);
-    };
-
-    const handleDailySync = async () => {
-        setActiveTab('agent');
-        addTimelineEntry({
-            label: 'Agente: varredura diária',
-            state: 'thinking',
-            detail: 'Atualizando contexto por modulo',
-        });
-        await syncDailyIntelligence();
-    };
 
     const ctxInfo = CONTEXT_LABELS[currentContext] || { icon: <Sparkles className="h-3.5 w-3.5" />, label: 'Synapse' };
 
@@ -417,15 +299,14 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
-                layoutId="synapse-optical-surface"
                 style={{ willChange: "transform, opacity" }}
-                initial={shouldReduceMotion ? false : { opacity: 0.72, y: 7 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0.72, y: 5 }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 8, scale: 0.992 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.992 }}
                 transition={shouldReduceMotion ? { duration: 0 } : {
-                    layout: { type: 'spring', stiffness: 420, damping: 38, mass: 0.82 },
-                    opacity: { duration: 0.18 },
-                    y: { type: 'spring', stiffness: 420, damping: 38, mass: 0.82 },
+                    opacity: { duration: 0.16, ease: 'easeOut' },
+                    y: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
+                    scale: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                 }}
                 className={cn(
                     'synapse-desktop-shell relative flex h-[min(720px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[30px] border',
@@ -437,20 +318,66 @@ export const SynapseCompactPanel = () => {
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
                         <header className="synapse-desktop-chrome shrink-0">
-                            <div className="flex min-h-16 items-center justify-between gap-3 px-3.5">
-                                <div className="flex min-w-0 items-center gap-2.5">
-                                    <span className="synapse-desktop-mark flex h-10 w-10 shrink-0 items-center justify-center text-foreground" aria-hidden="true">
-                                        <Sparkles className="relative z-10 h-4 w-4" />
-                                    </span>
-                                    <span className="min-w-0 leading-none">
-                                        <span className="block truncate text-[15px] font-semibold text-foreground">Synapse</span>
-                                        <span className="mt-1.5 flex items-center gap-1.5 truncate text-[10px] font-medium text-muted-foreground">
-                                            <span className={cn('h-1.5 w-1.5 rounded-full', sessionReady ? 'bg-foreground/75' : 'bg-muted-foreground/40')} aria-hidden="true" />
-                                            {ctxInfo.icon}
-                                            <span className="truncate">{ctxInfo.label}</span>
-                                        </span>
-                                    </span>
-                                </div>
+                            <div className="synapse-desktop-toolbar flex min-h-[68px] items-center gap-2 px-3">
+                                <span className="w-[76px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
+                                    Synapse AI
+                                </span>
+
+                                <nav className="synapse-desktop-tabs flex min-w-0 flex-1 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
+                                    {PANEL_TABS.map((tab, index) => {
+                                        const Icon = tab.icon;
+                                        const isActive = activeTab === tab.id;
+                                        return (
+                                            <motion.button
+                                                key={tab.id}
+                                                ref={(node) => { tabRefs.current[index] = node; }}
+                                                id={`synapse-tab-${tab.id}`}
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={isActive}
+                                                aria-controls="synapse-tabpanel"
+                                                tabIndex={isActive ? 0 : -1}
+                                                onClick={() => handleTabChange(tab.id)}
+                                                onKeyDown={(event) => handleTabKeyDown(event, index)}
+                                                whileTap={shouldReduceMotion ? undefined : { scale: 0.96, y: 1 }}
+                                                className={cn(
+                                                    'relative flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-[10px] font-semibold transition-[color,width,padding] duration-200',
+                                                    'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                                    isActive ? 'min-w-[66px] px-2 text-foreground' : 'w-9 px-0 text-muted-foreground',
+                                                )}
+                                            >
+                                                {isActive ? (
+                                                    <motion.span
+                                                        layoutId="synapse-active-tab"
+                                                        className="synapse-desktop-tab-active absolute inset-0 rounded-[10px]"
+                                                        transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
+                                                        aria-hidden="true"
+                                                    />
+                                                ) : null}
+                                                <span className="relative z-10 shrink-0">
+                                                    <Icon className="h-3.5 w-3.5" />
+                                                    {tab.id === 'voice' && voiceStatus === 'connected' ? (
+                                                        <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                                                    ) : null}
+                                                </span>
+                                                <AnimatePresence initial={false} mode="wait">
+                                                    {isActive ? (
+                                                        <motion.span
+                                                            key={tab.id}
+                                                            initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
+                                                            animate={{ opacity: 1, width: 'auto' }}
+                                                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
+                                                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: 'easeOut' }}
+                                                            className="relative z-10 overflow-hidden whitespace-nowrap"
+                                                        >
+                                                            {tab.label}
+                                                        </motion.span>
+                                                    ) : null}
+                                                </AnimatePresence>
+                                            </motion.button>
+                                        );
+                                    })}
+                                </nav>
 
                                 <div className="flex shrink-0 items-center gap-0.5">
                                     {messages.length > 0 ? (
@@ -459,10 +386,10 @@ export const SynapseCompactPanel = () => {
                                                 <button
                                                     type="button"
                                                     onClick={clearSession}
-                                                    className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    className="synapse-desktop-control flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                     aria-label="Limpar conversa"
                                                 >
-                                                    <Trash2 className="h-4 w-4" />
+                                                    <Trash2 className="h-3.5 w-3.5" />
                                                 </button>
                                             </TooltipTrigger>
                                             <TooltipContent side="bottom">Limpar conversa</TooltipContent>
@@ -473,10 +400,10 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={clearSession}
-                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Criar nova conversa"
                                             >
-                                                <Plus className="h-4 w-4" />
+                                                <Plus className="h-3.5 w-3.5" />
                                             </button>
                                         </TooltipTrigger>
                                         <TooltipContent side="bottom">Nova conversa</TooltipContent>
@@ -486,59 +413,16 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setShellState('pill')}
-                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Recolher Synapse"
                                             >
-                                                <X className="h-4 w-4" />
+                                                <X className="h-3.5 w-3.5" />
                                             </button>
                                         </TooltipTrigger>
                                         <TooltipContent side="bottom">Recolher</TooltipContent>
                                     </Tooltip>
                                 </div>
                             </div>
-
-                            <nav className="synapse-desktop-tabs mx-3 mb-3 grid grid-cols-5 gap-1 p-1" role="tablist" aria-label="Modos do Synapse">
-                                {PANEL_TABS.map((tab, index) => {
-                                    const Icon = tab.icon;
-                                    const isActive = activeTab === tab.id;
-                                    return (
-                                        <motion.button
-                                            key={tab.id}
-                                            ref={(node) => { tabRefs.current[index] = node; }}
-                                            id={`synapse-tab-${tab.id}`}
-                                            type="button"
-                                            role="tab"
-                                            aria-selected={isActive}
-                                            aria-controls="synapse-tabpanel"
-                                            tabIndex={isActive ? 0 : -1}
-                                            onClick={() => handleTabChange(tab.id)}
-                                            onKeyDown={(event) => handleTabKeyDown(event, index)}
-                                            whileTap={shouldReduceMotion ? undefined : { scale: 0.97, y: 1 }}
-                                            className={cn(
-                                                "relative flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[11px] px-1 text-[10px] font-semibold text-muted-foreground transition-colors",
-                                                "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                isActive && "text-foreground",
-                                            )}
-                                        >
-                                            {isActive ? (
-                                                <motion.span
-                                                    layoutId="synapse-active-tab"
-                                                    className="synapse-desktop-tab-active absolute inset-0 rounded-[11px]"
-                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
-                                                    aria-hidden="true"
-                                                />
-                                            ) : null}
-                                            <span className="relative z-10 shrink-0">
-                                                <Icon className="h-4 w-4" />
-                                                {tab.id === 'voice' && voiceStatus === 'connected' ? (
-                                                    <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                                                ) : null}
-                                            </span>
-                                            <span className="relative z-10 hidden truncate min-[380px]:inline">{tab.label}</span>
-                                        </motion.button>
-                                    );
-                                })}
-                            </nav>
                         </header>
                     </TooltipProvider>
 
@@ -573,7 +457,7 @@ export const SynapseCompactPanel = () => {
                                             className={cn(
                                                 "relative h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'neuronex'
-                                                    ? "synapse-history-segment-active text-foreground"
+                                                    ? "synapse-history-segment-active"
                                                     : "hover:text-foreground"
                                             )}
                                         >
@@ -585,7 +469,7 @@ export const SynapseCompactPanel = () => {
                                             className={cn(
                                                 "relative h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'whatsapp'
-                                                    ? "synapse-history-segment-active text-foreground"
+                                                    ? "synapse-history-segment-active"
                                                     : "hover:text-foreground"
                                             )}
                                         >
@@ -688,123 +572,6 @@ export const SynapseCompactPanel = () => {
                                         <p className="px-1 text-center text-[10px] text-muted-foreground">Exibindo as últimas {TIMELINE_RENDER_LIMIT} atividades.</p>
                                     ) : null}
                                 </motion.div>
-                            ) : activeTab === 'agent' ? (
-                                <motion.div
-                                    key="agent"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 4 }}
-                                    className="synapse-agent-view flex flex-col"
-                                >
-                                    <section className="synapse-agent-section py-5">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="space-y-1">
-                                                <span className="text-[11px] font-medium text-muted-foreground">Modo agente</span>
-                                                <h3 className="text-[16px] font-semibold text-foreground">Controle de tela</h3>
-                                            </div>
-                                            <span className={cn(
-                                                "synapse-status-badge px-2.5 py-1.5 text-[10px] font-semibold",
-                                                execState === 'error'
-                                                    ? "bg-red-500/10 text-red-600 dark:text-red-400"
-                                                    : execState === 'success'
-                                                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                                                        : agentBusy
-                                                            ? "bg-foreground/10 text-foreground"
-                                                            : "bg-foreground/[0.06] text-muted-foreground dark:bg-white/[0.055]"
-                                            )}>
-                                                {EXEC_STATE_LABELS[execState]}
-                                            </span>
-                                        </div>
-
-                                        <div className="synapse-command-list mt-4 divide-y">
-                                            {AGENT_ACTIONS.map((item) => {
-                                                const Icon = item.icon;
-                                                return (
-                                                    <button
-                                                        key={item.id}
-                                                        type="button"
-                                                        onClick={() => void runAgentAction(item)}
-                                                        disabled={agentBusy}
-                                                        className="synapse-command-row group flex min-h-[68px] w-full items-center gap-3 px-2 py-3 text-left disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
-                                                    >
-                                                        <span className="synapse-command-icon flex h-9 w-9 shrink-0 items-center justify-center">
-                                                            <Icon className="h-4 w-4" />
-                                                        </span>
-                                                        <div className="min-w-0 flex-1">
-                                                            <span className="block text-[12px] font-semibold leading-tight text-foreground">{item.label}</span>
-                                                            <span className="mt-1 block truncate text-[10px] leading-relaxed text-muted-foreground">{item.description}</span>
-                                                        </div>
-                                                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
-                                                    </button>
-                                                );
-                                            })}
-                                        </div>
-                                    </section>
-
-                                    <section className="synapse-agent-section py-5">
-                                        <div className="flex items-center justify-between gap-3">
-                                            <div>
-                                                <span className="text-[12px] font-semibold text-foreground">Inteligência diária</span>
-                                                <p className="mt-1 text-[11px] text-muted-foreground">{dailyActionCount} sugestões ativas</p>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => void handleDailySync()}
-                                                disabled={isIntelligenceLoading}
-                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                title="Atualizar"
-                                                aria-label="Atualizar inteligência diária"
-                                            >
-                                                {isIntelligenceLoading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <RefreshCw className="h-4 w-4" />}
-                                            </button>
-                                        </div>
-
-                                        <div className="synapse-scan-list mt-4 divide-y">
-                                            {scanProgress.map((item) => (
-                                                <div key={item.module} className="flex min-h-10 items-center justify-between px-1">
-                                                    <span className="text-[10px] font-bold text-muted-foreground">{item.label}</span>
-                                                    <span className={cn(
-                                                        "h-2 w-2 rounded-full",
-                                                        item.status === 'completed'
-                                                            ? "bg-emerald-500"
-                                                            : item.status === 'scanning'
-                                                                ? cn("bg-foreground", !shouldReduceMotion && "animate-pulse")
-                                                                : "bg-muted-foreground/25 dark:bg-white/[0.18]"
-                                                    )} />
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </section>
-
-                                    <section className="py-5">
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <span className="text-[12px] font-semibold text-foreground">Atividade recente</span>
-                                            <Activity className="h-3.5 w-3.5 text-muted-foreground" />
-                                        </div>
-                                        {recentAgentTimeline.length === 0 ? (
-                                            <p className="py-4 text-center text-[11px] font-semibold text-muted-foreground">Nenhuma atividade registrada.</p>
-                                        ) : (
-                                            <div className="space-y-3">
-                                                {recentAgentTimeline.map((entry) => (
-                                                    <div key={entry.id} className="flex items-start gap-3">
-                                                        <span className={cn(
-                                                            "mt-1.5 h-2 w-2 rounded-full",
-                                                            entry.state === 'success'
-                                                                ? "bg-emerald-500"
-                                                                : entry.state === 'error'
-                                                                    ? "bg-red-500"
-                                                                    : "bg-foreground"
-                                                        )} />
-                                                        <div className="min-w-0 flex-1">
-                                                            <p className="truncate text-[11px] font-bold text-foreground">{entry.label}</p>
-                                                            {entry.detail && <p className="truncate text-[10px] text-muted-foreground">{entry.detail}</p>}
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </section>
-                                </motion.div>
                             ) : activeTab === 'voice' ? (
                                 <motion.div
                                     key="voice"
@@ -860,13 +627,20 @@ export const SynapseCompactPanel = () => {
                                     )}
                                 </motion.div>
                             ) : (
-                                <SynapseConversation
-                                    messages={messages}
-                                    isSending={isSending}
-                                    quickActions={quickActions}
-                                    shouldReduceMotion={Boolean(shouldReduceMotion)}
-                                    onQuickAction={setInputDraft}
-                                />
+                                <div className="synapse-chat-view min-h-full py-3">
+                                    <div className="synapse-context-pill mx-1 flex w-fit items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground">
+                                        <span className={cn('h-1.5 w-1.5 rounded-full', sessionReady ? 'bg-foreground/75' : 'bg-muted-foreground/40')} aria-hidden="true" />
+                                        <span className="flex h-3.5 w-3.5 items-center justify-center" aria-hidden="true">{ctxInfo.icon}</span>
+                                        <span>{ctxInfo.label}</span>
+                                    </div>
+                                    <SynapseConversation
+                                        messages={messages}
+                                        isSending={isSending}
+                                        quickActions={quickActions}
+                                        shouldReduceMotion={Boolean(shouldReduceMotion)}
+                                        onQuickAction={setInputDraft}
+                                    />
+                                </div>
                             )}
                         </AnimatePresence>
                     </div>

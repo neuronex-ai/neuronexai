@@ -1166,8 +1166,8 @@
     box-shadow:
       0 22px 90px -76px hsl(var(--foreground) / 0.7),
       inset 0 1px 0 hsl(var(--background) / 0.18);
-    backdrop-filter: blur(18px) saturate(1.04);
-    -webkit-backdrop-filter: blur(18px) saturate(1.04);
+    backdrop-filter: blur(19px) saturate(1.04);
+    -webkit-backdrop-filter: blur(19px) saturate(1.04);
   }
 
   .synapse-desktop-shell::before,
@@ -1224,32 +1224,13 @@
     background: linear-gradient(180deg, hsl(var(--background) / 0.18), transparent);
   }
 
+  .synapse-desktop-toolbar {
+    min-width: 0;
+  }
+
   .dark .synapse-desktop-chrome {
     border-bottom-color: rgba(255, 255, 255, 0.055);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent);
-  }
-
-  .synapse-desktop-mark {
-    position: relative;
-    overflow: hidden;
-    border: 1px solid hsl(var(--border) / 0.68);
-    border-radius: 13px;
-    background: hsl(var(--background) / 0.42);
-    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.24);
-  }
-
-  .synapse-desktop-mark::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, hsl(var(--background) / 0.2), transparent 48%);
-    pointer-events: none;
-  }
-
-  .dark .synapse-desktop-mark {
-    border-color: rgba(255, 255, 255, 0.07);
-    background: rgba(255, 255, 255, 0.022);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
 
   .synapse-desktop-control {
@@ -1294,6 +1275,10 @@
     box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
   }
 
+  .synapse-history-segment-active {
+    color: hsl(var(--background)) !important;
+  }
+
   .synapse-desktop-tabs [aria-selected='true'] {
     color: hsl(var(--background));
   }
@@ -1304,6 +1289,8 @@
 
   .synapse-desktop-viewport {
     overscroll-behavior: contain;
+    scroll-behavior: auto;
+    scrollbar-gutter: stable;
     background: linear-gradient(180deg, hsl(var(--foreground) / 0.014), transparent 120px);
   }
 
@@ -1315,24 +1302,23 @@
     color: hsl(var(--muted-foreground));
   }
 
-  .synapse-history-row,
-  .synapse-command-row {
+  .synapse-history-row {
     border-radius: 12px;
+    contain: layout paint style;
+    contain-intrinsic-size: 72px;
+    content-visibility: auto;
     transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
   }
 
-  .synapse-history-row:hover,
-  .synapse-command-row:hover {
+  .synapse-history-row:hover {
     background: hsl(var(--foreground) / 0.038);
   }
 
-  .synapse-history-row:active,
-  .synapse-command-row:active {
+  .synapse-history-row:active {
     transform: translateY(1px);
   }
 
-  .dark .synapse-history-row:hover,
-  .dark .synapse-command-row:hover {
+  .dark .synapse-history-row:hover {
     background: rgba(255, 255, 255, 0.035);
   }
 
@@ -1373,18 +1359,6 @@
     min-height: 54px;
   }
 
-  .synapse-agent-section {
-    border-bottom: 1px solid hsl(var(--border) / 0.52);
-  }
-
-  .synapse-agent-section:last-child {
-    border-bottom: 0;
-  }
-
-  .dark .synapse-agent-section {
-    border-bottom-color: rgba(255, 255, 255, 0.055);
-  }
-
   .synapse-status-badge {
     border: 1px solid hsl(var(--border) / 0.58);
     border-radius: 999px;
@@ -1396,14 +1370,43 @@
     background: rgba(255, 255, 255, 0.025);
   }
 
-  .synapse-command-list,
-  .synapse-scan-list {
-    border-top: 1px solid hsl(var(--border) / 0.45);
+  .synapse-context-pill {
+    border: 1px solid hsl(var(--border) / 0.56);
+    border-radius: 999px;
+    background: hsl(var(--foreground) / 0.028);
+    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
   }
 
-  .dark .synapse-command-list,
-  .dark .synapse-scan-list {
-    border-top-color: rgba(255, 255, 255, 0.045);
+  .dark .synapse-context-pill {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.022);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  @media (max-width: 420px) {
+    .synapse-desktop-toolbar {
+      gap: 0.25rem;
+      padding-inline: 0.5rem;
+    }
+
+    .synapse-desktop-toolbar > span:first-child {
+      width: 3.5rem;
+      font-size: 0.8125rem;
+    }
+
+    .synapse-desktop-tabs {
+      gap: 0;
+      padding: 0.1875rem;
+    }
+
+    .synapse-desktop-tabs > button {
+      height: 2rem;
+    }
+
+    .synapse-desktop-control {
+      height: 2rem !important;
+      width: 2rem !important;
+    }
   }
 
   .synapse-voice-stage {

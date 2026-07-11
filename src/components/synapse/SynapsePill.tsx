@@ -42,7 +42,6 @@ export const SynapsePill = () => {
         getVoiceInputVolume,
         setIsVoiceExpanded,
         quickActions,
-        isIntelligenceLoading,
     } = useSynapse();
     const { messages, send, isSending } = useSynapseChat();
     const shouldReduceMotion = Boolean(useReducedMotion());
@@ -56,7 +55,7 @@ export const SynapsePill = () => {
     const magneticY = useSpring(rawY, spring.magnetic);
 
     const isVoiceActive = voiceStatus === "connected";
-    const isThinking = execState === "thinking" || execState === "executing" || isIntelligenceLoading || isSending;
+    const isThinking = execState === "thinking" || execState === "executing" || isSending;
     const targetWidth = isVoiceActive ? PILL_SIZE.voice : isExpanded ? PILL_SIZE.expanded : PILL_SIZE.collapsed;
     const targetHeight = isVoiceActive ? PILL_SIZE.voiceHeight : PILL_SIZE.idleHeight;
 
@@ -140,11 +139,9 @@ export const SynapsePill = () => {
                 aria-expanded={!isVoiceActive && isExpanded}
             >
                 <motion.div
-                    layoutId="synapse-optical-surface"
                     animate={{ width: targetWidth, height: targetHeight }}
                     transition={shouldReduceMotion ? { duration: 0 } : {
                         ...spring.width,
-                        layout: spring.width,
                     }}
                     className={cn(
                         "synapse-optical-shell relative isolate flex items-center justify-start overflow-hidden rounded-full border p-1.5",
