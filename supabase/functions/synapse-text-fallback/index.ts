@@ -24,13 +24,114 @@ import { invokeSynapseModel } from "./provider.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization,x-client-info,apikey,content-type",
+  "Access-Control-Allow-Headers": "authorization,x-client-info,apikey,content-type,accept,x-synapse-progress",
   "Access-Control-Allow-Methods": "POST,OPTIONS",
 };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
   status,
   headers: { ...CORS, "Content-Type": "application/json; charset=utf-8" },
 });
+
+type ProgressEvent = {
+  stage: string;
+  label: string;
+  detail?: string;
+  toolName?: string;
+  recordsFound?: number;
+  generatedAt?: string;
+};
+
+type ProgressReporter = (event: ProgressEvent) => void;
+
+const STREAM_HEADERS = {
+  ...CORS,
+  "Content-Type": "text/event-stream; charset=utf-8",
+  "Cache-Control": "no-cache, no-transform",
+  "Connection": "keep-alive",
+  "X-Accel-Buffering": "no",
+};
+
+const wantsProgressStream = (request: Request) =>
+  request.headers.get("Accept")?.includes("text/event-stream") ||
+  request.headers.get("X-Synapse-Progress") === "stream";
+
+const sseBlock = (event: string, data: unknown) => `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+
+const progressText = (value: unknown, max = 120) =>
+  String(value ?? "")
+    .replace(UUID_PATTERN, "")
+    .replace(/[{}[\]"]/g, " ")
+    .replace(/\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientAction|function_call)\b/gi, "")
+    .replace(/\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi, "ação")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+
+const patientFromArgs = (args: Record<string, unknown>) =>
+  progressText(args.patient_name || args.patientName || args.patient || args.name_query || args.query, 80);
+
+const toolProgressCopy = (name: string, args: Record<string, unknown>, phase: "started" | "finished", recordsFound?: number): ProgressEvent => {
+  const patient = patientFromArgs(args);
+  const suffix = typeof recordsFound === "number" ? `${recordsFound} registro${recordsFound === 1 ? "" : "s"} encontrado${recordsFound === 1 ? "" : "s"}` : undefined;
+  const patientDetail = patient ? `Paciente: ${patient}` : undefined;
+
+  if (phase === "finished") {
+    return {
+      stage: "tool_finished",
+      toolName: name,
+      label: suffix ? `Consulta concluída: ${suffix}` : "Consulta concluída",
+      detail: patientDetail,
+      recordsFound,
+    };
+  }
+
+  if (/patient|pacient|prontuario|clinical|history/i.test(name)) {
+    return {
+      stage: "tool_started",
+      toolName: name,
+      label: patient ? `Buscando dados de ${patient}` : "Consultando pacientes no sistema",
+      detail: "Conferindo cadastro e contexto clínico",
+    };
+  }
+  if (/agenda|calendar|appointment|slot|teleconsultation/i.test(name)) {
+    return {
+      stage: "tool_started",
+      toolName: name,
+      label: "Consultando agenda clínica",
+      detail: patientDetail || "Verificando horários e atendimentos",
+    };
+  }
+  if (/finance|financial|payment|charge|invoice|transaction|nfse/i.test(name)) {
+    return {
+      stage: "tool_started",
+      toolName: name,
+      label: "Conferindo dados financeiros",
+      detail: patientDetail || "Verificando lançamentos, cobranças e status",
+    };
+  }
+  if (/note|document|file|task|notion|neuroview|neuroflow|neuropulse/i.test(name)) {
+    return {
+      stage: "tool_started",
+      toolName: name,
+      label: "Consultando NeuroDrive",
+      detail: patientDetail || "Organizando notas, arquivos e tarefas",
+    };
+  }
+  if (/interface|navigate|open|highlight/i.test(name)) {
+    return {
+      stage: "tool_started",
+      toolName: name,
+      label: "Preparando ação visual",
+      detail: "Atualizando o painel do Synapse",
+    };
+  }
+  return {
+    stage: "tool_started",
+    toolName: name,
+    label: "Consultando o sistema",
+    detail: patientDetail || "Executando ferramenta do Synapse",
+  };
+};
 
 const CONFIRM = /^\s*(confirmo|sim[,! ]*confirmo|pode executar|pode fazer|autorizo|confirmado|pode prosseguir|prosseguir)\s*[.!]?\s*$/i;
 const CANCEL = /^\s*(cancelar|cancele|não confirmo|nao confirmo|desistir|desisto)\s*[.!]?\s*$/i;
@@ -218,6 +319,18 @@ Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: CORS });
   if (request.method !== "POST") return reply({ error: "Método não permitido." }, 405);
 
+  const streamMode = wantsProgressStream(request);
+  const encoder = new TextEncoder();
+  let streamController: ReadableStreamDefaultController<Uint8Array> | null = null;
+  const emitSse = (event: string, data: unknown) => {
+    streamController?.enqueue(encoder.encode(sseBlock(event, data)));
+  };
+  const progress: ProgressReporter = (event) => {
+    if (!streamMode) return;
+    emitSse("progress", { ...event, generatedAt: new Date().toISOString() });
+  };
+
+  const run = async () => {
   try {
     const authorization = request.headers.get("Authorization") || "";
     if (!authorization.startsWith("Bearer ")) return reply({ error: "Sessão ausente." }, 401);
@@ -228,6 +341,11 @@ Deno.serve(async (request) => {
     const context = body.context || {};
     const inputAttachments = Array.isArray(body.attachments) ? body.attachments : [];
     if (!message || !sessionId) return reply({ error: "Mensagem ou conversa ausente." }, 400);
+    progress({
+      stage: "validation",
+      label: "Validando conversa",
+      detail: "Conferindo sessão, permissões e contexto",
+    });
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -249,6 +367,11 @@ Deno.serve(async (request) => {
       "ai_copilot",
     );
     await consumeSynapseQuota(admin, user.id, 15);
+    progress({
+      stage: "authorization",
+      label: "Acesso confirmado",
+      detail: "Quota e plano do Synapse validados",
+    });
 
     const { data: session, error: sessionError } = await admin
       .from("chat_sessions")
@@ -270,8 +393,18 @@ Deno.serve(async (request) => {
     const pending = findPending(rows);
     const loadedContext = await loadConversationContext(admin, user.id, sessionId);
     let conversationState = await seedContextFromFrontend(admin, user.id, loadedContext.state, context);
+    progress({
+      stage: "context",
+      label: "Carregando memória da conversa",
+      detail: pending ? "Há uma ação aguardando confirmação" : "Lendo histórico recente e contexto durável",
+    });
 
     await saveUserMessage(admin, user.id, sessionId, message, rows, inputAttachments);
+    progress({
+      stage: "message_saved",
+      label: "Solicitação registrada",
+      detail: "Preparando o raciocínio operacional",
+    });
 
     const toolContext: AgentToolContextV3 = {
       admin,
@@ -282,6 +415,11 @@ Deno.serve(async (request) => {
     };
 
     if (pending && CANCEL.test(message)) {
+      progress({
+        stage: "pending_cancel",
+        label: "Cancelando ação pendente",
+        detail: progressText(pending.action.summary, 160) || "Nenhuma alteração será realizada",
+      });
       await updatePending(admin, pending, "cancelled");
       const response = "A ação pendente foi cancelada. Nenhuma alteração foi realizada.";
       await saveAssistantMessage(admin, user.id, sessionId, response, [{
@@ -295,6 +433,11 @@ Deno.serve(async (request) => {
     }
 
     if (pending && CONFIRM.test(message)) {
+      progress({
+        stage: "pending_confirm",
+        label: "Executando ação confirmada",
+        detail: progressText(pending.action.summary, 160),
+      });
       await updatePending(admin, pending, "executing");
       const result = await executeConfirmedMutationV3(pending.action, toolContext);
       await updatePending(admin, pending, result.ok ? "executed" : "failed", result.error);
@@ -325,6 +468,11 @@ Deno.serve(async (request) => {
     }
 
     if (!pending && CONFIRM.test(message)) {
+      progress({
+        stage: "pending_missing",
+        label: "Verificando confirmação",
+        detail: "Nenhuma ação pendente foi encontrada",
+      });
       const response = "Não há nenhuma ação pendente para confirmar.";
       await saveAssistantMessage(admin, user.id, sessionId, response, []);
       return reply({ response, clientAction: null, session_id: sessionId, provider: "system", grounded: true });
@@ -352,6 +500,11 @@ Deno.serve(async (request) => {
     let selectedModel = Deno.env.get("NVIDIA_SYNAPSE_MODEL") || "nvidia/nemotron-3-ultra-550b-a55b";
 
     outer: for (let step = 0; step < 7; step += 1) {
+      progress({
+        stage: step === 0 ? "planning" : "reasoning",
+        label: step === 0 ? "Interpretando solicitação" : "Combinando resultados consultados",
+        detail: mustGround ? "Selecionando consultas reais do sistema" : "Preparando resposta com o contexto disponível",
+      });
       const modelResult = await invokeSynapseModel({
         messages: modelMessages,
         tools: AGENT_TOOLS_V3,
@@ -370,6 +523,14 @@ Deno.serve(async (request) => {
         break;
       }
 
+      progress({
+        stage: "tools_selected",
+        label: calls.length === 1 ? "Consulta selecionada" : `${calls.length} consultas selecionadas`,
+        detail: calls.length === 1
+          ? "Preparando consulta real do sistema"
+          : "Preparando consultas reais em sequencia",
+      });
+
       modelMessages.push({
         role: "assistant",
         content: assistant.content || null,
@@ -384,7 +545,9 @@ Deno.serve(async (request) => {
         } catch {
           args = {};
         }
+        progress(toolProgressCopy(name, args, "started"));
         const execution = await executeAgentToolV3(name, args, toolContext, conversationState);
+        progress(toolProgressCopy(name, args, "finished", Number(execution.result.recordCount || 0)));
         conversationState = execution.state;
         records.push({ name, result: execution.result });
         if (execution.result.structuredData) structured = execution.result.structuredData;
@@ -405,6 +568,11 @@ Deno.serve(async (request) => {
     await saveConversationContext(admin, user.id, sessionId, conversationState);
 
     if (pendingAction) {
+      progress({
+        stage: "confirmation_required",
+        label: "Confirmação necessária",
+        detail: progressText(pendingAction.summary, 180),
+      });
       const response = appendWidget(
         `Antes de executar, preciso da sua confirmação:\n\n**${pendingAction.summary}**\n\nResponda **“Confirmo”** para prosseguir ou **“Cancelar”** para desistir.`,
         { type: "confirmation_required", data: { actionId: pendingAction.actionId, summary: pendingAction.summary } },
@@ -447,6 +615,14 @@ Deno.serve(async (request) => {
     const isGrounded = groundedSuccess || Boolean(clientAction);
     const toolsUsed = records.map((item) => item.name);
     const recordsFound = records.reduce((total, item) => total + Number(item.result.recordCount || 0), 0);
+    progress({
+      stage: "finalizing",
+      label: "Preparando resposta final",
+      detail: toolsUsed.length
+        ? `${toolsUsed.length} consulta${toolsUsed.length === 1 ? "" : "s"} consolidada${toolsUsed.length === 1 ? "" : "s"}`
+        : "Finalizando texto do Synapse",
+      recordsFound,
+    });
     await saveAssistantMessage(admin, user.id, sessionId, response, [{
       kind: "synapse_grounding",
       provider: selectedProvider,
@@ -480,4 +656,54 @@ Deno.serve(async (request) => {
       error: error instanceof Error ? error.message : "Falha no agente Synapse.",
     }, 500);
   }
+  };
+
+  if (!streamMode) return run();
+
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      streamController = controller;
+      progress({
+        stage: "received",
+        label: "Preparando solicitação",
+        detail: "Iniciando processamento em tempo real",
+      });
+
+      run()
+        .then(async (response) => {
+          const raw = await response.text();
+          let payload: any = null;
+          try {
+            payload = JSON.parse(raw);
+          } catch {
+            payload = { error: raw || "Resposta inválida do Synapse." };
+          }
+
+          if (response.status >= 400 || payload?.error) {
+            emitSse("error", {
+              error: payload?.error || "Falha ao processar a solicitação.",
+              status: response.status,
+            });
+            return;
+          }
+
+          emitSse("final", payload);
+        })
+        .catch((error) => {
+          console.error("[synapse-text-agent:stream]", error);
+          emitSse("error", {
+            error: error instanceof Error ? error.message : "Falha no agente Synapse.",
+          });
+        })
+        .finally(() => {
+          streamController = null;
+          controller.close();
+        });
+    },
+    cancel() {
+      streamController = null;
+    },
+  });
+
+  return new Response(stream, { headers: STREAM_HEADERS });
 });

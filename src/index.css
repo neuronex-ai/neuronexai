@@ -1228,6 +1228,12 @@
     min-width: 0;
   }
 
+  .synapse-desktop-tabs {
+    flex: 0 0 auto;
+    width: max-content;
+    max-width: 100%;
+  }
+
   .dark .synapse-desktop-chrome {
     border-bottom-color: rgba(255, 255, 255, 0.055);
     background: linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent);
@@ -1635,12 +1641,23 @@
     border: 1px solid hsl(var(--border) / 0.58);
     border-radius: 15px 15px 15px 5px;
     color: hsl(var(--foreground) / 0.68);
-    background: hsl(var(--foreground) / 0.022);
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.42), hsl(var(--foreground) / 0.024)),
+      hsl(var(--foreground) / 0.022);
+    box-shadow:
+      0 16px 44px -34px hsl(var(--foreground) / 0.38),
+      inset 0 1px 0 hsl(var(--background) / 0.16);
+    backdrop-filter: blur(18px);
   }
 
   .dark .synapse-desktop-thinking {
     border-color: rgba(255, 255, 255, 0.06);
-    background: rgba(255, 255, 255, 0.018);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.012)),
+      rgba(255, 255, 255, 0.018);
+    box-shadow:
+      0 18px 48px -34px rgba(0, 0, 0, 0.86),
+      inset 0 1px 0 rgba(255, 255, 255, 0.026);
   }
 
   .synapse-desktop-composer-dock {

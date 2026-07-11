@@ -68,7 +68,7 @@ describe('SynapseConversation', () => {
         expect(screen.getByRole('log', { name: 'Conversa com o Synapse' })).toBeInTheDocument();
         expect(screen.getByText('Como está minha agenda?')).toBeInTheDocument();
         expect(screen.getByText('Hoje')).toBeInTheDocument();
-        expect(screen.getByRole('status')).toHaveTextContent('Synapse está pensando.');
+        expect(screen.getByRole('status')).toHaveTextContent('Processando solicitação');
 
         fireEvent.click(screen.getByRole('button', { name: 'Copiar mensagem' }));
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('**Hoje** você tem três atendimentos.');

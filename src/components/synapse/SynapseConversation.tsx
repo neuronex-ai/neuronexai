@@ -32,6 +32,9 @@ type QuickAction = {
 type SynapseConversationProps = {
     messages: Message[];
     isSending: boolean;
+    isProcessing?: boolean;
+    activityLabel?: string;
+    activityDetail?: string;
     quickActions: QuickAction[];
     shouldReduceMotion: boolean;
     onQuickAction: (name: string) => void;
@@ -167,11 +170,15 @@ const SynapseEmptyConversation = ({
 export const SynapseConversation = ({
     messages,
     isSending,
+    isProcessing,
+    activityLabel = 'Processando solicitação',
+    activityDetail,
     quickActions,
     shouldReduceMotion,
     onQuickAction,
 }: SynapseConversationProps) => {
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const processingActive = isProcessing ?? isSending;
 
     const handleCopy = async (id: string, content: string) => {
         try {
@@ -184,9 +191,9 @@ export const SynapseConversation = ({
     };
 
     return (
-        <div className="min-h-full" aria-busy={isSending}>
+        <div className="min-h-full" aria-busy={processingActive}>
             <span className="sr-only" role="status" aria-live="polite">
-                {isSending ? 'Synapse está pensando.' : ''}
+                {processingActive ? activityLabel : ''}
             </span>
 
             <AnimatePresence initial={false} mode="wait">
@@ -269,7 +276,7 @@ export const SynapseConversation = ({
                         })}
 
                         <AnimatePresence initial={false}>
-                            {isSending ? (
+                            {processingActive ? (
                                 <motion.div
                                     key="thinking"
                                     initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
@@ -279,18 +286,27 @@ export const SynapseConversation = ({
                                     className="flex items-end gap-2.5"
                                 >
                                     <SynapseMessageMark />
-                                    <div className="synapse-desktop-thinking flex min-h-11 items-center gap-2.5 px-4">
-                                        <span className="flex items-center gap-1.5" aria-hidden="true">
+                                    <div className="synapse-desktop-thinking flex min-h-[58px] max-w-[315px] flex-col justify-center gap-2 px-4 py-3">
+                                        <span className="text-[11px] font-semibold leading-4 text-foreground/82">
+                                            {activityLabel}
+                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className="flex items-center gap-1.5 text-muted-foreground" aria-hidden="true">
                                             {[0, 0.16, 0.32].map((delay) => (
                                                 <motion.span
                                                     key={delay}
-                                                    animate={shouldReduceMotion ? undefined : { y: [0, -3, 0], opacity: [0.32, 1, 0.32] }}
-                                                    transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 0.9, delay, ease: 'easeInOut' }}
+                                                    animate={shouldReduceMotion ? undefined : { y: [0, -3, 0], scale: [0.82, 1.08, 0.82], opacity: [0.28, 1, 0.28] }}
+                                                    transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 0.92, delay, ease: 'easeInOut' }}
                                                     className="h-1.5 w-1.5 rounded-full bg-current"
                                                 />
                                             ))}
-                                        </span>
-                                        <span className="text-[11px] font-medium text-muted-foreground">Pensando</span>
+                                            </span>
+                                            {activityDetail ? (
+                                                <span className="truncate text-[10px] font-medium text-muted-foreground">
+                                                    {activityDetail}
+                                                </span>
+                                            ) : null}
+                                        </div>
                                     </div>
                                 </motion.div>
                             ) : null}

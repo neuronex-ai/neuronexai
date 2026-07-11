@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSynapse, type SynapseActiveTab } from '@/context/SynapseProvider';
 import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
+import { sanitizeSynapseDisplayText } from '@/lib/synapse-humanize';
 import {
     X,
     Loader2,
@@ -49,6 +50,73 @@ const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.Eleme
 
 const HISTORY_FETCH_BATCH = 48;
 const TIMELINE_RENDER_LIMIT = 80;
+
+type ActivityCopy = {
+    label: string;
+    detail?: string;
+};
+
+const normalizeIntent = (value: string) =>
+    value
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+
+const extractNamedEntity = (prompt: string) => {
+    const quoted = prompt.match(/["'“”‘’]([^"'“”‘’]{2,64})["'“”‘’]/u)?.[1];
+    if (quoted) return quoted.trim();
+
+    const patientMatch = prompt.match(/paciente\s+(?:chamado|chamada|de nome|com nome)?\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\s.'-]{1,42})/i)?.[1];
+    if (!patientMatch) return '';
+
+    return patientMatch
+        .split(/\b(?:no|na|do|da|dos|das|para|pra|em|com|que|e)\b/i)[0]
+        .replace(/[?.!,;:]+$/g, '')
+        .trim();
+};
+
+const inferChatActivity = (prompt: string, contextLabel: string): ActivityCopy => {
+    const cleanPrompt = sanitizeSynapseDisplayText(prompt, '');
+    const normalized = normalizeIntent(cleanPrompt);
+    const entity = extractNamedEntity(cleanPrompt);
+    const contextDetail = `Contexto atual: ${contextLabel}`;
+
+    if (/\b(relatorio|resumo|analise)\b/.test(normalized) && /\bpacient/.test(normalized)) {
+        return { label: 'Gerando relatório de pacientes', detail: 'Conferindo a base clínica' };
+    }
+
+    if (/\b(listar|liste|mostrar|mostre|ver)\b/.test(normalized) && /\bpacient/.test(normalized)) {
+        return { label: 'Consultando pacientes cadastrados', detail: 'Lendo registros disponíveis' };
+    }
+
+    if (/\b(buscar|busque|procurar|procure|encontrar|encontre)\b/.test(normalized) && /\bpacient/.test(normalized)) {
+        return {
+            label: entity ? `Buscando paciente ${entity} no sistema` : 'Buscando paciente no sistema',
+            detail: 'Consultando cadastro e contexto clínico',
+        };
+    }
+
+    if (/\b(prontuario|detalhes|ficha|acompanhar|seguimento)\b/.test(normalized) && /\bpacient/.test(normalized)) {
+        return {
+            label: entity ? `Consultando prontuário de ${entity}` : 'Consultando prontuário do paciente',
+            detail: 'Preparando dados clínicos relevantes',
+        };
+    }
+
+    if (/\b(agenda|horario|consulta|atendimento)\b/.test(normalized)) {
+        return { label: 'Consultando agenda clínica', detail: 'Verificando horários e atendimentos' };
+    }
+
+    if (/\b(financeiro|faturamento|cobranca|pagamento|saldo|extrato|transacao)\b/.test(normalized)) {
+        return { label: 'Conferindo dados financeiros', detail: 'Verificando lançamentos e cobranças' };
+    }
+
+    if (/\b(nota|documento|laudo|atestado|parecer|email|e-mail)\b/.test(normalized)) {
+        return { label: 'Preparando conteúdo solicitado', detail: 'Organizando informações do sistema' };
+    }
+
+    return { label: 'Processando solicitação', detail: contextDetail };
+};
 
 type ChatSessionRow = {
     id: string;
@@ -97,6 +165,7 @@ export const SynapseCompactPanel = () => {
         inputDraft,
         setInputDraft,
         timeline,
+        execState,
         activeTab,
         setActiveTab,
         voiceStatus,
@@ -109,7 +178,7 @@ export const SynapseCompactPanel = () => {
         setActiveSessionId,
     } = useSynapse();
     const { currentContext } = useAI();
-    const { send, messages, isSending, sessionReady, clearSession } = useSynapseChat();
+    const { send, messages, isSending, progressEvent, sessionReady, clearSession } = useSynapseChat();
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -231,6 +300,21 @@ export const SynapseCompactPanel = () => {
     const visibleTimeline = timeline.slice(-TIMELINE_RENDER_LIMIT).reverse();
 
     const ctxInfo = CONTEXT_LABELS[currentContext] || { icon: <Sparkles className="h-3.5 w-3.5" />, label: 'Synapse' };
+    const latestUserPrompt = [...messages].reverse().find((message) => message.role === 'user')?.content || inputDraft;
+    const latestExecutionEntry = visibleTimeline.find((entry) => entry.state === execState);
+    const inferredChatActivity = inferChatActivity(latestUserPrompt, ctxInfo.label);
+    const chatActivity = execState === 'executing' && latestExecutionEntry
+        ? {
+            label: sanitizeSynapseDisplayText(latestExecutionEntry.label, 'Executando ação no painel'),
+            detail: sanitizeSynapseDisplayText(latestExecutionEntry.detail, 'Atualizando a interface do Synapse.'),
+        }
+        : progressEvent?.label
+            ? {
+                label: sanitizeSynapseDisplayText(progressEvent.label, 'Processando solicitação'),
+                detail: sanitizeSynapseDisplayText(progressEvent.detail, 'Acompanhando progresso em tempo real.'),
+            }
+        : inferredChatActivity;
+    const isChatProcessing = activeTab === 'chat' && (isSending || execState === 'thinking' || execState === 'executing');
 
     useEffect(() => {
         if (shellState === 'compact' && activeTab === 'chat') {
@@ -318,12 +402,12 @@ export const SynapseCompactPanel = () => {
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
                         <header className="synapse-desktop-chrome shrink-0">
-                            <div className="synapse-desktop-toolbar flex min-h-[68px] items-center gap-2 px-3">
-                                <span className="w-[88px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
+                            <div className="synapse-desktop-toolbar flex min-h-[68px] items-center gap-2.5 pl-4 pr-3">
+                                <span className="w-[92px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
                                     Synapse AI
                                 </span>
 
-                                <nav className="synapse-desktop-tabs flex min-w-0 flex-1 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
+                                <nav className="synapse-desktop-tabs flex w-fit max-w-full shrink-0 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
                                     {PANEL_TABS.map((tab, index) => {
                                         const Icon = tab.icon;
                                         const isActive = activeTab === tab.id;
@@ -381,7 +465,7 @@ export const SynapseCompactPanel = () => {
                                     })}
                                 </nav>
 
-                                <div className="flex shrink-0 items-center gap-0.5">
+                                <div className="ml-auto flex shrink-0 items-center gap-0.5">
                                     {messages.length > 0 ? (
                                         <Tooltip>
                                             <TooltipTrigger asChild>
@@ -630,14 +714,15 @@ export const SynapseCompactPanel = () => {
                                 </motion.div>
                             ) : (
                                 <div className="synapse-chat-view min-h-full py-3">
-                                    <div className="synapse-context-pill mx-1 flex w-fit items-center gap-1.5 px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground">
-                                        <span className={cn('h-1.5 w-1.5 rounded-full', sessionReady ? 'bg-foreground/75' : 'bg-muted-foreground/40')} aria-hidden="true" />
-                                        <span className="flex h-3.5 w-3.5 items-center justify-center" aria-hidden="true">{ctxInfo.icon}</span>
+                                    <div className="synapse-context-pill mx-1 flex w-fit items-center px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
                                         <span>{ctxInfo.label}</span>
                                     </div>
                                     <SynapseConversation
                                         messages={messages}
                                         isSending={isSending}
+                                        isProcessing={isChatProcessing}
+                                        activityLabel={chatActivity.label}
+                                        activityDetail={chatActivity.detail}
                                         quickActions={quickActions}
                                         shouldReduceMotion={Boolean(shouldReduceMotion)}
                                         onQuickAction={setInputDraft}

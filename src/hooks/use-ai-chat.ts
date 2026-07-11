@@ -15,6 +15,81 @@ export interface ChatSession {
 
 const GEMINI_CHAT_URL = edgeFunctionUrl("gemini-text-chat");
 
+export type SynapseProgressEvent = {
+  stage?: string;
+  label?: string;
+  detail?: string;
+  toolName?: string;
+  recordsFound?: number;
+  generatedAt?: string;
+};
+
+type SendChatMessageVariables = {
+  message: string;
+  sessionId: string;
+  attachments?: any[];
+  context?: any;
+  streamProgress?: boolean;
+  onProgress?: (event: SynapseProgressEvent) => void;
+};
+
+const parseSsePayload = (raw: string) => {
+  if (!raw.trim()) return null;
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return { error: raw.trim() };
+  }
+};
+
+const readEventStream = async (
+  response: Response,
+  onProgress?: (event: SynapseProgressEvent) => void,
+) => {
+  const reader = response.body?.getReader();
+  if (!reader) throw new Error("A IA não retornou uma resposta válida. Tente novamente.");
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalPayload: any = null;
+
+  const consumeBlock = (block: string) => {
+    let event = "message";
+    const dataLines: string[] = [];
+
+    for (const line of block.split(/\r?\n/)) {
+      if (line.startsWith("event:")) event = line.slice(6).trim();
+      else if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
+    }
+
+    const payload = parseSsePayload(dataLines.join("\n"));
+    if (!payload) return;
+
+    if (event === "progress") onProgress?.(payload as SynapseProgressEvent);
+    else if (event === "final") finalPayload = payload;
+    else if (event === "error") throw new Error(payload.error || payload.message || "Falha ao processar a solicitação.");
+  };
+
+  while (true) {
+    const { value, done } = await reader.read();
+    if (value) {
+      buffer += decoder.decode(value, { stream: !done });
+      const blocks = buffer.split(/\r?\n\r?\n/);
+      buffer = blocks.pop() || "";
+      for (const block of blocks) consumeBlock(block);
+    }
+
+    if (done) {
+      buffer += decoder.decode();
+      if (buffer.trim()) consumeBlock(buffer);
+      break;
+    }
+  }
+
+  if (!finalPayload) throw new Error("A IA não concluiu a resposta. Tente novamente.");
+  return finalPayload;
+};
+
 // --- Fetch Sessions ---
 const fetchChatSessions = async (userId: string): Promise<ChatSession[]> => {
   const { data, error } = await supabase
@@ -109,18 +184,36 @@ export const useSessionMessages = (sessionId: string | null) => {
 };
 
 // --- Send Message ---
-const sendMessageToAI = async (message: string, sessionId: string, attachments: any[], context: any, accessToken: string) => {
+const sendMessageToAI = async (
+  message: string,
+  sessionId: string,
+  attachments: any[],
+  context: any,
+  accessToken: string,
+  options: { streamProgress?: boolean; onProgress?: (event: SynapseProgressEvent) => void } = {},
+) => {
   try {
+    const wantsProgressStream = Boolean(options.streamProgress && options.onProgress);
     const response = await fetch(GEMINI_CHAT_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
+        'Accept': wantsProgressStream ? 'text/event-stream' : 'application/json',
+        ...(wantsProgressStream ? { 'X-Synapse-Progress': 'stream' } : {}),
       },
-      body: JSON.stringify({ message, sessionId, attachments, context }),
+      body: JSON.stringify({ message, sessionId, attachments, context, streamProgress: wantsProgressStream }),
     });
 
     const contentType = response.headers.get("content-type");
+    if (contentType?.includes("text/event-stream")) {
+      const streamedData = await readEventStream(response, options.onProgress);
+      if (!response.ok || streamedData?.error) {
+        throw new Error(streamedData?.error || "A IA não retornou uma resposta válida. Tente novamente.");
+      }
+      return streamedData;
+    }
+
     if (!contentType || !contentType.includes("application/json")) {
       const text = await response.text();
       console.error("Non-JSON response from Chat AI:", text);
@@ -153,10 +246,10 @@ export const useSendChatMessage = () => {
   const accessToken = session?.access_token;
 
   return useMutation({
-    mutationFn: ({ message, sessionId, attachments, context }: { message: string, sessionId: string, attachments?: any[], context?: any }) => {
+    mutationFn: ({ message, sessionId, attachments, context, streamProgress, onProgress }: SendChatMessageVariables) => {
       if (!accessToken) throw new Error("Sessão inválida.");
       if (!user?.id) throw new Error("UsuÃ¡rio nÃ£o autenticado");
-      return sendMessageToAI(message, sessionId, attachments || [], context || {}, accessToken);
+      return sendMessageToAI(message, sessionId, attachments || [], context || {}, accessToken, { streamProgress, onProgress });
     },
     onMutate: async ({ message, sessionId }) => {
       // Cancel outgoing refetches

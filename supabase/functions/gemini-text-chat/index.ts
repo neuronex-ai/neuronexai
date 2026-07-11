@@ -1,7 +1,15 @@
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, accept, x-synapse-progress",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+};
+
+const streamHeaders = {
+  ...corsHeaders,
+  "Content-Type": "text/event-stream; charset=utf-8",
+  "Cache-Control": "no-cache, no-transform",
+  "Connection": "keep-alive",
+  "X-Accel-Buffering": "no",
 };
 
 Deno.serve(async (request: Request) => {
@@ -30,15 +38,27 @@ Deno.serve(async (request: Request) => {
 
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") || "";
     const body = await request.text();
+    const accept = request.headers.get("Accept") || "";
+    const progressMode = request.headers.get("X-Synapse-Progress") || "";
     const response = await fetch(`${supabaseUrl}/functions/v1/synapse-text-fallback`, {
       method: "POST",
       headers: {
         Authorization: authorization,
         ...(anonKey ? { apikey: anonKey } : {}),
         "Content-Type": "application/json",
+        ...(accept ? { Accept: accept } : {}),
+        ...(progressMode ? { "X-Synapse-Progress": progressMode } : {}),
       },
       body,
     });
+
+    const responseType = response.headers.get("Content-Type") || "";
+    if (responseType.includes("text/event-stream")) {
+      return new Response(response.body, {
+        status: response.status,
+        headers: streamHeaders,
+      });
+    }
 
     const payload = await response.text();
     return new Response(payload, {
