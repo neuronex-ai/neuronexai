@@ -1,26 +1,35 @@
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState, type FocusEvent, type PointerEvent } from "react";
+import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 import { AudioLines, Loader2, MessageCircle, Sparkles } from "lucide-react";
 
 import { VoiceSpiral } from "@/components/ai-chat/VoiceSpiral";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useAI } from "@/context/AIContext";
 import { useSynapse } from "@/context/SynapseProvider";
 import { useSynapseChat } from "@/hooks/use-synapse-chat";
 import { cn } from "@/lib/utils";
 
-const CONTEXT_DISPLAY: Record<string, string> = {
-    dashboard: "Dashboard",
-    "patient-profile": "Paciente",
-    patients: "Pacientes",
-    calendar: "Agenda",
-    finance: "Financeiro",
-    session: "Teleconsulta",
-    notes: "Notas",
-    synapse: "Synapse AI",
-};
+const PILL_SIZE = {
+    collapsed: 140,
+    expanded: 248,
+    voice: 64,
+    idleHeight: 56,
+    voiceHeight: 64,
+} as const;
 
-const controlClassName =
-    "relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-xl text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-background";
+const spring = {
+    shell: { type: "spring", stiffness: 430, damping: 38, mass: 0.78 },
+    width: { type: "spring", stiffness: 390, damping: 36, mass: 0.82 },
+    content: { type: "spring", stiffness: 470, damping: 36, mass: 0.66 },
+    magnetic: { type: "spring", stiffness: 300, damping: 34, mass: 0.5 },
+} as const;
+
+const primaryControlClassName =
+    "relative flex h-11 w-[58px] shrink-0 items-center justify-center overflow-hidden border border-border/45 bg-background/42 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.045)] transition-[background-color,color,border-color,box-shadow] duration-150 hover:border-border/75 hover:bg-muted/75 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-black/20 dark:hover:border-white/[0.13] dark:hover:bg-white/[0.075]";
+
+const quickControlClassName =
+    "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-background/52 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.05)] transition-[background-color,color,border-color,box-shadow] duration-150 hover:border-border/80 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:border-white/[0.14] dark:hover:bg-white/[0.085]";
+
+const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
 export const SynapsePill = () => {
     const {
@@ -32,24 +41,69 @@ export const SynapsePill = () => {
         isVoiceSpeaking,
         getVoiceInputVolume,
         setIsVoiceExpanded,
+        quickActions,
         isIntelligenceLoading,
     } = useSynapse();
-    const { currentContext } = useAI();
-    const { messages, isSending } = useSynapseChat();
+    const { messages, send, isSending } = useSynapseChat();
     const shouldReduceMotion = Boolean(useReducedMotion());
+    const [isExpanded, setIsExpanded] = useState(false);
+    const pillRef = useRef<HTMLDivElement>(null);
+    const wasSendingRef = useRef(isSending);
+
+    const rawX = useMotionValue(0);
+    const rawY = useMotionValue(0);
+    const magneticX = useSpring(rawX, spring.magnetic);
+    const magneticY = useSpring(rawY, spring.magnetic);
 
     const isVoiceActive = voiceStatus === "connected";
     const isThinking = execState === "thinking" || execState === "executing" || isIntelligenceLoading || isSending;
-    const contextLabel = CONTEXT_DISPLAY[currentContext] || "Synapse";
-    const statusLabel = isVoiceActive
-        ? isVoiceSpeaking
-            ? "Respondendo"
-            : "Ouvindo"
-        : isThinking
-            ? "Analisando"
-            : contextLabel;
+    const targetWidth = isVoiceActive ? PILL_SIZE.voice : isExpanded ? PILL_SIZE.expanded : PILL_SIZE.collapsed;
+    const targetHeight = isVoiceActive ? PILL_SIZE.voiceHeight : PILL_SIZE.idleHeight;
+
+    useEffect(() => {
+        if (wasSendingRef.current && !isSending && shellState === "pill") {
+            setActiveTab("chat");
+            setShellState("compact");
+        }
+        wasSendingRef.current = isSending;
+    }, [isSending, setActiveTab, setShellState, shellState]);
+
+    useEffect(() => {
+        if (isVoiceActive) setIsExpanded(false);
+    }, [isVoiceActive]);
 
     if (shellState !== "pill") return null;
+
+    const resetMagnetism = () => {
+        rawX.set(0);
+        rawY.set(0);
+    };
+
+    const handlePointerEnter = (event: PointerEvent<HTMLDivElement>) => {
+        if (!isVoiceActive && event.pointerType !== "touch") setIsExpanded(true);
+    };
+
+    const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+        if (shouldReduceMotion || event.pointerType === "touch" || !pillRef.current) return;
+        const rect = pillRef.current.getBoundingClientRect();
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        rawX.set(clamp((event.clientX - centerX) * 0.035, -5, 5));
+        rawY.set(clamp((event.clientY - centerY) * 0.045, -4, 4));
+    };
+
+    const handlePointerLeave = () => {
+        resetMagnetism();
+        setIsExpanded(false);
+    };
+
+    const handleBlurCapture = (event: FocusEvent<HTMLDivElement>) => {
+        const nextFocusedElement = event.relatedTarget as Node | null;
+        if (!pillRef.current?.contains(nextFocusedElement)) {
+            resetMagnetism();
+            setIsExpanded(false);
+        }
+    };
 
     const openVoice = () => {
         setActiveTab("voice");
@@ -63,102 +117,167 @@ export const SynapsePill = () => {
     };
 
     return (
-        <motion.div
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 8, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.98 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 38 }}
-            className="relative"
-            aria-label="Controles do Synapse"
-        >
-            <TooltipProvider delayDuration={300}>
-                <div
+        <TooltipProvider delayDuration={260}>
+            <motion.div
+                ref={pillRef}
+                onPointerEnter={handlePointerEnter}
+                onPointerMove={handlePointerMove}
+                onPointerLeave={handlePointerLeave}
+                onFocusCapture={() => !isVoiceActive && setIsExpanded(true)}
+                onBlurCapture={handleBlurCapture}
+                style={{
+                    x: shouldReduceMotion ? 0 : magneticX,
+                    y: shouldReduceMotion ? 0 : magneticY,
+                    transformOrigin: "100% 50%",
+                    willChange: "transform",
+                }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 8, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
+                transition={shouldReduceMotion ? { duration: 0 } : spring.shell}
+                className="relative flex items-center justify-end"
+                aria-label="Controles do Synapse"
+                aria-expanded={!isVoiceActive && isExpanded}
+            >
+                <motion.div
+                    animate={{ width: targetWidth, height: targetHeight }}
+                    transition={shouldReduceMotion ? { duration: 0 } : spring.width}
                     className={cn(
-                        "flex h-14 w-[204px] items-center gap-1 rounded-[18px] border border-border/70 bg-background/92 p-1.5",
-                        "shadow-[0_18px_48px_-28px_hsl(var(--foreground)/0.38)] backdrop-blur-2xl",
-                        "dark:border-white/[0.09] dark:bg-background/82 dark:shadow-[0_20px_54px_-28px_rgba(0,0,0,0.78)]",
+                        "notes-liquid-surface synapse-glass-texture relative isolate flex items-center justify-start overflow-hidden rounded-full border p-1.5 backdrop-blur-3xl",
+                        "shadow-[0_20px_56px_-30px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.62)]",
+                        "dark:shadow-[0_24px_66px_-28px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.075)]",
                     )}
+                    style={{ contain: "layout paint", transformOrigin: "100% 50%", willChange: "width, height" }}
                 >
-                    <div className="flex min-w-0 flex-1 items-center gap-2.5 pl-1.5" aria-live="polite">
-                        <span
-                            className={cn(
-                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-[10px] bg-foreground text-background",
-                                isVoiceActive && "bg-primary text-primary-foreground",
-                            )}
-                            aria-hidden="true"
-                        >
-                            {isThinking && !isVoiceActive ? (
-                                <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
-                            ) : (
-                                <Sparkles className="h-4 w-4" />
-                            )}
-                        </span>
-                        <span className="min-w-0 leading-none">
-                            <span className="block truncate text-[13px] font-semibold text-foreground">Synapse</span>
-                            <span className="mt-1 block max-w-[68px] truncate text-[10px] font-medium text-muted-foreground">
-                                {statusLabel}
-                            </span>
-                        </span>
-                    </div>
-
-                    <span className="mx-0.5 h-6 w-px shrink-0 bg-border/70 dark:bg-white/[0.08]" aria-hidden="true" />
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
+                    <AnimatePresence initial={false} mode="wait">
+                        {isVoiceActive ? (
                             <motion.button
+                                key="voice-active"
                                 type="button"
+                                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : spring.content}
+                                whileTap={shouldReduceMotion ? undefined : { scale: 0.95, y: 1 }}
                                 onClick={openVoice}
-                                whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
-                                className={cn(
-                                    controlClassName,
-                                    isVoiceActive && "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground",
-                                )}
-                                aria-label={isVoiceActive ? "Abrir conversa por voz ativa" : "Iniciar conversa por voz"}
-                                aria-pressed={isVoiceActive}
+                                className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-foreground/[0.07] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-white/[0.055]"
+                                aria-label="Abrir conversa por voz ativa"
                             >
-                                {isVoiceActive && !shouldReduceMotion ? (
-                                    <span className="pointer-events-none absolute inset-0 opacity-45" aria-hidden="true">
+                                {!shouldReduceMotion ? (
+                                    <span className="absolute inset-0 opacity-55" aria-hidden="true">
                                         <VoiceSpiral
-                                            totalDots={80}
-                                            dotRadius={0.9}
+                                            totalDots={100}
+                                            dotRadius={0.95}
                                             margin={0}
                                             isListening
                                             isProcessing={isVoiceSpeaking}
                                             getAudioVolume={getVoiceInputVolume}
-                                            className="h-full w-full mix-blend-screen"
+                                            className="h-full w-full mix-blend-multiply dark:mix-blend-screen"
                                             minScale={0.8}
-                                            maxScale={1.6}
+                                            maxScale={1.72}
                                         />
                                     </span>
                                 ) : null}
                                 <AudioLines className="relative z-10 h-[18px] w-[18px]" />
                             </motion.button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Voz</TooltipContent>
-                    </Tooltip>
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <motion.button
-                                type="button"
-                                onClick={openChat}
-                                whileTap={shouldReduceMotion ? undefined : { scale: 0.96 }}
-                                className={controlClassName}
-                                aria-label="Abrir conversa por texto"
+                        ) : (
+                            <motion.div
+                                key="idle"
+                                initial={shouldReduceMotion ? false : { opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.14 }}
+                                className="relative z-10 flex h-full w-max items-center gap-1"
                             >
-                                <MessageCircle className="h-[18px] w-[18px]" />
-                                {messages.length > 0 && execState === "idle" ? (
-                                    <span
-                                        className="absolute right-2.5 top-2.5 h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_0_2px_hsl(var(--background))]"
-                                        aria-hidden="true"
-                                    />
-                                ) : null}
-                            </motion.button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Chat</TooltipContent>
-                    </Tooltip>
-                </div>
-            </TooltipProvider>
-        </motion.div>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <motion.button
+                                            type="button"
+                                            onClick={openVoice}
+                                            whileTap={shouldReduceMotion ? undefined : { scale: 0.95, y: 1 }}
+                                            className={cn(primaryControlClassName, "rounded-l-full rounded-r-[14px]")}
+                                            aria-label="Iniciar conversa por voz"
+                                        >
+                                            <AudioLines className="h-[18px] w-[18px]" />
+                                        </motion.button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">Voz</TooltipContent>
+                                </Tooltip>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <motion.button
+                                            type="button"
+                                            onClick={openChat}
+                                            whileTap={shouldReduceMotion ? undefined : { scale: 0.95, y: 1 }}
+                                            className={cn(primaryControlClassName, "rounded-l-[14px] rounded-r-full")}
+                                            aria-label="Abrir conversa por texto"
+                                        >
+                                            <MessageCircle className="h-[18px] w-[18px]" />
+                                            {messages.length > 0 && execState === "idle" ? (
+                                                <span className="absolute right-2.5 top-2 h-1.5 w-1.5 rounded-full bg-foreground/75 shadow-[0_0_0_2px_hsl(var(--background))]" aria-hidden="true" />
+                                            ) : null}
+                                        </motion.button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="top">Chat</TooltipContent>
+                                </Tooltip>
+
+                                <motion.div
+                                    animate={isExpanded ? "expanded" : "collapsed"}
+                                    variants={{
+                                        collapsed: { opacity: 0, x: 10, scale: 0.98 },
+                                        expanded: { opacity: 1, x: 0, scale: 1 },
+                                    }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : spring.content}
+                                    className={cn("ml-1 flex h-11 shrink-0 items-center gap-1.5 pr-0.5", !isExpanded && "pointer-events-none")}
+                                    aria-hidden={!isExpanded}
+                                >
+                                    <span className="mx-0.5 h-5 w-px shrink-0 bg-border/70 dark:bg-white/[0.09]" aria-hidden="true" />
+                                    {quickActions.slice(0, 2).map((action) => (
+                                        <Tooltip key={action.id}>
+                                            <TooltipTrigger asChild>
+                                                <motion.button
+                                                    type="button"
+                                                    tabIndex={isExpanded ? 0 : -1}
+                                                    onClick={() => void send(action.name)}
+                                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.93, y: 1 }}
+                                                    className={quickControlClassName}
+                                                    aria-label={`Executar ${action.name}`}
+                                                >
+                                                    {isSending ? (
+                                                        <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                                                    ) : (
+                                                        <Sparkles className="h-3.5 w-3.5" />
+                                                    )}
+                                                </motion.button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="top">{action.name}</TooltipContent>
+                                        </Tooltip>
+                                    ))}
+                                </motion.div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <AnimatePresence initial={false}>
+                        {isThinking && !isVoiceActive ? (
+                            <motion.span
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="pointer-events-none absolute inset-x-4 bottom-0 h-px overflow-hidden bg-foreground/10"
+                                aria-hidden="true"
+                            >
+                                <motion.span
+                                    className="block h-full w-1/3 bg-foreground/65"
+                                    animate={shouldReduceMotion ? undefined : { x: ["-100%", "400%"] }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.15, repeat: Infinity, ease: "easeInOut" }}
+                                />
+                            </motion.span>
+                        ) : null}
+                    </AnimatePresence>
+                </motion.div>
+            </motion.div>
+        </TooltipProvider>
     );
 };
