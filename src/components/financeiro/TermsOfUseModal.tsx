@@ -17,8 +17,8 @@ interface TermsOfUseModalProps {
 export const TermsOfUseModal = ({ isOpen, onOpenChange }: TermsOfUseModalProps) => {
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-white dark:bg-zinc-950 rounded-[32px] border-zinc-200 dark:border-white/10 shadow-2xl">
-        <DialogHeader className="p-8 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/50">
+      <DialogContent className="finance-modal-surface max-w-4xl max-h-[90vh] p-0 overflow-hidden bg-white dark:bg-zinc-950 rounded-[32px] border-zinc-200 dark:border-white/10 shadow-2xl">
+        <DialogHeader className="finance-separator p-8 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/50">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center">
               <Scale className="w-6 h-6" />
@@ -123,7 +123,7 @@ export const TermsOfUseModal = ({ isOpen, onOpenChange }: TermsOfUseModalProps) 
           </div>
         </ScrollArea>
 
-        <div className="p-6 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end">
+        <div className="finance-separator p-6 border-t border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/50 flex justify-end">
           <Button 
             onClick={() => onOpenChange(false)}
             className="h-12 px-8 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-bold uppercase tracking-widest text-[10px]"

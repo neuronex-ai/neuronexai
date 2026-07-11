@@ -18,6 +18,7 @@
     --pwa-titlebar-y: env(titlebar-area-y, 0px);
     --pwa-titlebar-width: env(titlebar-area-width, 100%);
     --pwa-titlebar-height: env(titlebar-area-height, 0px);
+    --desktop-navbar-clearance: calc(max(7.75rem, var(--pwa-titlebar-height) + 7.25rem));
 
     /* --- LIQUID GLASS DARK MODE PALETTE (Vision Pro Inspired) --- */
     --background: 240 10% 4%;
@@ -384,10 +385,12 @@
     overflow: hidden;
     transform: translateZ(0);
     background:
-      radial-gradient(74rem 38rem at 50% -10%, hsl(var(--foreground) / 0.052), transparent 56%),
-      radial-gradient(42rem 28rem at 14% 18%, hsl(var(--foreground) / 0.024), transparent 62%),
-      radial-gradient(40rem 26rem at 86% 18%, hsl(var(--foreground) / 0.018), transparent 64%),
+      radial-gradient(74rem 40rem at 50% -10%, hsl(var(--foreground) / 0.056) 0%, hsl(var(--foreground) / 0.034) 24%, hsl(var(--foreground) / 0.014) 48%, transparent 72%),
+      radial-gradient(46rem 32rem at 12% 16%, hsl(var(--foreground) / 0.026) 0%, hsl(var(--foreground) / 0.01) 44%, transparent 72%),
+      radial-gradient(44rem 30rem at 88% 14%, hsl(var(--foreground) / 0.022) 0%, hsl(var(--foreground) / 0.008) 46%, transparent 74%),
       linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--background) / 0.98) 100%);
+    backface-visibility: hidden;
+    will-change: transform, opacity;
   }
 
   .notes-lumen-field::before,
@@ -400,45 +403,396 @@
 
   .notes-lumen-field::before {
     background:
-      repeating-linear-gradient(90deg, hsl(var(--foreground) / 0.018) 0 1px, transparent 1px 5px),
-      repeating-linear-gradient(0deg, hsl(var(--foreground) / 0.012) 0 1px, transparent 1px 7px),
-      radial-gradient(circle at 50% 8%, hsl(var(--foreground) / 0.05), transparent 38%);
-    opacity: 0.34;
-    filter: blur(0.22px);
-    mix-blend-mode: soft-light;
+      radial-gradient(ellipse 58% 34% at 50% 4%, hsl(var(--foreground) / 0.05) 0%, hsl(var(--foreground) / 0.024) 34%, hsl(var(--foreground) / 0.008) 58%, transparent 78%),
+      radial-gradient(ellipse 36% 42% at 24% 22%, hsl(var(--foreground) / 0.018) 0%, transparent 76%),
+      radial-gradient(ellipse 34% 40% at 78% 20%, hsl(var(--foreground) / 0.014) 0%, transparent 78%);
+    opacity: 0.72;
+    mix-blend-mode: screen;
+    animation: lumen-drift 22s cubic-bezier(0.45, 0, 0.3, 1) infinite alternate;
   }
 
   .notes-lumen-field::after {
     background:
-      radial-gradient(circle at 50% 16%, hsl(var(--foreground) / 0.044), transparent 36%),
-      linear-gradient(115deg, transparent 0 36%, hsl(var(--foreground) / 0.018) 42%, transparent 54% 100%);
-    opacity: 0.48;
-    filter: blur(18px) saturate(1.05);
+      radial-gradient(ellipse 44% 24% at 50% 12%, hsl(var(--foreground) / 0.032) 0%, hsl(var(--foreground) / 0.012) 52%, transparent 82%),
+      linear-gradient(112deg, transparent 0 34%, hsl(var(--foreground) / 0.012) 46%, transparent 60% 100%);
+    opacity: 0.62;
     mix-blend-mode: screen;
   }
 
   .dark .notes-lumen-field {
     background:
-      radial-gradient(78rem 42rem at 50% -12%, rgba(255, 255, 255, 0.074), transparent 58%),
-      radial-gradient(44rem 30rem at 16% 18%, rgba(255, 255, 255, 0.026), transparent 64%),
-      radial-gradient(42rem 28rem at 84% 16%, rgba(255, 255, 255, 0.018), transparent 66%),
+      radial-gradient(78rem 44rem at 50% -12%, rgba(255, 255, 255, 0.078) 0%, rgba(255, 255, 255, 0.044) 24%, rgba(255, 255, 255, 0.018) 48%, transparent 74%),
+      radial-gradient(48rem 34rem at 14% 16%, rgba(188, 195, 216, 0.026) 0%, rgba(188, 195, 216, 0.009) 48%, transparent 76%),
+      radial-gradient(46rem 32rem at 86% 15%, rgba(182, 190, 214, 0.02) 0%, rgba(182, 190, 214, 0.007) 50%, transparent 78%),
       linear-gradient(180deg, #070708 0%, #050506 100%);
   }
 
   .dark .notes-lumen-field::before {
     background:
-      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.024) 0 1px, transparent 1px 6px),
-      repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.016) 0 1px, transparent 1px 8px),
-      radial-gradient(circle at 50% 8%, rgba(255, 255, 255, 0.07), transparent 40%);
-    opacity: 0.3;
+      radial-gradient(ellipse 60% 36% at 50% 3%, rgba(255, 255, 255, 0.072) 0%, rgba(220, 225, 240, 0.032) 36%, rgba(188, 196, 222, 0.009) 62%, transparent 80%),
+      radial-gradient(ellipse 38% 44% at 22% 20%, rgba(172, 181, 210, 0.018) 0%, transparent 78%),
+      radial-gradient(ellipse 36% 42% at 80% 18%, rgba(172, 181, 210, 0.015) 0%, transparent 80%);
+    opacity: 0.76;
   }
 
   .dark .notes-lumen-field::after {
     background:
-      radial-gradient(circle at 50% 14%, rgba(255, 255, 255, 0.065), transparent 38%),
-      linear-gradient(115deg, transparent 0 36%, rgba(255, 255, 255, 0.022) 42%, transparent 54% 100%);
-    opacity: 0.5;
+      radial-gradient(ellipse 46% 26% at 50% 12%, rgba(255, 255, 255, 0.046) 0%, rgba(184, 193, 220, 0.014) 54%, transparent 84%),
+      linear-gradient(112deg, transparent 0 34%, rgba(194, 201, 224, 0.014) 46%, transparent 60% 100%);
+    opacity: 0.68;
     mix-blend-mode: screen;
+  }
+
+  @keyframes lumen-drift {
+    0% { transform: translate3d(-0.6%, -0.25%, 0) scale(1.008); opacity: 0.68; }
+    100% { transform: translate3d(0.6%, 0.25%, 0) scale(1.018); opacity: 0.78; }
+  }
+
+  .dark .finance-desktop {
+    --background: 0 0% 4%;
+    --card: 0 0% 6%;
+    --popover: 0 0% 5%;
+    --secondary: 0 0% 15%;
+    --muted: 0 0% 15%;
+    --accent: 0 0% 15%;
+    --border: 0 0% 15%;
+    --input: 0 0% 10%;
+  }
+
+  .finance-lumen-field {
+    overflow: hidden;
+    transform: translateZ(0);
+    background:
+      radial-gradient(80rem 42rem at 50% -12%, hsl(var(--foreground) / 0.052) 0%, hsl(var(--foreground) / 0.026) 30%, hsl(var(--foreground) / 0.009) 56%, transparent 78%),
+      radial-gradient(50rem 34rem at 12% 18%, hsl(var(--foreground) / 0.018) 0%, transparent 74%),
+      radial-gradient(48rem 32rem at 88% 16%, hsl(var(--foreground) / 0.014) 0%, transparent 76%);
+    backface-visibility: hidden;
+    will-change: transform, opacity;
+  }
+
+  .finance-lumen-field::before,
+  .finance-lumen-field::after {
+    content: '';
+    position: absolute;
+    inset: -12%;
+    pointer-events: none;
+  }
+
+  .finance-lumen-field::before {
+    background:
+      radial-gradient(ellipse 58% 34% at 50% 2%, hsl(var(--foreground) / 0.048) 0%, hsl(var(--foreground) / 0.021) 40%, hsl(var(--foreground) / 0.006) 66%, transparent 82%),
+      radial-gradient(ellipse 32% 44% at 20% 18%, hsl(var(--foreground) / 0.012) 0%, transparent 80%),
+      radial-gradient(ellipse 30% 42% at 82% 16%, hsl(var(--foreground) / 0.01) 0%, transparent 82%);
+    mix-blend-mode: screen;
+    animation: lumen-drift 24s cubic-bezier(0.45, 0, 0.3, 1) infinite alternate-reverse;
+  }
+
+  .finance-lumen-field::after {
+    background: radial-gradient(ellipse 70% 24% at 50% 92%, rgba(136, 136, 136, 0.05) 0%, rgba(136, 136, 136, 0.016) 48%, transparent 82%);
+    opacity: 0.58;
+    mix-blend-mode: screen;
+  }
+
+  .dark .finance-lumen-field {
+    background:
+      radial-gradient(82rem 46rem at 50% -14%, rgba(255, 255, 255, 0.072) 0%, rgba(232, 232, 232, 0.036) 28%, rgba(194, 194, 194, 0.011) 56%, transparent 80%),
+      radial-gradient(52rem 36rem at 12% 16%, rgba(184, 184, 184, 0.016) 0%, transparent 76%),
+      radial-gradient(50rem 34rem at 88% 14%, rgba(184, 184, 184, 0.013) 0%, transparent 78%);
+  }
+
+  .dark .finance-lumen-field::after {
+    background: radial-gradient(ellipse 72% 26% at 50% 92%, rgba(148, 148, 148, 0.068) 0%, rgba(122, 122, 122, 0.02) 50%, transparent 84%);
+    opacity: 0.62;
+  }
+
+  .finance-frame,
+  .finance-sidebar-surface,
+  .finance-panel,
+  .finance-inset,
+  .finance-kpi,
+  .finance-modal-surface {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.035) 34%, rgba(24, 24, 24, 0.018));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.5),
+      0 24px 68px -52px rgba(24, 24, 24, 0.38),
+      0 12px 34px -28px rgba(104, 104, 104, 0.14);
+  }
+
+  .dark .finance-frame,
+  .dark .finance-sidebar-surface {
+    border-color: rgba(255, 255, 255, 0.038) !important;
+    background-color: rgba(8, 8, 8, 0.84) !important;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.009) 38%, rgba(0, 0, 0, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.025),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+      0 34px 92px -66px rgba(0, 0, 0, 0.98),
+      0 18px 48px -42px rgba(148, 148, 148, 0.14) !important;
+  }
+
+  .dark .finance-panel {
+    border-color: rgba(255, 255, 255, 0.045) !important;
+    background-color: rgba(18, 18, 18, 0.9) !important;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.036), rgba(255, 255, 255, 0.012) 46%, rgba(0, 0, 0, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.032),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.42),
+      0 22px 58px -48px rgba(0, 0, 0, 0.94),
+      0 12px 34px -30px rgba(146, 146, 146, 0.1) !important;
+  }
+
+  .dark .finance-inset,
+  .dark .finance-kpi {
+    border-color: rgba(255, 255, 255, 0.04) !important;
+    background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.034), rgba(255, 255, 255, 0.012) 48%, rgba(0, 0, 0, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.026),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.48),
+      0 14px 34px -30px rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .dark .finance-inset {
+    background-color: rgba(20, 20, 20, 0.78) !important;
+  }
+
+  .dark .finance-kpi:not([class*="bg-emerald"]):not([class*="bg-amber"]):not([class*="bg-rose"]):not(.finance-kpi-accent) {
+    background-color: rgba(24, 24, 24, 0.86) !important;
+  }
+
+  .dark .finance-kpi[class*="bg-emerald"] {
+    background-color: rgba(27, 27, 27, 0.94) !important;
+    background-color: color-mix(in srgb, rgb(27, 27, 27) 97%, rgb(16, 185, 129) 3%) !important;
+  }
+
+  .dark .finance-kpi[class*="bg-amber"] {
+    background-color: rgba(27, 27, 27, 0.94) !important;
+    background-color: color-mix(in srgb, rgb(27, 27, 27) 96%, rgb(245, 158, 11) 4%) !important;
+  }
+
+  .dark .finance-kpi[class*="bg-rose"] {
+    background-color: rgba(27, 27, 27, 0.94) !important;
+    background-color: color-mix(in srgb, rgb(27, 27, 27) 96%, rgb(244, 63, 94) 4%) !important;
+  }
+
+  .finance-modal-surface {
+    border-color: rgba(24, 24, 24, 0.09) !important;
+    background-color: rgba(252, 252, 252, 0.96) !important;
+    backdrop-filter: blur(30px) saturate(1.08);
+  }
+
+  .dark .finance-modal-surface {
+    border-color: rgba(255, 255, 255, 0.055) !important;
+    background-color: rgba(12, 12, 12, 0.96) !important;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012) 42%, rgba(0, 0, 0, 0.1));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.56),
+      0 42px 110px -48px rgba(0, 0, 0, 0.98),
+      0 18px 48px -38px rgba(148, 148, 148, 0.12) !important;
+  }
+
+  .dark .finance-separator {
+    border-color: rgba(255, 255, 255, 0.045) !important;
+  }
+
+  .dark .finance-modal-form :where(input, textarea, button[role="combobox"]) {
+    border-color: rgba(255, 255, 255, 0.045) !important;
+    background-color: rgba(20, 20, 20, 0.86) !important;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(0, 0, 0, 0.06));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
+  }
+
+  /* Shared desktop Retina/Lumen language for clinical and account workspaces. */
+  .desktop-lumen-page {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .desktop-content-offset {
+    padding-top: var(--desktop-navbar-clearance);
+  }
+
+  .dark .desktop-lumen-page {
+    --background: 0 0% 4%;
+    --card: 0 0% 6%;
+    --popover: 0 0% 5%;
+    --secondary: 0 0% 15%;
+    --muted: 0 0% 15%;
+    --accent: 0 0% 15%;
+    --border: 0 0% 15%;
+    --input: 0 0% 10%;
+  }
+
+  .desktop-lumen-field {
+    overflow: hidden;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    background:
+      radial-gradient(82rem 46rem at 50% -14%, hsl(var(--foreground) / 0.052) 0%, hsl(var(--foreground) / 0.025) 30%, hsl(var(--foreground) / 0.008) 58%, transparent 80%),
+      radial-gradient(52rem 36rem at 12% 18%, hsl(var(--foreground) / 0.016) 0%, transparent 76%),
+      radial-gradient(50rem 34rem at 88% 16%, hsl(var(--foreground) / 0.013) 0%, transparent 78%);
+  }
+
+  .desktop-lumen-field::before,
+  .desktop-lumen-field::after {
+    content: '';
+    position: absolute;
+    inset: -12%;
+    pointer-events: none;
+  }
+
+  .desktop-lumen-field::before {
+    background:
+      radial-gradient(ellipse 60% 36% at 50% 2%, hsl(var(--foreground) / 0.046) 0%, hsl(var(--foreground) / 0.019) 42%, hsl(var(--foreground) / 0.005) 68%, transparent 82%),
+      radial-gradient(ellipse 34% 46% at 20% 18%, hsl(var(--foreground) / 0.011) 0%, transparent 80%),
+      radial-gradient(ellipse 32% 44% at 82% 16%, hsl(var(--foreground) / 0.009) 0%, transparent 82%);
+    mix-blend-mode: screen;
+    animation: lumen-drift 26s cubic-bezier(0.45, 0, 0.3, 1) infinite alternate;
+  }
+
+  .desktop-lumen-field::after {
+    background: radial-gradient(ellipse 72% 25% at 50% 92%, rgba(144, 144, 144, 0.052) 0%, rgba(122, 122, 122, 0.016) 50%, transparent 84%);
+    opacity: 0.56;
+    mix-blend-mode: screen;
+  }
+
+  .dark .desktop-lumen-field {
+    background:
+      radial-gradient(84rem 48rem at 50% -14%, rgba(255, 255, 255, 0.07) 0%, rgba(232, 232, 232, 0.034) 28%, rgba(194, 194, 194, 0.01) 58%, transparent 80%),
+      radial-gradient(52rem 36rem at 12% 16%, rgba(184, 184, 184, 0.015) 0%, transparent 76%),
+      radial-gradient(50rem 34rem at 88% 14%, rgba(184, 184, 184, 0.012) 0%, transparent 78%),
+      linear-gradient(180deg, #070707 0%, #050505 100%);
+  }
+
+  .dark .desktop-lumen-field::after {
+    background: radial-gradient(ellipse 74% 27% at 50% 92%, rgba(148, 148, 148, 0.064) 0%, rgba(122, 122, 122, 0.019) 50%, transparent 84%);
+    opacity: 0.6;
+  }
+
+  .desktop-retina-frame,
+  .desktop-retina-panel,
+  .desktop-retina-inset,
+  .desktop-retina-modal,
+  .global-retina-navbar {
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.026) 42%, rgba(24, 24, 24, 0.016));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.34),
+      0 24px 68px -52px rgba(24, 24, 24, 0.34),
+      0 12px 34px -29px rgba(104, 104, 104, 0.12);
+  }
+
+  .dark .desktop-retina-frame,
+  .dark .global-retina-navbar {
+    border-color: rgba(255, 255, 255, 0.04) !important;
+    background-color: rgba(8, 8, 8, 0.86) !important;
+    background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.009) 42%, rgba(0, 0, 0, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.028),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.52),
+      0 34px 92px -66px rgba(0, 0, 0, 0.98),
+      0 18px 48px -42px rgba(148, 148, 148, 0.13) !important;
+  }
+
+  .dark .desktop-retina-panel {
+    border-color: rgba(255, 255, 255, 0.046) !important;
+    background-color: rgba(18, 18, 18, 0.91) !important;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.011) 48%, rgba(0, 0, 0, 0.09));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.032),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.44),
+      0 22px 58px -48px rgba(0, 0, 0, 0.94),
+      0 12px 34px -30px rgba(146, 146, 146, 0.1) !important;
+  }
+
+  .dark .desktop-retina-inset {
+    border-color: rgba(255, 255, 255, 0.042) !important;
+    background-color: rgba(21, 21, 21, 0.82) !important;
+    background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.031), rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.08));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.024),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.46),
+      0 14px 34px -30px rgba(0, 0, 0, 0.9) !important;
+  }
+
+  .dark .desktop-retina-modal {
+    border-color: rgba(255, 255, 255, 0.058) !important;
+    background-color: rgba(12, 12, 12, 0.97) !important;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012) 44%, rgba(0, 0, 0, 0.1));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.56),
+      0 42px 110px -48px rgba(0, 0, 0, 0.98),
+      0 18px 48px -38px rgba(148, 148, 148, 0.12) !important;
+    backdrop-filter: blur(32px) saturate(1.04);
+  }
+
+  .dark .desktop-retina-form :where(input, textarea, button[role="combobox"]) {
+    border-color: rgba(255, 255, 255, 0.046) !important;
+    background-color: rgba(20, 20, 20, 0.88) !important;
+    background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(0, 0, 0, 0.06));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
+  }
+
+  .desktop-retina-interactive {
+    transition-property: transform, background-color, border-color, box-shadow, opacity;
+    transition-duration: 420ms;
+    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  .desktop-retina-interactive:hover {
+    transform: translateY(-2px);
+  }
+
+  .desktop-retina-interactive:active {
+    transform: translateY(0) scale(0.985);
+    transition-duration: 140ms;
+  }
+
+  @supports (background: radial-gradient(in oklab, white, transparent)) {
+    .notes-lumen-field,
+    .finance-lumen-field,
+    .desktop-lumen-field {
+      background-image:
+        radial-gradient(ellipse 76% 44% at 50% -12% in oklab, hsl(var(--foreground) / 0.07) 0%, hsl(var(--foreground) / 0.032) 30%, hsl(var(--foreground) / 0.009) 58%, transparent 80%),
+        radial-gradient(ellipse 46% 38% at 12% 16% in oklab, hsl(var(--foreground) / 0.018) 0%, transparent 78%),
+        radial-gradient(ellipse 44% 36% at 88% 14% in oklab, hsl(var(--foreground) / 0.014) 0%, transparent 80%);
+    }
+
+    .dark .notes-lumen-field {
+      background-image:
+        radial-gradient(ellipse 78% 46% at 50% -12% in oklab, rgba(255, 255, 255, 0.078) 0%, rgba(225, 230, 243, 0.038) 30%, rgba(182, 192, 218, 0.011) 58%, transparent 80%),
+        radial-gradient(ellipse 48% 40% at 12% 16% in oklab, rgba(172, 182, 212, 0.018) 0%, transparent 78%),
+        radial-gradient(ellipse 46% 38% at 88% 14% in oklab, rgba(172, 182, 212, 0.014) 0%, transparent 80%);
+    }
+
+    .dark .finance-lumen-field {
+      background-image:
+        radial-gradient(ellipse 78% 46% at 50% -12% in oklab, rgba(255, 255, 255, 0.078) 0%, rgba(230, 230, 230, 0.036) 30%, rgba(192, 192, 192, 0.01) 58%, transparent 80%),
+        radial-gradient(ellipse 48% 40% at 12% 16% in oklab, rgba(184, 184, 184, 0.016) 0%, transparent 78%),
+        radial-gradient(ellipse 46% 38% at 88% 14% in oklab, rgba(184, 184, 184, 0.013) 0%, transparent 80%);
+    }
+
+    .dark .desktop-lumen-field {
+      background-image:
+        radial-gradient(ellipse 80% 48% at 50% -12% in oklab, rgba(255, 255, 255, 0.076) 0%, rgba(230, 230, 230, 0.035) 30%, rgba(192, 192, 192, 0.01) 58%, transparent 80%),
+        radial-gradient(ellipse 48% 40% at 12% 16% in oklab, rgba(184, 184, 184, 0.015) 0%, transparent 78%),
+        radial-gradient(ellipse 46% 38% at 88% 14% in oklab, rgba(184, 184, 184, 0.012) 0%, transparent 80%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notes-lumen-field::before,
+    .finance-lumen-field::before,
+    .desktop-lumen-field::before {
+      animation: none;
+    }
+
+    .desktop-retina-interactive,
+    .desktop-retina-interactive:hover,
+    .desktop-retina-interactive:active {
+      transform: none;
+      transition-duration: 0.01ms;
+    }
   }
 
   .notes-retina-rail {

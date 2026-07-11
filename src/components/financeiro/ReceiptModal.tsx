@@ -112,7 +112,7 @@ export const ReceiptModal = ({ transaction, children, patientEmail }: ReceiptMod
             <DialogTrigger asChild>
                 {children}
             </DialogTrigger>
-            <DialogContent className="max-w-[1000px] bg-background dark:bg-[#020204] border-border/10 dark:border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] outline-none">
+            <DialogContent className="finance-modal-surface max-w-[1000px] bg-background dark:bg-[#020204] border-border/10 dark:border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] outline-none">
                 <div className="flex flex-col h-[90vh]">
 
                     {/* Header */}

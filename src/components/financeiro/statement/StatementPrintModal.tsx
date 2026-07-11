@@ -48,7 +48,7 @@ export const StatementPrintModal = ({ children, transactions, dateRange, summary
             </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-[900px] bg-[#0A0A0B] border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] h-[90vh] flex flex-col outline-none">
+      <DialogContent className="finance-modal-surface max-w-[900px] bg-[#0A0A0B] border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] h-[90vh] flex flex-col outline-none">
         
         {/* Header */}
         <div className="p-6 border-b border-white/5 bg-white/[0.02] shrink-0 flex items-center justify-between">

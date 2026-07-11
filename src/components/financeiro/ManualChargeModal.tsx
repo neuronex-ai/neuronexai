@@ -271,15 +271,15 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/10 dark:bg-zinc-950">
-        <div className="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
+      <DialogContent className="finance-modal-surface max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/10 dark:bg-zinc-950">
+        <div className="finance-separator border-b border-zinc-200 px-6 py-5 dark:border-white/10">
           <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">Nova cobrança manual</DialogTitle>
           <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             Registro gerencial em aberto. Não gera cobrança bancária NeuroFinance nem movimentação em conta.
           </DialogDescription>
         </div>
 
-        <div className="grid gap-6 p-6 lg:grid-cols-[1fr_320px]">
+        <div className="finance-modal-form grid gap-6 p-6 lg:grid-cols-[1fr_320px]">
           <div className="space-y-5">
             <div className="space-y-2">
               <Label>Paciente</Label>
@@ -367,7 +367,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
           </div>
 
           <aside className="space-y-3">
-            <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 dark:border-white/10 dark:bg-white/[0.035]">
+            <div className="finance-inset rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 dark:border-white/10 dark:bg-white/[0.035]">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
                   <UserRound className="h-5 w-5" />
@@ -385,7 +385,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
               <div
                 key={`${card.label}-${card.value}`}
                 className={cn(
-                  "rounded-[20px] border border-zinc-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025]",
+                  "finance-inset rounded-[20px] border border-zinc-200 bg-white p-4 dark:border-white/10 dark:bg-white/[0.025]",
                   card.tone === "warning" && "border-amber-200 bg-amber-50 dark:border-amber-300/20 dark:bg-amber-300/10",
                   card.tone === "success" && "border-emerald-200 bg-emerald-50 dark:border-emerald-300/20 dark:bg-emerald-300/10",
                 )}
@@ -401,7 +401,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
             ))}
 
             {!patientId ? (
-              <div className="rounded-[20px] border border-dashed border-zinc-200 p-4 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+              <div className="finance-inset rounded-[20px] border border-dashed border-zinc-200 p-4 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
                 Selecione um paciente para preencher defaults de convenio, pacote, mensalidade ou sessao avulsa.
               </div>
             ) : null}
@@ -415,7 +415,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
           </aside>
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-zinc-200 px-6 py-5 dark:border-white/10">
+        <div className="finance-separator flex items-center justify-between gap-3 border-t border-zinc-200 px-6 py-5 dark:border-white/10">
           <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
             {packageConsumesOnly?"Consome uma sessão sem gerar nova receita.":destination==="paid"?"Registra a baixa no histórico.":destination==="neurofinance"?"Cria e vincula a cobrança bancária.":"Salva como cobrança gerencial em aberto."}
           </p>

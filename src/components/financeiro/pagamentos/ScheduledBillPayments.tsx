@@ -255,7 +255,7 @@ export function BillPaymentDetailsDialog({
 
   return (
     <Dialog open={Boolean(record)} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto rounded-[32px] border-zinc-200 bg-white/95 p-0 shadow-[0_40px_120px_-44px_rgba(0,0,0,0.55)] backdrop-blur-3xl dark:border-white/10 dark:bg-zinc-950/95">
+      <DialogContent className="finance-modal-surface max-h-[90vh] max-w-3xl overflow-y-auto rounded-[32px] border-zinc-200 bg-white/95 p-0 shadow-[0_40px_120px_-44px_rgba(0,0,0,0.55)] backdrop-blur-3xl dark:border-white/10 dark:bg-zinc-950/95">
         <DialogHeader className="border-b border-zinc-200/70 p-7 dark:border-white/[0.07]">
           <div className="flex items-start gap-4">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">

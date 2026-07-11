@@ -91,7 +91,7 @@ export const RecurringExpensesPanel = () => {
               Nova
             </Button>
           </DialogTrigger>
-          <DialogContent className="rounded-[28px] border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900">
+          <DialogContent className="finance-modal-surface rounded-[28px] border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900">
             <DialogHeader>
               <DialogTitle className="text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tight">
                 Nova Despesa Recorrente

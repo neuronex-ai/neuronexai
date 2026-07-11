@@ -357,7 +357,7 @@ export const NeuroNexBankPanel = ({ transactions = [], isLoadingTransactions = f
         <div className="w-full space-y-8">
             {/* Modal de Extrato Geral */}
             <Dialog open={isStatementOpen} onOpenChange={(open) => { if (!open) handleCloseStatement(); else setIsStatementOpen(true); }}>
-                <DialogContent className="max-w-[1100px] h-[90vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
+                <DialogContent className="finance-modal-surface max-w-[1100px] h-[90vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
                     <DialogHeader className="px-12 py-10 border-b border-zinc-100 dark:border-white/5 flex flex-row items-center justify-between space-y-0 bg-zinc-50/50 dark:bg-white/[0.01]">
                         <div className="flex items-center gap-6">
                             <div className="w-14 h-14 rounded-[20px] bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center shadow-2xl">
@@ -419,7 +419,7 @@ export const NeuroNexBankPanel = ({ transactions = [], isLoadingTransactions = f
 
             {/* Modal: Quanto Entrou */}
             <Dialog open={isIncomeModalOpen} onOpenChange={(open) => { if (!open) setSelectedTransaction(null); setIsIncomeModalOpen(open); }}>
-                <DialogContent className="max-w-[800px] h-[80vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
+                <DialogContent className="finance-modal-surface max-w-[800px] h-[80vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
                     <DialogHeader className="px-10 py-8 border-b border-zinc-100 dark:border-white/5 flex flex-row items-center justify-between space-y-0 bg-zinc-50/50 dark:bg-white/[0.01]">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-[18px] bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center shadow-xl">
@@ -461,7 +461,7 @@ export const NeuroNexBankPanel = ({ transactions = [], isLoadingTransactions = f
 
             {/* Modal: Quanto Saiu */}
             <Dialog open={isExpensesModalOpen} onOpenChange={(open) => { if (!open) setSelectedTransaction(null); setIsExpensesModalOpen(open); }}>
-                <DialogContent className="max-w-[800px] h-[80vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
+                <DialogContent className="finance-modal-surface max-w-[800px] h-[80vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
                     <DialogHeader className="px-10 py-8 border-b border-zinc-100 dark:border-white/5 flex flex-row items-center justify-between space-y-0 bg-zinc-50/50 dark:bg-white/[0.01]">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-[18px] bg-zinc-100 dark:bg-white/10 text-zinc-500 dark:text-zinc-400 flex items-center justify-center shadow-xl">
@@ -503,7 +503,7 @@ export const NeuroNexBankPanel = ({ transactions = [], isLoadingTransactions = f
 
             {/* Modal: Vai Cair */}
             <Dialog open={isPendingModalOpen} onOpenChange={(open) => { if (!open) setSelectedTransaction(null); setIsPendingModalOpen(open); }}>
-                <DialogContent className="max-w-[800px] h-[80vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
+                <DialogContent className="finance-modal-surface max-w-[800px] h-[80vh] bg-white dark:bg-[#0A0A0B] border-zinc-200 dark:border-white/5 p-0 overflow-hidden flex flex-col rounded-[48px] shadow-2xl z-[150] backdrop-blur-3xl outline-none [&>button]:hidden">
                     <DialogHeader className="px-10 py-8 border-b border-zinc-100 dark:border-white/5 flex flex-row items-center justify-between space-y-0 bg-zinc-50/50 dark:bg-white/[0.01]">
                         <div className="flex items-center gap-5">
                             <div className="w-12 h-12 rounded-[18px] bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-xl">

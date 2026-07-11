@@ -51,7 +51,7 @@ import type { Transaction } from "@/types";
 import type { FinanceView } from "../FinancialDashboard";
 
 const FINANCE_PANEL_SURFACE =
-  "border-border/55 bg-background/76 shadow-[0_24px_74px_-58px_rgba(0,0,0,0.34)] dark:border-black/75 dark:bg-zinc-900/58 dark:shadow-[0_26px_74px_-52px_rgba(0,0,0,0.96)] dark:ring-black/50";
+  "finance-panel border-border/55 bg-background/[0.76] shadow-[0_24px_74px_-58px_rgba(0,0,0,0.34)] dark:border-black/75 dark:bg-zinc-900/[0.58] dark:shadow-[0_26px_74px_-52px_rgba(0,0,0,0.96)] dark:ring-black/50";
 
 export interface NeuroFinanceManagementContext {
   enabled: boolean;
@@ -128,7 +128,7 @@ function Rows({
       </div>
     );
   return (
-    <div className="overflow-x-auto rounded-2xl border border-border/60 dark:border-black/75">
+    <div className="finance-inset overflow-x-auto rounded-2xl border border-border/60 dark:border-black/75">
       <table className="w-full min-w-[720px] text-sm">
         <thead className="border-b border-border/55 bg-muted/35 text-left text-muted-foreground dark:border-black/70 dark:bg-black/20">
           <tr>
@@ -287,7 +287,7 @@ function Planning({
           </Button>
         </Panel>
       </div>
-      <details className="rounded-[28px] border border-border/55 bg-background/60 p-5 shadow-sm dark:border-black/75 dark:bg-zinc-900/52 dark:shadow-[0_18px_48px_-38px_rgba(0,0,0,0.95)]">
+      <details className="rounded-[28px] border border-border/55 bg-background/60 p-5 shadow-sm dark:border-black/75 dark:bg-zinc-900/[0.52] dark:shadow-[0_18px_48px_-38px_rgba(0,0,0,0.95)]">
         <summary className="cursor-pointer text-sm font-semibold">
           Gerenciar recorrências
         </summary>
@@ -381,16 +381,16 @@ export const FinancialManagementDashboard = (props: Props) => {
           if (!v) setSettlement(null);
         }}
       />
-      <DesktopWorkspaceShell className="border-border/45 bg-background/70 shadow-[0_26px_90px_-68px_rgba(0,0,0,0.46)] dark:border-black/80 dark:bg-black/32 dark:shadow-[0_28px_90px_-58px_rgba(0,0,0,0.98)] dark:ring-black/60">
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border border-border/55 bg-background/76 p-4 shadow-[0_18px_54px_-44px_rgba(0,0,0,0.38)] dark:border-black/75 dark:bg-zinc-900/58 dark:shadow-[0_22px_58px_-40px_rgba(0,0,0,0.96)]">
-          <DesktopWorkspaceIcon icon={CircleDollarSign} className="dark:border-black/75 dark:bg-black/35" />
+      <DesktopWorkspaceShell className="finance-frame border-border/45 bg-background/70 shadow-[0_26px_90px_-68px_rgba(0,0,0,0.46)] dark:border-black/80 dark:bg-black/[0.32] dark:shadow-[0_28px_90px_-58px_rgba(0,0,0,0.98)] dark:ring-black/60">
+        <div className="finance-panel mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border border-border/55 bg-background/[0.76] p-4 shadow-[0_18px_54px_-44px_rgba(0,0,0,0.38)] dark:border-black/75 dark:bg-zinc-900/[0.58] dark:shadow-[0_22px_58px_-40px_rgba(0,0,0,0.96)]">
+          <DesktopWorkspaceIcon icon={CircleDollarSign} className="finance-inset dark:border-black/75 dark:bg-black/35" />
           <div className="min-w-48 flex-1">
             <h1 className="text-xl font-bold">Gestão financeira</h1>
             <p className="text-sm text-muted-foreground">
               Consultório, cobranças e planejamento
             </p>
           </div>
-          <div className="flex items-center rounded-xl border border-border/60 bg-background/45 dark:border-black/75 dark:bg-black/25">
+          <div className="finance-inset flex items-center rounded-xl border border-border/60 bg-background/[0.45] dark:border-black/75 dark:bg-black/25">
             <Button
               variant="ghost"
               size="icon"
@@ -409,7 +409,7 @@ export const FinancialManagementDashboard = (props: Props) => {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex rounded-xl border border-border/60 bg-background/45 p-1 dark:border-black/75 dark:bg-black/25">
+          <div className="finance-inset flex rounded-xl border border-border/60 bg-background/[0.45] p-1 dark:border-black/75 dark:bg-black/25">
             {(["cash", "competence"] as const).map((x) => (
               <button
                 key={x}
@@ -440,7 +440,7 @@ export const FinancialManagementDashboard = (props: Props) => {
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi finance-kpi-accent dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 accent
                 label="Resultado"
                 value={compact(metrics.result)}
@@ -449,25 +449,25 @@ export const FinancialManagementDashboard = (props: Props) => {
                 }
               />
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 tone="success"
                 label="Recebido"
                 value={compact(metrics.received)}
               />
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 label="Despesas pagas"
                 value={compact(metrics.paidExpenses)}
               />
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 tone={metrics.overdueCount ? "warning" : "default"}
                 label="A receber"
                 value={compact(metrics.receivable)}
                 detail={`${metrics.overdueCount} vencida(s)`}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-border/55 bg-background/42 p-4 dark:border-black/75 dark:bg-black/24">
+            <div className="finance-inset flex flex-wrap items-center gap-3 rounded-2xl border border-border/55 bg-background/[0.42] p-4 dark:border-black/75 dark:bg-black/[0.24]">
               <Landmark className="h-4 w-4" />
               <p className="flex-1 text-sm text-muted-foreground">
                 {props.neurofinance?.connected
@@ -501,7 +501,7 @@ export const FinancialManagementDashboard = (props: Props) => {
                         onClick={() =>
                           props.setSelectedTransaction(x.transaction)
                         }
-                        className="flex w-full items-center gap-3 rounded-xl border border-border/55 p-3 text-left transition-[background-color,transform] duration-150 hover:bg-muted/35 active:scale-[0.99] dark:border-black/70 dark:hover:bg-white/[0.025] motion-reduce:transition-none motion-reduce:active:scale-100"
+                        className="finance-inset flex w-full items-center gap-3 rounded-xl border border-border/55 p-3 text-left transition-[background-color,transform] duration-150 hover:bg-muted/35 active:scale-[0.99] dark:border-black/70 dark:hover:bg-white/[0.025] motion-reduce:transition-none motion-reduce:active:scale-100"
                       >
                         <AlertTriangle className="h-4 w-4 text-amber-600" />
                         <span className="min-w-0 flex-1">
@@ -558,21 +558,21 @@ export const FinancialManagementDashboard = (props: Props) => {
           <div className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 tone={metrics.overdueCount ? "warning" : "default"}
                 label="Vencidas"
                 value={metrics.overdueCount}
                 detail={money(metrics.overdueAmount)}
               />
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 label="A vencer"
                 value={
                   metrics.openIncomeTransactions.length - metrics.overdueCount
                 }
               />
               <DesktopMiniStat
-                className="dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
+                className="finance-kpi finance-kpi-accent dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
                 accent
                 label="Total em aberto"
                 value={compact(metrics.receivable)}

@@ -120,7 +120,7 @@ const SectionHeader = ({
     action?: ReactNode;
     onBack?: () => void;
 }) => (
-    <div className="relative overflow-hidden rounded-[32px] border border-zinc-200/50 bg-white/60 p-6 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.04)] backdrop-blur-2xl dark:border-black/75 dark:bg-zinc-900/42 dark:shadow-[0_18px_48px_-34px_rgba(0,0,0,0.96)] lg:p-7">
+    <div className="finance-panel relative overflow-hidden rounded-[32px] border border-zinc-200/50 bg-white/60 p-6 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.04)] backdrop-blur-2xl dark:border-black/75 dark:bg-zinc-900/[0.42] dark:shadow-[0_18px_48px_-34px_rgba(0,0,0,0.96)] lg:p-7">
         <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.02] mix-blend-overlay dark:opacity-[0.04]" />
         <div className="relative z-10 flex flex-col items-center justify-between gap-4 md:flex-row">
             <div className="flex items-center gap-5">
@@ -149,7 +149,7 @@ const SectionHeader = ({
 );
 
 const ContentWrapper = ({ children }: { children: ReactNode }) => (
-    <div className="relative overflow-hidden rounded-[32px] border border-zinc-200/50 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-black/75 dark:bg-zinc-900/36 dark:shadow-[0_18px_48px_-36px_rgba(0,0,0,0.94)] lg:p-6">
+    <div className="finance-panel relative overflow-hidden rounded-[32px] border border-zinc-200/50 bg-white/40 p-5 shadow-sm backdrop-blur-xl dark:border-black/75 dark:bg-zinc-900/[0.36] dark:shadow-[0_18px_48px_-36px_rgba(0,0,0,0.94)] lg:p-6">
         <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.015] mix-blend-overlay dark:opacity-[0.03]" />
         <div className="relative z-10">{children}</div>
     </div>
@@ -162,7 +162,7 @@ const PaymentRouteSwitcher = ({
     active: "boleto" | "pix";
     onSelect: (route: "pagamentos-boletos" | "pix-pagar") => void;
 }) => (
-    <div className="flex rounded-[18px] border border-zinc-200/70 bg-white/70 p-1 shadow-sm backdrop-blur-xl dark:border-black/75 dark:bg-black/28 dark:shadow-[0_14px_34px_-28px_rgba(0,0,0,0.96)]">
+    <div className="finance-inset flex rounded-[18px] border border-zinc-200/70 bg-white/70 p-1 shadow-sm backdrop-blur-xl dark:border-black/75 dark:bg-black/[0.28] dark:shadow-[0_14px_34px_-28px_rgba(0,0,0,0.96)]">
         {[
             { id: "boleto" as const, route: "pagamentos-boletos" as const, label: "Pagar boleto", icon: Barcode },
             { id: "pix" as const, route: "pix-pagar" as const, label: "Pagar Pix", icon: QrCode },
@@ -185,7 +185,7 @@ const PaymentRouteSwitcher = ({
 );
 
 const CapabilityNotice = ({ icon: Icon, title, description }: { icon: ElementType<{ className?: string }>; title: string; description: string }) => (
-    <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50/50 px-8 text-center dark:border-black/70 dark:bg-black/18">
+    <div className="finance-inset flex min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-dashed border-zinc-200 bg-zinc-50/50 px-8 text-center dark:border-black/70 dark:bg-black/[0.18]">
         <div className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-200 bg-white shadow-sm dark:border-black/75 dark:bg-black/30 dark:shadow-[0_16px_38px_-30px_rgba(0,0,0,0.94)]">
             <Icon className="h-6 w-6 text-zinc-500" />
         </div>

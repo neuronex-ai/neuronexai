@@ -320,8 +320,7 @@ const DesktopFinanceiro = () => {
         onOpenChange={setAgentTransactionModalOpen}
         showTrigger={false}
       />
-      <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_10%,hsl(var(--foreground)/0.035),transparent_34%)] dark:bg-[radial-gradient(circle_at_50%_10%,hsl(var(--foreground)/0.045),transparent_34%)]" />
-      <div className="pointer-events-none fixed inset-0 z-0 bg-[url('/noise.png')] bg-repeat opacity-[0.018] mix-blend-soft-light dark:opacity-[0.025]" />
+      <div className="finance-lumen-field pointer-events-none fixed inset-0 z-0" />
       <div className="relative z-10 mx-auto flex w-full max-w-[2200px] flex-1 gap-5 px-5 pb-10 md:px-7 lg:gap-6 lg:px-10 xl:px-14 2xl:px-16">
         <nav
           aria-label="Navegação do Financeiro"
@@ -336,7 +335,7 @@ const DesktopFinanceiro = () => {
             animate={{ opacity: 1, x: 0, width: isSidebarExpanded ? SIDEBAR_EXPANDED_WIDTH : SIDEBAR_COLLAPSED_WIDTH }}
             transition={sidebarTransition}
             style={{ willChange: "width, transform" }}
-            className="sticky top-10 flex max-h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-[30px] border border-border/60 bg-card/82 p-3 shadow-[0_24px_74px_-54px_hsl(var(--foreground)/0.42)] ring-1 ring-foreground/[0.02] backdrop-blur-2xl dark:border-black/80 dark:bg-zinc-950/88 dark:shadow-[0_28px_80px_-52px_rgba(0,0,0,0.96)] dark:ring-black/70"
+            className="finance-sidebar-surface sticky top-10 flex max-h-[calc(100vh-5rem)] flex-col overflow-hidden rounded-[30px] border border-border/60 bg-card/[0.82] p-3 shadow-[0_24px_74px_-54px_hsl(var(--foreground)/0.42)] ring-1 ring-foreground/[0.02] backdrop-blur-2xl dark:border-black/80 dark:bg-zinc-950/[0.88] dark:shadow-[0_28px_80px_-52px_rgba(0,0,0,0.96)] dark:ring-black/70"
           >
             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,hsl(var(--background)/0.62),transparent_28%),radial-gradient(circle_at_0%_0%,hsl(var(--foreground)/0.035),transparent_34%)]" />
             <div className={cn("relative z-10 flex flex-col gap-2 overflow-y-auto overflow-x-hidden no-scrollbar", showSidebarDetails ? "pr-1" : "items-center pr-0")}>
@@ -366,7 +365,7 @@ const DesktopFinanceiro = () => {
                           : "text-muted-foreground hover:bg-foreground/[0.045] hover:text-foreground dark:hover:bg-white/[0.045]",
                       )}
                     >
-                      <div className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-[background-color,border-color,transform] duration-200 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100", hasActiveSub ? "bg-background/65 dark:bg-black/55" : "border border-border/60 bg-background/55 dark:border-black/70 dark:bg-black/35")}>
+                      <div className={cn("finance-inset flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-[background-color,border-color,transform] duration-200 group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100", hasActiveSub ? "bg-background/65 dark:bg-black/55" : "border border-border/60 bg-background/55 dark:border-black/70 dark:bg-black/35")}>
                         <group.icon className="h-5 w-5" />
                       </div>
                       <AnimatePresence initial={false}>
@@ -424,7 +423,7 @@ const DesktopFinanceiro = () => {
           </motion.div>
         </nav>
 
-        <div className="relative min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/42 shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.45)] backdrop-blur-sm dark:border-black/75 dark:bg-black/28 dark:shadow-[0_28px_96px_-68px_rgba(0,0,0,0.98)]">
+        <div className="finance-frame relative min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/[0.42] shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.45)] backdrop-blur-sm dark:border-black/75 dark:bg-black/[0.28] dark:shadow-[0_28px_96px_-68px_rgba(0,0,0,0.98)]">
           <AnimatePresence mode="wait">
             <FinanceiroMainContent
               selectedTransaction={selectedTransaction}

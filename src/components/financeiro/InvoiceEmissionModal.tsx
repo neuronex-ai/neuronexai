@@ -45,7 +45,7 @@ export const InvoiceEmissionModal = ({ children }: InvoiceEmissionModalProps) =>
             <DialogTrigger asChild>
                 {TriggerButton}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] bg-card dark:bg-[#0A0A0B] border-border/10 dark:border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] gap-0 outline-none">
+            <DialogContent className="finance-modal-surface sm:max-w-[700px] bg-card dark:bg-[#0A0A0B] border-border/10 dark:border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] gap-0 outline-none">
 
                 <AnimatePresence mode="wait">
                     {view === 'menu' && (

@@ -103,7 +103,7 @@ export const CreatePaymentLinkModal = ({ open, onOpenChange }: CreatePaymentLink
 
     return (
         <Dialog open={open} onOpenChange={(val) => !val && handleClose()}>
-            <DialogContent className="sm:max-w-[480px] bg-zinc-950 border-white/5 p-0 overflow-hidden rounded-[32px] shadow-2xl">
+            <DialogContent className="finance-modal-surface sm:max-w-[480px] bg-zinc-950 border-white/5 p-0 overflow-hidden rounded-[32px] shadow-2xl">
                 <div className="absolute inset-0 premium-noise opacity-[0.03] pointer-events-none" />
 
                 <DialogHeader className="p-8 pb-4 flex flex-row items-center justify-between border-b border-white/5 relative z-10">

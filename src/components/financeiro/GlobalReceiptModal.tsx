@@ -60,7 +60,7 @@ export const GlobalReceiptModal = ({ children }: GlobalReceiptModalProps) => {
             <DialogTrigger asChild>
                 {TriggerButton}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[1100px] bg-[#0A0A0B] border-white/10 shadow-2xl p-0 overflow-hidden rounded-[24px] flex flex-col md:flex-row h-[90vh] md:h-[85vh] outline-none">
+            <DialogContent className="finance-modal-surface sm:max-w-[1100px] bg-[#0A0A0B] border-white/10 shadow-2xl p-0 overflow-hidden rounded-[24px] flex flex-col md:flex-row h-[90vh] md:h-[85vh] outline-none">
 
                 {/* Left: Form */}
                 <div className="w-full md:w-[360px] p-8 border-b md:border-b-0 md:border-r border-white/10 bg-white/[0.02] flex flex-col gap-6 shrink-0 overflow-y-auto">

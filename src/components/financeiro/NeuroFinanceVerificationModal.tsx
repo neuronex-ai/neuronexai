@@ -31,7 +31,7 @@ export function NeuroFinanceVerificationModal({
 }: NeuroFinanceVerificationModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex h-[88vh] flex-col overflow-hidden rounded-[34px] border border-zinc-200/80 bg-white p-0 text-zinc-950 shadow-[0_42px_120px_-42px_rgba(24,24,27,0.38)] dark:border-white/10 dark:bg-zinc-950 dark:text-white sm:max-w-[1180px]">
+      <DialogContent className="finance-modal-surface flex h-[88vh] flex-col overflow-hidden rounded-[34px] border border-zinc-200/80 bg-white p-0 text-zinc-950 shadow-[0_42px_120px_-42px_rgba(24,24,27,0.38)] dark:border-white/10 dark:bg-zinc-950 dark:text-white sm:max-w-[1180px]">
         <DialogHeader className="shrink-0 border-b border-zinc-200/80 bg-white px-8 py-7 dark:border-white/[0.07] dark:bg-zinc-950">
           <DialogTitle className="text-2xl font-black uppercase tracking-tight text-zinc-900 dark:text-white">
             Análise cadastral

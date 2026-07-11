@@ -56,7 +56,7 @@ export const RecurringInvoicesList = () => {
                             <Plus className="h-5 w-5 transition-transform group-hover:rotate-90" />
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 w-[380px] rounded-[32px] p-8 shadow-2xl">
+                    <DialogContent className="finance-modal-surface bg-white dark:bg-[#09090b] border-zinc-200 dark:border-white/10 w-[380px] rounded-[32px] p-8 shadow-2xl">
                         <DialogHeader className="mb-6">
                             <DialogTitle className="flex items-center gap-3 text-lg font-black text-zinc-900 dark:text-white uppercase tracking-tighter">
                                 <div className="p-2.5 rounded-xl bg-zinc-900/10 dark:bg-white/10 text-zinc-900 dark:text-white"><Repeat className="h-5 w-5" /></div>

@@ -655,10 +655,10 @@ function ChargeDetailDialog({
 
   return (
     <Dialog open={Boolean(charge)} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-[28px] border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/10 dark:bg-zinc-950">
+      <DialogContent className="finance-modal-surface max-w-2xl rounded-[28px] border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/10 dark:bg-zinc-950">
         {charge ? (
           <>
-            <div className="border-b border-zinc-200 px-6 py-5 dark:border-white/10">
+            <div className="finance-separator border-b border-zinc-200 px-6 py-5 dark:border-white/10">
               <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">{charge.description}</DialogTitle>
               <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
                 {charge.scope === "management" ? "Cobrança gerencial" : "Cobrança bancária NeuroFinance"}
@@ -678,7 +678,7 @@ function ChargeDetailDialog({
                 {status.label}
               </span>
             </div>
-            <div className="flex flex-wrap justify-end gap-2 border-t border-zinc-200 px-6 py-5 dark:border-white/10">
+            <div className="finance-separator flex flex-wrap justify-end gap-2 border-t border-zinc-200 px-6 py-5 dark:border-white/10">
               {charge.scope === "management" ? (
                 <>
                   <Button variant="outline" onClick={() => onMarkPending(charge)} disabled={isWorking || charge.status === "pending"} className="rounded-[14px]">

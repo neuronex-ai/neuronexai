@@ -94,7 +94,7 @@ export function FinancialSettlementModal({
   };
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-[24px]">
+      <DialogContent className="finance-modal-surface finance-modal-form max-w-md rounded-[24px]">
         <DialogTitle>
           Registrar{" "}
           {transaction.type === "income" ? "recebimento" : "pagamento"}
@@ -102,7 +102,7 @@ export function FinancialSettlementModal({
         <DialogDescription>
           Baixa total ou parcial com histórico auditável.
         </DialogDescription>
-        <div className="rounded-2xl border p-4">
+        <div className="finance-inset rounded-2xl border p-4">
           <p className="font-medium">{transaction.description}</p>
           <p className="text-xs text-muted-foreground">
             Saldo: {money(managementOutstandingAmountOf(transaction))}

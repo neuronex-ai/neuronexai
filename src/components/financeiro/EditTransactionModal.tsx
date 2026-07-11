@@ -49,8 +49,8 @@ export const EditTransactionModal = ({ transaction, children }: EditTransactionM
       <DialogTrigger asChild>
         {children}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[480px] p-0 border border-border/10 dark:border-white/10 bg-card dark:bg-[#0A0A0B] shadow-2xl gap-0 overflow-hidden">
-        <DialogHeader className="p-6 border-b border-border/10 dark:border-white/5 bg-secondary/5 dark:bg-white/[0.02]">
+      <DialogContent className="finance-modal-surface sm:max-w-[480px] p-0 border border-border/10 dark:border-white/10 bg-card dark:bg-[#0A0A0B] shadow-2xl gap-0 overflow-hidden">
+        <DialogHeader className="finance-separator p-6 border-b border-border/10 dark:border-white/5 bg-secondary/5 dark:bg-white/[0.02]">
           <DialogTitle className="text-xl font-semibold text-foreground dark:text-white flex items-center gap-2">
             <Edit className="h-5 w-5 text-primary" />
             Editar Transação

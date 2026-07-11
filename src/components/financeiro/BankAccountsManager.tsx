@@ -122,7 +122,7 @@ export const BankAccountsManager = () => {
                             <Sparkles className="h-3.5 w-3.5 opacity-40 group-hover:opacity-100" />
                         </motion.button>
                     </DialogTrigger>
-                    <DialogContent showCloseButton={false} className="bg-white/80 dark:bg-[#0A0A0B]/80 backdrop-blur-[120px] border border-zinc-200 dark:border-white/5 rounded-[64px] p-0 shadow-[0_80px_160px_-40px_rgba(0,0,0,0.8)] overflow-hidden sm:max-w-2xl z-[10000] outline-none">
+                    <DialogContent showCloseButton={false} className="finance-modal-surface bg-white/80 dark:bg-[#0A0A0B]/80 backdrop-blur-[120px] border border-zinc-200 dark:border-white/5 rounded-[64px] p-0 shadow-[0_80px_160px_-40px_rgba(0,0,0,0.8)] overflow-hidden sm:max-w-2xl z-[10000] outline-none">
                         <div className="absolute inset-0 opacity-[0.03] pointer-events-none mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
 
                         <DialogHeader className="p-10 border-b border-zinc-100 dark:border-white/5 bg-zinc-50/50 dark:bg-zinc-900/50">
