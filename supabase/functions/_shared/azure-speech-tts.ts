@@ -1,5 +1,5 @@
-export const DEFAULT_AZURE_SPEECH_VOICE = "pt-BR-FranciscaNeural";
-export const DEFAULT_AZURE_SPEECH_STYLE = "calm";
+export const DEFAULT_AZURE_SPEECH_VOICE = "pt-BR-MacerioMultilingualNeural";
+export const DEFAULT_AZURE_SPEECH_STYLE = "none";
 export const MAX_AZURE_TTS_INPUT_LENGTH = 2000;
 
 export interface OpenAiSpeechRequest {
@@ -66,7 +66,12 @@ export function buildAzureSpeechSsml({
   const safeVoice = /^[a-z]{2}-[A-Z]{2}-[A-Za-z0-9:.-]+$/.test(voice)
     ? voice
     : DEFAULT_AZURE_SPEECH_VOICE;
-  const safeStyle = /^[a-z][a-z0-9-]{0,39}$/i.test(style) ? style : "";
+  const normalizedStyle = clean(style, 40);
+  const safeStyle = /^(?:none|default|neutral)$/i.test(normalizedStyle)
+    ? ""
+    : /^[a-z][a-z0-9-]{0,39}$/i.test(normalizedStyle)
+      ? normalizedStyle
+      : "";
   const text = escapeSsml(input);
   const prosody = `<prosody rate="${speedToAzureRate(speed)}">${text}</prosody>`;
   const spokenContent = safeStyle

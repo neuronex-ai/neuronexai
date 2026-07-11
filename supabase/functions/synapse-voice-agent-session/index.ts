@@ -29,7 +29,7 @@ const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.25;
 const AZURE_TTS_ADAPTER_PATH = "/functions/v1/synapse-voice-azure-tts";
 const OPENAI_COMPATIBLE_TTS_MODEL = "tts-1";
 const OPENAI_COMPATIBLE_TTS_VOICE = "alloy";
-const DEFAULT_AZURE_TTS_VOICE = "pt-BR-FranciscaNeural";
+const DEFAULT_AZURE_TTS_VOICE = "pt-BR-MacerioMultilingualNeural";
 const DEFAULT_CARTESIA_MODEL_ID = "sonic-2";
 const DEFAULT_CARTESIA_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
 
