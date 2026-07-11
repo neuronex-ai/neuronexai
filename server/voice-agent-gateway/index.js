@@ -274,6 +274,9 @@ class SynapseVoiceSession {
     this.latencyMs = {};
     this.firstAudioByteSeen = false;
     this.lastUserTranscriptAt = 0;
+    this.lastResponseActivityAt = 0;
+    this.noResponseRecoveryTimer = null;
+    this.noResponseRecoveryCount = 0;
     this.lastFunctionResponseAt = 0;
     this.waitingAudioAfterUser = false;
     this.waitingAudioAfterFunction = false;
@@ -424,6 +427,7 @@ class SynapseVoiceSession {
 
       ws.on("message", (data, isBinary) => {
         if (isBinary) {
+          this.markAgentActivity();
           if (!this.firstAudioByteSeen) {
             this.firstAudioByteSeen = true;
             this.latencyMs.first_audio_byte_ms = Date.now() - this.startedAt;
@@ -505,6 +509,7 @@ class SynapseVoiceSession {
         });
         break;
       case "FunctionCallRequest":
+        this.markAgentActivity();
         this.latencyMs.first_tool_request_ms ??= Date.now() - this.startedAt;
         this.latencyMs.last_tool_request_ms = Date.now() - this.startedAt;
         if (this.lastUserTranscriptAt) {
@@ -516,6 +521,10 @@ class SynapseVoiceSession {
       case "AgentAudioInterrupted":
         this.runner.onUserStartedSpeaking();
         break;
+      case "AgentThinking":
+      case "AgentStartedSpeaking":
+        this.markAgentActivity();
+        break;
       case "ConversationText": {
         const text = conversationText(event);
         if (!text) break;
@@ -526,6 +535,9 @@ class SynapseVoiceSession {
             this.latencyMs.last_user_transcript_ms = Date.now() - this.startedAt;
             this.lastUserTranscriptAt = Date.now();
             this.waitingAudioAfterUser = true;
+            this.armNoResponseRecovery(text.content);
+          } else if (isAssistantRole(text.role)) {
+            this.markAgentActivity();
           }
           void this.persistMessage(text.role, text.content, event);
         }
@@ -552,6 +564,52 @@ class SynapseVoiceSession {
       default:
         break;
     }
+  }
+
+  markAgentActivity() {
+    this.lastResponseActivityAt = Date.now();
+    this.clearNoResponseRecovery();
+  }
+
+  clearNoResponseRecovery() {
+    if (!this.noResponseRecoveryTimer) return;
+    clearTimeout(this.noResponseRecoveryTimer);
+    this.noResponseRecoveryTimer = null;
+  }
+
+  armNoResponseRecovery(text) {
+    this.clearNoResponseRecovery();
+    this.noResponseRecoveryCount = 0;
+    const transcript = normalizeVoiceText(clean(text, 1600));
+    if (!transcript) return;
+
+    const runRecovery = () => {
+      if (this.closed || !this.settingsApplied || !isOpen(this.deepgram)) return;
+      if (!this.lastUserTranscriptAt || this.lastResponseActivityAt >= this.lastUserTranscriptAt) return;
+
+      this.noResponseRecoveryCount += 1;
+      if (this.noResponseRecoveryCount === 1) {
+        this.latencyMs.last_silent_transcript_reinject_ms = Date.now() - this.startedAt;
+        this.sendDeepgram({ type: "InjectUserMessage", message: transcript });
+        this.sendClient({
+          type: "gateway_warning",
+          errorType: "voice_recovery",
+          error: "O comando foi ouvido, mas o agente demorou para responder. Reenviei a fala para manter a conversa.",
+        });
+        this.noResponseRecoveryTimer = setTimeout(runRecovery, 8500);
+        return;
+      }
+
+      this.latencyMs.last_silent_transcript_fallback_ms = Date.now() - this.startedAt;
+      this.sendDeepgram({
+        type: "InjectAgentMessage",
+        message: "Estou te ouvindo, mas a resposta demorou mais que o normal. Pode repetir o comando de forma mais direta?",
+        behavior: "queue",
+      });
+      this.noResponseRecoveryTimer = null;
+    };
+
+    this.noResponseRecoveryTimer = setTimeout(runRecovery, 6000);
   }
 
   markRunnerLatency(event, data = {}) {
@@ -741,6 +799,7 @@ class SynapseVoiceSession {
     if (this.closed) return;
     this.closed = true;
     clearInterval(this.keepAliveTimer);
+    this.clearNoResponseRecovery();
     void this.updateVoiceSession(this.settingsApplied ? "ended" : "cancelled", { closeReason: "client_closed" });
     this.closeDeepgram();
     if (isOpen(this.client)) this.client.close(1000, "session_closed");

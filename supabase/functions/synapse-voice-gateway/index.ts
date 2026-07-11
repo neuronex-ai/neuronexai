@@ -767,6 +767,9 @@ class EdgeSynapseVoiceSession {
   private closed = false;
   private lastProviderEvent: Record<string, unknown> | null = null;
   private lastUserTranscriptAt = 0;
+  private lastResponseActivityAt = 0;
+  private noResponseRecoveryTimer: ReturnType<typeof setTimeout> | null = null;
+  private noResponseRecoveryCount = 0;
   private lastFunctionResponseAt = 0;
   private waitingAudioAfterUser = false;
   private waitingAudioAfterFunction = false;
@@ -865,6 +868,7 @@ class EdgeSynapseVoiceSession {
 
     ws.onmessage = (event) => {
       if (event.data instanceof ArrayBuffer) {
+        this.markAgentActivity();
         if (!this.firstAudioByteSeen) {
           this.firstAudioByteSeen = true;
           this.latencyMs.first_audio_byte_ms = Date.now() - this.startedAt;
@@ -897,6 +901,7 @@ class EdgeSynapseVoiceSession {
 
     ws.onclose = (event) => {
       if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+      this.clearNoResponseRecovery();
       const closeReason = clean(event.reason || this.lastProviderEvent?.message || "", 500);
       void this.updateVoiceSession(this.settingsApplied ? "ended" : "error", {
         closeCode: event.code,
@@ -943,6 +948,7 @@ class EdgeSynapseVoiceSession {
         });
         break;
       case "FunctionCallRequest":
+        this.markAgentActivity();
         this.latencyMs.first_tool_request_ms ??= Date.now() - this.startedAt;
         this.latencyMs.last_tool_request_ms = Date.now() - this.startedAt;
         if (this.lastUserTranscriptAt) {
@@ -954,6 +960,10 @@ class EdgeSynapseVoiceSession {
       case "AgentAudioInterrupted":
         this.runner.onUserStartedSpeaking();
         break;
+      case "AgentThinking":
+      case "AgentStartedSpeaking":
+        this.markAgentActivity();
+        break;
       case "ConversationText": {
         const text = conversationText(event);
         if (!text) break;
@@ -964,6 +974,9 @@ class EdgeSynapseVoiceSession {
             this.latencyMs.last_user_transcript_ms = Date.now() - this.startedAt;
             this.lastUserTranscriptAt = Date.now();
             this.waitingAudioAfterUser = true;
+            this.armNoResponseRecovery(text.content);
+          } else if (isAssistantRole(text.role)) {
+            this.markAgentActivity();
           }
           void this.persistMessage(text.role, text.content, event);
         }
@@ -990,6 +1003,52 @@ class EdgeSynapseVoiceSession {
       default:
         break;
     }
+  }
+
+  markAgentActivity() {
+    this.lastResponseActivityAt = Date.now();
+    this.clearNoResponseRecovery();
+  }
+
+  clearNoResponseRecovery() {
+    if (!this.noResponseRecoveryTimer) return;
+    clearTimeout(this.noResponseRecoveryTimer);
+    this.noResponseRecoveryTimer = null;
+  }
+
+  armNoResponseRecovery(text: string) {
+    this.clearNoResponseRecovery();
+    this.noResponseRecoveryCount = 0;
+    const transcript = normalizeVoiceText(clean(text, 1600));
+    if (!transcript) return;
+
+    const runRecovery = () => {
+      if (this.closed || !this.settingsApplied || !isOpen(this.deepgram)) return;
+      if (!this.lastUserTranscriptAt || this.lastResponseActivityAt >= this.lastUserTranscriptAt) return;
+
+      this.noResponseRecoveryCount += 1;
+      if (this.noResponseRecoveryCount === 1) {
+        this.latencyMs.last_silent_transcript_reinject_ms = Date.now() - this.startedAt;
+        this.sendDeepgram({ type: "InjectUserMessage", message: transcript });
+        this.sendClient({
+          type: "gateway_warning",
+          errorType: "voice_recovery",
+          error: "O comando foi ouvido, mas o agente demorou para responder. Reenviei a fala para manter a conversa.",
+        });
+        this.noResponseRecoveryTimer = setTimeout(runRecovery, 8500);
+        return;
+      }
+
+      this.latencyMs.last_silent_transcript_fallback_ms = Date.now() - this.startedAt;
+      this.sendDeepgram({
+        type: "InjectAgentMessage",
+        message: "Estou te ouvindo, mas a resposta demorou mais que o normal. Pode repetir o comando de forma mais direta?",
+        behavior: "queue",
+      });
+      this.noResponseRecoveryTimer = null;
+    };
+
+    this.noResponseRecoveryTimer = setTimeout(runRecovery, 6000);
   }
 
   markRunnerLatency(event: string, data: Record<string, unknown> = {}) {
@@ -1174,6 +1233,7 @@ class EdgeSynapseVoiceSession {
     if (this.closed) return;
     this.closed = true;
     if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
+    this.clearNoResponseRecovery();
     void this.updateVoiceSession(this.settingsApplied ? "ended" : "cancelled", {
       closeReason: "client_closed",
     });

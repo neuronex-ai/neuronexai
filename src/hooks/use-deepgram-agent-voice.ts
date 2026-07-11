@@ -12,7 +12,7 @@ type ClientAction = { type?: string; payload?: unknown; data?: unknown };
 type PendingStart = {
   resolve: () => void;
   reject: (error: Error) => void;
-  timeoutId: ReturnType<typeof window.setTimeout>;
+  timeoutId: number;
 };
 
 interface Options {
@@ -36,6 +36,8 @@ interface Options {
 }
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
+const VOICE_CONTROL_CHANNEL = "synapse-voice-control";
+const VOICE_ACTIVE_OWNER_KEY = "synapse_voice_active_owner";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -44,9 +46,6 @@ const isLocalBrowserRuntime = () => {
   if (import.meta.env.DEV) return true;
   return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname);
 };
-
-const isLocalGatewayUrl = (value: string) =>
-  /^wss?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(?:\/|$)/i.test(value);
 
 const localBrowserGatewayUrl = () => {
   if (typeof window === "undefined") return DEFAULT_GATEWAY_URL;
@@ -94,6 +93,13 @@ const parseMessage = (value: unknown) => {
   } catch {
     return null;
   }
+};
+
+const makeVoiceOwnerId = () => {
+  const randomId = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `synapse-voice-${randomId}`;
 };
 
 const eventText = (event: Record<string, unknown>) => clean(
@@ -205,6 +211,8 @@ export function useDeepgramAgentVoice({
   const [currentVoiceSessionId, setCurrentVoiceSessionId] = useState<string | null>(voiceSessionId || null);
 
   const wsRef = useRef<WebSocket | null>(null);
+  const ownerIdRef = useRef(makeVoiceOwnerId());
+  const controlChannelRef = useRef<BroadcastChannel | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const inputContextRef = useRef<AudioContext | null>(null);
   const workletRef = useRef<AudioWorkletNode | null>(null);
@@ -417,6 +425,63 @@ export function useDeepgramAgentVoice({
     setLastFunctionStatus(null);
     setVoicePhase("idle");
   }, [cleanupInput, setActiveToolState]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const stopIfOtherSessionStarted = (payload: unknown) => {
+      const message = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+      if (message.type !== "stop_other_synapse_voice_sessions") return;
+      if (message.ownerId === ownerIdRef.current) return;
+      if (!activeRef.current && !wsRef.current) return;
+      void closeEverything();
+    };
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel(VOICE_CONTROL_CHANNEL);
+      channel.onmessage = (event) => stopIfOtherSessionStarted(event.data);
+      controlChannelRef.current = channel;
+    } catch {
+      controlChannelRef.current = null;
+    }
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== VOICE_ACTIVE_OWNER_KEY || !event.newValue) return;
+      try {
+        stopIfOtherSessionStarted(JSON.parse(event.newValue));
+      } catch {
+        // Ignore malformed lock values from older builds.
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      channel?.close();
+      if (controlChannelRef.current === channel) controlChannelRef.current = null;
+    };
+  }, [closeEverything]);
+
+  const requestExclusiveVoiceSession = useCallback(async () => {
+    if (typeof window === "undefined") return;
+    const message = {
+      type: "stop_other_synapse_voice_sessions",
+      ownerId: ownerIdRef.current,
+      at: Date.now(),
+    };
+    try {
+      controlChannelRef.current?.postMessage(message);
+    } catch {
+      // BroadcastChannel can fail in restricted browser contexts; localStorage still covers other tabs.
+    }
+    try {
+      window.localStorage.setItem(VOICE_ACTIVE_OWNER_KEY, JSON.stringify(message));
+    } catch {
+      // Storage can be disabled; this lock is best-effort and should not block voice startup.
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+  }, []);
 
   const startInput = useCallback(async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -671,6 +736,7 @@ export function useDeepgramAgentVoice({
   }, [ensurePlayer]);
 
   const startSession = useCallback(async (override?: SynapseVoiceStartOverride) => {
+    await requestExclusiveVoiceSession();
     await closeEverything();
     activeRef.current = true;
     readyRef.current = false;
@@ -769,7 +835,7 @@ export function useDeepgramAgentVoice({
       await closeEverything();
       throw startError;
     }
-  }, [closeEverything, gatewayUrl, handleBinaryAudio, handleGatewayMessage, inputSampleRate, language, outputSampleRate, rejectPendingStart, setActiveToolState, startInput, systemInstruction]);
+  }, [closeEverything, gatewayUrl, handleBinaryAudio, handleGatewayMessage, inputSampleRate, language, outputSampleRate, rejectPendingStart, requestExclusiveVoiceSession, setActiveToolState, startInput, systemInstruction]);
 
   const endSession = useCallback(() => {
     void closeEverything();
