@@ -117,7 +117,7 @@ export const DesktopSessionReviewDialog = ({
         onEscapeKeyDown={(event) => event.preventDefault()}
         onPointerDownOutside={(event) => event.preventDefault()}
         className={cn(
-          '!grid !w-[min(980px,calc(100vw-2rem))] !max-w-[min(980px,calc(100vw-2rem))] !grid-cols-none !gap-0 !overflow-hidden !rounded-[28px] !border-border/45 !bg-background/98 !p-0 shadow-2xl backdrop-blur-3xl dark:!border-white/10',
+          'desktop-retina-modal desktop-retina-form !grid !w-[min(980px,calc(100vw-2rem))] !max-w-[min(980px,calc(100vw-2rem))] !grid-cols-none !gap-0 !overflow-hidden !rounded-[28px] !border-border/45 !bg-background/98 !p-0 backdrop-blur-3xl dark:!border-white/10',
           '!max-h-[calc(100dvh-2rem)] sm:!max-h-[calc(100dvh-2rem)] sm:!overflow-hidden sm:!rounded-[28px] sm:!p-0',
         )}
       >

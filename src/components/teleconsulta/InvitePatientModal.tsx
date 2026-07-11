@@ -72,7 +72,7 @@ export const InvitePatientModal = ({ isOpen, onClose, patient, meetLink, therapi
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="bg-white/60 dark:bg-[#050505]/60 backdrop-blur-[40px] border border-white/20 dark:border-white/10 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.2)] dark:shadow-[0_32px_64px_-12px_rgba(0,0,0,0.5)] rounded-[32px] sm:max-w-[480px] p-0 overflow-hidden gap-0">
+            <DialogContent className="desktop-retina-modal desktop-retina-form bg-white/60 dark:bg-[#0c0c0c]/96 backdrop-blur-[40px] border border-white/20 dark:border-white/10 rounded-[32px] sm:max-w-[480px] p-0 overflow-hidden gap-0">
 
                 <div className="p-8 pb-6 border-b border-white/10 dark:border-white/5 bg-white/10 dark:bg-white/[0.02]">
                     <DialogHeader>

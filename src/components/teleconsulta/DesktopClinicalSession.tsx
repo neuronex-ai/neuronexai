@@ -8,6 +8,7 @@ import { DesktopSessionWorkspace } from './DesktopSessionWorkspace';
 import { DesktopTeleconsultationLobby } from './DesktopTeleconsultationLobby';
 import { InvitePatientModal } from './InvitePatientModal';
 import { TranscriptionConsentPanel } from './TranscriptionConsentPanel';
+import { DesktopLumenBackdrop } from '@/components/ui/DesktopLumenBackdrop';
 
 interface DesktopClinicalSessionProps {
   activeAppointment: Appointment;
@@ -34,7 +35,9 @@ export const DesktopClinicalSession = ({
   if (session.showLobby) {
     return (
       <>
-        <div className="fixed inset-0 z-[100] overflow-hidden bg-background pt-24">
+        <div className="desktop-lumen-page fixed inset-0 z-[100] overflow-hidden bg-background pt-[var(--desktop-navbar-clearance)]">
+          <DesktopLumenBackdrop />
+          <div className="relative z-10 h-full">
           <DesktopTeleconsultationLobby
             patientName={patientName}
             patient={session.patient}
@@ -50,11 +53,12 @@ export const DesktopClinicalSession = ({
             onRequireTranscriptionDecision={() => session.openPatientInvite()}
             onJoin={session.handleJoinSession}
           />
+          </div>
         </div>
 
         {session.showConsent ? (
           <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-4 backdrop-blur-md sm:p-6" data-synapse-target="transcription-decision">
-            <div className="w-full max-w-2xl">
+            <div className="desktop-retina-modal w-full max-w-2xl rounded-[32px]">
               <TranscriptionConsentPanel
                 patientName={patientName}
                 isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
@@ -70,10 +74,11 @@ export const DesktopClinicalSession = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-[100] overflow-hidden bg-background pt-24">
+      <div className="desktop-lumen-page fixed inset-0 z-[100] overflow-hidden bg-background pt-[var(--desktop-navbar-clearance)]">
+        <DesktopLumenBackdrop />
         <div
           className={cn(
-            'grid h-full min-h-0 gap-4 p-4 xl:p-5',
+            'relative z-10 grid h-full min-h-0 gap-4 p-4 xl:p-5',
             session.isFocusMode
               ? 'grid-cols-1'
               : 'grid-cols-[minmax(0,1.2fr)_minmax(520px,0.8fr)]',
@@ -162,7 +167,7 @@ export const DesktopClinicalSession = ({
 
       {session.showConsent && session.hasJoined && !session.reviewOpen ? (
         <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-6 backdrop-blur-md" data-synapse-target="transcription-decision">
-          <div className="w-full max-w-2xl">
+          <div className="desktop-retina-modal w-full max-w-2xl rounded-[32px]">
             <TranscriptionConsentPanel
               patientName={patientName}
               isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}

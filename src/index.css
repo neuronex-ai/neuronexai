@@ -608,8 +608,10 @@
     isolation: isolate;
   }
 
-  .desktop-content-offset {
-    padding-top: var(--desktop-navbar-clearance);
+  @media (min-width: 768px) {
+    .desktop-content-offset {
+      padding-top: var(--desktop-navbar-clearance) !important;
+    }
   }
 
   .dark .desktop-lumen-page {
@@ -714,7 +716,8 @@
       0 14px 34px -30px rgba(0, 0, 0, 0.9) !important;
   }
 
-  .dark .desktop-retina-modal {
+  .dark .desktop-retina-modal,
+  .dark .app-dialog-surface {
     border-color: rgba(255, 255, 255, 0.058) !important;
     background-color: rgba(12, 12, 12, 0.97) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012) 44%, rgba(0, 0, 0, 0.1));
@@ -731,6 +734,11 @@
     background-color: rgba(20, 20, 20, 0.88) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(0, 0, 0, 0.06));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
+  }
+
+  .dark .app-dialog-surface :where(input, textarea, button[role="combobox"]) {
+    border-color: rgba(255, 255, 255, 0.046) !important;
+    background-color: rgba(20, 20, 20, 0.88) !important;
   }
 
   .desktop-retina-interactive {

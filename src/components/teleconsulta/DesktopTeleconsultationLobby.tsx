@@ -58,9 +58,9 @@ export const DesktopTeleconsultationLobby = ({
   const isJoinDisabled = !isReady || (isOnline && (isLoadingToken || isDecisionBlocked || isRoomClosed));
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-background p-4 xl:p-5">
+    <div className="relative z-10 h-full w-full overflow-y-auto bg-transparent p-4 xl:p-5">
       <div className="mx-auto grid min-h-full max-w-7xl gap-4 xl:grid-cols-[1.35fr_0.65fr] xl:items-start">
-        <section className="rounded-[28px] border border-border/40 bg-card/75 p-4 shadow-[0_30px_100px_-78px_rgba(0,0,0,0.8)] dark:border-white/10 dark:bg-white/[0.03] xl:p-5">
+        <section className="desktop-retina-panel rounded-[28px] border border-border/40 bg-card/75 p-4 xl:p-5">
           <MediaReadinessPanel
             variant="desktop"
             initialAudioEnabled
@@ -92,7 +92,7 @@ export const DesktopTeleconsultationLobby = ({
           </section>
 
           {isOnline ? (
-            <section className="rounded-[24px] border border-border/40 bg-card/75 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+            <section className="desktop-retina-panel rounded-[24px] border border-border/40 bg-card/75 p-4">
               <p className="mb-3 text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">Enviar link ao paciente</p>
               <PreJoinActions
                 appointmentId={appointmentId}

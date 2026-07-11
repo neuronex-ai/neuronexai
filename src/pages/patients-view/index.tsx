@@ -11,6 +11,7 @@ import {
     DialogContent, DialogDescription, DialogTitle
 } from "@/components/ui/dialog";
 import { GlassCard } from "@/components/ui/GlassCard";
+import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useSubscription } from "@/context/SubscriptionContext";
@@ -117,7 +118,8 @@ export default function Pacientes() {
     };
 
     return (
-        <div className="w-full min-h-screen pt-10 pb-24 relative font-sans bg-transparent selection:bg-zinc-900/10 dark:selection:bg-white/10 selection:text-zinc-900 dark:selection:text-white">
+        <div className="desktop-lumen-page desktop-content-offset w-full min-h-screen pt-24 pb-24 relative font-sans bg-transparent selection:bg-zinc-900/10 dark:selection:bg-white/10 selection:text-zinc-900 dark:selection:text-white">
+            <DesktopLumenBackdrop />
             <NewPatientModal
                 open={agentPatientModalOpen}
                 onOpenChange={setAgentPatientModalOpen}
@@ -219,7 +221,7 @@ export default function Pacientes() {
             )}>
                 <div className="max-w-[1920px] mx-auto md:px-10 lg:px-16 xl:px-24">
                     <div className={cn(
-                        "w-full flex items-center justify-between py-4 px-8 md:px-10 bg-white/90 dark:bg-[#0C0C0E]/90 backdrop-blur-3xl border border-black/[0.04] dark:border-white/[0.08] rounded-[28px] shadow-xl group transition-all duration-500 ease-apple hover:border-black/[0.08] dark:hover:border-white/[0.12]",
+                        "desktop-retina-frame w-full flex items-center justify-between py-4 px-8 md:px-10 bg-white/90 dark:bg-[#0c0c0c]/90 backdrop-blur-3xl border border-black/[0.04] dark:border-white/[0.08] rounded-[28px] group transition-all duration-500 ease-apple hover:border-black/[0.08] dark:hover:border-white/[0.12]",
                         isMobile && "p-5 flex-col gap-6"
                     )}>
                         {/* Title Section */}
@@ -331,7 +333,7 @@ export default function Pacientes() {
                         filteredPatients?.map((patient, i) => (
                             <GlassCard
                                 key={patient.id}
-                                className="h-full min-h-[240px] group cursor-pointer rounded-[32px] hover:-translate-y-2 transition-all duration-500"
+                                className="desktop-retina-panel desktop-retina-interactive h-full min-h-[240px] group cursor-pointer rounded-[32px]"
                                 innerClassName="p-0 flex flex-col h-full"
                                 onClick={() => navigate(`/pacientes/${patient.id}`)}
                                 delay={i * 40}
@@ -348,7 +350,7 @@ export default function Pacientes() {
 
                                     {/* Top Section */}
                                     <div className="flex items-start gap-4 md:gap-5">
-                                        <Avatar className="h-14 w-14 md:h-16 md:h-16 border-[3px] border-white dark:border-[#0C0C0E] shadow-2xl rounded-2xl transition-all duration-700 group-hover:scale-105">
+                                        <Avatar className="h-14 w-14 md:h-16 md:w-16 border-[3px] border-white dark:border-[#0c0c0c] shadow-2xl rounded-2xl transition-all duration-700 group-hover:scale-105">
                                             <AvatarFallback className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black text-base md:text-lg uppercase tracking-widest">
                                                 {patient.name.substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
@@ -371,11 +373,11 @@ export default function Pacientes() {
 
                                     {/* Bottom Info */}
                                     <div className="space-y-2.5 mt-6 md:mt-8">
-                                        <div className="flex items-center gap-3.5 text-[11px] md:text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100/50 dark:bg-white/[0.04] px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-zinc-200/50 dark:border-white/[0.08] transition-all group-hover:bg-white dark:group-hover:bg-white/[0.06]">
+                                        <div className="desktop-retina-inset flex items-center gap-3.5 text-[11px] md:text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100/50 px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-zinc-200/50 transition-all group-hover:bg-white">
                                             <Activity className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                                             <span className="truncate font-bold tracking-tight">{patient.diagnosis || "Sem diagnóstico definido"}</span>
                                         </div>
-                                        <div className="flex items-center gap-3.5 text-[11px] md:text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100/50 dark:bg-white/[0.04] px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-zinc-200/50 dark:border-white/[0.08] transition-all group-hover:bg-white dark:group-hover:bg-white/[0.06]">
+                                        <div className="desktop-retina-inset flex items-center gap-3.5 text-[11px] md:text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100/50 px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-zinc-200/50 transition-all group-hover:bg-white">
                                             <Calendar className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                                             <span className="font-bold tracking-tight">
                                                 {patient.next_session
@@ -393,7 +395,7 @@ export default function Pacientes() {
             </div>
 
             <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-                <DialogContent className="z-[9999] sm:max-w-[480px] p-0 bg-white/95 dark:bg-[#0A0A0C]/95 backdrop-blur-3xl border border-zinc-200 dark:border-white/[0.08] rounded-[48px] shadow-2xl overflow-hidden">
+                <DialogContent className="desktop-retina-modal desktop-retina-form z-[9999] sm:max-w-[480px] p-0 bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-3xl border border-zinc-200 dark:border-white/[0.08] rounded-[38px] overflow-hidden">
                     <div className="p-12 text-center relative">
                         <div className="absolute top-0 right-0 p-32 bg-rose-500/5 rounded-full blur-[80px] pointer-events-none" />
 

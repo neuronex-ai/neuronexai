@@ -305,7 +305,7 @@ const Section = ({
   description?: string;
   children: ReactNode;
 }) => (
-  <section className="border-t border-border py-7 first:border-t-0 first:pt-0">
+  <section className="desktop-retina-inset rounded-[24px] border border-border p-5 md:p-6">
     <div className="grid gap-5 lg:grid-cols-[14rem_minmax(0,1fr)] xl:grid-cols-[15rem_minmax(0,1fr)]">
       <div className="space-y-2">
         <h3 className="text-base font-semibold leading-tight tracking-normal text-foreground">{title}</h3>
@@ -835,10 +835,10 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
   return (
     <TooltipProvider delayDuration={150}>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="flex min-h-0 flex-1 flex-col">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="desktop-retina-form flex min-h-0 flex-1 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
-            <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
-              <div className="mb-5 flex flex-col gap-3 rounded-lg border border-border bg-background p-4 shadow-none sm:flex-row sm:items-center sm:justify-between">
+            <div className="mx-auto w-full max-w-6xl space-y-4 px-4 py-5 sm:px-6 lg:px-8">
+              <div className="desktop-retina-inset flex flex-col gap-3 rounded-[22px] border border-border bg-background p-4 shadow-none sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <p className="text-base font-semibold text-foreground">Cadastro rápido</p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -1119,7 +1119,7 @@ export const NewPatientForm = ({ onSuccess, onCancel, patient = null }: NewPatie
             </div>
           </div>
 
-          <footer className="shrink-0 border-t border-border bg-background/95 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-xl sm:px-6 lg:px-8">
+          <footer className="shrink-0 border-t border-border/60 bg-background/82 px-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] pt-3 backdrop-blur-2xl sm:px-6 lg:px-8">
             <div className="mx-auto flex max-w-6xl flex-col-reverse gap-2 sm:flex-row sm:justify-end">
               <Button type="button" variant="ghost" className="h-11 rounded-md px-5" onClick={onCancel}>
                 Cancelar

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 import { User, MessageSquare, Building, CreditCard, LogOut, Bell, CheckCircle2, ChevronRight, Monitor, Moon, Sun, Shield, Wallet, Settings, ArrowLeft, Sparkles, Link2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { TodoistIcon } from "@/components/icons/TodoistIcon";
@@ -145,12 +146,13 @@ const Ajustes = () => {
     if (callbackStatus) return <CallbackStatus status={callbackStatus} message={callbackMessage} onClose={() => setCallbackStatus(null)} />;
 
     return (
-        <div className="w-full min-h-screen bg-background font-sans selection:bg-primary/20 flex">
-            <div className="flex-1 pb-24 relative space-y-10">
-                <div className="max-w-[1600px] mx-auto px-6 lg:px-8 xl:px-10 pt-16 relative z-10 space-y-12">
+        <div className="desktop-lumen-page w-full min-h-screen bg-background font-sans selection:bg-primary/20 flex">
+            <DesktopLumenBackdrop />
+            <div className="desktop-content-offset flex-1 pb-24 pt-24 relative space-y-10">
+                <div className="max-w-[1600px] mx-auto px-6 lg:px-8 xl:px-10 relative z-10 space-y-10">
                     {/* Header - Floating Bar Style Polished */}
                     <div className="mb-12 relative z-40 w-full animate-in fade-in slide-in-from-top-4 duration-700">
-                        <div className="w-full flex items-center justify-between p-1.5 pl-3 bg-white/80 dark:bg-zinc-950/60 backdrop-blur-3xl border border-zinc-200 dark:border-white/10 rounded-full shadow-[0_8px_30px_rgba(0,0,0,0.04)] dark:shadow-[0_12px_40px_rgba(0,0,0,0.5),0_0_0_1px_rgba(255,255,255,0.05)] ring-1 ring-black/5 dark:ring-white/5 relative overflow-hidden group">
+                        <div className="desktop-retina-frame w-full flex items-center justify-between p-1.5 pl-3 bg-white/80 dark:bg-[#080808]/86 backdrop-blur-3xl border border-zinc-200 dark:border-white/10 rounded-full ring-1 ring-black/5 dark:ring-white/[0.025] relative overflow-hidden group">
 
                             {/* Subtle Inner Glow */}
                             <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
@@ -199,7 +201,7 @@ const Ajustes = () => {
                                             key={item.val}
                                             value={item.val}
                                             className={cn(
-                                                "group relative justify-between px-4 py-3.5 rounded-2xl text-xs font-semibold transition-all duration-300 border border-transparent",
+                                                "desktop-retina-interactive group relative justify-between px-4 py-3.5 rounded-2xl text-xs font-semibold border border-transparent",
                                                 "data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-foreground data-[state=active]:border-zinc-200 dark:data-[state=active]:border-white/10 data-[state=active]:shadow-lg dark:data-[state=active]:shadow-[0_4px_12px_rgba(0,0,0,0.2)]",
                                                 "text-zinc-600 dark:text-muted-foreground hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900/40"
                                             )}
@@ -223,21 +225,14 @@ const Ajustes = () => {
 
                             <div className="flex-1 min-w-0">
                                 <AnimatePresence mode="wait">
-                                    <div className="min-h-[700px] w-full bg-white/60 dark:bg-zinc-950/15 backdrop-blur-[40px] backdrop-saturate-[1.8] border border-zinc-200 dark:border-white/15 rounded-[48px] p-8 md:p-12 relative overflow-hidden shadow-[0_12px_48px_-12px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_128px_-16px_rgba(0,0,0,0.7)] ring-1 ring-black/5 dark:ring-white/10">
-
-                                        {/* Texture Overlay (4K Fidelity) */}
-                                        <div className="absolute inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3column%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }} />
-
-                                        {/* Background Orbs - Monochromatic & High Fidelity */}
-                                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/5 dark:bg-primary/10 blur-[150px] rounded-full pointer-events-none -translate-y-1/2 translate-x-1/2 opacity-60" />
-                                        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-zinc-200/40 dark:bg-zinc-100/5 blur-[150px] rounded-full pointer-events-none translate-y-1/2 -translate-x-1/2 opacity-40" />
+                                    <div className="desktop-retina-frame min-h-[700px] w-full bg-white/60 backdrop-blur-[40px] border border-zinc-200 rounded-[48px] p-8 md:p-12 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/[0.025]">
 
                                         <TabsContent value="profile" className="mt-0 animate-in fade-in zoom-in-95 duration-500 relative z-10">
                                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                                                 <div className="order-2 lg:order-1">
                                                     <ProfessionalProfileForm />
                                                 </div>
-                                                <div className="order-1 lg:order-2 bg-zinc-50/50 dark:bg-zinc-900/40 rounded-[40px] border border-zinc-200 dark:border-white/10 flex items-center justify-center p-8 backdrop-blur-md shadow-[inset_0_2px_12px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_2px_12px_rgba(0,0,0,0.5)]">
+                                                <div className="desktop-retina-panel order-1 lg:order-2 bg-zinc-50/50 rounded-[40px] border border-zinc-200 flex items-center justify-center p-8 backdrop-blur-md">
                                                     <NeuroNexIDCard profile={profile} />
                                                 </div>
                                             </div>

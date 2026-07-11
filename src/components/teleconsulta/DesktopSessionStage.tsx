@@ -113,8 +113,7 @@ export const DesktopSessionStage = ({
   const renderStage = () => {
     if (!isOnlineSession) {
       return (
-        <div className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-white/45 px-10 text-center backdrop-blur-[60px] dark:bg-[#050505]/45">
-          <div className="pointer-events-none absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay" />
+        <div className="desktop-retina-panel relative flex h-full flex-col items-center justify-center overflow-hidden bg-white/45 px-10 text-center backdrop-blur-[60px] dark:bg-[#121212]/88">
           <div className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.045] blur-[140px]" />
           <div className="relative z-10 flex flex-col items-center">
             <div
@@ -182,7 +181,7 @@ export const DesktopSessionStage = ({
   };
 
   return (
-    <section className="relative min-h-0 overflow-hidden rounded-[34px] border border-border/45 bg-black shadow-2xl dark:border-white/10">
+    <section className="desktop-retina-frame relative min-h-0 overflow-hidden rounded-[34px] border border-border/45 bg-black dark:border-white/10">
       {renderStage()}
       <RiskAlert riskScore={patientRiskScore} />
 

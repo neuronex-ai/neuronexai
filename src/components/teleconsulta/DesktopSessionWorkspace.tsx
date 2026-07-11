@@ -50,7 +50,7 @@ const WorkspaceCard = ({
 }) => (
   <section
     className={cn(
-      'relative min-h-0 overflow-hidden rounded-[28px] border border-border/45 bg-card/82 shadow-[0_24px_80px_-55px_rgba(0,0,0,0.8)] backdrop-blur-2xl dark:border-white/10 dark:bg-white/[0.035]',
+      'desktop-retina-panel relative min-h-0 overflow-hidden rounded-[28px] border border-border/45 bg-card/82 backdrop-blur-2xl',
       className,
     )}
   >
@@ -135,7 +135,7 @@ export const DesktopSessionWorkspace = ({
                   {segments.map((segment) => (
                     <article
                       key={segment.client_segment_id}
-                      className="rounded-[20px] border border-border/35 bg-background/62 p-4 dark:border-white/8 dark:bg-black/20"
+                      className="desktop-retina-inset rounded-[20px] border border-border/35 bg-background/62 p-4"
                     >
                       <p className="text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">
                         {segment.speaker_label || 'Participante'}
@@ -188,7 +188,7 @@ export const DesktopSessionWorkspace = ({
                 value={notes}
                 onChange={(event) => onNotesChange(event.target.value)}
                 placeholder="Registre hipóteses, observações, intervenções e próximos passos..."
-                className="h-full min-h-0 resize-none rounded-[22px] border-border/35 bg-background/58 p-4 text-sm leading-relaxed dark:border-white/8 dark:bg-black/20"
+                className="desktop-retina-inset h-full min-h-0 resize-none rounded-[22px] border-border/35 bg-background/58 p-4 text-sm leading-relaxed"
               />
             </div>
           </div>
@@ -223,13 +223,13 @@ export const DesktopSessionWorkspace = ({
           </header>
 
           <div className="mt-4 grid min-h-0 flex-1 grid-cols-[0.95fr_1.05fr_1fr] gap-3">
-            <div className="rounded-[20px] bg-background/58 p-4 dark:bg-black/20">
+            <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
               <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Hipótese / diagnóstico</p>
               <p className="mt-2 line-clamp-4 text-xs font-semibold leading-relaxed text-foreground/85">
                 {patient?.diagnosis || 'Nenhuma informação clínica resumida.'}
               </p>
             </div>
-            <div className="rounded-[20px] bg-background/58 p-4 dark:bg-black/20">
+            <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
               <div className="flex items-center gap-2">
                 <Pill className="h-3.5 w-3.5 text-muted-foreground" />
                 <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Medicações</p>
@@ -244,7 +244,7 @@ export const DesktopSessionWorkspace = ({
                 )}
               </div>
             </div>
-            <div className="rounded-[20px] bg-background/58 p-4 dark:bg-black/20">
+            <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
               <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Observações permanentes</p>
               <p className="mt-2 line-clamp-4 text-xs leading-relaxed text-foreground/78">
                 {patient?.notes || 'Sem observações permanentes cadastradas.'}

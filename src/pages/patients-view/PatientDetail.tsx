@@ -44,6 +44,7 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 import { GlassCard } from "@/components/ui/GlassCard";
+import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobilePatientDetail } from "@/mobile/pages/MobilePatientDetail";
@@ -176,7 +177,8 @@ export default function PatientDetail() {
     ];
 
     return (
-        <div className="relative min-h-screen w-full pb-28 pt-4 font-sans text-foreground selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
+        <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full pb-28 pt-24 font-sans text-foreground selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
+            <DesktopLumenBackdrop />
             <div className="relative z-10 mx-auto w-full max-w-[2200px] px-5">
 
             {/* ─── Header Top Bar ─── */}
@@ -184,7 +186,7 @@ export default function PatientDetail() {
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: "circOut" }}
-                className="sticky top-3 z-40 rounded-[26px] border border-border/60 bg-background/88 px-4 py-3 shadow-sm backdrop-blur-xl"
+                className="desktop-retina-frame sticky top-[calc(var(--desktop-navbar-clearance)-1.5rem)] z-40 rounded-[26px] border border-border/60 bg-background/88 px-4 py-3 backdrop-blur-xl"
             >
                 <div className="flex w-full items-center gap-4">
 
@@ -212,7 +214,7 @@ export default function PatientDetail() {
                         onMouseUp={handleMouseLeaveOrUp}
                         onMouseMove={handleMouseMove}
                         className={cn(
-                            "flex min-w-0 flex-1 select-none items-center overflow-x-auto rounded-[20px] border border-border/55 bg-muted/30 p-1.5 backdrop-blur-xl",
+                            "desktop-retina-inset flex min-w-0 flex-1 select-none items-center overflow-x-auto rounded-[20px] border border-border/55 bg-muted/30 p-1.5 backdrop-blur-xl",
                             isDragging ? "cursor-grabbing" : "cursor-grab",
                             "custom-premium-scrollbar"
                         )}
@@ -224,7 +226,7 @@ export default function PatientDetail() {
                                     type="button"
                                     onClick={() => setActiveTab(tab.val)}
                                     className={cn(
-                                        "relative flex h-10 items-center gap-2 whitespace-nowrap rounded-[15px] px-4 text-[9px] font-black uppercase tracking-[0.16em] transition-colors active:scale-95",
+                                        "desktop-retina-interactive relative flex h-10 items-center gap-2 whitespace-nowrap rounded-[15px] px-4 text-[9px] font-black uppercase tracking-[0.16em]",
                                         activeTab === tab.val
                                             ? "bg-foreground text-background"
                                             : "text-muted-foreground hover:bg-background hover:text-foreground"
@@ -278,7 +280,7 @@ export default function PatientDetail() {
                     {/* LEFT COLUMN: Patient Info */}
                     <aside className="z-20 w-full space-y-5 border-b border-border/55 py-5 pr-5 dark:border-white/[0.085] xl:sticky xl:top-[86px] xl:border-b-0 xl:border-r">
                         <GlassCard
-                            className="w-full !rounded-[24px] !border-border/60 !bg-card/70 !shadow-sm !backdrop-blur-xl dark:!border-white/[0.085] dark:!bg-card/55"
+                            className="desktop-retina-panel w-full !rounded-[24px] !border-border/60 !bg-card/70 !backdrop-blur-xl"
                             innerClassName="p-0"
                         >
                             <div className="relative overflow-hidden p-5">
@@ -295,15 +297,15 @@ export default function PatientDetail() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <div className="flex items-center gap-3 rounded-xl border border-border/55 bg-muted/35 p-3 transition-colors hover:bg-muted/55">
+                                    <div className="desktop-retina-inset desktop-retina-interactive flex items-center gap-3 rounded-xl border border-border/55 bg-muted/35 p-3 hover:bg-muted/55">
                                         <Phone className="h-3.5 w-3.5 text-muted-foreground" />
                                         <span className="text-[11px] font-bold tracking-tight text-zinc-700 dark:text-zinc-300">{patient.phone || "Não informado"}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 rounded-xl border border-border/55 bg-muted/35 p-3 transition-colors hover:bg-muted/55">
+                                    <div className="desktop-retina-inset desktop-retina-interactive flex items-center gap-3 rounded-xl border border-border/55 bg-muted/35 p-3 hover:bg-muted/55">
                                         <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                                         <span className="truncate text-[11px] font-bold tracking-tight text-zinc-700 dark:text-zinc-300">{patient.address || "Endereço ausente"}</span>
                                     </div>
-                                    <div className="flex items-center gap-3 rounded-xl border border-border/55 bg-muted/35 p-3 transition-colors hover:bg-muted/55">
+                                    <div className="desktop-retina-inset desktop-retina-interactive flex items-center gap-3 rounded-xl border border-border/55 bg-muted/35 p-3 hover:bg-muted/55">
                                         <Cake className="h-3.5 w-3.5 text-muted-foreground" />
                                         <span className="text-[11px] font-bold tracking-tight text-zinc-700 dark:text-zinc-300">
                                             {patient.birth_date ? format(new Date(patient.birth_date), 'dd/MM/yyyy') : "Nascimento ausente"}
@@ -357,7 +359,7 @@ export default function PatientDetail() {
                                     <div className="space-y-3">
                                         {patient.medications && patient.medications.length > 0 ? (
                                             patient.medications.map((med, idx) => (
-                                                <div key={idx} className="group relative overflow-hidden rounded-2xl border border-border/55 bg-muted/35 p-4 transition-colors hover:bg-muted/55">
+                                                <div key={idx} className="desktop-retina-inset group relative overflow-hidden rounded-2xl border border-border/55 bg-muted/35 p-4 transition-colors hover:bg-muted/55">
                                                     <div className="flex items-start justify-between gap-3">
                                                         <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{med.name}</span>
                                                         {med.dosage && (
@@ -382,7 +384,7 @@ export default function PatientDetail() {
                     </aside>
 
                     {/* RIGHT COLUMN: Content Area */}
-                    <main className="min-w-0 space-y-7 p-5 pb-16 md:p-7 lg:p-8">
+                    <main className="desktop-retina-frame min-w-0 space-y-7 rounded-[32px] border border-border/45 p-5 pb-16 md:p-7 lg:p-8">
 
                         <div className="relative flex min-h-[760px] w-full flex-col">
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full">

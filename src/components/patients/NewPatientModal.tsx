@@ -50,13 +50,14 @@ export const NewPatientModal = ({
       <DialogContent
         showCloseButton={false}
         className={cn(
-          "left-0 top-0 z-[180] flex h-dvh max-h-dvh w-dvw max-w-none translate-x-0 translate-y-0 grid-cols-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0 shadow-none",
-          "data-[state=open]:zoom-in-100 data-[state=closed]:zoom-out-100",
+          "desktop-retina-modal desktop-retina-form z-[180] flex h-dvh max-h-dvh w-dvw max-w-none grid-cols-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0",
+          "sm:!h-[min(900px,calc(100dvh-2.5rem))] sm:!max-h-[calc(100dvh-2.5rem)] sm:!w-[min(1180px,calc(100vw-2.5rem))] sm:!max-w-[1180px] sm:!rounded-[34px] sm:!border",
+          "data-[state=open]:zoom-in-[0.985] data-[state=closed]:zoom-out-[0.985]",
         )}
       >
-        <header className="shrink-0 border-b border-border bg-background/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur-xl sm:px-6 lg:px-8">
+        <header className="shrink-0 border-b border-border/60 bg-background/82 px-4 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] backdrop-blur-2xl sm:px-7 sm:pt-4 lg:px-8">
           <div className="mx-auto flex max-w-6xl items-center gap-3">
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40 text-foreground">
+            <div className="desktop-retina-inset flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-muted/40 text-foreground">
               <UserPlus className="h-5 w-5" />
             </div>
             <div className="min-w-0 flex-1">

@@ -69,7 +69,7 @@ export const Navbar = () => {
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Usuário';
 
   const dockItemClass = (active: boolean) => cn(
-    "relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-500 cursor-pointer group",
+    "desktop-retina-interactive relative flex items-center justify-center w-10 h-10 rounded-2xl cursor-pointer group",
     active
       ? isDarkTheme
         ? "bg-white text-black shadow-[0_18px_48px_-28px_rgba(255,255,255,0.48),inset_0_1px_0_rgba(255,255,255,0.65)]"
@@ -87,7 +87,7 @@ export const Navbar = () => {
   );
 
   const utilityButtonClass = cn(
-    "w-10 h-10 rounded-2xl transition-all duration-500",
+    "desktop-retina-interactive w-10 h-10 rounded-2xl",
     isDarkTheme
       ? "text-white/42 hover:bg-white/[0.065] hover:text-white"
       : "text-zinc-400 hover:bg-black/[0.045] hover:text-zinc-900"
@@ -96,7 +96,7 @@ export const Navbar = () => {
   const tooltipClass = cn(
     "text-[9px] font-black uppercase px-4 py-2 rounded-xl tracking-[0.2em] backdrop-blur-xl",
     isDarkTheme
-      ? "border-white/10 bg-[#0A0A0C]/95 text-white/58"
+      ? "border-white/10 bg-[#0a0a0a]/95 text-white/58"
       : "border-zinc-200 bg-white/95 text-zinc-500"
   );
 
@@ -125,9 +125,9 @@ export const Navbar = () => {
     <nav id="navbar-container" className="fixed top-7 left-0 right-0 z-[60] flex justify-center pointer-events-none px-4">
       <div
         className={cn(
-          "pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-all duration-700 ease-apple hover:-translate-y-0.5 active:scale-[0.99]",
+          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-all duration-700 ease-apple hover:-translate-y-0.5 active:scale-[0.99]",
           isDarkTheme
-            ? "border border-white/[0.09] bg-[#070708]/72 shadow-[0_32px_96px_-52px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.08)] ring-1 ring-white/[0.035] hover:bg-[#09090a]/80 hover:shadow-[0_44px_120px_-62px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,0.1)]"
+            ? "border border-white/[0.055] bg-[#080808]/82 ring-1 ring-white/[0.025] hover:bg-[#0a0a0a]/88"
             : "border border-black/[0.075] bg-white/[0.72] shadow-[0_30px_90px_-46px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-white/40 hover:bg-white/[0.78] hover:shadow-[0_42px_112px_-56px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.8)]"
         )}
       >
@@ -195,7 +195,7 @@ export const Navbar = () => {
               className={cn(
                 "h-[620px] w-[430px] max-h-[78vh] p-0 backdrop-blur-[32px] shadow-[0_48px_96px_-24px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden z-[70]",
                 isDarkTheme
-                  ? "border border-white/10 bg-[#080809]/95 ring-1 ring-white/5"
+                  ? "desktop-retina-modal border border-white/10 bg-[#080808]/95 ring-1 ring-white/5"
                   : "border border-zinc-200 bg-white/95 ring-1 ring-black/5"
               )}
             >
@@ -217,7 +217,7 @@ export const Navbar = () => {
               className={cn(
                 "w-64 backdrop-blur-[32px] rounded-[32px] p-3 z-[9999] shadow-[0_48px_96px_-24px_rgba(0,0,0,0.5)]",
                 isDarkTheme
-                  ? "border border-white/10 bg-[#080809]/95 ring-1 ring-white/5"
+                  ? "desktop-retina-modal border border-white/10 bg-[#080808]/95 ring-1 ring-white/5"
                   : "border border-zinc-200 bg-white/95 ring-1 ring-black/5"
               )}
               sideOffset={14}

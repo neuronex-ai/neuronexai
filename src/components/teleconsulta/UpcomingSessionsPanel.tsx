@@ -55,14 +55,14 @@ export const UpcomingSessionsPanel = ({
     }
 
     return (
-        <div className="flex h-full w-full overflow-hidden bg-background">
+        <div className="relative z-10 flex h-full w-full overflow-hidden bg-transparent">
             {/* Main Content Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pr-8 lg:pt-8">
                 <div className="max-w-5xl mx-auto space-y-8">
 
                     {/* Header - Floating Bar Style */}
                     <div className="mb-5 relative z-40 w-full animate-fade-in group">
-                        <div className="w-full h-[72px] flex items-center justify-between px-6 py-2 bg-white/60 dark:bg-[#050505]/60 backdrop-blur-[40px] border border-white/20 dark:border-white/10 rounded-[32px] shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] hover:border-white/30 dark:hover:border-white/20 transition-all duration-500 ease-out">
+                        <div className="desktop-retina-frame w-full h-[72px] flex items-center justify-between px-6 py-2 bg-white/60 dark:bg-[#080808]/80 backdrop-blur-[40px] border border-white/20 dark:border-white/10 rounded-[32px] hover:border-white/30 dark:hover:border-white/20 transition-all duration-500 ease-out">
 
                             {/* Left: Title & Badge */}
                             <div className="flex items-center gap-4 h-full">
@@ -85,7 +85,7 @@ export const UpcomingSessionsPanel = ({
                     {nextSession ? (
                         <div className="relative group rounded-[32px] p-1 transition-all duration-500 hover:scale-[1.01]">
                             <div className="absolute inset-0 bg-gradient-to-r from-zinc-500/10 to-zinc-500/5 dark:from-white/10 dark:to-white/5 rounded-[32px] blur-xl opacity-40 group-hover:opacity-60 transition-opacity duration-500" />
-                            <div className="relative bg-white/40 dark:bg-[#050505]/40 backdrop-blur-[40px] rounded-[32px] border border-white/20 dark:border-white/10 p-8 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] overflow-hidden">
+                            <div className="desktop-retina-panel relative bg-white/40 dark:bg-[#121212]/88 backdrop-blur-[40px] rounded-[32px] border border-white/20 dark:border-white/10 p-8 overflow-hidden">
 
                                 <div className="relative z-10 flex items-center justify-between gap-8">
                                     {/* Left Content */}
@@ -135,7 +135,7 @@ export const UpcomingSessionsPanel = ({
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white/30 dark:bg-[#050505]/30 backdrop-blur-xl border border-white/20 dark:border-white/5 rounded-[40px] p-12 text-center shadow-lg">
+                        <div className="desktop-retina-panel bg-white/30 backdrop-blur-xl border border-white/20 rounded-[40px] p-12 text-center">
                             <Calendar className="w-12 h-12 mx-auto mb-4 text-zinc-400/50 dark:text-zinc-600/50" />
                             <p className="text-zinc-500 dark:text-zinc-400 font-medium">Nenhuma sessão agendada.</p>
                         </div>
@@ -150,7 +150,7 @@ export const UpcomingSessionsPanel = ({
                             </div>
                             <div className="space-y-3">
                                 {futureSessions.length > 0 ? futureSessions.map(session => (
-                                    <div key={session.id} className="group p-4 rounded-3xl bg-white/40 dark:bg-[#050505]/40 backdrop-blur-md border border-white/20 dark:border-white/5 hover:bg-white/60 dark:hover:bg-[#050505]/60 hover:border-white/40 dark:hover:border-white/10 transition-all flex items-center justify-between shadow-[0_4px_16px_0_rgba(0,0,0,0.02)]">
+                                    <div key={session.id} className="desktop-retina-inset desktop-retina-interactive group p-4 rounded-3xl bg-white/40 backdrop-blur-md border border-white/20 hover:bg-white/60 hover:border-white/40 flex items-center justify-between">
                                         <div className="flex items-center gap-4">
                                             <div className="w-10 h-10 rounded-full bg-black/5 dark:bg-white/5 flex items-center justify-center text-xs font-bold text-zinc-700 dark:text-zinc-300 border border-black/5 dark:border-white/5">
                                                 {getInitials(session.patient_name || '')}
@@ -182,7 +182,7 @@ export const UpcomingSessionsPanel = ({
                                             "group p-4 rounded-[24px] border flex items-center justify-between transition-all duration-500 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)] cursor-pointer relative overflow-hidden",
                                             selectedSession?.id === session.id
                                                 ? "bg-black/5 dark:bg-white/10 border-black/10 dark:border-white/20 opacity-100 scale-[1.02] shadow-lg"
-                                                : "bg-white/20 dark:bg-[#050505]/20 border-white/10 dark:border-white/5 opacity-60 hover:opacity-100 hover:bg-white/40 dark:hover:bg-[#050505]/40 hover:border-white/20 dark:hover:border-white/10 hover:scale-[1.01] shadow-[0_4px_16px_0_rgba(0,0,0,0.02)]"
+                                                : "desktop-retina-inset bg-white/20 border-white/10 opacity-60 hover:opacity-100 hover:bg-white/40 hover:border-white/20 hover:scale-[1.01]"
                                         )}
                                     >
                                         <div className="flex items-center gap-4">
