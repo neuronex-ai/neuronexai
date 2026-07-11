@@ -17,7 +17,7 @@ export type SynapseExecState =
     | 'success'
     | 'error';
 
-export type SynapseActiveTab = 'chat' | 'timeline' | 'voice' | 'history' | 'agent';
+export type SynapseActiveTab = 'chat' | 'voice' | 'history' | 'timeline';
 
 export interface SynapseTimelineEntry {
     id: string;
@@ -27,12 +27,6 @@ export interface SynapseTimelineEntry {
     toolId?: string;
     detail?: string;
     actionPath?: string;
-}
-
-export interface ScanStatus {
-    module: string;
-    label: string;
-    status: 'pending' | 'scanning' | 'completed';
 }
 
 interface SynapseContextType {
@@ -77,11 +71,6 @@ interface SynapseContextType {
     isVoiceExpanded: boolean;
     setIsVoiceExpanded: (expanded: boolean) => void;
 
-    // Daily Intelligence
-    dailyActions: Record<string, { id: string; name: string; description: string }[]>;
-    isIntelligenceLoading: boolean;
-    scanProgress: ScanStatus[];
-    syncDailyIntelligence: () => Promise<void>;
 }
 
 const SynapseContext = createContext<SynapseContextType | undefined>(undefined);
@@ -147,19 +136,6 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     // Shell state
     const [shellState, setShellState] = useState<SynapseShellState>('pill');
     const [activeTab, setActiveTab] = useState<SynapseActiveTab>('chat');
-
-    // Intelligence State
-    const [dailyActions, setDailyActions] = useState<Record<string, { id: string; name: string; description: string }[]>>({});
-    const [isIntelligenceLoading, setIsIntelligenceLoading] = useState(false);
-    const [scanProgress, setScanProgress] = useState<ScanStatus[]>([
-        { module: 'dashboard', label: 'Dashboard', status: 'pending' },
-        { module: 'agenda', label: 'Agenda', status: 'pending' },
-        { module: 'pacientes', label: 'Pacientes', status: 'pending' },
-        { module: 'financeiro', label: 'Financeiro', status: 'pending' },
-        { module: 'teleconsulta', label: 'Teleconsulta', status: 'pending' },
-        { module: 'notas', label: 'Notas', status: 'pending' },
-    ]);
-    const hasSyncRunThisSession = useRef(false);
 
     // Execution state
     const [execState, setExecState] = useState<SynapseExecState>('idle');
