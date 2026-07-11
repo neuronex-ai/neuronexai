@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAI } from "@/context/AIContext";
 import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
 import {
@@ -9,14 +10,8 @@ import {
 
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
-const SYNAPSE_GLOBAL_VOICE_PROMPT = [
-  "Voce e o Synapse AI, assistente operacional inteligente da NeuroNex AI.",
-  "Fale sempre em portugues brasileiro, com vocabulario e construcao natural do Brasil.",
-  "Responda por voz com frases curtas, humanas e uteis.",
-  "Nunca cite fornecedores, APIs, modelos, banco de dados, rotas, JSON, IDs ou infraestrutura.",
-  "Use ferramentas apenas quando precisar de dados reais ou executar acoes no sistema.",
-  "Antes de acoes sensiveis, confirme de forma clara e execute somente apos confirmacao.",
-].join(" ");
+const SYNAPSE_GLOBAL_VOICE_PROMPT =
+  "Converse em português brasileiro natural. Seja breve e use somente consultas e navegação nesta primeira versão de voz.";
 
 interface UseSynapseLiveVoiceOptions {
   onConnect?: () => void;
@@ -27,6 +22,12 @@ interface UseSynapseLiveVoiceOptions {
 
 export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const navigate = useNavigate();
+  const { currentContext, activePatientId, contextSummary } = useAI();
+  const voiceContext = useMemo(() => ({
+    currentContext,
+    activePatientId,
+    contextSummary,
+  }), [activePatientId, contextSummary, currentContext]);
   const connectedRef = useRef(false);
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -54,6 +55,7 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     inputSampleRate,
     outputSampleRate,
     systemInstruction: SYNAPSE_GLOBAL_VOICE_PROMPT,
+    context: voiceContext,
     onClientAction: (rawAction) => {
       optionsRef.current?.onClientAction?.(rawAction);
       const action = normalizeSynapseClientAction(rawAction);

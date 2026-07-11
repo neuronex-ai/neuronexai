@@ -23,6 +23,7 @@ interface UseSynapseVoiceOptions {
   voiceSessionId?: string | null;
   inputSampleRate?: number;
   outputSampleRate?: number;
+  context?: Record<string, unknown>;
   onSessionIdChange?: (sessionId: string) => void;
   onConversationIdChange?: (conversationId: string) => void;
   onVoiceSessionIdChange?: (voiceSessionId: string) => void;
@@ -43,6 +44,7 @@ export function useSynapseVoice(options: UseSynapseVoiceOptions) {
     voiceSessionId: options.voiceSessionId,
     inputSampleRate: options.inputSampleRate,
     outputSampleRate: options.outputSampleRate,
+    context: options.context,
     systemInstruction: options.systemInstruction,
     language: options.language,
     onSessionIdChange: options.onSessionIdChange,

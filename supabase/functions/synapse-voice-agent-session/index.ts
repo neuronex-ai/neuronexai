@@ -23,17 +23,28 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const SUPABASE_EDGE_GATEWAY_PATH = "/functions/v1/synapse-voice-gateway";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
-const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
-const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
-const DEFAULT_OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
-const DEFAULT_OPENAI_TTS_VOICE = "marin";
-const DEFAULT_OPENAI_TTS_LANGUAGE = "multi";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
-const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt";
-const DEFAULT_VOICE_CONTEXT_LENGTH = 12000;
+const PRIMARY_THINK_MODEL = "gpt-4.1-mini";
+const FALLBACK_THINK_MODEL = "gemini-2.5-flash";
+const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.25;
+const AZURE_TTS_ADAPTER_PATH = "/functions/v1/synapse-voice-azure-tts";
+const OPENAI_COMPATIBLE_TTS_MODEL = "tts-1";
+const OPENAI_COMPATIBLE_TTS_VOICE = "alloy";
+const DEFAULT_AZURE_TTS_VOICE = "pt-BR-FranciscaNeural";
+const DEFAULT_CARTESIA_MODEL_ID = "sonic-2";
+const DEFAULT_CARTESIA_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
+
+const VOICE_CORE_TOOL_NAMES = new Set([
+  "get_system_help",
+  "get_workspace_overview",
+  "get_dashboard_daily_briefing",
+  "get_dashboard_schedule",
+  "search_patients",
+  "get_patient_details",
+  "get_clinical_history",
+  "get_patient_system_snapshot",
+  "get_calendar",
+  "request_interface_action",
+]);
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -43,50 +54,24 @@ const envFlag = (name: string, fallback = false) => {
   return ["1", "true", "yes", "on"].includes(value);
 };
 
-const voiceContextLength = () => {
-  const value = Number(Deno.env.get("SYNAPSE_VOICE_CONTEXT_LENGTH") || DEFAULT_VOICE_CONTEXT_LENGTH);
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_VOICE_CONTEXT_LENGTH;
-};
-
 const isLocalDevelopmentHost = (host: string) =>
   /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(host) ||
   /^10\./.test(host) ||
   /^192\.168\./.test(host) ||
   /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
 
-function elevenLabsApiKey() {
-  const value = clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000);
-  if (!value) {
-    throw new Error("ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY nao configurada para o Synapse de voz.");
-  }
+function ttsAdapterSecret() {
+  const value = clean(Deno.env.get("SYNAPSE_VOICE_TTS_ADAPTER_SECRET"), 8000);
+  if (!value) throw new Error("SYNAPSE_VOICE_TTS_ADAPTER_SECRET não configurado para o Synapse de voz.");
   return value;
 }
 
-function openAiApiKey() {
-  return clean(Deno.env.get("OPENAI_API_KEY"), 8000);
-}
-
-function requestedSpeakProvider() {
-  return clean(Deno.env.get("SPEAK_PROVIDER_TYPE") || "open_ai", 40).toLowerCase() === "eleven_labs"
-    ? "eleven_labs"
-    : "open_ai";
-}
-
-function activeSpeakProvider() {
-  const requested = requestedSpeakProvider();
-  if (requested === "open_ai" && openAiApiKey()) return "open_ai";
-  if (clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000)) {
-    return "eleven_labs";
-  }
-  return requested;
-}
-
-function nvidiaVoiceApiKey() {
-  const value = clean(Deno.env.get("NVIDIA_VOICE_API_KEY"), 8000);
-  if (!value) {
-    throw new Error("NVIDIA_VOICE_API_KEY nao configurada para o Synapse de voz.");
-  }
-  return value;
+function azureTtsAdapterUrl() {
+  const configured = clean(Deno.env.get("SYNAPSE_VOICE_TTS_ADAPTER_URL"), 1000);
+  if (configured) return configured;
+  const supabaseUrl = clean(Deno.env.get("SUPABASE_URL"), 1000).replace(/\/$/, "");
+  if (!supabaseUrl) throw new Error("SUPABASE_URL não configurada para o adaptador de voz.");
+  return `${supabaseUrl}${AZURE_TTS_ADAPTER_PATH}`;
 }
 
 const supabaseEdgeGatewayUrl = () => {
@@ -210,55 +195,47 @@ const VOICE_ONLY_TOOLS = [
 ];
 
 function buildVoiceFunctions() {
+  const selectedTools = AGENT_TOOLS_V3
+    .map(toDeepgramFunction)
+    .filter((item) => item.name && VOICE_CORE_TOOL_NAMES.has(item.name));
+  const selectedNames = new Set(selectedTools.map((item) => item.name));
+  const missing = [...VOICE_CORE_TOOL_NAMES].filter((name) => !selectedNames.has(name));
+  if (missing.length) {
+    throw new Error(`Ferramentas essenciais de voz ausentes: ${missing.join(", ")}.`);
+  }
   return [
     ...VOICE_ONLY_TOOLS,
-    ...AGENT_TOOLS_V3.map(toDeepgramFunction).filter((item) => item.name),
+    ...selectedTools,
   ];
 }
 
 function buildSpeakConfig() {
-  if (activeSpeakProvider() === "open_ai") {
-    const model = clean(Deno.env.get("SPEAK_PROVIDER_MODEL_ID") || DEFAULT_OPENAI_TTS_MODEL, 120);
-    const voice = clean(Deno.env.get("SPEAK_PROVIDER_VOICE_ID") || DEFAULT_OPENAI_TTS_VOICE, 120);
-    const language = clean(Deno.env.get("SPEAK_PROVIDER_LANGUAGE_CODE") || DEFAULT_OPENAI_TTS_LANGUAGE, 40);
-    const apiKey = openAiApiKey();
-    if (!apiKey) throw new Error("OPENAI_API_KEY nao configurada para o Synapse de voz.");
-    return {
-      speak: {
-        provider: { type: "open_ai", model, voice, language },
+  const azureVoice = clean(Deno.env.get("AZURE_SPEECH_VOICE") || DEFAULT_AZURE_TTS_VOICE, 160);
+  const cartesiaVoice = clean(Deno.env.get("CARTESIA_FALLBACK_VOICE_ID") || DEFAULT_CARTESIA_VOICE_ID, 160);
+  return {
+    speak: [
+      {
+        provider: {
+          type: "open_ai",
+          model: OPENAI_COMPATIBLE_TTS_MODEL,
+          voice: OPENAI_COMPATIBLE_TTS_VOICE,
+        },
         endpoint: {
-          url: OPENAI_TTS_URL,
-          headers: { authorization: `Bearer ${apiKey}` },
+          url: azureTtsAdapterUrl(),
+          headers: { "x-synapse-tts-secret": ttsAdapterSecret() },
         },
       },
-      ttsProvider: "deepgram-openai",
-      ttsVoice: voice,
-    };
-  }
-
-  const modelId = DEFAULT_ELEVENLABS_MODEL_ID;
-  const voiceId = DEFAULT_ELEVENLABS_VOICE_ID;
-  const languageCode = DEFAULT_ELEVENLABS_LANGUAGE_CODE;
-  const elevenLabsKey = elevenLabsApiKey();
-
-  const speak: Record<string, unknown> = {
-    provider: {
-      type: "eleven_labs",
-      model_id: modelId,
-      language_code: languageCode,
-    },
-    endpoint: {
-      url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`,
-      headers: {
-        "xi-api-key": elevenLabsKey,
+      {
+        provider: {
+          type: "cartesia",
+          model_id: clean(Deno.env.get("CARTESIA_FALLBACK_MODEL_ID") || DEFAULT_CARTESIA_MODEL_ID, 120),
+          voice: { mode: "id", id: cartesiaVoice },
+          speed: "normal",
+        },
       },
-    },
-  };
-
-  return {
-    speak,
-    ttsProvider: "deepgram-elevenlabs",
-    ttsVoice: voiceId,
+    ],
+    ttsProvider: "azure-speech+deepgram-cartesia-fallback",
+    ttsVoice: azureVoice,
   };
 }
 
@@ -266,22 +243,26 @@ function buildThinkConfig(
   prompt: string,
   functions: Array<Record<string, unknown>>,
 ) {
-  return {
-    provider: {
-      type: "open_ai",
-      model: NVIDIA_VOICE_MODEL,
-      temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
-    },
-    endpoint: {
-      url: NVIDIA_VOICE_CHAT_URL,
-      headers: {
-        authorization: `Bearer ${nvidiaVoiceApiKey()}`,
+  return [
+    {
+      provider: {
+        type: "open_ai",
+        model: PRIMARY_THINK_MODEL,
+        temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
       },
+      prompt,
+      functions,
     },
-    prompt,
-    context_length: voiceContextLength(),
-    functions,
-  };
+    {
+      provider: {
+        type: "google",
+        model: FALLBACK_THINK_MODEL,
+        temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
+      },
+      prompt,
+      functions,
+    },
+  ];
 }
 
 function buildAgentSettings(
@@ -311,7 +292,7 @@ function buildAgentSettings(
     listenProvider.smart_format = true;
   }
 
-  const thinkModel = NVIDIA_VOICE_MODEL;
+  const thinkModel = PRIMARY_THINK_MODEL;
   const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "48000");
   const outputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000");
 
@@ -348,7 +329,7 @@ function buildAgentSettings(
       ttsVoice,
       inputSampleRate,
       outputSampleRate,
-      contextLength: voiceContextLength(),
+      fallbackThinkModel: FALLBACK_THINK_MODEL,
       historyEnabled: envFlag("SYNAPSE_VOICE_HISTORY", false),
       functionsCount: functions.length,
     },
@@ -402,13 +383,12 @@ serve(async (request) => {
     }
     const pendingActionSummary = await loadPendingActionSummary(admin, user.id, conversationId);
     const prompt = buildSynapseVoicePrompt({
-      systemInstruction: clean(body.systemInstruction, 1600),
+      systemInstruction: clean(body.systemInstruction, 600),
       state: loadedContext.state,
       memorySummary: loadedContext.memorySummary,
       context,
       professionalName: profile.professionalName,
       pendingActionSummary,
-      tools: functions,
     });
     const { settings, metadata } = buildAgentSettings(prompt, context, functions);
     const voiceSessionId = await ensureVoiceSessionRecord(

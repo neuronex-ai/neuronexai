@@ -47,8 +47,12 @@ export const SynapseGlobalShell = () => {
         <>
             {/* Fixed container for Pill + Compact (bottom-right) */}
             <div
-                className="fixed bottom-6 right-6 flex flex-col items-end gap-3"
-                style={{ zIndex: 9990 }}
+                className="fixed flex flex-col items-end gap-3"
+                style={{
+                    zIndex: 9990,
+                    right: 'max(12px, env(safe-area-inset-right))',
+                    bottom: 'max(12px, env(safe-area-inset-bottom))',
+                }}
             >
                 <AnimatePresence initial={false} mode="wait">
                     {shellState === 'compact' ? (

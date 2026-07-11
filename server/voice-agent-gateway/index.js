@@ -27,17 +27,8 @@ loadLocalEnv();
 const PORT = Number(process.env.SYNAPSE_VOICE_GATEWAY_PORT || process.env.PORT || "8789");
 const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
-const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
-const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
-const OPENAI_TTS_URL = "https://api.openai.com/v1/audio/speech";
-const OPENAI_TTS_MODEL = "gpt-4o-mini-tts";
-const OPENAI_TTS_VOICE = "marin";
-const OPENAI_TTS_LANGUAGE = "multi";
-const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
-const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const ELEVENLABS_LANGUAGE_CODE = "pt";
-const DEFAULT_VOICE_CONTEXT_LENGTH = 12000;
+const MANAGED_THINK_MODELS = new Set(["open_ai:gpt-4.1-mini", "google:gemini-2.5-flash"]);
+const MAX_VOICE_FUNCTIONS = 16;
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -45,31 +36,6 @@ function envFlag(name, fallback = false) {
   const value = clean(process.env[name], 40).toLowerCase();
   if (!value) return fallback;
   return ["1", "true", "yes", "on"].includes(value);
-}
-
-function voiceContextLength() {
-  const value = Number(process.env.SYNAPSE_VOICE_CONTEXT_LENGTH || DEFAULT_VOICE_CONTEXT_LENGTH);
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_VOICE_CONTEXT_LENGTH;
-}
-
-function compactVoiceToolCatalog(functions) {
-  const names = Array.isArray(functions)
-    ? functions.map((fn) => clean(fn?.name, 120)).filter(Boolean)
-    : [];
-  return names.length ? names.join(", ") : "confirm_pending_action, cancel_pending_action";
-}
-
-function compactVoicePrompt(prompt, functions) {
-  const text = String(prompt ?? "");
-  const start = text.indexOf("# Chamadas de funcao disponiveis no runtime");
-  const end = start >= 0 ? text.indexOf("\n\n# Seguranca", start) : -1;
-  if (start < 0 || end < 0) return text;
-  const replacement = [
-    "# Chamadas de funcao disponiveis no runtime",
-    "Use somente as tools registradas abaixo. Os schemas completos ja foram registrados separadamente no runtime; este catalogo serve apenas para orientacao rapida.",
-    compactVoiceToolCatalog(functions),
-  ].join("\n\n");
-  return `${text.slice(0, start)}${replacement}${text.slice(end)}`;
 }
 
 function jsonResponse(res, status, payload) {
@@ -93,38 +59,9 @@ function getGatewaySecret() {
   return process.env.SYNAPSE_VOICE_GATEWAY_SECRET || "";
 }
 
-function getElevenLabsApiKey() {
-  return process.env.ELEVENLABS_API_KEY || process.env.ELEVEN_LABS_API_KEY || "";
-}
-
-function getOpenAiApiKey() {
-  return process.env.OPENAI_API_KEY || "";
-}
-
-function requestedSpeakProvider() {
-  return clean(process.env.SPEAK_PROVIDER_TYPE || "open_ai", 40).toLowerCase() === "eleven_labs"
-    ? "eleven_labs"
-    : "open_ai";
-}
-
-function activeSpeakProvider() {
-  const requested = requestedSpeakProvider();
-  if (requested === "open_ai" && getOpenAiApiKey()) return "open_ai";
-  if (getElevenLabsApiKey()) return "eleven_labs";
-  return requested;
-}
-
-function getNvidiaVoiceApiKey() {
-  return process.env.NVIDIA_VOICE_API_KEY || "";
-}
-
 function missingGatewayConfiguration() {
-  const speakProvider = activeSpeakProvider();
   return [
     !process.env.DEEPGRAM_API_KEY ? "DEEPGRAM_API_KEY" : "",
-    !getNvidiaVoiceApiKey() ? "NVIDIA_VOICE_API_KEY" : "",
-    speakProvider === "open_ai" && !getOpenAiApiKey() ? "OPENAI_API_KEY" : "",
-    speakProvider === "eleven_labs" && !getElevenLabsApiKey() ? "ELEVENLABS_API_KEY ou ELEVEN_LABS_API_KEY" : "",
     !getSupabaseUrl() ? "SUPABASE_URL ou VITE_SUPABASE_URL" : "",
     !getSupabaseAnonKey() ? "SUPABASE_ANON_KEY ou VITE_SUPABASE_ANON_KEY" : "",
     !getGatewaySecret() ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
@@ -135,7 +72,7 @@ function assertGatewayConfiguration() {
   const missing = missingGatewayConfiguration();
   if (!missing.length) return;
   console.error("[voice-agent-gateway] configuracao obrigatoria ausente:", missing.join(", "));
-  console.error("[voice-agent-gateway] o Synapse de voz usa Deepgram Agent + NVIDIA BYO + OpenAI TTS.");
+  console.error("[voice-agent-gateway] o Synapse de voz usa provedores gerenciados pela Deepgram e Azure Speech.");
   process.exit(1);
 }
 
@@ -206,25 +143,25 @@ function normalizeAgentSettings(settings) {
   settings.flags = flags;
   flags.history = envFlag("SYNAPSE_VOICE_HISTORY", false);
 
-  const think = agent.think && typeof agent.think === "object" ? agent.think : {};
-  agent.think = think;
-  const thinkProvider = think.provider && typeof think.provider === "object" ? think.provider : {};
-  think.provider = thinkProvider;
-  thinkProvider.type = "open_ai";
-  thinkProvider.model = NVIDIA_VOICE_MODEL;
-  thinkProvider.temperature = SYNAPSE_VOICE_THINK_TEMPERATURE;
-  const thinkEndpoint = think.endpoint && typeof think.endpoint === "object" ? think.endpoint : {};
-  think.endpoint = thinkEndpoint;
-  thinkEndpoint.url = NVIDIA_VOICE_CHAT_URL;
-  think.context_length = voiceContextLength();
-  thinkEndpoint.headers = {
-    ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers : {}),
-    authorization: `Bearer ${getNvidiaVoiceApiKey()}`,
-  };
-  if (!clean(thinkEndpoint.url, 500) || !getNvidiaVoiceApiKey()) {
-    throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
+  const thinkChain = Array.isArray(agent.think) ? agent.think : [agent.think];
+  if (!thinkChain.length || thinkChain.some((item) => !item || typeof item !== "object")) {
+    throw new Error("Settings de voz inválidos: agent.think ausente.");
   }
-  think.prompt = compactVoicePrompt(think.prompt, think.functions);
+  for (const think of thinkChain) {
+    const thinkProvider = think.provider;
+    if (!thinkProvider || typeof thinkProvider !== "object") {
+      throw new Error("Settings de voz inválidos: provedor de raciocínio ausente.");
+    }
+    const providerKey = `${clean(thinkProvider.type, 40)}:${clean(thinkProvider.model, 120)}`;
+    if (!MANAGED_THINK_MODELS.has(providerKey) || think.endpoint) {
+      throw new Error("Settings de voz inválidos: apenas LLMs gerenciados aprovados são permitidos.");
+    }
+    if (!clean(think.prompt, 8000)) throw new Error("Settings de voz inválidos: prompt ausente.");
+    if (!Array.isArray(think.functions) || think.functions.length > MAX_VOICE_FUNCTIONS) {
+      throw new Error("Settings de voz inválidos: conjunto de ferramentas excede o núcleo permitido.");
+    }
+  }
+  agent.think = thinkChain;
 
   const listenProvider = settings?.agent?.listen?.provider;
   if (listenProvider && typeof listenProvider === "object") {
@@ -241,44 +178,25 @@ function normalizeAgentSettings(settings) {
     }
   }
 
-  const speak = settings?.agent?.speak;
-  if (!speak || typeof speak !== "object") throw new Error("Settings de voz invalidos: agent.speak ausente.");
-  const speakProvider = speak.provider && typeof speak.provider === "object" ? speak.provider : {};
-  speak.provider = speakProvider;
-  const endpoint = speak.endpoint && typeof speak.endpoint === "object" ? speak.endpoint : {};
-  speak.endpoint = endpoint;
-  const incomingHeaders = endpoint.headers && typeof endpoint.headers === "object" ? endpoint.headers : {};
-  const incomingOpenAiAuthorization = clean(incomingHeaders.authorization, 8000);
-  const useOpenAi = activeSpeakProvider() === "open_ai" ||
-    (speakProvider.type === "open_ai" && Boolean(incomingOpenAiAuthorization));
-
-  if (useOpenAi) {
-    const authorization = getOpenAiApiKey()
-      ? `Bearer ${getOpenAiApiKey()}`
-      : incomingOpenAiAuthorization;
-    speakProvider.type = "open_ai";
-    speakProvider.model = clean(process.env.SPEAK_PROVIDER_MODEL_ID || OPENAI_TTS_MODEL, 120);
-    speakProvider.voice = clean(process.env.SPEAK_PROVIDER_VOICE_ID || OPENAI_TTS_VOICE, 120);
-    speakProvider.language = clean(process.env.SPEAK_PROVIDER_LANGUAGE_CODE || OPENAI_TTS_LANGUAGE, 40);
-    delete speakProvider.model_id;
-    delete speakProvider.voice_id;
-    delete speakProvider.language_code;
-    endpoint.url = OPENAI_TTS_URL;
-    endpoint.headers = { authorization };
-    if (!authorization) throw new Error("Settings de voz incompletos: autorizacao OpenAI ausente.");
-  } else {
-    speakProvider.type = "eleven_labs";
-    speakProvider.model_id = ELEVENLABS_MODEL_ID;
-    speakProvider.language_code = ELEVENLABS_LANGUAGE_CODE;
-    delete speakProvider.model;
-    delete speakProvider.voice;
-    delete speakProvider.language;
-    endpoint.url = `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(ELEVENLABS_VOICE_ID)}/multi-stream-input`;
-    endpoint.headers = { "xi-api-key": getElevenLabsApiKey() };
-    if (!getElevenLabsApiKey()) {
-      throw new Error("Settings de voz incompletos: ELEVENLABS_API_KEY ausente para fallback.");
-    }
+  const speakChain = Array.isArray(agent.speak) ? agent.speak : [agent.speak];
+  if (speakChain.length !== 2 || speakChain.some((item) => !item || typeof item !== "object")) {
+    throw new Error("Settings de voz inválidos: cadeia Azure/Cartesia ausente.");
   }
+  const [azureSpeak, fallbackSpeak] = speakChain;
+  const azureProvider = azureSpeak.provider;
+  const azureEndpoint = azureSpeak.endpoint;
+  const azureHeaders = azureEndpoint?.headers;
+  if (
+    azureProvider?.type !== "open_ai" ||
+    !clean(azureEndpoint?.url, 1000).includes("/functions/v1/synapse-voice-azure-tts") ||
+    !clean(azureHeaders?.["x-synapse-tts-secret"], 8000)
+  ) {
+    throw new Error("Settings de voz inválidos: adaptador Azure Speech incompleto.");
+  }
+  if (fallbackSpeak?.provider?.type !== "cartesia" || fallbackSpeak.endpoint) {
+    throw new Error("Settings de voz inválidos: fallback Cartesia gerenciado ausente.");
+  }
+  agent.speak = speakChain;
 
   return settings;
 }
@@ -344,6 +262,8 @@ class SynapseVoiceSession {
     const settings = sessionConfig.agentSettings;
     if (!settings) throw new Error("Settings Deepgram ausentes na resposta segura do Supabase.");
     normalizeAgentSettings(settings);
+    const primaryThink = Array.isArray(settings.agent.think) ? settings.agent.think[0] : settings.agent.think;
+    const primarySpeak = Array.isArray(settings.agent.speak) ? settings.agent.speak[0] : settings.agent.speak;
 
     this.conversationId = clean(sessionConfig.conversationId || sessionConfig.sessionId || payload.conversationId || payload.sessionId, 120);
     this.sessionId = this.conversationId;
@@ -355,9 +275,9 @@ class SynapseVoiceSession {
       listenModel: settings?.agent?.listen?.provider?.model,
       listenVersion: settings?.agent?.listen?.provider?.version,
       smartFormat: settings?.agent?.listen?.provider?.smart_format,
-      ttsProvider: sessionConfig.ttsProvider || settings?.agent?.speak?.provider?.type,
-      functionsCount: Array.isArray(settings?.agent?.think?.functions) ? settings.agent.think.functions.length : 0,
-      elevenLabsEndpointConfigured: Boolean(settings?.agent?.speak?.endpoint?.url),
+      ttsProvider: sessionConfig.ttsProvider || primarySpeak?.provider?.type,
+      functionsCount: Array.isArray(primaryThink?.functions) ? primaryThink.functions.length : 0,
+      azureTtsAdapterConfigured: Boolean(primarySpeak?.endpoint?.url),
     });
     this.sendClient({
       type: "gateway_status",
@@ -371,8 +291,8 @@ class SynapseVoiceSession {
       ttsProvider: sessionConfig.ttsProvider,
       functionsCount: sessionConfig.functionsCount,
       outputSampleRate: sessionConfig.outputSampleRate,
-      thinkProvider: settings?.agent?.think?.provider?.type,
-      thinkModel: settings?.agent?.think?.provider?.model,
+      thinkProvider: primaryThink?.provider?.type,
+      thinkModel: primaryThink?.provider?.model,
     });
 
     await this.connectDeepgram(sessionConfig.deepgramUrl || DEFAULT_DEEPGRAM_URL, settings);
@@ -396,7 +316,7 @@ class SynapseVoiceSession {
         conversationId: clean(payload.conversationId || payload.sessionId, 120),
         sessionId: clean(payload.sessionId || payload.conversationId, 120),
         voiceSessionId: clean(payload.voiceSessionId, 120),
-        systemInstruction: clean(payload.systemInstruction, 1600),
+        systemInstruction: clean(payload.systemInstruction, 600),
         context: payload.context && typeof payload.context === "object" ? payload.context : {},
       }),
     });
@@ -740,15 +660,12 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: "synapse-voice-agent-gateway",
       path: PATHNAME,
-      voicePath: `deepgram-agent-nvidia-byo-${activeSpeakProvider() === "open_ai" ? "openai-tts" : "elevenlabs-tts"}`,
-      requestedSpeakProvider: requestedSpeakProvider(),
-      activeSpeakProvider: activeSpeakProvider(),
+      voicePath: "deepgram-managed-gpt41-azure-speech-cartesia-fallback",
+      thinkPrimary: "open_ai/gpt-4.1-mini",
+      thinkFallback: "google/gemini-2.5-flash",
+      speakPrimary: "azure-speech",
+      speakFallback: "deepgram-managed-cartesia",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),
-      nvidiaVoiceConfigured: Boolean(getNvidiaVoiceApiKey()),
-      openAiConfigured: Boolean(getOpenAiApiKey()),
-      openAiViaSessionSupported: true,
-      elevenLabsConfigured: Boolean(getElevenLabsApiKey()),
-      ttsFallbackActive: requestedSpeakProvider() === "open_ai" && activeSpeakProvider() !== "open_ai",
       supabaseConfigured: Boolean(getSupabaseUrl() && getSupabaseAnonKey()),
       gatewaySecretConfigured: Boolean(getGatewaySecret()),
       missing: missingGatewayConfiguration(),

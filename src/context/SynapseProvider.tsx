@@ -177,7 +177,8 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const isMobile = useIsMobile();
 
     // Visibility
-    const isVisible = !isMobile && !!user;
+    const isDevShellPreview = import.meta.env.DEV && new URLSearchParams(location.search).get('synapse-preview') === '1';
+    const isVisible = isDevShellPreview || (!isMobile && !!user);
 
     // Derived: tools for current route
     const baseTools = getToolsForRoute(location.pathname);

@@ -24,6 +24,7 @@ interface Options {
   outputSampleRate?: number;
   systemInstruction?: string;
   language?: string;
+  context?: Record<string, unknown>;
   onSessionIdChange?: (id: string) => void;
   onConversationIdChange?: (id: string) => void;
   onVoiceSessionIdChange?: (id: string) => void;
@@ -164,7 +165,7 @@ const toHumanToolLabel = (value: unknown) => {
 };
 
 const sanitizeToolMessage = (value: unknown) => clean(value, 800)
-  .replace(/[{}\[\]"]/g, "")
+  .replace(/[{}[\]"]/g, "")
   .replace(/\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientAction|function_call)\b/gi, "")
   .replace(/\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi, "ação")
   .replace(/\s+/g, " ")
@@ -179,6 +180,7 @@ export function useDeepgramAgentVoice({
   outputSampleRate,
   systemInstruction,
   language = "pt-BR",
+  context,
   onSessionIdChange,
   onConversationIdChange,
   onVoiceSessionIdChange,
@@ -750,7 +752,12 @@ export function useDeepgramAgentVoice({
             voiceSessionId: nextVoiceSessionId,
             systemInstruction,
             language,
-            context: { route: "voice", source: "deepgram-agent" },
+            context: {
+              ...(context || {}),
+              ...(override?.context || {}),
+              route: clean(override?.context?.currentContext || context?.currentContext || "voice", 80),
+              source: "deepgram-agent",
+            },
           }));
           void startInput().catch((caught) => {
             const inputError = caught instanceof Error ? caught : new Error("Falha ao iniciar microfone.");
@@ -769,7 +776,7 @@ export function useDeepgramAgentVoice({
       await closeEverything();
       throw startError;
     }
-  }, [closeEverything, gatewayUrl, handleBinaryAudio, handleGatewayMessage, inputSampleRate, language, outputSampleRate, rejectPendingStart, setActiveToolState, startInput, systemInstruction]);
+  }, [closeEverything, context, gatewayUrl, handleBinaryAudio, handleGatewayMessage, inputSampleRate, language, outputSampleRate, rejectPendingStart, setActiveToolState, startInput, systemInstruction]);
 
   const endSession = useCallback(() => {
     void closeEverything();
@@ -830,6 +837,6 @@ export function useDeepgramAgentVoice({
     error,
     provider: "deepgram-agent" as const,
     inputProvider: "deepgram-flux" as const,
-    outputProvider: "deepgram-elevenlabs" as const,
+    outputProvider: "azure-speech" as const,
   };
 }

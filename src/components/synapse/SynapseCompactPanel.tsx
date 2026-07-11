@@ -2,7 +2,8 @@ import React, { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
-import { useSynapse } from '@/context/SynapseProvider';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSynapse, type SynapseActiveTab } from '@/context/SynapseProvider';
 import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
 import {
@@ -38,7 +39,6 @@ import { parseSynapseWidgetFromContent } from '@/lib/synapse-widget-parser';
 import { SynapseWidgetRenderer } from './SynapseWidgetRenderer';
 import { SynapseAllActionsModal } from './SynapseAllActionsModal';
 import { supabase } from '@/integrations/supabase/client';
-import { SynapseOrbAvatar } from './SynapseOrbAvatar';
 import {
     executeSynapseInterfaceAction,
     type SynapseInterfaceAction,
@@ -54,6 +54,26 @@ const CONTEXT_LABELS: Record<string, { icon: React.ReactNode; label: string }> =
     notes: { icon: <Notebook className="h-3.5 w-3.5" />, label: 'Notas' },
     synapse: { icon: <Sparkles className="h-3.5 w-3.5" />, label: 'Synapse AI' },
 };
+
+const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.ElementType<{ className?: string }> }> = [
+    { id: 'chat', label: 'Chat', icon: MessageSquare },
+    { id: 'history', label: 'Histórico', icon: History },
+    { id: 'timeline', label: 'Atividade', icon: Activity },
+    { id: 'agent', label: 'Agente', icon: MousePointer2 },
+    { id: 'voice', label: 'Voz', icon: AudioLines },
+];
+
+const SynapseMessageMark = ({ className }: { className?: string }) => (
+    <span
+        className={cn(
+            "flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-border/60 bg-muted/45 text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.04]",
+            className,
+        )}
+        aria-hidden="true"
+    >
+        <Sparkles className="h-3.5 w-3.5" />
+    </span>
+);
 
 type AgentActionItem = {
     id: string;
@@ -110,9 +130,9 @@ const AGENT_ACTIONS: AgentActionItem[] = [
     {
         id: 'open-daily-schedule',
         label: 'Agenda do dia',
-        description: 'Abre a agenda diaria e destaca a grade.',
+        description: 'Abre a agenda diária e destaca a grade.',
         icon: Calendar,
-        action: { action: 'open_daily_schedule', reason: 'Abrindo agenda diaria' },
+        action: { action: 'open_daily_schedule', reason: 'Abrindo agenda diária' },
     },
     {
         id: 'new-appointment',
@@ -124,16 +144,16 @@ const AGENT_ACTIONS: AgentActionItem[] = [
     {
         id: 'new-patient',
         label: 'Novo paciente',
-        description: 'Abre o cadastro de prontuario.',
+        description: 'Abre o cadastro de prontuário.',
         icon: Users,
         action: { action: 'open_modal', modal: 'new_patient', reason: 'Abrindo cadastro de paciente' },
     },
     {
         id: 'new-transaction',
-        label: 'Novo lancamento',
+        label: 'Novo lançamento',
         description: 'Abre o registro financeiro manual.',
         icon: TrendingUp,
-        action: { action: 'open_modal', modal: 'new_transaction', reason: 'Abrindo lancamento financeiro' },
+        action: { action: 'open_modal', modal: 'new_transaction', reason: 'Abrindo lançamento financeiro' },
     },
     {
         id: 'go-patients',
@@ -145,7 +165,7 @@ const AGENT_ACTIONS: AgentActionItem[] = [
     {
         id: 'go-finance',
         label: 'Ir ao financeiro',
-        description: 'Navega para a gestao financeira.',
+        description: 'Navega para a gestão financeira.',
         icon: TrendingUp,
         action: { action: 'navigate', target: 'finance', reason: 'Abrindo financeiro' },
     },
@@ -163,8 +183,8 @@ const EXEC_STATE_LABELS = {
     listening: 'Ouvindo',
     thinking: 'Analisando',
     executing: 'Executando',
-    success: 'Concluido',
-    error: 'Atencao',
+    success: 'Concluído',
+    error: 'Atenção',
 } as const;
 
 export const SynapseCompactPanel = () => {
@@ -205,7 +225,6 @@ export const SynapseCompactPanel = () => {
 
     const [copiedId, setCopiedId] = useState<string | null>(null);
     const [isListening, setIsListening] = useState(false);
-    const [isInputFocused, setIsInputFocused] = useState(false);
     const [showAllActions, setShowAllActions] = useState(false);
     const [sessions, setSessions] = useState<ChatSessionRow[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(false);
@@ -324,7 +343,7 @@ export const SynapseCompactPanel = () => {
 
         const result = await executeSynapseInterfaceAction(item.action, { navigate, channel: 'text' });
         addTimelineEntry({
-            label: result.success ? `${item.label} concluido` : `${item.label} falhou`,
+            label: result.success ? `${item.label} concluído` : `${item.label} falhou`,
             state: result.success ? 'success' : 'error',
             detail: result.message,
         });
@@ -335,7 +354,7 @@ export const SynapseCompactPanel = () => {
     const handleDailySync = async () => {
         setActiveTab('agent');
         addTimelineEntry({
-            label: 'Agente: varredura diaria',
+            label: 'Agente: varredura diária',
             state: 'thinking',
             detail: 'Atualizando contexto por modulo',
         });
@@ -345,10 +364,11 @@ export const SynapseCompactPanel = () => {
     const ctxInfo = CONTEXT_LABELS[currentContext] || { icon: <Sparkles className="h-3.5 w-3.5" />, label: 'Synapse' };
 
     useEffect(() => {
-        if (shellState === 'compact') {
-            setTimeout(() => inputRef.current?.focus(), 200);
+        if (shellState === 'compact' && activeTab === 'chat') {
+            const timeout = window.setTimeout(() => inputRef.current?.focus(), 200);
+            return () => window.clearTimeout(timeout);
         }
-    }, [shellState]);
+    }, [activeTab, shellState]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -371,15 +391,11 @@ export const SynapseCompactPanel = () => {
         }
     };
 
-    const handleVoiceButtonClick = () => {
-        if (activeTab === 'voice') {
-            setActiveTab('chat');
-            if (voiceStatus !== 'disconnected') {
-                toggleVoiceMode();
-            }
-        } else {
-            setActiveTab('voice');
+    const handleTabChange = (tab: SynapseActiveTab) => {
+        if (activeTab === 'voice' && tab !== 'voice' && voiceStatus !== 'disconnected') {
+            toggleVoiceMode();
         }
+        setActiveTab(tab);
     };
 
     const voiceModeLabel = isVoiceToolActive
@@ -390,131 +406,141 @@ export const SynapseCompactPanel = () => {
                 ? 'Modo de Voz Ativo'
                 : 'Conectando...';
     const voiceModeDescription = isVoiceToolActive
-        ? voiceActivityMessage || (voiceActivityLabel ? `Executando ${voiceActivityLabel}. Voce ainda pode interromper ou complementar por voz.` : 'Executando a solicitacao no sistema. Voce ainda pode interromper ou complementar por voz.')
+        ? voiceActivityMessage || (voiceActivityLabel ? `Executando ${voiceActivityLabel}. Você ainda pode interromper ou complementar por voz.` : 'Executando a solicitação no sistema. Você ainda pode interromper ou complementar por voz.')
         : voiceStatus === 'connected'
-            ? 'O Synapse esta ouvindo em tempo real. Fale naturalmente para realizar acoes ou tirar duvidas.'
-            : 'Preparando conexao de voz em tempo real.';
+            ? 'O Synapse está ouvindo em tempo real. Fale naturalmente para realizar ações ou tirar dúvidas.'
+            : 'Preparando conexão de voz em tempo real.';
 
     return (
         <>
             <motion.div
-                style={{ willChange: "transform, opacity, filter" }}
-                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.9, y: 20, filter: 'blur(10px)' }}
-                animate={{ opacity: 1, scale: 1, y: 0, filter: 'blur(0px)' }}
+                style={{ willChange: "transform, opacity" }}
+                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98, y: 12 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={shouldReduceMotion ? { opacity: 0 } : {
                     opacity: 0,
-                    scale: 0.92,
-                    y: 12,
-                    filter: 'blur(8px)',
+                    scale: 0.98,
+                    y: 8,
                     transition: {
-                        duration: 0.22,
+                        duration: 0.18,
                         ease: [0.32, 0, 0.67, 0],
                     }
                 }}
                 transition={shouldReduceMotion ? { duration: 0 } : {
                     type: 'spring',
-                    stiffness: 400,
-                    damping: 34,
-                    mass: 1,
+                    stiffness: 440,
+                    damping: 38,
+                    mass: 0.9,
                 }}
                 className={cn(
-                    'w-[480px] h-[640px]',
-                    'rounded-[36px]',
-                    'relative overflow-hidden',
-                    'flex flex-col',
-                    'notes-liquid-surface border backdrop-blur-3xl',
-                    'shadow-[0_40px_100px_-42px_hsl(var(--foreground)/0.42)] dark:shadow-[0_40px_100px_-34px_rgba(0,0,0,0.72)]',
+                    'relative flex h-[min(680px,calc(100vh-24px))] w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[18px]',
+                    'border border-border/70 bg-background/95 backdrop-blur-2xl',
+                    'shadow-[0_32px_84px_-36px_hsl(var(--foreground)/0.42)]',
+                    'dark:border-white/[0.09] dark:bg-background/90 dark:shadow-[0_36px_90px_-34px_rgba(0,0,0,0.78)]',
                 )}
+                role="dialog"
+                aria-label="Synapse AI"
             >
-                <div className="notes-lumen-field pointer-events-none absolute inset-0 opacity-55" />
-                <div className="notes-retina-texture pointer-events-none absolute inset-0 opacity-45" />
+                <div className="relative z-10 flex h-full min-h-0 flex-col">
+                    <TooltipProvider delayDuration={300}>
+                        <header className="shrink-0 border-b border-border/65 bg-background/80 dark:border-white/[0.07]">
+                            <div className="flex min-h-14 items-center justify-between gap-3 px-4">
+                                <div className="flex min-w-0 items-center gap-2.5">
+                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border/60 bg-muted/45 text-foreground dark:border-white/[0.07] dark:bg-white/[0.045]" aria-hidden="true">
+                                        <Sparkles className="h-4 w-4" />
+                                    </span>
+                                    <span className="min-w-0 leading-none">
+                                        <span className="block truncate text-[14px] font-semibold text-foreground">Synapse</span>
+                                        <span className="mt-1.5 flex items-center gap-1.5 truncate text-[10px] font-medium text-muted-foreground">
+                                            {ctxInfo.icon}
+                                            <span className="truncate">{ctxInfo.label}</span>
+                                        </span>
+                                    </span>
+                                </div>
 
-                <div className="relative z-10 flex flex-col h-full max-h-[620px]">
-                    <div className="flex items-center justify-between px-7 pt-7 pb-4">
-                        <div className="flex items-center gap-3">
-                            <span className="text-[14px] font-black uppercase tracking-[0.24em] text-foreground">
-                                Synapse AI
-                            </span>
-                        </div>
+                                <div className="flex shrink-0 items-center gap-0.5">
+                                    {messages.length > 0 ? (
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <button
+                                                    type="button"
+                                                    onClick={clearSession}
+                                                    className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    aria-label="Limpar conversa"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </TooltipTrigger>
+                                            <TooltipContent side="bottom">Limpar conversa</TooltipContent>
+                                        </Tooltip>
+                                    ) : null}
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                type="button"
+                                                onClick={clearSession}
+                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                aria-label="Criar nova conversa"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">Nova conversa</TooltipContent>
+                                    </Tooltip>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                type="button"
+                                                onClick={() => setShellState('pill')}
+                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                aria-label="Recolher Synapse"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent side="bottom">Recolher</TooltipContent>
+                                    </Tooltip>
+                                </div>
+                            </div>
 
-                        <div className="flex items-center gap-2 p-1 bg-white/50 dark:bg-white/[0.04] rounded-full border border-black/[0.03] dark:border-white/[0.05] shadow-sm">
-                            <button
-                                onClick={() => setActiveTab(activeTab === 'history' ? 'chat' : 'history')}
-                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeTab === 'history' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground")}
-                                title="Histórico"
-                                aria-label="Abrir histórico"
-                            >
-                                <History className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setActiveTab(activeTab === 'timeline' ? 'chat' : 'timeline')}
-                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeTab === 'timeline' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground")}
-                                title="Atividade"
-                                aria-label="Abrir atividade"
-                            >
-                                <Activity className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setActiveTab(activeTab === 'agent' ? 'chat' : 'agent')}
-                                className={cn("p-1.5 rounded-full transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeTab === 'agent' ? "bg-foreground/10 text-foreground shadow-sm" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground")}
-                                title="Agente"
-                                aria-label="Abrir modo agente"
-                            >
-                                <MousePointer2 className="h-4 w-4" />
-                            </button>
-                            <div className="w-[1px] h-4 bg-border/70 dark:bg-white/[0.08] mx-0.5" />
-                            <button
-                                onClick={handleVoiceButtonClick}
-                                className={cn(
-                                    "p-1.5 rounded-full transition-all duration-300 relative overflow-hidden active:scale-95",
-                                    voiceStatus === 'connected' ? "bg-foreground/10 text-foreground" : "text-muted-foreground hover:bg-muted/55 hover:text-foreground"
-                                )}
-                                title="Voz"
-                                aria-label={activeTab === 'voice' ? "Fechar modo de voz" : "Abrir modo de voz"}
-                            >
-                                {voiceStatus === 'connected' ? (
-                                    <>
-                                        <PhoneOff className="h-4 w-4 relative z-10" />
-                                        {!shouldReduceMotion && (
-                                            <motion.div className="absolute inset-0 bg-foreground/10" animate={{ scale: [1, 1.2, 1], opacity: [0.5, 0.2, 0.5] }} transition={{ repeat: Infinity, duration: 1.5 }} />
-                                        )}
-                                    </>
-                                ) : (
-                                    <AudioLines className="h-4 w-4" />
-                                )}
-                            </button>
-                            {messages.length > 0 && (
-                                <button
-                                    onClick={clearSession}
-                                    className="p-1.5 rounded-full text-muted-foreground transition-all duration-300 hover:bg-red-500/10 hover:text-red-600 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:text-red-400"
-                                    title="Limpar"
-                                    aria-label="Limpar conversa"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </button>
-                            )}
-                            <button
-                                onClick={clearSession}
-                                className="p-1.5 rounded-full bg-primary text-primary-foreground border border-transparent shadow-md hover:bg-primary/90 hover:scale-105 active:scale-95 transition-all duration-300 ml-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                title="Nova Conversa"
-                                aria-label="Criar nova conversa"
-                            >
-                                <Plus className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setShellState('pill')}
-                                className="p-1.5 rounded-full text-muted-foreground hover:bg-muted/55 hover:text-foreground transition-all duration-300 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                aria-label="Fechar"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
-                        </div>
-                    </div>
+                            <nav className="grid grid-cols-5 gap-1 px-2 pb-2" role="tablist" aria-label="Modos do Synapse">
+                                {PANEL_TABS.map((tab) => {
+                                    const Icon = tab.icon;
+                                    const isActive = activeTab === tab.id;
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            type="button"
+                                            role="tab"
+                                            aria-selected={isActive}
+                                            aria-controls="synapse-tabpanel"
+                                            onClick={() => handleTabChange(tab.id)}
+                                            className={cn(
+                                                "relative flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[10px] font-semibold text-muted-foreground transition-colors",
+                                                "hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                isActive && "bg-muted text-foreground dark:bg-white/[0.07]",
+                                            )}
+                                        >
+                                            <span className="relative shrink-0">
+                                                <Icon className="h-4 w-4" />
+                                                {tab.id === 'voice' && voiceStatus === 'connected' ? (
+                                                    <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+                                                ) : null}
+                                            </span>
+                                            <span className="hidden truncate min-[380px]:inline">{tab.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </nav>
+                        </header>
+                    </TooltipProvider>
 
                     <div
                         ref={scrollRef}
+                        id="synapse-tabpanel"
+                        role="tabpanel"
                         className={cn(
-                            'flex-1 min-h-0 overflow-y-auto px-5 relative',
+                            'relative min-h-0 flex-1 overflow-y-auto px-4',
                             'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
@@ -522,25 +548,25 @@ export const SynapseCompactPanel = () => {
                             {activeTab === 'history' ? (
                                 <motion.div
                                     key="history"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="flex flex-col py-6 gap-4"
+                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 4 }}
+                                    className="flex flex-col gap-3 py-4"
                                 >
-                                    <div className="flex items-center justify-between px-2 mb-2">
-                                        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Conversas Recentes</h3>
-                                        {isLoadingSessions && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+                                    <div className="flex min-h-11 items-center justify-between px-2">
+                                        <h3 className="text-[12px] font-semibold text-foreground">Conversas recentes</h3>
+                                        {isLoadingSessions && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
                                     </div>
 
-                                    <div className="mx-2 mb-2 grid grid-cols-2 rounded-[18px] border border-black/[0.04] bg-white/65 p-1 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground shadow-sm dark:border-white/[0.045] dark:bg-white/[0.03]">
+                                    <div className="grid grid-cols-2 rounded-lg border border-border/60 bg-muted/30 p-1 text-[11px] font-medium text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.025]">
                                         <button
                                             type="button"
                                             onClick={() => setHistoryChannel('neuronex')}
                                             className={cn(
-                                                "h-10 rounded-[14px] transition-all",
+                                                "h-11 rounded-md px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'neuronex'
-                                                    ? "bg-primary text-primary-foreground shadow-sm"
-                                                    : "hover:bg-muted/55"
+                                                    ? "bg-background text-foreground shadow-sm dark:bg-white/[0.08]"
+                                                    : "hover:bg-muted/60 hover:text-foreground"
                                             )}
                                         >
                                             NeuroNex
@@ -549,10 +575,10 @@ export const SynapseCompactPanel = () => {
                                             type="button"
                                             onClick={() => setHistoryChannel('whatsapp')}
                                             className={cn(
-                                                "h-10 rounded-[14px] transition-all",
+                                                "h-11 rounded-md px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'whatsapp'
-                                                    ? "bg-primary text-primary-foreground shadow-sm"
-                                                    : "hover:bg-muted/55"
+                                                    ? "bg-background text-foreground shadow-sm dark:bg-white/[0.08]"
+                                                    : "hover:bg-muted/60 hover:text-foreground"
                                             )}
                                         >
                                             WhatsApp Business
@@ -560,53 +586,54 @@ export const SynapseCompactPanel = () => {
                                     </div>
 
                                     {sessions.length === 0 && !isLoadingSessions ? (
-                                        <div className="text-center py-20 opacity-40 flex flex-col items-center gap-4">
-                                            <MessageSquare className="w-8 h-8" />
-                                            <p className="text-[11px] font-bold uppercase tracking-widest">
+                                        <div className="flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
+                                            <MessageSquare className="h-7 w-7 opacity-60" />
+                                            <p className="text-[12px] font-medium">
                                                 {historyChannel === 'whatsapp' ? 'Nenhuma conversa WhatsApp' : 'Nenhuma conversa salva'}
                                             </p>
                                         </div>
                                     ) : (
-                                        <div className="grid gap-3">
+                                        <div className="divide-y divide-border/60 dark:divide-white/[0.07]">
                                             {sessions.map((session) => {
                                                 const isWpp = session.context_state?.source === 'whatsapp';
                                                 const isPsychologist = session.context_state?.conversation_kind === 'psychologist';
                                                 const title = isWpp
                                                     ? isPsychologist
-                                                        ? 'Voce e Synapse'
+                                                        ? 'Você e Synapse'
                                                         : session.context_state?.pushName || session.title?.replace(/^WhatsApp Business\s*-\s*/i, '') || session.context_state?.phoneNumber || 'Paciente'
-                                                    : session.title || 'Conversa sem titulo';
+                                                    : session.title || 'Conversa sem título';
                                                 return (
                                                     <button
                                                         key={session.id}
+                                                        type="button"
                                                         onClick={() => {
                                                             setActiveSessionId(session.id);
                                                             setActiveTab('chat');
                                                         }}
-                                                        className="group relative flex w-full items-center justify-between overflow-hidden rounded-[28px] border border-border/35 bg-background/58 p-5 text-left transition-all duration-300 hover:bg-muted/55 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.055] dark:bg-white/[0.025]"
+                                                        className="group relative flex min-h-[72px] w-full items-center justify-between gap-3 px-2 py-3 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                                                     >
-                                                        {isWpp && (
-                                                            <div className="absolute top-0 right-0 px-3 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-bl-[14px]">
-                                                                <span className="text-[8px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                                                                    {isPsychologist ? 'Profissional' : 'Paciente'}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                        <div className="flex items-center gap-4">
+                                                        <div className="flex min-w-0 items-center gap-3">
                                                             <div className={cn(
-                                                                "w-10 h-10 rounded-2xl flex items-center justify-center transition-all",
+                                                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
                                                                 isWpp ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted/65 text-muted-foreground"
                                                             )}>
-                                                                {isWpp ? <Smartphone className="w-5 h-5" /> : <MessageSquare className="w-4 h-4" />}
+                                                                {isWpp ? <Smartphone className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
                                                             </div>
-                                                            <div className="flex flex-col mt-1">
-                                                                <span className="text-[13px] font-bold tracking-tight">{title}</span>
-                                                                <span className="text-[9px] font-mono opacity-40 uppercase tracking-widest">
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex min-w-0 items-center gap-2">
+                                                                    <span className="truncate text-[13px] font-semibold text-foreground">{title}</span>
+                                                                    {isWpp ? (
+                                                                        <span className="shrink-0 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400">
+                                                                            {isPsychologist ? 'Profissional' : 'Paciente'}
+                                                                        </span>
+                                                                    ) : null}
+                                                                </div>
+                                                                <span className="mt-1 block text-[10px] text-muted-foreground">
                                                                     {session.updated_at ? new Date(session.updated_at).toLocaleDateString('pt-BR') : 'Sem data'}
                                                                 </span>
                                                             </div>
                                                         </div>
-                                                        <ChevronRight className="w-4 h-4 opacity-20 group-hover:opacity-100 transition-all ml-2" />
+                                                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
                                                     </button>
                                                 )
                                             })}
@@ -616,10 +643,10 @@ export const SynapseCompactPanel = () => {
                             ) : activeTab === 'timeline' ? (
                                 <motion.div
                                     key="timeline"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="flex flex-col py-4 gap-4"
+                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 4 }}
+                                    className="flex flex-col gap-4 py-4"
                                 >
                                     {timeline.length === 0 ? (
                                         <div className="text-center text-muted-foreground text-[11px] mt-10">Nenhuma atividade registrada.</div>
@@ -641,19 +668,19 @@ export const SynapseCompactPanel = () => {
                             ) : activeTab === 'agent' ? (
                                 <motion.div
                                     key="agent"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                    className="flex flex-col py-5 gap-4"
+                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 4 }}
+                                    className="flex flex-col"
                                 >
-                                    <div className="rounded-[28px] bg-white/65 dark:bg-white/[0.032] border border-black/[0.04] dark:border-white/[0.045] p-5 shadow-sm dark:shadow-[0_20px_56px_-46px_rgba(0,0,0,0.8)]">
+                                    <section className="border-b border-border/60 py-5 dark:border-white/[0.07]">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-1">
-                                                <span className="text-[9px] font-black uppercase tracking-[0.28em] text-muted-foreground">Modo agente</span>
-                                                <h3 className="text-[17px] font-black tracking-tight text-foreground">Controle de tela</h3>
+                                                <span className="text-[11px] font-medium text-muted-foreground">Modo agente</span>
+                                                <h3 className="text-[16px] font-semibold text-foreground">Controle de tela</h3>
                                             </div>
                                             <span className={cn(
-                                                "rounded-full px-3 py-1 text-[9px] font-black uppercase tracking-[0.16em]",
+                                                "rounded-md px-2.5 py-1.5 text-[10px] font-semibold",
                                                 execState === 'error'
                                                     ? "bg-red-500/10 text-red-600 dark:text-red-400"
                                                     : execState === 'success'
@@ -672,44 +699,46 @@ export const SynapseCompactPanel = () => {
                                                 return (
                                                     <button
                                                         key={item.id}
+                                                        type="button"
                                                         onClick={() => void runAgentAction(item)}
                                                         disabled={agentBusy}
-                                                        className="group flex min-h-[88px] flex-col items-start justify-between rounded-[22px] border border-border/35 bg-background/62 p-4 text-left transition-all hover:-translate-y-0.5 hover:bg-muted/55 disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0 dark:border-white/[0.045] dark:bg-white/[0.03]"
+                                                        className="group flex min-h-[88px] flex-col items-start justify-between rounded-lg border border-border/60 bg-muted/20 p-3.5 text-left transition-colors hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-white/[0.025]"
                                                     >
                                                         <div className="flex w-full items-center justify-between gap-2">
                                                             <Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-current" />
-                                                            <ChevronRight className="h-3.5 w-3.5 opacity-30 transition-all group-hover:translate-x-0.5 group-hover:opacity-80" />
+                                                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
                                                         </div>
                                                         <div className="space-y-1">
-                                                            <span className="block text-[11px] font-black uppercase tracking-[0.12em] leading-tight">{item.label}</span>
-                                                            <span className="line-clamp-2 text-[10px] leading-relaxed text-muted-foreground group-hover:text-current/70">{item.description}</span>
+                                                            <span className="block text-[11px] font-semibold leading-tight">{item.label}</span>
+                                                            <span className="line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">{item.description}</span>
                                                         </div>
                                                     </button>
                                                 );
                                             })}
                                         </div>
-                                    </div>
+                                    </section>
 
-                                    <div className="rounded-[26px] bg-white/45 dark:bg-white/[0.024] border border-black/[0.035] dark:border-white/[0.04] p-4">
+                                    <section className="border-b border-border/60 py-5 dark:border-white/[0.07]">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Inteligencia diaria</span>
-                                                <p className="mt-1 text-[11px] font-semibold text-muted-foreground">{dailyActionCount} sugestoes ativas</p>
+                                                <span className="text-[12px] font-semibold text-foreground">Inteligência diária</span>
+                                                <p className="mt-1 text-[11px] text-muted-foreground">{dailyActionCount} sugestões ativas</p>
                                             </div>
                                             <button
+                                                type="button"
                                                 onClick={() => void handleDailySync()}
                                                 disabled={isIntelligenceLoading}
-                                                className="h-10 w-10 rounded-2xl bg-primary text-primary-foreground transition-all hover:scale-105 active:scale-95 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:scale-100 motion-reduce:active:scale-100"
+                                                className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 title="Atualizar"
-                                                aria-label="Atualizar inteligencia diaria"
+                                                aria-label="Atualizar inteligência diária"
                                             >
-                                                {isIntelligenceLoading ? <Loader2 className="mx-auto h-4 w-4 animate-spin" /> : <RefreshCw className="mx-auto h-4 w-4" />}
+                                                {isIntelligenceLoading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <RefreshCw className="h-4 w-4" />}
                                             </button>
                                         </div>
 
-                                        <div className="mt-4 grid gap-2">
+                                        <div className="mt-4 divide-y divide-border/55 dark:divide-white/[0.06]">
                                             {scanProgress.map((item) => (
-                                                <div key={item.module} className="flex items-center justify-between rounded-2xl bg-foreground/[0.035] px-3 py-2 dark:bg-white/[0.03]">
+                                                <div key={item.module} className="flex min-h-10 items-center justify-between px-1">
                                                     <span className="text-[10px] font-bold text-muted-foreground">{item.label}</span>
                                                     <span className={cn(
                                                         "h-2 w-2 rounded-full",
@@ -722,11 +751,11 @@ export const SynapseCompactPanel = () => {
                                                 </div>
                                             ))}
                                         </div>
-                                    </div>
+                                    </section>
 
-                                    <div className="rounded-[26px] bg-white/35 dark:bg-white/[0.02] border border-black/[0.03] dark:border-white/[0.04] p-4">
+                                    <section className="py-5">
                                         <div className="mb-3 flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Atividade recente</span>
+                                            <span className="text-[12px] font-semibold text-foreground">Atividade recente</span>
                                             <Activity className="h-3.5 w-3.5 text-muted-foreground" />
                                         </div>
                                         {recentAgentTimeline.length === 0 ? (
@@ -751,15 +780,15 @@ export const SynapseCompactPanel = () => {
                                                 ))}
                                             </div>
                                         )}
-                                    </div>
+                                    </section>
                                 </motion.div>
                             ) : activeTab === 'voice' ? (
                                 <motion.div
                                     key="voice"
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    className="flex flex-col items-center justify-center h-full py-12 gap-8 min-h-[400px]"
+                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 4 }}
+                                    className="flex h-full min-h-[400px] flex-col items-center justify-center gap-8 py-12"
                                 >
                                     <div className="relative flex h-56 w-56 items-center justify-center rounded-full border border-border/35 bg-muted/35 shadow-inner dark:border-white/[0.055] dark:bg-white/[0.025]">
                                         {shouldReduceMotion ? (
@@ -775,7 +804,7 @@ export const SynapseCompactPanel = () => {
                                     </div>
 
                                     <div className="flex flex-col items-center gap-2 text-center">
-                                        <span className={cn("text-sm uppercase tracking-[0.2em] font-black", voiceStatus === 'connected' || isVoiceToolActive ? 'text-foreground' : cn('text-muted-foreground', !shouldReduceMotion && 'animate-pulse'))}>
+                                        <span className={cn("text-[14px] font-semibold", voiceStatus === 'connected' || isVoiceToolActive ? 'text-foreground' : cn('text-muted-foreground', !shouldReduceMotion && 'animate-pulse'))}>
                                             {voiceModeLabel}
                                         </span>
                                         <p className="text-[11px] text-muted-foreground max-w-[280px] leading-relaxed">
@@ -785,8 +814,9 @@ export const SynapseCompactPanel = () => {
 
                                     {voiceStatus === 'connected' && (
                                         <button
+                                            type="button"
                                             onClick={() => toggleVoiceMode()}
-                                            className="mt-4 px-8 py-3 rounded-full bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 text-[12px] font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            className="mt-4 flex min-h-11 items-center gap-2 rounded-lg bg-destructive/10 px-4 py-2 text-[12px] font-semibold text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             aria-label="Encerrar chamada de voz"
                                         >
                                             <PhoneOff className="w-4 h-4" />
@@ -797,16 +827,16 @@ export const SynapseCompactPanel = () => {
                             ) : messages.length === 0 ? (
                                 <motion.div
                                     key="empty"
-                                    initial={{ opacity: 0, y: 10 }}
+                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    className="flex flex-col items-center justify-center h-full py-10 gap-5"
+                                    className="flex h-full flex-col items-center justify-center gap-5 py-10"
                                 >
-                                    <div className="flex h-14 w-14 items-center justify-center rounded-3xl border border-border/35 bg-muted/45 text-muted-foreground dark:border-white/[0.06] dark:bg-white/[0.04]">
-                                        <Sparkles className="h-6 w-6" />
+                                    <div className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-border/60 bg-muted/45 text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.04]">
+                                        <Sparkles className="h-5 w-5" />
                                     </div>
                                     <div className="text-center space-y-1.5">
-                                        <h3 className="text-[14px] font-semibold text-foreground">Como posso ajudar?</h3>
-                                        <p className="text-[12px] text-muted-foreground max-w-[240px]">Peça para resumir um paciente ou agendar uma sessão.</p>
+                                        <h3 className="text-[15px] font-semibold text-foreground">Como posso ajudar?</h3>
+                                        <p className="max-w-[260px] text-[12px] leading-5 text-muted-foreground">Peça para resumir um paciente ou consultar sua agenda.</p>
                                     </div>
 
                                     {quickActions.length > 0 && (
@@ -814,8 +844,9 @@ export const SynapseCompactPanel = () => {
                                             {quickActions.slice(0, 4).map((tool) => (
                                                 <button
                                                     key={tool.id}
+                                                    type="button"
                                                     onClick={() => setInputDraft(tool.name)}
-                                                    className="rounded-[14px] border border-border/35 bg-muted/35 px-4 py-2 text-[11px] font-semibold text-muted-foreground shadow-sm transition-all hover:bg-muted hover:text-foreground active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:active:scale-100 dark:border-white/[0.06] dark:bg-white/[0.04]"
+                                                    className="min-h-11 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-white/[0.035]"
                                                 >
                                                     {tool.name}
                                                 </button>
@@ -824,29 +855,30 @@ export const SynapseCompactPanel = () => {
                                     )}
                                 </motion.div>
                             ) : (
-                                <motion.div key="chat" layout className="space-y-4 py-4">
+                                <motion.div key="chat" layout className="space-y-5 py-4">
                                     {messages.map((msg, idx) => (
                                         <motion.div
                                             key={msg.id || idx}
                                             layout
-                                            initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            className={cn('flex gap-3', msg.role === 'user' ? 'justify-end' : 'justify-start')}
+                                            initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className={cn('flex min-w-0 gap-2.5', msg.role === 'user' ? 'justify-end' : 'justify-start')}
                                         >
                                             {msg.role === 'assistant' && (
-                                                <SynapseOrbAvatar className="mt-0.5 h-8 w-8" />
+                                                <SynapseMessageMark className="mt-0.5" />
                                             )}
 
                                             <div className={cn(
-                                                'relative group max-w-[85%]',
+                                                'group relative min-w-0 max-w-[84%]',
                                                 msg.role === 'user'
-                                                    ? 'rounded-[28px] rounded-br-[8px] bg-primary px-6 py-4 text-primary-foreground shadow-xl'
-                                                    : 'rounded-[28px] rounded-bl-[8px] border border-border/45 bg-background/72 px-6 py-4 text-foreground dark:text-white shadow-sm dark:border-white/[0.04] dark:bg-white/[0.035]'
+                                                    ? 'rounded-[14px] rounded-br-[4px] bg-primary px-4 py-3 text-primary-foreground shadow-sm'
+                                                    : 'rounded-[14px] rounded-bl-[4px] bg-muted/55 px-4 py-3 pr-10 text-foreground dark:bg-white/[0.055] dark:text-white'
                                             )}>
                                                 {msg.role === "assistant" && (
                                                     <button
+                                                        type="button"
                                                         onClick={() => handleCopy(msg.id, msg.content)}
-                                                        className="absolute -right-9 top-1 rounded-lg p-1.5 text-muted-foreground opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                        className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-[10px] text-muted-foreground opacity-0 transition-[opacity,color,background-color] hover:bg-background/65 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                         aria-label="Copiar mensagem"
                                                     >
                                                         {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
@@ -911,24 +943,14 @@ export const SynapseCompactPanel = () => {
 
                                     {isSending && (
                                         <motion.div
-                                            initial={{ opacity: 0, y: 8, scale: 0.96 }}
-                                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                                            exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                                            initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            exit={{ opacity: 0, y: 4 }}
                                             transition={{ type: 'spring', stiffness: 430, damping: 32 }}
                                             className="flex items-end gap-3"
                                         >
-                                            <SynapseOrbAvatar className="mb-0.5 h-8 w-8" />
-                                            <motion.div
-                                                animate={shouldReduceMotion ? undefined : {
-                                                    boxShadow: [
-                                                        '0 16px 42px -34px rgba(0,0,0,0.45)',
-                                                        '0 22px 58px -36px rgba(0,0,0,0.56)',
-                                                        '0 16px 42px -34px rgba(0,0,0,0.45)',
-                                                    ],
-                                                }}
-                                                transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 2.4, ease: 'easeInOut' }}
-                                                className="flex items-center gap-1.5 rounded-[24px] rounded-bl-[8px] border border-border/45 bg-background/72 px-5 py-3.5 shadow-sm backdrop-blur-xl dark:border-white/[0.045] dark:bg-white/[0.04]"
-                                            >
+                                            <SynapseMessageMark className="mb-0.5" />
+                                            <div className="flex items-center gap-1.5 rounded-[14px] rounded-bl-[4px] bg-muted/55 px-4 py-3.5 dark:bg-white/[0.055]">
                                                 {[0, 0.16, 0.32].map((delay) => (
                                                     <motion.div
                                                         key={delay}
@@ -937,7 +959,7 @@ export const SynapseCompactPanel = () => {
                                                         className="h-1.5 w-1.5 rounded-full bg-foreground/65"
                                                     />
                                                 ))}
-                                            </motion.div>
+                                            </div>
                                         </motion.div>
                                     )}
                                 </motion.div>
@@ -945,70 +967,59 @@ export const SynapseCompactPanel = () => {
                         </AnimatePresence>
                     </div>
 
-                    <div className="px-6 pb-6 pt-2">
-                        <motion.div
-                            animate={shouldReduceMotion ? undefined : {
-                                y: isInputFocused ? -2 : 0,
-                                scale: isInputFocused ? 1.008 : 1,
-                                boxShadow: isInputFocused
-                                    ? '0 24px 70px -42px rgba(0,0,0,0.55)'
-                                    : '0 16px 48px -44px rgba(0,0,0,0.35)',
-                            }}
-                            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34 }}
+                    {activeTab === 'chat' ? (
+                    <div className="shrink-0 border-t border-border/65 bg-background/82 px-4 py-3 dark:border-white/[0.07]">
+                        <div
                             className={cn(
-                                'flex items-end gap-3 rounded-[26px]',
-                                'notes-liquid-surface border',
-                                'px-4 py-3 transition-[border-color,box-shadow] duration-300 backdrop-blur-2xl',
-                                isInputFocused
-                                    ? 'border-foreground/25 dark:border-white/[0.15]'
-                                    : 'border-border/45 dark:border-white/[0.05]'
+                                'flex min-h-14 items-end gap-2 rounded-xl border border-border/70 bg-muted/25 px-2 py-1.5',
+                                'transition-[border-color,box-shadow] duration-150 focus-within:border-foreground/25 focus-within:ring-2 focus-within:ring-ring/20',
+                                'dark:border-white/[0.08] dark:bg-white/[0.025] dark:focus-within:border-white/[0.16]',
                             )}
                         >
                             <textarea
                                 ref={inputRef}
                                 value={inputDraft}
                                 onChange={(e) => setInputDraft(e.target.value)}
-                                onFocus={() => setIsInputFocused(true)}
-                                onBlur={() => setIsInputFocused(false)}
                                 onKeyDown={handleKeyDown}
                                 placeholder="Pergunte ao Synapse..."
                                 rows={1}
                                 disabled={!sessionReady || isSending}
-                                className="min-h-9 flex-1 resize-none bg-transparent py-2 text-[13px] font-medium text-foreground border-0 focus:ring-0 focus-visible:ring-0 focus:outline-none outline-none placeholder:text-muted-foreground/55 disabled:opacity-50"
+                                className="min-h-11 max-h-28 flex-1 resize-none border-0 bg-transparent px-2 py-3 text-[13px] font-medium leading-5 text-foreground outline-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0 focus-visible:ring-0 disabled:opacity-50"
                             />
-                            <div className="flex items-center gap-1.5 shrink-0 pb-0.5">
+                            <div className="flex shrink-0 items-center gap-1">
                                 <motion.button
+                                    type="button"
                                     onClick={toggleListening}
                                     whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
                                     className={cn(
-                                        'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                        'flex h-11 w-11 items-center justify-center rounded-[10px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                         isListening
                                             ? 'bg-primary text-primary-foreground'
-                                            : 'bg-muted/65 text-muted-foreground hover:text-foreground dark:bg-white/[0.06]'
+                                            : 'text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-white/[0.06]'
                                     )}
                                     aria-label={isListening ? "Parar ditado" : "Iniciar ditado"}
                                 >
                                     <Mic className="h-4 w-4" />
                                 </motion.button>
                                 <motion.button
+                                    type="button"
                                     onClick={handleSend}
-                                    disabled={!inputDraft.trim() || isSending}
+                                    disabled={!inputDraft.trim() || isSending || !sessionReady}
                                     whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
-                                    animate={shouldReduceMotion ? undefined : { rotate: inputDraft.trim() ? 0 : -4 }}
-                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 520, damping: 30 }}
                                     className={cn(
-                                        'flex h-10 w-10 items-center justify-center rounded-2xl transition-all duration-300 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                        'flex h-11 w-11 items-center justify-center rounded-[10px] transition-colors duration-150 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                         inputDraft.trim()
-                                            ? 'bg-primary text-primary-foreground shadow-md'
-                                            : 'bg-muted/45 text-muted-foreground/60 dark:bg-white/[0.04]'
+                                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                            : 'bg-muted/50 text-muted-foreground/60 dark:bg-white/[0.04]'
                                     )}
                                     aria-label="Enviar mensagem"
                                 >
                                     {isSending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowUp className="h-4 w-4" />}
                                 </motion.button>
                             </div>
-                        </motion.div>
+                        </div>
                     </div>
+                    ) : null}
                 </div>
             </motion.div>
 

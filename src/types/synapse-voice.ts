@@ -46,6 +46,7 @@ export interface SynapseVoiceStartOverride {
   voiceSessionId?: string | null;
   inputSampleRate?: number;
   outputSampleRate?: number;
+  context?: Record<string, unknown>;
 }
 
 export interface SynapseVoiceConfig {
