@@ -30,9 +30,9 @@ const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
 const NVIDIA_VOICE_CHAT_URL = "https://integrate.api.nvidia.com/v1/chat/completions";
 const NVIDIA_VOICE_MODEL = "nvidia/nemotron-3-nano-30b-a3b";
 const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
-const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const ELEVENLABS_MODEL_ID = "eleven_multilingual_v2";
 const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
-const ELEVENLABS_LANGUAGE_CODE = "pt";
+const ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
