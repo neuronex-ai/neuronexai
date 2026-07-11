@@ -66,7 +66,7 @@ const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.Eleme
 const SynapseMessageMark = ({ className }: { className?: string }) => (
     <span
         className={cn(
-            "flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border border-border/60 bg-muted/45 text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.04]",
+            "synapse-chat-glass flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border text-muted-foreground",
             className,
         )}
         aria-hidden="true"
@@ -433,20 +433,20 @@ export const SynapseCompactPanel = () => {
                     mass: 0.9,
                 }}
                 className={cn(
-                    'relative flex h-[min(680px,calc(100vh-24px))] w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[18px]',
-                    'border border-border/70 bg-background/95 backdrop-blur-2xl',
-                    'shadow-[0_32px_84px_-36px_hsl(var(--foreground)/0.42)]',
-                    'dark:border-white/[0.09] dark:bg-background/90 dark:shadow-[0_36px_90px_-34px_rgba(0,0,0,0.78)]',
+                    'notes-liquid-surface synapse-glass-texture relative flex h-[min(680px,calc(100vh-24px))] w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[20px]',
+                    'border backdrop-blur-3xl backdrop-saturate-150',
+                    'shadow-[0_34px_92px_-34px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.72)]',
+                    'dark:shadow-[0_38px_100px_-32px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.065)]',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
-                        <header className="shrink-0 border-b border-border/65 bg-background/80 dark:border-white/[0.07]">
+                        <header className="shrink-0 border-b border-border/65 bg-background/58 backdrop-blur-2xl dark:border-white/[0.075] dark:bg-black/18">
                             <div className="flex min-h-14 items-center justify-between gap-3 px-4">
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border border-border/60 bg-muted/45 text-foreground dark:border-white/[0.07] dark:bg-white/[0.045]" aria-hidden="true">
+                                    <span className="synapse-chat-glass flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border text-foreground" aria-hidden="true">
                                         <Sparkles className="h-4 w-4" />
                                     </span>
                                     <span className="min-w-0 leading-none">
@@ -465,7 +465,7 @@ export const SynapseCompactPanel = () => {
                                                 <button
                                                     type="button"
                                                     onClick={clearSession}
-                                                    className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-[background-color,color,transform] hover:bg-destructive/10 hover:text-destructive active:translate-y-px active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
                                                     aria-label="Limpar conversa"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -479,7 +479,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={clearSession}
-                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:translate-y-px active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
                                                 aria-label="Criar nova conversa"
                                             >
                                                 <Plus className="h-4 w-4" />
@@ -492,7 +492,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setShellState('pill')}
-                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:translate-y-px active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
                                                 aria-label="Recolher Synapse"
                                             >
                                                 <X className="h-4 w-4" />
@@ -508,27 +508,36 @@ export const SynapseCompactPanel = () => {
                                     const Icon = tab.icon;
                                     const isActive = activeTab === tab.id;
                                     return (
-                                        <button
+                                        <motion.button
                                             key={tab.id}
                                             type="button"
                                             role="tab"
                                             aria-selected={isActive}
                                             aria-controls="synapse-tabpanel"
                                             onClick={() => handleTabChange(tab.id)}
+                                            whileTap={shouldReduceMotion ? undefined : { scale: 0.97, y: 1 }}
                                             className={cn(
                                                 "relative flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[10px] font-semibold text-muted-foreground transition-colors",
-                                                "hover:bg-muted/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                isActive && "bg-muted text-foreground dark:bg-white/[0.07]",
+                                                "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                isActive && "text-foreground",
                                             )}
                                         >
-                                            <span className="relative shrink-0">
+                                            {isActive ? (
+                                                <motion.span
+                                                    layoutId="synapse-active-tab"
+                                                    className="synapse-chat-glass absolute inset-0 rounded-lg border"
+                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
+                                                    aria-hidden="true"
+                                                />
+                                            ) : null}
+                                            <span className="relative z-10 shrink-0">
                                                 <Icon className="h-4 w-4" />
                                                 {tab.id === 'voice' && voiceStatus === 'connected' ? (
                                                     <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
                                                 ) : null}
                                             </span>
-                                            <span className="hidden truncate min-[380px]:inline">{tab.label}</span>
-                                        </button>
+                                            <span className="relative z-10 hidden truncate min-[380px]:inline">{tab.label}</span>
+                                        </motion.button>
                                     );
                                 })}
                             </nav>
@@ -558,7 +567,7 @@ export const SynapseCompactPanel = () => {
                                         {isLoadingSessions && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
                                     </div>
 
-                                    <div className="grid grid-cols-2 rounded-lg border border-border/60 bg-muted/30 p-1 text-[11px] font-medium text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.025]">
+                                    <div className="synapse-chat-glass grid grid-cols-2 rounded-lg border p-1 text-[11px] font-medium text-muted-foreground">
                                         <button
                                             type="button"
                                             onClick={() => setHistoryChannel('neuronex')}
@@ -831,7 +840,7 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, y: 0 }}
                                     className="flex h-full flex-col items-center justify-center gap-5 py-10"
                                 >
-                                    <div className="flex h-12 w-12 items-center justify-center rounded-[12px] border border-border/60 bg-muted/45 text-muted-foreground dark:border-white/[0.07] dark:bg-white/[0.04]">
+                                    <div className="synapse-chat-glass flex h-12 w-12 items-center justify-center rounded-[12px] border text-muted-foreground">
                                         <Sparkles className="h-5 w-5" />
                                     </div>
                                     <div className="text-center space-y-1.5">
@@ -846,7 +855,7 @@ export const SynapseCompactPanel = () => {
                                                     key={tool.id}
                                                     type="button"
                                                     onClick={() => setInputDraft(tool.name)}
-                                                    className="min-h-11 rounded-lg border border-border/60 bg-muted/30 px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-white/[0.035]"
+                                                    className="synapse-chat-glass min-h-11 rounded-lg border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-[background-color,color,transform] hover:text-foreground active:translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
                                                 >
                                                     {tool.name}
                                                 </button>
@@ -871,8 +880,8 @@ export const SynapseCompactPanel = () => {
                                             <div className={cn(
                                                 'group relative min-w-0 max-w-[84%]',
                                                 msg.role === 'user'
-                                                    ? 'rounded-[14px] rounded-br-[4px] bg-primary px-4 py-3 text-primary-foreground shadow-sm'
-                                                    : 'rounded-[14px] rounded-bl-[4px] bg-muted/55 px-4 py-3 pr-10 text-foreground dark:bg-white/[0.055] dark:text-white'
+                                                    ? 'rounded-[14px] rounded-br-[4px] bg-foreground px-4 py-3 text-background shadow-[0_14px_30px_-24px_hsl(var(--foreground)/0.68),inset_0_1px_0_hsl(var(--background)/0.14)]'
+                                                    : 'synapse-chat-glass rounded-[14px] rounded-bl-[4px] border px-4 py-3 pr-10 text-foreground dark:text-white'
                                             )}>
                                                 {msg.role === "assistant" && (
                                                     <button
@@ -889,7 +898,7 @@ export const SynapseCompactPanel = () => {
                                                     'prose prose-sm max-w-none break-words text-[13px] leading-relaxed',
                                                     'prose-p:text-current prose-strong:text-current prose-li:text-current prose-code:text-current',
                                                     msg.role === 'user'
-                                                        ? 'text-primary-foreground [&_*]:!text-primary-foreground prose-headings:!text-primary-foreground'
+                                                        ? 'text-background [&_*]:!text-background prose-headings:!text-background'
                                                         : 'text-foreground dark:text-white dark:prose-invert [&_p]:text-current [&_strong]:text-current [&_li]:text-current [&_code]:text-current [&_ol]:text-current [&_ul]:text-current'
                                                 )}>
                                                     {(() => {
@@ -950,7 +959,7 @@ export const SynapseCompactPanel = () => {
                                             className="flex items-end gap-3"
                                         >
                                             <SynapseMessageMark className="mb-0.5" />
-                                            <div className="flex items-center gap-1.5 rounded-[14px] rounded-bl-[4px] bg-muted/55 px-4 py-3.5 dark:bg-white/[0.055]">
+                                            <div className="synapse-chat-glass flex items-center gap-1.5 rounded-[14px] rounded-bl-[4px] border px-4 py-3.5">
                                                 {[0, 0.16, 0.32].map((delay) => (
                                                     <motion.div
                                                         key={delay}
@@ -968,12 +977,12 @@ export const SynapseCompactPanel = () => {
                     </div>
 
                     {activeTab === 'chat' ? (
-                    <div className="shrink-0 border-t border-border/65 bg-background/82 px-4 py-3 dark:border-white/[0.07]">
+                    <div className="shrink-0 border-t border-border/65 bg-background/58 px-4 py-3 backdrop-blur-2xl dark:border-white/[0.075] dark:bg-black/18">
                         <div
                             className={cn(
-                                'flex min-h-14 items-end gap-2 rounded-xl border border-border/70 bg-muted/25 px-2 py-1.5',
+                                'synapse-chat-glass flex min-h-14 items-end gap-2 rounded-xl border px-2 py-1.5',
                                 'transition-[border-color,box-shadow] duration-150 focus-within:border-foreground/25 focus-within:ring-2 focus-within:ring-ring/20',
-                                'dark:border-white/[0.08] dark:bg-white/[0.025] dark:focus-within:border-white/[0.16]',
+                                'dark:focus-within:border-white/[0.16]',
                             )}
                         >
                             <textarea

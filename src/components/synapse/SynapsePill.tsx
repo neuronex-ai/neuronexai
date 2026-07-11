@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FocusEvent, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type FocusEvent, type MouseEvent } from "react";
 import { AnimatePresence, motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 import { AudioLines, Loader2, MessageCircle, Sparkles } from "lucide-react";
 
@@ -20,7 +20,7 @@ const spring = {
     shell: { type: "spring", stiffness: 430, damping: 38, mass: 0.78 },
     width: { type: "spring", stiffness: 390, damping: 36, mass: 0.82 },
     content: { type: "spring", stiffness: 470, damping: 36, mass: 0.66 },
-    magnetic: { type: "spring", stiffness: 300, damping: 34, mass: 0.5 },
+    magnetic: { stiffness: 300, damping: 34, mass: 0.5 },
 } as const;
 
 const primaryControlClassName =
@@ -79,12 +79,12 @@ export const SynapsePill = () => {
         rawY.set(0);
     };
 
-    const handlePointerEnter = (event: PointerEvent<HTMLDivElement>) => {
-        if (!isVoiceActive && event.pointerType !== "touch") setIsExpanded(true);
+    const handleMouseEnter = () => {
+        if (!isVoiceActive) setIsExpanded(true);
     };
 
-    const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-        if (shouldReduceMotion || event.pointerType === "touch" || !pillRef.current) return;
+    const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
+        if (shouldReduceMotion || !pillRef.current) return;
         const rect = pillRef.current.getBoundingClientRect();
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
@@ -92,7 +92,7 @@ export const SynapsePill = () => {
         rawY.set(clamp((event.clientY - centerY) * 0.045, -4, 4));
     };
 
-    const handlePointerLeave = () => {
+    const handleMouseLeave = () => {
         resetMagnetism();
         setIsExpanded(false);
     };
@@ -120,9 +120,9 @@ export const SynapsePill = () => {
         <TooltipProvider delayDuration={260}>
             <motion.div
                 ref={pillRef}
-                onPointerEnter={handlePointerEnter}
-                onPointerMove={handlePointerMove}
-                onPointerLeave={handlePointerLeave}
+                onMouseEnter={handleMouseEnter}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
                 onFocusCapture={() => !isVoiceActive && setIsExpanded(true)}
                 onBlurCapture={handleBlurCapture}
                 style={{
@@ -135,7 +135,7 @@ export const SynapsePill = () => {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
                 transition={shouldReduceMotion ? { duration: 0 } : spring.shell}
-                className="relative flex items-center justify-end"
+                className="group relative flex items-center justify-end"
                 aria-label="Controles do Synapse"
                 aria-expanded={!isVoiceActive && isExpanded}
             >
@@ -144,6 +144,7 @@ export const SynapsePill = () => {
                     transition={shouldReduceMotion ? { duration: 0 } : spring.width}
                     className={cn(
                         "notes-liquid-surface synapse-glass-texture relative isolate flex items-center justify-start overflow-hidden rounded-full border p-1.5 backdrop-blur-3xl",
+                        !isVoiceActive && "transition-[width] duration-300 ease-out group-hover:!w-[248px] group-focus-within:!w-[248px] motion-reduce:duration-0",
                         "shadow-[0_20px_56px_-30px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.62)]",
                         "dark:shadow-[0_24px_66px_-28px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.075)]",
                     )}
@@ -229,8 +230,10 @@ export const SynapsePill = () => {
                                         expanded: { opacity: 1, x: 0, scale: 1 },
                                     }}
                                     transition={shouldReduceMotion ? { duration: 0 } : spring.content}
-                                    className={cn("ml-1 flex h-11 shrink-0 items-center gap-1.5 pr-0.5", !isExpanded && "pointer-events-none")}
-                                    aria-hidden={!isExpanded}
+                                    className={cn(
+                                        "ml-1 flex h-11 shrink-0 items-center gap-1.5 pr-0.5 transition-[opacity] duration-150",
+                                        !isExpanded && "pointer-events-none group-hover:pointer-events-auto group-focus-within:pointer-events-auto group-hover:!opacity-100 group-focus-within:!opacity-100",
+                                    )}
                                 >
                                     <span className="mx-0.5 h-5 w-px shrink-0 bg-border/70 dark:bg-white/[0.09]" aria-hidden="true" />
                                     {quickActions.slice(0, 2).map((action) => (
@@ -238,7 +241,7 @@ export const SynapsePill = () => {
                                             <TooltipTrigger asChild>
                                                 <motion.button
                                                     type="button"
-                                                    tabIndex={isExpanded ? 0 : -1}
+                                                    tabIndex={0}
                                                     onClick={() => void send(action.name)}
                                                     whileTap={shouldReduceMotion ? undefined : { scale: 0.93, y: 1 }}
                                                     className={quickControlClassName}

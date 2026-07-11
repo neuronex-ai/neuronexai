@@ -131,7 +131,7 @@ const sanitizeTimelineText = (value?: string) => {
         next = next.replace(new RegExp(toolName, 'gi'), label);
     }
     return next
-        .replace(/[{}\[\]"]/g, '')
+        .replace(/[{}[\]"]/g, '')
         .replace(/\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientAction|function_call)\b/gi, '')
         .replace(/\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi, 'ação')
         .replace(/\s+/g, ' ')
@@ -177,8 +177,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const isMobile = useIsMobile();
 
     // Visibility
-    const isDevShellPreview = import.meta.env.DEV && new URLSearchParams(location.search).get('synapse-preview') === '1';
-    const isVisible = isDevShellPreview || (!isMobile && !!user);
+  const isVisible = !isMobile && !!user;
 
     // Derived: tools for current route
     const baseTools = getToolsForRoute(location.pathname);
