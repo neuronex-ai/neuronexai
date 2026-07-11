@@ -138,6 +138,17 @@ function sanitizeProviderEvent(event: Record<string, unknown>) {
   };
 }
 
+function normalizeDeepgramClientPayload(payload: unknown) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return payload;
+  const record = payload as Record<string, unknown>;
+  if (record.type !== "InjectUserMessage") return payload;
+
+  const content = clean(record.content || record.message, 4000);
+  const next: Record<string, unknown> = { ...record, content };
+  delete next.message;
+  return next;
+}
+
 function validateAgentSettings(settings: Record<string, unknown>) {
   const agent = settings.agent as Record<string, unknown> | undefined;
   if (!agent || typeof agent !== "object") {
@@ -792,7 +803,7 @@ class EdgeSynapseVoiceSession {
   sendDeepgram(payload: unknown, binary = false) {
     const socket = this.deepgram;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(binary ? payload as ArrayBuffer : JSON.stringify(payload));
+    socket.send(binary ? payload as ArrayBuffer : JSON.stringify(normalizeDeepgramClientPayload(payload)));
   }
 
   async start(payload: Record<string, unknown>) {
@@ -1029,7 +1040,7 @@ class EdgeSynapseVoiceSession {
       this.noResponseRecoveryCount += 1;
       if (this.noResponseRecoveryCount === 1) {
         this.latencyMs.last_silent_transcript_reinject_ms = Date.now() - this.startedAt;
-        this.sendDeepgram({ type: "InjectUserMessage", message: transcript });
+        this.sendDeepgram({ type: "InjectUserMessage", content: transcript });
         this.sendClient({
           type: "gateway_warning",
           errorType: "voice_recovery",
@@ -1180,7 +1191,7 @@ class EdgeSynapseVoiceSession {
   injectUserMessage(message: unknown) {
     const text = normalizeVoiceText(clean(message, 2000));
     if (!text) return;
-    this.sendDeepgram({ type: "InjectUserMessage", message: text });
+    this.sendDeepgram({ type: "InjectUserMessage", content: text });
   }
 
   startKeepAlive() {
