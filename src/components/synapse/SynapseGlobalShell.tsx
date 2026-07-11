@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, LayoutGroup } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseProvider';
 import { SynapsePill } from './SynapsePill';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
@@ -54,13 +54,15 @@ export const SynapseGlobalShell = () => {
                     bottom: 'max(12px, env(safe-area-inset-bottom))',
                 }}
             >
-                <AnimatePresence initial={false} mode="wait">
-                    {shellState === 'compact' ? (
-                        <SynapseCompactPanel key="compact" />
-                    ) : (
-                        <SynapsePill key="pill" />
-                    )}
-                </AnimatePresence>
+                <LayoutGroup id="synapse-shell">
+                    <AnimatePresence initial={false} mode="sync">
+                        {shellState === 'compact' ? (
+                            <SynapseCompactPanel key="compact" />
+                        ) : (
+                            <SynapsePill key="pill" />
+                        )}
+                    </AnimatePresence>
+                </LayoutGroup>
             </div>
         </>
     );

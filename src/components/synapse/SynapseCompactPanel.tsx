@@ -1,5 +1,12 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
+import {
+    motion,
+    AnimatePresence,
+    useMotionValue,
+    useMotionValueEvent,
+    useReducedMotion,
+    useSpring,
+} from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -8,7 +15,6 @@ import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
 import {
     X,
-    ArrowUp,
     Loader2,
     Sparkles,
     Calendar,
@@ -16,13 +22,10 @@ import {
     TrendingUp,
     Stethoscope,
     Notebook,
-    Copy,
-    Check,
     History,
     Activity,
     Trash2,
     Plus,
-    Mic,
     ChevronRight,
     AudioLines,
     PhoneOff,
@@ -33,11 +36,8 @@ import {
     Target,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import { parseSynapseWidgetFromContent } from '@/lib/synapse-widget-parser';
-import { SynapseWidgetRenderer } from './SynapseWidgetRenderer';
 import { SynapseAllActionsModal } from './SynapseAllActionsModal';
+import { SynapseComposer, SynapseConversation } from './SynapseConversation';
 import { supabase } from '@/integrations/supabase/client';
 import {
     executeSynapseInterfaceAction,
@@ -62,18 +62,6 @@ const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.Eleme
     { id: 'agent', label: 'Agente', icon: MousePointer2 },
     { id: 'voice', label: 'Voz', icon: AudioLines },
 ];
-
-const SynapseMessageMark = ({ className }: { className?: string }) => (
-    <span
-        className={cn(
-            "synapse-chat-glass flex h-8 w-8 shrink-0 items-center justify-center rounded-[9px] border text-muted-foreground",
-            className,
-        )}
-        aria-hidden="true"
-    >
-        <Sparkles className="h-3.5 w-3.5" />
-    </span>
-);
 
 type AgentActionItem = {
     id: string;
@@ -117,13 +105,6 @@ type SpeechRecognitionConstructor = new () => SpeechRecognitionLike;
 type WindowWithSpeechRecognition = Window & typeof globalThis & {
     SpeechRecognition?: SpeechRecognitionConstructor;
     webkitSpeechRecognition?: SpeechRecognitionConstructor;
-};
-
-type MarkdownPreProps = React.ComponentPropsWithoutRef<'pre'> & { node?: unknown };
-type MarkdownCodeProps = React.ComponentPropsWithoutRef<'code'> & {
-    node?: unknown;
-    inline?: boolean;
-    className?: string;
 };
 
 const AGENT_ACTIONS: AgentActionItem[] = [
@@ -222,13 +203,27 @@ export const SynapseCompactPanel = () => {
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+    const panelRef = useRef<HTMLDivElement>(null);
+    const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
-    const [copiedId, setCopiedId] = useState<string | null>(null);
+    const rawLightX = useMotionValue(50);
+    const rawLightY = useMotionValue(8);
+    const lightX = useSpring(rawLightX, { stiffness: 190, damping: 30, mass: 0.55 });
+    const lightY = useSpring(rawLightY, { stiffness: 190, damping: 30, mass: 0.55 });
+
     const [isListening, setIsListening] = useState(false);
     const [showAllActions, setShowAllActions] = useState(false);
     const [sessions, setSessions] = useState<ChatSessionRow[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(false);
     const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
+
+    useMotionValueEvent(lightX, 'change', (latest) => {
+        panelRef.current?.style.setProperty('--synapse-light-x', `${latest}%`);
+    });
+
+    useMotionValueEvent(lightY, 'change', (latest) => {
+        panelRef.current?.style.setProperty('--synapse-light-y', `${latest}%`);
+    });
 
     useEffect(() => {
         if (activeTab === 'history') {
@@ -316,12 +311,6 @@ export const SynapseCompactPanel = () => {
         }
     };
 
-    const handleCopy = (id: string, content: string) => {
-        navigator.clipboard.writeText(content);
-        setCopiedId(id);
-        setTimeout(() => setCopiedId(null), 2000);
-    };
-
     const handleActionClick = (toolName: string) => {
         const formattedName = toolName.replace(/_/g, ' ');
         send(formattedName);
@@ -384,18 +373,48 @@ export const SynapseCompactPanel = () => {
         setInputDraft('');
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            if (!isSending) handleSend();
-        }
-    };
-
     const handleTabChange = (tab: SynapseActiveTab) => {
         if (activeTab === 'voice' && tab !== 'voice' && voiceStatus !== 'disconnected') {
             toggleVoiceMode();
         }
         setActiveTab(tab);
+    };
+
+    const handlePanelPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+        if (shouldReduceMotion || event.pointerType !== 'mouse' || !panelRef.current) return;
+        const rect = panelRef.current.getBoundingClientRect();
+        const nextX = Math.min(96, Math.max(4, ((event.clientX - rect.left) / rect.width) * 100));
+        const nextY = Math.min(96, Math.max(4, ((event.clientY - rect.top) / rect.height) * 100));
+        rawLightX.set(nextX);
+        rawLightY.set(nextY);
+    };
+
+    const resetPanelLight = () => {
+        rawLightX.set(50);
+        rawLightY.set(8);
+    };
+
+    const focusTabAt = (index: number) => {
+        const normalizedIndex = (index + PANEL_TABS.length) % PANEL_TABS.length;
+        const nextTab = PANEL_TABS[normalizedIndex];
+        tabRefs.current[normalizedIndex]?.focus();
+        handleTabChange(nextTab.id);
+    };
+
+    const handleTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
+        if (event.key === 'ArrowRight') {
+            event.preventDefault();
+            focusTabAt(index + 1);
+        } else if (event.key === 'ArrowLeft') {
+            event.preventDefault();
+            focusTabAt(index - 1);
+        } else if (event.key === 'Home') {
+            event.preventDefault();
+            focusTabAt(0);
+        } else if (event.key === 'End') {
+            event.preventDefault();
+            focusTabAt(PANEL_TABS.length - 1);
+        }
     };
 
     const voiceModeLabel = isVoiceToolActive
@@ -414,44 +433,38 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
+                ref={panelRef}
+                layoutId="synapse-optical-surface"
+                onPointerMove={handlePanelPointerMove}
+                onPointerLeave={resetPanelLight}
                 style={{ willChange: "transform, opacity" }}
-                initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={shouldReduceMotion ? { opacity: 0 } : {
-                    opacity: 0,
-                    scale: 0.98,
-                    y: 8,
-                    transition: {
-                        duration: 0.18,
-                        ease: [0.32, 0, 0.67, 0],
-                    }
-                }}
+                initial={shouldReduceMotion ? false : { opacity: 0.72, y: 7 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0.72, y: 5 }}
                 transition={shouldReduceMotion ? { duration: 0 } : {
-                    type: 'spring',
-                    stiffness: 440,
-                    damping: 38,
-                    mass: 0.9,
+                    layout: { type: 'spring', stiffness: 420, damping: 38, mass: 0.82 },
+                    opacity: { duration: 0.18 },
+                    y: { type: 'spring', stiffness: 420, damping: 38, mass: 0.82 },
                 }}
                 className={cn(
-                    'notes-liquid-surface synapse-glass-texture relative flex h-[min(680px,calc(100vh-24px))] w-[min(440px,calc(100vw-24px))] flex-col overflow-hidden rounded-[20px]',
-                    'border backdrop-blur-3xl backdrop-saturate-150',
-                    'shadow-[0_34px_92px_-34px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.72)]',
-                    'dark:shadow-[0_38px_100px_-32px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.065)]',
+                    'synapse-optical-shell relative flex h-[min(720px,calc(100vh-24px))] w-[min(460px,calc(100vw-24px))] flex-col overflow-hidden rounded-[24px] border',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"
+                aria-modal="false"
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
-                        <header className="shrink-0 border-b border-border/65 bg-background/58 backdrop-blur-2xl dark:border-white/[0.075] dark:bg-black/18">
-                            <div className="flex min-h-14 items-center justify-between gap-3 px-4">
+                        <header className="synapse-optical-chrome shrink-0">
+                            <div className="flex min-h-16 items-center justify-between gap-3 px-3.5">
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                    <span className="synapse-chat-glass flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] border text-foreground" aria-hidden="true">
-                                        <Sparkles className="h-4 w-4" />
+                                    <span className="synapse-header-mark flex h-10 w-10 shrink-0 items-center justify-center text-foreground" aria-hidden="true">
+                                        <Sparkles className="relative z-10 h-4 w-4" />
                                     </span>
                                     <span className="min-w-0 leading-none">
-                                        <span className="block truncate text-[14px] font-semibold text-foreground">Synapse</span>
+                                        <span className="block truncate text-[15px] font-semibold text-foreground">Synapse</span>
                                         <span className="mt-1.5 flex items-center gap-1.5 truncate text-[10px] font-medium text-muted-foreground">
+                                            <span className={cn('h-1.5 w-1.5 rounded-full', sessionReady ? 'bg-foreground/75' : 'bg-muted-foreground/40')} aria-hidden="true" />
                                             {ctxInfo.icon}
                                             <span className="truncate">{ctxInfo.label}</span>
                                         </span>
@@ -465,7 +478,7 @@ export const SynapseCompactPanel = () => {
                                                 <button
                                                     type="button"
                                                     onClick={clearSession}
-                                                    className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-[background-color,color,transform] hover:bg-destructive/10 hover:text-destructive active:translate-y-px active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
+                                                    className="synapse-header-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                     aria-label="Limpar conversa"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -479,7 +492,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={clearSession}
-                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:translate-y-px active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
+                                                className="synapse-header-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Criar nova conversa"
                                             >
                                                 <Plus className="h-4 w-4" />
@@ -492,7 +505,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setShellState('pill')}
-                                                className="flex h-11 w-11 items-center justify-center rounded-xl text-muted-foreground transition-[background-color,color,transform] hover:bg-muted hover:text-foreground active:translate-y-px active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
+                                                className="synapse-header-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Recolher Synapse"
                                             >
                                                 <X className="h-4 w-4" />
@@ -503,21 +516,25 @@ export const SynapseCompactPanel = () => {
                                 </div>
                             </div>
 
-                            <nav className="grid grid-cols-5 gap-1 px-2 pb-2" role="tablist" aria-label="Modos do Synapse">
-                                {PANEL_TABS.map((tab) => {
+                            <nav className="synapse-mode-switcher mx-2.5 mb-2.5 grid grid-cols-5 gap-1 p-1" role="tablist" aria-label="Modos do Synapse">
+                                {PANEL_TABS.map((tab, index) => {
                                     const Icon = tab.icon;
                                     const isActive = activeTab === tab.id;
                                     return (
                                         <motion.button
                                             key={tab.id}
+                                            ref={(node) => { tabRefs.current[index] = node; }}
+                                            id={`synapse-tab-${tab.id}`}
                                             type="button"
                                             role="tab"
                                             aria-selected={isActive}
                                             aria-controls="synapse-tabpanel"
+                                            tabIndex={isActive ? 0 : -1}
                                             onClick={() => handleTabChange(tab.id)}
+                                            onKeyDown={(event) => handleTabKeyDown(event, index)}
                                             whileTap={shouldReduceMotion ? undefined : { scale: 0.97, y: 1 }}
                                             className={cn(
-                                                "relative flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-lg px-1 text-[10px] font-semibold text-muted-foreground transition-colors",
+                                                "relative flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[11px] px-1 text-[10px] font-semibold text-muted-foreground transition-colors",
                                                 "hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 isActive && "text-foreground",
                                             )}
@@ -525,7 +542,7 @@ export const SynapseCompactPanel = () => {
                                             {isActive ? (
                                                 <motion.span
                                                     layoutId="synapse-active-tab"
-                                                    className="synapse-chat-glass absolute inset-0 rounded-lg border"
+                                                    className="synapse-mode-active absolute inset-0 rounded-[11px]"
                                                     transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
                                                     aria-hidden="true"
                                                 />
@@ -548,8 +565,9 @@ export const SynapseCompactPanel = () => {
                         ref={scrollRef}
                         id="synapse-tabpanel"
                         role="tabpanel"
+                        aria-labelledby={`synapse-tab-${activeTab}`}
                         className={cn(
-                            'relative min-h-0 flex-1 overflow-y-auto px-4',
+                            'synapse-thread-viewport relative min-h-0 flex-1 overflow-y-auto px-4',
                             'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
@@ -833,201 +851,30 @@ export const SynapseCompactPanel = () => {
                                         </button>
                                     )}
                                 </motion.div>
-                            ) : messages.length === 0 ? (
-                                <motion.div
-                                    key="empty"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    className="flex h-full flex-col items-center justify-center gap-5 py-10"
-                                >
-                                    <div className="synapse-chat-glass flex h-12 w-12 items-center justify-center rounded-[12px] border text-muted-foreground">
-                                        <Sparkles className="h-5 w-5" />
-                                    </div>
-                                    <div className="text-center space-y-1.5">
-                                        <h3 className="text-[15px] font-semibold text-foreground">Como posso ajudar?</h3>
-                                        <p className="max-w-[260px] text-[12px] leading-5 text-muted-foreground">Peça para resumir um paciente ou consultar sua agenda.</p>
-                                    </div>
-
-                                    {quickActions.length > 0 && (
-                                        <div className="flex flex-wrap justify-center gap-2 max-w-[340px] mt-2">
-                                            {quickActions.slice(0, 4).map((tool) => (
-                                                <button
-                                                    key={tool.id}
-                                                    type="button"
-                                                    onClick={() => setInputDraft(tool.name)}
-                                                    className="synapse-chat-glass min-h-11 rounded-lg border px-3 py-2 text-[11px] font-semibold text-muted-foreground transition-[background-color,color,transform] hover:text-foreground active:translate-y-px active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none"
-                                                >
-                                                    {tool.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                                </motion.div>
                             ) : (
-                                <motion.div key="chat" layout className="space-y-5 py-4">
-                                    {messages.map((msg, idx) => (
-                                        <motion.div
-                                            key={msg.id || idx}
-                                            layout
-                                            initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            className={cn('flex min-w-0 gap-2.5', msg.role === 'user' ? 'justify-end' : 'justify-start')}
-                                        >
-                                            {msg.role === 'assistant' && (
-                                                <SynapseMessageMark className="mt-0.5" />
-                                            )}
-
-                                            <div className={cn(
-                                                'group relative min-w-0 max-w-[84%]',
-                                                msg.role === 'user'
-                                                    ? 'rounded-[14px] rounded-br-[4px] bg-foreground px-4 py-3 text-background shadow-[0_14px_30px_-24px_hsl(var(--foreground)/0.68),inset_0_1px_0_hsl(var(--background)/0.14)]'
-                                                    : 'synapse-chat-glass rounded-[14px] rounded-bl-[4px] border px-4 py-3 pr-10 text-foreground dark:text-white'
-                                            )}>
-                                                {msg.role === "assistant" && (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleCopy(msg.id, msg.content)}
-                                                        className="absolute right-0 top-0 flex h-11 w-11 items-center justify-center rounded-[10px] text-muted-foreground opacity-0 transition-[opacity,color,background-color] hover:bg-background/65 hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                        aria-label="Copiar mensagem"
-                                                    >
-                                                        {copiedId === msg.id ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                                                    </button>
-                                                )}
-
-                                                <div className={cn(
-                                                    'prose prose-sm max-w-none break-words text-[13px] leading-relaxed',
-                                                    'prose-p:text-current prose-strong:text-current prose-li:text-current prose-code:text-current',
-                                                    msg.role === 'user'
-                                                        ? 'text-background [&_*]:!text-background prose-headings:!text-background'
-                                                        : 'text-foreground dark:text-white dark:prose-invert [&_p]:text-current [&_strong]:text-current [&_li]:text-current [&_code]:text-current [&_ol]:text-current [&_ul]:text-current'
-                                                )}>
-                                                    {(() => {
-                                                        const parsedMessage = msg.role === "assistant"
-                                                            ? parseSynapseWidgetFromContent(msg.content)
-                                                            : { cleanContent: msg.content, widgetData: null };
-                                                        const cleanContent = parsedMessage.cleanContent || (parsedMessage.widgetData ? "" : msg.content);
-
-                                                        return (
-                                                            <>
-                                                                {cleanContent ? (
-                                                                    <ReactMarkdown
-                                                                        remarkPlugins={[remarkGfm]}
-                                                                        components={{
-                                                                            pre({ children, ...props }: MarkdownPreProps) {
-                                                                                const childArray = React.Children.toArray(children);
-                                                                                const isWidget = childArray.some((child) => {
-                                                                                    if (!React.isValidElement<{ className?: string; children?: React.ReactNode }>(child)) return false;
-                                                                                    return child.props.className?.includes('language-json') && String(child.props.children).includes('__actionType');
-                                                                                });
-                                                                                if (isWidget) {
-                                                                                    return <div className="not-prose">{children}</div>;
-                                                                                }
-                                                                                return <pre {...props}>{children}</pre>;
-                                                                            },
-                                                                            code({ inline, className, children, ...props }: MarkdownCodeProps) {
-                                                                                const match = /language-(\w+)/.exec(className || '');
-                                                                                if (!inline && match && match[1] === 'json' && String(children).includes('__actionType')) {
-                                                                                    try {
-                                                                                        const parsedData = JSON.parse(String(children));
-                                                                                        return <SynapseWidgetRenderer widgetData={parsedData} compact />;
-                                                                                    } catch (e) {
-                                                                                        console.error("Widget render error:", e);
-                                                                                    }
-                                                                                }
-                                                                                return <code className={className} {...props}>{children}</code>;
-                                                                            }
-                                                                        }}
-                                                                    >
-                                                                        {cleanContent}
-                                                                    </ReactMarkdown>
-                                                                ) : null}
-                                                                {parsedMessage.widgetData ? <SynapseWidgetRenderer widgetData={parsedMessage.widgetData} compact /> : null}
-                                                            </>
-                                                        );
-                                                    })()}
-                                                </div>
-                                            </div>
-                                        </motion.div>
-                                    ))}
-
-                                    {isSending && (
-                                        <motion.div
-                                            initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            exit={{ opacity: 0, y: 4 }}
-                                            transition={{ type: 'spring', stiffness: 430, damping: 32 }}
-                                            className="flex items-end gap-3"
-                                        >
-                                            <SynapseMessageMark className="mb-0.5" />
-                                            <div className="synapse-chat-glass flex items-center gap-1.5 rounded-[14px] rounded-bl-[4px] border px-4 py-3.5">
-                                                {[0, 0.16, 0.32].map((delay) => (
-                                                    <motion.div
-                                                        key={delay}
-                                                        animate={shouldReduceMotion ? undefined : { y: [0, -3, 0], scale: [1, 1.18, 1], opacity: [0.35, 1, 0.35] }}
-                                                        transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 0.9, delay, ease: 'easeInOut' }}
-                                                        className="h-1.5 w-1.5 rounded-full bg-foreground/65"
-                                                    />
-                                                ))}
-                                            </div>
-                                        </motion.div>
-                                    )}
-                                </motion.div>
+                                <SynapseConversation
+                                    messages={messages}
+                                    isSending={isSending}
+                                    quickActions={quickActions}
+                                    shouldReduceMotion={Boolean(shouldReduceMotion)}
+                                    onQuickAction={setInputDraft}
+                                />
                             )}
                         </AnimatePresence>
                     </div>
 
                     {activeTab === 'chat' ? (
-                    <div className="shrink-0 border-t border-border/65 bg-background/58 px-4 py-3 backdrop-blur-2xl dark:border-white/[0.075] dark:bg-black/18">
-                        <div
-                            className={cn(
-                                'synapse-chat-glass flex min-h-14 items-end gap-2 rounded-xl border px-2 py-1.5',
-                                'transition-[border-color,box-shadow] duration-150 focus-within:border-foreground/25 focus-within:ring-2 focus-within:ring-ring/20',
-                                'dark:focus-within:border-white/[0.16]',
-                            )}
-                        >
-                            <textarea
-                                ref={inputRef}
-                                value={inputDraft}
-                                onChange={(e) => setInputDraft(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder="Pergunte ao Synapse..."
-                                rows={1}
-                                disabled={!sessionReady || isSending}
-                                className="min-h-11 max-h-28 flex-1 resize-none border-0 bg-transparent px-2 py-3 text-[13px] font-medium leading-5 text-foreground outline-none placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0 focus-visible:ring-0 disabled:opacity-50"
-                            />
-                            <div className="flex shrink-0 items-center gap-1">
-                                <motion.button
-                                    type="button"
-                                    onClick={toggleListening}
-                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
-                                    className={cn(
-                                        'flex h-11 w-11 items-center justify-center rounded-[10px] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                        isListening
-                                            ? 'bg-primary text-primary-foreground'
-                                            : 'text-muted-foreground hover:bg-muted hover:text-foreground dark:hover:bg-white/[0.06]'
-                                    )}
-                                    aria-label={isListening ? "Parar ditado" : "Iniciar ditado"}
-                                >
-                                    <Mic className="h-4 w-4" />
-                                </motion.button>
-                                <motion.button
-                                    type="button"
-                                    onClick={handleSend}
-                                    disabled={!inputDraft.trim() || isSending || !sessionReady}
-                                    whileTap={shouldReduceMotion ? undefined : { scale: 0.92 }}
-                                    className={cn(
-                                        'flex h-11 w-11 items-center justify-center rounded-[10px] transition-colors duration-150 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                        inputDraft.trim()
-                                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                                            : 'bg-muted/50 text-muted-foreground/60 dark:bg-white/[0.04]'
-                                    )}
-                                    aria-label="Enviar mensagem"
-                                >
-                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <ArrowUp className="h-4 w-4" />}
-                                </motion.button>
-                            </div>
-                        </div>
-                    </div>
+                        <SynapseComposer
+                            ref={inputRef}
+                            value={inputDraft}
+                            isSending={isSending}
+                            isListening={isListening}
+                            sessionReady={sessionReady}
+                            shouldReduceMotion={Boolean(shouldReduceMotion)}
+                            onChange={setInputDraft}
+                            onSend={handleSend}
+                            onToggleListening={toggleListening}
+                        />
                     ) : null}
                 </div>
             </motion.div>

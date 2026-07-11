@@ -140,10 +140,14 @@ export const SynapsePill = () => {
                 aria-expanded={!isVoiceActive && isExpanded}
             >
                 <motion.div
+                    layoutId="synapse-optical-surface"
                     animate={{ width: targetWidth, height: targetHeight }}
-                    transition={shouldReduceMotion ? { duration: 0 } : spring.width}
+                    transition={shouldReduceMotion ? { duration: 0 } : {
+                        ...spring.width,
+                        layout: spring.width,
+                    }}
                     className={cn(
-                        "notes-liquid-surface synapse-glass-texture relative isolate flex items-center justify-start overflow-hidden rounded-full border p-1.5 backdrop-blur-3xl",
+                        "synapse-optical-shell relative isolate flex items-center justify-start overflow-hidden rounded-full border p-1.5",
                         !isVoiceActive && "transition-[width] duration-300 ease-out group-hover:!w-[248px] group-focus-within:!w-[248px] motion-reduce:duration-0",
                         "shadow-[0_20px_56px_-30px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.62)]",
                         "dark:shadow-[0_24px_66px_-28px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.075)]",
