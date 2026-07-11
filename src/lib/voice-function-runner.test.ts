@@ -1,7 +1,6 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 
 import { VoiceFunctionRunner } from "../../server/voice-agent-gateway/function-runner.js";
-import { normalizeVoiceText } from "../../server/voice-agent-gateway/speech-normalizer.js";
 
 const toolResponse = (payload: Record<string, unknown>) => ({
   content: JSON.stringify(payload),
@@ -189,18 +188,5 @@ describe("VoiceFunctionRunner", () => {
     });
 
     expect(order).toEqual(["start:first_tool", "end:first_tool", "start:second_tool", "end:second_tool"]);
-  });
-
-  it("normalizes technical voice text before speech", () => {
-    const text = normalizeVoiceText(
-      "Nao ha acao pendente. create_appointment para 2026-07-07T11:30:00-03:00 com valor R$ 150,00.",
-    );
-
-    expect(text).toContain("não há ação pendente");
-    expect(text).toContain("novo agendamento");
-    expect(text).toContain("sete de julho, às onze e trinta da manhã");
-    expect(text).toContain("cento e cinquenta reais");
-    expect(text).not.toContain("create_appointment");
-    expect(text).not.toContain("T11:30");
   });
 });

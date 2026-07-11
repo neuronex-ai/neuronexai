@@ -33,40 +33,8 @@ const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
 const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
 const ELEVENLABS_LANGUAGE_CODE = "pt";
-const DEFAULT_VOICE_CONTEXT_LENGTH = 12000;
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
-
-function envFlag(name, fallback = false) {
-  const value = clean(process.env[name], 40).toLowerCase();
-  if (!value) return fallback;
-  return ["1", "true", "yes", "on"].includes(value);
-}
-
-function voiceContextLength() {
-  const value = Number(process.env.SYNAPSE_VOICE_CONTEXT_LENGTH || DEFAULT_VOICE_CONTEXT_LENGTH);
-  return Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_VOICE_CONTEXT_LENGTH;
-}
-
-function compactVoiceToolCatalog(functions) {
-  const names = Array.isArray(functions)
-    ? functions.map((fn) => clean(fn?.name, 120)).filter(Boolean)
-    : [];
-  return names.length ? names.join(", ") : "confirm_pending_action, cancel_pending_action";
-}
-
-function compactVoicePrompt(prompt, functions) {
-  const text = String(prompt ?? "");
-  const start = text.indexOf("# Chamadas de funcao disponiveis no runtime");
-  const end = start >= 0 ? text.indexOf("\n\n# Seguranca", start) : -1;
-  if (start < 0 || end < 0) return text;
-  const replacement = [
-    "# Chamadas de funcao disponiveis no runtime",
-    "Use somente as tools registradas abaixo. Os schemas completos ja foram registrados separadamente no runtime; este catalogo serve apenas para orientacao rapida.",
-    compactVoiceToolCatalog(functions),
-  ].join("\n\n");
-  return `${text.slice(0, start)}${replacement}${text.slice(end)}`;
-}
 
 function jsonResponse(res, status, payload) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
@@ -179,10 +147,6 @@ function normalizeAgentSettings(settings) {
     throw new Error("Settings de voz invalidos: agent ausente.");
   }
 
-  const flags = settings.flags && typeof settings.flags === "object" ? settings.flags : {};
-  settings.flags = flags;
-  flags.history = envFlag("SYNAPSE_VOICE_HISTORY", false);
-
   const think = agent.think && typeof agent.think === "object" ? agent.think : {};
   agent.think = think;
   const thinkProvider = think.provider && typeof think.provider === "object" ? think.provider : {};
@@ -193,7 +157,6 @@ function normalizeAgentSettings(settings) {
   const thinkEndpoint = think.endpoint && typeof think.endpoint === "object" ? think.endpoint : {};
   think.endpoint = thinkEndpoint;
   thinkEndpoint.url = NVIDIA_VOICE_CHAT_URL;
-  think.context_length = voiceContextLength();
   thinkEndpoint.headers = {
     ...(thinkEndpoint.headers && typeof thinkEndpoint.headers === "object" ? thinkEndpoint.headers : {}),
     authorization: `Bearer ${getNvidiaVoiceApiKey()}`,
@@ -201,7 +164,6 @@ function normalizeAgentSettings(settings) {
   if (!clean(thinkEndpoint.url, 500) || !getNvidiaVoiceApiKey()) {
     throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
   }
-  think.prompt = compactVoicePrompt(think.prompt, think.functions);
 
   const listenProvider = settings?.agent?.listen?.provider;
   if (listenProvider && typeof listenProvider === "object") {
