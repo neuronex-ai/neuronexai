@@ -1706,6 +1706,97 @@
     box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
   }
 
+  .synapse-actions-modal {
+    border-color: hsl(var(--border) / 0.58);
+    border-radius: 30px;
+    background: hsl(var(--card));
+    box-shadow:
+      0 32px 110px -46px hsl(var(--foreground) / 0.82),
+      inset 0 1px 0 hsl(var(--background) / 0.16);
+  }
+
+  .dark .synapse-actions-modal {
+    border-color: rgba(255, 255, 255, 0.065);
+    background: #0b0b0c;
+    box-shadow:
+      0 36px 120px -44px rgba(0, 0, 0, 0.98),
+      inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  }
+
+  .synapse-actions-modal-header,
+  .synapse-actions-modal-footer {
+    border-bottom: 1px solid hsl(var(--border) / 0.5);
+    background: linear-gradient(180deg, hsl(var(--foreground) / 0.018), transparent);
+  }
+
+  .synapse-actions-modal-footer {
+    border-bottom: 0;
+    border-top: 1px solid hsl(var(--border) / 0.5);
+  }
+
+  .dark .synapse-actions-modal-header,
+  .dark .synapse-actions-modal-footer {
+    border-color: rgba(255, 255, 255, 0.055);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent);
+  }
+
+  .synapse-actions-modal-mark {
+    border: 1px solid hsl(var(--border) / 0.62);
+    border-radius: 13px;
+    background: hsl(var(--foreground) / 0.03);
+  }
+
+  .dark .synapse-actions-modal-mark {
+    border-color: rgba(255, 255, 255, 0.065);
+    background: rgba(255, 255, 255, 0.022);
+  }
+
+  .synapse-actions-modal-close {
+    border: 1px solid transparent;
+    border-radius: 13px;
+    transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease, transform 150ms ease;
+  }
+
+  .synapse-actions-modal-close:hover {
+    border-color: hsl(var(--border) / 0.62);
+    background: hsl(var(--foreground) / 0.04);
+    color: hsl(var(--foreground));
+  }
+
+  .synapse-actions-modal-close:active {
+    transform: translateY(1px) scale(0.97);
+  }
+
+  .dark .synapse-actions-modal-close:hover {
+    border-color: rgba(255, 255, 255, 0.075);
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  .synapse-actions-list {
+    border-top: 1px solid hsl(var(--border) / 0.46);
+  }
+
+  .synapse-actions-row {
+    border-radius: 12px;
+    transition: background-color 150ms ease, transform 150ms ease;
+  }
+
+  .synapse-actions-row:hover {
+    background: hsl(var(--foreground) / 0.04);
+  }
+
+  .synapse-actions-row:active {
+    transform: translateY(1px);
+  }
+
+  .dark .synapse-actions-list {
+    border-color: rgba(255, 255, 255, 0.045);
+  }
+
+  .dark .synapse-actions-row:hover {
+    background: rgba(255, 255, 255, 0.035);
+  }
+
   @media (max-width: 430px) {
     .synapse-desktop-shell {
       border-radius: 24px;
