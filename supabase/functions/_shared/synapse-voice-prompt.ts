@@ -19,21 +19,12 @@ function toolName(tool: Record<string, unknown>) {
   return clean(tool.name || (tool.function as Record<string, unknown> | undefined)?.name, 120);
 }
 
-function toolDescription(tool: Record<string, unknown>) {
-  return clean(tool.description || (tool.function as Record<string, unknown> | undefined)?.description, 240);
-}
-
 function formatVoiceToolCatalog(tools: Array<Record<string, unknown>> = []) {
-  const lines = tools
-    .map((tool) => {
-      const name = toolName(tool);
-      if (!name) return "";
-      const description = toolDescription(tool);
-      return description ? `- ${name}: ${description}` : `- ${name}`;
-    })
+  const names = tools
+    .map((tool) => toolName(tool))
     .filter(Boolean);
-  return lines.length
-    ? lines.join("\n")
+  return names.length
+    ? names.join(", ")
     : "- Nenhuma tool real foi registrada neste runtime de voz.";
 }
 
@@ -83,7 +74,8 @@ export function buildSynapseVoicePrompt({
     "Se houver ambiguidade de paciente, consulta, cobranca, nota ou arquivo, faca uma pergunta curta de esclarecimento.",
     "",
     "# Chamadas de funcao disponiveis no runtime",
-    "Use somente as tools registradas abaixo. Se uma acao pedida nao estiver nesta lista, diga que ainda nao consegue executar diretamente por voz e ofereca um caminho alternativo na NeuroNex.",
+    "Use somente as tools registradas abaixo. Os schemas completos ja foram registrados separadamente no runtime; este catalogo serve apenas para orientacao rapida.",
+    "Se uma acao pedida nao estiver nesta lista, diga que ainda nao consegue executar diretamente por voz e ofereca um caminho alternativo na NeuroNex.",
     formatVoiceToolCatalog(tools),
     "",
     "# Seguranca, LGPD e sigilo clinico",

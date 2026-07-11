@@ -11,6 +11,7 @@ const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
 const ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
 const ELEVENLABS_LANGUAGE_CODE = "pt";
+const DEFAULT_VOICE_CONTEXT_LENGTH = 12000;
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const json = (payload: Record<string, unknown>, status = 200) =>
@@ -27,6 +28,37 @@ const parseJson = (value: unknown) => {
     return null;
   }
 };
+
+const envFlag = (name: string, fallback = false) => {
+  const value = clean(Deno.env.get(name), 40).toLowerCase();
+  if (!value) return fallback;
+  return ["1", "true", "yes", "on"].includes(value);
+};
+
+const voiceContextLength = () => {
+  const value = Number(Deno.env.get("SYNAPSE_VOICE_CONTEXT_LENGTH") || DEFAULT_VOICE_CONTEXT_LENGTH);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_VOICE_CONTEXT_LENGTH;
+};
+
+function compactVoiceToolCatalog(functions: unknown) {
+  const names = Array.isArray(functions)
+    ? functions.map((fn) => clean((fn as Record<string, unknown>)?.name, 120)).filter(Boolean)
+    : [];
+  return names.length ? names.join(", ") : "confirm_pending_action, cancel_pending_action";
+}
+
+function compactVoicePrompt(prompt: unknown, functions: unknown) {
+  const text = String(prompt ?? "");
+  const start = text.indexOf("# Chamadas de funcao disponiveis no runtime");
+  const end = start >= 0 ? text.indexOf("\n\n# Seguranca", start) : -1;
+  if (start < 0 || end < 0) return text;
+  const replacement = [
+    "# Chamadas de funcao disponiveis no runtime",
+    "Use somente as tools registradas abaixo. Os schemas completos ja foram registrados separadamente no runtime; este catalogo serve apenas para orientacao rapida.",
+    compactVoiceToolCatalog(functions),
+  ].join("\n\n");
+  return `${text.slice(0, start)}${replacement}${text.slice(end)}`;
+}
 
 const parseArgs = (value: unknown): Record<string, unknown> => {
   if (!value) return {};
@@ -104,6 +136,12 @@ function validateAgentSettings(settings: Record<string, unknown>) {
     throw new Error("Settings de voz invalidos: agent ausente.");
   }
 
+  const flags = settings.flags && typeof settings.flags === "object"
+    ? settings.flags as Record<string, unknown>
+    : {};
+  settings.flags = flags;
+  flags.history = envFlag("SYNAPSE_VOICE_HISTORY", false);
+
   const think = agent.think && typeof agent.think === "object"
     ? agent.think as Record<string, unknown>
     : {};
@@ -127,6 +165,8 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   if (!clean(thinkEndpoint.url, 500) || !nvidiaVoiceApiKey()) {
     throw new Error("Settings de voz incompletos: endpoint NVIDIA ou NVIDIA_VOICE_API_KEY ausente.");
   }
+  think.context_length = voiceContextLength();
+  think.prompt = compactVoicePrompt(think.prompt, think.functions);
 
   const listen = agent?.listen as Record<string, unknown> | undefined;
   const listenProvider = listen?.provider as Record<string, unknown> | undefined;

@@ -307,14 +307,14 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
 
     const clearTimeline = useCallback(() => setTimeline([]), []);
 
-    // ─── Voice Integration (Gemini Live) ──────────────────────────────────
+    // ─── Voice Integration (Deepgram Agent) ───────────────────────────────
     const synapseVoice = useSynapseLiveVoice({
         onConnect: () => {
-            console.log('[Synapse Global Voice] Conectado ao Gemini Live');
+            console.log('[Synapse Global Voice] Conectado ao Deepgram Agent');
             setExecState('listening');
         },
         onDisconnect: () => {
-            console.log('[Synapse Global Voice] Desconectado do Gemini Live');
+            console.log('[Synapse Global Voice] Desconectado do Deepgram Agent');
             setExecState('idle');
             if (activeTab === 'voice') setActiveTab('chat');
         },
