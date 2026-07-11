@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   AlertCircle,
@@ -58,6 +58,7 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
   const [boletoUrl, setBoletoUrl] = useState<string | null>(null);
   const [pixData, setPixData] = useState<{ qrCode?: string; copyPaste?: string } | undefined>();
   const [expiresAt, setExpiresAt] = useState<string | undefined>();
+  const operationIdRef=useRef(crypto.randomUUID());
 
   const { data: patients } = usePatients();
   const { mutate: generateInvoice, isPending: isCreating } = useGenerateInvoice();
@@ -90,6 +91,7 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
   }));
 
   const reset = useCallback(() => {
+    operationIdRef.current=crypto.randomUUID();
     setStep("form");
     form.reset();
     setPaymentUrl(null);
@@ -129,6 +131,7 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
         dueDate: new Date(`${values.dueDate}T12:00:00`),
         billingType,
         paymentMethodType,
+        operationId:operationIdRef.current,
       },
       {
         onSuccess: (data) => {

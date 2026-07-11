@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, addMonths, format, setDate, startOfDay } from "date-fns";
-import { AlertCircle, CalendarClock, Loader2, PackageCheck, Plus, ShieldCheck, UserRound } from "lucide-react";
+import { AlertCircle, CalendarClock, CheckCircle2, Landmark, Loader2, PackageCheck, Plus, ShieldCheck, UserRound } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
-import { useCreateFinancialEntry, type FinancialEntryPaymentMethod } from "@/hooks/use-financial-entries";
+import { buildFinancialEntryIdempotencyKey,useCreateFinancialEntry,useTransitionFinancialEntry,type FinancialEntryPaymentMethod } from "@/hooks/use-financial-entries";
+import { useAppointments } from "@/hooks/use-appointments";
+import { useFinancialAccount } from "@/hooks/use-financial-account";
+import { useGenerateInvoice } from "@/hooks/use-generate-invoice";
+import { useUsePackageSession } from "@/hooks/use-use-package-session";
 import { formatCentsAsBRL, usePatientInsuranceAgreements } from "@/hooks/use-patient-insurance-agreements";
 import { usePatientRecordDetails } from "@/hooks/use-patient-record-details";
 import { usePatients } from "@/hooks/use-patients";
@@ -67,6 +71,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const { data: patients = [] } = usePatients();
   const { data: agreements = [] } = usePatientInsuranceAgreements();
   const [patientId, setPatientId] = useState("");
+  const [appointmentId,setAppointmentId]=useState("");
   const [description, setDescription] = useState("Cobrança manual");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState(formatDateInput(new Date()));
@@ -74,11 +79,16 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const [packageId, setPackageId] = useState("");
   const [notes, setNotes] = useState("");
   const [overrideExempt, setOverrideExempt] = useState(false);
+  const [overrideReason,setOverrideReason]=useState("");
+  const [destination,setDestination]=useState<"management"|"paid"|"neurofinance">("management");
+  const [payerType,setPayerType]=useState<"patient"|"responsible"|"insurer">("patient");
+  const operationKey=useRef(crypto.randomUUID());
 
   const selectedPatient = patients.find((patient) => patient.id === patientId) || null;
   const recordDetails = usePatientRecordDetails(patientId || null);
   const activePackages = useActivePatientPackages(patientId || "");
   const createEntry = useCreateFinancialEntry();
+  const transitionEntry=useTransitionFinancialEntry();const generateInvoice=useGenerateInvoice();const consumePackage=useUsePackageSession();const financialAccount=useFinancialAccount();const appointments=useAppointments({patientId:patientId||undefined});
 
   const financial = recordDetails.data?.financial || null;
   const responsible = recordDetails.data?.responsible || null;
@@ -86,6 +96,8 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const selectedPackage = activePackages.data?.find((item) => item.id === packageId) || null;
   const planType = financial?.plan_type || "not_configured";
   const isExempt = planType === "exempt";
+  const packageConsumesOnly=Boolean(selectedPackage&&(selectedPackage.billing_mode||"upfront")!=="per_session");
+  const neurofinanceReady=Boolean(financialAccount.isApproved&&financialAccount.account?.charges_enabled&&patientId&&payerType==="patient");
 
   const contextCards = useMemo(() => {
     const cards: Array<{ icon: typeof UserRound; label: string; value: string; tone?: "warning" | "success" }> = [];
@@ -155,13 +167,15 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
     if (financial.plan_type === "insurance") {
       const expectedDays = activeAgreement?.expected_receipt_days ?? 30;
+      const sessionAmount=centsToAmount(financial.session_value_cents);
       const agreementAmount =
         activeAgreement?.repass_type === "currency"
           ? centsToAmount(activeAgreement.repass_value_cents)
-          : centsToAmount(financial.session_value_cents);
+          : sessionAmount*Math.max(0,Number(activeAgreement?.repass_percentage||0))/100;
       setDescription(activeAgreement ? `Repasse ${activeAgreement.name}` : "Repasse de convenio");
       setAmount(agreementAmount ? String(agreementAmount.toFixed(2)).replace(".", ",") : "");
       setPaymentMethod("convenio");
+      setPayerType("insurer");
       setDueDate(formatDateInput(addDays(new Date(), expectedDays)));
     }
 
@@ -194,9 +208,11 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     setPackageId("");
     setNotes("");
     setOverrideExempt(false);
+    setOverrideReason("");setDestination("management");setPayerType("patient");setAppointmentId("");operationKey.current=crypto.randomUUID();
   };
 
   const handleSubmit = async () => {
+    if(packageConsumesOnly&&selectedPackage&&patientId){try{await consumePackage.mutateAsync({packageId:selectedPackage.id,patientId,appointmentId:appointmentId||null,idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-package-use",selectedPackage.id,appointmentId||operationKey.current]),reason:notes.trim()||"Uso pela Gestão Financeira"});resetAndClose();}catch(error){console.error(error);}return;}
     if (!description.trim()) {
       toast.error("Informe uma descrição para a cobrança.");
       return;
@@ -212,9 +228,11 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       toast.error("Paciente isento. Confirme o override para criar a cobrança.");
       return;
     }
+    if(isExempt&&overrideReason.trim().length<3){toast.error("Informe o motivo da cobrança.");return;}
+    if(destination==="neurofinance"&&!neurofinanceReady){toast.error("O NeuroFinance não está habilitado para este pagador.");return;}
 
     try {
-      await createEntry.mutateAsync({
+      const entry=await createEntry.mutateAsync({
         type: "income",
         title: description.trim(),
         description: description.trim(),
@@ -226,6 +244,8 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
         paymentMethod,
         origin: selectedPackage ? "package" : paymentMethod === "convenio" ? "convenio" : "manual",
         patientId: patientId || null,
+        appointmentId:appointmentId||null,
+        idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-charge",patientId||"none",appointmentId||(planType==="monthly"?dueDate.slice(0,7):operationKey.current)]),
         metadata: {
           source: "manual_charge_modal",
           patient_financial_plan: financial?.plan_type || null,
@@ -233,10 +253,15 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
           patient_package_id: selectedPackage?.id || null,
           notes: notes.trim() || null,
           exempt_override: isExempt ? overrideExempt : false,
+          exempt_override_reason:isExempt?overrideReason.trim():null,
+          package_billing_mode:selectedPackage?.billing_mode||null,
+          payer_type:payerType,payer_name:payerType==="responsible"?responsible?.name||null:payerType==="insurer"?activeAgreement?.name||null:selectedPatient?.name||null,
+          intended_destination:destination,
         },
       });
-
-      toast.success("Cobrança manual criada como pendente.");
+      if(destination==="paid")await transitionEntry.mutateAsync({id:entry.id,action:"settle",amount:parsedAmount,effectiveAt:new Date(),paymentMethod,idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-charge-settlement",operationKey.current])});
+      if(destination==="neurofinance")await generateInvoice.mutateAsync({patientId,amount:parsedAmount,description:description.trim(),dueDate:new Date(`${dueDate}T12:00:00`),paymentMethodType:paymentMethod==="boleto"?["boleto"]:paymentMethod==="card"?["card"]:["pix"],financialEntryId:entry.id,operationId:operationKey.current});
+      toast.success(destination==="paid"?"Recebimento registrado.":destination==="neurofinance"?"Cobrança NeuroFinance criada e vinculada.":"Cobrança criada em aberto.");
       resetAndClose();
     } catch (error) {
       console.error("Falha ao criar cobrança manual:", error);
@@ -272,6 +297,8 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
                 </SelectContent>
               </Select>
             </div>
+            {patientId?<div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Consulta (opcional)</Label><Select value={appointmentId||"none"} onValueChange={v=>setAppointmentId(v==="none"?"":v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Sem consulta</SelectItem>{(appointments.data||[]).slice(-20).map(a=><SelectItem key={a.id} value={a.id}>{format(new Date(a.start_time),"dd/MM/yyyy HH:mm")}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Pagador</Label><Select value={payerType} onValueChange={v=>setPayerType(v as typeof payerType)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="patient">Paciente</SelectItem>{responsible?.name?<SelectItem value="responsible">Responsável · {responsible.name}</SelectItem>:null}{activeAgreement?<SelectItem value="insurer">Convênio · {activeAgreement.name}</SelectItem>:null}</SelectContent></Select></div></div>:null}
+            {!packageConsumesOnly?<div className="space-y-2"><Label>Destino</Label><div className="grid grid-cols-3 gap-2">{([{id:"management",label:"Em aberto",icon:CalendarClock},{id:"paid",label:"Já recebido",icon:CheckCircle2},{id:"neurofinance",label:"NeuroFinance",icon:Landmark}]as const).map(x=><button key={x.id} type="button" disabled={x.id==="neurofinance"&&!neurofinanceReady} onClick={()=>setDestination(x.id)} className={cn("rounded-2xl border p-3 text-left text-xs font-semibold disabled:opacity-40",destination===x.id&&"border-foreground bg-foreground text-background")}><x.icon className="mb-3 h-4 w-4"/>{x.label}</button>)}</div></div>:null}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
@@ -327,10 +354,10 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
             ) : null}
 
             {isExempt ? (
-              <label className="flex items-start gap-3 rounded-[18px] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100">
+              <div className="space-y-3 rounded-[18px] border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-300/20 dark:bg-amber-300/10 dark:text-amber-100"><label className="flex items-start gap-3">
                 <Checkbox checked={overrideExempt} onCheckedChange={(checked) => setOverrideExempt(Boolean(checked))} />
                 <span>Este paciente está marcado como isento. Confirmo que quero criar uma cobrança manual mesmo assim.</span>
-              </label>
+              </label>{overrideExempt?<Input value={overrideReason} onChange={e=>setOverrideReason(e.target.value)} placeholder="Motivo obrigatório"/>:null}</div>
             ) : null}
 
             <div className="space-y-2">
@@ -390,15 +417,15 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
         <div className="flex items-center justify-between gap-3 border-t border-zinc-200 px-6 py-5 dark:border-white/10">
           <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
-            Salva em financial_entries com status pendente.
+            {packageConsumesOnly?"Consome uma sessão sem gerar nova receita.":destination==="paid"?"Registra a baixa no histórico.":destination==="neurofinance"?"Cria e vincula a cobrança bancária.":"Salva como cobrança gerencial em aberto."}
           </p>
           <div className="flex gap-2">
             <Button type="button" variant="outline" onClick={resetAndClose} className="rounded-[14px]">
               Cancelar
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={createEntry.isPending} className="rounded-[14px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-              {createEntry.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-              Criar cobrança
+            <Button type="button" onClick={handleSubmit} disabled={createEntry.isPending||transitionEntry.isPending||generateInvoice.isPending||consumePackage.isPending} className="rounded-[14px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
+              {createEntry.isPending||transitionEntry.isPending||generateInvoice.isPending||consumePackage.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+              {packageConsumesOnly?"Usar sessão":destination==="paid"?"Registrar recebimento":"Criar cobrança"}
             </Button>
           </div>
         </div>

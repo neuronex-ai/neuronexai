@@ -5,7 +5,7 @@ import { useAuth } from "@/components/auth/SessionContextProvider";
 import type { PaymentMethod, Transaction } from "@/types";
 import type { AccountMovement } from "@/lib/neurofinance-types";
 
-export const useNeuroFinanceStatement = (startDate?: Date, endDate?: Date) => {
+export const useNeuroFinanceStatement = (startDate?: Date, endDate?: Date, enabled=true) => {
     const { user } = useAuth();
     const queryStart = format(startDate || subDays(new Date(), 30), "yyyy-MM-dd");
     const queryEnd = format(endDate || new Date(), "yyyy-MM-dd");
@@ -66,7 +66,7 @@ export const useNeuroFinanceStatement = (startDate?: Date, endDate?: Date) => {
                 } as Transaction;
             });
         },
-        enabled: Boolean(user?.id),
+        enabled: Boolean(user?.id)&&enabled,
         staleTime: 1000 * 60 * 5,
     });
 };
