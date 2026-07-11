@@ -319,7 +319,7 @@ export const SynapseCompactPanel = () => {
                     <TooltipProvider delayDuration={300}>
                         <header className="synapse-desktop-chrome shrink-0">
                             <div className="synapse-desktop-toolbar flex min-h-[68px] items-center gap-2 px-3">
-                                <span className="w-[76px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
+                                <span className="w-[88px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
                                     Synapse AI
                                 </span>
 
@@ -336,6 +336,8 @@ export const SynapseCompactPanel = () => {
                                                 role="tab"
                                                 aria-selected={isActive}
                                                 aria-controls="synapse-tabpanel"
+                                                aria-label={tab.label}
+                                                title={tab.label}
                                                 tabIndex={isActive ? 0 : -1}
                                                 onClick={() => handleTabChange(tab.id)}
                                                 onKeyDown={(event) => handleTabKeyDown(event, index)}

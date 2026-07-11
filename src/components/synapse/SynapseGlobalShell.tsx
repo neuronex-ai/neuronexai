@@ -54,7 +54,7 @@ export const SynapseGlobalShell = () => {
                     bottom: 'max(12px, env(safe-area-inset-bottom))',
                 }}
             >
-                <AnimatePresence initial={false} mode="wait">
+                <AnimatePresence initial={false} mode="sync">
                     {shellState === 'compact' ? (
                         <SynapseCompactPanel key="compact" />
                     ) : (
