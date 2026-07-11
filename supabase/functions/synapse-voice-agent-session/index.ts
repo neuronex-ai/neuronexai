@@ -29,8 +29,20 @@ const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.35;
 const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_VOICE_ID = "cjVigY5qzO86Huf0OWal";
 const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt";
+const DEFAULT_VOICE_CONTEXT_LENGTH = 12000;
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
+
+const envFlag = (name: string, fallback = false) => {
+  const value = clean(Deno.env.get(name), 40).toLowerCase();
+  if (!value) return fallback;
+  return ["1", "true", "yes", "on"].includes(value);
+};
+
+const voiceContextLength = () => {
+  const value = Number(Deno.env.get("SYNAPSE_VOICE_CONTEXT_LENGTH") || DEFAULT_VOICE_CONTEXT_LENGTH);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : DEFAULT_VOICE_CONTEXT_LENGTH;
+};
 
 const isLocalDevelopmentHost = (host: string) =>
   /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(host) ||
@@ -225,6 +237,7 @@ function buildThinkConfig(
       },
     },
     prompt,
+    context_length: voiceContextLength(),
     functions,
   };
 }
@@ -264,7 +277,7 @@ function buildAgentSettings(
     settings: {
       type: "Settings",
       tags: ["neuronex", "synapse", "voice", "pt-BR"],
-      flags: { history: true },
+      flags: { history: envFlag("SYNAPSE_VOICE_HISTORY", false) },
       audio: {
         input: {
           encoding: "linear16",
@@ -293,6 +306,8 @@ function buildAgentSettings(
       ttsVoice,
       inputSampleRate,
       outputSampleRate,
+      contextLength: voiceContextLength(),
+      historyEnabled: envFlag("SYNAPSE_VOICE_HISTORY", false),
       functionsCount: functions.length,
     },
   };
