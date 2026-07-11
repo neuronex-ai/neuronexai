@@ -1,12 +1,5 @@
-import React, { useRef, useEffect, useState } from 'react';
-import {
-    motion,
-    AnimatePresence,
-    useMotionValue,
-    useMotionValueEvent,
-    useReducedMotion,
-    useSpring,
-} from 'framer-motion';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -62,6 +55,9 @@ const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.Eleme
     { id: 'agent', label: 'Agente', icon: MousePointer2 },
     { id: 'voice', label: 'Voz', icon: AudioLines },
 ];
+
+const HISTORY_FETCH_BATCH = 48;
+const TIMELINE_RENDER_LIMIT = 80;
 
 type AgentActionItem = {
     id: string;
@@ -203,58 +199,59 @@ export const SynapseCompactPanel = () => {
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
-    const panelRef = useRef<HTMLDivElement>(null);
     const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
-
-    const rawLightX = useMotionValue(50);
-    const rawLightY = useMotionValue(8);
-    const lightX = useSpring(rawLightX, { stiffness: 190, damping: 30, mass: 0.55 });
-    const lightY = useSpring(rawLightY, { stiffness: 190, damping: 30, mass: 0.55 });
 
     const [isListening, setIsListening] = useState(false);
     const [showAllActions, setShowAllActions] = useState(false);
     const [sessions, setSessions] = useState<ChatSessionRow[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+    const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
+    const [historyOffset, setHistoryOffset] = useState(0);
+    const [hasMoreSessions, setHasMoreSessions] = useState(false);
     const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
 
-    useMotionValueEvent(lightX, 'change', (latest) => {
-        panelRef.current?.style.setProperty('--synapse-light-x', `${latest}%`);
-    });
+    const loadHistorySessions = useCallback(async (offset: number, append: boolean) => {
+        if (append) setIsLoadingMoreSessions(true);
+        else setIsLoadingSessions(true);
 
-    useMotionValueEvent(lightY, 'change', (latest) => {
-        panelRef.current?.style.setProperty('--synapse-light-y', `${latest}%`);
-    });
+        try {
+            const { data, error } = await supabase
+                .from('chat_sessions')
+                .select('id,title,updated_at,created_at,context_state')
+                .order('updated_at', { ascending: false })
+                .range(offset, offset + HISTORY_FETCH_BATCH - 1);
+
+            if (error) {
+                console.error('Error fetching sessions:', error);
+                return;
+            }
+
+            const batch = (data || []) as ChatSessionRow[];
+            const filtered = batch.filter((session) => {
+                if (session.title?.startsWith('NeuroPulse Analysis')) return false;
+                const isWhatsApp = session.context_state?.source === 'whatsapp';
+                return historyChannel === 'whatsapp' ? isWhatsApp : !isWhatsApp;
+            });
+
+            setSessions((current) => {
+                if (!append) return filtered;
+                const knownIds = new Set(current.map((session) => session.id));
+                return [...current, ...filtered.filter((session) => !knownIds.has(session.id))];
+            });
+            setHistoryOffset(offset + batch.length);
+            setHasMoreSessions(batch.length === HISTORY_FETCH_BATCH);
+        } catch (error) {
+            console.error('Error fetching sessions:', error);
+        } finally {
+            setIsLoadingSessions(false);
+            setIsLoadingMoreSessions(false);
+        }
+    }, [historyChannel]);
 
     useEffect(() => {
-        if (activeTab === 'history') {
-            const fetchSessions = async () => {
-                setIsLoadingSessions(true);
-                try {
-                    const { data, error } = await supabase
-                        .from('chat_sessions')
-                        .select('id,title,updated_at,created_at,context_state')
-                        .order('updated_at', { ascending: false })
-                        .limit(40);
-
-                    if (error) {
-                        console.error("Error fetching sessions:", error);
-                    } else if (data) {
-                        const filtered = (data as ChatSessionRow[]).filter((session) => {
-                            if (session.title?.startsWith('NeuroPulse Analysis')) return false;
-                            const isWhatsApp = session.context_state?.source === 'whatsapp';
-                            return historyChannel === 'whatsapp' ? isWhatsApp : !isWhatsApp;
-                        });
-                        setSessions(filtered);
-                    }
-                } catch (err) {
-                    console.error("Error fetching sessions:", err);
-                } finally {
-                    setIsLoadingSessions(false);
-                }
-            };
-            fetchSessions();
-        }
-    }, [activeTab, historyChannel]);
+        if (activeTab !== 'history') return;
+        void loadHistorySessions(0, false);
+    }, [activeTab, historyChannel, loadHistorySessions]);
 
     useEffect(() => {
         if (shellState === 'compact' && activeTab === 'voice' && voiceStatus === 'disconnected') {
@@ -319,6 +316,7 @@ export const SynapseCompactPanel = () => {
 
     const dailyActionCount = Object.values(dailyActions).reduce((total, actions) => total + actions.length, 0);
     const recentAgentTimeline = timeline.slice(-4).reverse();
+    const visibleTimeline = timeline.slice(-TIMELINE_RENDER_LIMIT).reverse();
     const agentBusy = execState === 'thinking' || execState === 'executing' || isIntelligenceLoading;
 
     const runAgentAction = async (item: AgentActionItem) => {
@@ -380,20 +378,6 @@ export const SynapseCompactPanel = () => {
         setActiveTab(tab);
     };
 
-    const handlePanelPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-        if (shouldReduceMotion || event.pointerType !== 'mouse' || !panelRef.current) return;
-        const rect = panelRef.current.getBoundingClientRect();
-        const nextX = Math.min(96, Math.max(4, ((event.clientX - rect.left) / rect.width) * 100));
-        const nextY = Math.min(96, Math.max(4, ((event.clientY - rect.top) / rect.height) * 100));
-        rawLightX.set(nextX);
-        rawLightY.set(nextY);
-    };
-
-    const resetPanelLight = () => {
-        rawLightX.set(50);
-        rawLightY.set(8);
-    };
-
     const focusTabAt = (index: number) => {
         const normalizedIndex = (index + PANEL_TABS.length) % PANEL_TABS.length;
         const nextTab = PANEL_TABS[normalizedIndex];
@@ -433,10 +417,7 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
-                ref={panelRef}
                 layoutId="synapse-optical-surface"
-                onPointerMove={handlePanelPointerMove}
-                onPointerLeave={resetPanelLight}
                 style={{ willChange: "transform, opacity" }}
                 initial={shouldReduceMotion ? false : { opacity: 0.72, y: 7 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -447,7 +428,7 @@ export const SynapseCompactPanel = () => {
                     y: { type: 'spring', stiffness: 420, damping: 38, mass: 0.82 },
                 }}
                 className={cn(
-                    'synapse-optical-shell relative flex h-[min(720px,calc(100vh-24px))] w-[min(460px,calc(100vw-24px))] flex-col overflow-hidden rounded-[24px] border',
+                    'synapse-desktop-shell relative flex h-[min(720px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[30px] border',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"
@@ -455,10 +436,10 @@ export const SynapseCompactPanel = () => {
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
-                        <header className="synapse-optical-chrome shrink-0">
+                        <header className="synapse-desktop-chrome shrink-0">
                             <div className="flex min-h-16 items-center justify-between gap-3 px-3.5">
                                 <div className="flex min-w-0 items-center gap-2.5">
-                                    <span className="synapse-header-mark flex h-10 w-10 shrink-0 items-center justify-center text-foreground" aria-hidden="true">
+                                    <span className="synapse-desktop-mark flex h-10 w-10 shrink-0 items-center justify-center text-foreground" aria-hidden="true">
                                         <Sparkles className="relative z-10 h-4 w-4" />
                                     </span>
                                     <span className="min-w-0 leading-none">
@@ -478,7 +459,7 @@ export const SynapseCompactPanel = () => {
                                                 <button
                                                     type="button"
                                                     onClick={clearSession}
-                                                    className="synapse-header-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                     aria-label="Limpar conversa"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -492,7 +473,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={clearSession}
-                                                className="synapse-header-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Criar nova conversa"
                                             >
                                                 <Plus className="h-4 w-4" />
@@ -505,7 +486,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setShellState('pill')}
-                                                className="synapse-header-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Recolher Synapse"
                                             >
                                                 <X className="h-4 w-4" />
@@ -516,7 +497,7 @@ export const SynapseCompactPanel = () => {
                                 </div>
                             </div>
 
-                            <nav className="synapse-mode-switcher mx-2.5 mb-2.5 grid grid-cols-5 gap-1 p-1" role="tablist" aria-label="Modos do Synapse">
+                            <nav className="synapse-desktop-tabs mx-3 mb-3 grid grid-cols-5 gap-1 p-1" role="tablist" aria-label="Modos do Synapse">
                                 {PANEL_TABS.map((tab, index) => {
                                     const Icon = tab.icon;
                                     const isActive = activeTab === tab.id;
@@ -542,7 +523,7 @@ export const SynapseCompactPanel = () => {
                                             {isActive ? (
                                                 <motion.span
                                                     layoutId="synapse-active-tab"
-                                                    className="synapse-mode-active absolute inset-0 rounded-[11px]"
+                                                    className="synapse-desktop-tab-active absolute inset-0 rounded-[11px]"
                                                     transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
                                                     aria-hidden="true"
                                                 />
@@ -567,7 +548,7 @@ export const SynapseCompactPanel = () => {
                         role="tabpanel"
                         aria-labelledby={`synapse-tab-${activeTab}`}
                         className={cn(
-                            'synapse-thread-viewport relative min-h-0 flex-1 overflow-y-auto px-4',
+                            'synapse-desktop-viewport relative min-h-0 flex-1 overflow-y-auto px-4',
                             'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
@@ -585,15 +566,15 @@ export const SynapseCompactPanel = () => {
                                         {isLoadingSessions && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
                                     </div>
 
-                                    <div className="synapse-chat-glass grid grid-cols-2 rounded-lg border p-1 text-[11px] font-medium text-muted-foreground">
+                                    <div className="synapse-history-segment grid grid-cols-2 p-1 text-[11px] font-medium text-muted-foreground">
                                         <button
                                             type="button"
                                             onClick={() => setHistoryChannel('neuronex')}
                                             className={cn(
-                                                "h-11 rounded-md px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                "relative h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'neuronex'
-                                                    ? "bg-background text-foreground shadow-sm dark:bg-white/[0.08]"
-                                                    : "hover:bg-muted/60 hover:text-foreground"
+                                                    ? "synapse-history-segment-active text-foreground"
+                                                    : "hover:text-foreground"
                                             )}
                                         >
                                             NeuroNex
@@ -602,10 +583,10 @@ export const SynapseCompactPanel = () => {
                                             type="button"
                                             onClick={() => setHistoryChannel('whatsapp')}
                                             className={cn(
-                                                "h-11 rounded-md px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                "relative h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'whatsapp'
-                                                    ? "bg-background text-foreground shadow-sm dark:bg-white/[0.08]"
-                                                    : "hover:bg-muted/60 hover:text-foreground"
+                                                    ? "synapse-history-segment-active text-foreground"
+                                                    : "hover:text-foreground"
                                             )}
                                         >
                                             WhatsApp Business
@@ -613,7 +594,7 @@ export const SynapseCompactPanel = () => {
                                     </div>
 
                                     {sessions.length === 0 && !isLoadingSessions ? (
-                                        <div className="flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
+                                        <div className="synapse-empty-state flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
                                             <MessageSquare className="h-7 w-7 opacity-60" />
                                             <p className="text-[12px] font-medium">
                                                 {historyChannel === 'whatsapp' ? 'Nenhuma conversa WhatsApp' : 'Nenhuma conversa salva'}
@@ -637,11 +618,11 @@ export const SynapseCompactPanel = () => {
                                                             setActiveSessionId(session.id);
                                                             setActiveTab('chat');
                                                         }}
-                                                        className="group relative flex min-h-[72px] w-full items-center justify-between gap-3 px-2 py-3 text-left transition-colors hover:bg-muted/45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                                                        className="synapse-history-row group relative flex min-h-[72px] w-full items-center justify-between gap-3 px-2 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                                                     >
                                                         <div className="flex min-w-0 items-center gap-3">
                                                             <div className={cn(
-                                                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg",
+                                                                "synapse-history-row-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]",
                                                                 isWpp ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted/65 text-muted-foreground"
                                                             )}>
                                                                 {isWpp ? <Smartphone className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
@@ -666,6 +647,18 @@ export const SynapseCompactPanel = () => {
                                             })}
                                         </div>
                                     )}
+
+                                    {hasMoreSessions ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => void loadHistorySessions(historyOffset, true)}
+                                            disabled={isLoadingMoreSessions}
+                                            className="synapse-load-more mt-3 flex min-h-11 w-full items-center justify-center gap-2 text-[11px] font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                        >
+                                            {isLoadingMoreSessions ? <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> : <ChevronRight className="h-3.5 w-3.5 rotate-90" />}
+                                            {isLoadingMoreSessions ? 'Carregando' : 'Carregar mais'}
+                                        </button>
+                                    ) : null}
                                 </motion.div>
                             ) : activeTab === 'timeline' ? (
                                 <motion.div
@@ -675,14 +668,14 @@ export const SynapseCompactPanel = () => {
                                     exit={{ opacity: 0, y: 4 }}
                                     className="flex flex-col gap-4 py-4"
                                 >
-                                    {timeline.length === 0 ? (
-                                        <div className="text-center text-muted-foreground text-[11px] mt-10">Nenhuma atividade registrada.</div>
+                                    {visibleTimeline.length === 0 ? (
+                                        <div className="synapse-empty-state mt-10 text-center text-[11px] text-muted-foreground">Nenhuma atividade registrada.</div>
                                     ) : (
-                                        timeline.map((entry, idx) => (
-                                            <div key={entry.id} className="flex gap-4">
+                                        visibleTimeline.map((entry, idx) => (
+                                            <div key={entry.id} className="synapse-timeline-row flex gap-4">
                                                 <div className="flex flex-col items-center">
                                                     <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/28 dark:bg-white/[0.18] mt-1" />
-                                                    {idx !== timeline.length - 1 && <div className="w-[1px] h-full bg-border/60 dark:bg-white/[0.05] mt-1" />}
+                                                    {idx !== visibleTimeline.length - 1 && <div className="w-[1px] h-full bg-border/60 dark:bg-white/[0.05] mt-1" />}
                                                 </div>
                                                 <div className="flex flex-col flex-1 pb-4">
                                                     <span className="text-[10px] font-mono text-muted-foreground mb-0.5">{new Date(entry.timestamp).toLocaleTimeString('pt-BR')}</span>
@@ -691,6 +684,9 @@ export const SynapseCompactPanel = () => {
                                             </div>
                                         ))
                                     )}
+                                    {timeline.length > TIMELINE_RENDER_LIMIT ? (
+                                        <p className="px-1 text-center text-[10px] text-muted-foreground">Exibindo as últimas {TIMELINE_RENDER_LIMIT} atividades.</p>
+                                    ) : null}
                                 </motion.div>
                             ) : activeTab === 'agent' ? (
                                 <motion.div
@@ -698,16 +694,16 @@ export const SynapseCompactPanel = () => {
                                     initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 4 }}
-                                    className="flex flex-col"
+                                    className="synapse-agent-view flex flex-col"
                                 >
-                                    <section className="border-b border-border/60 py-5 dark:border-white/[0.07]">
+                                    <section className="synapse-agent-section py-5">
                                         <div className="flex items-start justify-between gap-4">
                                             <div className="space-y-1">
                                                 <span className="text-[11px] font-medium text-muted-foreground">Modo agente</span>
                                                 <h3 className="text-[16px] font-semibold text-foreground">Controle de tela</h3>
                                             </div>
                                             <span className={cn(
-                                                "rounded-md px-2.5 py-1.5 text-[10px] font-semibold",
+                                                "synapse-status-badge px-2.5 py-1.5 text-[10px] font-semibold",
                                                 execState === 'error'
                                                     ? "bg-red-500/10 text-red-600 dark:text-red-400"
                                                     : execState === 'success'
@@ -720,7 +716,7 @@ export const SynapseCompactPanel = () => {
                                             </span>
                                         </div>
 
-                                        <div className="mt-5 grid grid-cols-2 gap-2.5">
+                                        <div className="synapse-command-list mt-4 divide-y">
                                             {AGENT_ACTIONS.map((item) => {
                                                 const Icon = item.icon;
                                                 return (
@@ -729,23 +725,23 @@ export const SynapseCompactPanel = () => {
                                                         type="button"
                                                         onClick={() => void runAgentAction(item)}
                                                         disabled={agentBusy}
-                                                        className="group flex min-h-[88px] flex-col items-start justify-between rounded-lg border border-border/60 bg-muted/20 p-3.5 text-left transition-colors hover:bg-muted/60 disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-white/[0.025]"
+                                                        className="synapse-command-row group flex min-h-[68px] w-full items-center gap-3 px-2 py-3 text-left disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
                                                     >
-                                                        <div className="flex w-full items-center justify-between gap-2">
-                                                            <Icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-current" />
-                                                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
+                                                        <span className="synapse-command-icon flex h-9 w-9 shrink-0 items-center justify-center">
+                                                            <Icon className="h-4 w-4" />
+                                                        </span>
+                                                        <div className="min-w-0 flex-1">
+                                                            <span className="block text-[12px] font-semibold leading-tight text-foreground">{item.label}</span>
+                                                            <span className="mt-1 block truncate text-[10px] leading-relaxed text-muted-foreground">{item.description}</span>
                                                         </div>
-                                                        <div className="space-y-1">
-                                                            <span className="block text-[11px] font-semibold leading-tight">{item.label}</span>
-                                                            <span className="line-clamp-2 text-[10px] leading-relaxed text-muted-foreground">{item.description}</span>
-                                                        </div>
+                                                        <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transform-none" />
                                                     </button>
                                                 );
                                             })}
                                         </div>
                                     </section>
 
-                                    <section className="border-b border-border/60 py-5 dark:border-white/[0.07]">
+                                    <section className="synapse-agent-section py-5">
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
                                                 <span className="text-[12px] font-semibold text-foreground">Inteligência diária</span>
@@ -755,7 +751,7 @@ export const SynapseCompactPanel = () => {
                                                 type="button"
                                                 onClick={() => void handleDailySync()}
                                                 disabled={isIntelligenceLoading}
-                                                className="flex h-11 w-11 items-center justify-center rounded-[10px] bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-foreground disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 title="Atualizar"
                                                 aria-label="Atualizar inteligência diária"
                                             >
@@ -763,7 +759,7 @@ export const SynapseCompactPanel = () => {
                                             </button>
                                         </div>
 
-                                        <div className="mt-4 divide-y divide-border/55 dark:divide-white/[0.06]">
+                                        <div className="synapse-scan-list mt-4 divide-y">
                                             {scanProgress.map((item) => (
                                                 <div key={item.module} className="flex min-h-10 items-center justify-between px-1">
                                                     <span className="text-[10px] font-bold text-muted-foreground">{item.label}</span>
@@ -815,35 +811,47 @@ export const SynapseCompactPanel = () => {
                                     initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 4 }}
-                                    className="flex h-full min-h-[400px] flex-col items-center justify-center gap-8 py-12"
+                                    className="synapse-voice-view flex h-full min-h-[430px] flex-col items-center justify-center py-8"
                                 >
-                                    <div className="relative flex h-56 w-56 items-center justify-center rounded-full border border-border/35 bg-muted/35 shadow-inner dark:border-white/[0.055] dark:bg-white/[0.025]">
-                                        {shouldReduceMotion ? (
-                                            <div className="h-44 w-44 rounded-full border border-foreground/10 bg-foreground/[0.035]" />
-                                        ) : (
-                                            <VoiceSpiral
-                                                getAudioVolume={getVoiceInputVolume}
-                                                isListening={voiceStatus === 'connected' && !isVoiceSpeaking && !isVoiceToolActive}
-                                                isProcessing={voiceStatus === 'connecting' || isVoiceToolActive}
-                                                className="overflow-hidden rounded-full opacity-80 mix-blend-multiply dark:opacity-90 dark:mix-blend-screen"
-                                            />
-                                        )}
+                                    <div className="flex w-full items-center justify-between px-2">
+                                        <span className="text-[11px] font-semibold text-muted-foreground">Conversa por voz</span>
+                                        <span className={cn(
+                                            'synapse-status-badge px-2.5 py-1.5 text-[10px] font-semibold',
+                                            voiceStatus === 'connected' ? 'text-foreground' : 'text-muted-foreground',
+                                        )}>
+                                            {voiceStatus === 'connected' ? 'Ativa' : 'Preparando'}
+                                        </span>
                                     </div>
 
-                                    <div className="flex flex-col items-center gap-2 text-center">
-                                        <span className={cn("text-[14px] font-semibold", voiceStatus === 'connected' || isVoiceToolActive ? 'text-foreground' : cn('text-muted-foreground', !shouldReduceMotion && 'animate-pulse'))}>
+                                    <div className="synapse-voice-stage mt-6 flex w-full flex-1 flex-col items-center justify-center">
+                                        <div className="synapse-voice-orbit relative flex h-56 w-56 items-center justify-center">
+                                            {shouldReduceMotion ? (
+                                                <div className="h-44 w-44 rounded-full border border-foreground/10 bg-foreground/[0.035]" />
+                                            ) : (
+                                                <VoiceSpiral
+                                                    getAudioVolume={getVoiceInputVolume}
+                                                    isListening={voiceStatus === 'connected' && !isVoiceSpeaking && !isVoiceToolActive}
+                                                    isProcessing={voiceStatus === 'connecting' || isVoiceToolActive}
+                                                    className="overflow-hidden rounded-full opacity-80 mix-blend-multiply dark:opacity-90 dark:mix-blend-screen"
+                                                />
+                                            )}
+                                        </div>
+
+                                        <div className="mt-7 flex flex-col items-center gap-2 text-center">
+                                            <span className={cn('text-[18px] font-semibold', voiceStatus === 'connected' || isVoiceToolActive ? 'text-foreground' : cn('text-muted-foreground', !shouldReduceMotion && 'animate-pulse'))}>
                                             {voiceModeLabel}
                                         </span>
-                                        <p className="text-[11px] text-muted-foreground max-w-[280px] leading-relaxed">
+                                        <p className="max-w-[300px] text-[12px] leading-5 text-muted-foreground">
                                             {voiceModeDescription}
                                         </p>
+                                        </div>
                                     </div>
 
                                     {voiceStatus === 'connected' && (
                                         <button
                                             type="button"
                                             onClick={() => toggleVoiceMode()}
-                                            className="mt-4 flex min-h-11 items-center gap-2 rounded-lg bg-destructive/10 px-4 py-2 text-[12px] font-semibold text-destructive transition-colors hover:bg-destructive/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            className="synapse-voice-end-button mt-6 flex min-h-11 items-center gap-2 px-4 py-2 text-[12px] font-semibold text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                             aria-label="Encerrar chamada de voz"
                                         >
                                             <PhoneOff className="w-4 h-4" />

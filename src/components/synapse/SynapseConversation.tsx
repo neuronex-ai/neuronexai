@@ -66,7 +66,7 @@ const formatMessageTime = (value: string) => {
 
 const SynapseMessageMark = ({ className }: { className?: string }) => (
     <span
-        className={cn('synapse-message-mark flex h-8 w-8 shrink-0 items-center justify-center', className)}
+        className={cn('synapse-desktop-message-mark flex h-8 w-8 shrink-0 items-center justify-center', className)}
         aria-hidden="true"
     >
         <Sparkles className="relative z-10 h-3.5 w-3.5" />
@@ -129,7 +129,7 @@ const SynapseEmptyConversation = ({
         <motion.div
             animate={shouldReduceMotion ? undefined : { y: [0, -2, 0] }}
             transition={shouldReduceMotion ? { duration: 0 } : { duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-            className="synapse-empty-mark flex h-[68px] w-[68px] items-center justify-center"
+            className="synapse-desktop-empty-mark flex h-[68px] w-[68px] items-center justify-center"
             aria-hidden="true"
         >
             <Sparkles className="relative z-10 h-6 w-6" />
@@ -153,7 +153,7 @@ const SynapseEmptyConversation = ({
                         transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.08 + index * 0.035, duration: 0.24 }}
                         whileTap={shouldReduceMotion ? undefined : { scale: 0.97, y: 1 }}
                         onClick={() => onQuickAction(tool.name)}
-                        className="synapse-prompt-chip flex min-h-11 items-center gap-2.5 px-3 text-left text-[12px] font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="synapse-desktop-prompt flex min-h-11 items-center gap-2.5 px-3 text-left text-[12px] font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                         <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span className="line-clamp-2 leading-4">{tool.name}</span>
@@ -224,8 +224,8 @@ export const SynapseConversation = ({
                                     <div className={cn('flex min-w-0 max-w-[84%] flex-col', isUser ? 'items-end' : 'items-start')}>
                                         <div
                                             className={cn(
-                                                'synapse-message-bubble group relative min-w-0 px-4 py-3',
-                                                isUser ? 'synapse-message-user' : 'synapse-message-assistant pr-11',
+                                                'synapse-desktop-message group relative min-w-0 px-4 py-3',
+                                                isUser ? 'synapse-desktop-message-user' : 'synapse-desktop-message-assistant pr-11',
                                             )}
                                         >
                                             {!isUser ? (
@@ -250,7 +250,7 @@ export const SynapseConversation = ({
                                                 </motion.button>
                                             ) : null}
 
-                                            <div className={cn('synapse-message-prose break-words', isUser && 'synapse-message-prose-user')}>
+                                            <div className={cn('synapse-desktop-prose break-words', isUser && 'synapse-desktop-prose-user')}>
                                                 {isUser ? message.content : <SynapseMarkdownMessage content={message.content} />}
                                             </div>
                                         </div>
@@ -279,7 +279,7 @@ export const SynapseConversation = ({
                                     className="flex items-end gap-2.5"
                                 >
                                     <SynapseMessageMark />
-                                    <div className="synapse-thinking-surface flex min-h-11 items-center gap-2.5 px-4">
+                                    <div className="synapse-desktop-thinking flex min-h-11 items-center gap-2.5 px-4">
                                         <span className="flex items-center gap-1.5" aria-hidden="true">
                                             {[0, 0.16, 0.32].map((delay) => (
                                                 <motion.span
@@ -340,8 +340,8 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
     };
 
     return (
-        <div className="synapse-composer-dock shrink-0 px-3.5 pb-3.5 pt-2.5">
-            <div className="synapse-optical-composer flex min-h-[62px] items-end gap-2 p-2">
+        <div className="synapse-desktop-composer-dock shrink-0 px-3.5 pb-3.5 pt-2.5">
+            <div className="synapse-desktop-composer flex min-h-[62px] items-end gap-2 p-2">
                 <textarea
                     ref={setTextareaRef}
                     value={value}
@@ -360,8 +360,8 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
                         onClick={onToggleListening}
                         whileTap={shouldReduceMotion ? undefined : { scale: 0.92, y: 1 }}
                         className={cn(
-                            'synapse-composer-control flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            isListening && 'synapse-composer-control-active',
+                            'synapse-desktop-composer-control flex h-11 w-11 items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            isListening && 'synapse-desktop-composer-control-active',
                         )}
                         aria-label={isListening ? 'Parar ditado' : 'Iniciar ditado'}
                         aria-pressed={isListening}
@@ -374,8 +374,8 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
                         disabled={!canSend}
                         whileTap={shouldReduceMotion ? undefined : { scale: 0.92, y: 1 }}
                         className={cn(
-                            'synapse-composer-control flex h-11 w-11 items-center justify-center disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                            canSend && 'synapse-send-control-active',
+                            'synapse-desktop-composer-control flex h-11 w-11 items-center justify-center disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                            canSend && 'synapse-desktop-send-control-active',
                         )}
                         aria-label="Enviar mensagem"
                     >
