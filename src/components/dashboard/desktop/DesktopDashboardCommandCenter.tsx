@@ -13,6 +13,8 @@ import {
   Calculator,
   Calendar as CalendarIcon,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   CheckCircle2,
   Clock,
   FileText,
@@ -62,6 +64,7 @@ import {
   getNextScheduleItem,
   getTodayAppointments,
   isOnlineAppointment,
+  paginateAttentionItems,
   type AttentionQueueCategory,
   type AttentionQueueItem,
 } from "./dashboard-command-center-model";
@@ -83,6 +86,9 @@ const pendingFilters: Array<{ value: PendingFilter; label: string }> = [
   { value: "registrations", label: "Cadastros" },
   { value: "neurofinance", label: "NeuroFinance" },
 ];
+
+const AGENDA_VISIBLE_ITEMS = 4;
+const PENDING_PAGE_SIZE = 4;
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
@@ -692,7 +698,7 @@ const EmptyState = ({
   title: string;
   description: string;
 }) => (
-  <div className="flex min-h-[220px] flex-col items-center justify-center rounded-[24px] border border-dashed border-border/60 bg-muted/18 p-6 text-center">
+  <div className="flex min-h-[328px] flex-col items-center justify-center rounded-[24px] border border-dashed border-border/60 bg-muted/18 p-6 text-center">
     <Icon className="h-8 w-8 text-muted-foreground/45" />
     <h3 className="mt-4 text-base font-bold text-foreground">{title}</h3>
     <p className="mt-2 max-w-sm text-sm font-medium text-muted-foreground">{description}</p>
@@ -706,7 +712,7 @@ const AppointmentRow = ({ appointment }: { appointment: Appointment }) => {
     <button
       type="button"
       onClick={() => navigate("/agenda", { state: { openAppointmentId: appointment.id } })}
-      className="dashboard-retina-card dashboard-tactile group flex w-full items-center gap-3 rounded-[20px] p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="dashboard-retina-card dashboard-tactile group flex min-h-[76px] w-full items-center gap-3 rounded-[20px] p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
       <div className="flex h-12 w-16 shrink-0 items-center justify-center rounded-[16px] bg-foreground text-sm font-bold text-background tabular-nums">
         {formatAppointmentTime(appointment)}
@@ -730,6 +736,32 @@ const AppointmentRow = ({ appointment }: { appointment: Appointment }) => {
   );
 };
 
+const AgendaListViewport = ({
+  appointments,
+  label,
+}: {
+  appointments: Appointment[];
+  label: string;
+}) => {
+  const hasOverflow = appointments.length > AGENDA_VISIBLE_ITEMS;
+
+  return (
+    <div
+      role="region"
+      aria-label={`${label}: ${appointments.length} compromisso${appointments.length === 1 ? "" : "s"}`}
+      tabIndex={hasOverflow ? 0 : undefined}
+      className={cn(
+        "h-[328px] space-y-2 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable]",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+      )}
+    >
+      {appointments.map((appointment) => (
+        <AppointmentRow key={appointment.id} appointment={appointment} />
+      ))}
+    </div>
+  );
+};
+
 const AgendaPanel = ({
   todayAppointments,
   weekAppointments,
@@ -740,8 +772,6 @@ const AgendaPanel = ({
   isLoading: boolean;
 }) => {
   const navigate = useNavigate();
-  const todayVisible = todayAppointments.slice(0, 6);
-  const weekVisible = weekAppointments.slice(0, 8);
 
   return (
     <DesktopWorkspacePanel className="p-5 lg:p-6">
@@ -765,37 +795,29 @@ const AgendaPanel = ({
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="today" className="mt-4">
+        <TabsContent value="today" className="mt-4 min-h-[328px]">
           {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-20 animate-pulse rounded-[20px] bg-muted/35" />
+            <div className="h-[328px] space-y-2 overflow-hidden" aria-label="Carregando agenda de hoje">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="h-[76px] animate-pulse rounded-[20px] bg-muted/35 motion-reduce:animate-none" />
               ))}
             </div>
-          ) : todayVisible.length ? (
-            <div className="space-y-2">
-              {todayVisible.map((appointment) => (
-                <AppointmentRow key={appointment.id} appointment={appointment} />
-              ))}
-            </div>
+          ) : todayAppointments.length ? (
+            <AgendaListViewport appointments={todayAppointments} label="Agenda de hoje" />
           ) : (
             <EmptyState icon={CalendarIcon} title="Dia livre" description="Nenhum atendimento marcado para hoje." />
           )}
         </TabsContent>
 
-        <TabsContent value="week" className="mt-4">
+        <TabsContent value="week" className="mt-4 min-h-[328px]">
           {isLoading ? (
-            <div className="space-y-2">
-              {[1, 2, 3].map((item) => (
-                <div key={item} className="h-20 animate-pulse rounded-[20px] bg-muted/35" />
+            <div className="h-[328px] space-y-2 overflow-hidden" aria-label="Carregando agenda dos próximos sete dias">
+              {[1, 2, 3, 4].map((item) => (
+                <div key={item} className="h-[76px] animate-pulse rounded-[20px] bg-muted/35 motion-reduce:animate-none" />
               ))}
             </div>
-          ) : weekVisible.length ? (
-            <div className="space-y-2">
-              {weekVisible.map((appointment) => (
-                <AppointmentRow key={appointment.id} appointment={appointment} />
-              ))}
-            </div>
+          ) : weekAppointments.length ? (
+            <AgendaListViewport appointments={weekAppointments} label="Agenda dos próximos sete dias" />
           ) : (
             <EmptyState icon={CalendarIcon} title="Semana livre" description="Sem compromissos ativos nos próximos 7 dias." />
           )}
@@ -817,35 +839,87 @@ const FinanceMetricCard = ({
   onClick?: () => void;
 }) => {
   const interactive = Boolean(onClick);
+  const cardClassName = cn(
+    "group relative isolate flex h-full min-h-[144px] w-full overflow-hidden rounded-[24px] border p-4 text-left",
+    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    "motion-reduce:transition-none",
+    interactive && "dashboard-tactile cursor-pointer hover:-translate-y-0.5 active:translate-y-px motion-reduce:hover:translate-y-0 motion-reduce:active:translate-y-0",
+    accent
+      ? "border-foreground bg-foreground text-background shadow-[0_24px_54px_-40px_hsl(var(--foreground)/0.62)] dark:border-white dark:bg-white dark:text-zinc-950 dark:shadow-[0_24px_56px_-42px_rgba(0,0,0,0.96)]"
+      : "dashboard-retina-card dashboard-finance-metric border-foreground/[0.09] text-foreground dark:border-white/[0.075] dark:bg-[linear-gradient(155deg,rgba(255,255,255,0.052),rgba(255,255,255,0.022))] dark:shadow-[0_24px_56px_-44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.035)]",
+  );
+  const content = (
+    <>
+      <div
+        className={cn(
+          "pointer-events-none absolute inset-0 -z-10",
+          accent
+            ? "bg-[radial-gradient(circle_at_16%_0%,hsl(var(--background)/0.09),transparent_42%)] dark:bg-[radial-gradient(circle_at_16%_0%,rgba(9,9,11,0.06),transparent_42%)]"
+            : "bg-[radial-gradient(circle_at_16%_0%,hsl(var(--foreground)/0.025),transparent_42%),linear-gradient(145deg,transparent_48%,hsl(var(--foreground)/0.012))] dark:bg-[radial-gradient(circle_at_16%_0%,rgba(255,255,255,0.018),transparent_42%),linear-gradient(145deg,transparent_48%,rgba(255,255,255,0.006))]",
+        )}
+      />
+      <span
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute inset-x-5 top-0 h-px",
+          accent ? "bg-background/[0.26] dark:bg-zinc-950/[0.12]" : "bg-foreground/[0.045] dark:bg-white/[0.045]",
+        )}
+      />
+      <span className="relative z-10 flex h-full min-w-0 flex-1 flex-col justify-between gap-5">
+        <span className="flex items-start justify-between gap-3">
+          <span className={cn("text-[9px] font-black uppercase tracking-[0.16em]", accent ? "text-background/56 dark:text-zinc-950/55" : "text-muted-foreground")}>
+            {label}
+          </span>
+          {interactive ? (
+            <ArrowRight
+              aria-hidden="true"
+              className={cn(
+                "h-4 w-4 shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0",
+                accent ? "text-background/52 dark:text-zinc-950/50" : "text-muted-foreground/45",
+              )}
+            />
+          ) : null}
+        </span>
+        <span
+          className={cn(
+            "block max-w-full truncate text-[clamp(1.2rem,1.65vw,1.7rem)] font-black leading-none tracking-[-0.05em] tabular-nums",
+            accent ? "text-background dark:text-zinc-950" : "text-foreground",
+          )}
+          title={value}
+        >
+          {value}
+        </span>
+      </span>
+    </>
+  );
+
+  if (interactive) {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        aria-label={`${label}: ${value}`}
+        className={cardClassName}
+      >
+        {content}
+      </button>
+    );
+  }
 
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!interactive}
-      className={cn(
-        "dashboard-tactile group relative min-h-[132px] overflow-hidden rounded-[24px] border p-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none",
-        interactive && "hover:shadow-lg",
-        accent
-          ? "border-foreground bg-foreground text-background dark:border-white dark:bg-white dark:text-zinc-950"
-          : "dashboard-retina-card dashboard-finance-metric text-foreground",
-      )}
-    >
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,rgba(0,0,0,0.035),transparent_34%)] opacity-70 dark:bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.006),transparent_34%)]" />
-      <div className="relative z-10 flex h-full flex-col justify-between gap-5">
-        <div className="flex items-start justify-between gap-3">
-          <p className={cn("text-[9px] font-black uppercase tracking-[0.16em]", accent ? "text-background/56 dark:text-zinc-950/55" : "text-muted-foreground")}>
-            {label}
-          </p>
-          {interactive ? <ArrowRight className={cn("h-4 w-4 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0", accent ? "text-background/52 dark:text-zinc-950/50" : "text-muted-foreground/45")} /> : null}
-        </div>
-        <p className={cn("break-words text-2xl font-black leading-tight tracking-[-0.05em] tabular-nums", accent ? "text-background dark:text-zinc-950" : "text-foreground")}>
-          {value}
-        </p>
-      </div>
-    </button>
+    <div role="group" aria-label={`${label}: ${value}`} className={cardClassName}>
+      {content}
+    </div>
   );
 };
+
+const FinanceWidgetSkeleton = () => (
+  <div className="grid gap-3 sm:h-[328px] sm:grid-cols-2 sm:grid-rows-2" aria-label="Carregando resumo financeiro">
+    {[1, 2, 3, 4].map((item) => (
+      <div key={item} className="min-h-[144px] animate-pulse rounded-[24px] bg-muted/35 motion-reduce:animate-none" />
+    ))}
+  </div>
+);
 
 const ManagementWidget = ({
   managerial,
@@ -860,11 +934,11 @@ const ManagementWidget = ({
   const payable = Number(managerial?.payable || 0);
 
   if (isLoading) {
-    return <div className="h-[296px] animate-pulse rounded-[30px] bg-muted/35" />;
+    return <FinanceWidgetSkeleton />;
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+    <div className="grid gap-3 sm:h-[328px] sm:grid-cols-2 sm:grid-rows-2">
       <FinanceMetricCard label="Resumo do mês" value={formatCurrency(result)} accent />
       <FinanceMetricCard label="A receber" value={formatCurrency(receivable)} />
       <FinanceMetricCard label="A pagar" value={formatCurrency(payable)} />
@@ -892,11 +966,11 @@ const NeuroFinanceWidget = ({
   const incoming = Number(managerial?.receivable || 0);
 
   if (loading) {
-    return <div className="h-[296px] animate-pulse rounded-[30px] bg-muted/35" />;
+    return <FinanceWidgetSkeleton />;
   }
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
+    <div className="grid gap-3 sm:h-[328px] sm:grid-cols-2 sm:grid-rows-2">
       <FinanceMetricCard label="Disponível para saque" value={financialConnected ? formatCentsCurrency(signal.bankBalanceCents) : "Ativar"} accent={financialConnected} onClick={() => navigate(signal.ctaPath)} />
       <FinanceMetricCard label="Vai cair" value={formatCentsCurrency(signal.bankPendingCents)} />
       <FinanceMetricCard label="Vai entrar" value={formatCurrency(incoming)} />
@@ -1113,7 +1187,7 @@ const PendingRows = ({ items }: { items: AttentionQueueItem[] }) => {
 
   if (!items.length) {
     return (
-      <div className="flex min-h-[190px] flex-col items-center justify-center rounded-[24px] border border-dashed border-border/60 bg-muted/18 p-6 text-center">
+      <div className="flex h-full min-h-[204px] flex-col items-center justify-center rounded-[24px] border border-dashed border-border/60 bg-muted/18 p-6 text-center">
         <CheckCircle2 className="h-8 w-8 text-emerald-500/70" />
         <h3 className="mt-4 text-base font-bold text-foreground">Tudo em dia</h3>
         <p className="mt-2 max-w-sm text-sm font-medium text-muted-foreground">Sem pendências acionáveis nesta categoria.</p>
@@ -1122,14 +1196,14 @@ const PendingRows = ({ items }: { items: AttentionQueueItem[] }) => {
   }
 
   return (
-    <div className="grid gap-2 md:grid-cols-2">
+    <div className="grid content-start gap-2 md:grid-cols-2">
       {items.map((item) => (
         <button
           key={item.id}
           type="button"
           onClick={() => navigate(item.actionUrl)}
           className={cn(
-            "dashboard-retina-card dashboard-tactile group flex w-full items-start gap-3 rounded-[20px] p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            "dashboard-retina-card dashboard-tactile group flex min-h-[98px] w-full items-start gap-3 rounded-[20px] p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
             item.tone === "warning" && "border-amber-500/25 bg-amber-500/[0.06]",
             item.tone === "destructive" && "border-rose-500/25 bg-rose-500/[0.055]",
           )}
@@ -1151,6 +1225,88 @@ const PendingRows = ({ items }: { items: AttentionQueueItem[] }) => {
           <ArrowRight className="mt-3 h-4 w-4 shrink-0 text-muted-foreground/45 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
         </button>
       ))}
+    </div>
+  );
+};
+
+const PendingPage = ({
+  id,
+  items,
+  isLoading,
+}: {
+  id: string;
+  items: AttentionQueueItem[];
+  isLoading: boolean;
+}) => {
+  const [requestedPage, setRequestedPage] = useState(0);
+  const pagination = useMemo(
+    () => paginateAttentionItems(items, requestedPage, PENDING_PAGE_SIZE),
+    [items, requestedPage],
+  );
+  const contentId = `dashboard-pending-${id}`;
+  const firstVisibleItem = pagination.totalItems ? pagination.pageIndex * pagination.pageSize + 1 : 0;
+  const lastVisibleItem = Math.min(pagination.totalItems, firstVisibleItem + pagination.items.length - 1);
+
+  useEffect(() => {
+    if (requestedPage !== pagination.pageIndex) {
+      setRequestedPage(pagination.pageIndex);
+    }
+  }, [pagination.pageIndex, requestedPage]);
+
+  return (
+    <div className="flex h-[276px] min-h-0 flex-col">
+      <div
+        id={contentId}
+        role="region"
+        aria-label="Itens pendentes desta categoria"
+        tabIndex={pagination.items.length ? 0 : undefined}
+        className="h-[212px] min-h-0 overflow-y-auto overscroll-contain pr-1 [scrollbar-gutter:stable] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+      >
+        {isLoading ? (
+          <div className="grid content-start gap-2 md:grid-cols-2" aria-label="Carregando pendências">
+            {[1, 2, 3, 4].map((item) => (
+              <div key={item} className="h-[98px] animate-pulse rounded-[20px] bg-muted/35 motion-reduce:animate-none" />
+            ))}
+          </div>
+        ) : (
+          <PendingRows items={pagination.items} />
+        )}
+      </div>
+
+      <div className="mt-3 flex min-h-12 items-center justify-between gap-3 border-t border-border/45 pt-3 dark:border-white/[0.06]">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground" aria-live="polite">
+          {pagination.totalItems ? `${firstVisibleItem}–${lastVisibleItem} de ${pagination.totalItems}` : "0 itens"}
+        </p>
+        <div className="flex items-center gap-2">
+          <span className="min-w-16 text-center text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground tabular-nums">
+            {pagination.pageIndex + 1} / {pagination.totalPages}
+          </span>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Página anterior"
+            aria-controls={contentId}
+            disabled={pagination.pageIndex === 0 || isLoading}
+            onClick={() => setRequestedPage((current) => Math.max(0, current - 1))}
+            className="dashboard-tactile h-9 w-9 rounded-[13px]"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            aria-label="Próxima página"
+            aria-controls={contentId}
+            disabled={pagination.pageIndex >= pagination.totalPages - 1 || isLoading}
+            onClick={() => setRequestedPage((current) => Math.min(pagination.totalPages - 1, current + 1))}
+            className="dashboard-tactile h-9 w-9 rounded-[13px]"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 };
@@ -1185,15 +1341,7 @@ const PendingWorkPanel = ({
 
         {pendingFilters.map((filter) => (
           <TabsContent key={filter.value} value={filter.value} className="mt-5">
-            {isLoading ? (
-              <div className="grid gap-2 md:grid-cols-2">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="h-20 animate-pulse rounded-[20px] bg-muted/35" />
-                ))}
-              </div>
-            ) : (
-              <PendingRows items={itemsForFilter(filter.value)} />
-            )}
+            <PendingPage id={filter.value} items={itemsForFilter(filter.value)} isLoading={isLoading} />
           </TabsContent>
         ))}
       </Tabs>
@@ -1227,7 +1375,7 @@ export const DesktopDashboardCommandCenter = () => {
         pendingPatients,
         financialConnected,
         financialLoading,
-        limit: 8,
+        limit: 24,
       }),
     [activeAppointments, financialConnected, financialLoading, notifications, pendingPatients],
   );
@@ -1256,7 +1404,7 @@ export const DesktopDashboardCommandCenter = () => {
             />
           </div>
 
-          <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(500px,0.98fr)]">
+          <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(500px,0.98fr)]">
             <AgendaPanel todayAppointments={todayAppointments} weekAppointments={activeAppointments} isLoading={loadingAppointments} />
             <FinancialOverviewPanel
               financialConnected={financialConnected}

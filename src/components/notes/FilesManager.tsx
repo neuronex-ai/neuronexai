@@ -4,7 +4,7 @@ import { useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { NotionIcon } from "@/components/icons/NotionIcon";
-import { GoogleDriveIcon } from "@/components/icons/GoogleDriveIcon";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import {
     Upload,
@@ -471,57 +471,62 @@ export const FilesManager = () => {
                                     Integrações
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-md rounded-[40px] bg-[#0A0A0B] backdrop-blur-3xl border-white/[0.08] p-0 shadow-[0_32px_128px_-16px_rgba(0,0,0,0.8)] ring-1 ring-white/10 overflow-hidden">
-                                <div className="p-10 relative z-10">
-                                    <DialogHeader className="mb-8">
-                                        <div className="flex items-center gap-4 mb-2">
-                                            <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center shadow-inner">
-                                                <Link2 className="h-6 w-6 text-white" />
+                            <DialogContent className="desktop-retina-modal overflow-hidden rounded-[32px] border border-border/70 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl sm:max-w-lg">
+                                <div className="relative z-10 p-6 sm:p-8">
+                                    <DialogHeader className="mb-7">
+                                        <div className="mb-2 flex items-center gap-4">
+                                            <div className="desktop-retina-inset flex h-12 w-12 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-foreground">
+                                                <Link2 className="h-5 w-5" />
                                             </div>
                                             <div className="flex flex-col">
-                                                <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] leading-none">Conectividade</span>
-                                                <DialogTitle className="text-2xl font-black text-white mt-1.5">Integrações</DialogTitle>
+                                                <span className="text-[10px] font-semibold uppercase leading-none tracking-[0.24em] text-muted-foreground">Conectividade</span>
+                                                <DialogTitle className="mt-1.5 text-2xl font-semibold tracking-tight text-foreground">Integrações</DialogTitle>
                                             </div>
                                         </div>
                                     </DialogHeader>
 
-                                    <div className="space-y-8">
-                                        <p className="text-[13px] text-zinc-400 font-medium leading-relaxed">
-                                            Acesse seus documentos na nuvem diretamente pelo NeuroNex com sincronização em tempo real.
+                                    <div className="space-y-7">
+                                        <p className="text-sm font-normal leading-relaxed text-muted-foreground">
+                                            Conecte serviços externos para organizar documentos no mesmo fluxo de trabalho. O acesso ao Google está temporariamente indisponível enquanto aprimoramos a integração.
                                         </p>
 
-                                        <div className="grid grid-cols-2 gap-5">
+                                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                                             {/* Google Drive */}
-                                            <div
-                                                onClick={() => { handleOpenDrive(); }}
-                                                className="group p-6 rounded-[32px] bg-white/[0.02] border border-white/[0.05] flex flex-col items-center gap-4 text-center transition-all duration-700 hover:bg-white/[0.05] hover:border-white/10 hover:-translate-y-1.5 cursor-pointer"
+                                            <button
+                                                type="button"
+                                                disabled
+                                                onClick={handleOpenDrive}
+                                                className="flex min-h-40 cursor-not-allowed flex-col items-center justify-center gap-4 rounded-[24px] border border-border/70 bg-muted/30 p-5 text-center opacity-75"
+                                                aria-label="Google Drive indisponível no momento"
                                             >
-                                                <div className="w-16 h-16 rounded-3xl bg-black/40 border border-white/[0.08] flex items-center justify-center shadow-inner transition-all duration-700 group-hover:scale-110 group-hover:bg-black/60 p-3.5 overflow-hidden">
-                                                    <GoogleDriveIcon className="h-full w-full opacity-90 group-hover:opacity-100 transition-opacity" />
+                                                <div className="desktop-retina-inset flex h-14 w-14 items-center justify-center overflow-hidden rounded-2xl border border-border/70 bg-background p-3.5">
+                                                    <GoogleIcon className="h-full w-full" />
                                                 </div>
-                                                <span className="text-[12px] font-bold text-zinc-500 group-hover:text-white transition-colors tracking-tight">Google Drive</span>
-                                            </div>
+                                                <span className="text-sm font-semibold text-foreground">Google Drive</span>
+                                                <span className="rounded-full border border-border/70 bg-background px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Em breve</span>
+                                            </button>
 
                                             {/* Notion */}
                                             <Link
                                                 to="/ajustes?tab=integrations"
-                                                className="group p-6 rounded-[32px] bg-white/[0.02] border border-white/[0.05] flex flex-col items-center gap-4 text-center transition-all duration-700 hover:bg-white/[0.05] hover:border-white/10 hover:-translate-y-1.5"
+                                                className="group flex min-h-40 flex-col items-center justify-center gap-4 rounded-[24px] border border-border/70 bg-muted/30 p-5 text-center transition-colors hover:bg-muted/55"
                                             >
-                                                <div className="w-16 h-16 rounded-3xl bg-black/40 border border-white/[0.08] flex items-center justify-center shadow-inner transition-all duration-700 group-hover:scale-110 group-hover:bg-black/60">
-                                                    <NotionIcon className="h-9 w-9 text-white opacity-80 group-hover:opacity-100 transition-opacity" />
+                                                <div className="desktop-retina-inset flex h-14 w-14 items-center justify-center rounded-2xl border border-border/70 bg-background">
+                                                    <NotionIcon className="h-8 w-8 text-foreground opacity-80 transition-opacity group-hover:opacity-100" />
                                                 </div>
-                                                <span className="text-[12px] font-bold text-zinc-500 group-hover:text-white transition-colors tracking-tight">Notion</span>
+                                                <span className="text-sm font-semibold text-foreground">Notion</span>
+                                                <span className="text-xs text-muted-foreground">Ver configurações</span>
                                             </Link>
                                         </div>
 
-                                        <div className="pt-2">
+                                        <div>
                                             <Button
                                                 asChild
-                                                className="w-full rounded-2xl h-14 font-black text-[11px] tracking-[0.2em] uppercase bg-white text-black hover:bg-zinc-200 shadow-[0_20px_40px_-12px_rgba(255,255,255,0.1)] transition-all group"
+                                                className="group h-12 w-full rounded-xl bg-foreground text-sm font-medium text-background shadow-none hover:bg-foreground/90 active:scale-[0.99]"
                                             >
                                                 <Link to="/ajustes?tab=integrations">
-                                                    Configurar Integrações
-                                                    <ExternalLink className="ml-2.5 h-4 w-4 opacity-50 group-hover:opacity-100 transition-all group-hover:translate-x-0.5" />
+                                                    Abrir configurações
+                                                    <ExternalLink className="ml-2.5 h-4 w-4 opacity-60 transition-opacity group-hover:opacity-100" />
                                                 </Link>
                                             </Button>
                                         </div>
@@ -603,14 +608,14 @@ export const FilesManager = () => {
                                 <EmptyState
                                     icon={<FolderOpen className="h-7 w-7 text-muted-foreground" strokeWidth={1.5} />}
                                     title="Nenhum arquivo pessoal"
-                                    description="Envie arquivos do seu dispositivo ou importe do Google Drive."
+                                    description="Envie arquivos do seu dispositivo. A importação pelo Google Drive estará disponível em breve."
                                     action={
                                         <div className="flex gap-2">
                                             <Button size="sm" variant="outline" className="h-9 rounded-xl gap-2 text-xs" onClick={() => fileInputRef.current?.click()}>
                                                 <Upload className="h-3.5 w-3.5" /> Enviar Arquivo
                                             </Button>
-                                            <Button size="sm" variant="outline" className="h-9 rounded-xl gap-2 text-xs" onClick={handleOpenDrive}>
-                                                <HardDrive className="h-3.5 w-3.5" /> Google Drive
+                                            <Button size="sm" variant="outline" className="h-9 rounded-xl gap-2 text-xs" onClick={handleOpenDrive} disabled title="Integração em revisão">
+                                                <HardDrive className="h-3.5 w-3.5" /> Drive em breve
                                             </Button>
                                         </div>
                                     }
@@ -826,7 +831,7 @@ export const FilesManager = () => {
                         <DialogHeader className="mb-8">
                             <div className="flex items-center gap-4 mb-2">
                                 <div className="w-12 h-12 rounded-2xl bg-white/[0.03] border border-white/10 flex items-center justify-center p-3 shadow-inner">
-                                    <GoogleDriveIcon className="h-full w-full" />
+                                    <GoogleIcon className="h-full w-full" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-[10px] font-black text-zinc-500 uppercase tracking-[0.3em] leading-none">Armazenamento</span>

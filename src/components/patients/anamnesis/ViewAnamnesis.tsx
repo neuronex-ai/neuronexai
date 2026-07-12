@@ -17,6 +17,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { cn } from "@/lib/utils";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface ExtractedItem {
     question: string;
@@ -229,6 +239,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [publicToken, setPublicToken] = useState<string | null>(null);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         if (!anamnesisId) return;
@@ -408,6 +419,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
 
     const handleDelete = async () => {
         if (!anamnesisId) return;
+        setIsDeleting(true);
         try {
             // Try hard delete first
             const { data: deleted, error } = await supabase
@@ -443,6 +455,8 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
             console.error('[Anamnesis] Delete error:', err);
             toast.error("Erro ao excluir.");
             setConfirmDeleteOpen(false);
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -659,44 +673,39 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                 )}
             </AnimatePresence>
 
-            <AnimatePresence>
-                {confirmDeleteOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/45 p-4 backdrop-blur-2xl">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="w-full max-w-xs"
-                        >
-                            <GlassCard className="relative flex flex-col items-center gap-6 overflow-hidden rounded-[38px] border-zinc-200/75 bg-white/92 p-8 text-center text-zinc-950 shadow-[0_42px_110px_-34px_rgba(24,24,27,0.38)] backdrop-blur-3xl dark:border-white/[0.085] dark:bg-[#09090b]/94 dark:text-white dark:shadow-[0_48px_118px_-32px_rgba(0,0,0,0.92)]">
-                                <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.014] dark:opacity-[0.03]" />
-                                <div className="relative z-10 flex h-16 w-16 items-center justify-center rounded-[24px] border border-rose-500/15 bg-rose-500/10 text-rose-500 shadow-[0_22px_52px_-34px_rgba(225,29,72,0.5)] dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300">
-                                    <Trash2 className="h-8 w-8" />
-                                </div>
-                                <div className="relative z-10 space-y-2">
-                                    <h3 className="text-2xl font-black tracking-tighter leading-none text-zinc-950 dark:text-white">
-                                        Excluir Modelo?
-                                    </h3>
-                                    <p className="max-w-[240px] text-sm font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-                                        O modelo e todas as respostas preenchidas serão removidos permanentemente. Você poderá escolher um novo template ou importar um documento.
-                                    </p>
-                                </div>
-                                <div className="relative z-10 flex w-full flex-col gap-3">
-                                    <Button
-                                        className="h-14 w-full rounded-[20px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-2xl transition-all hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
-                                        onClick={handleDelete}
-                                    >
-                                        Confirmar Exclusão
-                                    </Button>
-                                    <Button variant="ghost" className="h-11 w-full rounded-[18px] text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:bg-zinc-950/[0.045] hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-white" onClick={() => setConfirmDeleteOpen(false)}>
-                                        Manter
-                                    </Button>
-                                </div>
-                            </GlassCard>
-                        </motion.div>
+            <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+                <AlertDialogContent className="desktop-retina-modal z-[220] w-[calc(100%-2rem)] max-w-md gap-0 overflow-hidden rounded-[30px] border border-border/70 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-[30px]">
+                    <div className="p-6 sm:p-8">
+                        <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl border border-rose-500/20 bg-rose-500/10 text-rose-500 dark:text-rose-300">
+                            <Trash2 className="h-5 w-5" aria-hidden="true" />
+                        </div>
+                        <AlertDialogHeader className="space-y-2 text-left">
+                            <AlertDialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                                Excluir modelo de anamnese?
+                            </AlertDialogTitle>
+                            <AlertDialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                                O modelo e todas as respostas preenchidas serão excluídos permanentemente. Depois, você poderá escolher outro modelo ou importar um documento.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
                     </div>
-                )}
-            </AnimatePresence>
+                    <AlertDialogFooter className="grid grid-cols-1 gap-2 border-t border-border/60 bg-muted/20 p-4 sm:grid-cols-2 sm:space-x-0">
+                        <AlertDialogCancel className="mt-0 h-11 rounded-xl border-border/70 bg-background text-foreground hover:bg-muted">
+                            Manter modelo
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            className="h-11 rounded-xl bg-rose-600 text-white shadow-none hover:bg-rose-700 focus-visible:ring-rose-500"
+                            disabled={isDeleting}
+                            onClick={(event) => {
+                                event.preventDefault();
+                                void handleDelete();
+                            }}
+                        >
+                            {isDeleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" /> : null}
+                            {isDeleting ? "Excluindo..." : "Excluir modelo"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

@@ -1,212 +1,300 @@
-import { motion } from "framer-motion";
-import { ShieldCheck, Fingerprint, CheckCircle, QrCode, Copy, ExternalLink } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useProfile } from "@/hooks/use-profile";
+import { cn } from "@/lib/utils";
+import { buildPublicProfessionalProfileUrl } from "@/lib/public-app-url";
+import type { Profile } from "@/types";
+import { motion, useReducedMotion } from "framer-motion";
+import {
+  BadgeCheck,
+  Copy,
+  ExternalLink,
+  Loader2,
+  QrCode,
+  ShieldCheck,
+  Sparkles,
+} from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface NeuroNexIDCardProps {
-    profile: any;
+  profile?: Profile | null;
 }
 
+const getPlanLabel = (plan?: string | null) => {
+  const normalized = plan?.trim().toLowerCase();
+  if (normalized === "enterprise") return "Enterprise";
+  if (normalized === "professional" || normalized === "profissional")
+    return "Profissional";
+  return "Essencial";
+};
+
 export const NeuroNexIDCard = ({ profile }: NeuroNexIDCardProps) => {
-    const plan = profile?.subscription_plan || 'Professional';
-    const qrData = `https://neuronex.site/id/${profile?.id}`;
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrData)}&size=300x300&bgcolor=ffffff&color=0a0a0b&format=svg`;
+  const reduceMotion = useReducedMotion();
+  const { updateProfile, isUpdating } = useProfile();
+  const [specialty, setSpecialty] = useState(profile?.specialty || "");
+  const plan = getPlanLabel(profile?.subscription_plan);
+  const isVerified = Boolean(profile?.crp?.trim());
 
-    const copyToClipboard = () => {
-        navigator.clipboard.writeText(qrData);
-        toast.success("Link copiado!");
-    };
+  useEffect(() => {
+    setSpecialty(profile?.specialty || "");
+  }, [profile?.specialty]);
 
-    return (
-        <div className="flex flex-col items-center gap-10 py-12 w-full h-full justify-center">
-            <div className="text-center space-y-3 z-10">
-                <motion.h3
-                    animate={{ opacity: [0.5, 1, 0.5] }}
-                    transition={{ duration: 4, repeat: Infinity }}
-                    className="text-2xl font-black text-zinc-950 dark:text-white tracking-[0.2em] uppercase drop-shadow-lg"
-                >
-                    NEURONEX ID
-                </motion.h3>
-                <div className="flex items-center gap-3 justify-center">
-                    <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-800" />
-                    <p className="text-[9px] text-zinc-500 uppercase tracking-[0.4em] font-black">Digital Access Protocol</p>
-                    <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-800" />
-                </div>
-            </div>
+  const profileUrl = useMemo(() => {
+    if (!profile?.id) return "";
+    return buildPublicProfessionalProfileUrl(profile.public_slug || profile.id);
+  }, [profile?.id, profile?.public_slug]);
 
-            <div className="relative group">
-                {/* Outer Glow for Premium Feel */}
-                <div className="absolute -inset-4 bg-gradient-to-tr from-primary/20 via-transparent to-primary/10 blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
+  const qrUrl = profileUrl
+    ? `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(profileUrl)}&size=300x300&bgcolor=ffffff&color=0a0a0b&format=svg`
+    : "";
 
-                <div
-                    className={cn(
-                        "relative w-[340px] h-[520px] rounded-[48px] p-10 overflow-hidden border transition-all duration-700 backdrop-blur-3xl",
-                        "bg-white/40 dark:bg-white/5 border-white/40 dark:border-white/10 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1),inset_0_1px_1px_rgba(255,255,255,0.4)] dark:shadow-2xl"
-                    )}
-                >
-                    {/* Content Component */}
-                    <div className="relative h-full flex flex-col justify-between">
+  const copyToClipboard = async () => {
+    if (!profileUrl) return;
+    try {
+      await navigator.clipboard.writeText(profileUrl);
+      toast.success("Link do perfil copiado.");
+    } catch {
+      toast.error("Não foi possível copiar o link agora.");
+    }
+  };
 
-                        {/* Header: Auth Node (Fingerprint) */}
-                        <div className="flex justify-between items-start">
-                            <div className="space-y-2">
-                                <h3 className="text-[10px] font-black text-zinc-950 dark:text-white/90 uppercase tracking-[0.3em] drop-shadow-md flex items-center gap-2">
-                                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
-                                    Auth Secure
-                                </h3>
-                                <div className="flex gap-1.5 opacity-20">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-white" />
-                                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-white" />
-                                    <div className="w-1.5 h-1.5 rounded-full bg-zinc-950 dark:bg-white" />
-                                </div>
-                            </div>
-                            <div className="p-2.5 rounded-2xl bg-black/5 dark:bg-white/[0.03] border border-black/10 dark:border-white/10 backdrop-blur-xl">
-                                <Fingerprint className={cn("w-5 h-5", plan === 'Enterprise' ? "text-zinc-700 dark:text-white" : "text-zinc-950/40 dark:text-white/40")} />
-                            </div>
-                        </div>
+  const saveSpecialty = () => {
+    const nextSpecialty = specialty.trim();
+    const currentSpecialty = profile?.specialty?.trim() || "";
+    if (nextSpecialty === currentSpecialty) return;
+    updateProfile({ specialty: nextSpecialty || null });
+  };
 
-                        {/* Profile Area */}
-                        <div className="flex flex-col items-center gap-6">
-                            <div className="relative group/avatar">
-                                <div className="p-1 rounded-[45px] bg-gradient-to-br from-black/10 dark:from-white/20 via-transparent dark:via-white/5 to-transparent shadow-2xl">
-                                    <Avatar className="h-[150px] w-[150px] border-[6px] border-white dark:border-zinc-950 shadow-inner rounded-[40px] transition-all duration-700">
-                                        <AvatarImage src={profile?.avatar_url} className="object-cover" />
-                                        <AvatarFallback className="bg-zinc-100 dark:bg-zinc-900 text-zinc-950 dark:text-white font-black text-5xl tracking-tighter">
-                                            {profile?.first_name?.charAt(0)}{profile?.last_name?.charAt(0)}
-                                        </AvatarFallback>
-                                    </Avatar>
-                                </div>
-                                {/* Verified Seal */}
-                                <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-emerald-500 shadow-2xl border-2 border-white dark:border-black flex items-center justify-center rounded-full backdrop-blur-3xl transition-transform group-hover/avatar:scale-110">
-                                    <CheckCircle className="w-4 h-4 text-white fill-white" />
-                                </div>
-                            </div>
+  const resetSpecialty = () => setSpecialty(profile?.specialty || "");
 
-                            <div className="space-y-3 text-center">
-                                <h4 className="text-3xl font-black text-zinc-950 dark:text-white tracking-tighter uppercase leading-none drop-shadow-sm">
-                                    {profile?.first_name} {profile?.last_name}
-                                </h4>
-                                <div className="px-5 py-2 rounded-full bg-black/5 dark:bg-white/[0.03] border border-black/10 dark:border-white/10 inline-block backdrop-blur-md">
-                                    <p className="text-[9px] text-zinc-600 dark:text-zinc-400 uppercase tracking-[0.4em] font-black">{profile?.crp || 'UNAUTHORIZED NODE'}</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Footer / QR / Badge */}
-                        <div className="flex items-end justify-between pt-6">
-                            <div className="space-y-4">
-                                <Dialog>
-                                    <DialogTrigger asChild>
-                                        <div className="p-1.5 bg-white rounded-xl shadow-xl transition-all w-[64px] h-[64px] flex items-center justify-center cursor-pointer hover:scale-[1.05] active:scale-[0.98] border border-zinc-100 dark:border-zinc-800">
-                                            <img
-                                                src={qrUrl}
-                                                alt="QR Code"
-                                                className="w-full h-full object-contain rounded-lg"
-                                            />
-                                        </div>
-                                    </DialogTrigger>
-                                    <DialogContent className="bg-zinc-950/95 backdrop-blur-[80px] border-white/[0.08] sm:max-w-[400px] p-0 rounded-[32px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.9)] overflow-hidden">
-                                        {/* Top highlight */}
-                                        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-
-                                        <div className="flex flex-col items-center p-8 space-y-6">
-                                            {/* Header */}
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-2xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center">
-                                                    <QrCode className="w-5 h-5 text-white/60" />
-                                                </div>
-                                                <div>
-                                                    <h4 className="text-xl font-bold text-white">NeuroNex ID</h4>
-                                                    <p className="text-[10px] text-white/40 uppercase tracking-[0.15em] font-medium">
-                                                        Digital Access Protocol
-                                                    </p>
-                                                </div>
-                                            </div>
-
-                                            {/* QR Code Container */}
-                                            <div className="relative group">
-                                                <div className="absolute -inset-3 bg-white/10 blur-[30px] rounded-full opacity-50" />
-                                                <div className="relative p-4 bg-white rounded-[20px] shadow-2xl shadow-white/5">
-                                                    <img
-                                                        src={qrUrl}
-                                                        alt="QR Code Expanded"
-                                                        className="w-56 h-56 object-contain"
-                                                    />
-                                                </div>
-                                            </div>
-
-                                            {/* Profile Info */}
-                                            <div className="text-center space-y-1">
-                                                <p className="text-lg font-bold text-white">
-                                                    {profile?.first_name} {profile?.last_name}
-                                                </p>
-                                                <p className="text-[10px] text-white/40 uppercase tracking-[0.2em]">
-                                                    {profile?.crp || 'Profissional Verificado'}
-                                                </p>
-                                            </div>
-
-                                            {/* URL Display */}
-                                            <div className="w-full p-3 rounded-xl bg-white/[0.02] border border-white/[0.06]">
-                                                <p className="text-[11px] text-white/50 text-center break-all font-mono">
-                                                    {qrData}
-                                                </p>
-                                            </div>
-
-                                            {/* Action Buttons */}
-                                            <div className="flex gap-3 w-full">
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={copyToClipboard}
-                                                    className="flex-1 h-11 rounded-xl border-white/[0.08] text-white hover:bg-white/[0.05] text-[10px] font-black uppercase tracking-[0.1em]"
-                                                >
-                                                    <Copy className="w-4 h-4 mr-2" />
-                                                    Copiar Link
-                                                </Button>
-                                                <Button
-                                                    onClick={() => window.open(qrData, '_blank')}
-                                                    className="flex-1 h-11 rounded-xl bg-white text-black hover:bg-white/90 text-[10px] font-black uppercase tracking-[0.1em] shadow-xl shadow-white/5"
-                                                >
-                                                    <ExternalLink className="w-4 h-4 mr-2" />
-                                                    Abrir Perfil
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </DialogContent>
-                                </Dialog>
-                                <div className="space-y-1">
-                                    <p className="text-[7px] font-black text-zinc-500 dark:text-zinc-600 uppercase tracking-widest">Protocol Version</p>
-                                    <p className="text-[10px] font-mono font-bold text-zinc-950/40 dark:text-white/40 italic tracking-wider">v2.4.0-ID</p>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col items-end gap-5">
-                                <div className={cn(
-                                    "px-5 py-2.5 rounded-2xl border text-[10px] font-black uppercase tracking-[0.3em] backdrop-blur-2xl shadow-xl transition-all",
-                                    plan === 'Enterprise' ? "bg-zinc-800/80 border-zinc-700/30 text-white shadow-black/20" :
-                                        plan === 'Professional' ? "bg-black/5 dark:bg-white/[0.03] border-black/10 dark:border-white/10 text-zinc-950 dark:text-white shadow-black/5" :
-                                            "bg-zinc-100 dark:bg-zinc-900/50 border-zinc-200 dark:border-zinc-700/30 text-zinc-600 dark:text-zinc-400"
-                                )}>
-                                    {plan} TIER
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-[7px] font-black text-zinc-500 dark:text-zinc-700 uppercase tracking-widest mb-1">Established</p>
-                                    <p className="text-lg font-black text-zinc-950 dark:text-white tracking-tighter drop-shadow-sm">2024</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="relative group">
-                <p className="text-[9px] text-zinc-500 dark:text-zinc-600 max-w-[280px] text-center font-bold tracking-[0.2em] uppercase leading-relaxed transition-colors group-hover:text-zinc-800 dark:group-hover:text-zinc-400">
-                    ID Bio-Digital certificado pela rede <span className="text-zinc-400 dark:text-zinc-500">NeuroNex Bank</span>. Acesso intransferível e criptografado.
-                </p>
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-zinc-200 dark:bg-zinc-900 rounded-full" />
-            </div>
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center gap-8 py-8">
+      <div className="z-10 space-y-3 text-center">
+        <motion.h3
+          animate={reduceMotion ? undefined : { opacity: [0.58, 1, 0.58] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          className="text-2xl font-black uppercase tracking-[0.2em] text-zinc-950 drop-shadow-lg dark:text-white"
+        >
+          NEUROID
+        </motion.h3>
+        <div className="flex items-center justify-center gap-3">
+          <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-800" />
+          <p className="text-[9px] font-black uppercase tracking-[0.28em] text-zinc-500">
+            Sua credencial de acesso
+          </p>
+          <div className="h-px w-8 bg-zinc-300 dark:bg-zinc-800" />
         </div>
-    );
+      </div>
+
+      <div className="group relative">
+        <div className="absolute -inset-4 bg-gradient-to-tr from-white/18 via-transparent to-zinc-400/10 opacity-0 blur-[60px] transition-opacity duration-1000 group-hover:opacity-100" />
+
+        <div
+          className={cn(
+            "relative h-[520px] w-[340px] overflow-hidden rounded-[48px] border p-9 backdrop-blur-3xl transition-all duration-700",
+            "border-white/40 bg-white/55 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.12),inset_0_1px_1px_rgba(255,255,255,0.5)]",
+            "dark:border-white/[0.075] dark:bg-[linear-gradient(145deg,rgba(28,28,29,0.94),rgba(13,13,14,0.96))] dark:shadow-[0_42px_90px_-34px_rgba(0,0,0,0.9),inset_0_1px_rgba(255,255,255,0.07)]",
+            "group-hover:-translate-y-1 group-hover:shadow-[0_42px_80px_-20px_rgba(0,0,0,0.18)] dark:group-hover:shadow-[0_54px_110px_-34px_rgba(0,0,0,0.96),0_14px_44px_-28px_rgba(255,255,255,0.2),inset_0_1px_rgba(255,255,255,0.09)]",
+          )}
+        >
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_12%,rgba(255,255,255,0.12),transparent_32%),linear-gradient(120deg,transparent_38%,rgba(255,255,255,0.035)_52%,transparent_68%)]"
+          />
+
+          <div className="relative flex h-full flex-col justify-between">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-700 dark:text-white/75">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
+                {isVerified ? "Identidade verificada" : "Perfil profissional"}
+              </div>
+              <motion.div
+                animate={
+                  reduceMotion
+                    ? undefined
+                    : { opacity: [0.72, 1, 0.72], scale: [1, 1.025, 1] }
+                }
+                transition={{
+                  duration: 3.6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+                className="relative flex items-center gap-1.5 overflow-hidden rounded-full border border-zinc-300/70 bg-zinc-950 px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] text-white shadow-lg dark:border-white/10 dark:bg-white/[0.075]"
+                title="Reconhecimento a quem ajudou a construir a NeuroNex desde o início"
+              >
+                <Sparkles className="h-3 w-3" />
+                Founder
+              </motion.div>
+            </div>
+
+            <div className="flex flex-col items-center gap-5">
+              <div className="group/avatar relative">
+                <div className="rounded-[45px] bg-gradient-to-br from-black/10 via-transparent to-transparent p-1 shadow-2xl dark:from-white/20 dark:via-white/5">
+                  <Avatar className="h-[142px] w-[142px] rounded-[40px] border-[6px] border-white shadow-inner transition-transform duration-700 group-hover/avatar:scale-[1.015] dark:border-zinc-950">
+                    <AvatarImage
+                      src={profile?.avatar_url || undefined}
+                      className="object-cover"
+                      alt="Foto do perfil"
+                    />
+                    <AvatarFallback className="bg-zinc-100 text-5xl font-black tracking-tighter text-zinc-950 dark:bg-zinc-900 dark:text-white">
+                      {profile?.first_name?.charAt(0)}
+                      {profile?.last_name?.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+                {isVerified ? (
+                  <div className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[radial-gradient(circle_at_32%_20%,rgba(255,255,255,0.85),transparent_28%),linear-gradient(145deg,#3f3f46,#09090b)] shadow-2xl transition-transform group-hover/avatar:scale-110 dark:border-black">
+                    <BadgeCheck
+                      className="h-5 w-5 text-white drop-shadow-md"
+                      aria-label="Perfil verificado"
+                    />
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="w-full space-y-3 text-center">
+                <h4 className="truncate text-3xl font-black uppercase leading-none tracking-tighter text-zinc-950 drop-shadow-sm dark:text-white">
+                  {profile?.first_name} {profile?.last_name}
+                </h4>
+                <div className="mx-auto max-w-[250px]">
+                  <label htmlFor="neuroid-specialty" className="sr-only">
+                    Principal área de atuação
+                  </label>
+                  <Input
+                    id="neuroid-specialty"
+                    value={specialty}
+                    onChange={(event) =>
+                      setSpecialty(event.target.value.slice(0, 42))
+                    }
+                    onBlur={saveSpecialty}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.currentTarget.blur();
+                      if (event.key === "Escape") {
+                        resetSpecialty();
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    disabled={isUpdating}
+                    maxLength={42}
+                    placeholder="Ex.: Neuropsicólogo"
+                    className="h-9 rounded-full border-black/10 bg-black/5 px-4 text-center text-[9px] font-black uppercase tracking-[0.18em] text-zinc-700 placeholder:text-zinc-400 dark:border-white/10 dark:bg-white/[0.035] dark:text-zinc-300 dark:placeholder:text-zinc-600"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-end justify-between gap-5 pt-4">
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={!qrUrl}
+                    className="h-[66px] w-[66px] rounded-2xl border border-zinc-200 bg-white p-1.5 shadow-xl transition-transform hover:scale-[1.04] hover:bg-white active:scale-[0.98] dark:border-zinc-800"
+                    aria-label="Abrir QR Code do perfil compartilhável"
+                  >
+                    {qrUrl ? (
+                      <img
+                        src={qrUrl}
+                        alt="QR Code do perfil compartilhável"
+                        className="h-full w-full rounded-xl object-contain"
+                      />
+                    ) : (
+                      <QrCode className="h-5 w-5" />
+                    )}
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="desktop-retina-modal overflow-hidden rounded-[32px] border-white/[0.08] bg-zinc-950/95 p-0 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.9)] backdrop-blur-[80px] sm:max-w-[420px]">
+                  <div className="flex flex-col items-center space-y-6 p-8">
+                    <div className="flex items-center gap-3 self-start">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/[0.08] bg-white/[0.05]">
+                        <QrCode className="h-5 w-5 text-white/65" />
+                      </div>
+                      <div>
+                        <h4 className="text-xl font-bold text-white">
+                          NEUROID
+                        </h4>
+                        <p className="text-[10px] font-medium uppercase tracking-[0.15em] text-white/45">
+                          Perfil para pacientes e redes sociais
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="relative rounded-[22px] bg-white p-4 shadow-2xl shadow-white/5">
+                      <img
+                        src={qrUrl}
+                        alt="QR Code ampliado do perfil"
+                        className="h-56 w-56 object-contain"
+                      />
+                    </div>
+
+                    <div className="space-y-1 text-center">
+                      <p className="text-lg font-bold text-white">
+                        {profile?.first_name} {profile?.last_name}
+                      </p>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">
+                        {specialty || "Profissional verificado"}
+                      </p>
+                    </div>
+
+                    <div className="w-full rounded-xl border border-white/[0.06] bg-white/[0.025] p-3">
+                      <p className="break-all text-center font-mono text-[11px] text-white/55">
+                        {profileUrl}
+                      </p>
+                    </div>
+
+                    <div className="flex w-full gap-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void copyToClipboard()}
+                        className="h-11 flex-1 rounded-xl border-white/[0.09] text-[10px] font-black uppercase tracking-[0.1em] text-white hover:bg-white/[0.06]"
+                      >
+                        <Copy className="mr-2 h-4 w-4" /> Copiar link
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            profileUrl,
+                            "_blank",
+                            "noopener,noreferrer",
+                          )
+                        }
+                        className="h-11 flex-1 rounded-xl bg-white text-[10px] font-black uppercase tracking-[0.1em] text-black hover:bg-white/90"
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" /> Abrir perfil
+                      </Button>
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+
+              <div className="flex flex-col items-end gap-2 text-right">
+                <span className="text-[7px] font-black uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-600">
+                  Plano atual
+                </span>
+                <div className="rounded-2xl border border-black/10 bg-black/5 px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-zinc-800 shadow-sm dark:border-white/10 dark:bg-white/[0.045] dark:text-white">
+                  {plan}
+                </div>
+                {isUpdating ? (
+                  <span className="flex items-center gap-1 text-[8px] font-bold text-zinc-500">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Salvando
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p className="max-w-[310px] text-center text-[9px] font-bold uppercase leading-relaxed tracking-[0.16em] text-zinc-500 dark:text-zinc-600">
+        Sua identidade profissional para compartilhar o consultório e facilitar
+        o acesso dos seus pacientes.
+      </p>
+    </div>
+  );
 };

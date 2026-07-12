@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,7 +6,7 @@ import { Loader2, Mail, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
-import { useFinancialSettings } from "@/hooks/use-financial-settings";
+import { useFinancialPinStatus } from "@/hooks/use-financial-pin-status";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 interface SetPinFormProps {
@@ -45,9 +45,10 @@ const PinSlots = ({
 );
 
 export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
-    const { settings } = useFinancialSettings();
-    const hasExistingPin = Boolean(settings?.pin_hash);
-    const [step, setStep] = useState<Step>(hasExistingPin ? "current" : "create");
+    const pinStatus = useFinancialPinStatus();
+    const hasExistingPin = Boolean(pinStatus.data?.isConfigured);
+    const [step, setStep] = useState<Step>("create");
+    const [isInitialized, setIsInitialized] = useState(false);
     const [currentPin, setCurrentPin] = useState("");
     const [pin, setPin] = useState("");
     const [confirmPin, setConfirmPin] = useState("");
@@ -56,17 +57,23 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
     const [isLoading, setIsLoading] = useState(false);
     const [resetRequested, setResetRequested] = useState(false);
 
+    useEffect(() => {
+        if (pinStatus.isLoading || isInitialized) return;
+        setStep(hasExistingPin ? "current" : "create");
+        setIsInitialized(true);
+    }, [hasExistingPin, isInitialized, pinStatus.isLoading]);
+
     const title = useMemo(() => {
         if (step === "password-reset") return "Confirme sua senha";
         if (step === "current") return "Confirme seu PIN atual";
         if (step === "reset-code") return "Código enviado por e-mail";
         if (step === "confirm") return "Confirme seu novo PIN";
-        return hasExistingPin ? "Escolha um novo PIN" : "Configurar PIN do Cofre";
+        return hasExistingPin ? "Escolha um novo PIN" : "Criar PIN financeiro";
     }, [hasExistingPin, step]);
 
     const description = useMemo(() => {
         if (step === "password-reset") return "Usaremos sua senha de acesso apenas para autorizar a redefinição.";
-        if (step === "current") return "Digite o PIN atual para alterar sua assinatura digital.";
+        if (step === "current") return "Digite o PIN atual para confirmar a alteração.";
         if (step === "reset-code") return "Use o código recebido no e-mail da sua conta.";
         if (step === "confirm") return "Digite novamente para evitar erro de digitação.";
         return "Este PIN de 6 dígitos protege saques, Pix e ações financeiras.";
@@ -133,6 +140,14 @@ export const SetPinForm = ({ onSuccess }: SetPinFormProps) => {
             setIsLoading(false);
         }
     };
+
+    if (pinStatus.isLoading || !isInitialized) {
+        return (
+            <div className="flex min-h-48 w-full items-center justify-center" aria-label="Consultando situação do PIN">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+        );
+    }
 
     return (
         <div className="relative z-10 flex w-full max-w-[21rem] flex-col items-center space-y-8 text-center">

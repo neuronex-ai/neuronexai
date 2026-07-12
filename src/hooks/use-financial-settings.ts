@@ -5,14 +5,14 @@ import { useQuery } from '@tanstack/react-query';
 export interface FinancialSettings {
   id: string;
   user_id: string;
-  pin_hash: string | null;
-  updated_at: string;
+  pin_last_verified_at: string | null;
+  updated_at: string | null;
 }
 
 const fetchFinancialSettings = async (userId: string): Promise<FinancialSettings | null> => {
   const { data, error } = await supabase
     .from('user_financial_settings')
-    .select('*')
+    .select('id, user_id, pin_last_verified_at, updated_at')
     .eq('user_id', userId)
     .maybeSingle();
 

@@ -1,4 +1,4 @@
-import { Activity, Calendar, Target, TrendingUp } from 'lucide-react';
+import { Activity, Calendar, PackageCheck, Target, TrendingUp } from "lucide-react";
 
 interface MonthlyReportTemplateProps {
   patientName: string;
@@ -22,92 +22,119 @@ export const MonthlyReportTemplate = ({
   professionalName,
   stats,
   financialSummary,
-  clinicalSummary
+  clinicalSummary,
 }: MonthlyReportTemplateProps) => {
+  const professionalInitials = professionalName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0))
+    .join("")
+    .toUpperCase();
+
   return (
-    <div className="w-full aspect-[210/297] mx-auto relative bg-white text-slate-800 shadow-2xl font-sans flex flex-col print:shadow-none print:m-0 overflow-hidden">
-        
-        {/* Topo Colorido */}
-        <div className="h-3 bg-gradient-to-r from-purple-600 via-blue-500 to-emerald-400 w-full" />
+    <article className="relative mx-auto flex aspect-[210/297] w-full flex-col overflow-hidden bg-[#fbfbfa] font-sans text-zinc-900 shadow-2xl print:m-0 print:shadow-none">
+      <div className="h-1.5 w-full bg-zinc-950" />
 
-        <div className="p-12 flex-1 flex flex-col">
-            {/* Header */}
-            <div className="flex justify-between items-start mb-12">
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Relatório de Acompanhamento</h1>
-                    <p className="text-purple-600 font-medium mt-1 text-lg">Mês de Referência: {month}</p>
-                </div>
-                <div className="text-right">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Paciente</p>
-                    <p className="text-lg font-bold text-slate-800">{patientName}</p>
-                </div>
+      <div className="flex flex-1 flex-col p-10 sm:p-12">
+        <header className="mb-10 border-b border-zinc-200 pb-8">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.28em] text-zinc-500">
+              NeuroNex · acompanhamento clínico
+            </p>
+            <p className="rounded-full border border-zinc-200 px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-600">
+              {month}
+            </p>
+          </div>
+
+          <div className="flex items-end justify-between gap-8">
+            <div className="max-w-[70%]">
+              <h1 className="text-3xl font-semibold leading-[1.05] tracking-[-0.035em] text-zinc-950">
+                Relatório mensal de acompanhamento
+              </h1>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-500">
+                Uma síntese objetiva do período, preparada para facilitar o acompanhamento do cuidado.
+              </p>
             </div>
-
-            {/* Grid de Stats */}
-            <div className="grid grid-cols-3 gap-4 mb-10">
-                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
-                    <div className="flex items-center gap-2 text-purple-700 mb-2">
-                        <Activity size={18} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Presença</span>
-                    </div>
-                    <p className="text-2xl font-bold text-slate-800">{stats.attended} <span className="text-sm font-normal text-slate-500">sessões</span></p>
-                </div>
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-600 mb-2">
-                        <Calendar size={18} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Próxima</span>
-                    </div>
-                    <p className="text-lg font-bold text-slate-800 truncate">{stats.next || "A agendar"}</p>
-                </div>
-                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                    <div className="flex items-center gap-2 text-emerald-700 mb-2">
-                        <Target size={18} />
-                        <span className="text-[10px] font-bold uppercase tracking-wider">Foco</span>
-                    </div>
-                    <p className="text-sm font-medium text-emerald-900">Evolução Contínua</p>
-                </div>
+            <div className="min-w-0 text-right">
+              <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-zinc-400">Paciente</p>
+              <p className="mt-1 truncate text-base font-semibold text-zinc-900">{patientName}</p>
             </div>
+          </div>
+        </header>
 
-            {/* Resumo Clínico (Genérico/Seguro) */}
-            <div className="mb-10">
-                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
-                    <TrendingUp size={16} /> Visão Geral
-                </h3>
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-slate-600 leading-relaxed text-sm">
-                    {clinicalSummary || "Neste mês, trabalhamos na consolidação das metas terapêuticas estabelecidas. Observou-se engajamento satisfatório com o processo e consistência na frequência."}
-                </div>
+        <section aria-label="Resumo do período" className="mb-9 grid grid-cols-3 gap-3">
+          <div className="rounded-2xl bg-zinc-950 p-4 text-white">
+            <div className="mb-5 flex items-center gap-2 text-zinc-400">
+              <Activity className="h-4 w-4" aria-hidden="true" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em]">Sessões</span>
             </div>
+            <p className="text-2xl font-semibold tabular-nums">{stats.attended}</p>
+            <p className="mt-1 text-[10px] text-zinc-400">{stats.cancelled} cancelada(s)</p>
+          </div>
 
-            {/* Resumo Financeiro (Se existir) */}
-            {financialSummary && (
-                <div className="mb-10">
-                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2">
-                        Status do Plano
-                    </h3>
-                    <div className="flex justify-between bg-slate-900 text-white p-6 rounded-2xl shadow-lg">
-                        <div>
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Pacote Ativo</p>
-                            <p className="text-lg font-medium">{financialSummary.packagesActive}</p>
-                        </div>
-                         <div className="text-right">
-                            <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">Investimento (Mês)</p>
-                            <p className="text-2xl font-bold text-emerald-400">{financialSummary.totalInvested}</p>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Footer */}
-            <div className="mt-auto pt-8 border-t border-slate-100 flex items-center gap-4">
-                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-700 font-bold text-sm">
-                    {professionalName.substring(0,2).toUpperCase()}
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-slate-900">{professionalName}</p>
-                    <p className="text-xs text-slate-500">Psicólogo Responsável</p>
-                </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+            <div className="mb-5 flex items-center gap-2 text-zinc-500">
+              <Calendar className="h-4 w-4" aria-hidden="true" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em]">Próxima sessão</span>
             </div>
-        </div>
-    </div>
+            <p className="truncate text-base font-semibold text-zinc-900">{stats.next || "A agendar"}</p>
+          </div>
+
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-100/70 p-4">
+            <div className="mb-5 flex items-center gap-2 text-zinc-500">
+              <Target className="h-4 w-4" aria-hidden="true" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.18em]">Continuidade</span>
+            </div>
+            <p className="text-base font-semibold leading-tight text-zinc-900">Evolução em acompanhamento</p>
+          </div>
+        </section>
+
+        <section className="mb-9">
+          <div className="mb-4 flex items-center gap-2 border-b border-zinc-200 pb-3">
+            <TrendingUp className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+            <h2 className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-700">Visão geral</h2>
+          </div>
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 text-sm leading-7 text-zinc-600">
+            {clinicalSummary ||
+              "Neste mês, o acompanhamento permaneceu orientado às metas terapêuticas definidas em conjunto, com atenção à continuidade do cuidado e aos próximos passos do processo."}
+          </div>
+        </section>
+
+        {financialSummary ? (
+          <section className="mb-9">
+            <div className="mb-4 flex items-center gap-2 border-b border-zinc-200 pb-3">
+              <PackageCheck className="h-4 w-4 text-zinc-500" aria-hidden="true" />
+              <h2 className="text-[10px] font-semibold uppercase tracking-[0.22em] text-zinc-700">Plano de atendimento</h2>
+            </div>
+            <div className="grid grid-cols-[1fr_auto] items-center gap-6 rounded-2xl bg-zinc-950 p-5 text-white">
+              <div className="min-w-0">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Pacote atual</p>
+                <p className="mt-1 truncate text-sm font-medium">{financialSummary.packagesActive}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-zinc-500">Valor do pacote</p>
+                <p className="mt-1 text-lg font-semibold tabular-nums">{financialSummary.totalInvested}</p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        <footer className="mt-auto flex items-center justify-between border-t border-zinc-200 pt-7">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
+              {professionalInitials || "NN"}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-zinc-900">{professionalName}</p>
+              <p className="text-[10px] text-zinc-500">Profissional responsável</p>
+            </div>
+          </div>
+          <p className="text-right text-[9px] leading-relaxed text-zinc-400">
+            Documento confidencial<br />NeuroNex
+          </p>
+        </footer>
+      </div>
+    </article>
   );
 };

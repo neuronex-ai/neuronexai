@@ -43,9 +43,9 @@ export function NeuroFinanceWelcomeWizard({
   const title = step === "success" ? "Sua conta NeuroFinance foi criada." : step === "pin" ? "Defina seu PIN de 6 dígitos." : "Escolha para onde deseja sacar.";
   const eyebrow = step === "success" ? "Conta criada" : step === "pin" ? "Segurança financeira" : "Dados de recebimento";
   const description = step === "success"
-    ? "Recebemos seus dados com sucesso. A análise segue em andamento e você pode acompanhar cada etapa em Ajustes > Saúde da Conta."
+    ? "Recebemos seus dados com sucesso. A análise segue em andamento e você pode acompanhar cada etapa em NeuroFinance > Saúde da conta."
     : step === "pin"
-      ? "Esse PIN será solicitado para saques, transferências e ações sensíveis. Depois, você poderá redefini-lo em Ajustes > Segurança > PIN."
+      ? "Esse PIN será solicitado para saques, transferências e ações sensíveis. Depois, você poderá redefini-lo em Ajustes > NeuroFinance."
       : "Cadastre uma conta bancária, uma chave Pix pessoal ou ambas. Você poderá editar esses dados depois em Ajustes > Conta bancária.";
 
   const savePin = async () => {
@@ -98,7 +98,7 @@ export function NeuroFinanceWelcomeWizard({
             <p className="mt-5 max-w-xl text-xs font-medium leading-relaxed text-zinc-500 dark:text-zinc-400 md:text-sm">{description}</p>
 
             {step === "success" ? (
-              <div className="mt-7 grid gap-3 sm:grid-cols-3">{["Acompanhe documentos em Ajustes > Saúde da Conta", "Receba cobranças enquanto a análise avança", "Proteja transações com PIN financeiro"].map((item) => <div key={item} className="rounded-2xl border border-zinc-200/75 bg-zinc-50/80 p-3 text-[9px] font-bold uppercase leading-relaxed tracking-[0.12em] text-zinc-500 dark:border-white/10 dark:bg-white/[0.035]">{item}</div>)}</div>
+              <div className="mt-7 grid gap-3 sm:grid-cols-3">{["Acompanhe documentos em NeuroFinance > Saúde da conta", "Receba cobranças enquanto a análise avança", "Proteja transações com PIN financeiro"].map((item) => <div key={item} className="rounded-2xl border border-zinc-200/75 bg-zinc-50/80 p-3 text-[9px] font-bold uppercase leading-relaxed tracking-[0.12em] text-zinc-500 dark:border-white/10 dark:bg-white/[0.035]">{item}</div>)}</div>
             ) : step === "pin" ? (
               <div className="mt-8 space-y-6">
                 <PinInput label="Novo PIN" value={pin} onChange={setPin} disabled={saving} />

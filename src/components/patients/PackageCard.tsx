@@ -39,6 +39,8 @@ export const PackageCard = ({ pkg, patientId }: PackageCardProps) => {
     const { mutate: consumeSession, isPending: isUsingSession } = useUsePackageSession();
     const { mutate: deletePackage, isPending: isDeleting } = useDeletePatientPackage();
     const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isEditingPackage, setIsEditingPackage] = useState(false);
 
     const handleUseSession = () => {
         consumeSession({ packageId: pkg.id, patientId });
@@ -89,26 +91,38 @@ export const PackageCard = ({ pkg, patientId }: PackageCardProps) => {
                         </div>
                     </div>
 
-                    <DropdownMenu>
+                    <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-9 w-9 text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-[#18181a] rounded-xl">
                                 <MoreVertical className="h-4 w-4" />
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="bg-white/95 dark:bg-[#0b0b0d]/95 backdrop-blur-xl border-zinc-200 dark:border-white/[0.085] rounded-2xl p-1.5 shadow-2xl">
-                            <EditPackageModal pkg={pkg}>
-                                <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="cursor-pointer text-[10px] font-black uppercase tracking-widest gap-2.5 p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-[#18181a] text-zinc-700 dark:text-zinc-300 focus:text-zinc-900 dark:focus:text-white">
-                                    <Edit className="h-3.5 w-3.5" /> Editar
-                                </DropdownMenuItem>
-                            </EditPackageModal>
+                            <DropdownMenuItem
+                                onSelect={() => {
+                                    setIsMenuOpen(false);
+                                    setIsEditingPackage(true);
+                                }}
+                                className="cursor-pointer text-[10px] font-black uppercase tracking-widest gap-2.5 p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-[#18181a] text-zinc-700 dark:text-zinc-300 focus:text-zinc-900 dark:focus:text-white"
+                            >
+                                <Edit className="h-3.5 w-3.5" /> Editar
+                            </DropdownMenuItem>
                             <DropdownMenuItem
                                 className="text-rose-500 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-500/10 cursor-pointer text-[10px] font-black uppercase tracking-widest gap-2.5 p-2.5 rounded-xl mt-1"
-                                onSelect={() => setIsConfirmingDelete(true)}
+                                onSelect={() => {
+                                    setIsMenuOpen(false);
+                                    setIsConfirmingDelete(true);
+                                }}
                             >
                                 <Trash2 className="h-3.5 w-3.5" /> Excluir
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    <EditPackageModal
+                        pkg={pkg}
+                        open={isEditingPackage}
+                        onOpenChange={setIsEditingPackage}
+                    />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">

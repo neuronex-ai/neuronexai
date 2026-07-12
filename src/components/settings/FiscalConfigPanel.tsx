@@ -7,8 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Building2, FileCheck2 } from "lucide-react";
+import { ArrowRight, Loader2, Building2, FileCheck2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { useFiscalSettings } from "@/hooks/use-fiscal-settings";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -24,7 +25,7 @@ const fiscalSchema = z.object({
   municipal_code: z.string().optional(),
   auto_issue: z.boolean().default(false),
   fiscal_provider: z.literal("asaas").default("asaas"),
-  fiscal_email: z.string().email("Email fiscal invalido").optional().or(z.literal("")),
+  fiscal_email: z.string().email("E-mail fiscal inválido").optional().or(z.literal("")),
   simples_nacional: z.boolean().default(true),
   cultural_projects_promoter: z.boolean().default(false),
   cnae: z.string().optional(),
@@ -126,10 +127,10 @@ export const FiscalConfigPanel = () => {
       if (error) throw new Error(error.message);
       setMunicipalServices(data?.data || []);
       if (!data?.data?.length) {
-        toast.info("Nenhum servico municipal encontrado para esse filtro.");
+        toast.info("Nenhum serviço municipal foi encontrado para esse filtro.");
       }
-    } catch (error: any) {
-      toast.error(`Erro ao buscar servicos Asaas: ${error.message}`);
+    } catch {
+      toast.error("Não foi possível consultar os serviços municipais agora.");
     } finally {
       setIsLoadingServices(false);
     }
@@ -157,30 +158,40 @@ export const FiscalConfigPanel = () => {
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-8 max-w-3xl"
+      className="mx-auto max-w-4xl space-y-7"
     >
-      <div className="flex flex-col items-center gap-6 border-b border-border/10 pb-8 text-center md:flex-row md:items-center md:text-left md:justify-between">
-        <div className="flex flex-col items-center gap-4 md:flex-row">
-          <div className="w-12 h-12 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-            <Building2 className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-foreground mb-1">Dados Fiscais</h2>
-            <p className="text-sm text-muted-foreground font-medium max-w-sm mx-auto md:mx-0">Informações para emissão de Nota Fiscal de Serviço (NFS-e).</p>
-          </div>
+      <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground/65">Dados fiscais</p>
+          <h2 className="mt-2 text-2xl font-black tracking-[-0.035em] text-foreground">Configurações da NFS-e</h2>
+          <p className="mt-2 max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground">
+            Mantenha aqui o cadastro do prestador e as regras usadas nas notas. A emissão e o histórico continuam no NeuroFinance.
+          </p>
         </div>
         <Button
           onClick={form.handleSubmit(onSubmit)}
           disabled={isSaving}
-          className="bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-8 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-lg shadow-primary/20 transition-all active:scale-95 active:shadow-none hover:-translate-y-0.5 w-full md:w-auto"
+          className="desktop-retina-interactive h-11 w-full rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.15em] sm:w-auto"
         >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar Configurações"}
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar configurações"}
+        </Button>
+      </div>
+
+      <div className="desktop-retina-inset flex flex-col gap-4 rounded-[24px] border border-border/45 bg-muted/25 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-black text-foreground">Onde emitir e acompanhar as notas?</p>
+          <p className="mt-1 text-xs font-medium leading-relaxed text-muted-foreground">
+            Use NeuroFinance › NFS-e para criar notas, consultar o processamento e abrir documentos emitidos.
+          </p>
+        </div>
+        <Button asChild variant="outline" className="h-10 shrink-0 rounded-2xl px-4 font-bold">
+          <Link to="/financeiro?view=fiscal-nova">Abrir NFS-e <ArrowRight className="ml-2 h-4 w-4" /></Link>
         </Button>
       </div>
 
       <Form {...form}>
         <form className="space-y-10">
-          <div className="space-y-6">
+          <div className="desktop-retina-panel space-y-6 rounded-[28px] border border-border/45 p-6">
             <div className="flex items-center gap-2 mb-2">
               <Building2 className="h-4 w-4 text-muted-foreground" />
               <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Prestador</h3>
@@ -229,7 +240,7 @@ export const FiscalConfigPanel = () => {
 
               <FormField control={form.control} name="fiscal_email" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">Email fiscal Asaas</FormLabel>
+                  <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">E-mail para envio das notas</FormLabel>
                   <FormControl>
                     <Input {...field} type="email" className="bg-secondary/40 dark:bg-secondary/20 border-border/10 h-12 rounded-xl focus:border-primary/50 transition-all focus:bg-secondary/30 dark:focus:bg-secondary/10" />
                   </FormControl>
@@ -239,7 +250,7 @@ export const FiscalConfigPanel = () => {
 
               <FormField control={form.control} name="cnae" render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">CNAE</FormLabel>
+                  <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">Código da atividade (CNAE)</FormLabel>
                   <FormControl>
                     <Input {...field} className="bg-secondary/40 dark:bg-secondary/20 border-border/10 h-12 rounded-xl focus:border-primary/50 transition-all focus:bg-secondary/30 dark:focus:bg-secondary/10" />
                   </FormControl>
@@ -253,7 +264,7 @@ export const FiscalConfigPanel = () => {
                 <FormItem className="flex items-center justify-between gap-6 rounded-2xl border border-border/10 bg-secondary/20 p-4">
                   <div>
                     <FormLabel className="text-sm font-bold">Simples Nacional</FormLabel>
-                    <FormDescription className="text-[10px] text-muted-foreground">Enviado para o fiscalInfo da subconta Asaas.</FormDescription>
+                    <FormDescription className="text-[10px] text-muted-foreground">Usado no cadastro tributário para emissão da NFS-e.</FormDescription>
                   </div>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
@@ -263,7 +274,7 @@ export const FiscalConfigPanel = () => {
                 <FormItem className="flex items-center justify-between gap-6 rounded-2xl border border-border/10 bg-secondary/20 p-4">
                   <div>
                     <FormLabel className="text-sm font-bold">Incentivo cultural</FormLabel>
-                    <FormDescription className="text-[10px] text-muted-foreground">Marque apenas quando aplicavel ao cadastro municipal.</FormDescription>
+                    <FormDescription className="text-[10px] text-muted-foreground">Marque apenas quando aplicável ao cadastro municipal.</FormDescription>
                   </div>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
@@ -271,10 +282,10 @@ export const FiscalConfigPanel = () => {
             </div>
           </div>
 
-          <div className="space-y-6 pt-6 border-t border-border/5">
+          <div className="desktop-retina-panel space-y-6 rounded-[28px] border border-border/45 p-6">
             <div className="flex items-center gap-2 mb-2">
               <FileCheck2 className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Emissão automática via Asaas</h3>
+              <h3 className="text-sm font-bold text-foreground uppercase tracking-wider">Regras de emissão</h3>
             </div>
 
             <div className="space-y-6">
@@ -282,7 +293,7 @@ export const FiscalConfigPanel = () => {
                 <FormItem className="flex items-center justify-between gap-6 rounded-2xl border border-border/10 bg-secondary/20 p-4">
                   <div>
                     <FormLabel className="text-sm font-bold">Emitir NFS-e após confirmação do pagamento</FormLabel>
-                    <FormDescription className="text-[10px] text-muted-foreground">A cobrança paga agenda automaticamente a nota pela API v3 da Asaas.</FormDescription>
+                    <FormDescription className="text-[10px] text-muted-foreground">Quando ativado, um pagamento confirmado prepara automaticamente a emissão da nota.</FormDescription>
                   </div>
                   <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                 </FormItem>
@@ -291,18 +302,18 @@ export const FiscalConfigPanel = () => {
               <div className="rounded-2xl border border-border/10 bg-secondary/20 p-4 space-y-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div>
-                    <p className="text-sm font-bold">Servico municipal Asaas</p>
-                    <p className="text-[10px] text-muted-foreground">Busca oficial da subconta para selecionar o codigo usado na NFS-e.</p>
+                    <p className="text-sm font-bold">Serviço municipal</p>
+                    <p className="text-[10px] text-muted-foreground">Consulte os serviços disponíveis e selecione o que corresponde ao atendimento prestado.</p>
                   </div>
                   <Button type="button" variant="outline" size="sm" onClick={loadMunicipalServices} disabled={isLoadingServices}>
-                    {isLoadingServices ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar servicos"}
+                    {isLoadingServices ? <Loader2 className="h-4 w-4 animate-spin" /> : "Buscar serviços"}
                   </Button>
                 </div>
 
                 {municipalServices.length > 0 && (
                   <Select onValueChange={selectMunicipalService}>
                     <SelectTrigger className="h-12 rounded-xl bg-background/60">
-                      <SelectValue placeholder="Selecionar servico municipal" />
+                      <SelectValue placeholder="Selecionar serviço municipal" />
                     </SelectTrigger>
                     <SelectContent>
                       {municipalServices.map((service) => (
@@ -316,25 +327,21 @@ export const FiscalConfigPanel = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField control={form.control} name="asaas_municipal_service_id" render={({ field }) => (
+                <FormField control={form.control} name="asaas_municipal_service_name" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">ID do serviço municipal Asaas</FormLabel>
-                    <FormControl><Input {...field} className="bg-secondary/40 dark:bg-secondary/20 border-border/10 h-12 rounded-xl" /></FormControl>
+                    <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">Serviço selecionado</FormLabel>
+                    <FormControl><Input {...field} readOnly className="bg-secondary/40 dark:bg-secondary/20 border-border/10 h-12 rounded-xl" /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )} />
 
-                <FormField control={form.control} name="asaas_municipal_service_name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">Nome do serviço municipal</FormLabel>
-                    <FormControl><Input {...field} className="bg-secondary/40 dark:bg-secondary/20 border-border/10 h-12 rounded-xl" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
+                <FormField control={form.control} name="asaas_municipal_service_id" render={({ field }) => (
+                  <input type="hidden" {...field} />
                 )} />
 
                 <FormField control={form.control} name="service_code" render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">Cód. Serviço (quando não houver ID)</FormLabel>
+                    <FormLabel className="text-[10px] text-muted-foreground/60 font-bold uppercase tracking-widest">Código municipal do serviço</FormLabel>
                     <FormControl><Input {...field} className="bg-secondary/40 dark:bg-secondary/20 border-border/10 h-12 rounded-xl" /></FormControl>
                     <FormMessage />
                   </FormItem>

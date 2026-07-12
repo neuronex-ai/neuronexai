@@ -1299,11 +1299,12 @@ export function NewAppointmentModal({
       open={isOpen}
       onOpenChange={onOpenChange}
       trigger={children}
-      className="w-[calc(100vw-1rem)] bg-white/95 dark:bg-[#09090b]/95 backdrop-blur-[40px] border border-zinc-200 dark:border-white/[0.08] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] dark:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)] rounded-[24px] p-0 overflow-hidden sm:max-w-[640px] flex flex-col"
+      showCloseButton={false}
+      className="desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[24px] border border-border/70 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl sm:max-w-[640px]"
       drawerClassName="max-h-[92dvh]"
       contentStyle={{ maxHeight: "min(680px, calc(100dvh - 1rem))" }}
     >
-      <div className="flex flex-col flex-1 min-h-0 bg-gradient-to-b from-zinc-50/50 dark:from-card/50 to-transparent">
+      <div className="flex min-h-0 flex-1 flex-col bg-background">
         {/* Header */}
         <div className="px-5 pt-5 pb-3 sm:px-6 flex items-center justify-between shrink-0">
           <div>
@@ -1314,9 +1315,10 @@ export function NewAppointmentModal({
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            className="rounded-full w-9 h-9 hover:bg-secondary text-muted-foreground hover:text-foreground transition-all active:scale-90"
+            className="h-11 w-11 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]"
+            aria-label="Fechar novo agendamento"
           >
-            <X className="h-5 w-5" />
+            <X className="h-5 w-5" aria-hidden="true" />
           </Button>
         </div>
 
@@ -1332,7 +1334,7 @@ export function NewAppointmentModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-zinc-50/60 dark:bg-card/60 border-t border-zinc-200 dark:border-border/10 flex justify-between items-center backdrop-blur-xl shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-t border-border/60 bg-muted/20 p-4 backdrop-blur-xl">
           {step > 1 ? (
             <Button
               type="button"

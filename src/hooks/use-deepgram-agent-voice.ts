@@ -12,7 +12,7 @@ type ClientAction = { type?: string; payload?: unknown; data?: unknown };
 type PendingStart = {
   resolve: () => void;
   reject: (error: Error) => void;
-  timeoutId: ReturnType<typeof window.setTimeout>;
+  timeoutId: number;
 };
 
 interface Options {
@@ -45,9 +45,6 @@ const isLocalBrowserRuntime = () => {
   if (import.meta.env.DEV) return true;
   return /^(localhost|127\.0\.0\.1|0\.0\.0\.0)$/i.test(window.location.hostname);
 };
-
-const isLocalGatewayUrl = (value: string) =>
-  /^wss?:\/\/(?:localhost|127\.0\.0\.1|0\.0\.0\.0)(?::\d+)?(?:\/|$)/i.test(value);
 
 const localBrowserGatewayUrl = () => {
   if (typeof window === "undefined") return DEFAULT_GATEWAY_URL;

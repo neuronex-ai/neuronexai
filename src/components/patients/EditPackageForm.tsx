@@ -32,6 +32,9 @@ const EditPackageSchema = z.object({
 
 type EditPackageFormValues = z.infer<typeof EditPackageSchema>;
 
+const fieldClassName = "h-11 rounded-xl border-border/70 bg-muted/35 text-foreground shadow-none transition-colors focus:bg-background";
+const dateButtonClassName = "h-11 w-full rounded-xl border-border/70 bg-muted/35 px-3 pl-3 text-left font-normal text-foreground shadow-none hover:bg-muted/55";
+
 interface EditPackageFormProps {
   pkg: PatientPackage;
   onSuccess: () => void;
@@ -77,7 +80,7 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5" noValidate>
         <FormField
           control={form.control}
           name="description"
@@ -85,14 +88,14 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
             <FormItem>
               <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Descrição</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Pacote Mensal" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                <Input placeholder="Ex.: Pacote mensal" {...field} className={fieldClassName} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <FormField
             control={form.control}
             name="totalSessions"
@@ -100,7 +103,7 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Total</FormLabel>
                 <FormControl>
-                  <Input type="number" min={1} placeholder="4" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                  <Input type="number" min={1} placeholder="4" {...field} className={fieldClassName} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -113,7 +116,7 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Usadas</FormLabel>
                 <FormControl>
-                  <Input type="number" min={0} placeholder="0" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                  <Input type="number" min={0} placeholder="0" {...field} className={fieldClassName} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -126,7 +129,7 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Preço</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="0.00" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                  <Input type="number" min={0} step="0.01" inputMode="decimal" placeholder="0,00" {...field} className={fieldClassName} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -141,14 +144,14 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
             <FormItem>
               <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Dia do Vencimento</FormLabel>
               <FormControl>
-                <Input type="number" min={1} max={31} {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                <Input type="number" min={1} max={31} inputMode="numeric" {...field} className={fieldClassName} />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <FormField
             control={form.control}
             name="startDate"
@@ -160,17 +163,14 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
                     <FormControl>
                       <Button
                         variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal bg-black/20 border-white/10 hover:bg-black/30 h-11 rounded-xl px-3",
-                          !field.value && "text-muted-foreground"
-                        )}
+                        className={cn(dateButtonClassName, !field.value && "text-muted-foreground")}
                       >
                         {field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 border-white/10 bg-[#0A0A0B]" align="start">
+                  <PopoverContent className="w-auto border-border/70 bg-popover p-0" align="start">
                     <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ptBR} />
                   </PopoverContent>
                 </Popover>
@@ -189,17 +189,14 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
                     <FormControl>
                       <Button
                         variant={"outline"}
-                        className={cn(
-                          "w-full pl-3 text-left font-normal bg-black/20 border-white/10 hover:bg-black/30 h-11 rounded-xl px-3",
-                          !field.value && "text-muted-foreground"
-                        )}
+                        className={cn(dateButtonClassName, !field.value && "text-muted-foreground")}
                       >
                         {field.value ? format(field.value, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 border-white/10 bg-[#0A0A0B]" align="start">
+                  <PopoverContent className="w-auto border-border/70 bg-popover p-0" align="start">
                     <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ptBR} />
                   </PopoverContent>
                 </Popover>
@@ -209,7 +206,7 @@ export const EditPackageForm = ({ pkg, onSuccess }: EditPackageFormProps) => {
           />
         </div>
 
-        <Button type="submit" className="w-full gap-2 h-12 rounded-xl shadow-glow" disabled={isPending}>
+        <Button type="submit" className="h-12 w-full gap-2 rounded-xl bg-foreground text-background shadow-none hover:bg-foreground/90 active:scale-[0.99]" disabled={isPending}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <Save className="h-4 w-4" />
           {isPending ? "Salvando..." : "Salvar Alterações"}

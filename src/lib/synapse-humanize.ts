@@ -54,7 +54,7 @@ export const sanitizeSynapseDisplayText = (value: unknown, fallback = "Ação do
     .replace(/```[\s\S]*?```/g, " ")
     .replace(UUID_RE, " ")
     .replace(TECHNICAL_TOKEN_RE, " ")
-    .replace(/[{}\[\]"]/g, " ")
+    .replace(/[{}[\]"]/g, " ")
     .replace(SNAKE_CASE_RE, " ")
     .replace(/\s+/g, " ")
     .trim();

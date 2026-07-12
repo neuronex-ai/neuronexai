@@ -15,9 +15,9 @@ export const SetPinModal = ({ open, onOpenChange, onSuccess }: SetPinModalProps)
       open={open}
       onOpenChange={onOpenChange}
       size="sm"
-      eyebrow="Assinatura digital"
+      eyebrow="Segurança financeira"
       title="PIN financeiro"
-      description="Configure ou atualize o codigo de seis digitos usado para proteger acoes financeiras."
+      description="Configure ou atualize o código de seis dígitos usado para proteger suas operações financeiras."
       heroIcon={<ModalHeroIcon icon={KeyRound} ariaLabel="PIN financeiro" />}
       bodyClassName="flex justify-center"
     >

@@ -64,6 +64,7 @@ const HelpCenter = lazy(() => import("@/pages/public/HelpCenter"));
 // Desktop Help (Electron only - Lazy loaded)
 const DesktopHelpCenter = lazy(() => import("./pages/desktop/DesktopHelpCenter"));
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
+const PublicProfessionalProfile = lazy(() => import("./pages/public/PublicProfessionalProfile"));
 const SynapseGlobalShell = lazy(() => import("@/components/synapse/SynapseGlobalShell").then(m => ({ default: m.SynapseGlobalShell })));
 
 const queryClient = new QueryClient();
@@ -86,8 +87,11 @@ const PaidRoute = ({ children }: { children: ReactNode }) => (
 
 const SynapseShellGate = () => {
   const location = useLocation();
-  const isPatientSurface = location.pathname.startsWith("/portal") || location.pathname.startsWith("/join/");
-  if (isPatientSurface) return null;
+  const isFocusedPublicSurface =
+    location.pathname.startsWith("/portal") ||
+    location.pathname.startsWith("/join/") ||
+    location.pathname.startsWith("/id/");
+  if (isFocusedPublicSurface) return null;
 
   return <SynapseGlobalShell />;
 };
@@ -144,6 +148,7 @@ const SharedRoutes = () => {
         <Route path="/join/:appointmentId" element={<JoinSession />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/anamnese-externa/:id" element={<AnamnesisPublic />} />
+        <Route path="/id/:profileId" element={<PublicProfessionalProfile />} />
 
         {/* ─── Public Pages (web only) ────────────────────── */}
         {!electronMode && (

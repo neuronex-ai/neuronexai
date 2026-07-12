@@ -95,7 +95,7 @@ Deno.serve(async (req: Request) => {
         }
 
         // 1. Check if user already has a financial account with Asaas
-        let { data: existingAccount } = await supabaseAdmin
+        const { data: existingAccount } = await supabaseAdmin
             .from('financial_accounts')
             .select('*')
             .eq('user_id', user.id)

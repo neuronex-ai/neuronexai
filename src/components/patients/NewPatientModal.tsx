@@ -62,10 +62,10 @@ export const NewPatientModal = ({
             </div>
             <div className="min-w-0 flex-1">
               <DialogTitle className="text-lg font-semibold leading-tight tracking-normal text-foreground sm:text-xl">
-                Novo Prontuário
+                Novo prontuário
               </DialogTitle>
               <DialogDescription className="mt-1 text-sm text-muted-foreground">
-                Cadastro de paciente responsivo e completo.
+                Cadastre os dados essenciais e complemente o prontuário quando precisar.
               </DialogDescription>
             </div>
             <DialogClose asChild>

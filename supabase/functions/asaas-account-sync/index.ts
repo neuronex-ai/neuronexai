@@ -80,7 +80,7 @@ Deno.serve(async (req: Request) => {
         );
 
         // 1. Get the local Asaas account record from DB.
-        let financialAccount = await getFinancialAccount(user.id);
+        const financialAccount = await getFinancialAccount(user.id);
 
         if (!financialAccount) {
             return jsonResponse({
@@ -91,7 +91,7 @@ Deno.serve(async (req: Request) => {
             });
         }
 
-        let asaasApiKey = await getFinancialAccountAsaasApiKey(financialAccount);
+        const asaasApiKey = await getFinancialAccountAsaasApiKey(financialAccount);
         if (!asaasApiKey) {
             return errorResponse('Credencial privada da subconta Asaas não configurada.', 409, {
                 code: 'ASAAS_PRIVATE_CREDENTIAL_MISSING',

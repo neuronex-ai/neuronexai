@@ -2,7 +2,15 @@
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePatientData } from "@/hooks/use-patient-data";
@@ -11,7 +19,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useSessionNotes } from "@/hooks/use-session-notes";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AlertCircle, FileText, Loader2, Mail, MessageCircle, Package, Plus, Printer } from "lucide-react";
+import { AlertCircle, FileText, Loader2, Mail, MessageCircle, Package, Plus, Printer, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { MonthlyReportTemplate } from "./MonthlyReportTemplate";
@@ -165,21 +173,42 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                                 <FileText className="h-3.5 w-3.5" /> Relatório Mensal
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-[900px] h-[90vh] bg-zinc-50 dark:bg-[#0b0b0d] border-zinc-200 dark:border-white/[0.085] p-0 rounded-[32px] overflow-hidden flex flex-col shadow-2xl">
-                            <div className="flex-1 bg-zinc-100/50 dark:bg-[#080809] p-8 overflow-y-auto flex justify-center custom-scrollbar">
-                                <div ref={printRef} className="w-full max-w-[600px] scale-95 origin-top shadow-xl">
+                        <DialogContent
+                            showCloseButton={false}
+                            className="desktop-retina-modal z-[180] flex h-[min(920px,calc(100dvh-2rem))] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[960px] flex-col gap-0 overflow-hidden rounded-[32px] border border-border/70 bg-background/96 p-0 shadow-2xl"
+                        >
+                            <div className="flex items-center gap-4 border-b border-border/60 bg-background/82 px-5 py-4 backdrop-blur-2xl sm:px-7">
+                                <div className="desktop-retina-inset flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border/70 bg-muted/40 text-foreground">
+                                    <FileText className="h-5 w-5" aria-hidden="true" />
+                                </div>
+                                <DialogHeader className="min-w-0 flex-1 space-y-1 pr-0 text-left">
+                                    <DialogTitle className="text-lg font-semibold tracking-tight text-foreground">Relatório mensal</DialogTitle>
+                                    <DialogDescription className="truncate text-sm text-muted-foreground">
+                                        Prévia de {reportData.month} para {reportData.patientName}.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <DialogClose asChild>
+                                    <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background hover:bg-muted" aria-label="Fechar relatório">
+                                        <X className="h-5 w-5" aria-hidden="true" />
+                                    </Button>
+                                </DialogClose>
+                            </div>
+
+                            <div className="custom-scrollbar flex flex-1 justify-center overflow-y-auto bg-muted/20 p-4 sm:p-7">
+                                <div ref={printRef} className="w-full max-w-[620px] origin-top shadow-[0_28px_72px_-34px_rgba(0,0,0,0.45)]">
                                     <MonthlyReportTemplate {...reportData} />
                                 </div>
                             </div>
-                            <div className="p-6 border-t border-zinc-200 dark:border-white/[0.085] bg-white dark:bg-[#0b0b0d] flex justify-end gap-3 shrink-0">
-                                <Button variant="outline" onClick={handlePrintReport} className="border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 gap-2 h-11 rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+
+                            <div className="flex shrink-0 flex-wrap justify-end gap-2 border-t border-border/60 bg-background/90 p-4 backdrop-blur-2xl sm:px-7">
+                                <Button variant="outline" onClick={handlePrintReport} className="h-11 gap-2 rounded-xl border-border/70 bg-background px-4 text-sm font-medium text-foreground hover:bg-muted active:scale-[0.98]">
                                     <Printer className="h-4 w-4" /> Imprimir
                                 </Button>
-                                <Button variant="outline" onClick={handleSendReportEmail} disabled={isSending} className="border-zinc-200 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-white/5 gap-2 h-11 rounded-xl text-xs font-bold uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} Email
+                                <Button variant="outline" onClick={handleSendReportEmail} disabled={isSending} className="h-11 gap-2 rounded-xl border-border/70 bg-background px-4 text-sm font-medium text-foreground hover:bg-muted active:scale-[0.98]">
+                                    {isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />} E-mail
                                 </Button>
-                                <Button className="bg-emerald-500 hover:bg-emerald-600 text-white gap-2 h-11 rounded-xl shadow-lg shadow-emerald-500/20 text-xs font-bold uppercase tracking-wider transition-all hover:scale-105 active:scale-95">
-                                    <MessageCircle className="h-4 w-4" /> WhatsApp
+                                <Button disabled className="h-11 gap-2 rounded-xl bg-foreground px-4 text-sm font-medium text-background shadow-none">
+                                    <MessageCircle className="h-4 w-4" /> WhatsApp em breve
                                 </Button>
                             </div>
                         </DialogContent>

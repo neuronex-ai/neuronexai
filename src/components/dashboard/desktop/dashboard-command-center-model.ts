@@ -56,6 +56,14 @@ export type FinancialSignal = {
   bankPendingCents: number | null;
 };
 
+export type PaginatedAttentionItems = {
+  items: AttentionQueueItem[];
+  pageIndex: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+};
+
 const severityRank: Record<DashboardNotificationSeverity, number> = {
   destructive: 0,
   warning: 1,
@@ -135,6 +143,27 @@ export const getNextSession = (appointments: Appointment[], now: Date) =>
 export const getNextScheduleItem = (appointments: Appointment[], now: Date) =>
   appointments.find((appointment) => isAfter(new Date(appointment.end_time), now));
 
+export const paginateAttentionItems = (
+  items: AttentionQueueItem[],
+  requestedPageIndex: number,
+  requestedPageSize = 4,
+): PaginatedAttentionItems => {
+  const pageSize = Number.isFinite(requestedPageSize) ? Math.max(1, Math.floor(requestedPageSize)) : 4;
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const normalizedPageIndex = Number.isFinite(requestedPageIndex) ? Math.max(0, Math.floor(requestedPageIndex)) : 0;
+  const pageIndex = Math.min(normalizedPageIndex, totalPages - 1);
+  const pageStart = pageIndex * pageSize;
+
+  return {
+    items: items.slice(pageStart, pageStart + pageSize),
+    pageIndex,
+    pageSize,
+    totalItems,
+    totalPages,
+  };
+};
+
 export const buildAttentionQueue = ({
   notifications,
   appointments,
@@ -152,6 +181,8 @@ export const buildAttentionQueue = ({
   financialLoading?: boolean;
   limit?: number;
 }): AttentionQueueItem[] => {
+  const notificationLimit = Math.max(3, Math.ceil(limit / 2));
+  const appointmentLimit = Math.max(2, Math.ceil(limit / 3));
   const notificationItems = [...(notifications || [])]
     .filter((notification) => !notification.isRead && notification.severity !== "success")
     .sort((left, right) => {
@@ -163,7 +194,7 @@ export const buildAttentionQueue = ({
 
       return new Date(right.createdAt || 0).getTime() - new Date(left.createdAt || 0).getTime();
     })
-    .slice(0, 3)
+    .slice(0, notificationLimit)
     .map<AttentionQueueItem>((notification) => {
       const category = getNotificationQueueCategory(notification);
 
@@ -188,7 +219,7 @@ export const buildAttentionQueue = ({
         new Date(appointment.end_time).getTime() < now.getTime() &&
         normalizeAppointmentStatus(appointment.status, appointment.notes) === "unscored",
     )
-    .slice(0, 2)
+    .slice(0, appointmentLimit)
     .map<AttentionQueueItem>((appointment) => ({
       id: `appointment-score-${appointment.id}`,
       label: "Agenda",

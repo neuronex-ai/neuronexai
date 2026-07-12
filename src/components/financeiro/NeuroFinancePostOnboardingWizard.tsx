@@ -46,7 +46,7 @@ export function NeuroFinancePostOnboardingWizard({
         eyebrow: "Conta criada",
         title: "Sua conta NeuroFinance foi criada.",
         description:
-          "Recebemos seus dados com sucesso. A análise documental segue em andamento e você pode acompanhar cada etapa no painel NeuroFinance, em Ajustes > Saúde da Conta.",
+          "Recebemos seus dados com sucesso. A análise documental segue em andamento e você pode acompanhar cada etapa em NeuroFinance > Saúde da conta.",
       };
     }
 
@@ -54,7 +54,7 @@ export function NeuroFinancePostOnboardingWizard({
       eyebrow: "Segurança financeira",
       title: "Defina seu PIN de 6 dígitos.",
       description:
-        "Esse PIN será solicitado para saques, transferências e operações sensíveis. Depois, você poderá redefini-lo em Ajustes > Segurança > PIN.",
+        "Esse PIN será solicitado para saques, transferências e operações sensíveis. Depois, você poderá redefini-lo em Ajustes > NeuroFinance.",
     };
   }, [step]);
 
@@ -198,7 +198,7 @@ export function NeuroFinancePostOnboardingWizard({
               {step === "success" ? (
                 <div className="mt-9 grid gap-3 sm:grid-cols-3">
                   {[
-                    "Acompanhe documentos em Ajustes > Saúde da Conta",
+                    "Acompanhe documentos em NeuroFinance > Saúde da conta",
                     "Receba cobranças enquanto a análise avança",
                     "Proteja transações com PIN financeiro",
                   ].map((item) => (

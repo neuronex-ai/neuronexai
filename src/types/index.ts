@@ -71,6 +71,8 @@ export interface Profile {
   gender_identity?: 'female' | 'male' | 'non_binary' | 'prefer_not_to_say' | string | null;
   bio: string | null;
   avatar_url: string | null;
+  specialty?: string | null;
+  public_slug?: string | null;
   subscription_plan?: string | null;
   updated_at: string;
   two_factor_enabled?: boolean;

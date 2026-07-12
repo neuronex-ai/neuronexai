@@ -9,6 +9,7 @@ import {
   getNextSession,
   getTodayAppointments,
   isOnlineAppointment,
+  paginateAttentionItems,
 } from "./dashboard-command-center-model";
 
 const appointment = (overrides: Partial<Appointment>): Appointment => ({
@@ -160,6 +161,41 @@ describe("dashboard command center model", () => {
       id: "appointment-score-unscored",
       category: "appointments",
       actionUrl: "/agenda",
+    });
+  });
+
+  it("paginates pending work in stable four-item pages", () => {
+    const queue = buildAttentionQueue({
+      notifications: Array.from({ length: 7 }, (_, index) => ({
+        id: `pending-${index}`,
+        title: `Pendência ${index}`,
+        message: "Requer revisão",
+        severity: "warning" as const,
+        isRead: false,
+        createdAt: `2026-06-28T${String(index + 10).padStart(2, "0")}:00:00.000Z`,
+      })),
+      pendingPatients: 0,
+      financialConnected: true,
+      limit: 12,
+    });
+
+    const firstPage = paginateAttentionItems(queue, 0, 4);
+    const clampedLastPage = paginateAttentionItems(queue, 99, 4);
+
+    expect(firstPage.items).toHaveLength(4);
+    expect(firstPage.totalItems).toBe(6);
+    expect(firstPage.totalPages).toBe(2);
+    expect(clampedLastPage.pageIndex).toBe(1);
+    expect(clampedLastPage.items).toHaveLength(2);
+  });
+
+  it("keeps the empty pending state on page one", () => {
+    expect(paginateAttentionItems([], 4, 0)).toMatchObject({
+      items: [],
+      pageIndex: 0,
+      pageSize: 1,
+      totalItems: 0,
+      totalPages: 1,
     });
   });
 
