@@ -9,9 +9,10 @@ interface MermaidDiagramProps {
   chart: string;
   compact?: boolean;
   className?: string;
+  layoutKey?: string | number;
 }
 
-export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDiagramProps) => {
+export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = "default" }: MermaidDiagramProps) => {
   const [svg, setSvg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -120,7 +121,7 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px]" />
 
       <TransformWrapper
-        key={`${compact ? "compact" : "full"}-${svg.length}`}
+        key={`${compact ? "compact" : "full"}-${layoutKey}-${svg.length}`}
         initialScale={compact ? 0.82 : 1}
         minScale={compact ? 0.35 : 0.5}
         maxScale={compact ? 2.5 : 4}

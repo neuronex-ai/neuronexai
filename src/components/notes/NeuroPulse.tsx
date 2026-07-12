@@ -324,7 +324,7 @@ Relato:
 
                 <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-border/40 bg-muted/20 p-1.5">
                     <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                        <SelectTrigger className="h-9 w-[170px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
+                        <SelectTrigger className="h-11 w-[170px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
                             <SelectValue placeholder="Paciente" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-border/50 bg-popover p-2">
@@ -342,7 +342,7 @@ Relato:
                     <div className="h-6 w-px bg-border/50" />
 
                     <Select value={selectedLens} onValueChange={setSelectedLens}>
-                        <SelectTrigger className="h-9 w-[195px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
+                        <SelectTrigger className="h-11 w-[195px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
                             <SelectValue placeholder="Abordagem clínica" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-border/50 bg-popover p-2">
@@ -357,7 +357,7 @@ Relato:
                     <Button
                         onClick={handleGenerate}
                         disabled={isGenerating || !input.trim()}
-                        className="desktop-retina-interactive h-9 rounded-xl px-5 text-[10px] font-black uppercase tracking-[0.14em]"
+                        className="desktop-retina-interactive h-11 rounded-xl px-5 text-[10px] font-black uppercase tracking-[0.14em]"
                     >
                         {isGenerating ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <><Zap className="mr-2 h-3.5 w-3.5" /><span>Analisar</span></>}
                     </Button>
@@ -503,7 +503,7 @@ Relato:
                                     </div>
                                 </div>
                                 <div ref={diagramRef} className="custom-scrollbar relative flex min-h-0 flex-1 overflow-hidden bg-transparent p-4 sm:p-6">
-                                    <MermaidDiagram chart={diagramCode} className="min-h-0 flex-1" />
+                                    <MermaidDiagram chart={diagramCode} className="min-h-0 flex-1" layoutKey={isFullscreen ? "fullscreen" : "panel"} />
                                 </div>
                             </motion.div>
                         ) : (

@@ -90,6 +90,9 @@ export const NoteEditor = ({
     latestDraftRef.current = nextDraft;
     lastSavedDraftRef.current = nextDraft;
     setSaveStatus('saved');
+    // Draft replacement is intentionally keyed to note identity. Live title
+    // and content reconciliation is handled by the effect immediately below.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [note.id]);
 
   const draftsMatch = useCallback((
@@ -319,7 +322,7 @@ export const NoteEditor = ({
             className={cn(
               "notes-toolbar-surface h-[52px] px-4 md:px-6 flex items-center justify-between z-50 transition-[border-radius,box-shadow,background-color] duration-300 backdrop-blur-3xl",
               isFocusMode
-                ? "fixed top-8 left-1/2 w-[90%] max-w-4xl h-14 rounded-2xl border ring-1 ring-foreground/[0.025] dark:ring-white/[0.035]"
+                ? "fixed left-1/2 top-8 h-[52px] w-[90%] max-w-4xl rounded-2xl border"
                 : "sticky top-0 border-b"
             )}
           >

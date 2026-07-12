@@ -353,13 +353,13 @@ export const NeuroFlowVault = ({ onOpenFlow }: NeuroFlowVaultProps) => {
                             placeholder="Buscar por título ou marcador"
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
-                            className="desktop-retina-inset h-10 rounded-[14px] border-border/45 bg-muted/30 pl-11 pr-4 text-sm shadow-none"
+                            className="desktop-retina-inset h-11 rounded-[14px] border-border/45 bg-muted/30 pl-11 pr-4 text-sm shadow-none"
                         />
                     </label>
                     <Button
                         onClick={handleCreateFlow}
                         disabled={isCreatingFlow}
-                        className="desktop-retina-interactive h-10 shrink-0 rounded-[14px] px-5 text-[10px] font-black uppercase tracking-[0.14em]"
+                        className="desktop-retina-interactive h-11 shrink-0 rounded-[14px] px-5 text-[10px] font-black uppercase tracking-[0.14em]"
                     >
                         {isCreatingFlow ? <Loader2 size={17} className="mr-2 animate-spin" /> : <Plus size={17} className="mr-2" />}
                         {isCreatingFlow ? "Criando" : "Novo mapeamento"}
