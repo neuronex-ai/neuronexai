@@ -56,7 +56,7 @@ const CustomCaption = () => {
             {format(displayMonth, "MMMM yyyy", { locale: ptBR })}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] overflow-hidden rounded-[32px] border border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/[0.08] dark:bg-[#070708]" align="center" sideOffset={12}>
+        <PopoverContent className="w-[300px] overflow-hidden rounded-[32px] border border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/[0.08] dark:bg-[#070707]" align="center" sideOffset={12}>
           <div className="flex flex-row h-[280px]">
             <ScrollArea className="w-[100px] border-r border-zinc-100 dark:border-white/[0.05] bg-zinc-50/50 dark:bg-white/[0.01]">
               <div className="flex flex-col p-3 gap-1.5">
@@ -133,7 +133,7 @@ export const Sidebar = ({
 
   return (
     <div
-      className="agenda-sidebar-scroll custom-scrollbar flex h-full min-h-0 flex-col gap-3 overflow-y-scroll overscroll-contain px-0.5 pb-2 pr-1 [scrollbar-gutter:stable]"
+      className="agenda-sidebar-scroll custom-scrollbar flex h-full min-h-0 flex-col gap-3 overflow-y-auto overscroll-contain px-0.5 pb-2 pr-1 [scrollbar-gutter:stable]"
       style={{ touchAction: "pan-y" }}
     >
       

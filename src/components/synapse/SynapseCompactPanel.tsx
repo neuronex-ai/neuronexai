@@ -357,7 +357,7 @@ export const SynapseCompactPanel = () => {
                     scale: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                 }}
                 className={cn(
-                    'synapse-desktop-shell relative flex h-[min(680px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[32px] border',
+                    'synapse-desktop-shell relative flex h-[min(660px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[32px] border',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"

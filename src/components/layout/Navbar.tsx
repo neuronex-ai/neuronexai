@@ -125,7 +125,7 @@ export const Navbar = () => {
     <nav id="navbar-container" className="fixed top-7 left-0 right-0 z-[60] flex justify-center pointer-events-none px-4">
       <div
         className={cn(
-          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-all duration-700 ease-apple hover:-translate-y-0.5 active:scale-[0.99]",
+          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-[transform,background-color,border-color,box-shadow] duration-500 ease-apple hover:-translate-y-0.5 active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none",
           isDarkTheme
             ? "border border-white/[0.055] bg-[#080808]/82 ring-1 ring-white/[0.025] hover:bg-[#0a0a0a]/88"
             : "border border-black/[0.075] bg-white/[0.72] shadow-[0_30px_90px_-46px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-white/40 hover:bg-white/[0.78] hover:shadow-[0_42px_112px_-56px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.8)]"
@@ -136,12 +136,12 @@ export const Navbar = () => {
             to="/dashboard"
             aria-label="Ir para o dashboard NeuroNex"
             className={cn(
-              "group flex items-center gap-3 rounded-[22px] px-1.5 py-1 transition-all duration-500 hover:bg-black/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.055]",
+              "group flex items-center gap-3 rounded-[22px] px-1.5 py-1 transition-colors duration-300 hover:bg-black/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.055]",
             )}
           >
             <span
               className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-[18px] border transition-all duration-500 group-hover:scale-105",
+                "flex h-10 w-10 items-center justify-center rounded-[18px] border transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100",
                 isDarkTheme
                   ? "border-white/[0.08] bg-white/[0.045] shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)]"
                   : "border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)]",
@@ -193,7 +193,7 @@ export const Navbar = () => {
               align="center"
               sideOffset={14}
               className={cn(
-                "notification-popover-surface h-[590px] w-[420px] max-h-[76vh] overflow-hidden rounded-[30px] p-0 shadow-[0_36px_88px_-42px_rgba(0,0,0,0.72)] z-[70]",
+                "notification-popover-surface z-[70] h-[560px] max-h-[72vh] w-[420px] overflow-hidden rounded-[30px] p-0 shadow-[0_36px_88px_-42px_rgba(0,0,0,0.72)]",
                 isDarkTheme
                   ? "desktop-retina-modal border border-white/10 bg-[#080808]/95 ring-1 ring-white/5"
                   : "border border-zinc-200 bg-white/95 ring-1 ring-black/5"
@@ -205,7 +205,7 @@ export const Navbar = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-10 w-10 rounded-2xl ring-offset-background transition-all hover:scale-105 focus:outline-none p-0 overflow-hidden ml-1">
+              <Button variant="ghost" className="relative ml-1 h-10 w-10 overflow-hidden rounded-2xl p-0 ring-offset-background transition-transform duration-200 hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none motion-reduce:hover:scale-100">
                 <Avatar className="h-10 w-10 border border-zinc-200 dark:border-white/10 rounded-2xl">
                   <AvatarImage src={profile?.avatar_url || ''} alt={fullName} className="object-cover" />
                   <AvatarFallback className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[10px] font-black">{fullName.substring(0, 2).toUpperCase()}</AvatarFallback>

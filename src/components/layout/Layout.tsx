@@ -34,7 +34,7 @@ export const Layout = ({ children }: LayoutProps) => {
 
       {!isMobile && <Navbar />}
       <main className={cn(
-        "flex-1 transition-all duration-300 relative z-10",
+        "relative z-10 flex-1",
         !isMobile && !hasFullBleedDesktopShell && "pt-20 pb-12",
         !isMobile && hasFullBleedDesktopShell && "pb-0",
         isMobile && "pt-0",

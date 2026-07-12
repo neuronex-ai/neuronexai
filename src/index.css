@@ -769,7 +769,7 @@
   .dark .agenda-desktop-shell,
   .dark .patient-record-shell {
     border-color: rgba(255, 255, 255, 0.042) !important;
-    background-color: rgba(7, 7, 8, 0.9) !important;
+    background-color: rgba(7, 7, 7, 0.9) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0.006) 48%, rgba(0, 0, 0, 0.12));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.024),
@@ -780,14 +780,14 @@
   .dark .agenda-desktop-shell .desktop-retina-panel,
   .dark .patient-record-content {
     border-color: rgba(255, 255, 255, 0.047) !important;
-    background-color: rgba(14, 14, 15, 0.93) !important;
+    background-color: rgba(14, 14, 14, 0.93) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.009) 52%, rgba(0, 0, 0, 0.1));
   }
 
   .dark .agenda-desktop-shell .desktop-retina-inset,
   .dark .patient-record-shell .desktop-retina-inset {
     border-color: rgba(255, 255, 255, 0.042) !important;
-    background-color: rgba(19, 19, 20, 0.86) !important;
+    background-color: rgba(19, 19, 19, 0.86) !important;
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.007) 54%, rgba(0, 0, 0, 0.08));
   }
 
@@ -815,23 +815,23 @@
   }
 
   .teleconsultation-surface {
-    border: 1px solid rgba(24, 24, 27, 0.075);
+    border: 1px solid rgba(24, 24, 24, 0.075);
     background-color: rgba(250, 250, 250, 0.86);
-    background-image: linear-gradient(152deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.38) 46%, rgba(228, 228, 231, 0.2));
+    background-image: linear-gradient(152deg, rgba(255, 255, 255, 0.82), rgba(255, 255, 255, 0.38) 46%, rgba(228, 228, 228, 0.2));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.86),
-      inset 0 -1px 0 rgba(24, 24, 27, 0.028),
-      0 30px 82px -64px rgba(24, 24, 27, 0.34),
-      0 12px 32px -28px rgba(82, 82, 91, 0.16);
+      inset 0 -1px 0 rgba(24, 24, 24, 0.028),
+      0 30px 82px -64px rgba(24, 24, 24, 0.34),
+      0 12px 32px -28px rgba(82, 82, 82, 0.16);
   }
 
   .teleconsultation-inset {
-    border: 1px solid rgba(24, 24, 27, 0.068);
-    background-color: rgba(244, 244, 245, 0.72);
-    background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.16) 52%, rgba(212, 212, 216, 0.12));
+    border: 1px solid rgba(24, 24, 24, 0.068);
+    background-color: rgba(244, 244, 244, 0.72);
+    background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.58), rgba(255, 255, 255, 0.16) 52%, rgba(212, 212, 212, 0.12));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.72),
-      inset 0 -1px 0 rgba(24, 24, 27, 0.035);
+      inset 0 -1px 0 rgba(24, 24, 24, 0.035);
   }
 
   .dark .teleconsultation-surface {
@@ -866,11 +866,11 @@
   }
 
   .teleconsultation-control-dock {
-    border: 1px solid rgba(24, 24, 27, 0.1);
-    background: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(244, 244, 245, 0.91));
+    border: 1px solid rgba(24, 24, 24, 0.1);
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.96), rgba(244, 244, 244, 0.91));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.96),
-      0 22px 56px -38px rgba(24, 24, 27, 0.52);
+      0 22px 56px -38px rgba(24, 24, 24, 0.52);
   }
 
   .dark .teleconsultation-control-dock {
@@ -894,7 +894,7 @@
   }
 
   .teleconsultation-overlay {
-    background-color: rgba(9, 9, 11, 0.72);
+    background-color: rgba(9, 9, 9, 0.72);
   }
 
   .teleconsultation-action {
@@ -1018,7 +1018,7 @@
     border-color: rgba(255, 255, 255, 0.065);
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.058), rgba(255, 255, 255, 0.022)),
-      rgba(8, 8, 10, 0.78);
+      rgba(8, 8, 8, 0.78);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
       0 24px 70px -45px rgba(0, 0, 0, 0.9);
@@ -2198,7 +2198,7 @@
     border-color: rgba(255, 255, 255, 0.07);
     background:
       linear-gradient(150deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0.004) 58%, rgba(0, 0, 0, 0.08)),
-      rgba(14, 14, 15, 0.84);
+      rgba(14, 14, 14, 0.84);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.022);
   }
 
@@ -2692,7 +2692,7 @@
   .dark .dashboard-schedule-card {
     border-color: rgba(255, 255, 255, 0.09);
     background:
-      linear-gradient(180deg, rgba(14, 15, 17, 0.98), rgba(7, 7, 8, 0.96)),
+      linear-gradient(180deg, rgba(15, 15, 15, 0.98), rgba(7, 7, 7, 0.96)),
       linear-gradient(135deg, rgba(255, 255, 255, 0.026), transparent 50%);
     box-shadow:
       0 28px 74px -48px rgba(0, 0, 0, 0.96),
@@ -2702,7 +2702,7 @@
   .dashboard-schedule-detail-layer {
     border: 1px solid rgba(255, 255, 255, 0.13);
     background:
-      linear-gradient(180deg, rgba(15, 15, 17, 0.94), rgba(7, 7, 8, 0.92)),
+      linear-gradient(180deg, rgba(15, 15, 15, 0.94), rgba(7, 7, 7, 0.92)),
       linear-gradient(135deg, rgba(255, 255, 255, 0.036), transparent 56%);
     box-shadow:
       0 26px 56px -42px rgba(0, 0, 0, 0.84),
@@ -2808,15 +2808,15 @@
   .dark .dashboard-shell-surface {
     border-color: rgba(255, 255, 255, 0.045);
     background:
-      linear-gradient(160deg, rgba(18, 18, 19, 0.96), rgba(7, 7, 8, 0.96)),
-      #09090a;
+      linear-gradient(160deg, rgba(18, 18, 18, 0.96), rgba(7, 7, 7, 0.96)),
+      #090909;
   }
 
   .dark .dashboard-panel-surface:not([class*="bg-white"]) {
     border-color: rgba(255, 255, 255, 0.06);
     background:
-      linear-gradient(155deg, rgba(24, 24, 25, 0.96), rgba(12, 12, 13, 0.96)),
-      #111112;
+      linear-gradient(155deg, rgba(24, 24, 24, 0.96), rgba(12, 12, 12, 0.96)),
+      #111111;
   }
 
   .dashboard-deferred-section {
@@ -2845,8 +2845,8 @@
   .dark .notification-popover-surface {
     border-color: rgba(255, 255, 255, 0.06) !important;
     background:
-      linear-gradient(160deg, rgba(20, 20, 21, 0.99), rgba(8, 8, 9, 0.99)),
-      #0a0a0b !important;
+      linear-gradient(160deg, rgba(20, 20, 20, 0.99), rgba(8, 8, 8, 0.99)),
+      #0a0a0a !important;
   }
 
   .notification-panel-header {
@@ -2857,8 +2857,8 @@
 
   .dark .notification-panel-header {
     background:
-      linear-gradient(180deg, rgba(17, 17, 18, 0.995), rgba(11, 11, 12, 0.985)),
-      #0b0b0c;
+      linear-gradient(180deg, rgba(17, 17, 17, 0.995), rgba(11, 11, 11, 0.985)),
+      #0b0b0b;
   }
 
   .notification-card {

@@ -9,6 +9,7 @@ import { useResilientSessionNotes } from '@/hooks/use-resilient-session-notes';
 import { useSessionCapture } from '@/hooks/use-session-capture';
 import { useUpdateAppointment } from '@/hooks/use-update-appointment';
 import { supabase } from '@/integrations/supabase/client';
+import { shouldStartTeleconsultationCapture } from '@/lib/teleconsultation-transcription';
 import type { AISummary, Appointment, SessionNote } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -295,7 +296,7 @@ export const useDesktopClinicalSession = (
         toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a sala para o paciente.');
       });
     }
-    if (transcriptionEnabled && consentStatus === 'granted' && !isCaptureEnabled) {
+    if (shouldStartTeleconsultationCapture({ transcriptionEnabled, consentStatus, isCaptureEnabled })) {
       void startCapture().catch((error) => {
         toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a transcrição.');
       });

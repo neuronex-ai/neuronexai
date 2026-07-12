@@ -1,36 +1,43 @@
 import React from "react";
-import { motion, HTMLMotionProps } from "framer-motion";
+import { motion, HTMLMotionProps, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 // Omitimos as propriedades de drag que causam conflito entre React.HTMLAttributes e HTMLMotionProps
-interface GlassCardProps extends Omit<HTMLMotionProps<"div">, "onDrag" | "onDragStart" | "onDragEnd"> {
+interface GlassCardProps extends Omit<
+  HTMLMotionProps<"div">,
+  "onDrag" | "onDragStart" | "onDragEnd"
+> {
   children: React.ReactNode;
   className?: string;
   innerClassName?: string;
   delay?: number;
 }
 
-export const GlassCard = ({ 
-  children, 
-  className, 
-  innerClassName, 
-  delay = 0, 
-  ...props 
+export const GlassCard = ({
+  children,
+  className,
+  innerClassName,
+  delay = 0,
+  ...props
 }: GlassCardProps) => {
+  const shouldReduceMotion = useReducedMotion();
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: delay / 1000 }}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { duration: 0.32, delay: delay / 1000, ease: [0.32, 0.72, 0, 1] }
+      }
       className={cn(
-        "bg-white/80 dark:bg-[#0A0A0B]/80 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-[32px] overflow-hidden shadow-xl",
-        className
+        "overflow-hidden rounded-[32px] border border-zinc-200 bg-white/80 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-[#0A0A0A]/80",
+        className,
       )}
       {...props}
     >
-      <div className={cn("h-full w-full", innerClassName)}>
-        {children}
-      </div>
+      <div className={cn("h-full w-full", innerClassName)}>{children}</div>
     </motion.div>
   );
 };

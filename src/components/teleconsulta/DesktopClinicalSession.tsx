@@ -17,59 +17,51 @@ interface DesktopClinicalSessionProps {
   openInviteOnMount?: boolean;
 }
 
-export const DesktopClinicalSession = ({
-  activeAppointment,
-  patientName,
-  onSessionEnd,
-  openInviteOnMount = false,
-}: DesktopClinicalSessionProps) => {
+export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessionEnd, openInviteOnMount = false }: DesktopClinicalSessionProps) => {
   const session = useDesktopClinicalSession(activeAppointment, patientName, onSessionEnd);
   const inviteRequestedRef = useRef(false);
+  const { hasTranscriptionDecision, openPatientInvite, requestTranscriptionDecision } = session;
 
   useEffect(() => {
     if (!openInviteOnMount || inviteRequestedRef.current) return;
 
-    if (!session.hasTranscriptionDecision) {
-      session.requestTranscriptionDecision();
+    if (!hasTranscriptionDecision) {
+      requestTranscriptionDecision();
       return;
     }
 
     inviteRequestedRef.current = true;
-    session.openPatientInvite();
-  }, [
-    openInviteOnMount,
-    session.hasTranscriptionDecision,
-    session.openPatientInvite,
-    session.requestTranscriptionDecision,
-  ]);
+    openPatientInvite();
+  }, [hasTranscriptionDecision, openInviteOnMount, openPatientInvite, requestTranscriptionDecision]);
 
-  const consentDialog = session.showConsent && !session.reviewOpen ? (
-    <Dialog open onOpenChange={() => undefined}>
-      <DialogContent
-        showCloseButton={false}
-        overlayClassName="teleconsultation-overlay !z-[179] !backdrop-blur-none"
-        onEscapeKeyDown={(event) => event.preventDefault()}
-        onPointerDownOutside={(event) => event.preventDefault()}
-        data-synapse-target="transcription-decision"
-        aria-label="Decisão de transcrição"
-        className="teleconsultation-surface !z-[180] !w-[min(680px,calc(100vw-2rem))] !max-w-[min(680px,calc(100vw-2rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0"
-      >
-        <DialogTitle className="sr-only">Decisão de transcrição</DialogTitle>
-        <TranscriptionConsentPanel
-          patientName={patientName}
-          isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
-          onGrant={session.handleGrantConsent}
-          onDecline={session.handleDeclineConsent}
-        />
-      </DialogContent>
-    </Dialog>
-  ) : null;
+  const consentDialog =
+    session.showConsent && !session.reviewOpen ? (
+      <Dialog open onOpenChange={() => undefined}>
+        <DialogContent
+          showCloseButton={false}
+          overlayClassName='teleconsultation-overlay !z-[179] !backdrop-blur-none'
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onPointerDownOutside={(event) => event.preventDefault()}
+          data-synapse-target='transcription-decision'
+          aria-label='Decisão de transcrição'
+          className='teleconsultation-surface !z-[180] !w-[min(680px,calc(100vw-2rem))] !max-w-[min(680px,calc(100vw-2rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0'
+        >
+          <DialogTitle className='sr-only'>Decisão de transcrição</DialogTitle>
+          <TranscriptionConsentPanel
+            patientName={patientName}
+            isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
+            onGrant={session.handleGrantConsent}
+            onDecline={session.handleDeclineConsent}
+          />
+        </DialogContent>
+      </Dialog>
+    ) : null;
 
   if (session.showLobby) {
     return (
       <>
-        <div className="desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent">
-          <div className="relative z-10 h-full min-h-0 overflow-hidden">
+        <div className='desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent'>
+          <div className='relative z-10 h-full min-h-0 overflow-hidden'>
             <DesktopTeleconsultationLobby
               patientName={patientName}
               patient={session.patient}
@@ -94,7 +86,7 @@ export const DesktopClinicalSession = ({
 
   return (
     <>
-      <div className="desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent">
+      <div className='desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent'>
         <div
           className={cn(
             'relative z-10 grid h-full min-h-0 grid-rows-[minmax(0,1fr)] items-stretch gap-3 px-3 pb-3 sm:px-4 sm:pb-4 xl:px-5 xl:pb-5',
@@ -175,7 +167,7 @@ export const DesktopClinicalSession = ({
         </div>
       </div>
 
-      <div data-synapse-target="patient-invite">
+      <div data-synapse-target='patient-invite'>
         <InvitePatientModal
           isOpen={session.showInviteModal}
           onClose={() => session.setShowInviteModal(false)}

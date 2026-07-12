@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useAppointments } from '@/hooks/use-appointments';
 import { UpcomingSessionsPanel } from '@/components/teleconsulta/UpcomingSessionsPanel';
 import { ActiveSessionPanel } from '@/components/teleconsulta/ActiveSessionPanel';
@@ -6,19 +6,20 @@ import { addMonths, endOfWeek, startOfWeek } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { MobileTeleconsulta } from '@/mobile/pages/MobileTeleconsulta';
 import { FeatureGate, LockedFeatureScreen } from '@/components/subscription';
 import { getAppointmentKind } from '@/lib/appointment-metadata';
 import { isCancelledAppointmentStatus } from '@/lib/appointment-status';
-import {
-  SYNAPSE_PAGE_ACTION_EVENT,
-  type SynapseInterfaceAction,
-} from '@/lib/synapse-interface-actions';
+import { SYNAPSE_PAGE_ACTION_EVENT, type SynapseInterfaceAction } from '@/lib/synapse-interface-actions';
 
-const TeleconsultaCore = () => {
+const MobileTeleconsulta = lazy(() =>
+  import('@/mobile/pages/MobileTeleconsulta').then((module) => ({
+    default: module.MobileTeleconsulta,
+  })),
+);
+
+const DesktopTeleconsulta = () => {
   const queryClient = useQueryClient();
   const location = useLocation();
-  const isMobile = useIsMobile();
   const [activeAppointmentId, setActiveAppointmentId] = useState<string | undefined>(undefined);
   const [inviteRequestedAppointmentId, setInviteRequestedAppointmentId] = useState<string | undefined>(undefined);
 
@@ -48,19 +49,20 @@ const TeleconsultaCore = () => {
     const handleSynapseAction = (event: Event) => {
       const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
       if (!action?.appointmentId) return;
-      if (!["open_teleconsultation_lobby", "open_patient_invite_modal"].includes(action.action)) return;
+      if (!['open_teleconsultation_lobby', 'open_patient_invite_modal'].includes(action.action)) return;
       setActiveAppointmentId(action.appointmentId);
-      if (action.action === "open_patient_invite_modal") setInviteRequestedAppointmentId(action.appointmentId);
+      if (action.action === 'open_patient_invite_modal') setInviteRequestedAppointmentId(action.appointmentId);
     };
     window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
     return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
   }, []);
 
   const clinicalSessions = useMemo(
-    () => (appointments || []).filter((appointment) => {
-      if (isCancelledAppointmentStatus(appointment.status, appointment.notes)) return false;
-      return getAppointmentKind(appointment) === 'session';
-    }),
+    () =>
+      (appointments || []).filter((appointment) => {
+        if (isCancelledAppointmentStatus(appointment.status, appointment.notes)) return false;
+        return getAppointmentKind(appointment) === 'session';
+      }),
     [appointments],
   );
 
@@ -77,11 +79,9 @@ const TeleconsultaCore = () => {
     void queryClient.invalidateQueries({ queryKey: ['appointments'] });
   };
 
-  if (isMobile) return <MobileTeleconsulta />;
-
   if (activeAppointment) {
     return (
-      <div className="desktop-lumen-page teleconsultation-shell relative h-dvh overflow-hidden bg-transparent">
+      <div className='desktop-lumen-page teleconsultation-shell relative h-dvh overflow-hidden bg-transparent'>
         <ActiveSessionPanel
           key={activeAppointment.id}
           activeAppointment={activeAppointment}
@@ -94,25 +94,34 @@ const TeleconsultaCore = () => {
   }
 
   return (
-    <div className="desktop-lumen-page desktop-content-offset teleconsultation-shell relative h-dvh overflow-hidden bg-transparent">
-      <UpcomingSessionsPanel
-        upcomingSessions={upcomingSessions}
-        activeAppointment={activeAppointment}
-        isLoading={isLoading}
-        startSession={startSession}
-      />
+    <div className='desktop-lumen-page desktop-content-offset teleconsultation-shell relative h-dvh overflow-hidden bg-transparent'>
+      <UpcomingSessionsPanel upcomingSessions={upcomingSessions} activeAppointment={activeAppointment} isLoading={isLoading} startSession={startSession} />
     </div>
   );
 };
 
+const TeleconsultaCore = () => {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <Suspense fallback={<div className='min-h-dvh bg-transparent' aria-busy='true' aria-label='Carregando teleconsulta' />}>
+        <MobileTeleconsulta />
+      </Suspense>
+    );
+  }
+
+  return <DesktopTeleconsulta />;
+};
+
 const Teleconsulta = () => (
   <FeatureGate
-    feature="telemedicine"
+    feature='telemedicine'
     fallback={
       <LockedFeatureScreen
-        feature="telemedicine"
-        title="Sessões clínicas"
-        description="Conduza sessões online ou presenciais com captura consentida, transcrição persistente e integração revisável com o prontuário. Disponível a partir do plano Professional."
+        feature='telemedicine'
+        title='Sessões clínicas'
+        description='Conduza sessões online ou presenciais com captura consentida, transcrição persistente e integração revisável com o prontuário. Disponível a partir do plano Professional.'
       />
     }
   >

@@ -313,7 +313,7 @@ export default function Pacientes() {
                 <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
                     {isLoading ? (
                         [...Array(8)].map((_, i) => (
-                            <GlassCard key={i} className="h-[240px] animate-pulse rounded-[32px]">
+                            <GlassCard key={i} className="h-[240px] animate-pulse rounded-[32px] motion-reduce:animate-none">
                                 <></>
                             </GlassCard>
                         ))
@@ -334,21 +334,32 @@ export default function Pacientes() {
                                 className="desktop-retina-panel desktop-retina-interactive group h-full min-h-[240px] cursor-pointer rounded-[32px] border-border/45 bg-card/72"
                                 innerClassName="p-0 flex flex-col h-full"
                                 onClick={() => navigate(`/pacientes/${patient.id}`)}
-                                delay={i * 40}
+                                onKeyDown={(event) => {
+                                    if (event.target !== event.currentTarget) return;
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        navigate(`/pacientes/${patient.id}`);
+                                    }
+                                }}
+                                role="link"
+                                tabIndex={0}
+                                aria-label={`Abrir prontuário de ${patient.name}`}
+                                delay={Math.min(i, 5) * 20}
                             >
                                 <div className="p-6 md:p-8 flex flex-col justify-between h-full relative z-10">
                                     {/* Delete Button (Visible on hover) */}
                                     <button
                                         onClick={(e) => handleDeleteClick(e, patient.id, patient.name)}
-                                        className="desktop-retina-inset absolute right-6 top-6 z-20 flex h-9 w-9 items-center justify-center rounded-[14px] bg-muted/40 opacity-0 shadow-sm transition-[opacity,background-color,color,transform] duration-200 hover:bg-rose-500 hover:text-white group-hover:opacity-100 md:h-10 md:w-10"
+                                        className="desktop-retina-inset absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-[14px] bg-muted/40 opacity-0 shadow-sm transition-[opacity,background-color,color,transform] duration-200 hover:bg-rose-500 hover:text-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
                                         title="Excluir paciente"
+                                        aria-label={`Excluir ${patient.name}`}
                                     >
                                         <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
                                     </button>
 
                                     {/* Top Section */}
                                     <div className="flex items-start gap-4 md:gap-5">
-                                        <Avatar className="h-14 w-14 md:h-16 md:w-16 border-[3px] border-white dark:border-[#0c0c0c] shadow-2xl rounded-2xl transition-all duration-700 group-hover:scale-105">
+                                        <Avatar className="h-14 w-14 rounded-2xl border-[3px] border-white shadow-2xl transition-transform duration-300 group-hover:scale-[1.035] motion-reduce:transition-none motion-reduce:group-hover:scale-100 dark:border-[#0c0c0c] md:h-16 md:w-16">
                                             <AvatarFallback className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black text-base md:text-lg uppercase tracking-widest">
                                                 {patient.name.substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
@@ -359,7 +370,7 @@ export default function Pacientes() {
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full",
                                                     patient.status === 'active'
-                                                        ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse"
+                                                        ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] motion-reduce:animate-none"
                                                         : "bg-zinc-400 dark:bg-zinc-700 shadow-sm"
                                                 )} />
                                                 <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-widest">
@@ -393,7 +404,7 @@ export default function Pacientes() {
             </div>
 
             <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-                <DialogContent className="desktop-retina-modal desktop-retina-form z-[9999] sm:max-w-[480px] p-0 bg-white/95 dark:bg-[#0a0a0a]/95 backdrop-blur-3xl border border-zinc-200 dark:border-white/[0.08] rounded-[38px] overflow-hidden">
+                <DialogContent className="desktop-retina-modal desktop-retina-form z-[9999] overflow-hidden rounded-[38px] border border-zinc-200 bg-white/95 p-0 backdrop-blur-3xl dark:border-white/[0.08] dark:bg-[#0a0a0a]/95 sm:max-w-[480px]">
                     <div className="p-12 text-center relative">
                         <div className="absolute top-0 right-0 p-32 bg-rose-500/5 rounded-full blur-[80px] pointer-events-none" />
 

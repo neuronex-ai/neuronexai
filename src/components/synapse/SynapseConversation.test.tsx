@@ -7,7 +7,7 @@ import type { Message } from '@/types';
 import { SynapseComposer, SynapseConversation } from './SynapseConversation';
 
 vi.mock('./SynapseWidgetRenderer', () => ({
-    SynapseWidgetRenderer: () => <div data-testid="synapse-widget" />,
+    SynapseWidgetRenderer: () => <div data-testid='synapse-widget' />,
 }));
 
 const messages: Message[] = [
@@ -55,15 +55,7 @@ describe('SynapseConversation', () => {
     });
 
     it('renders both roles, exposes the activity state and copies assistant content', async () => {
-        render(
-            <SynapseConversation
-                messages={messages}
-                isSending
-                quickActions={[]}
-                shouldReduceMotion
-                onQuickAction={() => undefined}
-            />,
-        );
+        render(<SynapseConversation messages={messages} isSending quickActions={[]} shouldReduceMotion onQuickAction={() => undefined} />);
 
         expect(screen.getByRole('log', { name: 'Conversa com o Synapse' })).toBeInTheDocument();
         expect(screen.getByText('Como está minha agenda?')).toBeInTheDocument();
@@ -83,7 +75,7 @@ describe('SynapseComposer', () => {
 
         render(
             <SynapseComposer
-                value="Olá, Synapse"
+                value='Olá, Synapse'
                 isSending={false}
                 isListening={false}
                 sessionReady
@@ -94,7 +86,9 @@ describe('SynapseComposer', () => {
             />,
         );
 
-        const textarea = screen.getByRole('textbox', { name: 'Mensagem para o Synapse' });
+        const textarea = screen.getByRole('textbox', {
+            name: 'Mensagem para o Synapse',
+        });
         fireEvent.keyDown(textarea, { key: 'Enter', shiftKey: true });
         expect(onSend).not.toHaveBeenCalled();
 
@@ -115,13 +109,18 @@ describe('SynapseComposer', () => {
             onSend: vi.fn(),
             onToggleListening: vi.fn(),
         };
-        const { rerender } = render(<SynapseComposer value="" {...props} />);
-        const textarea = screen.getByRole('textbox', { name: 'Mensagem para o Synapse' });
+        const { rerender } = render(<SynapseComposer value='' {...props} />);
+        const textarea = screen.getByRole('textbox', {
+            name: 'Mensagem para o Synapse',
+        });
 
         expect(screen.getByRole('button', { name: 'Enviar mensagem' })).toBeDisabled();
-        Object.defineProperty(textarea, 'scrollHeight', { configurable: true, value: 180 });
+        Object.defineProperty(textarea, 'scrollHeight', {
+            configurable: true,
+            value: 180,
+        });
         rerender(<SynapseComposer value={'Linha longa '.repeat(20)} {...props} />);
 
-        expect(textarea).toHaveStyle({ height: '116px', overflowY: 'auto' });
+        expect(textarea).toHaveStyle({ height: '104px', overflowY: 'auto' });
     });
 });

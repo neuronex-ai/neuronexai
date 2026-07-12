@@ -509,7 +509,7 @@ const FlowCard = memo(function FlowCard({ flow, idx, onClick, onDelete, onRename
             role="button"
             tabIndex={0}
             aria-label={`Abrir mapeamento ${flow.title}`}
-            style={{ contentVisibility: "auto", containIntrinsicSize: "280px" }}
+            style={{ contain: "layout style" }}
             className="notes-liquid-surface desktop-retina-interactive group relative flex min-h-[260px] cursor-pointer flex-col overflow-hidden rounded-[26px] border border-border/45 p-5 outline-none transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-border/75 hover:bg-muted/25 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0"
         >
             <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,hsl(var(--foreground)/0.035),transparent_46%,hsl(var(--foreground)/0.012))]" />
