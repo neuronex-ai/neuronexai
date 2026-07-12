@@ -3,6 +3,16 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useSynapse, type SynapseActiveTab } from '@/context/SynapseProvider';
 import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
@@ -20,7 +30,6 @@ import {
     History,
     Activity,
     Trash2,
-    Plus,
     ChevronRight,
     AudioLines,
     PhoneOff,
@@ -171,6 +180,7 @@ export const SynapseCompactPanel = () => {
 
     const [isListening, setIsListening] = useState(false);
     const [showAllActions, setShowAllActions] = useState(false);
+    const [confirmClearOpen, setConfirmClearOpen] = useState(false);
     const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
     const historyQuery = useChatSessionHistory(historyChannel, shellState === 'compact' && activeTab === 'history');
     const sessions = useMemo(() => {
@@ -357,7 +367,7 @@ export const SynapseCompactPanel = () => {
                     scale: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                 }}
                 className={cn(
-                    'synapse-desktop-shell relative flex h-[min(660px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[32px] border',
+                    'synapse-desktop-shell relative flex h-[min(642px,calc(100dvh-24px))] w-[min(464px,calc(100vw-24px))] flex-col overflow-hidden rounded-[34px] border',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"
@@ -366,12 +376,8 @@ export const SynapseCompactPanel = () => {
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
                         <header className="synapse-desktop-chrome shrink-0">
-                            <div className="synapse-desktop-toolbar flex min-h-[64px] items-center gap-2.5 pl-4 pr-3">
-                                <span className="w-[92px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
-                                    Synapse AI
-                                </span>
-
-                                <nav className="synapse-desktop-tabs grid shrink-0 grid-cols-4 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
+                            <div className="synapse-desktop-toolbar flex min-h-[58px] items-center gap-2 px-3">
+                                <nav className="synapse-desktop-tabs flex min-w-0 flex-1 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
                                     {PANEL_TABS.map((tab, index) => {
                                         const Icon = tab.icon;
                                         const isActive = activeTab === tab.id;
@@ -390,7 +396,7 @@ export const SynapseCompactPanel = () => {
                                                 onClick={() => handleTabChange(tab.id)}
                                                 onKeyDown={(event) => handleTabKeyDown(event, index)}
                                                 className={cn(
-                                                    'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
+                                                    'relative flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-[13px] px-2.5 text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
                                                     'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                                     isActive ? 'text-foreground' : 'text-muted-foreground',
                                                 )}
@@ -398,7 +404,7 @@ export const SynapseCompactPanel = () => {
                                                 {isActive ? (
                                                     <motion.span
                                                         layoutId="synapse-active-tab"
-                                                        className="synapse-desktop-tab-active absolute inset-0 rounded-[10px]"
+                                                        className="synapse-desktop-tab-active absolute inset-0 rounded-[12px]"
                                                         transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
                                                         aria-hidden="true"
                                                     />
@@ -409,6 +415,21 @@ export const SynapseCompactPanel = () => {
                                                         <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
                                                     ) : null}
                                                 </span>
+                                                <AnimatePresence initial={false}>
+                                                    {isActive ? (
+                                                        <motion.span
+                                                            key={`${tab.id}-label`}
+                                                            initial={shouldReduceMotion ? false : { opacity: 0, width: 0, x: -3 }}
+                                                            animate={{ opacity: 1, width: 'auto', x: 0 }}
+                                                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0, x: -2 }}
+                                                            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 480, damping: 42 }}
+                                                            className="relative z-10 hidden whitespace-nowrap min-[390px]:inline-block"
+                                                            aria-hidden="true"
+                                                        >
+                                                            {tab.label}
+                                                        </motion.span>
+                                                    ) : null}
+                                                </AnimatePresence>
                                                 <span className="sr-only">{tab.label}</span>
                                             </button>
                                         );
@@ -421,8 +442,8 @@ export const SynapseCompactPanel = () => {
                                             <TooltipTrigger asChild>
                                                 <button
                                                     type="button"
-                                                    onClick={clearSession}
-                                                    className="synapse-desktop-control flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    onClick={() => setConfirmClearOpen(true)}
+                                                    className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                     aria-label="Limpar conversa"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
@@ -435,21 +456,8 @@ export const SynapseCompactPanel = () => {
                                         <TooltipTrigger asChild>
                                             <button
                                                 type="button"
-                                                onClick={clearSession}
-                                                className="synapse-desktop-control flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                aria-label="Criar nova conversa"
-                                            >
-                                                <Plus className="h-3.5 w-3.5" />
-                                            </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="bottom">Nova conversa</TooltipContent>
-                                    </Tooltip>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <button
-                                                type="button"
                                                 onClick={() => setShellState('pill')}
-                                                className="synapse-desktop-control flex h-9 w-9 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Recolher Synapse"
                                             >
                                                 <X className="h-3.5 w-3.5" />
@@ -702,7 +710,7 @@ export const SynapseCompactPanel = () => {
                                         activityMode={chatActivityMode}
                                         quickActions={quickActions}
                                         shouldReduceMotion={Boolean(shouldReduceMotion)}
-                                        onQuickAction={setInputDraft}
+                                        onQuickAction={handleActionClick}
                                     />
                                 </motion.div>
                             )}
@@ -732,6 +740,26 @@ export const SynapseCompactPanel = () => {
                 handleActionClick={handleActionClick}
                 ctxInfo={ctxInfo}
             />
+
+            <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+                <AlertDialogContent className="synapse-actions-modal w-[min(420px,calc(100vw-24px))] rounded-[24px] border-border/60 p-5 dark:border-white/[0.09]">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="text-[17px]">Excluir esta conversa?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-[12px] leading-5">
+                            O histórico desta conversa será removido. Essa ação não altera prontuários ou dados clínicos.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-2 gap-2 sm:space-x-0">
+                        <AlertDialogCancel className="min-h-11 rounded-[14px]">Manter conversa</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={clearSession}
+                            className="min-h-11 rounded-[14px] bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        >
+                            Excluir conversa
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </>
     );
 };

@@ -343,6 +343,21 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/send-session-invite/index.ts"
 
+[functions.ensure-teleconsultation-invite]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/ensure-teleconsultation-invite/index.ts"
+
+[functions.redeem-teleconsultation-invite]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/redeem-teleconsultation-invite/index.ts"
+
+[functions.get-session-join-info]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/get-session-join-info/index.ts"
+
 [functions.generate-jitsi-token]
 enabled = true
 verify_jwt = true

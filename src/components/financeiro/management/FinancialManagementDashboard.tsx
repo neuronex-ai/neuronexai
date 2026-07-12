@@ -24,6 +24,7 @@ import { ManualChargeModal } from "@/components/financeiro/ManualChargeModal";
 import { NewTransactionModal } from "@/components/financeiro/NewTransactionModal";
 import { RecurringManager } from "@/components/financeiro/RecurringManager";
 import { Button } from "@/components/ui/button";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import {
   DesktopMiniStat,
   DesktopWorkspaceIcon,
@@ -435,20 +436,20 @@ export const FinancialManagementDashboard = (props: Props) => {
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
-          <div className="finance-inset flex rounded-xl border border-border/60 bg-background/[0.45] p-1 dark:border-black/75 dark:bg-black/25">
-            {(["cash", "competence"] as const).map((x) => (
-              <button
-                key={x}
-                onClick={() => setBasis(x)}
-                className={cn(
-                  "min-h-9 rounded-lg px-3 py-2 text-xs transition-[background-color,color,transform] duration-150 active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100",
-                  basis === x && "bg-foreground text-background shadow-sm dark:bg-white dark:text-zinc-950 dark:shadow-[0_8px_20px_-14px_rgba(0,0,0,0.9)]",
-                )}
-              >
-                {x === "cash" ? "Caixa" : "Competência"}
-              </button>
-            ))}
-          </div>
+          <MagneticSegmentedControl
+            id="financial-management-basis"
+            indicatorId="financial-management-basis-indicator"
+            value={basis}
+            onValueChange={setBasis}
+            ariaLabel="Regime de apuração financeira"
+            behavior="single-select"
+            options={[
+              { value: "cash", label: "Caixa" },
+              { value: "competence", label: "Competência" },
+            ]}
+            className="finance-inset h-12 min-h-12 shrink-0 rounded-xl border-border/60 bg-background/[0.45] dark:border-black/75 dark:bg-black/25"
+            triggerClassName="h-11 min-h-11 rounded-lg px-3 py-0 text-xs"
+          />
           <Button variant="outline" onClick={() => openEntry("expense")}>
             <ArrowDownRight className="mr-2 h-4 w-4" />
             Despesa

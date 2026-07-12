@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useGenerateSessionProntuario } from '@/hooks/use-generate-session-prontuario';
 import { useJitsiToken } from '@/hooks/use-jitsi-token';
+import { useTeleconsultationInvite } from '@/hooks/use-teleconsultation-invite';
 import type { MediaDeviceChoice } from '@/hooks/use-media-readiness';
 import { usePatientById } from '@/hooks/use-patient-by-id';
 import { useResilientSessionNotes } from '@/hooks/use-resilient-session-notes';
@@ -20,7 +21,6 @@ import {
   CloudOff,
   FileText,
   Loader2,
-  MessageSquare,
   Mic,
   MicOff,
   NotebookPen,
@@ -77,7 +77,12 @@ export const MobileActiveSession = ({ activeAppointment, onSessionEnd }: MobileA
   const patientName = activeAppointment.patient_name || 'Paciente';
   const appointmentId = activeAppointment.id;
   const isOnlineSession = activeAppointment.type === 'online';
-  const meetLink = `${window.location.origin}/join/${appointmentId}`;
+  const invite = useTeleconsultationInvite(
+    appointmentId,
+    activeAppointment.google_meet_link,
+    isOnlineSession,
+  );
+  const meetLink = invite.data?.meetLink || '';
   const roomName = `${JITSI_APP_ID}/${appointmentId}`;
 
   const { data: patient } = usePatientById(patientId || '');
@@ -570,9 +575,6 @@ export const MobileActiveSession = ({ activeAppointment, onSessionEnd }: MobileA
                   </Button>
                   <Button size="icon" variant="secondary" onClick={() => jitsiRef.current?.toggleVideo()} className={cn('h-11 w-11 rounded-2xl', !isVideoEnabled && 'bg-rose-500/10 text-rose-500')}>
                     {isVideoEnabled ? <Video className="h-5 w-5" /> : <VideoOff className="h-5 w-5" />}
-                  </Button>
-                  <Button size="icon" variant="secondary" onClick={() => jitsiRef.current?.toggleChat()} className="h-11 w-11 rounded-2xl">
-                    <MessageSquare className="h-5 w-5" />
                   </Button>
                 </>
               ) : (

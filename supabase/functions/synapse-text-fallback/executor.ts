@@ -8,6 +8,7 @@ import {
   summarizeNotesMutation,
 } from "./notes-tools.ts";
 import { executeNeuroNotesAgentTool } from "./neuro-notes-tools.ts";
+import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
 
 export interface AgentToolContext {
   admin: any;
@@ -94,6 +95,8 @@ const summarizeMutation = (name: string, args: Record<string, any>) => {
     case "cancel_appointment": return `Cancelar a consulta de ${cleanText(args.patient_name || "paciente selecionado", 120)}${args.reason ? `, motivo: ${cleanText(args.reason, 240)}` : ""}.`;
     case "set_teleconsultation_transcription_decision": return `${args.enabled === false ? "Desativar" : "Autorizar"} transcrição da sessão de ${cleanText(args.patient_name || "paciente selecionado", 120)}.`;
     case "close_teleconsultation_room": return `Encerrar a sala de teleconsulta de ${cleanText(args.patient_name || "paciente selecionado", 120)}${args.reason ? `, motivo: ${cleanText(args.reason, 180)}` : ""}.`;
+    case "create_neuroflow_from_patient_history": return `Criar e salvar um NeuroFlow para ${cleanText(args.patient_name || "paciente selecionado", 120)}${args.objective ? ` com o objetivo “${cleanText(args.objective, 220)}”` : ""}.`;
+    case "create_neuropulse_cause_effect_diagram": return `Criar e salvar um NeuroPulse para ${cleanText(args.patient_name || "paciente selecionado", 120)}${args.prompt ? ` a partir de “${cleanText(args.prompt, 220)}”` : ""}.`;
     case "create_financial_entry": return `Registrar ${args.entry_type === "expense" ? "a despesa" : "a receita"} “${cleanText(args.title, 160)}” no valor de ${formatMoney(Math.abs(Number(args.amount || 0)))}.`;
     default: return "Executar a alteração solicitada.";
   }
@@ -109,7 +112,7 @@ function mapPatient(row: any) {
   return { id: row.id, name: row.name, email: row.email || null, phone: row.phone || null, cpf: row.cpf || null, status: row.status || null, diagnosis: row.diagnosis || null, birth_date: row.birth_date || null, address: row.address || null, emergency_contact: row.emergency_contact || null, risk_score: row.risk_score ?? null, last_session: row.last_session || null, next_session: row.next_session || null, created_at: row.created_at || null };
 }
 function mapAppointment(item: any) {
-  return { id: item.id, patient_id: item.patient_id, patient_name: item.patient?.name || (item.type === "block" ? "Bloqueio" : "Sem paciente"), patient_email: item.patient?.email || null, patient_phone: item.patient?.phone || null, start_time: item.start_time, end_time: item.end_time, start_time_local: item.start_time ? formatDateTime(item.start_time) : null, end_time_local: item.end_time ? formatDateTime(item.end_time) : null, time_label: item.start_time ? formatTime(item.start_time) : null, date: item.start_time ? localDate(item.start_time) : null, type: item.type, status: item.status, notes: item.notes, location: item.location || null, google_meet_link: item.google_meet_link || null, price: item.price ?? null, metadata: item.metadata || {} };
+  return { id: item.id, patient_id: item.patient_id, patient_name: item.patient?.name || (item.type === "block" ? "Bloqueio" : "Sem paciente"), patient_email: item.patient?.email || null, patient_phone: item.patient?.phone || null, start_time: item.start_time, end_time: item.end_time, start_time_local: item.start_time ? formatDateTime(item.start_time) : null, end_time_local: item.end_time ? formatDateTime(item.end_time) : null, time_label: item.start_time ? formatTime(item.start_time) : null, date: item.start_time ? localDate(item.start_time) : null, type: item.type, status: item.status, notes: item.notes, location: item.location || null, google_meet_link: typeof item.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(item.google_meet_link) ? item.google_meet_link : null, price: item.price ?? null, metadata: item.metadata || {} };
 }
 async function queryPatients(admin: any, userId: string, args: Record<string, any> = {}) {
   let query = admin.from("patients").select("id,name,email,phone,cpf,status,diagnosis,birth_date,address,emergency_contact,risk_score,last_session,next_session,created_at").eq("user_id", userId).order("name").limit(clamp(args.limit, 50, 1, 100));
@@ -228,7 +231,10 @@ const transcriptionDecision = (appointment: any) => {
   const decision = appointment?.metadata?.teleconsultationTranscription;
   return decision && typeof decision.enabled === "boolean" ? decision : null;
 };
-const meetLinkFor = (appointment: any) => appointment?.google_meet_link || (appointment?.id ? `/join/${appointment.id}` : null);
+const meetLinkFor = (appointment: any) =>
+  typeof appointment?.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(appointment.google_meet_link)
+    ? appointment.google_meet_link
+    : null;
 function teleStatus(appointment: any) {
   const decision = transcriptionDecision(appointment);
   const roomStatus = teleRoomStatus(appointment);
@@ -458,6 +464,23 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
   const notesResult = await executeConfirmedNotesMutation(pending, context);
   if (notesResult) return notesResult;
 
+  if (["create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram"].includes(pending.toolName)) {
+    try {
+      const result = await executeNeuroNotesAgentTool(
+        pending.toolName,
+        pending.arguments as Record<string, any>,
+        context,
+      );
+      if (result) return result;
+    } catch (error) {
+      return {
+        ok: false,
+        grounded: true,
+        error: error instanceof Error ? error.message : "Não foi possível concluir a criação assistida.",
+      };
+    }
+  }
+
   const { admin, userId, sessionId } = context;
   const args = pending.arguments as Record<string, any>;
   try {
@@ -505,6 +528,15 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         }
         const { data, error } = await admin.from("appointments").insert({ user_id: userId, patient_id: patientId, start_time: start, end_time: end, type: args.appointment_type || "presencial", notes: args.notes ? cleanText(args.notes, 3000) : null, location: args.location ? cleanText(args.location, 300) : null, price: args.price ?? null, status: "confirmed", metadata: { source: "synapse", created_from: "agenda_desktop" } }).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
         if (error) throw error;
+        if (data.type === "online") {
+          try {
+            const invite = await ensureTeleconsultationInvite(admin, { ...data, user_id: userId });
+            data.google_meet_link = invite.meetLink;
+          } catch (inviteError) {
+            await admin.from("appointments").delete().eq("id", data.id).eq("user_id", userId);
+            throw inviteError;
+          }
+        }
         const appointment = mapAppointment(data);
         return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Agendamento criado para ${appointment.start_time_local}.`, structuredData: { type: "appointment_card", data: appointment } };
       }
@@ -521,6 +553,10 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         const metadata = { ...(current.metadata || {}), rescheduled_by: "synapse", previous_start_time: current.start_time, updated_from: "agenda_desktop" };
         const { data, error } = await admin.from("appointments").update({ start_time: start, end_time: end, status: "confirmed", metadata, updated_at: new Date().toISOString() }).eq("id", appointmentId).eq("user_id", userId).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
         if (error) throw error;
+        if (data.type === "online") {
+          const invite = await ensureTeleconsultationInvite(admin, { ...data, user_id: userId });
+          data.google_meet_link = invite.meetLink;
+        }
         const appointment = mapAppointment(data);
         return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} remarcada para ${appointment.start_time_local}.`, structuredData: { type: "appointment_rescheduled", data: appointment } };
       }

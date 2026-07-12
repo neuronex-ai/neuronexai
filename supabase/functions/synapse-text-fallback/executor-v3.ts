@@ -11,6 +11,7 @@ import {
   updateContextFromResult,
   type SynapseConversationState,
 } from "./entity-context.ts";
+import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
 
 export interface AgentToolContextV3 {
   admin: any;
@@ -288,7 +289,9 @@ function mapAppointment(row: any) {
     type: row.type,
     status: row.status,
     location: row.location || null,
-    google_meet_link: row.google_meet_link || null,
+    google_meet_link: typeof row.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(row.google_meet_link)
+      ? row.google_meet_link
+      : null,
     notes: row.notes || null,
     metadata: row.metadata || {},
   };
@@ -1039,13 +1042,17 @@ export async function executeConfirmedMutationV3(
       case "send_appointment_reminder": {
         const { data: appointment, error } = await context.admin
           .from("appointments")
-          .select("id,start_time,end_time,type,location,google_meet_link,patient:patient_id(name,email)")
+          .select("id,user_id,start_time,end_time,type,location,google_meet_link,patient:patient_id(name,email)")
           .eq("id", args.appointment_id)
           .eq("user_id", context.userId)
           .maybeSingle();
         if (error) throw error;
         if (!appointment) throw new Error("Consulta não encontrada.");
         if (!appointment.patient?.email) throw new Error(`${appointment.patient?.name || "O paciente"} não possui e-mail cadastrado.`);
+
+        const meetLink = appointment.type === "online"
+          ? (await ensureTeleconsultationInvite(context.admin, appointment)).meetLink
+          : null;
 
         await invokeAuthenticatedFunction(context, "send-reminder-email", {
           appointmentId: appointment.id,
@@ -1054,7 +1061,7 @@ export async function executeConfirmedMutationV3(
           startTime: appointment.start_time,
           endTime: appointment.end_time,
           type: appointment.type,
-          meetLink: appointment.google_meet_link || null,
+          meetLink,
           location: appointment.location || null,
           origin: context.requestOrigin || "https://neuronex.site",
           action: args.action || "reminder",

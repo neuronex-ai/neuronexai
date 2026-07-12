@@ -1,4 +1,6 @@
 import { Button } from '@/components/ui/button';
+import { MagneticSegmentedControl } from '@/components/ui/magnetic-segmented-control';
+import { StableTabViewport } from '@/components/ui/stable-tab-viewport';
 import { Textarea } from '@/components/ui/textarea';
 import type { SessionNotesSyncState } from '@/hooks/use-resilient-session-notes';
 import type {
@@ -71,28 +73,28 @@ export const DesktopSessionWorkspace = ({
 
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col gap-3" aria-label="Ferramentas clínicas da sessão">
-      <nav className="teleconsultation-surface grid shrink-0 grid-cols-3 gap-1 rounded-[19px] p-1.5" aria-label="Seções da sessão" role="tablist">
-        {workspaceTabs.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            role="tab"
-            onClick={() => setActiveTab(tab.id)}
-            aria-selected={activeTab === tab.id}
-            className={cn(
-              'teleconsultation-action flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[13px] px-2 text-[8px] font-black uppercase tracking-[0.1em] outline-none focus-visible:ring-2 focus-visible:ring-ring',
-              activeTab === tab.id
-                ? 'bg-foreground text-background shadow-sm'
-                : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
-            )}
-          >
-            <tab.icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            <span className="truncate">{tab.label}</span>
-          </button>
-        ))}
-      </nav>
+      <MagneticSegmentedControl
+        id="teleconsultation-workspace"
+        indicatorId="teleconsultation-workspace-indicator"
+        value={activeTab}
+        onValueChange={setActiveTab}
+        ariaLabel="Seções da sessão"
+        options={workspaceTabs.map((tab) => ({
+          value: tab.id,
+          ariaLabel: tab.label,
+          label: (
+            <>
+              <tab.icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span className="truncate">{tab.label}</span>
+            </>
+          ),
+        }))}
+        className="teleconsultation-surface grid w-full shrink-0 grid-cols-3 rounded-[19px] p-1.5"
+        triggerClassName="teleconsultation-action w-full min-w-0 px-2 text-[8px] font-black uppercase tracking-[0.1em]"
+      />
 
-      <section className="teleconsultation-surface min-h-0 flex-1 overflow-hidden rounded-[27px]" role="tabpanel">
+      <section className="teleconsultation-surface min-h-0 flex-1 overflow-hidden rounded-[27px]">
+        <StableTabViewport value={activeTab} id="teleconsultation-workspace" className="h-full">
         {activeTab === 'transcript' ? (
           <div className="flex h-full min-h-0 flex-col">
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-5 py-4 dark:border-white/[0.045]">
@@ -258,6 +260,7 @@ export const DesktopSessionWorkspace = ({
             </div>
           </div>
         ) : null}
+        </StableTabViewport>
       </section>
     </aside>
   );

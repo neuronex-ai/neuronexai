@@ -791,6 +791,85 @@
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.007) 54%, rgba(0, 0, 0, 0.08));
   }
 
+  .patient-record-header,
+  .patient-record-panel,
+  .patient-record-card {
+    background-color: rgba(250, 250, 250, 0.78);
+    background-image: linear-gradient(154deg, rgba(255, 255, 255, 0.82), rgba(250, 250, 250, 0.3) 48%, rgba(228, 228, 228, 0.11));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.72),
+      inset 0 -1px 0 rgba(24, 24, 24, 0.028),
+      0 22px 62px -54px rgba(24, 24, 24, 0.34);
+  }
+
+  .patient-record-panel,
+  .patient-record-card {
+    border-color: hsl(var(--border) / 0.48);
+  }
+
+  .dark .patient-record-header {
+    border-color: rgba(255, 255, 255, 0.046) !important;
+    background-color: rgba(8, 8, 8, 0.94) !important;
+    background-image: linear-gradient(158deg, rgba(255, 255, 255, 0.034), rgba(255, 255, 255, 0.009) 48%, rgba(0, 0, 0, 0.12));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.54),
+      0 30px 76px -62px rgba(0, 0, 0, 0.98),
+      0 14px 38px -34px rgba(156, 156, 156, 0.11) !important;
+  }
+
+  .dark .patient-record-panel {
+    border-color: rgba(255, 255, 255, 0.052) !important;
+    background-color: rgba(15, 15, 15, 0.95) !important;
+    background-image: linear-gradient(154deg, rgba(255, 255, 255, 0.037), rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.12));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.032),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.48),
+      0 24px 62px -52px rgba(0, 0, 0, 0.96) !important;
+  }
+
+  .dark .patient-record-card {
+    border-color: rgba(255, 255, 255, 0.047) !important;
+    background-color: rgba(18, 18, 18, 0.93) !important;
+    background-image: linear-gradient(154deg, rgba(255, 255, 255, 0.033), rgba(255, 255, 255, 0.009) 52%, rgba(0, 0, 0, 0.1));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.027),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.45),
+      0 20px 52px -46px rgba(0, 0, 0, 0.94) !important;
+  }
+
+  .dark .patient-record-card:hover {
+    border-color: rgba(255, 255, 255, 0.075) !important;
+    background-color: rgba(22, 22, 22, 0.96) !important;
+  }
+
+  .patient-record-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--foreground) / 0.12) transparent;
+  }
+
+  .patient-record-scrollbar::-webkit-scrollbar,
+  .patient-record-tabbar::-webkit-scrollbar {
+    width: 5px;
+    height: 4px;
+  }
+
+  .patient-record-scrollbar::-webkit-scrollbar-track,
+  .patient-record-tabbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .patient-record-scrollbar::-webkit-scrollbar-thumb,
+  .patient-record-tabbar::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: hsl(var(--foreground) / 0.1);
+  }
+
+  .patient-record-scrollbar:hover::-webkit-scrollbar-thumb,
+  .patient-record-tabbar:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--foreground) / 0.18);
+  }
+
   .desktop-retina-interactive {
     transition-property: transform, background-color, border-color, box-shadow, opacity;
     transition-duration: 420ms;

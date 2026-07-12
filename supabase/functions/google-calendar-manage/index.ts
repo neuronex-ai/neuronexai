@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,8 +41,11 @@ const titleOf = (appointment: any) => {
 };
 
 const teleconsultationLinkOf = (appointment: any) => {
-  if (appointment?.type !== "online" || !appointment?.id) return null;
-  return `${frontendUrl()}/join/${appointment.id}`;
+  if (appointment?.type !== "online") return null;
+  return typeof appointment.google_meet_link === "string" &&
+      /\/join\/[a-f0-9]{64}$/i.test(appointment.google_meet_link)
+    ? appointment.google_meet_link
+    : null;
 };
 
 const descriptionOf = (appointment: any) => {
@@ -129,13 +133,26 @@ serve(async (req) => {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
     } else if (action === "update" && appointmentData) {
+      let safeAppointmentData = appointmentData;
+      if (appointmentData.type === "online" && appointmentData.id) {
+        const { data: storedAppointment, error: appointmentError } = await supabaseService
+          .from("appointments")
+          .select("id,user_id,type,start_time,end_time,google_meet_link,metadata,notes,location,patient_id")
+          .eq("id", appointmentData.id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (appointmentError) throw appointmentError;
+        if (!storedAppointment) throw new Error("Appointment not found");
+        const invite = await ensureTeleconsultationInvite(supabaseService, storedAppointment);
+        safeAppointmentData = { ...appointmentData, google_meet_link: invite.meetLink };
+      }
       response = await fetch(`${baseUrl}?sendUpdates=all`, {
         method: "PATCH",
         headers: {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(patchFromAppointment(appointmentData)),
+        body: JSON.stringify(patchFromAppointment(safeAppointmentData)),
       });
     }
 

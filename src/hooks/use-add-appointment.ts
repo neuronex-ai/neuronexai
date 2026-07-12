@@ -21,6 +21,16 @@ interface NewAppointmentData {
 
 const GOOGLE_CALENDAR_SYNC_URL = edgeFunctionUrl("google-calendar-sync");
 
+const ensureTeleconsultationInvite = async (appointmentId: string) => {
+  const { data, error } = await supabase.functions.invoke<{ meetLink?: string }>(
+    'ensure-teleconsultation-invite',
+    { body: { appointmentId } },
+  );
+  if (error) throw new Error(error.message);
+  if (!data?.meetLink) throw new Error('O servidor não retornou o convite da teleconsulta.');
+  return data.meetLink;
+};
+
 const toLogMessage = (error: unknown) => {
   if (error instanceof Error) return error.message;
   if (typeof error === 'string') return error;
@@ -75,10 +85,6 @@ const resolveMetadata = (appointmentData: NewAppointmentData): AppointmentMetada
 
 const addAppointment = async (appointmentData: NewAppointmentData, userId: string, accessToken: string) => {
   const appointmentId = appointmentData.id || crypto.randomUUID();
-  const frontendOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://neuronexai.com.br';
-  const teleconsultationLink = appointmentData.type === 'online'
-    ? `${frontendOrigin}/join/${appointmentId}`
-    : null;
 
   const { data: hasConflict, error: conflictError } = await supabase.rpc('check_appointment_overlap', {
     p_user_id: userId,
@@ -97,7 +103,7 @@ const addAppointment = async (appointmentData: NewAppointmentData, userId: strin
     name: metadata.kind === 'event' ? metadata.eventTitle || "Compromisso" : "Bloqueio de Agenda",
   };
   let googleEventId: string | null = null;
-  let googleMeetLink: string | null = null;
+  let secureMeetLink: string | null = null;
 
   if (appointmentData.patient_id) {
     const { data: fetchedPatient, error: patientError } = await supabase
@@ -113,34 +119,7 @@ const addAppointment = async (appointmentData: NewAppointmentData, userId: strin
     patientData = fetchedPatient;
   }
 
-  if (shouldSyncToGoogle) {
-    try {
-      toast.info("Sincronizando com o Google Calendar...");
-      const syncResult = await syncAppointmentToGoogle(
-        {
-          ...appointmentData,
-          metadata,
-          id: appointmentId,
-          user_id: userId,
-          created_at: new Date().toISOString(),
-          status: 'unscored',
-          patient_name: patientData.name,
-        } as unknown as Appointment,
-        patientData,
-        accessToken
-      );
-
-      googleEventId = syncResult.googleEventId || null;
-      googleMeetLink = syncResult.googleMeetLink || null;
-      toast.success("Agendamento sincronizado com Google Calendar!");
-    } catch (e: unknown) {
-      console.warn("Google Sync Failed:", toLogMessage(e));
-      metadata.syncStatus = 'failed';
-      toast.warning(`Agendamento criado, mas falha na sincronizacao com Google: ${toLogMessage(e)}`);
-    }
-  }
-
-  const { data: newAppointment, error: appointmentError } = await supabase
+  const { data: insertedAppointment, error: appointmentError } = await supabase
     .from('appointments')
     .insert({
       id: appointmentId,
@@ -155,14 +134,14 @@ const addAppointment = async (appointmentData: NewAppointmentData, userId: strin
       metadata: {
         ...metadata,
         origin: metadata.origin || 'neuronex',
-        syncStatus: googleEventId ? 'synced' : metadata.syncStatus || 'pending',
-        lastSyncedAt: googleEventId ? new Date().toISOString() : metadata.lastSyncedAt,
+        syncStatus: metadata.syncStatus || 'pending',
+        lastSyncedAt: metadata.lastSyncedAt,
         ...(appointmentData.type === 'online'
           ? { teleconsultationRoom: { status: 'waiting' } }
           : {}),
       },
-      google_event_id: googleEventId,
-      google_meet_link: teleconsultationLink || googleMeetLink,
+      google_event_id: null,
+      google_meet_link: null,
     })
     .select()
     .single();
@@ -170,6 +149,62 @@ const addAppointment = async (appointmentData: NewAppointmentData, userId: strin
   if (appointmentError) {
     console.error(`Erro ao adicionar agendamento: ${toLogMessage(appointmentError)}`);
     throw new Error(appointmentError.message);
+  }
+
+  let newAppointment = insertedAppointment;
+
+  if (appointmentData.type === 'online') {
+    try {
+      secureMeetLink = await ensureTeleconsultationInvite(appointmentId);
+      newAppointment = { ...newAppointment, google_meet_link: secureMeetLink };
+    } catch (inviteError) {
+      console.error(`[useAddAppointment] Convite seguro não criado: ${toLogMessage(inviteError)}`);
+      await supabase.from('appointments').delete().eq('id', appointmentId).eq('user_id', userId);
+      throw new Error('Não foi possível criar o convite seguro. A teleconsulta não foi salva; tente novamente.');
+    }
+  }
+
+  if (shouldSyncToGoogle) {
+    try {
+      toast.info("Sincronizando com o Google Calendar...");
+      const syncResult = await syncAppointmentToGoogle(
+        {
+          ...newAppointment,
+          metadata,
+          patient_name: patientData.name,
+        } as unknown as Appointment,
+        patientData,
+        accessToken,
+      );
+
+      googleEventId = syncResult.googleEventId || null;
+      const lastSyncedAt = new Date().toISOString();
+      const { data: syncedAppointment, error: syncUpdateError } = await supabase
+        .from('appointments')
+        .update({
+          google_event_id: googleEventId,
+          google_meet_link: secureMeetLink,
+          metadata: {
+            ...metadata,
+            origin: metadata.origin || 'neuronex',
+            syncStatus: googleEventId ? 'synced' : 'pending',
+            lastSyncedAt,
+            ...(appointmentData.type === 'online'
+              ? { teleconsultationRoom: { status: 'waiting' } }
+              : {}),
+          },
+        })
+        .eq('id', appointmentId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+      if (syncUpdateError) throw syncUpdateError;
+      newAppointment = syncedAppointment;
+      toast.success("Agendamento sincronizado com Google Calendar!");
+    } catch (e: unknown) {
+      console.warn("Google Sync Failed:", toLogMessage(e));
+      toast.warning(`Agendamento criado, mas falha na sincronização com Google: ${toLogMessage(e)}`);
+    }
   }
 
   try {

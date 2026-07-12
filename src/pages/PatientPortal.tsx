@@ -2,6 +2,9 @@ import { Button } from "@/components/ui/button";
 import { DesktopWorkspacePanel, DesktopWorkspaceShell } from "@/components/ui/desktop-workspace";
 import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { ReflectionCarousel as SharedReflectionCarousel } from "@/components/ui/reflection-carousel";
+import { useDailyRotationItem } from "@/components/ui/reflection-carousel-rotation";
+import { MoodTrendChart } from "@/components/patients/MoodTrendChart";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/components/auth/SessionContextProvider";
@@ -13,7 +16,6 @@ import {
   type PatientPortalDocument,
   type PatientPortalGoal,
   type PatientPortalInvoice,
-  type PatientPortalMoodLog,
   type PatientPortalPackage,
   type PatientPortalSessionSummary,
   usePatientPortalAnamnesis,
@@ -72,7 +74,6 @@ import {
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { toast } from "sonner";
 
 const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -95,13 +96,6 @@ const moodOptions = [
   { score: 5, label: "Leve", icon: Laugh, tone: "text-blue-600 border-blue-500/25 bg-blue-500/10" },
 ] as const;
 
-const moodVisualConfig: Record<number, { label: string; color: string; tone: string }> = {
-  1: { label: "Pesado", color: "#f43f5e", tone: "bg-rose-500/10 text-rose-500 border-rose-500/20" },
-  2: { label: "Difícil", color: "#f97316", tone: "bg-orange-500/10 text-orange-500 border-orange-500/20" },
-  3: { label: "Neutro", color: "#eab308", tone: "bg-yellow-500/10 text-yellow-500 border-yellow-500/20" },
-  4: { label: "Bem", color: "#10b981", tone: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  5: { label: "Leve", color: "#6366f1", tone: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20" },
-};
 
 const navItems = [
   { value: "home", label: "Início", path: "/portal", icon: Home },
@@ -145,8 +139,7 @@ const appointmentIsOnline = (appointment?: PatientPortalAppointment | null) =>
 
 const patientSessionUrl = (appointment: PatientPortalAppointment) => {
   const link = appointment.google_meet_link || "";
-  if (link.includes("/join/")) return link;
-  return `/join/${appointment.id}`;
+  return /\/join\/[a-f0-9]{64}$/i.test(link) ? link : "";
 };
 
 const appointmentTypeLabel = (type?: string | null) => {
@@ -181,12 +174,6 @@ const patientQuotes = [
   "Existe força em pedir pausa, ajuda e espaço.",
   "O futuro melhora quando o cuidado fica mais perto.",
 ];
-
-const quoteOfTheDay = () => {
-  const start = new Date(new Date().getFullYear(), 0, 0);
-  const day = Math.floor((Date.now() - start.getTime()) / 86400000);
-  return patientQuotes[Math.abs(day) % patientQuotes.length];
-};
 
 const statusTone = (status?: string | null) => {
   const normalized = String(status || "").toLowerCase();
@@ -1759,93 +1746,6 @@ const ProgressView = ({
   );
 };
 
-const MoodChartTooltip = ({ active, payload, label }: any) => {
-  if (!active || !payload?.length) return null;
-  const score = Number(payload[0].value || 3);
-  const config = moodVisualConfig[score] || moodVisualConfig[3];
-
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white/92 p-4 shadow-2xl ring-1 ring-black/5 backdrop-blur-2xl dark:border-white/[0.085] dark:bg-[#0b0b0d] dark:ring-white/5">
-      <p className="mb-3 border-b border-zinc-100 pb-2 text-[10px] font-black uppercase tracking-widest text-zinc-400 dark:border-white/[0.065] dark:text-zinc-500">
-        {label}
-      </p>
-      <div className="flex items-center gap-3">
-        <span className={cn("rounded-lg border px-3 py-2 text-xs font-black uppercase tracking-[0.16em]", config.tone)}>
-          {config.label}
-        </span>
-      </div>
-    </div>
-  );
-};
-
-const MoodTrendChart = ({ logs }: { logs: PatientPortalMoodLog[] }) => {
-  const rows = [...logs]
-    .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
-    .slice(-14);
-  const avgMood = rows.length ? rows.reduce((total, log) => total + Number(log.mood_score || 0), 0) / rows.length : 0;
-  const chartData = rows.map((log) => ({
-    date: dateOnly.format(new Date(log.created_at)).slice(0, 5),
-    fullDate: dateOnly.format(new Date(log.created_at)),
-    score: log.mood_score,
-  }));
-
-  return (
-    <section className="relative overflow-hidden rounded-[34px] border border-zinc-200/50 bg-white p-6 shadow-[0_24px_72px_-58px_rgba(0,0,0,0.42)] dark:border-white/[0.085] dark:bg-[#0b0b0d] dark:shadow-[0_24px_62px_-46px_rgba(0,0,0,0.96)] md:p-8">
-      <div className="pointer-events-none absolute right-0 top-0 h-72 w-72 rounded-full bg-primary/5 blur-[100px] dark:bg-white/[0.018]" />
-      <div className="relative z-10 mb-8 flex flex-col justify-between gap-5 md:flex-row md:items-center">
-        <div className="flex items-center gap-5">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-zinc-200 bg-zinc-100 text-zinc-900 shadow-lg dark:border-white/[0.075] dark:bg-[#141415] dark:text-white">
-            <TrendingUp className="h-7 w-7" />
-          </div>
-          <div>
-            <h3 className="text-xl font-black leading-none tracking-tight text-zinc-900 dark:text-zinc-100">Tendência Emocional</h3>
-            <p className="mt-2 text-[10px] font-bold uppercase leading-none tracking-[0.2em] text-zinc-500">Análise de variação de humor</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-4 rounded-2xl border border-zinc-200/50 bg-zinc-100/50 p-1 backdrop-blur-md dark:border-white/[0.065] dark:bg-[#080809]">
-          <div className="rounded-xl border border-zinc-200 bg-white px-5 py-3 shadow-lg dark:border-white/[0.075] dark:bg-[#141415]">
-            <p className="mb-1 text-[9px] font-black uppercase leading-none tracking-widest text-zinc-400 dark:text-zinc-500">Média geral</p>
-            <p className="text-2xl font-black leading-none tracking-tight text-zinc-900 dark:text-white">{avgMood ? avgMood.toFixed(1) : "0.0"}</p>
-          </div>
-          <div className="hidden px-4 sm:block">
-            <p className="mb-1 text-[9px] font-black uppercase leading-none tracking-widest text-zinc-400 dark:text-zinc-500">Registros</p>
-            <p className="text-sm font-bold leading-none text-zinc-900 dark:text-white">{rows.length}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative z-10 h-[300px] rounded-[32px] border border-zinc-200/50 bg-zinc-100/30 p-6 shadow-inner dark:border-white/[0.065] dark:bg-[#080809]">
-        {rows.length < 2 ? (
-          <div className="flex h-full items-center justify-center text-center">
-            <p className="max-w-sm text-sm font-medium leading-relaxed text-muted-foreground">
-              Com dois registros ou mais, seu histórico emocional começa a desenhar uma linha do tempo.
-            </p>
-          </div>
-        ) : (
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,120,120,0.12)" vertical={false} />
-              <XAxis dataKey="date" stroke="transparent" tick={{ fill: "rgba(120,120,120,0.58)", fontSize: 10, fontWeight: 700 }} dy={15} />
-              <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} stroke="transparent" tick={{ fill: "rgba(120,120,120,0.58)", fontSize: 10, fontWeight: 700 }} />
-              <Tooltip content={<MoodChartTooltip />} cursor={{ stroke: "rgba(120,120,120,0.16)", strokeWidth: 2 }} />
-              <ReferenceLine y={3} stroke="rgba(120,120,120,0.18)" strokeDasharray="6 6" />
-              <Line
-                type="monotone"
-                dataKey="score"
-                stroke="#6366f1"
-                strokeWidth={5}
-                dot={{ r: 6, fill: "#6366f1", strokeWidth: 4, stroke: "#fff" }}
-                activeDot={{ r: 8, strokeWidth: 0, fill: "#4f46e5" }}
-                animationDuration={1500}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        )}
-      </div>
-    </section>
-  );
-};
-
 const DiaryView = ({ mood }: { mood: ReturnType<typeof usePatientPortalMood> }) => {
   const [moodScore, setMoodScore] = useState(mood.data?.today?.mood_score || 4);
   const [notes, setNotes] = useState(mood.data?.today?.notes || "");
@@ -1867,7 +1767,7 @@ const DiaryView = ({ mood }: { mood: ReturnType<typeof usePatientPortalMood> }) 
 
   return (
     <div className="space-y-5">
-      <MoodTrendChart logs={logs} />
+      <MoodTrendChart logs={logs} audience="patient" />
       <Panel>
         <p className="text-lg font-semibold text-foreground">Como você está hoje?</p>
         <div className="mt-5 grid grid-cols-5 gap-2">
@@ -2079,18 +1979,12 @@ const HomeSummaryRow = ({
   </button>
 );
 
-const ReflectionCarousel = ({ patientName }: { patientName: string }) => {
-  const [activeSlide, setActiveSlide] = useState(0);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setActiveSlide((current) => (current === 0 ? 1 : 0)), 5200);
-    return () => window.clearInterval(timer);
-  }, []);
-
+const PatientReflectionCarousel = ({ patientName }: { patientName: string }) => {
+  const dailyQuote = useDailyRotationItem(patientQuotes);
   const slides = [
     {
       eyebrow: "Frase do dia",
-      title: quoteOfTheDay(),
+      title: dailyQuote || patientQuotes[0],
       description: "Uma pequena lâmina para atravessar o dia com menos ruído e mais presença.",
     },
     {
@@ -2101,40 +1995,11 @@ const ReflectionCarousel = ({ patientName }: { patientName: string }) => {
   ];
 
   return (
-    <section className="relative overflow-hidden rounded-[42px] border border-border/45 bg-foreground p-6 text-center text-background shadow-[0_32px_110px_-78px_rgba(0,0,0,0.9)] dark:bg-white dark:text-zinc-950 md:p-10">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_42%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.055),transparent_42%,rgba(0,0,0,0.02))]" />
-      <div className="relative z-10 mx-auto max-w-4xl overflow-hidden">
-        <div
-          className="flex transition-transform duration-700 ease-out motion-reduce:transition-none"
-          style={{ transform: `translateX(${activeSlide * -100}%)` }}
-        >
-          {slides.map((slide) => (
-            <div key={slide.eyebrow} className="flex min-h-[220px] min-w-full flex-col items-center justify-center px-4 md:min-h-[260px]">
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white">
-                <BrainCircuit className="h-5 w-5" />
-              </div>
-              <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-55">{slide.eyebrow}</p>
-              <h2 className="mt-5 max-w-3xl text-3xl font-black leading-[0.96] tracking-tight md:text-5xl">{slide.title}</h2>
-              <p className="mx-auto mt-5 max-w-2xl text-sm font-medium leading-relaxed opacity-62 md:text-base">{slide.description}</p>
-            </div>
-          ))}
-        </div>
-        <div className="mt-2 flex justify-center gap-2">
-          {slides.map((slide, index) => (
-            <button
-              key={slide.eyebrow}
-              type="button"
-              onClick={() => setActiveSlide(index)}
-              className={cn(
-                "h-2 rounded-full transition-all duration-300 motion-reduce:transition-none",
-                activeSlide === index ? "w-8 bg-background dark:bg-zinc-950" : "w-2 bg-background/25 dark:bg-zinc-950/25",
-              )}
-              aria-label={`Ir para ${slide.eyebrow}`}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
+    <SharedReflectionCarousel
+      slides={slides}
+      icon={BrainCircuit}
+      ariaLabel="Reflexões para o seu dia"
+    />
   );
 };
 
@@ -2256,7 +2121,7 @@ const HomeView = ({
         </Panel>
       </div>
 
-      <ReflectionCarousel patientName={patientName} />
+      <PatientReflectionCarousel patientName={patientName} />
     </div>
   );
 };

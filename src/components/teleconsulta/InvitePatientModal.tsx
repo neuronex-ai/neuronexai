@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Mail, Phone, Copy, CheckCircle2, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Patient } from "@/types";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +19,7 @@ interface InvitePatientModalProps {
 export const InvitePatientModal = ({ isOpen, onClose, appointmentId, patient, meetLink, therapistName }: InvitePatientModalProps) => {
     const [copied, setCopied] = useState(false);
     const [isSendingEmail, setIsSendingEmail] = useState(false);
+    const firstActionRef = useRef<HTMLButtonElement>(null);
 
     const handleCopyLink = async () => {
         try {
@@ -80,7 +81,11 @@ export const InvitePatientModal = ({ isOpen, onClose, appointmentId, patient, me
         <Dialog open={isOpen} onOpenChange={(open) => { if (!open) onClose(); }}>
             <DialogContent
                 overlayClassName="teleconsultation-overlay !backdrop-blur-none"
-                className="teleconsultation-surface desktop-retina-form !w-[min(540px,calc(100vw-2rem))] !max-w-[min(540px,calc(100vw-2rem))] gap-0 overflow-hidden rounded-[30px] p-0"
+                className="teleconsultation-surface desktop-retina-form max-h-[calc(100dvh-2rem)] w-[calc(100vw-2rem)] max-w-[540px] gap-0 overflow-y-auto rounded-[30px] p-0"
+                onOpenAutoFocus={(event) => {
+                    event.preventDefault();
+                    firstActionRef.current?.focus();
+                }}
             >
 
                 <div className="border-b border-border/40 px-6 pb-5 pt-7 dark:border-white/[0.045] sm:px-7">
@@ -93,8 +98,9 @@ export const InvitePatientModal = ({ isOpen, onClose, appointmentId, patient, me
                 </div>
 
                 <div className="space-y-5 p-6 sm:p-7">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 min-[480px]:grid-cols-2">
                         <Button
+                            ref={firstActionRef}
                             onClick={handleWhatsApp}
                             variant="outline"
                             className="teleconsultation-inset teleconsultation-action group flex h-28 flex-col items-center justify-center gap-3 rounded-[22px] hover:border-emerald-500/25"
@@ -129,7 +135,7 @@ export const InvitePatientModal = ({ isOpen, onClose, appointmentId, patient, me
                         </div>
                     </div>
 
-                    <div className="teleconsultation-inset flex min-w-0 items-center gap-2 rounded-[18px] p-1.5 pl-4">
+                    <div className="teleconsultation-inset grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 rounded-[18px] p-1.5 pl-4">
                         <div className="min-w-0 flex-1 overflow-hidden">
                             <p className="text-xs text-zinc-600 dark:text-zinc-400 truncate font-mono select-all">
                                 {meetLink}
@@ -139,7 +145,7 @@ export const InvitePatientModal = ({ isOpen, onClose, appointmentId, patient, me
                             size="sm"
                             onClick={() => void handleCopyLink()}
                             className={cn(
-                                "teleconsultation-action h-11 rounded-[14px] px-5 text-[10px] font-bold uppercase tracking-wider shadow-none",
+                                "teleconsultation-action h-11 rounded-[14px] px-3 text-[10px] font-bold uppercase tracking-wider shadow-none sm:px-5",
                                 copied ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-white/80 dark:bg-white/10 text-zinc-800 dark:text-white hover:bg-white hover:text-black dark:hover:bg-white/20"
                             )}
                         >

@@ -64,21 +64,9 @@ serve(async (req) => {
       }
     }
 
-    // 2. Fallback: Check by appointment ID directly (for legacy links or direct access)
-    if (!appointment && isUUID) {
-      const { data: byId } = await supabaseClient
-        .from('appointments')
-        .select('*')
-        .eq('id', token)
-        .maybeSingle();
-
-      if (byId) {
-        console.log('Found appointment by direct ID');
-        appointment = byId;
-      }
-    }
-
-    // 3. Last resort: Check token column in appointments table (legacy)
+    // 2. Legacy confirmation links may still use the dedicated bearer token
+    // stored on the appointment. The public appointment UUID is deliberately
+    // not accepted as a credential.
     if (!appointment) {
       const { data: byTokenColumn } = await supabaseClient
         .from('appointments')

@@ -11,6 +11,7 @@ import {
   getPatientPortalContext,
   requireActivePatientPortal,
 } from "../_shared/patient-portal.ts";
+import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
 
 async function readBody(req: Request) {
   if (req.method !== "POST") return {};
@@ -40,12 +41,25 @@ async function safeModule(module: string, fallback: Record<string, unknown>, loa
 async function loadAppointments(context: any) {
   const { data, error } = await supabaseAdmin
     .from("appointments")
-    .select("id,start_time,end_time,type,status,location,google_meet_link,created_at,updated_at,metadata,notes")
+    .select("id,user_id,start_time,end_time,type,status,location,google_meet_link,created_at,updated_at,metadata,notes")
     .eq("patient_id", context.patient.id)
     .eq("user_id", context.professional.id)
     .order("start_time", { ascending: true });
   if (error) throw error;
-  return { appointments: data || [] };
+  const appointments = await Promise.all((data || []).map(async (appointment: any) => {
+    if (appointment.type !== "online") return appointment;
+    const isCancelled = [
+      "cancelled",
+      "canceled",
+      "cancelled_by_patient",
+      "cancelled_by_professional",
+    ].includes(String(appointment.status || "").toLowerCase());
+    const sessionEnded = new Date(appointment.end_time || appointment.start_time).getTime() < Date.now();
+    if (isCancelled || sessionEnded) return { ...appointment, google_meet_link: null };
+    const invite = await ensureTeleconsultationInvite(supabaseAdmin, appointment);
+    return { ...appointment, google_meet_link: invite.meetLink };
+  }));
+  return { appointments };
 }
 
 async function loadDocuments(context: any) {
@@ -452,6 +466,7 @@ async function loadProgress(context: any) {
     loadPackages(context),
   ]);
   if (documents.error) throw documents.error;
+  if (mood instanceof Response) throw new Error("Não foi possível carregar os registros de humor.");
 
   const appointmentRows = appointments.appointments || [];
   const goalRows = goals.goals || [];
@@ -795,7 +810,7 @@ async function togglePatientTask(user: any, context: any, body: Record<string, u
   if (loadError) throw loadError;
   if (!existing) return errorResponse("Tarefa não encontrada.", 404);
 
-  const tags = noteTags(existing).filter((tag) => !tag.startsWith("status:"));
+  const tags = noteTags(existing).filter((tag: string) => !tag.startsWith("status:"));
   if (!tags.includes("portal-paciente")) tags.push("portal-paciente");
   if (!tags.includes("tarefa")) tags.push("tarefa");
   tags.push(isCompleted ? "status:completed" : "status:pending");

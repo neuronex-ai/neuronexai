@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { ScanningEffect } from "./ScanningEffect";
 import { useParams } from "react-router-dom";
 import mammoth from "mammoth";
-import { GlassCard } from "@/components/ui/GlassCard";
 
 interface ExtractedItem {
     question: string;
@@ -91,8 +90,10 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
         if (!allowedTypes.includes(selectedFile.type) && !isMd) {
             if (selectedFile.name.toLowerCase().endsWith('.doc')) {
                 toast.error("Formato .doc antigo não suportado", { description: "Por favor converta para .docx ou PDF." });
-                return;
+            } else {
+                toast.error("Formato não suportado", { description: "Envie um PDF, DOCX, TXT, Markdown ou uma imagem." });
             }
+            return;
         }
 
         if (selectedFile.size > 10 * 1024 * 1024) {
@@ -301,7 +302,8 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                         variant="ghost"
                         size="icon"
                         onClick={onBack}
-                        className="h-11 w-11 rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/10 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all shadow-sm"
+                        aria-label="Voltar à escolha de anamnese"
+                        className="desktop-retina-inset desktop-retina-interactive h-11 w-11 rounded-2xl border border-border/50 bg-background/58 shadow-sm hover:bg-muted"
                     >
                         <ChevronLeft className="w-5 h-5 text-zinc-500" />
                     </Button>
@@ -328,10 +330,9 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                             exit={{ opacity: 0 }}
                             className="flex-1 flex items-center justify-center"
                         >
-                            <GlassCard className={cn(
-                                "desktop-retina-panel group relative w-full max-w-[520px] rounded-[30px] border-border/50 bg-card/72 transition-colors duration-300",
-                                isDragging ? "bg-zinc-900/5 dark:bg-white/5 border-zinc-900 dark:border-white scale-[1.01]" : "hover:bg-white dark:hover:bg-zinc-900/30",
-                                "shadow-[0_40px_80px_-24px_rgba(0,0,0,0.08)] dark:shadow-[0_40px_80px_-24px_rgba(0,0,0,0.4)]"
+                            <div className={cn(
+                                "patient-record-panel group relative w-full max-w-[520px] overflow-hidden rounded-[30px] border p-0 transition-[border-color,background-color,transform] duration-300",
+                                isDragging ? "scale-[1.01] border-foreground/35 bg-muted/70" : "hover:border-border/70",
                             )}>
                                 <ScanningEffect isActive={isScanning} />
 
@@ -349,7 +350,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                 exit={{ opacity: 0 }}
                                                 className="space-y-8 w-full"
                                             >
-                                                <div className="w-24 h-24 rounded-[28px] bg-zinc-50 dark:bg-white/5 flex items-center justify-center mx-auto border border-zinc-100 dark:border-white/10 group-hover:scale-105 transition-transform duration-500">
+                                                <div className="desktop-retina-inset mx-auto flex h-24 w-24 items-center justify-center rounded-[28px] border border-border/45 bg-muted/35 transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
                                                     <Upload className="w-8 h-8 text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-white transition-colors" />
                                                 </div>
                                                 <div className="space-y-2">
@@ -359,7 +360,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                 <Button
                                                     variant="outline"
                                                     onClick={() => fileInputRef.current?.click()}
-                                                    className="rounded-2xl px-10 h-12 border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 hover:bg-zinc-900 hover:text-white dark:hover:bg-white dark:hover:text-zinc-900 text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm"
+                                                    className="desktop-retina-interactive h-12 rounded-2xl border-border/50 bg-background/62 px-10 text-[10px] font-bold uppercase tracking-widest shadow-sm hover:bg-foreground hover:text-background"
                                                 >
                                                     Selecionar Arquivo
                                                 </Button>
@@ -372,12 +373,13 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                 exit={{ opacity: 0 }}
                                                 className="w-full max-w-[280px] space-y-8"
                                             >
-                                                <div className="relative w-28 h-36 bg-white rounded-2xl shadow-lg mx-auto flex items-center justify-center border border-zinc-100">
+                                                <div className="desktop-retina-inset relative mx-auto flex h-36 w-28 items-center justify-center rounded-2xl border border-border/50 bg-background/64 shadow-lg">
                                                     <FileIcon className="w-10 h-10 text-zinc-300" />
                                                     {!isScanning && (
                                                         <button
                                                             onClick={() => { setFile(null); setError(null); }}
-                                                            className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                                                            aria-label="Remover arquivo"
+                                                            className="desktop-retina-interactive absolute -right-2 -top-2 flex h-9 w-9 items-center justify-center rounded-full bg-foreground text-background shadow-lg"
                                                         >
                                                             <X className="w-3.5 h-3.5" />
                                                         </button>
@@ -431,7 +433,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                     accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.docx,.md"
                                     onChange={handleFileSelect}
                                 />
-                            </GlassCard>
+                            </div>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -440,11 +442,11 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                     <motion.div
                         initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
                         className="flex-1 flex flex-col gap-4 min-h-0"
                     >
                         {/* Status bar with top confirm button */}
-                        <div className="h-14 rounded-2xl bg-white dark:bg-white/5 border border-zinc-200 dark:border-white/5 flex items-center px-6 justify-between shrink-0">
+                        <div className="patient-record-panel flex h-14 shrink-0 items-center justify-between rounded-2xl border px-4 sm:px-6">
                             <div className="flex items-center gap-3">
                                 <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                 <span className="text-[10px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-widest">
@@ -474,7 +476,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                         </div>
 
                         {/* Results container */}
-                        <div className="desktop-retina-panel relative flex-1 overflow-hidden rounded-[28px] border border-border/45 bg-card/68">
+                        <div className="patient-record-panel relative flex-1 overflow-hidden rounded-[28px] border">
                             <div className="custom-scrollbar h-full overflow-y-auto overscroll-contain p-6 pb-40 [contain:layout_paint_style] [scrollbar-gutter:stable] md:p-8 md:pb-40">
                                 <div className="max-w-3xl mx-auto space-y-6">
                                     {extractedData.slice(0, visibleCount).map((item, idx) => (
@@ -491,7 +493,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                                 <Input
                                                                     value={item.question}
                                                                     onChange={(e) => updateField(idx, 'question', e.target.value)}
-                                                                    className="h-8 text-xs font-bold uppercase tracking-widest text-zinc-900 dark:text-white border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/5 w-56 rounded-lg"
+                                                                className="desktop-retina-inset h-9 w-56 rounded-lg border-border/50 bg-background/58 text-xs font-bold uppercase tracking-widest text-foreground"
                                                                 />
                                                                 <Button size="icon" variant="ghost" className="h-8 w-8 rounded-lg" onClick={() => toggleEdit(idx)}>
                                                                     <Check className="w-4 h-4" />
@@ -515,7 +517,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                             <Input
                                                                 value={item.question}
                                                                 onChange={(e) => updateField(idx, 'question', e.target.value)}
-                                                                className="h-7 text-[10px] font-bold uppercase tracking-widest text-zinc-500 border-zinc-200 dark:border-white/10 bg-white dark:bg-white/5 flex-1 rounded-lg px-2"
+                                                                className="desktop-retina-inset h-9 flex-1 rounded-lg border-border/50 bg-background/58 px-2 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
                                                             />
                                                         ) : (
                                                             <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest leading-none">{item.question}</label>
@@ -533,7 +535,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                         <Textarea
                                                             value={item.answer}
                                                             onChange={(e) => updateField(idx, 'answer', e.target.value)}
-                                                            className="text-sm bg-white dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 text-zinc-900 dark:text-zinc-200 min-h-[100px] rounded-xl p-4 leading-relaxed resize-none"
+                                                            className="desktop-retina-inset min-h-[100px] resize-none rounded-xl border-border/50 bg-background/58 p-4 text-sm leading-relaxed text-foreground"
                                                         />
                                                     ) : (
                                                         <p className="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
@@ -553,7 +555,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.2 }}
-                                    className="absolute bottom-0 left-0 right-0 p-8 pt-16 bg-gradient-to-t from-white via-white/98 dark:from-zinc-950 dark:via-zinc-950/98 to-transparent flex justify-center z-30"
+                                    className="absolute bottom-0 left-0 right-0 z-30 flex justify-center bg-gradient-to-t from-background via-background/98 to-transparent p-8 pt-16"
                                 >
                                     <Button
                                         onClick={saveAnamnesis}

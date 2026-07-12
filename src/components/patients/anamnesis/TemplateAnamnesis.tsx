@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Baby, User, UserCheck, ArrowLeft, Info, Loader2, ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { motion, useReducedMotion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -16,7 +17,7 @@ const TEMPLATES = [
         id: 'infantil',
         label: 'Anamnese Infantil',
         icon: Baby,
-        description: 'Focada no desenvolvimento, gestação, parto, histórico escolar e dinmica familiar.',
+        description: 'Focada no desenvolvimento, gestação, parto, histórico escolar e dinâmica familiar.',
         color: 'from-zinc-500/10 to-zinc-700/10',
         borderColor: 'border-zinc-500/20',
         iconColor: 'text-zinc-700 dark:text-zinc-300',
@@ -43,7 +44,7 @@ const TEMPLATES = [
                 fields: ['Controle cervical (pescoço)', 'Sentar', 'Andar', 'Fala', 'Controle de esfíncteres (anal/vesical)', 'Histórico de doenças/internações']
             },
             {
-                title: 'Dinmica Familiar',
+                title: 'Dinâmica familiar',
                 fields: ['Com quem mora', 'Relacionamento dos pais', 'Relacionamento com a criança', 'Relacionamento com irmãos', 'Histórico familiar de transtornos']
             },
             {
@@ -83,7 +84,7 @@ const TEMPLATES = [
             },
             {
                 title: 'Histórico Médico',
-                fields: ['Doenças da infncia', 'Infeções/Alergias', 'Traumatismos/Convulsões', 'Dores de cabeça/Enxaquecas', 'Medicações em uso']
+                fields: ['Doenças da infância', 'Infecções/Alergias', 'Traumatismos/Convulsões', 'Dores de cabeça/Enxaquecas', 'Medicações em uso']
             },
             {
                 title: 'Sistemas e Saúde Geral',
@@ -130,7 +131,7 @@ const TEMPLATES = [
             },
             {
                 title: 'Hábitos e Estilo de Vida',
-                fields: ['Qualidade do sono', 'Alimentação', 'Atividade física', 'Uso de substncias']
+                fields: ['Qualidade do sono', 'Alimentação', 'Atividade física', 'Uso de substâncias']
             },
             {
                 title: 'Avaliação Mental (Obs.)',
@@ -148,6 +149,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
     const { id: patientId } = useParams<{ id: string }>();
     const [selectedTemplate, setSelectedTemplate] = useState<typeof TEMPLATES[number] | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const lastTriggerRef = useRef<HTMLButtonElement | null>(null);
     const shouldReduceMotion = useReducedMotion();
 
 
@@ -156,7 +158,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
 
         setIsSaving(true);
         try {
-            const structuredContent: any[] = [];
+            const structuredContent: Array<{ question: string; answer: string; isSection?: boolean }> = [];
 
             selectedTemplate.sections.forEach(section => {
                 structuredContent.push({
@@ -213,7 +215,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                 if (insertError) throw insertError;
             }
 
-            toast.success("Modelo aplicado com sucesso!");
+            toast.success("Modelo aplicado com sucesso.");
             if (onSuccess) onSuccess();
 
         } catch (error) {
@@ -226,9 +228,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
 
     return (
         <div className="w-full h-full relative selection:bg-zinc-900/10 dark:selection:bg-white/10">
-            <AnimatePresence mode="wait">
-                {!selectedTemplate ? (
-                    <motion.div
+            <motion.div
                         key="selection-grid"
                         initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -241,6 +241,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                 onClick={onBack}
                                 variant="ghost"
                                 size="icon"
+                                aria-label="Voltar à escolha de anamnese"
                                 className="desktop-retina-inset desktop-retina-interactive h-11 w-11 rounded-2xl border border-border/45"
                             >
                                 <ArrowLeft className="w-5 h-5 text-zinc-500" />
@@ -257,7 +258,10 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                     type="button"
                                     key={template.id}
                                     className="desktop-retina-inset desktop-retina-interactive group relative h-full cursor-pointer overflow-hidden rounded-[28px] border border-border/45 bg-background/58 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
-                                    onClick={() => setSelectedTemplate(template)}
+                                    onClick={(event) => {
+                                        lastTriggerRef.current = event.currentTarget;
+                                        setSelectedTemplate(template);
+                                    }}
                                 >
                                     <div className="relative z-10 flex h-full flex-col space-y-6 p-6">
                                         <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-foreground text-background shadow-sm">
@@ -283,21 +287,15 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                 </button>
                             ))}
                         </div>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="confirmation-modal"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/42 p-4 backdrop-blur-sm md:p-6"
-                    >
-                        <motion.div
-                            initial={shouldReduceMotion ? false : { scale: 0.985, y: 10, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.985, y: 8, opacity: 0 }}
-                            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 34, mass: 0.8 }}
-                            className="desktop-retina-modal relative flex h-[min(860px,calc(100dvh-3rem))] w-full max-w-6xl flex-col overflow-hidden rounded-[34px] border border-border/60 bg-background/96 shadow-2xl"
+            </motion.div>
+            <Dialog open={Boolean(selectedTemplate)} onOpenChange={(open) => { if (!open) setSelectedTemplate(null); }}>
+                {selectedTemplate ? (
+                        <DialogContent
+                            onCloseAutoFocus={(event) => {
+                                event.preventDefault();
+                                lastTriggerRef.current?.focus();
+                            }}
+                            className="desktop-retina-modal desktop-retina-form z-[210] flex h-[min(860px,calc(100dvh-2rem))] w-[calc(100%-2rem)] max-w-6xl flex-col gap-0 overflow-hidden rounded-[34px] border border-border/60 bg-background/96 p-0 shadow-2xl"
                         >
 
                             {/* Modal Header - Reduced height and added Confirm button */}
@@ -307,9 +305,12 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                         <selectedTemplate.icon className="w-8 h-8" />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tighter leading-none mb-2">
+                                        <DialogTitle className="mb-2 text-2xl font-black leading-none tracking-tighter text-zinc-900 dark:text-white">
                                             {selectedTemplate.label}
-                                        </h3>
+                                        </DialogTitle>
+                                        <DialogDescription className="sr-only">
+                                            Visualização dos campos do modelo antes de aplicá-lo ao prontuário.
+                                        </DialogDescription>
                                         <div className="flex items-center gap-3">
                                             <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 bg-zinc-100 dark:bg-white/5 px-3 py-1 rounded-lg border border-zinc-200/50 dark:border-white/5">
                                                 Visualização
@@ -321,23 +322,6 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                     </div>
                                 </div>
 
-                                <div className="flex items-center gap-4">
-                                    <Button
-                                        variant="ghost"
-                                        onClick={() => setSelectedTemplate(null)}
-                                        className="h-12 px-6 rounded-xl text-[10px] font-black uppercase tracking-widest text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-all"
-                                    >
-                                        Cancelar
-                                    </Button>
-                                    <Button
-                                        onClick={handleConfirmTemplate}
-                                        disabled={isSaving}
-                                        className="desktop-retina-interactive h-11 rounded-xl bg-foreground px-6 text-[10px] font-black uppercase tracking-widest text-background shadow-sm"
-                                    >
-                                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                                        Confirmar Modelo
-                                    </Button>
-                                </div>
                             </div>
 
                             {/* Modal Content - Preview */}
@@ -349,7 +333,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                         </div>
                                         <div className="relative z-10">
                                             <p className="text-lg font-black text-zinc-900 dark:text-white tracking-tight mb-2">
-                                                Guia do Modelo
+                                                Guia do modelo
                                             </p>
                                             <p className="text-base text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                                                 {selectedTemplate.description} Esta estrutura foi validada por especialistas e contém todos os campos necessários para uma avaliação completa.
@@ -403,13 +387,12 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                     className="desktop-retina-interactive h-11 rounded-xl bg-foreground px-7 text-[10px] font-black uppercase tracking-widest text-background shadow-sm"
                                 >
                                     {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Check className="w-6 h-6" />}
-                                    Aplicar Modelo
+                                    Aplicar modelo
                                 </Button>
                             </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
+                        </DialogContent>
+                ) : null}
+            </Dialog>
         </div>
     );
 }

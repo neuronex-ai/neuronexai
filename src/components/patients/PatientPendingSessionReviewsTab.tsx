@@ -13,7 +13,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { GlassCard } from "@/components/ui/GlassCard";
 import {
   Select,
   SelectContent,
@@ -84,10 +83,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
   };
 
   return (
-    <GlassCard
-      className="!rounded-[28px] !border-zinc-200/70 !bg-white/70 !p-5 !shadow-[0_22px_58px_-46px_rgba(24,24,27,0.45)] dark:!border-white/[0.085] dark:!bg-[#0b0b0d]"
-      innerClassName="space-y-5"
-    >
+    <article className="patient-record-card space-y-5 rounded-[28px] border p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -251,7 +247,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
           ) : null}
         </div>
       ) : null}
-    </GlassCard>
+    </article>
   );
 };
 
@@ -268,12 +264,12 @@ export const PatientPendingSessionReviewsTab = ({ patientId }: PatientPendingSes
 
   if (!pendingReviews?.length) {
     return (
-      <GlassCard className="!rounded-[30px] !border-dashed !border-zinc-200/70 !bg-white/52 !py-20 !text-center dark:!border-white/[0.085] dark:!bg-[#0b0b0d]">
+      <div className="patient-record-card rounded-[30px] border border-dashed py-20 text-center">
         <FileText className="mx-auto mb-4 h-8 w-8 text-muted-foreground/45" />
         <p className="text-xs font-bold uppercase tracking-[0.22em] text-muted-foreground">
           Nenhuma revisão pendente
         </p>
-      </GlassCard>
+      </div>
     );
   }
 

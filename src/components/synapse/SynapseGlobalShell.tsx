@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseProvider';
 import { SynapsePill } from './SynapsePill';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
+import { SynapseActionOrchestrator } from './SynapseActionOrchestrator';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
 // Pill:          z-index 9990 (above page content, below modals)
@@ -11,7 +12,7 @@ import { SynapseCompactPanel } from './SynapseCompactPanel';
 // system modals (toasts, dialogs) when in Pill/Compact state.
 
 export const SynapseGlobalShell = () => {
-    const { isVisible, shellState, setShellState } = useSynapse();
+    const { isVisible, shellState, setShellState, actionExperience, cancelActionExperience } = useSynapse();
 
     // ─── Keyboard Shortcut: Ctrl+J ─────────────────────────────────────
     const handleKeyDown = useCallback(
@@ -27,12 +28,13 @@ export const SynapseGlobalShell = () => {
 
             // Escape to close
             if (e.key === 'Escape') {
+                if (actionExperience) cancelActionExperience();
                 if (shellState === 'compact') {
                     setShellState('pill');
                 }
             }
         },
-        [shellState, setShellState]
+        [actionExperience, cancelActionExperience, shellState, setShellState]
     );
 
     useEffect(() => {
@@ -48,12 +50,14 @@ export const SynapseGlobalShell = () => {
             {/* Fixed container for Pill + Compact (bottom-right) */}
             <div
                 className="fixed flex flex-col items-end gap-3"
+                data-synapse-shell="true"
                 style={{
                     zIndex: 9990,
                     right: 'max(12px, env(safe-area-inset-right))',
                     bottom: 'max(12px, env(safe-area-inset-bottom))',
                 }}
             >
+                <SynapseActionOrchestrator />
                 <AnimatePresence initial={false} mode="sync">
                     {shellState === 'compact' ? (
                         <SynapseCompactPanel key="compact" />

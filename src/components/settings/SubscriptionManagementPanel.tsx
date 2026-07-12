@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   AlertCircle,
   ArrowUpRight,
@@ -14,7 +15,7 @@ import {
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { UpgradePlanModal } from "@/components/dashboard/UpgradePlanModal";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useCurrentSubscription } from "@/hooks/use-current-subscription";
 import { supabase } from "@/integrations/supabase/client";
@@ -93,6 +94,7 @@ const formatCurrency = (amountCents: number, currency = "BRL") =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency }).format(amountCents / 100);
 
 export function SubscriptionManagementPanel() {
+  const [activeView, setActiveView] = useState<"management" | "invoices">("management");
   const { user } = useAuth();
   const { plan, status, isTrial, trialEndsAt } = useSubscription();
   const currentSubscription = useCurrentSubscription();
@@ -142,17 +144,29 @@ export function SubscriptionManagementPanel() {
         </Button>
       </header>
 
-      <Tabs defaultValue="management" className="space-y-5">
-        <TabsList className="desktop-retina-inset grid h-12 w-full max-w-md grid-cols-2 rounded-2xl border border-border/45 bg-muted/35 p-1">
-          <TabsTrigger value="management" className="rounded-xl text-xs font-bold">
-            Minha assinatura
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className="rounded-xl text-xs font-bold">
-            Faturas
-          </TabsTrigger>
-        </TabsList>
+      <div className="space-y-5">
+        <MagneticSegmentedControl
+          id="settings-subscription-view"
+          indicatorId="settings-subscription-view-indicator"
+          value={activeView}
+          onValueChange={setActiveView}
+          ariaLabel="Área da assinatura"
+          options={[
+            { value: "management", label: "Minha assinatura" },
+            { value: "invoices", label: "Faturas" },
+          ]}
+          className="desktop-retina-inset h-12 min-h-12 w-full max-w-md rounded-2xl border-border/45 bg-muted/35"
+          triggerClassName="h-11 min-h-11 flex-1 rounded-xl px-4 text-xs font-bold"
+        />
 
-        <TabsContent value="management" className="mt-0 space-y-5">
+        <div
+          id="settings-subscription-view-panel-management"
+          role="tabpanel"
+          aria-labelledby="settings-subscription-view-tab-management"
+          hidden={activeView !== "management"}
+          tabIndex={0}
+          className="mt-0 space-y-5"
+        >
           <section className="desktop-retina-panel overflow-hidden rounded-[30px] border border-border/45">
             <div className="grid gap-px bg-border/35 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
               <div className="bg-card/90 p-6 dark:bg-white/[0.035] md:p-7">
@@ -232,9 +246,16 @@ export function SubscriptionManagementPanel() {
               </a>
             </Button>
           </div>
-        </TabsContent>
+        </div>
 
-        <TabsContent value="invoices" className="mt-0">
+        <div
+          id="settings-subscription-view-panel-invoices"
+          role="tabpanel"
+          aria-labelledby="settings-subscription-view-tab-invoices"
+          hidden={activeView !== "invoices"}
+          tabIndex={0}
+          className="mt-0"
+        >
           <section className="desktop-retina-panel overflow-hidden rounded-[30px] border border-border/45">
             <div className="flex items-center justify-between border-b border-border/40 px-6 py-5">
               <div>
@@ -304,8 +325,8 @@ export function SubscriptionManagementPanel() {
               </div>
             )}
           </section>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 }

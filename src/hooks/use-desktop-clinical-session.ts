@@ -3,6 +3,7 @@ import type { JitsiRef } from '@/components/teleconsulta/JitsiMeet';
 import { useAI } from '@/context/AIContext';
 import { useGenerateSessionProntuario } from '@/hooks/use-generate-session-prontuario';
 import { useJitsiToken } from '@/hooks/use-jitsi-token';
+import { useTeleconsultationInvite } from '@/hooks/use-teleconsultation-invite';
 import type { MediaDeviceChoice } from '@/hooks/use-media-readiness';
 import { usePatientById } from '@/hooks/use-patient-by-id';
 import { useResilientSessionNotes } from '@/hooks/use-resilient-session-notes';
@@ -75,7 +76,12 @@ export const useDesktopClinicalSession = (
   const appointmentId = activeAppointment.id;
   const isOnlineSession = activeAppointment.type === 'online';
   const roomName = `${JITSI_APP_ID}/${appointmentId}`;
-  const effectiveMeetLink = `${window.location.origin}/join/${appointmentId}`;
+  const invite = useTeleconsultationInvite(
+    appointmentId,
+    activeAppointment.google_meet_link,
+    isOnlineSession,
+  );
+  const effectiveMeetLink = invite.data?.meetLink || '';
   const [transcriptionDecision, setTranscriptionDecision] = useState<TranscriptionDecision>(() =>
     getTranscriptionDecision(activeAppointment.metadata),
   );
@@ -88,7 +94,12 @@ export const useDesktopClinicalSession = (
     data: jitsiToken,
     error: jitsiError,
     isLoading: isLoadingToken,
-  } = useJitsiToken(roomName, { enabled: isOnlineSession });
+  } = useJitsiToken(roomName, {
+    enabled: isOnlineSession && Boolean(transcriptionDecision),
+    decisionKey: transcriptionDecision
+      ? `${transcriptionDecision.enabled}:${transcriptionDecision.decidedAt || 'current'}`
+      : 'pending',
+  });
   const { mutateAsync: updateAppointment, isPending: isUpdatingAppointment } = useUpdateAppointment();
   const { mutateAsync: generateProntuario, isPending: isGeneratingProntuario } = useGenerateSessionProntuario();
   const notesDraft = useResilientSessionNotes(appointmentId);
@@ -131,7 +142,7 @@ export const useDesktopClinicalSession = (
   const captureAvailable = isOnlineSession || speechSupported;
   const hasTranscriptionDecision = !isOnlineSession || Boolean(transcriptionDecision);
   const transcriptionEnabled = transcriptionDecision?.enabled === true;
-  const canInvitePatient = isOnlineSession && hasTranscriptionDecision && roomStatus !== 'closed';
+  const canInvitePatient = isOnlineSession && hasTranscriptionDecision && roomStatus !== 'closed' && Boolean(effectiveMeetLink);
 
   const captureLabel = useMemo(() => {
     if (consentStatus === 'declined') return 'Sessão sem transcrição';
@@ -532,6 +543,8 @@ export const useDesktopClinicalSession = (
     isOnlineSession,
     roomName,
     effectiveMeetLink,
+    inviteLoading: invite.isLoading,
+    inviteError: invite.error,
     jitsiToken,
     jitsiError,
     isLoadingToken,

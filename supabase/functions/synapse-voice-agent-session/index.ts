@@ -7,6 +7,7 @@ import {
 } from "../_shared/synapse-voice-session.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 import { loadConversationContext } from "../synapse-text-fallback/entity-context.ts";
+import { validateVoiceToolCall } from "../_shared/synapse-voice-policy.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -32,21 +33,6 @@ const OPENAI_COMPATIBLE_TTS_VOICE = "alloy";
 const DEFAULT_AZURE_TTS_VOICE = "pt-BR-MacerioMultilingualNeural";
 const DEFAULT_CARTESIA_MODEL_ID = "sonic-2";
 const DEFAULT_CARTESIA_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
-
-const VOICE_CORE_TOOL_NAMES = new Set([
-  "get_system_help",
-  "get_workspace_overview",
-  "get_dashboard_daily_briefing",
-  "get_dashboard_schedule",
-  "search_patients",
-  "get_patient_details",
-  "get_clinical_history",
-  "get_patient_system_snapshot",
-  "get_calendar",
-  "request_interface_action",
-  "create_neuroflow_from_patient_history",
-  "create_neuropulse_cause_effect_diagram",
-]);
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -199,9 +185,23 @@ const VOICE_ONLY_TOOLS = [
 function buildVoiceFunctions() {
   const selectedTools = AGENT_TOOLS_V3
     .map(toDeepgramFunction)
-    .filter((item) => item.name && VOICE_CORE_TOOL_NAMES.has(item.name));
+    .filter((item) => {
+      if (!item.name) return false;
+      try {
+        validateVoiceToolCall(item.name);
+        return true;
+      } catch {
+        return false;
+      }
+    });
   const selectedNames = new Set(selectedTools.map((item) => item.name));
-  const missing = [...VOICE_CORE_TOOL_NAMES].filter((name) => !selectedNames.has(name));
+  const required = [
+    "request_interface_action",
+    "analyze_neuroview_patient_patterns",
+    "create_neuroflow_from_patient_history",
+    "create_neuropulse_cause_effect_diagram",
+  ];
+  const missing = required.filter((name) => !selectedNames.has(name));
   if (missing.length) {
     throw new Error(`Ferramentas essenciais de voz ausentes: ${missing.join(", ")}.`);
   }

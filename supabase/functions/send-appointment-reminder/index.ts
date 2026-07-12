@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.190.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 import { deliverPatientEmail, renderTemplate } from '../_shared/email-delivery.ts';
+import { ensureTeleconsultationInvite } from '../_shared/teleconsultation-access.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -40,12 +41,15 @@ serve(async (request) => {
     if (!appointmentId) return json({ error: 'ID do agendamento é obrigatório.' }, 400);
 
     const appointmentResult = await db.from('appointments')
-      .select('id,user_id,patient_id,start_time,type,location,google_meet_link,token,auth_code')
+      .select('id,user_id,patient_id,start_time,end_time,type,location,google_meet_link,token,auth_code')
       .eq('id', appointmentId)
       .eq('user_id', user.id)
       .maybeSingle();
     if (appointmentResult.error || !appointmentResult.data) return json({ error: 'Agendamento não encontrado para esta conta.' }, 404);
     const appointment = appointmentResult.data;
+    const secureInvite = appointment.type === 'online'
+      ? await ensureTeleconsultationInvite(db, appointment)
+      : null;
 
     const [patientResult, profileResult] = await Promise.all([
       db.from('patients').select('name,email').eq('id', appointment.patient_id).eq('user_id', user.id).maybeSingle(),
@@ -92,7 +96,7 @@ serve(async (request) => {
     const frontendUrl = Deno.env.get('FRONTEND_URL') || 'https://neuronexai.com.br';
     const confirmationUrl = `${frontendUrl}/confirmar-agendamento/${token}`;
     const isOnlineAppointment = appointment.type === 'online';
-    const sessionAccessUrl = isOnlineAppointment ? `${frontendUrl}/join/${appointment.id}` : confirmationUrl;
+    const sessionAccessUrl = isOnlineAppointment ? secureInvite!.meetLink : confirmationUrl;
     const appointmentLocation = isOnlineAppointment
       ? `Teleconsulta NeuroNex: ${sessionAccessUrl}`
       : appointment.location || 'Local a combinar com o profissional';

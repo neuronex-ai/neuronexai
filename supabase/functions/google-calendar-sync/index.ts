@@ -42,9 +42,10 @@ const isOnline = (appointment: any) => appointment.type === "online" || getMetad
 const buildEventBody = (appointment: any, patient: any, userEmail?: string, profileAddress?: string) => {
   const metadata = getMetadata(appointment);
   const session = isSession(appointment);
-  const frontendUrl = Deno.env.get("FRONTEND_URL") || "https://neuronexai.com.br";
-  const teleconsultationLink = session && isOnline(appointment) && appointment.id
-    ? `${frontendUrl}/join/${appointment.id}`
+  const teleconsultationLink = session && isOnline(appointment) &&
+      typeof appointment.google_meet_link === "string" &&
+      /\/join\/[a-f0-9]{64}$/i.test(appointment.google_meet_link)
+    ? appointment.google_meet_link
     : null;
   const title = session
     ? `Consulta: ${patient?.name || appointment.patient_name || "Paciente"}`

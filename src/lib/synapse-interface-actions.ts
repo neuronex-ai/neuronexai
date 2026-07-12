@@ -66,6 +66,16 @@ export interface SynapseActionExecutionResult {
   cancelled?: boolean;
 }
 
+export type SynapseActionPhase = "preparing" | "navigating" | "focusing" | "completed" | "error";
+
+export interface SynapseActionLifecycleEvent {
+  id: string;
+  phase: SynapseActionPhase;
+  action: SynapseInterfaceActionName;
+  label: string;
+  message: string;
+}
+
 type Navigate = (path: string, options?: { replace?: boolean; state?: unknown }) => void;
 
 const ROUTES: Record<SynapseNavigationTarget, string> = {
@@ -106,6 +116,35 @@ const sleep = (milliseconds: number, signal: AbortSignal) =>
 const validEntityId = (value?: string) => Boolean(value && (UUID_PATTERN.test(value) || SAFE_ID_PATTERN.test(value)));
 const safeNotesView = (value?: string): SynapseNotesView | undefined => value && NOTES_VIEWS.has(value) ? value as SynapseNotesView : undefined;
 const emitPageAction = (action: SynapseInterfaceAction) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PAGE_ACTION_EVENT, { detail: action })); };
+
+const ACTION_LABELS: Partial<Record<SynapseInterfaceActionName, string>> = {
+  navigate: "Abrindo uma área do sistema",
+  open_patient: "Abrindo a ficha do paciente",
+  open_patient_record: "Abrindo o prontuário",
+  open_daily_schedule: "Abrindo a agenda clínica",
+  scroll_to_appointment: "Localizando o atendimento",
+  highlight_element: "Destacando a informação",
+  open_modal: "Preparando a janela",
+  open_teleconsultation_lobby: "Abrindo a teleconsulta",
+  open_patient_invite_modal: "Preparando o convite",
+  filter_patients_directory: "Filtrando pacientes",
+  open_notes_desktop: "Abrindo o NeuroDrive",
+  switch_notes_view: "Organizando o NeuroDrive",
+  open_note: "Abrindo a nota",
+  filter_notes: "Filtrando notas",
+  open_new_note: "Preparando uma nova nota",
+  open_note_module: "Abrindo o módulo de notas",
+  open_tasks_board: "Abrindo as tarefas",
+  open_files_manager: "Abrindo os arquivos",
+  open_notion_panel: "Abrindo o Notion",
+  open_file_preview: "Abrindo o arquivo",
+  open_neuroview_reasoning: "Preparando o NeuroView",
+  open_neuroflow_generation: "Preparando o NeuroFlow",
+  open_neuropulse_diagram: "Preparando o NeuroPulse",
+};
+
+export const describeSynapseInterfaceAction = (action: SynapseInterfaceAction) =>
+  ACTION_LABELS[action.action] || action.reason || "Atualizando a interface";
 
 const highlightNode = (node: Element | null) => {
   if (!(node instanceof HTMLElement)) return false;
@@ -188,22 +227,46 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
   return null;
 }
 
-export async function executeSynapseInterfaceAction(rawAction: unknown, options: { navigate: Navigate; channel: "text" | "voice" }): Promise<SynapseActionExecutionResult> {
+export async function executeSynapseInterfaceAction(rawAction: unknown, options: {
+  navigate: Navigate;
+  channel: "text" | "voice";
+  onLifecycle?: (event: SynapseActionLifecycleEvent) => void;
+}): Promise<SynapseActionExecutionResult> {
   const action = normalizeSynapseClientAction(rawAction);
   const startedAt = performance.now();
   if (!action) return { success: false, action: "navigate", message: "Ação de interface inválida.", durationMs: 0 };
   cancelSynapseInterfaceAction();
   const controller = new AbortController();
   activeController = controller;
+  const lifecycleId = globalThis.crypto?.randomUUID?.() || `synapse-action-${Date.now()}`;
+  const label = describeSynapseInterfaceAction(action);
+  let lastPhase: SynapseActionPhase = "preparing";
+  const report = (phase: SynapseActionPhase, message: string) => {
+    lastPhase = phase;
+    options.onLifecycle?.({ id: lifecycleId, phase, action: action.action, label, message });
+  };
+  const reportPhase = (phase: SynapseActionPhase, message: string) => {
+    if (lastPhase !== phase) report(phase, message);
+  };
+  const focusPageAction = (pageAction: SynapseInterfaceAction) => {
+    reportPhase("focusing", "Destacando o resultado na tela");
+    emitPageAction(pageAction);
+  };
+  const focusNode = (node: Element | null) => {
+    reportPhase("focusing", "Destacando o resultado na tela");
+    return highlightNode(node);
+  };
+  report("preparing", "Preparando a solicitação");
   try {
     const { navigate } = options;
+    if (action.action !== "highlight_element") reportPhase("navigating", "Abrindo a área correta");
     switch (action.action) {
       case "navigate": {
         if (!action.target || !ROUTES[action.target]) throw new Error("Destino não permitido.");
         const state = action.target === "teleconsultation" && action.appointmentId ? { activeAppointmentId: action.appointmentId } : action.query ? { synapseQuery: action.query } : undefined;
         navigate(ROUTES[action.target], state ? { state } : undefined);
         await sleep(420, controller.signal);
-        if (action.query || action.appointmentId) emitPageAction(action);
+        if (action.query || action.appointmentId) focusPageAction(action);
         break;
       }
       case "open_patient":
@@ -212,52 +275,52 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         const suffix = action.action === "open_patient_record" ? "?tab=prontuario" : "";
         navigate(`/pacientes/${encodeURIComponent(action.patientId!)}${suffix}`);
         await sleep(520, controller.signal);
-        emitPageAction(action);
+        focusPageAction(action);
         break;
       }
       case "open_daily_schedule": {
         navigate("/agenda");
         await sleep(520, controller.signal);
-        emitPageAction(action);
+        focusPageAction(action);
         await sleep(180, controller.signal);
-        highlightNode(document.querySelector("[data-synapse-target='daily-schedule']"));
+        focusNode(document.querySelector("[data-synapse-target='daily-schedule']"));
         break;
       }
       case "scroll_to_appointment": {
         if (!validEntityId(action.appointmentId)) throw new Error("Agendamento inválido.");
         navigate("/agenda");
         await sleep(540, controller.signal);
-        emitPageAction({ ...action, action: "open_daily_schedule" });
+        focusPageAction({ ...action, action: "open_daily_schedule" });
         await sleep(260, controller.signal);
-        emitPageAction(action);
+        focusPageAction(action);
         await sleep(180, controller.signal);
-        highlightNode(document.querySelector(targetSelector(action)));
+        focusNode(document.querySelector(targetSelector(action)));
         break;
       }
       case "open_teleconsultation_lobby": {
         if (!validEntityId(action.appointmentId)) throw new Error("Sessão inválida.");
         navigate("/teleconsulta", { state: { activeAppointmentId: action.appointmentId } });
         await sleep(620, controller.signal);
-        emitPageAction(action);
+        focusPageAction(action);
         await sleep(180, controller.signal);
-        highlightNode(document.querySelector(targetSelector({ ...action, element: action.element || "transcription_decision" })));
+        focusNode(document.querySelector(targetSelector({ ...action, element: action.element || "transcription_decision" })));
         break;
       }
       case "open_patient_invite_modal": {
         if (!validEntityId(action.appointmentId)) throw new Error("Sessão inválida.");
         navigate("/teleconsulta", { state: { activeAppointmentId: action.appointmentId, openInvite: true } });
         await sleep(720, controller.signal);
-        emitPageAction(action);
+        focusPageAction(action);
         await sleep(180, controller.signal);
-        highlightNode(document.querySelector(targetSelector({ ...action, element: "patient_invite" })));
+        focusNode(document.querySelector(targetSelector({ ...action, element: "patient_invite" })));
         break;
       }
       case "filter_patients_directory": {
         navigate("/pacientes", { state: { synapseQuery: action.query || "" } });
         await sleep(520, controller.signal);
-        emitPageAction(action);
+        focusPageAction(action);
         await sleep(180, controller.signal);
-        highlightNode(document.querySelector(targetSelector({ ...action, element: "patients_search" })));
+        focusNode(document.querySelector(targetSelector({ ...action, element: "patients_search" })));
         break;
       }
       case "open_notes_desktop":
@@ -279,15 +342,15 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         const path = query.toString() ? `/notas?${query.toString()}` : "/notas";
         navigate(path, { state: { synapseNotesView: notesView, synapseQuery: action.query || "", synapseNoteId: action.noteId, synapseModuleId: action.moduleId, synapseTaskId: action.taskId, synapseFileId: action.fileId, synapseFlowId: action.flowId, synapseRunId: action.runId, synapsePatientId: action.patientId, synapsePulseEntryId: action.pulseEntryId, synapseMermaid: action.mermaid, synapseTrace: action.trace, synapseAction: action.action } });
         await sleep(560, controller.signal);
-        emitPageAction({ ...action, notesView });
+        focusPageAction({ ...action, notesView });
         await sleep(180, controller.signal);
         const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : notesView === "neuroview" ? "neuroview_graph" : notesView === "neuroflow" ? "neuroflow_canvas" : notesView === "neuropulse" ? "neuropulse_panel" : action.query ? "notes_search" : "notes_editor");
-        highlightNode(document.querySelector(targetSelector({ ...action, element })));
+        focusNode(document.querySelector(targetSelector({ ...action, element })));
         break;
       }
       case "highlight_element": {
         const selector = targetSelector(action);
-        if (!selector || !highlightNode(document.querySelector(selector))) emitPageAction(action);
+        if (!selector || !focusNode(document.querySelector(selector))) focusPageAction(action);
         break;
       }
       case "open_modal": {
@@ -296,16 +359,18 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         navigate(route, action.appointmentId ? { state: { activeAppointmentId: action.appointmentId } } : undefined);
         await sleep(520, controller.signal);
         if (!action.modal) throw new Error("Modal não permitido.");
-        emitPageAction(action);
+        focusPageAction(action);
         break;
       }
     }
     const result: SynapseActionExecutionResult = { success: true, action: action.action, message: "Ação executada com segurança.", durationMs: Math.round(performance.now() - startedAt) };
+    reportPhase("completed", "Ação concluída");
     await recordTelemetry(action, options.channel, result);
     return result;
   } catch (error) {
     const cancelled = error instanceof DOMException && error.name === "AbortError";
     const result: SynapseActionExecutionResult = { success: false, cancelled, action: action.action, message: cancelled ? "Ação cancelada." : error instanceof Error ? error.message : "Falha na ação.", durationMs: Math.round(performance.now() - startedAt) };
+    if (!cancelled) reportPhase("error", "Não foi possível concluir a ação");
     await recordTelemetry(action, options.channel, result, error);
     return result;
   } finally {

@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import type { Message } from "@/types";
+import type { SynapseProgressEvent } from "./use-ai-chat";
 
 export {
   useChatSessionHistory,
@@ -19,6 +20,8 @@ interface SendInput {
   sessionId: string;
   attachments?: unknown[];
   context?: Record<string, unknown>;
+  streamProgress?: boolean;
+  onProgress?: (event: SynapseProgressEvent) => void;
 }
 
 const INTERNAL_DATA = /\b(paciente|pacientes|consulta|consultas|agenda|agendamento|horário|horario|prontuário|prontuario|sessão|sessao|financeiro|saldo|receita|despesa|lançamento|lancamento|transação|transacao|nota|notas|documento|arquivo|medicação|medicacao|risco|cobrança|cobranca|fatura|neurofinance|neuroscan|teleconsulta|neuronotes|configuração|configuracao|integração|integracao|dashboard|synapse)\b/i;
@@ -48,14 +51,16 @@ async function invokeProvider(name: string, input: SendInput) {
 
 async function sendWithFallback(input: SendInput) {
   try {
-    return await invokeProvider("synapse-text-gateway", input);
-  } catch (agentError) {
-    console.warn("[Synapse] Agente principal indisponível.", agentError);
+    // The full Synapse agent owns the canonical tool contract, confirmations
+    // and grounded data access. Generic language gateways are recovery only.
+    return await invokeProvider("synapse-text-fallback", input);
+  } catch (canonicalAgentError) {
+    console.warn("[Synapse] Agente com ferramentas indisponível.", canonicalAgentError);
 
     try {
-      return await invokeProvider("synapse-text-fallback", input);
-    } catch (fallbackError) {
-      console.warn("[Synapse] Agente principal indisponivel.", fallbackError);
+      return await invokeProvider("synapse-text-gateway", input);
+    } catch (gatewayError) {
+      console.warn("[Synapse] Gateway de recuperação indisponível.", gatewayError);
     }
 
     if (INTERNAL_DATA.test(input.message)) {
@@ -80,9 +85,22 @@ export const useSendChatMessage = () => {
   const { session, user } = useAuth();
 
   return useMutation({
-    mutationFn: (input: SendInput) => {
+    mutationFn: async (input: SendInput) => {
       if (!session?.access_token) throw new Error("Sessão inválida.");
-      return sendWithFallback(input);
+      input.onProgress?.({
+        stage: "received",
+        label: "Preparando solicitação",
+        detail: "Consultando o contrato seguro de ferramentas",
+      });
+      const result = await sendWithFallback(input);
+      input.onProgress?.({
+        stage: "responding",
+        label: result?.confirmationRequired ? "Aguardando confirmação" : "Resposta pronta",
+        detail: result?.confirmationRequired
+          ? "Revise a ação antes de confirmar"
+          : "Organizando o retorno do Synapse",
+      });
+      return result;
     },
     onMutate: async ({ message, sessionId }) => {
       await queryClient.cancelQueries({ queryKey: ["sessionMessages", sessionId] });

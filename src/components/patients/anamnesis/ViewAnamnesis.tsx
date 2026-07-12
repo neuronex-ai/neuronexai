@@ -3,7 +3,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Loader2, Check, MoreVertical, FileDown, Mail, Trash2, RefreshCcw, ClipboardList, X } from "lucide-react";
+import { Loader2, Check, MoreVertical, FileDown, Mail, Trash2, RefreshCcw, ClipboardList } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { usePatientById } from "@/hooks/use-patient-by-id";
@@ -15,7 +15,6 @@ import { ptBR } from "date-fns/locale";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { cn } from "@/lib/utils";
 import {
     AlertDialog,
@@ -27,6 +26,14 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
 
 interface ExtractedItem {
     question: string;
@@ -96,10 +103,22 @@ const AutoSaveField = memo(function AutoSaveField({
             <Textarea
                 ref={inputRef}
                 value={value}
+                aria-label={type === "question" ? "Editar título do campo" : "Editar resposta da anamnese"}
                 onChange={(e) => setValue(e.target.value)}
                 onBlur={handleBlur}
+                onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                        event.preventDefault();
+                        setValue(initialValue);
+                        setIsEditing(false);
+                    }
+                    if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
+                        event.preventDefault();
+                        event.currentTarget.blur();
+                    }
+                }}
                 className={cn(
-                    "min-h-[128px] w-full resize-none overflow-hidden rounded-[22px] border border-zinc-200/70 bg-white/72 p-5 text-[15px] leading-relaxed text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.7),0_18px_42px_-34px_rgba(24,24,27,0.3)] outline-none transition-all duration-300 focus:border-zinc-300 focus:bg-white focus:ring-4 focus:ring-zinc-900/[0.035] dark:border-white/[0.075] dark:bg-[#0a0a0b]/72 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.035),0_20px_48px_-34px_rgba(0,0,0,0.95)] dark:focus:border-white/[0.14] dark:focus:bg-[#0d0d0f] dark:focus:ring-white/[0.045]",
+                    "desktop-retina-inset min-h-[128px] w-full resize-none overflow-hidden rounded-[22px] border border-border/55 bg-background/72 p-5 text-[15px] leading-relaxed text-foreground outline-none transition-[border-color,background-color,box-shadow] duration-300 focus:border-foreground/20 focus:bg-background focus:ring-4 focus:ring-foreground/[0.035]",
                     type === 'question' && "min-h-[42px] px-3 py-2 text-xs font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400",
                     className
                 )}
@@ -108,10 +127,12 @@ const AutoSaveField = memo(function AutoSaveField({
     }
 
     return (
-        <div
+        <button
+            type="button"
             onClick={() => setIsEditing(true)}
+            aria-label={type === "question" ? "Editar título do campo" : "Editar resposta da anamnese"}
             className={cn(
-                "group/field -mx-2 cursor-text rounded-2xl px-2 transition-all duration-300 hover:bg-zinc-950/[0.035] dark:hover:bg-white/[0.035]",
+                "group/field -mx-2 min-h-11 w-[calc(100%+1rem)] cursor-text rounded-2xl px-2 text-left transition-colors duration-300 hover:bg-foreground/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45",
                 type === 'question' ? "py-1" : "py-2 min-h-[2.5rem]"
             )}
         >
@@ -123,7 +144,7 @@ const AutoSaveField = memo(function AutoSaveField({
             )}>
                 {value || <span className="opacity-50 italic font-normal text-zinc-500">Clique para adicionar resposta...</span>}
             </p>
-        </div>
+        </button>
     );
 });
 
@@ -159,7 +180,7 @@ const AnamnesisEntry = memo(function AnamnesisEntry({
 
     return (
         <div
-            className="desktop-retina-inset group/item relative overflow-hidden rounded-[26px] border border-border/45 bg-background/64 p-6 transition-colors duration-300 hover:border-border/80 hover:bg-background/82 md:p-7"
+            className="patient-record-card group/item relative overflow-hidden rounded-[26px] border p-6 md:p-7"
             style={{ contentVisibility: "auto", containIntrinsicSize: "190px" }}
         >
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-white/[0.08]" />
@@ -441,7 +462,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                 if (updateError) throw updateError;
             }
 
-            toast.success("Ficha de anamnese excluída!");
+            toast.success("Ficha de anamnese excluída.");
             setData([]);
             setAnamnesisId(null);
             setConfirmDeleteOpen(false);
@@ -488,14 +509,14 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
     };
 
     return (
-        <div className="flex h-[calc(100vh-220px)] w-full flex-col items-center overflow-hidden px-1 pb-7">
+        <div className="flex h-[calc(100dvh-var(--desktop-navbar-clearance)-8rem)] min-h-[560px] max-h-[820px] w-full flex-col items-center overflow-hidden px-1 pb-4">
             <div className="relative flex h-full w-full max-w-5xl flex-1 flex-col px-0.5">
 
                 <motion.div
                     initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
-                    className="desktop-retina-panel group/doc-container relative flex h-full w-full flex-col overflow-hidden rounded-[30px] border border-border/50 bg-card/78"
+                    className="patient-record-panel group/doc-container relative flex h-full w-full flex-col overflow-hidden rounded-[30px] border"
                 >
                     <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent opacity-75 dark:via-white/[0.08]" />
 
@@ -524,14 +545,14 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                                 )}
                             </AnimatePresence>
 
-                            <DropdownMenu>
+                            <DropdownMenu modal={false}>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-10 w-10 rounded-2xl border border-zinc-200/70 bg-white/58 text-muted-foreground shadow-sm backdrop-blur-xl transition-all hover:bg-white hover:text-foreground active:scale-95 dark:border-white/[0.07] dark:bg-white/[0.04] dark:hover:bg-white/[0.08]">
+                                    <Button variant="ghost" size="icon" aria-label="Ações da ficha de anamnese" className="desktop-retina-inset h-11 w-11 rounded-2xl border border-border/50 bg-background/48 text-muted-foreground shadow-sm transition-colors hover:bg-background hover:text-foreground">
                                         <MoreVertical className="h-5 w-5" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="desktop-retina-modal w-72 rounded-[26px] border-border/60 bg-popover/96 p-3 shadow-2xl">
-                                    <div className="px-4 py-3 text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1">Ações do Documento</div>
+                                    <div className="mb-1 px-4 py-3 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">Ações do documento</div>
                                     <DropdownMenuItem onClick={handleDownloadPDF} className="gap-4 rounded-2xl cursor-pointer text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-widest py-4 px-5 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all">
                                         <div className="p-2 rounded-xl bg-zinc-50 dark:bg-white/10"><FileDown className="h-4 w-4" /></div> Baixar PDF
                                     </DropdownMenuItem>
@@ -554,13 +575,13 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                                         }}
                                         className="gap-4 rounded-2xl cursor-pointer text-zinc-600 dark:text-zinc-400 text-[11px] font-black uppercase tracking-widest py-4 px-5 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all"
                                     >
-                                        <div className="p-2 rounded-xl bg-zinc-50 dark:bg-white/10"><RefreshCcw className="h-4 w-4" /></div> Trocar Modelo
+                                        <div className="p-2 rounded-xl bg-zinc-50 dark:bg-white/10"><RefreshCcw className="h-4 w-4" /></div> Trocar modelo
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
                                         onClick={() => { setConfirmDeleteOpen(true); }}
                                         className="gap-4 rounded-2xl cursor-pointer text-rose-500 text-[11px] font-black uppercase tracking-widest py-4 px-5 hover:bg-rose-500/5 transition-all"
                                     >
-                                        <div className="p-2 rounded-xl bg-rose-500/10"><Trash2 className="h-4 w-4" /></div> Excluir Modelo
+                                        <div className="p-2 rounded-xl bg-rose-500/10"><Trash2 className="h-4 w-4" /></div> Excluir modelo
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -593,78 +614,55 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                 </motion.div>
             </div>
 
-            <AnimatePresence>
-                {linkModalOpen && (
-                    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/45 p-4 backdrop-blur-2xl">
-                        <motion.div
-                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                            className="w-full max-w-md"
-                        >
-                            <GlassCard className="desktop-retina-modal relative overflow-hidden rounded-[34px] border-border/60 bg-background/96 p-8 text-center text-foreground shadow-2xl">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setLinkModalOpen(false)}
-                                    className="absolute right-6 top-6 h-10 w-10 rounded-2xl border border-zinc-200/70 bg-zinc-950/[0.035] text-zinc-500 transition-all hover:bg-zinc-950 hover:text-white active:scale-95 dark:border-white/[0.06] dark:bg-white/[0.05] dark:hover:bg-white dark:hover:text-zinc-950"
-                                >
-                                    <X className="h-5 w-5" />
-                                </Button>
+            <Dialog open={linkModalOpen} onOpenChange={setLinkModalOpen}>
+                <DialogContent className="desktop-retina-modal desktop-retina-form z-[210] w-[calc(100%-2rem)] max-w-md gap-0 overflow-hidden rounded-[30px] border border-border/65 bg-background/96 p-0 shadow-2xl">
+                    <DialogHeader className="border-b border-border/50 p-6 text-left">
+                        <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-[18px] bg-foreground text-background shadow-sm">
+                            <ClipboardList className="h-5 w-5" aria-hidden="true" />
+                        </div>
+                        <DialogTitle className="text-xl font-black tracking-tight text-foreground">Compartilhar anamnese</DialogTitle>
+                        <DialogDescription className="text-sm leading-relaxed text-muted-foreground">
+                            Envie o link e o código de segurança ao paciente para que ele preencha a ficha.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                                <div className="relative z-10 flex flex-col items-center gap-6">
-                                    <div className="flex h-16 w-16 items-center justify-center rounded-[24px] border border-zinc-200/70 bg-zinc-950 text-white shadow-[0_22px_52px_-34px_rgba(24,24,27,0.7)] dark:border-white/[0.08] dark:bg-white dark:text-zinc-950 dark:shadow-[0_0_34px_rgba(255,255,255,0.12)]">
-                                        <ClipboardList className="h-8 w-8" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <h3 className="text-2xl font-black tracking-tight leading-none text-zinc-950 dark:text-white">Portal Ativado</h3>
-                                        <p className="mx-auto max-w-[280px] text-sm font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-                                            O link de preenchimento foi gerado com sucesso.
-                                        </p>
-                                    </div>
-
-                                    <div className="w-full space-y-6">
-                                        <div className="space-y-2 text-left">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block">Link de Acesso Único</label>
-                                            <div className="flex gap-2">
-                                                <div className="flex-1 truncate rounded-2xl border border-zinc-200/70 bg-zinc-950/[0.035] px-4 py-3 font-mono text-[10px] tracking-wider text-zinc-600 shadow-inner dark:border-white/[0.075] dark:bg-white/[0.045] dark:text-zinc-300">
-                                                    {`${window.location.origin}/anamnese-externa/${anamnesisId}`}
-                                                </div>
-                                                <Button size="icon" className="h-11 w-11 shrink-0 rounded-2xl bg-zinc-950 text-white shadow-xl transition-all hover:scale-105 active:scale-95 dark:bg-white dark:text-zinc-950" onClick={() => copyToClipboard(`${window.location.origin}/anamnese-externa/${anamnesisId}`)}>
-                                                    <Check className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-2 text-left">
-                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 block">Código de Segurança</label>
-                                            <div className="flex gap-2">
-                                                <div className="flex-1 rounded-2xl border border-zinc-200/70 bg-zinc-950/[0.035] px-4 py-3 text-center text-2xl font-black tracking-[0.4em] text-zinc-950 shadow-inner tabular-nums dark:border-white/[0.075] dark:bg-white/[0.045] dark:text-white">
-                                                    {publicToken || <Loader2 className="h-6 w-6 animate-spin mx-auto text-white" />}
-                                                </div>
-                                                <Button size="icon" className="h-11 w-11 shrink-0 rounded-2xl bg-zinc-950 text-white shadow-xl transition-all hover:scale-105 active:scale-95 dark:bg-white dark:text-zinc-950" onClick={() => copyToClipboard(publicToken || "")}>
-                                                    <Check className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col gap-3 w-full pt-2">
-                                        <Button className="h-14 w-full rounded-[20px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.15em] text-white shadow-2xl transition-all hover:scale-[1.02] hover:bg-zinc-800 active:scale-[0.98] dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100" onClick={() => {
-                                            const text = `Olá! Segue o link para preenchimento da sua ficha de anamnese:\n\nLink: ${window.location.origin}/anamnese-externa/${anamnesisId}\nCódigo: ${publicToken}\n\nPor favor, preencha assim que possível.`;
-                                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-                                        }}>
-                                            <MessageCircle className="h-4 w-4 mr-3" /> WhatsApp
-                                        </Button>
-                                        <Button variant="ghost" className="h-11 w-full rounded-[18px] text-[9px] font-bold uppercase tracking-widest text-zinc-500 hover:bg-zinc-950/[0.045] hover:text-zinc-950 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-white" onClick={() => setLinkModalOpen(false)}>
-                                            Fechar Gerenciador
-                                        </Button>
-                                    </div>
+                    <div className="space-y-5 p-6">
+                        <div className="space-y-2">
+                            <label className="block text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Link de acesso</label>
+                            <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+                                <div className="desktop-retina-inset truncate rounded-[15px] border border-border/50 bg-muted/30 px-4 py-3 font-mono text-[10px] text-muted-foreground">
+                                    {`${window.location.origin}/anamnese-externa/${anamnesisId}`}
                                 </div>
-                            </GlassCard>
-                        </motion.div>
+                                <Button size="icon" aria-label="Copiar link" className="h-11 w-11 rounded-[15px] bg-foreground text-background" onClick={() => copyToClipboard(`${window.location.origin}/anamnese-externa/${anamnesisId}`)}>
+                                    <Check className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Código de segurança</label>
+                            <div className="grid grid-cols-[minmax(0,1fr)_44px] gap-2">
+                                <div className="desktop-retina-inset rounded-[15px] border border-border/50 bg-muted/30 px-4 py-2.5 text-center text-xl font-black tracking-[0.32em] text-foreground tabular-nums">
+                                    {publicToken || <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />}
+                                </div>
+                                <Button size="icon" aria-label="Copiar código" className="h-11 w-11 rounded-[15px] bg-foreground text-background" onClick={() => copyToClipboard(publicToken || "")}>
+                                    <Check className="h-4 w-4" aria-hidden="true" />
+                                </Button>
+                            </div>
+                        </div>
                     </div>
-                )}
-            </AnimatePresence>
+
+                    <DialogFooter className="grid grid-cols-1 gap-2 border-t border-border/50 bg-muted/18 p-4 sm:grid-cols-2 sm:space-x-0">
+                        <Button variant="outline" className="h-11 rounded-xl" onClick={() => setLinkModalOpen(false)}>Fechar</Button>
+                        <Button className="h-11 rounded-xl bg-foreground text-background" onClick={() => {
+                            const text = `Olá! Segue o link para preenchimento da sua ficha de anamnese:\n\nLink: ${window.location.origin}/anamnese-externa/${anamnesisId}\nCódigo: ${publicToken}\n\nPor favor, preencha assim que possível.`;
+                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener,noreferrer");
+                        }}>
+                            <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
             <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
                 <AlertDialogContent className="desktop-retina-modal z-[220] w-[calc(100%-2rem)] max-w-md gap-0 overflow-hidden rounded-[30px] border border-border/70 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl sm:rounded-[30px]">

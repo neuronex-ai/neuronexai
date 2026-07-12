@@ -10,7 +10,6 @@ import {
   AlertCircle,
   ArrowRight,
   Bell,
-  Calculator,
   Calendar as CalendarIcon,
   ChevronDown,
   ChevronLeft,
@@ -19,8 +18,8 @@ import {
   Clock,
   FileText,
   Plus,
-  Save,
   Stethoscope,
+  Target,
   UserPlus,
   Users,
   Video,
@@ -32,13 +31,15 @@ import { NewAppointmentModal } from "@/components/agenda/NewAppointmentModal";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
 import { SynapseOrbAvatar } from "@/components/synapse/SynapseOrbAvatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   DesktopActionTile,
   DesktopWorkspacePanel,
   DesktopWorkspaceShell,
 } from "@/components/ui/desktop-workspace";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
+import { ReflectionCarousel } from "@/components/ui/reflection-carousel";
+import { useDailyRotationItem } from "@/components/ui/reflection-carousel-rotation";
+import { StableTabViewport } from "@/components/ui/stable-tab-viewport";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useSynapse } from "@/context/SynapseProvider";
 import { useAppointmentsByDateRange } from "@/hooks/use-appointments-by-date-range";
@@ -56,7 +57,6 @@ import { getAppointmentStatusMeta } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
 import { cn } from "@/lib/utils";
 import type { AISummary, Appointment, SessionNote } from "@/types";
-import { toast } from "sonner";
 import {
   buildAttentionQueue,
   getActiveAppointments,
@@ -70,7 +70,7 @@ import {
 
 type PendingFilter = "all" | AttentionQueueCategory;
 type AgendaView = "today" | "week";
-type FinancialView = "management" | "neurofinance" | "planning";
+type FinancialView = "management" | "neurofinance";
 
 type ManagerialDashboardMetrics = {
   income?: number | null;
@@ -92,82 +92,21 @@ const pendingFilters: Array<{ value: PendingFilter; label: string }> = [
 const AGENDA_VISIBLE_ITEMS = 4;
 const PENDING_PAGE_SIZE = 4;
 
-const MagneticTabTrigger = ({
-  value,
-  activeValue,
-  indicatorId,
-  children,
-  className,
-}: {
-  value: string;
-  activeValue: string;
-  indicatorId: string;
-  children: ReactNode;
-  className?: string;
-}) => {
-  const prefersReducedMotion = useReducedMotion();
-  const active = value === activeValue;
-
-  return (
-    <TabsTrigger
-      value={value}
-      className={cn("dashboard-segment-trigger relative isolate", className)}
-    >
-      {active ? (
-        <motion.span
-          layoutId={indicatorId}
-          aria-hidden="true"
-          className="dashboard-segment-indicator absolute inset-0 -z-10 rounded-[inherit]"
-          transition={
-            prefersReducedMotion
-              ? { duration: 0 }
-              : { type: "spring", stiffness: 410, damping: 35, mass: 0.78 }
-          }
-        />
-      ) : null}
-      <span className="relative z-10 inline-flex items-center gap-2">{children}</span>
-    </TabsTrigger>
-  );
-};
-
-const DashboardTabContent = ({
-  value,
-  children,
-  className,
-}: {
-  value: string;
-  children: ReactNode;
-  className?: string;
-}) => {
-  const prefersReducedMotion = useReducedMotion();
-
-  return (
-    <TabsContent
-      value={value}
-      className={cn("mt-0 h-full animate-none transition-none", className)}
-    >
-      <motion.div
-        initial={prefersReducedMotion ? false : { opacity: 0, y: 5, scale: 0.997 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={prefersReducedMotion ? { duration: 0 } : { duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-        className="h-full origin-top"
-      >
-        {children}
-      </motion.div>
-    </TabsContent>
-  );
-};
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
-const parseMoneyInput = (value: string) => {
-  const normalized = value.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
-  const amount = Number(normalized);
-  return Number.isFinite(amount) ? Math.max(0, amount) : 0;
-};
-
-const formatMoneyInputValue = (value: number) => value.toFixed(2).replace(".", ",");
+const professionalReflections = [
+  "Cuidar bem também inclui respeitar o próprio ritmo.",
+  "Presença clínica nasce de escuta, preparo e espaço para respirar.",
+  "Nem todo avanço é ruidoso; alguns começam numa pergunta mais precisa.",
+  "Organizar o cuidado devolve tempo para aquilo que só você pode oferecer.",
+  "A consistência de hoje constrói a confiança terapêutica de amanhã.",
+  "Clareza nos processos abre mais espaço para presença nas sessões.",
+  "Acolher histórias exige técnica — e também gentileza consigo.",
+  "O trabalho clínico ganha força quando o essencial permanece visível.",
+  "Cada prontuário bem cuidado também protege uma história.",
+  "Tecnologia útil é aquela que deixa o vínculo humano em primeiro plano.",
+] as const;
 
 const formatAppointmentTime = (appointment?: Appointment | null) =>
   appointment?.start_time ? format(new Date(appointment.start_time), "HH:mm") : "-";
@@ -814,63 +753,78 @@ const AgendaPanel = ({
 }) => {
   const navigate = useNavigate();
   const [activeView, setActiveView] = useState<AgendaView>("today");
+  const appointments = activeView === "today" ? todayAppointments : weekAppointments;
+  const loadingLabel =
+    activeView === "today"
+      ? "Carregando agenda de hoje"
+      : "Carregando agenda dos próximos sete dias";
+  const regionLabel =
+    activeView === "today" ? "Agenda de hoje" : "Agenda dos próximos sete dias";
 
   return (
-    <DesktopWorkspacePanel className="dashboard-panel-surface p-5 lg:p-6">
+    <DesktopWorkspacePanel className="dashboard-panel-surface flex h-full min-h-0 flex-col p-5 lg:p-6">
       <SectionHeader
         eyebrow="Agenda"
         title="Fluxo clínico"
         action={
-          <Button variant="outline" className="h-9 rounded-[14px] px-3 text-xs font-bold" onClick={() => navigate("/agenda")}>
-            Abrir
-          </Button>
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <MagneticSegmentedControl
+              id="dashboard-agenda-view"
+              indicatorId="dashboard-agenda-indicator"
+              value={activeView}
+              onValueChange={setActiveView}
+              ariaLabel="Período da agenda"
+              options={[
+                { value: "today", label: "Hoje" },
+                { value: "week", label: "7 dias" },
+              ]}
+              className="h-12 min-h-12 shrink-0 rounded-[16px]"
+              triggerClassName="h-11 min-h-11 rounded-[12px] px-3 py-0 text-xs"
+            />
+            <Button
+              variant="outline"
+              className="dashboard-tactile h-11 shrink-0 rounded-[14px] px-3 text-xs font-bold"
+              onClick={() => navigate("/agenda")}
+            >
+              Abrir
+            </Button>
+          </div>
         }
       />
 
-      <Tabs value={activeView} onValueChange={(value) => setActiveView(value as AgendaView)} className="mt-5">
-        <TabsList className="dashboard-segment-list h-10 rounded-[16px]">
-          <MagneticTabTrigger value="today" activeValue={activeView} indicatorId="dashboard-agenda-indicator" className="h-8 rounded-[12px] px-3 text-xs">
-            Hoje
-          </MagneticTabTrigger>
-          <MagneticTabTrigger value="week" activeValue={activeView} indicatorId="dashboard-agenda-indicator" className="h-8 rounded-[12px] px-3 text-xs">
-            7 dias
-          </MagneticTabTrigger>
-        </TabsList>
-
-        <div className="mt-4 h-[328px] min-h-0">
-          <DashboardTabContent value="today">
-            {isLoading ? (
-              <div className="h-[328px] space-y-2 overflow-hidden" aria-label="Carregando agenda de hoje">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="h-[76px] animate-pulse rounded-[20px] bg-muted/35 motion-reduce:animate-none" />
-                ))}
-              </div>
-            ) : todayAppointments.length ? (
-              <AgendaListViewport appointments={todayAppointments} label="Agenda de hoje" />
-            ) : (
-              <EmptyState icon={CalendarIcon} title="Dia livre" description="Nenhum atendimento marcado para hoje." />
-            )}
-          </DashboardTabContent>
-
-          <DashboardTabContent value="week">
-            {isLoading ? (
-              <div className="h-[328px] space-y-2 overflow-hidden" aria-label="Carregando agenda dos próximos sete dias">
-                {[1, 2, 3, 4].map((item) => (
-                  <div key={item} className="h-[76px] animate-pulse rounded-[20px] bg-muted/35 motion-reduce:animate-none" />
-                ))}
-              </div>
-            ) : weekAppointments.length ? (
-              <AgendaListViewport appointments={weekAppointments} label="Agenda dos próximos sete dias" />
-            ) : (
-              <EmptyState icon={CalendarIcon} title="Semana livre" description="Sem compromissos ativos nos próximos 7 dias." />
-            )}
-          </DashboardTabContent>
-        </div>
-      </Tabs>
+      <StableTabViewport
+        id="dashboard-agenda-view"
+        value={activeView}
+        className="mt-5 h-[328px] shrink-0"
+      >
+        {isLoading ? (
+          <div className="h-[328px] space-y-2 overflow-hidden" aria-label={loadingLabel}>
+            {[1, 2, 3, 4].map((item) => (
+              <div
+                key={item}
+                className="h-[76px] animate-pulse rounded-[20px] bg-muted/35 motion-reduce:animate-none"
+              />
+            ))}
+          </div>
+        ) : appointments.length ? (
+          <AgendaListViewport appointments={appointments} label={regionLabel} />
+        ) : activeView === "today" ? (
+          <EmptyState
+            icon={CalendarIcon}
+            title="Dia livre"
+            description="Nenhum atendimento marcado para hoje."
+          />
+        ) : (
+          <EmptyState
+            icon={CalendarIcon}
+            title="Semana livre"
+            description="Sem compromissos ativos nos próximos 7 dias."
+          />
+        )}
+      </StableTabViewport>
     </DesktopWorkspacePanel>
   );
 };
-
 const FinanceMetricCard = ({
   label,
   value,
@@ -958,7 +912,7 @@ const FinanceMetricCard = ({
 };
 
 const FinanceWidgetSkeleton = () => (
-  <div className="grid gap-3 sm:h-[328px] sm:grid-cols-2 sm:grid-rows-2" aria-label="Carregando resumo financeiro">
+  <div className="grid h-[328px] grid-cols-2 grid-rows-2 gap-3" aria-label="Carregando resumo financeiro">
     {[1, 2, 3, 4].map((item) => (
       <div key={item} className="min-h-[144px] animate-pulse rounded-[24px] bg-muted/35 motion-reduce:animate-none" />
     ))}
@@ -982,7 +936,7 @@ const ManagementWidget = ({
   }
 
   return (
-    <div className="grid gap-3 sm:h-[328px] sm:grid-cols-2 sm:grid-rows-2">
+    <div className="grid h-[328px] grid-cols-2 grid-rows-2 gap-3">
       <FinanceMetricCard label="Resumo do mês" value={formatCurrency(result)} accent />
       <FinanceMetricCard label="A receber" value={formatCurrency(receivable)} />
       <FinanceMetricCard label="A pagar" value={formatCurrency(payable)} />
@@ -1015,7 +969,7 @@ const NeuroFinanceWidget = ({
   }
 
   return (
-    <div className="grid gap-3 sm:h-[328px] sm:grid-cols-2 sm:grid-rows-2">
+    <div className="grid h-[328px] grid-cols-2 grid-rows-2 gap-3">
       <FinanceMetricCard label="Saldo" value={financialConnected ? formatCurrency(balance.balance) : "Ativar"} accent={financialConnected} onClick={() => navigate("/financeiro/neurofinance")} />
       <FinanceMetricCard label="Vai cair" value={formatCurrency(balance.pending)} />
       <FinanceMetricCard label="Quanto entrou" value={formatCurrency(balance.totalReceived)} />
@@ -1024,7 +978,7 @@ const NeuroFinanceWidget = ({
   );
 };
 
-const PlanningWidget = ({
+const FinancialGoalShortcut = ({
   managerial,
   isLoading,
 }: {
@@ -1033,135 +987,42 @@ const PlanningWidget = ({
 }) => {
   const navigate = useNavigate();
   const planning = useFinancialPlanning(new Date());
+  const goal = planning.goal ? fromPlanningCents(planning.goal.revenue_goal_cents) : 0;
   const income = Number(managerial?.income || 0);
-  const receivable = Number(managerial?.receivable || 0);
-  const payable = Number(managerial?.payable || 0);
-  const suggestedGoal = Math.max(income + receivable, income, 10000);
-  const storageKey = `dashboard-planning-goal:${planning.monthKey}`;
-  const [cachedGoal, setCachedGoal] = useState<number | null>(() => {
-    if (typeof window === "undefined") return null;
-    const value = window.localStorage.getItem(storageKey);
-    const parsed = value ? Number(value) : null;
-    return Number.isFinite(parsed) ? parsed : null;
-  });
-  const [goalTouched, setGoalTouched] = useState(false);
-  const persistedGoal = planning.goal ? fromPlanningCents(planning.goal.revenue_goal_cents) : null;
-  const visibleGoal = persistedGoal ?? cachedGoal ?? suggestedGoal;
-  const [revenueGoal, setRevenueGoal] = useState(formatMoneyInputValue(visibleGoal));
-  const [sessionPrice, setSessionPrice] = useState("250,00");
-  const [sessionsPerWeek, setSessionsPerWeek] = useState("8");
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const value = window.localStorage.getItem(storageKey);
-    const parsed = value ? Number(value) : null;
-    setCachedGoal(Number.isFinite(parsed) ? parsed : null);
-  }, [storageKey]);
-
-  useEffect(() => {
-    if (persistedGoal === null) return;
-    setCachedGoal(persistedGoal);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(storageKey, String(persistedGoal));
-    }
-  }, [persistedGoal, storageKey]);
-
-  useEffect(() => {
-    if (!goalTouched) {
-      setRevenueGoal(formatMoneyInputValue(visibleGoal));
-    }
-  }, [goalTouched, visibleGoal]);
-
-  const goal = parseMoneyInput(revenueGoal);
-  const price = parseMoneyInput(sessionPrice);
-  const weekly = Math.max(0, Number(sessionsPerWeek || 0));
   const progress = goal > 0 ? Math.min(100, Math.round((income / goal) * 100)) : 0;
-  const remaining = Math.max(0, goal - income);
-  const monthlyCapacity = Math.round(weekly * 4);
-  const realisticMonthly = monthlyCapacity * price;
-  const isRefreshing = isLoading || planning.isLoading;
-
-  const handleCalculateGoal = () => {
-    setRevenueGoal(formatMoneyInputValue(realisticMonthly || suggestedGoal));
-    setGoalTouched(true);
-  };
-
-  const handleSave = async () => {
-    try {
-      await planning.saveGoal.mutateAsync({
-        revenueGoal: goal,
-        expenseLimit: payable,
-        desiredProfit: Math.max(0, goal - payable),
-        targetSessions: 0,
-        notes: `Dashboard: meta editada. Calculadora atual: ${weekly} consultas/semana a ${formatCurrency(price)}.`,
-      });
-      setCachedGoal(goal);
-      setGoalTouched(false);
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(storageKey, String(goal));
-      }
-      toast.success("Meta financeira atualizada.");
-    } catch (error) {
-      console.error("Falha ao salvar meta financeira:", error);
-      toast.error("Não foi possível salvar a meta financeira.");
-    }
-  };
+  const hasGoal = goal > 0;
+  const loading = isLoading || planning.isLoading;
 
   return (
-    <div className="dashboard-internal-scroll grid h-[328px] gap-4 overflow-y-auto overscroll-contain pr-1 xl:grid-cols-[minmax(0,1fr)_220px]">
-      <div className="relative overflow-hidden rounded-[30px] border border-foreground bg-foreground p-5 text-background shadow-sm dark:border-white dark:bg-white dark:text-zinc-950">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_10%_0%,hsl(var(--background)/0.04),transparent_34%)]" />
-        <div className="relative z-10 flex h-full min-h-[160px] flex-col justify-between">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-background/55 dark:text-zinc-950/55">{planning.goal ? "Meta definida" : "Meta sugerida"}</p>
-            {isRefreshing ? <span className="text-[8px] font-black uppercase tracking-[0.16em] text-background/45 dark:text-zinc-950/45">Atualizando</span> : null}
-          </div>
-          <p className="mt-3 text-4xl font-black leading-none tracking-[-0.06em] tabular-nums">{formatCurrency(goal)}</p>
-          <div className="mt-6 h-3 overflow-hidden rounded-full bg-background/12 dark:bg-zinc-950/12">
-            <div className="h-full rounded-full bg-background transition-[width] duration-500 dark:bg-zinc-950 motion-reduce:transition-none" style={{ width: `${progress}%` }} />
-          </div>
-          <p className="mt-4 text-sm font-semibold leading-relaxed text-background/62 dark:text-zinc-950/62">{progress}% atingido no mês.</p>
-        </div>
-      </div>
-
-      <FinanceMetricCard label="Falta bater" value={formatCurrency(remaining)} />
-
-      <div className="dashboard-retina-card xl:col-span-2 rounded-[30px] p-4">
-        <div className="grid gap-3 md:grid-cols-[1fr_0.85fr_0.85fr_auto_auto] md:items-end">
-          <div>
-            <p className="mb-2 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Meta do mês</p>
-            <Input value={revenueGoal} onChange={(event) => { setRevenueGoal(event.target.value); setGoalTouched(true); }} inputMode="decimal" className="dashboard-soft-fill h-11 rounded-[16px] text-sm font-bold" />
-          </div>
-          <div>
-            <p className="mb-2 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Preço médio</p>
-            <Input value={sessionPrice} onChange={(event) => setSessionPrice(event.target.value)} inputMode="decimal" className="dashboard-soft-fill h-11 rounded-[16px] text-sm font-bold" />
-          </div>
-          <div>
-            <p className="mb-2 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Consultas/semana</p>
-            <Input value={sessionsPerWeek} onChange={(event) => setSessionsPerWeek(event.target.value)} inputMode="numeric" className="dashboard-soft-fill h-11 rounded-[16px] text-sm font-bold" />
-          </div>
-          <Button type="button" variant="outline" onClick={handleCalculateGoal} className="h-11 rounded-[16px] px-4 text-[9px] font-black uppercase tracking-[0.16em]">
-            <Calculator className="mr-2 h-4 w-4" />
-            Calcular
-          </Button>
-          <Button type="button" onClick={handleSave} disabled={planning.saveGoal.isPending} className="h-11 rounded-[16px] bg-foreground px-4 text-[9px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-950">
-            {planning.saveGoal.isPending ? <Calculator className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Salvar
-          </Button>
-        </div>
-        <div className="dashboard-soft-fill mt-3 flex flex-wrap items-center justify-between gap-3 rounded-[20px] px-4 py-3">
-          <p className="text-xs font-semibold text-muted-foreground">
-            Com {weekly || 0} consultas/semana a {formatCurrency(price)}, o potencial mensal fica em {formatCurrency(realisticMonthly)}.
-          </p>
-          <Button variant="outline" className="h-9 rounded-[14px] px-3 text-xs font-bold" onClick={() => navigate("/financeiro?view=gestao-planejamento")}>
-            Planejamento
-          </Button>
-        </div>
-      </div>
-    </div>
+    <Button
+      type="button"
+      variant="outline"
+      onClick={() => navigate("/financeiro?view=gestao-planejamento")}
+      aria-label={
+        hasGoal
+          ? `Abrir planejamento financeiro. Meta mensal ${formatCurrency(goal)}, ${progress}% atingida.`
+          : "Abrir planejamento financeiro e definir meta mensal"
+      }
+      className="dashboard-tactile relative h-11 min-w-11 overflow-hidden rounded-[14px] px-3 text-xs font-bold"
+    >
+      <Target aria-hidden="true" className="h-4 w-4 shrink-0" />
+      <span className="ml-2 hidden whitespace-nowrap 2xl:inline">
+        {loading ? "Atualizando" : hasGoal ? `${progress}% da meta` : "Definir meta"}
+      </span>
+      {hasGoal ? (
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-2 bottom-1 h-0.5 overflow-hidden rounded-full bg-foreground/10"
+        >
+          <span
+            className="block h-full rounded-full bg-foreground/65 transition-[width] duration-500 motion-reduce:transition-none"
+            style={{ width: `${progress}%` }}
+          />
+        </span>
+      ) : null}
+    </Button>
   );
 };
-
 const FinancialOverviewPanel = ({
   financialConnected,
   financialLoading,
@@ -1185,49 +1046,49 @@ const FinancialOverviewPanel = ({
   const [activeView, setActiveView] = useState<FinancialView>("management");
 
   return (
-  <DesktopWorkspacePanel className="dashboard-panel-surface p-5 lg:p-6">
-    <Tabs value={activeView} onValueChange={(value) => setActiveView(value as FinancialView)}>
+    <DesktopWorkspacePanel className="dashboard-panel-surface flex h-full min-h-0 flex-col p-5 lg:p-6">
       <SectionHeader
         eyebrow="Financeiro"
         title="Resumo útil"
         action={
-          <TabsList className="dashboard-segment-list h-10 rounded-[16px]">
-            <MagneticTabTrigger value="management" activeValue={activeView} indicatorId="dashboard-finance-indicator" className="h-8 rounded-[12px] px-3 text-xs">
-              Gestão
-            </MagneticTabTrigger>
-            <MagneticTabTrigger value="neurofinance" activeValue={activeView} indicatorId="dashboard-finance-indicator" className="h-8 rounded-[12px] px-3 text-xs">
-              NeuroFinance
-            </MagneticTabTrigger>
-            <MagneticTabTrigger value="planning" activeValue={activeView} indicatorId="dashboard-finance-indicator" className="h-8 rounded-[12px] px-3 text-xs">
-              Meta
-            </MagneticTabTrigger>
-          </TabsList>
+          <div className="flex min-w-0 items-center gap-2 overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <MagneticSegmentedControl
+              id="dashboard-finance-view"
+              indicatorId="dashboard-finance-indicator"
+              value={activeView}
+              onValueChange={setActiveView}
+              ariaLabel="Origem do resumo financeiro"
+              options={[
+                { value: "management", label: "Gestão" },
+                { value: "neurofinance", label: "NeuroFinance" },
+              ]}
+              className="h-12 min-h-12 shrink-0 rounded-[16px]"
+              triggerClassName="h-11 min-h-11 rounded-[12px] px-3 py-0 text-xs"
+            />
+            <FinancialGoalShortcut managerial={managerial} isLoading={managerLoading} />
+          </div>
         }
       />
 
-      <div className="mt-5 h-[328px] min-h-0">
-        <DashboardTabContent value="management">
+      <StableTabViewport
+        id="dashboard-finance-view"
+        value={activeView}
+        className="mt-5 h-[328px] shrink-0"
+      >
+        {activeView === "management" ? (
           <ManagementWidget managerial={managerial} isLoading={managerLoading} />
-        </DashboardTabContent>
-
-        <DashboardTabContent value="neurofinance">
+        ) : (
           <NeuroFinanceWidget
             financialConnected={financialConnected}
             financialLoading={financialLoading}
             balance={balance}
             balanceLoading={balanceLoading}
           />
-        </DashboardTabContent>
-
-        <DashboardTabContent value="planning">
-          <PlanningWidget managerial={managerial} isLoading={managerLoading} />
-        </DashboardTabContent>
-      </div>
-    </Tabs>
-  </DesktopWorkspacePanel>
+        )}
+      </StableTabViewport>
+    </DesktopWorkspacePanel>
   );
 };
-
 const PendingIcon = ({ item }: { item: AttentionQueueItem }) => {
   if (item.category === "sessions") return <Users className="h-4 w-4" />;
   if (item.category === "appointments") return <CalendarIcon className="h-4 w-4" />;
@@ -1385,36 +1246,55 @@ const PendingWorkPanel = ({
 
   return (
     <DesktopWorkspacePanel className="dashboard-panel-surface p-5 lg:p-6">
-      <Tabs value={activeFilter} onValueChange={(value) => setActiveFilter(value as PendingFilter)}>
-        <SectionHeader
-          eyebrow="Pendências"
-          title="Lista operacional"
-          action={
-             <TabsList className="dashboard-segment-list h-auto flex-wrap justify-end rounded-[18px] p-1">
-              {pendingFilters.map((filter) => (
-                <MagneticTabTrigger key={filter.value} value={filter.value} activeValue={activeFilter} indicatorId="dashboard-pending-indicator" className="h-8 gap-2 rounded-[14px] px-3 text-xs">
-                  {filter.label}
-                  <span className="rounded-full bg-muted/70 px-1.5 py-0.5 text-[9px] font-black text-muted-foreground">{itemsByFilter[filter.value].length}</span>
-                </MagneticTabTrigger>
-              ))}
-            </TabsList>
-          }
-        />
+      <SectionHeader
+        eyebrow="Pendências"
+        title="Lista operacional"
+        action={
+          <div className="max-w-[72vw] overflow-x-auto pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <MagneticSegmentedControl
+              id="dashboard-pending-view"
+              indicatorId="dashboard-pending-indicator"
+              value={activeFilter}
+              onValueChange={setActiveFilter}
+              ariaLabel="Filtrar pendências"
+              options={pendingFilters.map((filter) => ({
+                value: filter.value,
+                label: (
+                  <>
+                    {filter.label}
+                    <span className="rounded-full bg-muted/70 px-1.5 py-0.5 text-[9px] font-black text-muted-foreground">
+                      {itemsByFilter[filter.value].length}
+                    </span>
+                  </>
+                ),
+              }))}
+              className="h-12 min-h-12 min-w-max rounded-[18px]"
+              triggerClassName="h-11 min-h-11 rounded-[14px] px-3 py-0 text-xs"
+            />
+          </div>
+        }
+      />
 
-        {pendingFilters.map((filter) => (
-          <DashboardTabContent key={filter.value} value={filter.value} className="mt-5 h-[276px]">
-            <PendingPage id={filter.value} items={itemsByFilter[filter.value]} isLoading={isLoading} />
-          </DashboardTabContent>
-        ))}
-      </Tabs>
+      <StableTabViewport
+        id="dashboard-pending-view"
+        value={activeFilter}
+        className="mt-5 h-[276px]"
+      >
+        <PendingPage
+          id={activeFilter}
+          items={itemsByFilter[activeFilter]}
+          isLoading={isLoading}
+        />
+      </StableTabViewport>
     </DesktopWorkspacePanel>
   );
 };
-
 export const DesktopDashboardCommandCenter = () => {
   const today = useMemo(() => new Date(), []);
   const { data: profile } = useProfile();
   const { setShellState, setActiveTab, toggleVoiceMode } = useSynapse();
+  const professionalReflection = useDailyRotationItem(professionalReflections) || professionalReflections[0];
+  const firstName = getFirstName(profile);
 
   useGoogleCalendarSync();
 
@@ -1456,7 +1336,7 @@ export const DesktopDashboardCommandCenter = () => {
             <ActionSidebar today={today} openSynapseVoice={openSynapseVoice} />
             <MorningCommandPanel
               today={today}
-              firstName={getFirstName(profile)}
+              firstName={firstName}
               todayAppointments={todayAppointments}
               weekAppointmentsCount={activeAppointments.length}
               attentionItems={attentionItems}
@@ -1465,7 +1345,7 @@ export const DesktopDashboardCommandCenter = () => {
             />
           </div>
 
-          <div className="dashboard-deferred-section mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(500px,0.98fr)]">
+          <div className="dashboard-deferred-section mt-4 grid items-stretch gap-4 xl:grid-cols-[minmax(0,1.02fr)_minmax(500px,0.98fr)]">
             <AgendaPanel todayAppointments={todayAppointments} weekAppointments={activeAppointments} isLoading={loadingAppointments} />
             <FinancialOverviewPanel
               financialConnected={financialConnected}
@@ -1479,6 +1359,24 @@ export const DesktopDashboardCommandCenter = () => {
 
           <div className="dashboard-deferred-section dashboard-deferred-section-pending mt-4">
             <PendingWorkPanel items={attentionItems} isLoading={notificationsLoading} />
+          </div>
+
+          <div className="dashboard-deferred-section mt-4">
+            <ReflectionCarousel
+              ariaLabel="Reflexões para a prática clínica"
+              slides={[
+                {
+                  eyebrow: "Reflexão do dia",
+                  title: professionalReflection,
+                  description: "Uma pausa breve para atravessar o trabalho clínico com mais clareza, presença e intenção.",
+                },
+                {
+                  eyebrow: "Para quem cuida",
+                  title: "Este ambiente foi construído com psicólogos, para psicólogos.",
+                  description: `A NeuroNex existe para devolver tempo, clareza e presença a quem sustenta histórias todos os dias. Obrigado por construir esse futuro conosco, ${firstName}.`,
+                },
+              ]}
+            />
           </div>
         </DesktopWorkspaceShell>
       </main>

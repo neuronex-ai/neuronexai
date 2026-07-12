@@ -6,6 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { formatTimeBrazil } from "@/lib/timezone";
 import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
 import { AgendaSettingsModal } from "./AgendaSettingsModal";
 import { cn } from "@/lib/utils";
@@ -356,7 +357,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 size="icon"
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
                                 aria-label={sidebarOpen ? "Ocultar painel da agenda" : "Mostrar painel da agenda"}
-                                className="desktop-retina-interactive hidden h-10 w-10 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground xl:flex"
+                                className="desktop-retina-interactive hidden h-11 w-11 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground xl:flex"
                             >
                                 {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
                             </Button>
@@ -402,31 +403,21 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
                         {/* View Switcher Controls */}
                         {onViewChange && (
-                            <div className="desktop-retina-inset flex rounded-full border border-border/50 bg-muted/36 p-1">
-                                {([
-                                    { id: 'daily', label: 'Dia' },
-                                    { id: 'weekly', label: 'Sem' },
-                                    { id: 'monthly', label: 'Mês' }
-                                ] satisfies Array<{ id: CalendarViewProps["view"]; label: string }>).map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => onViewChange(tab.id)}
-                                        className={cn(
-                                            "relative z-10 rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors",
-                                            view === tab.id ? "text-background" : "text-muted-foreground hover:text-foreground"
-                                        )}
-                                    >
-                                        {view === tab.id && (
-                                            <motion.div
-                                                layoutId="activeViewTabCompact"
-                                                className="absolute inset-0 rounded-full bg-foreground shadow-sm"
-                                                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.72 }}
-                                            />
-                                        )}
-                                        <span className="relative z-10">{tab.label}</span>
-                                    </button>
-                                ))}
-                            </div>
+                            <MagneticSegmentedControl
+                                id="agenda-calendar-view"
+                                indicatorId="agenda-calendar-view-indicator"
+                                value={view}
+                                onValueChange={onViewChange}
+                                ariaLabel="Visualização da agenda"
+                                behavior="single-select"
+                                options={[
+                                    { value: "daily", label: "Dia" },
+                                    { value: "weekly", label: "Sem" },
+                                    { value: "monthly", label: "Mês" },
+                                ]}
+                                className="desktop-retina-inset h-12 min-h-12 shrink-0 rounded-full border-border/50 bg-muted/36"
+                                triggerClassName="h-11 min-h-11 rounded-full px-4 py-0 text-[10px] font-black uppercase tracking-wider"
+                            />
                         )}
 
                         <div className="hidden h-6 w-px bg-border/65 sm:block" />
@@ -437,14 +428,15 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
-                                className="desktop-retina-interactive h-10 w-10 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                                aria-label="Mostrar período anterior"
+                                className="desktop-retina-interactive h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <Button
                                 variant="ghost"
                                 onClick={() => onDateChange(new Date())}
-                                className="desktop-retina-interactive h-10 rounded-full border border-border/50 bg-background/70 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                                className="desktop-retina-interactive h-11 rounded-full border border-border/50 bg-background/70 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                             >
                                 Hoje
                             </Button>
@@ -452,7 +444,8 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
-                                className="desktop-retina-interactive h-10 w-10 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                                aria-label="Mostrar próximo período"
+                                className="desktop-retina-interactive h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -467,7 +460,8 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                         <Button
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
-                            className="desktop-retina-interactive flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground font-bold uppercase tracking-[0.1em] text-background hover:bg-foreground/88"
+                            aria-label="Criar novo agendamento"
+                            className="desktop-retina-interactive flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground font-bold uppercase tracking-[0.1em] text-background hover:bg-foreground/88"
                         >
                             <Plus className="h-4 w-4" />
                         </Button>

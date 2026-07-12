@@ -254,7 +254,6 @@ export const DesktopSessionStage = ({
           onClose={onCloseChat}
           appointmentId={appointmentId}
           currentUserId={user.id}
-          currentUserName={therapistName}
         />
       ) : null}
     </section>

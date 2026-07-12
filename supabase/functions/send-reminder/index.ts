@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0'
+import { ensureTeleconsultationInvite } from '../_shared/teleconsultation-access.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -60,9 +61,12 @@ serve(async (req) => {
     }
 
     const FRONTEND_URL = Deno.env.get('FRONTEND_URL') || 'https://neuronexai.com.br';
+    const secureInvite = appointment.type === 'online'
+      ? await ensureTeleconsultationInvite(supabaseAdmin, appointment)
+      : null;
     const meetLink = appointment.type === 'online'
-      ? `${FRONTEND_URL}/join/${appointment.id}`
-      : appointment.google_meet_link || `${FRONTEND_URL}/confirmar-agendamento/${appointment.id}`;
+      ? secureInvite!.meetLink
+      : appointment.google_meet_link || `${FRONTEND_URL}/confirmar-agendamento/${appointment.token || appointment.id}`;
 
     const event_type = `reminder.${method}`;
     const payload = {
@@ -92,7 +96,8 @@ serve(async (req) => {
 
   } catch (error) {
     console.error(error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Não foi possível enviar o lembrete.';
+    return new Response(JSON.stringify({ error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

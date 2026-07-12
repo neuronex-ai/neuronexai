@@ -28,7 +28,7 @@ export function RouteSelection({ onSelectRoute }: RouteSelectionProps) {
   const shouldReduceMotion = useReducedMotion();
 
   return (
-    <section className="desktop-retina-panel relative overflow-hidden rounded-[30px] border border-border/45 bg-card/62 px-5 py-8 sm:px-7 md:py-10">
+    <section className="patient-record-panel relative overflow-hidden rounded-[30px] border px-5 py-8 sm:px-7 md:py-10">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.018),transparent_42%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.014),transparent_44%)]" />
 
       <div className="relative z-10 mx-auto max-w-5xl">
@@ -52,7 +52,7 @@ export function RouteSelection({ onSelectRoute }: RouteSelectionProps) {
               initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={shouldReduceMotion ? { duration: 0 } : { delay: index * 0.04, duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
-              className="desktop-retina-inset desktop-retina-interactive group flex min-h-[240px] flex-col rounded-[26px] border border-border/45 bg-background/58 p-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 md:p-7"
+              className="patient-record-card desktop-retina-interactive group flex min-h-[240px] flex-col rounded-[26px] border p-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45 md:p-7"
             >
               <span className="flex h-12 w-12 items-center justify-center rounded-[18px] border border-border/50 bg-foreground text-background shadow-sm">
                 <option.icon className="h-5 w-5" aria-hidden="true" />

@@ -20,7 +20,6 @@ export interface JitsiRef {
   toggleAudio: () => void;
   toggleVideo: () => void;
   toggleScreenShare: () => void;
-  toggleChat: () => void;
   executeCommand: (command: string, ...args: any[]) => void;
 }
 
@@ -64,7 +63,6 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
     toggleAudio: () => apiRef.current?.executeCommand('toggleAudio'),
     toggleVideo: () => apiRef.current?.executeCommand('toggleVideo'),
     toggleScreenShare: () => apiRef.current?.executeCommand('toggleShareScreen'),
-    toggleChat: () => apiRef.current?.executeCommand('toggleChat'),
     executeCommand: (command: string, ...args: any[]) => apiRef.current?.executeCommand(command, ...args),
   }));
 
@@ -109,6 +107,8 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
           requireDisplayName: false,
           skipMeetingPrejoin: true,
           disableDeepLinking: true,
+          disableChat: true,
+          disableInviteFunctions: true,
           enableWelcomePage: false,
           enableClosePage: false,
           toolbarButtons: [],
@@ -168,6 +168,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
       const iframe = typeof api.getIFrame === 'function' ? api.getIFrame() : null;
       if (iframe) {
         iframe.title = `Sala de teleconsulta com ${subject || 'paciente'}`;
+        iframe.referrerPolicy = 'no-referrer';
         iframe.style.backgroundColor = '#050505';
       }
 

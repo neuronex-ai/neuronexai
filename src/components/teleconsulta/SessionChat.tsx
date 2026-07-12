@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import type { SessionChatMessage } from '@/types/chat';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { format } from 'date-fns';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Loader2, MessageSquare, Send, X } from 'lucide-react';
@@ -15,7 +16,7 @@ interface SessionChatProps {
   onClose: () => void;
   appointmentId: string;
   currentUserId: string;
-  currentUserName: string;
+  client?: SupabaseClient<any>;
 }
 
 export const SessionChat = ({
@@ -23,7 +24,7 @@ export const SessionChat = ({
   onClose,
   appointmentId,
   currentUserId,
-  currentUserName,
+  client = supabase,
 }: SessionChatProps) => {
   const [messages, setMessages] = useState<SessionChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -37,7 +38,7 @@ export const SessionChat = ({
 
     const fetchMessages = async () => {
       setIsLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await client
         .from('session_chat_messages')
         .select('id, appointment_id, sender_id, sender_name, sender_role, content, created_at')
         .eq('appointment_id', appointmentId)
@@ -45,13 +46,14 @@ export const SessionChat = ({
         .limit(100);
 
       if (!active) return;
-      if (!error && data) setMessages((data as SessionChatMessage[]).reverse());
+      if (error) toast.error('Não foi possível carregar o chat da sessão.');
+      else if (data) setMessages((data as SessionChatMessage[]).reverse());
       setIsLoading(false);
     };
 
     void fetchMessages();
 
-    const channel = supabase
+    const channel = client
       .channel(`session-chat-${appointmentId}`)
       .on<SessionChatMessage>(
         'postgres_changes',
@@ -68,13 +70,15 @@ export const SessionChat = ({
           });
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') toast.error('O chat perdeu a sincronização em tempo real.');
+      });
 
     return () => {
       active = false;
-      void supabase.removeChannel(channel);
+      void client.removeChannel(channel);
     };
-  }, [appointmentId, isOpen]);
+  }, [appointmentId, client, isOpen]);
 
   useEffect(() => {
     if (!isOpen || !scrollRef.current) return;
@@ -90,12 +94,9 @@ export const SessionChat = ({
     if (!content || isSending) return;
 
     setIsSending(true);
-    const { error } = await supabase.from('session_chat_messages').insert({
-      appointment_id: appointmentId,
-      sender_id: currentUserId,
-      sender_name: currentUserName,
-      sender_role: 'therapist',
-      content,
+    const { error } = await client.rpc('send_session_chat_message', {
+      p_appointment_id: appointmentId,
+      p_content: content,
     });
 
     if (error) toast.error('Não foi possível enviar a mensagem.');

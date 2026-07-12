@@ -6,11 +6,11 @@ import { useAI } from '@/context/AIContext';
 import {
     useChatSessions,
     useCreateChatSession,
-    useSendChatMessage,
     useSessionMessages,
     useDeleteChatSession,
     type SynapseProgressEvent,
 } from '@/hooks/use-ai-chat';
+import { useSendChatMessage } from '@/hooks/use-ai-chat-resilient';
 import { Message } from '@/types';
 import {
     executeSynapseInterfaceAction,
@@ -81,7 +81,13 @@ const describeInterfaceAction = (action: SynapseInterfaceAction) => {
 export const useSynapseChat = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
-    const { activeSessionId, setActiveSessionId, setExecState, addTimelineEntry } = useSynapse();
+    const {
+        activeSessionId,
+        setActiveSessionId,
+        setExecState,
+        addTimelineEntry,
+        setActionExperience,
+    } = useSynapse();
     const { currentContext, contextSummary, activePatientId } = useAI();
 
     const { data: sessions } = useChatSessions();
@@ -167,6 +173,7 @@ export const useSynapseChat = () => {
                             const result = await executeSynapseInterfaceAction(action, {
                                 navigate,
                                 channel: 'text',
+                                onLifecycle: setActionExperience,
                             });
 
                             setExecState(result.success ? 'success' : result.cancelled ? 'idle' : 'error');
@@ -212,6 +219,7 @@ export const useSynapseChat = () => {
             addTimelineEntry,
             sendMessage,
             navigate,
+            setActionExperience,
         ],
     );
 

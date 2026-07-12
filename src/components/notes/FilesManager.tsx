@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import {
     AlertDialog,
     AlertDialogAction,
@@ -41,7 +42,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
@@ -110,6 +111,7 @@ const getFileIcon = (name: string, className?: string) => {
 const getDocumentIdFromPath = (path: string) => path.replace(/^r2:/, "");
 
 export const FilesManager = () => {
+    const shouldReduceMotion = useReducedMotion();
     const { user, session } = useAuth();
     const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -434,30 +436,28 @@ export const FilesManager = () => {
 
                     <div className="flex items-center gap-3">
                         {/* View Toggle */}
-                        <div className="flex items-center rounded-2xl border border-white/[0.05] bg-black/40 p-1 backdrop-blur-xl [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-100/50">
-                            <button
-                                onClick={() => setViewLayout("list")}
-                                className={cn(
-                                    "p-2 rounded-xl transition-all duration-300",
-                                    viewLayout === "list"
-                                        ? "scale-105 bg-zinc-100 text-black shadow-xl [.light_&]:bg-white [.light_&]:text-zinc-900"
-                                        : "text-zinc-500 hover:text-white [.light_&]:text-zinc-400 [.light_&]:hover:text-zinc-900"
-                                )}
-                            >
-                                <LayoutList className="h-4 w-4" />
-                            </button>
-                            <button
-                                onClick={() => setViewLayout("grid")}
-                                className={cn(
-                                    "p-2 rounded-xl transition-all duration-300",
-                                    viewLayout === "grid"
-                                        ? "scale-105 bg-zinc-100 text-black shadow-xl [.light_&]:bg-white [.light_&]:text-zinc-900"
-                                        : "text-zinc-500 hover:text-white [.light_&]:text-zinc-400 [.light_&]:hover:text-zinc-900"
-                                )}
-                            >
-                                <LayoutGrid className="h-4 w-4" />
-                            </button>
-                        </div>
+                        <MagneticSegmentedControl
+                            id="notes-files-layout"
+                            indicatorId="notes-files-layout-indicator"
+                            value={viewLayout}
+                            onValueChange={setViewLayout}
+                            ariaLabel="Formato de exibição dos arquivos"
+                            behavior="single-select"
+                            options={[
+                                {
+                                    value: "list",
+                                    ariaLabel: "Exibir arquivos em lista",
+                                    label: <LayoutList aria-hidden="true" className="h-4 w-4" />,
+                                },
+                                {
+                                    value: "grid",
+                                    ariaLabel: "Exibir arquivos em grade",
+                                    label: <LayoutGrid aria-hidden="true" className="h-4 w-4" />,
+                                },
+                            ]}
+                            className="h-12 min-h-12 rounded-2xl border-white/[0.05] bg-black/40 [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-100/50"
+                            triggerClassName="h-11 min-h-11 w-11 rounded-xl px-0"
+                        />
 
                         {/* Cloud Integrations */}
                         <Dialog>
@@ -557,23 +557,25 @@ export const FilesManager = () => {
 
                 {/* Tabs & Search Row */}
                 <div className="flex flex-col md:flex-row items-stretch md:items-center gap-6">
-                    <div className="flex w-full max-w-md items-center gap-2 rounded-2xl border border-white/[0.05] bg-black/40 p-1.5 backdrop-blur-xl [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-100/50">
-                        {tabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "flex-1 flex items-center justify-center gap-2.5 py-3 px-6 rounded-xl text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-300",
-                                    activeTab === tab.id
-                                        ? "scale-[1.02] bg-zinc-100 text-black shadow-xl [.light_&]:bg-white [.light_&]:text-zinc-900"
-                                        : "text-zinc-500 hover:text-white [.light_&]:text-zinc-400 [.light_&]:hover:text-zinc-900"
-                                )}
-                            >
-                                <tab.icon className="h-3.5 w-3.5" strokeWidth={2.5} />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
+                    <MagneticSegmentedControl
+                        id="notes-files-scope"
+                        indicatorId="notes-files-scope-indicator"
+                        value={activeTab}
+                        onValueChange={setActiveTab}
+                        ariaLabel="Origem dos arquivos"
+                        behavior="single-select"
+                        options={tabs.map((tab) => ({
+                            value: tab.id,
+                            label: (
+                                <>
+                                    <tab.icon aria-hidden="true" className="h-3.5 w-3.5" strokeWidth={2.5} />
+                                    {tab.label}
+                                </>
+                            ),
+                        }))}
+                        className="h-12 min-h-12 w-full max-w-md rounded-2xl border-white/[0.05] bg-black/40 [.light_&]:border-zinc-200/50 [.light_&]:bg-zinc-100/50"
+                        triggerClassName="h-11 min-h-11 flex-1 rounded-xl px-4 text-[11px] font-black uppercase tracking-[0.1em]"
+                    />
 
                     <div className="flex-1 relative group">
                         <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400 transition-colors group-focus-within:text-zinc-100 [.light_&]:group-focus-within:text-zinc-900" />
@@ -590,13 +592,14 @@ export const FilesManager = () => {
             {/* Content Area */}
             <div className="custom-scrollbar relative z-10 flex-1 overflow-y-auto px-7 pb-10 lg:px-8">
                 <div className="absolute inset-0 notes-retina-texture opacity-[0.1] pointer-events-none" />
-                <AnimatePresence mode="wait">
+                <AnimatePresence initial={!shouldReduceMotion} mode="wait">
                     {activeTab === "personal" ? (
                         <motion.div
                             key="personal"
-                            initial={{ opacity: 0, y: 8 }}
+                            initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
+                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                         >
                             {isLoadingPersonal ? (
                                 <div className="space-y-3 pt-4">
@@ -661,9 +664,10 @@ export const FilesManager = () => {
                     ) : (
                         <motion.div
                             key="patients"
-                            initial={{ opacity: 0, y: 8 }}
+                            initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -8 }}
+                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                             className="space-y-3"
                         >
                             {isLoadingPatients ? (
@@ -705,12 +709,13 @@ export const FilesManager = () => {
                                                 className={cn("h-4 w-4 text-muted-foreground transition-transform", expandedPatient === patient.id && "rotate-180")}
                                             />
                                         </button>
-                                        <AnimatePresence>
+                                        <AnimatePresence initial={!shouldReduceMotion}>
                                             {expandedPatient === patient.id && (
                                                 <motion.div
-                                                    initial={{ height: 0, opacity: 0 }}
+                                                    initial={shouldReduceMotion ? false : { height: 0, opacity: 0 }}
                                                     animate={{ height: "auto", opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}
+                                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                                                     className="overflow-hidden pl-4 space-y-1"
                                                 >
                                                     {viewLayout === "grid" ? (

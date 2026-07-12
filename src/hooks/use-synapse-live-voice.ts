@@ -6,6 +6,7 @@ import { useVoiceConfig } from "@/hooks/use-voice-config";
 import {
   executeSynapseInterfaceAction,
   normalizeSynapseClientAction,
+  type SynapseActionLifecycleEvent,
 } from "@/lib/synapse-interface-actions";
 
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
@@ -18,6 +19,7 @@ interface UseSynapseLiveVoiceOptions {
   onDisconnect?: () => void;
   onError?: (error: string) => void;
   onClientAction?: (action: unknown) => void;
+  onActionLifecycle?: (event: SynapseActionLifecycleEvent) => void;
 }
 
 export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
@@ -65,6 +67,7 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
       void executeSynapseInterfaceAction(action, {
         navigate,
         channel: "voice",
+        onLifecycle: optionsRef.current?.onActionLifecycle,
       });
     },
   });

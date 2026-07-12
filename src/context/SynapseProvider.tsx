@@ -4,6 +4,10 @@ import { useSynapseLiveVoice } from '@/hooks/use-synapse-live-voice';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { getToolsForRoute, getQuickActionsForRoute, SynapseTool } from '@/lib/synapse-tool-catalog';
+import {
+    cancelSynapseInterfaceAction,
+    type SynapseActionLifecycleEvent,
+} from '@/lib/synapse-interface-actions';
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -43,12 +47,17 @@ interface SynapseContextType {
 
     // Tool catalog
     availableTools: SynapseTool[];
-    quickActions: (SynapseTool | { id: string; name: string; description: string; status: 'active'; category: 'clinical'; allowedRoutes: string[]; hiddenInProduction: boolean; riskLevel: 'low' })[];
+    quickActions: SynapseTool[];
 
     // Timeline
     timeline: SynapseTimelineEntry[];
     addTimelineEntry: (entry: Omit<SynapseTimelineEntry, 'id' | 'timestamp'>) => void;
     clearTimeline: () => void;
+
+    // Assisted interface action
+    actionExperience: SynapseActionLifecycleEvent | null;
+    setActionExperience: (event: SynapseActionLifecycleEvent | null) => void;
+    cancelActionExperience: () => void;
 
     // Chat session persistence
     activeSessionId: string | null;
@@ -111,6 +120,10 @@ const VOICE_TOOL_LABELS: Record<string, string> = {
     get_medication_info: 'Informações de medicação',
     get_latest_scientific_updates: 'Atualizações científicas',
     search_normative_docs: 'Normas profissionais',
+    request_interface_action: 'Ação assistida',
+    analyze_neuroview_patient_patterns: 'Análise NeuroView',
+    create_neuroflow_from_patient_history: 'Criação NeuroFlow',
+    create_neuropulse_cause_effect_diagram: 'Criação NeuroPulse',
 };
 
 const sanitizeTimelineText = (value?: string) => {
@@ -142,6 +155,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
 
     // Timeline
     const [timeline, setTimeline] = useState<SynapseTimelineEntry[]>([]);
+    const [actionExperience, setActionExperience] = useState<SynapseActionLifecycleEvent | null>(null);
     // Voice Modal State
     const [isVoiceExpanded, setIsVoiceExpanded] = useState(false);
     const timelineIdCounter = useRef(0);
@@ -183,8 +197,36 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
 
     const clearTimeline = useCallback(() => setTimeline([]), []);
 
+    const cancelActionExperience = useCallback(() => {
+        cancelSynapseInterfaceAction();
+        setActionExperience(null);
+    }, []);
+
+    useEffect(() => {
+        if (!actionExperience || ['completed', 'error'].includes(actionExperience.phase)) return;
+
+        const cancelOnUserInteraction = (event: PointerEvent) => {
+            const target = event.target instanceof Element ? event.target : null;
+            if (target?.closest('[data-synapse-shell="true"]')) return;
+            cancelActionExperience();
+        };
+
+        document.addEventListener('pointerdown', cancelOnUserInteraction, true);
+        return () => document.removeEventListener('pointerdown', cancelOnUserInteraction, true);
+    }, [actionExperience, cancelActionExperience]);
+
+    useEffect(() => {
+        if (!actionExperience || !['completed', 'error'].includes(actionExperience.phase)) return;
+        const timeout = window.setTimeout(
+            () => setActionExperience((current) => current?.id === actionExperience.id ? null : current),
+            actionExperience.phase === 'completed' ? 2200 : 3600,
+        );
+        return () => window.clearTimeout(timeout);
+    }, [actionExperience]);
+
     // ─── Voice Integration (Deepgram Agent) ───────────────────────────────
     const synapseVoice = useSynapseLiveVoice({
+        onActionLifecycle: setActionExperience,
         onConnect: () => {
             console.log('[Synapse Global Voice] Conectado ao Deepgram Agent');
             setExecState('listening');
@@ -264,6 +306,9 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 timeline,
                 addTimelineEntry,
                 clearTimeline,
+                actionExperience,
+                setActionExperience,
+                cancelActionExperience,
                 activeSessionId,
                 setActiveSessionId,
                 inputDraft,

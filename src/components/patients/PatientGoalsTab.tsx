@@ -150,7 +150,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
                       <CheckCircle2 className="h-4 w-4" />
                     </div>
                   ) : (
-                    <div className="w-6 h-6 rounded-full border-2 border-border/20 hover:border-primary/50 hover:bg-primary/10 transition-all dark:border-white/[0.14] dark:hover:bg-[#18181a]" />
+                    <div className="h-6 w-6 rounded-full border-2 border-border/20 transition-colors hover:border-foreground/35 hover:bg-foreground/5 dark:border-white/[0.14] dark:hover:bg-[#181818]" />
                   )}
                 </button>
 

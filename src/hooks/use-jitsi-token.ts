@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 interface UseJitsiTokenOptions {
   enabled?: boolean;
   retry?: number;
+  decisionKey?: string;
 }
 
 export const useJitsiToken = (roomName: string, options?: UseJitsiTokenOptions & { guestName?: string }) => {
@@ -12,7 +13,7 @@ export const useJitsiToken = (roomName: string, options?: UseJitsiTokenOptions &
   const guestName = options?.guestName;
 
   return useQuery({
-    queryKey: ['jitsiToken', roomName, user?.id, guestName],
+    queryKey: ['jitsiToken', roomName, user?.id, guestName, options?.decisionKey],
     queryFn: async () => {
       if (!user && !guestName) throw new Error('Usuário não autenticado e nome de convidado não fornecido');
 

@@ -24,6 +24,15 @@ export interface SynapseTool {
     allowedRoutes: string[]; // route prefixes where this tool is relevant
     hiddenInProduction: boolean; // if true, only visible in dev mode
     riskLevel: 'low' | 'medium' | 'high';
+    requiresConfirmation?: boolean;
+    voiceAvailability?: 'direct' | 'confirmation' | 'blocked';
+    executor?: 'read' | 'mutation' | 'interface';
+}
+
+export interface ResolvedSynapseTool extends SynapseTool {
+    requiresConfirmation: boolean;
+    voiceAvailability: 'direct' | 'confirmation' | 'blocked';
+    executor: 'read' | 'mutation' | 'interface';
 }
 
 // ─── DEV MODE ─────────────────────────────────────────────────────────
@@ -142,6 +151,45 @@ export const SYNAPSE_TOOLS: SynapseTool[] = [
         allowedRoutes: ['/pacientes', '/synapse-ai'],
         hiddenInProduction: true,
         riskLevel: 'high',
+    },
+    {
+        id: 'analyze_neuroview_patient_patterns',
+        name: 'Analisar no NeuroView',
+        description: 'Cruza registros reais do paciente e abre o mapa de conexões',
+        status: 'active',
+        category: 'clinical',
+        icon: 'Network',
+        allowedRoutes: ['/pacientes', '/notas', '/synapse-ai'],
+        hiddenInProduction: false,
+        riskLevel: 'low',
+        requiresConfirmation: false,
+        voiceAvailability: 'direct',
+    },
+    {
+        id: 'create_neuroflow_from_patient_history',
+        name: 'Criar NeuroFlow assistido',
+        description: 'Prepara um fluxo a partir do histórico real e pede confirmação antes de salvar',
+        status: 'active',
+        category: 'clinical',
+        icon: 'Workflow',
+        allowedRoutes: ['/pacientes', '/notas', '/synapse-ai'],
+        hiddenInProduction: false,
+        riskLevel: 'medium',
+        requiresConfirmation: true,
+        voiceAvailability: 'confirmation',
+    },
+    {
+        id: 'create_neuropulse_cause_effect_diagram',
+        name: 'Criar NeuroPulse assistido',
+        description: 'Prepara um diagrama clínico e pede confirmação antes de salvar',
+        status: 'active',
+        category: 'clinical',
+        icon: 'Activity',
+        allowedRoutes: ['/pacientes', '/notas', '/synapse-ai'],
+        hiddenInProduction: false,
+        riskLevel: 'medium',
+        requiresConfirmation: true,
+        voiceAvailability: 'confirmation',
     },
 
     // ── Agenda ──────────────────────────────────────────────────────────
@@ -347,20 +395,43 @@ export const SYNAPSE_TOOLS: SynapseTool[] = [
 /**
  * Returns tools available for the given route, respecting production visibility.
  */
-export function getToolsForRoute(_pathname: string): SynapseTool[] {
+const isToolAvailableOnRoute = (tool: SynapseTool, pathname: string) =>
+    tool.allowedRoutes.some((route) => route === '*' || pathname === route || pathname.startsWith(`${route}/`));
+
+export const resolveSynapseToolPolicy = (
+    tool: SynapseTool,
+): ResolvedSynapseTool => {
+    const requiresConfirmation = tool.requiresConfirmation ??
+        tool.riskLevel !== 'low';
+    const voiceAvailability = tool.voiceAvailability ?? (
+        /^delete_/i.test(tool.id) || /(pix|payout|refund|reembolso)/i.test(tool.id)
+            ? 'blocked'
+            : requiresConfirmation
+            ? 'confirmation'
+            : 'direct'
+    );
+    const executor = tool.executor ?? (
+        tool.category === 'navigation' ? 'interface' : requiresConfirmation ? 'mutation' : 'read'
+    );
+    return { ...tool, requiresConfirmation, voiceAvailability, executor };
+};
+
+export function getToolsForRoute(pathname: string): ResolvedSynapseTool[] {
     return SYNAPSE_TOOLS.filter((tool) => {
         // Hide tools flagged for production-only visibility
         if (tool.hiddenInProduction && !IS_DEV) return false;
-        return true;
-    });
+        return isToolAvailableOnRoute(tool, pathname);
+    }).map(resolveSynapseToolPolicy);
 }
 
 /**
  * Returns quick-action tools (active + low risk) for compact panel chips.
  */
-export function getQuickActionsForRoute(pathname: string): SynapseTool[] {
+export function getQuickActionsForRoute(
+    pathname: string,
+): ResolvedSynapseTool[] {
     return getToolsForRoute(pathname).filter(
-        (t) => t.status === 'active' && t.riskLevel === 'low'
+        (t) => t.status === 'active' && t.riskLevel === 'low',
     );
 }
 

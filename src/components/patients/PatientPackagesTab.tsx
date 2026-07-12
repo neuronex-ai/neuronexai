@@ -11,7 +11,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog";
-import { GlassCard } from "@/components/ui/GlassCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePatientData } from "@/hooks/use-patient-data";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
@@ -102,7 +101,7 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                 })
             });
             toast.success("Relatório enviado!");
-        } catch (e) {
+        } catch {
             toast.error("Erro ao enviar.");
         } finally {
             setIsSending(false);
@@ -134,33 +133,30 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
         <div className="space-y-6 md:space-y-8 animate-fade-in pb-10">
 
             {isRunningLow && (
-                <GlassCard 
-                    className="border-zinc-200 dark:!border-white/[0.085] bg-zinc-50 dark:!bg-[#0b0b0d]"
-                    innerClassName="p-5 md:p-6"
-                >
+                <section className="patient-record-card rounded-[26px] border p-5 md:p-6">
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md shrink-0">
                                 <AlertCircle className="h-5 w-5" />
                             </div>
                             <div>
-                                <p className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-wide">Pacote Acabando</p>
-                                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-0.5">Resta apenas <span className="font-black text-zinc-900 dark:text-white">{activePkg.total_sessions - activePkg.sessions_used}</span> sessão neste pacote.</p>
+                                <p className="text-sm font-black uppercase tracking-wide text-foreground">Plano perto do fim</p>
+                                <p className="mt-0.5 text-xs font-medium text-muted-foreground">Resta apenas <span className="font-black text-foreground">{activePkg.total_sessions - activePkg.sessions_used}</span> sessão neste plano.</p>
                             </div>
                         </div>
                         <NewPackageModal patientId={patientId}>
-                            <Button size="sm" variant="outline" className="h-9 border-zinc-200 dark:border-white/[0.075] text-zinc-900 dark:text-white hover:bg-zinc-100 dark:hover:bg-[#18181a] bg-transparent text-xs font-black uppercase tracking-wider rounded-xl transition-all">
+                            <Button size="sm" variant="outline" className="h-10 rounded-xl border-border/50 bg-transparent text-xs font-black uppercase tracking-wider text-foreground hover:bg-muted">
                                 Renovar
                             </Button>
                         </NewPackageModal>
                     </div>
-                </GlassCard>
+                </section>
             )}
 
-            <div className="flex flex-col sm:flex-row justify-between items-center p-2 bg-zinc-50/50 dark:bg-[#0b0b0d] backdrop-blur-xl rounded-[24px] border border-zinc-200/50 dark:border-white/[0.085] gap-3 sm:gap-0 shadow-sm">
+            <div className="patient-record-panel flex flex-col items-center justify-between gap-3 rounded-[24px] border p-2 shadow-sm sm:flex-row sm:gap-0">
                 <div className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 flex items-center gap-3 w-full sm:w-auto">
                     <Package className="h-4 w-4 opacity-50" />
-                    Gerenciamento de Planos
+                    Gestão de planos
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto p-1">
                     <Dialog>
@@ -168,9 +164,9 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                             <Button
                                 size="sm"
                                 variant="ghost"
-                                className="gap-2 h-10 text-[10px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-[#18181a] hover:text-zinc-900 dark:hover:text-white transition-all rounded-xl flex-1 sm:flex-none"
+                                className="h-10 flex-1 gap-2 rounded-xl text-[10px] font-bold uppercase tracking-wider text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:flex-none"
                             >
-                                <FileText className="h-3.5 w-3.5" /> Relatório Mensal
+                                <FileText className="h-3.5 w-3.5" /> Relatório mensal
                             </Button>
                         </DialogTrigger>
                         <DialogContent
@@ -217,7 +213,7 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                     <NewPackageModal patientId={patientId}>
                         <Button size="sm" className="gap-2 bg-zinc-900 dark:bg-white text-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-xl h-10 text-[10px] font-black uppercase tracking-widest px-6 rounded-xl transition-all hover:scale-105 flex-1 sm:flex-none">
                             <Plus className="h-3.5 w-3.5 stroke-[3]" />
-                            Novo Pacote
+                            Novo plano
                         </Button>
                     </NewPackageModal>
                 </div>
@@ -232,9 +228,9 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                     ))}
                 </div>
             ) : (
-                <GlassCard className="flex flex-col items-center justify-center py-24 md:py-36 text-center border-dashed rounded-[48px]">
-                    <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-none mb-3">Nenhum pacote ativo</h3>
-                </GlassCard>
+                <div className="patient-record-card flex flex-col items-center justify-center rounded-[36px] border border-dashed py-24 text-center md:py-32">
+                    <h3 className="mb-3 text-2xl font-black leading-none tracking-tight text-foreground">Nenhum plano ativo</h3>
+                </div>
             )}
         </div>
     );

@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
+import { ensureTeleconsultationInvite } from '../_shared/teleconsultation-access.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -397,7 +398,7 @@ serve(async (req: Request) => {
       }
 
       case 'create_appointment': {
-        const { patient_id, start_time, end_time, type = 'presencial', notes, google_meet_link } = params || {};
+        const { patient_id, start_time, end_time, type = 'presencial', notes } = params || {};
         if (!start_time || !end_time) throw new Error('Parâmetros `start_time` e `end_time` são obrigatórios para agendamentos.');
 
         const { data, error } = await supabaseClient.from('appointments').insert({
@@ -408,10 +409,12 @@ serve(async (req: Request) => {
           type,
           status: 'pending',
           notes: notes || null,
-          google_meet_link: google_meet_link || null
+          google_meet_link: null
         }).select().single();
         if (error) throw error;
-        result = data;
+        result = type === 'online'
+          ? { ...data, google_meet_link: (await ensureTeleconsultationInvite(supabaseClient, data)).meetLink }
+          : data;
         break;
       }
 
@@ -783,7 +786,8 @@ serve(async (req: Request) => {
       status: 200,
     });
   } catch (error) {
-    return new Response(JSON.stringify({ success: false, error: error.message }), {
+    const message = error instanceof Error ? error.message : 'Falha ao executar a ação solicitada.';
+    return new Response(JSON.stringify({ success: false, error: message }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
     });

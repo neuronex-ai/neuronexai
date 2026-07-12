@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { ensureTeleconsultationInvite, isUuid } from '../_shared/teleconsultation-access.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -65,11 +66,34 @@ serve(async (req) => {
     const userId = user.id;
 
     // Receber dados do body
-    const { patientEmail, patientName, meetLink, therapistName } = await req.json();
+    const { appointmentId, patientEmail, patientName } = await req.json();
 
-    if (!patientEmail || !meetLink) {
-        throw new Error("Dados incompletos: email do paciente ou link da sala faltando.");
+    if (!isUuid(appointmentId) || !patientEmail) {
+        throw new Error("Dados incompletos: agendamento ou e-mail do paciente ausente.");
     }
+
+    const { data: appointment, error: appointmentError } = await supabaseService
+      .from('appointments')
+      .select('id,user_id,patient_id,type,start_time,end_time,google_meet_link')
+      .eq('id', appointmentId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (appointmentError) throw appointmentError;
+    if (!appointment || appointment.type !== 'online') throw new Error('Teleconsulta não encontrada.');
+
+    const { data: patient, error: patientError } = await supabaseService
+      .from('patients')
+      .select('name,email')
+      .eq('id', appointment.patient_id)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (patientError) throw patientError;
+    if (!patient || patient.email?.toLowerCase() !== String(patientEmail).trim().toLowerCase()) {
+      throw new Error('O destinatário não corresponde ao paciente desta teleconsulta.');
+    }
+
+    const secureInvite = await ensureTeleconsultationInvite(supabaseService, appointment);
+    const meetLink = secureInvite.meetLink;
 
     // Buscar token do Google do Psicólogo
     const { data: tokenData } = await supabaseService.from('user_google_tokens').select('*').eq('user_id', userId).single();
@@ -81,9 +105,17 @@ serve(async (req) => {
     }
 
     // Buscar nome da clínica (opcional) para o template
-    const { data: profile } = await supabaseService.from('profiles').select('clinic_name').eq('id', userId).single();
+    const { data: profile } = await supabaseService
+      .from('profiles')
+      .select('clinic_name,full_name,first_name,last_name')
+      .eq('id', userId)
+      .single();
     const clinicName = profile?.clinic_name || "Consultório de Psicologia";
-    const firstName = patientName.split(' ')[0];
+    const professionalName = profile?.full_name ||
+      [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
+      user.email?.split('@')[0] ||
+      'Psicólogo';
+    const firstName = String(patient.name || patientName || 'Paciente').split(' ')[0];
 
     // --- TEMPLATE PREMIUM (IGUAL AO DE LEMBRETE) ---
     const fullHtml = `
@@ -139,7 +171,7 @@ serve(async (req) => {
                                             
                                             <!-- Title -->
                                             <div style="font-size: 24px; font-weight: 800; color: #ffffff; line-height: 1.2; letter-spacing: -0.5px; margin-bottom: 8px;">Sala Virtual Aberta</div>
-                                            <div style="font-size: 14px; font-weight: 500; color: #A1A1AA; text-transform: capitalize;">Com ${therapistName}</div>
+                                            <div style="font-size: 14px; font-weight: 500; color: #A1A1AA; text-transform: capitalize;">Com ${professionalName}</div>
                                             
                                             <!-- Divider -->
                                             <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top: 24px;">
@@ -198,7 +230,7 @@ serve(async (req) => {
     // Preparar envio via Gmail API
     const rawEmail = [
       `To: ${patientEmail}`,
-      `From: ${therapistName} <${user.email}>`,
+      `From: ${professionalName} <${user.email}>`,
       `Subject: =?utf-8?B?${toBase64(`Convite para Teleconsulta: ${firstName}`)}?=`,
       'MIME-Version: 1.0',
       'Content-Type: text/html; charset=utf-8',

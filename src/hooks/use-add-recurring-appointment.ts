@@ -177,11 +177,43 @@ const addRecurringAppointments = async (values: NewRecurringAppointmentFormValue
     throw new Error(insertError.message);
   }
 
-  toast.success(`${data.length} consultas agendadas com sucesso!`);
+  const insertedData = data || [];
+  let securedData: typeof insertedData;
+  try {
+    securedData = await Promise.all(insertedData.map(async (appointment) => {
+      if (appointment.type !== 'online') return appointment;
+      const { data: invite, error: inviteError } = await supabase.functions.invoke<{
+        meetLink: string;
+      }>('ensure-teleconsultation-invite', {
+        body: { appointmentId: appointment.id },
+      });
+      if (inviteError || !invite?.meetLink) {
+        throw new Error('Não foi possível criar o convite seguro de uma das teleconsultas recorrentes.');
+      }
+      return { ...appointment, google_meet_link: invite.meetLink };
+    }));
+  } catch (inviteError) {
+    const createdIds = insertedData.map((appointment) => appointment.id);
+    if (createdIds.length) await supabase.from('appointments').delete().in('id', createdIds).eq('user_id', userId);
+    throw inviteError;
+  }
+
+  const firstSecuredAppointment = securedData[0];
+  if (firstSecuredAppointment?.google_event_id && firstSecuredAppointment.type === 'online') {
+    await supabase.functions.invoke('google-calendar-manage', {
+      body: {
+        action: 'update',
+        googleEventId: firstSecuredAppointment.google_event_id,
+        appointmentData: firstSecuredAppointment,
+      },
+    });
+  }
+
+  toast.success(`${securedData.length} consultas agendadas com sucesso!`);
 
   try {
     await Promise.all(
-      (data || []).map((appointment) =>
+      securedData.map((appointment) =>
         createAppointmentFinancialEntryIfEnabled(
           appointment as Appointment,
           userId,
@@ -193,7 +225,7 @@ const addRecurringAppointments = async (values: NewRecurringAppointmentFormValue
     console.warn('[useAddRecurringAppointment] Agendamentos criados, mas a automacao financeira parcial falhou:', financialError);
   }
 
-  return data;
+  return securedData;
 };
 
 export const useAddRecurringAppointment = () => {

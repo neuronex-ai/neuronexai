@@ -83,13 +83,13 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
           if (values.financialType === 'transaction') {
             // Criar Transação Única (À Vista)
             addTransaction({
-              description: `Pacote: ${values.description}`,
+              description: `Plano: ${values.description}`,
               amount: values.price,
               type: 'income',
               category: 'Pacotes',
               date: new Date(),
             }, {
-              onSuccess: () => toast.success("Pacote e transação financeira registrados!")
+              onSuccess: () => toast.success("Plano e lançamento financeiro registrados.")
             });
           } else if (values.financialType === 'recurring') {
             // Criar Recorrência (Mensalidade)
@@ -100,19 +100,19 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
               day_of_month: values.recurrenceDay || 5,
               active: true,
             }, {
-              onSuccess: () => toast.success("Pacote e cobrança recorrente criados!")
+              onSuccess: () => toast.success("Plano e cobrança recorrente criados.")
             });
           }
 
         } else {
-          toast.success("Pacote de sessões adicionado com sucesso!");
+          toast.success("Plano de sessões adicionado com sucesso.");
         }
 
         form.reset();
         onSuccess();
       },
       onError: (error) => {
-        toast.error(`Erro ao adicionar pacote: ${error.message}`);
+        toast.error(`Erro ao adicionar o plano: ${error.message}`);
       },
     });
   };
@@ -127,7 +127,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
             <FormItem>
               <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Descrição</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Pacote Mensal (4 sessões)" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl text-white" />
+                <Input placeholder="Ex.: Plano mensal (4 sessões)" {...field} className="desktop-retina-inset h-11 rounded-xl border-border/50 bg-background/58 text-foreground focus:bg-background" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -142,7 +142,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Qtd. Sessões</FormLabel>
                 <FormControl>
-                  <Input type="number" min={1} placeholder="4" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl text-white" />
+                  <Input type="number" min={1} placeholder="4" {...field} className="desktop-retina-inset h-11 rounded-xl border-border/50 bg-background/58 text-foreground focus:bg-background" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -155,7 +155,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Preço (R$)</FormLabel>
                 <FormControl>
-                  <Input type="number" placeholder="600.00" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl text-white" />
+                  <Input type="number" inputMode="decimal" placeholder="600,00" {...field} className="desktop-retina-inset h-11 rounded-xl border-border/50 bg-background/58 text-foreground focus:bg-background" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -176,7 +176,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                       <Button
                         variant={"outline"}
                         className={cn(
-                          "w-full pl-3 text-left font-normal bg-black/20 border-white/10 hover:bg-black/30 h-11 rounded-xl px-3 text-white",
+                          "h-11 w-full rounded-xl border-border/50 bg-background/58 px-3 pl-3 text-left font-normal text-foreground hover:bg-muted",
                           !field.value && "text-muted-foreground"
                         )}
                       >
@@ -185,7 +185,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 border-white/10 bg-[#0A0A0B]" align="start">
+                  <PopoverContent className="desktop-retina-modal w-auto border-border/60 bg-popover/96 p-0" align="start">
                     <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ptBR} />
                   </PopoverContent>
                 </Popover>
@@ -205,7 +205,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                       <Button
                         variant={"outline"}
                         className={cn(
-                          "w-full pl-3 text-left font-normal bg-black/20 border-white/10 hover:bg-black/30 h-11 rounded-xl px-3 text-white",
+                          "h-11 w-full rounded-xl border-border/50 bg-background/58 px-3 pl-3 text-left font-normal text-foreground hover:bg-muted",
                           !field.value && "text-muted-foreground"
                         )}
                       >
@@ -214,7 +214,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0 border-white/10 bg-[#0A0A0B]" align="start">
+                  <PopoverContent className="desktop-retina-modal w-auto border-border/60 bg-popover/96 p-0" align="start">
                     <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ptBR} />
                   </PopoverContent>
                 </Popover>
@@ -225,15 +225,15 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
         </div>
 
         {/* Financial Integration Section */}
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10 space-y-4">
+        <div className="desktop-retina-inset space-y-4 rounded-xl border border-border/50 bg-muted/30 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-1.5 bg-emerald-500/10 text-emerald-500 rounded-lg border border-emerald-500/20">
                 <Wallet className="h-4 w-4" />
               </div>
               <div className="space-y-0.5">
-                <span className="text-xs font-bold text-white block">Lançar no Financeiro?</span>
-                <span className="text-[10px] text-muted-foreground block">Integração automática com caixa</span>
+                <span className="block text-xs font-bold text-foreground">Registrar também no Financeiro?</span>
+                <span className="block text-[10px] text-muted-foreground">Cria o lançamento automaticamente</span>
               </div>
             </div>
             <FormField
@@ -257,7 +257,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
           </div>
 
           {showFinancialOptions && (
-            <div className="pt-2 space-y-4 animate-fade-in border-t border-white/5">
+            <div className="animate-fade-in space-y-4 border-t border-border/45 pt-2">
               <FormField
                 control={form.control}
                 name="financialType"
@@ -277,11 +277,11 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                               "flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border cursor-pointer transition-all",
                               field.value === 'transaction'
                                 ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400"
-                                : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40"
+                                : "border-border/45 bg-background/45 text-muted-foreground hover:bg-muted"
                             )}
                           >
                             <ArrowRightLeft className="h-4 w-4" />
-                            <span className="text-[10px] font-bold uppercase tracking-wide">À Vista</span>
+                            <span className="text-[10px] font-bold uppercase tracking-wide">À vista</span>
                           </label>
                         </div>
 
@@ -292,8 +292,8 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                             className={cn(
                               "flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl border cursor-pointer transition-all",
                               field.value === 'recurring'
-                                ? "bg-blue-500/10 border-blue-500/50 text-blue-400"
-                                : "bg-black/20 border-white/5 text-muted-foreground hover:bg-black/40"
+                                ? "border-foreground/25 bg-foreground/10 text-foreground"
+                                : "border-border/45 bg-background/45 text-muted-foreground hover:bg-muted"
                             )}
                           >
                             <Repeat className="h-4 w-4" />
@@ -312,15 +312,15 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
                   name="recurrenceDay"
                   render={({ field }) => (
                     <FormItem className="animate-fade-in">
-                      <div className="flex items-center justify-between bg-black/20 p-3 rounded-lg border border-white/5">
-                        <span className="text-xs text-white/80">Dia do Vencimento:</span>
+                      <div className="flex items-center justify-between rounded-lg border border-border/45 bg-background/45 p-3">
+                        <span className="text-xs text-foreground/80">Dia do vencimento</span>
                         <FormControl>
                           <Input
                             type="number"
                             min={1}
                             max={31}
                             {...field}
-                            className="h-8 w-16 bg-black/40 border-white/10 text-center text-xs"
+                            className="h-9 w-16 border-border/50 bg-background text-center text-xs"
                           />
                         </FormControl>
                       </div>
@@ -335,7 +335,7 @@ export const NewPackageForm = ({ patientId, onSuccess }: NewPackageFormProps) =>
 
         <Button type="submit" className="w-full gap-2 h-12 rounded-xl shadow-glow mt-2 bg-primary hover:bg-primary/90 text-white transition-all" disabled={isAddingPackage}>
           {isAddingPackage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4 stroke-[3]" />}
-          {isAddingPackage ? "Salvando..." : "Criar Pacote"}
+          {isAddingPackage ? "Salvando..." : "Criar plano"}
         </Button>
       </form>
     </Form>

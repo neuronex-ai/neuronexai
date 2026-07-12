@@ -1,3 +1,5 @@
+import { SYNAPSE_TEXT_CONFIRMATION_TOOLS } from "../_shared/synapse-tool-contract.ts";
+
 type JsonSchema = Record<string, unknown>;
 
 const objectSchema = (
@@ -150,17 +152,7 @@ export const AGENT_TOOLS = [
   fn("create_financial_entry", "Prepara um lançamento gerencial e exige confirmação. patient_name é opcional e será resolvido internamente.", objectSchema({ title: { type: "string" }, description: { type: "string" }, amount: { type: "number", exclusiveMinimum: 0 }, entry_type: { type: "string", enum: ["income", "expense"] }, ...patientReference, date: { type: "string" }, category: { type: "string" } }, ["title", "amount", "entry_type"])),
 ] as const;
 
-export const MUTATING_TOOLS = new Set([
-  "create_patient", "update_patient", "update_patient_basic_info", "inactivate_patient",
-  "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment",
-  "set_teleconsultation_transcription_decision", "close_teleconsultation_room",
-  "create_personal_note", "update_personal_note", "append_to_personal_note", "rename_personal_note",
-  "move_note_to_module", "tag_personal_note", "delete_personal_note", "create_note_module",
-  "rename_note_module", "delete_note_module", "create_task", "update_task", "complete_task",
-  "reopen_task", "move_task_category", "delete_task", "link_file_to_patient",
-  "unlink_file_from_patient", "delete_file",
-  "create_financial_entry",
-]);
+export const MUTATING_TOOLS = new Set<string>(SYNAPSE_TEXT_CONFIRMATION_TOOLS);
 
 export const SYSTEM_DATA_TOOLS = new Set([
   "get_system_help", "get_workspace_overview", "list_patients", "search_patients",
