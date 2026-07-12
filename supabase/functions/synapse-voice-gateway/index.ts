@@ -236,6 +236,9 @@ const TOOL_LABELS: Record<string, string> = {
   get_medication_info: "informacoes de medicacao",
   get_latest_scientific_updates: "atualizacoes cientificas",
   search_normative_docs: "normas profissionais",
+  analyze_neuroview_patient_patterns: "análise no NeuroView",
+  create_neuroflow_from_patient_history: "criação no NeuroFlow",
+  create_neuropulse_cause_effect_diagram: "diagrama no NeuroPulse",
 };
 
 const safeJsonParse = (value: unknown): Record<string, unknown> => {

@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 
+const DEFAULT_VOICE_SPIRAL_COLORS = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd'];
+
 interface VoiceSpiralProps {
     /** Total number of dots in the spiral */
     totalDots?: number;
@@ -49,7 +51,7 @@ export function VoiceSpiral({
     minScale = 0.5,
     maxScale = 1.5,
     useMultipleColors = true,
-    colors = ['#6366f1', '#8b5cf6', '#a78bfa', '#c4b5fd'],
+    colors = DEFAULT_VOICE_SPIRAL_COLORS,
     audioIntensity = 0,
     getAudioVolume,
     isListening = false,
@@ -58,6 +60,8 @@ export function VoiceSpiral({
 }: VoiceSpiralProps) {
     const svgRef = useRef<SVGSVGElement>(null);
     const animationFrameRef = useRef<number>();
+    const lastFrameRef = useRef(0);
+    const isVisibleRef = useRef(typeof document === 'undefined' ? true : document.visibilityState === 'visible');
     const dotsRef = useRef<SVGCircleElement[]>([]);
 
     // Golden angle for Fibonacci spiral distribution
@@ -104,7 +108,15 @@ export function VoiceSpiral({
 
     // Animate dots based on audio intensity and state
     const animate = useCallback(() => {
-        const time = Date.now() / 1000;
+        animationFrameRef.current = requestAnimationFrame(animate);
+        if (!isVisibleRef.current) return;
+        const now = performance.now();
+        if (now - lastFrameRef.current < 32) return;
+        lastFrameRef.current = now;
+        const time = now / 1000;
+        const currentIntensity = getAudioVolume ? getAudioVolume() : audioIntensity;
+        const audioBoost = isListening ? currentIntensity * 0.5 : 0;
+        const processingPulse = isProcessing ? (Math.sin(time * 4) + 1) / 4 : 0;
 
         dotsRef.current.forEach((circle, _i) => {
             const frac = parseFloat(circle.dataset.baseFrac || '0');
@@ -116,10 +128,6 @@ export function VoiceSpiral({
             const waveFactor = (Math.sin(wavePhase) + 1) / 2;
 
             // Audio reactivity - dots pulse more when audio intensity is high
-            const currentIntensity = getAudioVolume ? getAudioVolume() : audioIntensity;
-            const audioBoost = isListening ? currentIntensity * 0.5 : 0;
-            const processingPulse = isProcessing ? (Math.sin(time * 4) + 1) / 4 : 0;
-
             // Combined intensity
             const intensity = waveFactor + audioBoost + processingPulse;
 
@@ -139,13 +147,18 @@ export function VoiceSpiral({
             circle.setAttribute('cy', (baseY + dy).toString());
         });
 
-        animationFrameRef.current = requestAnimationFrame(animate);
     }, [audioIntensity, getAudioVolume, isListening, isProcessing, duration, minScale, maxScale, minOpacity, maxOpacity, dotRadius]);
 
     // Start/stop animation loop
     useEffect(() => {
+        const handleVisibility = () => {
+            isVisibleRef.current = document.visibilityState === 'visible';
+            if (isVisibleRef.current) lastFrameRef.current = 0;
+        };
+        document.addEventListener('visibilitychange', handleVisibility);
         animationFrameRef.current = requestAnimationFrame(animate);
         return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
             if (animationFrameRef.current) {
                 cancelAnimationFrame(animationFrameRef.current);
             }

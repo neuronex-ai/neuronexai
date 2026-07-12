@@ -271,6 +271,8 @@ function DesktopPatientDetail() {
 
             {/* ─── Header Top Bar ─── */}
             <motion.div
+                data-synapse-target="patient-header"
+                data-synapse-patient-id={patient.id}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
@@ -523,10 +525,10 @@ function DesktopPatientDetail() {
                             <Tabs value={activeTab} onValueChange={handleTabChange} className="flex min-h-full w-full flex-col">
 
                                 <div className="min-h-full">
-                                    <TabsContent id="patient-record-panel-summary" aria-labelledby="patient-record-tab-summary" value="summary" className="mt-0 focus-visible:outline-none data-[state=inactive]:hidden">
+                                    <TabsContent data-synapse-target="patient-summary" id="patient-record-panel-summary" aria-labelledby="patient-record-tab-summary" value="summary" className="mt-0 focus-visible:outline-none data-[state=inactive]:hidden">
                                         <PatientRecordSummaryTab patient={patient} patientId={id!} onNavigate={handleTabChange} />
                                     </TabsContent>
-                                    <TabsContent id="patient-record-panel-sessions" aria-labelledby="patient-record-tab-sessions" value="sessions" className="mt-0 focus-visible:outline-none data-[state=inactive]:hidden">
+                                    <TabsContent data-synapse-target="patient-sessions" id="patient-record-panel-sessions" aria-labelledby="patient-record-tab-sessions" value="sessions" className="mt-0 focus-visible:outline-none data-[state=inactive]:hidden">
                                         <PatientSessionsTab
                                             patient={patient}
                                             patientId={id!}
@@ -547,10 +549,10 @@ function DesktopPatientDetail() {
                                     <TabsContent id="patient-record-panel-packages" aria-labelledby="patient-record-tab-packages" value="packages" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
                                         <Suspense fallback={<PatientTabFallback />}><PatientPackagesTab patientId={id!} /></Suspense>
                                     </TabsContent>
-                                    <TabsContent id="patient-record-panel-finance" aria-labelledby="patient-record-tab-finance" value="finance" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                                    <TabsContent data-synapse-target="patient-finance" id="patient-record-panel-finance" aria-labelledby="patient-record-tab-finance" value="finance" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
                                         <Suspense fallback={<PatientTabFallback />}><PatientFinanceTab patientId={id!} /></Suspense>
                                     </TabsContent>
-                                    <TabsContent id="patient-record-panel-documents" aria-labelledby="patient-record-tab-documents" value="documents" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
+                                    <TabsContent data-synapse-target="patient-files" id="patient-record-panel-documents" aria-labelledby="patient-record-tab-documents" value="documents" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
                                         <Suspense fallback={<PatientTabFallback />}><PatientDocumentsTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                 </div>

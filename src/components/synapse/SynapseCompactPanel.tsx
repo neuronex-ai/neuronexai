@@ -1,7 +1,6 @@
 import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
-import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     AlertDialog,
@@ -31,8 +30,6 @@ import {
     Activity,
     Trash2,
     ChevronRight,
-    AudioLines,
-    PhoneOff,
     MessageSquare,
     Smartphone,
 } from 'lucide-react';
@@ -52,7 +49,6 @@ const CONTEXT_LABELS: Record<string, { icon: React.ReactNode; label: string }> =
 
 const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.ElementType<{ className?: string }> }> = [
     { id: 'chat', label: 'Chat', icon: MessageSquare },
-    { id: 'voice', label: 'Voz', icon: AudioLines },
     { id: 'history', label: 'Histórico', icon: History },
     { id: 'timeline', label: 'Atividade', icon: Activity },
 ];
@@ -162,13 +158,6 @@ export const SynapseCompactPanel = () => {
         execState,
         activeTab,
         setActiveTab,
-        voiceStatus,
-        isVoiceSpeaking,
-        isVoiceToolActive,
-        voiceActivityLabel,
-        voiceActivityMessage,
-        getVoiceInputVolume,
-        toggleVoiceMode,
         setActiveSessionId,
     } = useSynapse();
     const { currentContext } = useAI();
@@ -182,7 +171,8 @@ export const SynapseCompactPanel = () => {
     const [showAllActions, setShowAllActions] = useState(false);
     const [confirmClearOpen, setConfirmClearOpen] = useState(false);
     const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
-    const historyQuery = useChatSessionHistory(historyChannel, shellState === 'compact' && activeTab === 'history');
+    const displayedTab: Exclude<SynapseActiveTab, 'voice'> = activeTab === 'voice' ? 'chat' : activeTab;
+    const historyQuery = useChatSessionHistory(historyChannel, shellState === 'compact' && displayedTab === 'history');
     const sessions = useMemo(() => {
         const uniqueSessions = new Map<string, ChatSession>();
         historyQuery.data?.pages.forEach((page) => {
@@ -192,11 +182,8 @@ export const SynapseCompactPanel = () => {
     }, [historyQuery.data]);
 
     useEffect(() => {
-        if (shellState === 'compact' && activeTab === 'voice' && voiceStatus === 'disconnected') {
-            const timeout = setTimeout(() => toggleVoiceMode(), 300);
-            return () => clearTimeout(timeout);
-        }
-    }, [shellState, activeTab, voiceStatus, toggleVoiceMode]);
+        if (shellState === 'compact' && activeTab === 'voice') setActiveTab('chat');
+    }, [activeTab, setActiveTab, shellState]);
 
     // Handle updates safely
     const stableSetInputDraft = useRef(setInputDraft);
@@ -277,7 +264,7 @@ export const SynapseCompactPanel = () => {
                 detail: sanitizeSynapseDisplayText(progressEvent.detail, 'Acompanhando progresso em tempo real.'),
             }
         : inferredChatActivity;
-    const isChatProcessing = activeTab === 'chat' && (isSending || execState === 'thinking' || execState === 'executing');
+    const isChatProcessing = displayedTab === 'chat' && (isSending || execState === 'thinking' || execState === 'executing');
     const chatActivityMode = execState === 'executing'
         ? 'executing' as const
         : progressEvent?.label && progressEvent.stage !== 'received'
@@ -285,14 +272,14 @@ export const SynapseCompactPanel = () => {
             : 'thinking' as const;
 
     useEffect(() => {
-        if (shellState === 'compact' && activeTab === 'chat') {
+        if (shellState === 'compact' && displayedTab === 'chat') {
             const timeout = window.setTimeout(() => inputRef.current?.focus(), 200);
             return () => window.clearTimeout(timeout);
         }
-    }, [activeTab, shellState]);
+    }, [displayedTab, shellState]);
 
     useEffect(() => {
-        if (activeTab !== 'chat' || !scrollRef.current) return;
+        if (displayedTab !== 'chat' || !scrollRef.current) return;
         const frame = window.requestAnimationFrame(() => {
             const viewport = scrollRef.current;
             if (!viewport) return;
@@ -302,7 +289,7 @@ export const SynapseCompactPanel = () => {
             });
         });
         return () => window.cancelAnimationFrame(frame);
-    }, [activeTab, messages]);
+    }, [displayedTab, messages]);
 
     if (shellState !== 'compact') return null;
 
@@ -313,9 +300,6 @@ export const SynapseCompactPanel = () => {
     };
 
     const handleTabChange = (tab: SynapseActiveTab) => {
-        if (activeTab === 'voice' && tab !== 'voice' && voiceStatus !== 'disconnected') {
-            toggleVoiceMode();
-        }
         setActiveTab(tab);
     };
 
@@ -342,19 +326,6 @@ export const SynapseCompactPanel = () => {
         }
     };
 
-    const voiceModeLabel = isVoiceToolActive
-        ? 'Consultando no sistema'
-        : isVoiceSpeaking
-            ? 'Respondendo'
-            : voiceStatus === 'connected'
-                ? 'Modo de Voz Ativo'
-                : 'Conectando...';
-    const voiceModeDescription = isVoiceToolActive
-        ? voiceActivityMessage || (voiceActivityLabel ? `Executando ${voiceActivityLabel}. Você ainda pode interromper ou complementar por voz.` : 'Executando a solicitação no sistema. Você ainda pode interromper ou complementar por voz.')
-        : voiceStatus === 'connected'
-            ? 'O Synapse está ouvindo em tempo real. Fale naturalmente para realizar ações ou tirar dúvidas.'
-            : 'Preparando conexão de voz em tempo real.';
-
     return (
         <>
             <motion.div
@@ -366,8 +337,9 @@ export const SynapseCompactPanel = () => {
                     y: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                     scale: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                 }}
+                id="synapse-panel"
                 className={cn(
-                    'synapse-desktop-shell relative flex h-[min(642px,calc(100dvh-24px))] w-[min(464px,calc(100vw-24px))] flex-col overflow-hidden rounded-[34px] border',
+                    'synapse-desktop-shell relative flex h-[min(620px,calc(100dvh-104px))] min-h-[360px] w-[min(464px,calc(100vw-24px))] flex-col overflow-hidden rounded-[30px] border',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"
@@ -380,7 +352,7 @@ export const SynapseCompactPanel = () => {
                                 <nav className="synapse-desktop-tabs flex min-w-0 flex-1 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
                                     {PANEL_TABS.map((tab, index) => {
                                         const Icon = tab.icon;
-                                        const isActive = activeTab === tab.id;
+                                        const isActive = displayedTab === tab.id;
                                         return (
                                             <button
                                                 key={tab.id}
@@ -411,9 +383,6 @@ export const SynapseCompactPanel = () => {
                                                 ) : null}
                                                 <span className="relative z-10 shrink-0">
                                                     <Icon className="h-3.5 w-3.5" />
-                                                    {tab.id === 'voice' && voiceStatus === 'connected' ? (
-                                                        <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
-                                                    ) : null}
                                                 </span>
                                                 <AnimatePresence initial={false}>
                                                     {isActive ? (
@@ -474,14 +443,14 @@ export const SynapseCompactPanel = () => {
                         ref={scrollRef}
                         id="synapse-tabpanel"
                         role="tabpanel"
-                        aria-labelledby={`synapse-tab-${activeTab}`}
+                        aria-labelledby={`synapse-tab-${displayedTab}`}
                         className={cn(
                             'synapse-desktop-viewport relative min-h-0 flex-1 overflow-y-auto px-4',
                             'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
                         <AnimatePresence initial={false} mode="sync">
-                            {activeTab === 'history' ? (
+                            {displayedTab === 'history' ? (
                                 <motion.div
                                     key="history"
                                     initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
@@ -605,7 +574,7 @@ export const SynapseCompactPanel = () => {
                                         </button>
                                     ) : null}
                                 </motion.div>
-                            ) : activeTab === 'timeline' ? (
+                            ) : displayedTab === 'timeline' ? (
                                 <motion.div
                                     key="timeline"
                                     initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
@@ -633,61 +602,6 @@ export const SynapseCompactPanel = () => {
                                     {timeline.length > TIMELINE_RENDER_LIMIT ? (
                                         <p className="px-1 text-center text-[10px] text-muted-foreground">Exibindo as últimas {TIMELINE_RENDER_LIMIT} atividades.</p>
                                     ) : null}
-                                </motion.div>
-                            ) : activeTab === 'voice' ? (
-                                <motion.div
-                                    key="voice"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -3 }}
-                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="synapse-voice-view flex h-full min-h-[430px] flex-col items-center justify-center py-8"
-                                >
-                                    <div className="flex w-full items-center justify-between px-2">
-                                        <span className="text-[11px] font-semibold text-muted-foreground">Conversa por voz</span>
-                                        <span className={cn(
-                                            'synapse-status-badge px-2.5 py-1.5 text-[10px] font-semibold',
-                                            voiceStatus === 'connected' ? 'text-foreground' : 'text-muted-foreground',
-                                        )}>
-                                            {voiceStatus === 'connected' ? 'Ativa' : 'Preparando'}
-                                        </span>
-                                    </div>
-
-                                    <div className="synapse-voice-stage mt-6 flex w-full flex-1 flex-col items-center justify-center">
-                                        <div className="synapse-voice-orbit relative flex h-56 w-56 items-center justify-center">
-                                            {shouldReduceMotion ? (
-                                                <div className="h-44 w-44 rounded-full border border-foreground/10 bg-foreground/[0.035]" />
-                                            ) : (
-                                                <VoiceSpiral
-                                                    getAudioVolume={getVoiceInputVolume}
-                                                    isListening={voiceStatus === 'connected' && !isVoiceSpeaking && !isVoiceToolActive}
-                                                    isProcessing={voiceStatus === 'connecting' || isVoiceToolActive}
-                                                    className="overflow-hidden rounded-full opacity-80 mix-blend-multiply dark:opacity-90 dark:mix-blend-screen"
-                                                />
-                                            )}
-                                        </div>
-
-                                        <div className="mt-7 flex flex-col items-center gap-2 text-center">
-                                            <span className={cn('text-[18px] font-semibold', voiceStatus === 'connected' || isVoiceToolActive ? 'text-foreground' : cn('text-muted-foreground', !shouldReduceMotion && 'animate-pulse'))}>
-                                            {voiceModeLabel}
-                                        </span>
-                                        <p className="max-w-[300px] text-[12px] leading-5 text-muted-foreground">
-                                            {voiceModeDescription}
-                                        </p>
-                                        </div>
-                                    </div>
-
-                                    {voiceStatus === 'connected' && (
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleVoiceMode()}
-                                            className="synapse-voice-end-button mt-6 flex min-h-11 items-center gap-2 px-4 py-2 text-[12px] font-semibold text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                            aria-label="Encerrar chamada de voz"
-                                        >
-                                            <PhoneOff className="w-4 h-4" />
-                                            Encerrar Chamada
-                                        </button>
-                                    )}
                                 </motion.div>
                             ) : (
                                 <motion.div
@@ -717,7 +631,7 @@ export const SynapseCompactPanel = () => {
                         </AnimatePresence>
                     </div>
 
-                    {activeTab === 'chat' ? (
+                    {displayedTab === 'chat' ? (
                         <SynapseComposer
                             ref={inputRef}
                             value={inputDraft}

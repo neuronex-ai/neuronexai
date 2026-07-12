@@ -219,6 +219,7 @@ export function useDeepgramAgentVoice({
   const readyRef = useRef(false);
   const listeningRef = useRef(false);
   const volumeRef = useRef(0);
+  const lastAudioStateUpdateRef = useRef(0);
   const sessionIdRef = useRef<string | null>(sessionId || null);
   const conversationIdRef = useRef<string | null>(conversationId || sessionId || null);
   const voiceSessionIdRef = useRef<string | null>(voiceSessionId || null);
@@ -279,6 +280,10 @@ export function useDeepgramAgentVoice({
 
   const setLevel = useCallback((level: number) => {
     volumeRef.current = level;
+    const now = performance.now();
+    const shouldPublish = level === 0 || now - lastAudioStateUpdateRef.current >= 80;
+    if (!shouldPublish) return;
+    lastAudioStateUpdateRef.current = now;
     setAudioIntensity(level);
     callbacksRef.current.onAudioIntensity?.(level);
   }, []);

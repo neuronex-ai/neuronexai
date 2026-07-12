@@ -152,6 +152,16 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/gemini-text-chat/index.ts"
 
+[functions.synapse-text-fallback]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/synapse-text-fallback/index.ts"
+
+[functions.synapse-text-gateway]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/synapse-text-gateway/index.ts"
+
 [functions.synapse-voice-agent-session]
 enabled = true
 verify_jwt = true

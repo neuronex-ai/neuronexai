@@ -29,6 +29,7 @@ import { SynapseAssistedSurfaceStage } from "@/components/synapse/SynapseAssiste
 import type { SynapseAssistedProduct } from "@/lib/synapse-assisted-surface-registry";
 
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useSynapseNotesAgentRun } from "@/hooks/use-synapse-notes-agent-run";
 import { MobileNotes } from "@/mobile/pages/MobileNotes";
 
 const NoteEditor = lazy(() =>
@@ -101,6 +102,31 @@ export default function Notes() {
     const [synapseMermaid, setSynapseMermaid] = useState<string | null>(null);
     const [synapseTrace, setSynapseTrace] = useState<unknown>(null);
     const [synapseAssistedPreview, setSynapseAssistedPreview] = useState<SynapseAssistedProduct | null>(null);
+    const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
+
+    useEffect(() => {
+        if (!synapseRun) return;
+
+        if (synapseRun.patient_id) setSynapsePatientId(synapseRun.patient_id);
+        if (synapseRun.trace) setSynapseTrace(synapseRun.trace);
+
+        if (synapseRun.product === "neuroflow") {
+            setViewMode("neuroflow");
+            if (synapseRun.target_flow_id) setSelectedFlowId(synapseRun.target_flow_id);
+            return;
+        }
+
+        if (synapseRun.product === "neuropulse") {
+            setViewMode("neuropulse");
+            if (synapseRun.pulse_entry_id) setSynapsePulseEntryId(synapseRun.pulse_entry_id);
+            if (synapseRun.note_id) setSynapseNoteId(synapseRun.note_id);
+            const mermaid = typeof synapseRun.result?.mermaid === "string" ? synapseRun.result.mermaid : null;
+            if (mermaid) setSynapseMermaid(mermaid);
+            return;
+        }
+
+        if (synapseRun.product === "neuroview") setViewMode("neuroview");
+    }, [synapseRun]);
 
     const {
         notes,

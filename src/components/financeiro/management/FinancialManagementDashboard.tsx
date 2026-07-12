@@ -464,7 +464,7 @@ export const FinancialManagementDashboard = (props: Props) => {
           </Button>
         </div>
         {view === "gestao-visao-geral" ? (
-          <div className="space-y-4">
+          <div data-synapse-target="finance-overview" className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
               <DesktopMiniStat
                 className="finance-kpi finance-kpi-accent dark:border-black/75 dark:shadow-[0_18px_42px_-34px_rgba(0,0,0,0.96)]"
@@ -552,6 +552,7 @@ export const FinancialManagementDashboard = (props: Props) => {
           </div>
         ) : null}
         {view === "gestao-lancamentos" ? (
+          <div data-synapse-target="finance-entries">
           <Panel
             title="Lançamentos"
             action={
@@ -611,9 +612,12 @@ export const FinancialManagementDashboard = (props: Props) => {
               </div>
             </div>
           </Panel>
+          </div>
         ) : null}
         {view === "gestao-cobrancas" ? (
-          <ChargesWorkspace scope="management" title="Cobranças" />
+          <div data-synapse-target="finance-charges">
+            <ChargesWorkspace scope="management" title="Cobranças" />
+          </div>
         ) : null}
         {view === "gestao-recebimentos" ? (
           <div className="space-y-4">

@@ -36,6 +36,39 @@ export type SynapseNavigationTarget =
 
 export type SynapseNotesView = "notes" | "tasks" | "files" | "notion" | "neuroview" | "neuroflow" | "neuropulse";
 
+export type SynapseInterfaceElement =
+  | "next_appointment"
+  | "daily_schedule"
+  | "dashboard_agenda"
+  | "dashboard_pending"
+  | "dashboard_finance"
+  | "agenda_calendar"
+  | "agenda_appointments"
+  | "patient_header"
+  | "patient_summary"
+  | "patient_sessions"
+  | "patient_files"
+  | "patient_finance"
+  | "financial_balance"
+  | "finance_overview"
+  | "finance_entries"
+  | "finance_charges"
+  | "finance_workspace"
+  | "transcription_decision"
+  | "patient_invite"
+  | "patients_search"
+  | "patients_grid"
+  | "notes_search"
+  | "notes_editor"
+  | "notes_list"
+  | "notes_sidebar"
+  | "tasks_board"
+  | "files_manager"
+  | "notion_panel"
+  | "neuroview_graph"
+  | "neuroflow_canvas"
+  | "neuropulse_panel";
+
 export interface SynapseInterfaceAction {
   action: SynapseInterfaceActionName;
   target?: SynapseNavigationTarget;
@@ -53,7 +86,7 @@ export interface SynapseInterfaceAction {
   date?: string;
   query?: string;
   notesView?: SynapseNotesView;
-  element?: "next_appointment" | "daily_schedule" | "patient_header" | "financial_balance" | "transcription_decision" | "patient_invite" | "patients_search" | "patients_grid" | "notes_search" | "notes_editor" | "notes_list" | "notes_sidebar" | "tasks_board" | "files_manager" | "notion_panel" | "neuroview_graph" | "neuroflow_canvas" | "neuropulse_panel";
+  element?: SynapseInterfaceElement;
   modal?: "new_appointment" | "new_patient" | "new_transaction" | "patient_details" | "patient_invite" | "new_note";
   reason?: string;
 }
@@ -103,6 +136,14 @@ const MODAL_ROUTES: Record<NonNullable<SynapseInterfaceAction["modal"]>, string>
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{6,80}$/;
 const NOTES_VIEWS = new Set(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
+const INTERFACE_ELEMENTS = new Set<SynapseInterfaceElement>([
+  "next_appointment", "daily_schedule", "dashboard_agenda", "dashboard_pending", "dashboard_finance",
+  "agenda_calendar", "agenda_appointments", "patient_header", "patient_summary", "patient_sessions",
+  "patient_files", "patient_finance", "financial_balance", "finance_overview", "finance_entries",
+  "finance_charges", "finance_workspace", "transcription_decision", "patient_invite", "patients_search",
+  "patients_grid", "notes_search", "notes_editor", "notes_list", "notes_sidebar", "tasks_board",
+  "files_manager", "notion_panel", "neuroview_graph", "neuroflow_canvas", "neuropulse_panel",
+]);
 const ALLOWED_INTERFACE_ACTIONS = new Set<SynapseInterfaceActionName>(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
 
 const PAGE_ACTION_EVENT = "synapse:page-action";
@@ -165,6 +206,8 @@ const waitForTarget = (selector: string, signal: AbortSignal, timeoutMs = 4200) 
 
 const validEntityId = (value?: string) => Boolean(value && (UUID_PATTERN.test(value) || SAFE_ID_PATTERN.test(value)));
 const safeNotesView = (value?: string): SynapseNotesView | undefined => value && NOTES_VIEWS.has(value) ? value as SynapseNotesView : undefined;
+const safeInterfaceElement = (value?: string): SynapseInterfaceElement | undefined =>
+  value && INTERFACE_ELEMENTS.has(value as SynapseInterfaceElement) ? value as SynapseInterfaceElement : undefined;
 const emitPageAction = (action: SynapseInterfaceAction) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PAGE_ACTION_EVENT, { detail: action })); };
 
 const ACTION_LABELS: Partial<Record<SynapseInterfaceActionName, string>> = {
@@ -225,11 +268,24 @@ const targetSelector = (action: SynapseInterfaceAction) => {
   }
   if (action.noteId && validEntityId(action.noteId)) return `[data-synapse-note-id="${CSS.escape(action.noteId)}"]`;
   if (action.fileId && validEntityId(action.fileId)) return `[data-synapse-file-id="${CSS.escape(action.fileId)}"]`;
-  const selectors: Record<NonNullable<SynapseInterfaceAction["element"]>, string> = {
+  const selectors: Record<SynapseInterfaceElement, string> = {
     next_appointment: "[data-synapse-target='next-appointment']",
     daily_schedule: "[data-synapse-target='daily-schedule']",
+    dashboard_agenda: "[data-synapse-target='dashboard-agenda']",
+    dashboard_pending: "[data-synapse-target='dashboard-pending']",
+    dashboard_finance: "[data-synapse-target='dashboard-finance']",
+    agenda_calendar: "[data-synapse-target='agenda-calendar']",
+    agenda_appointments: "[data-synapse-target='agenda-appointments']",
     patient_header: "[data-synapse-target='patient-header']",
+    patient_summary: "[data-synapse-target='patient-summary']",
+    patient_sessions: "[data-synapse-target='patient-sessions']",
+    patient_files: "[data-synapse-target='patient-files']",
+    patient_finance: "[data-synapse-target='patient-finance']",
     financial_balance: "[data-synapse-target='financial-balance']",
+    finance_overview: "[data-synapse-target='finance-overview']",
+    finance_entries: "[data-synapse-target='finance-entries']",
+    finance_charges: "[data-synapse-target='finance-charges']",
+    finance_workspace: "[data-synapse-target='finance-workspace']",
     transcription_decision: "[data-synapse-target='transcription-decision']",
     patient_invite: "[data-synapse-target='patient-invite']",
     patients_search: "[data-synapse-target='patients-search'] input, [data-synapse-target='patients-search']",
@@ -245,7 +301,24 @@ const targetSelector = (action: SynapseInterfaceAction) => {
     neuroflow_canvas: "[data-synapse-target='neuroflow-canvas']",
     neuropulse_panel: "[data-synapse-target='neuropulse-panel']",
   };
-  return action.element ? selectors[action.element] : "";
+  if (action.element) return selectors[action.element];
+  if (action.patientId && validEntityId(action.patientId)) {
+    return `[data-synapse-patient-id="${CSS.escape(action.patientId)}"]`;
+  }
+  return "";
+};
+
+const patientRecordTab = (element?: SynapseInterfaceElement) => {
+  if (element === "patient_sessions") return "sessions";
+  if (element === "patient_files") return "documents";
+  if (element === "patient_finance") return "finance";
+  return "summary";
+};
+
+const financeView = (element?: SynapseInterfaceElement) => {
+  if (element === "finance_entries") return "gestao-lancamentos";
+  if (element === "finance_charges") return "gestao-cobrancas";
+  return "gestao-visao-geral";
 };
 
 async function recordTelemetry(action: SynapseInterfaceAction, channel: "text" | "voice", result: SynapseActionExecutionResult, error?: unknown) {
@@ -271,7 +344,7 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
   if (envelope.type === "interface_action" || data.action) {
     const action = String(data.action || "") as SynapseInterfaceActionName;
     if (!ALLOWED_INTERFACE_ACTIONS.has(action)) return null;
-    return { action, target: data.target, patientId: data.patientId || data.patient_id, appointmentId: data.appointmentId || data.appointment_id, noteId: data.noteId || data.note_id, moduleId: data.moduleId || data.module_id, taskId: data.taskId || data.task_id, fileId: data.fileId || data.file_id, flowId: data.flowId || data.flow_id, runId: data.runId || data.run_id, pulseEntryId: data.pulseEntryId || data.pulse_entry_id, mermaid: data.mermaid, trace: data.trace, date: data.date, query: data.query, notesView: safeNotesView(data.notesView || data.notes_view), element: data.element, modal: data.modal, reason: data.reason };
+    return { action, target: data.target, patientId: data.patientId || data.patient_id, appointmentId: data.appointmentId || data.appointment_id, noteId: data.noteId || data.note_id, moduleId: data.moduleId || data.module_id, taskId: data.taskId || data.task_id, fileId: data.fileId || data.file_id, flowId: data.flowId || data.flow_id, runId: data.runId || data.run_id, pulseEntryId: data.pulseEntryId || data.pulse_entry_id, mermaid: data.mermaid, trace: data.trace, date: data.date, query: data.query, notesView: safeNotesView(data.notesView || data.notes_view), element: safeInterfaceElement(data.element), modal: data.modal, reason: data.reason };
   }
   if (envelope.type === "navigation_action" && typeof data.path === "string") {
     const path = data.path.replace(/\/$/, "") || "/";
@@ -281,7 +354,7 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
     if (path === "/financeiro") return { action: "navigate", target: "finance", reason: data.reason };
     if (path === "/notas") return { action: "open_notes_desktop", reason: data.reason };
     if (path === "/teleconsulta") return { action: "navigate", target: "teleconsultation", reason: data.reason };
-    const patientMatch = path.match(/^\/pacientes\/([a-zA-Z0-9_-]{6,80})(?:\?tab=(prontuario))?$/);
+    const patientMatch = path.match(/^\/pacientes\/([a-zA-Z0-9_-]{6,80})(?:\?tab=(prontuario|summary))?$/);
     if (patientMatch && validEntityId(patientMatch[1])) return { action: patientMatch[2] ? "open_patient_record" : "open_patient", patientId: patientMatch[1], reason: data.reason };
   }
   if (envelope.type === "patient_created" && validEntityId(data.id)) return { action: "open_patient", patientId: data.id, reason: "Paciente cadastrado" };
@@ -336,37 +409,54 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
       case "navigate": {
         if (!action.target || !ROUTES[action.target]) throw new Error("Destino não permitido.");
         const state = action.target === "teleconsultation" && action.appointmentId ? { activeAppointmentId: action.appointmentId } : action.query ? { synapseQuery: action.query } : undefined;
-        navigate(ROUTES[action.target], state ? { state } : undefined);
-        await sleep(420, controller.signal);
+        const route = action.target === "finance"
+          ? `${ROUTES.finance}?view=${financeView(action.element)}`
+          : ROUTES[action.target];
+        navigate(route, state ? { state } : undefined);
+        await nextFrame(controller.signal);
         if (action.query || action.appointmentId) focusPageAction(action);
+        const selector = targetSelector(action);
+        if (selector) {
+          const node = await waitForTarget(selector, controller.signal);
+          focusNode(node, selector);
+        }
         break;
       }
       case "open_patient":
       case "open_patient_record": {
         if (!validEntityId(action.patientId)) throw new Error("Paciente inválido.");
-        const suffix = action.action === "open_patient_record" ? "?tab=prontuario" : "";
+        const suffix = action.action === "open_patient_record" ? `?tab=${patientRecordTab(action.element)}` : "";
         navigate(`/pacientes/${encodeURIComponent(action.patientId!)}${suffix}`);
-        await sleep(520, controller.signal);
+        await nextFrame(controller.signal);
         focusPageAction(action);
+        const selector = targetSelector({
+          ...action,
+          element: action.action === "open_patient_record" ? action.element || "patient_summary" : action.element || "patient_header",
+        });
+        const node = await waitForTarget(selector, controller.signal);
+        focusNode(node, selector);
         break;
       }
       case "open_daily_schedule": {
         navigate("/agenda");
-        await sleep(520, controller.signal);
+        const shellSelector = targetSelector({ ...action, element: "daily_schedule" });
+        await waitForTarget(shellSelector, controller.signal);
         focusPageAction(action);
-        await sleep(180, controller.signal);
-        focusNode(document.querySelector("[data-synapse-target='daily-schedule']"));
+        const selector = targetSelector({ ...action, element: action.element || "agenda_calendar" });
+        const node = await waitForTarget(selector, controller.signal);
+        focusNode(node, selector);
         break;
       }
       case "scroll_to_appointment": {
         if (!validEntityId(action.appointmentId)) throw new Error("Agendamento inválido.");
         navigate("/agenda");
-        await sleep(540, controller.signal);
+        const shellSelector = targetSelector({ ...action, appointmentId: undefined, element: "daily_schedule" });
+        await waitForTarget(shellSelector, controller.signal);
         focusPageAction({ ...action, action: "open_daily_schedule" });
-        await sleep(260, controller.signal);
         focusPageAction(action);
-        await sleep(180, controller.signal);
-        focusNode(document.querySelector(targetSelector(action)));
+        const selector = targetSelector(action);
+        const node = await waitForTarget(selector, controller.signal);
+        focusNode(node, selector);
         break;
       }
       case "open_teleconsultation_lobby": {
@@ -389,10 +479,11 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
       }
       case "filter_patients_directory": {
         navigate("/pacientes", { state: { synapseQuery: action.query || "" } });
-        await sleep(520, controller.signal);
+        const selector = targetSelector({ ...action, element: "patients_search" });
+        await waitForTarget(selector, controller.signal);
         focusPageAction(action);
-        await sleep(180, controller.signal);
-        focusNode(document.querySelector(targetSelector({ ...action, element: "patients_search" })));
+        const node = await waitForTarget(selector, controller.signal);
+        focusNode(node, selector);
         break;
       }
       case "open_notes_desktop":

@@ -5,9 +5,12 @@ import {
   ensureVoiceConversation,
   ensureVoiceSessionRecord,
 } from "../_shared/synapse-voice-session.ts";
-import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 import { loadConversationContext } from "../synapse-text-fallback/entity-context.ts";
-import { validateVoiceToolCall } from "../_shared/synapse-voice-policy.ts";
+import {
+  buildSynapseVoiceFunctions,
+  SYNAPSE_VOICE_ONLY_TOOLS,
+  SYNAPSE_VOICE_TOOLSET_VERSION,
+} from "../_shared/synapse-voice-toolset.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -97,15 +100,6 @@ const publicGatewayUrl = (originHeader?: string | null) => {
   return supabaseEdgeGatewayUrl();
 };
 
-const toDeepgramFunction = (tool: any) => {
-  const fn = tool?.function || {};
-  return {
-    name: String(fn.name || ""),
-    description: String(fn.description || ""),
-    parameters: fn.parameters || { type: "object", properties: {} },
-  };
-};
-
 function professionalNameFromProfile(profile: any) {
   const joined = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
   return clean(profile?.full_name || joined || profile?.clinic_name || "", 160);
@@ -155,60 +149,6 @@ async function loadPendingActionSummary(admin: any, userId: string, conversation
     if (pending?.summary) return clean(pending.summary, 800);
   }
   return "";
-}
-
-const VOICE_ONLY_TOOLS = [
-  {
-    name: "confirm_pending_action",
-    description:
-      "Use quando o profissional confirmar verbalmente uma acao pendente preparada anteriormente, como 'confirmo', 'pode executar' ou 'pode prosseguir'.",
-    parameters: {
-      type: "object",
-      properties: {},
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "cancel_pending_action",
-    description:
-      "Use quando o profissional cancelar uma acao pendente ou uma execucao em andamento, como 'cancela', 'deixa', 'nao precisa' ou 'para isso'.",
-    parameters: {
-      type: "object",
-      properties: {
-        reason: { type: "string" },
-      },
-      additionalProperties: false,
-    },
-  },
-];
-
-function buildVoiceFunctions() {
-  const selectedTools = AGENT_TOOLS_V3
-    .map(toDeepgramFunction)
-    .filter((item) => {
-      if (!item.name) return false;
-      try {
-        validateVoiceToolCall(item.name);
-        return true;
-      } catch {
-        return false;
-      }
-    });
-  const selectedNames = new Set(selectedTools.map((item) => item.name));
-  const required = [
-    "request_interface_action",
-    "analyze_neuroview_patient_patterns",
-    "create_neuroflow_from_patient_history",
-    "create_neuropulse_cause_effect_diagram",
-  ];
-  const missing = required.filter((name) => !selectedNames.has(name));
-  if (missing.length) {
-    throw new Error(`Ferramentas essenciais de voz ausentes: ${missing.join(", ")}.`);
-  }
-  return [
-    ...VOICE_ONLY_TOOLS,
-    ...selectedTools,
-  ];
 }
 
 function buildSpeakConfig() {
@@ -379,8 +319,8 @@ serve(async (request) => {
     );
     const loadedContext = await loadConversationContext(admin, user.id, conversationId);
     const profile = await loadProfessionalProfile(admin, user.id);
-    const functions = buildVoiceFunctions();
-    if (functions.length <= VOICE_ONLY_TOOLS.length) {
+    const functions = buildSynapseVoiceFunctions();
+    if (functions.length <= SYNAPSE_VOICE_ONLY_TOOLS.length) {
       return json({ error: "Ferramentas reais do Synapse nao foram registradas para o modo voz." }, 500);
     }
     const pendingActionSummary = await loadPendingActionSummary(admin, user.id, conversationId);
@@ -409,6 +349,7 @@ serve(async (request) => {
           includeSettings,
           route: clean(context.route || context.currentContext, 180),
           functionsCount: metadata.functionsCount,
+          toolsetVersion: SYNAPSE_VOICE_TOOLSET_VERSION,
         },
       },
     );
@@ -430,6 +371,7 @@ serve(async (request) => {
       inputSampleRate: metadata.inputSampleRate,
       outputSampleRate: metadata.outputSampleRate,
       functionsCount: metadata.functionsCount,
+      toolsetVersion: SYNAPSE_VOICE_TOOLSET_VERSION,
       agentSettings: includeSettings ? settings : undefined,
     });
   } catch (error) {

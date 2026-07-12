@@ -2,6 +2,7 @@ import {
   requireRequestEntitlement,
   subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+import { requiresCanonicalSynapseAgent } from "../_shared/synapse-grounding-policy.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,6 +55,13 @@ Deno.serve(async (req) => {
 
     const auth = req.headers.get("Authorization") || "";
     const body = await req.json();
+    if (requiresCanonicalSynapseAgent(String(body.message || ""))) {
+      return reply({
+        error: "Esta solicitação precisa do agente operacional do Synapse. Tente novamente em instantes.",
+        code: "SYNAPSE_TOOLS_REQUIRED",
+        retryable: true,
+      }, 409);
+    }
     const url = Deno.env.get("SUPABASE_URL");
     const anon = Deno.env.get("SUPABASE_ANON_KEY");
 

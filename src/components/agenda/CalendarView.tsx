@@ -346,7 +346,11 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 },
             }}
         >
-            <div id="agenda-main-calendar" className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3">
+            <div
+                id="agenda-main-calendar"
+                data-synapse-target="agenda-calendar"
+                className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
+            >
                 <header className="desktop-retina-panel relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border border-border/50 bg-card/82 p-3 text-foreground xl:flex-row xl:items-center">
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.024),transparent_38%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
                     {/* Left side: Sidebar Toggle, Title/Date, Google Status */}
@@ -469,7 +473,10 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 </header>
 
                 {/* Main content area */}
-                <div className="desktop-retina-inset flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border border-border/45 bg-background/66">
+                <div
+                    data-synapse-target="agenda-appointments"
+                    className="desktop-retina-inset flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border border-border/45 bg-background/66"
+                >
                     {view === 'monthly' ? renderMonthlyView() : renderTimeGridView()}
                 </div>
 
@@ -635,6 +642,7 @@ const DraggableGridItem = ({ app }: { app: Appointment }) => {
     return (
         <div
             ref={setNodeRef}
+            data-synapse-appointment-id={app.id}
             className={cn(
                 "absolute left-1 right-1 z-10",
                 isDragging ? "invisible pointer-events-none opacity-0" : "visible"
@@ -806,6 +814,7 @@ const DraggableItem = ({ app, isMonthly }: { app: Appointment, isMonthly?: boole
     return (
         <div
             ref={setNodeRef}
+            data-synapse-appointment-id={app.id}
             className={cn(
                 "relative outline-none",
                 isDragging ? "invisible pointer-events-none" : "visible"

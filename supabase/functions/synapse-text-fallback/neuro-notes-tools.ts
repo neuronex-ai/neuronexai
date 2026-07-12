@@ -485,6 +485,71 @@ function lensLabel(value?: string) {
   return labels[key] || cleanText(value || "TCC", 80);
 }
 
+export function buildNeuroPulseNoteRecord(input: {
+  userId: string;
+  patientId: string;
+  title: string;
+  content: string;
+}) {
+  return {
+    user_id: input.userId,
+    title: input.title,
+    content: input.content,
+    tags: ["NeuroPulse", "Mermaid", "Synapse"],
+    patient_id: input.patientId,
+    // personal_notes.module_id is UUID. NeuroPulse is a product surface, not
+    // a note_modules row, so no synthetic string may be stored here.
+    module_id: null,
+    reference_date: new Date().toISOString(),
+  };
+}
+
+async function deleteOwnedArtifact(
+  admin: any,
+  table: "personal_notes" | "neuro_pulse_entries",
+  id: string | null | undefined,
+  userId: string,
+) {
+  if (!id) return;
+  const { error } = await admin
+    .from(table)
+    .delete()
+    .eq("id", id)
+    .eq("user_id", userId);
+  if (error) throw error;
+}
+
+export async function cleanupNeuroPulseArtifacts(
+  admin: any,
+  userId: string,
+  artifacts: { noteId?: string | null; entryId?: string | null },
+) {
+  const results = await Promise.allSettled([
+    deleteOwnedArtifact(admin, "neuro_pulse_entries", artifacts.entryId, userId),
+    deleteOwnedArtifact(admin, "personal_notes", artifacts.noteId, userId),
+  ]);
+  for (const result of results) {
+    if (result.status === "rejected") {
+      console.warn("[synapse-neuro-notes] compensatory cleanup failed", result.reason);
+    }
+  }
+}
+
+async function markRunFailed(admin: any, runId: string, error: unknown) {
+  const message = cleanText(
+    error instanceof Error ? error.message : "Falha ao gerar o artefato assistido.",
+    1200,
+  );
+  try {
+    await updateRun(admin, runId, {
+      error_message: message,
+      steps: [createStep("Concluir criação assistida", "failed", message)],
+    }, "failed");
+  } catch (runError) {
+    console.warn("[synapse-neuro-notes] failed to close run", runError);
+  }
+}
+
 export async function executeNeuroNotesAgentTool(
   name: string,
   args: Record<string, any>,
@@ -603,95 +668,101 @@ export async function executeNeuroNotesAgentTool(
 
     if (name === "create_neuropulse_cause_effect_diagram") {
       const run = await createRun(context, "neuropulse", patient, intent || "Gerar fluxograma causa e efeito", initialSteps);
-      const bundle = await gatherPatientBundle(context, patient, true);
-      const lens = cleanText(args.lens || args.approach || "tcc", 40);
-      const lensName = lensLabel(lens);
-      const rawMermaid = buildNeuroPulseMermaid(bundle, lensName, intent);
-      const mermaid = validateNeuroPulseMermaid(rawMermaid);
-      const title = `NeuroPulse - ${patient.name} - ${new Date().toLocaleDateString("pt-BR")}`;
-      const noteContent = [
-        `<p><strong>NeuroPulse gerado pelo Synapse</strong> - ${escapeHtml(lensName)}</p>`,
-        `<p>${escapeHtml(cleanText(intent || "Fluxograma de causa e efeito criado a partir do histórico do paciente e do chat atual.", 600))}</p>`,
-        `<pre class="mermaid">${escapeHtml(mermaid)}</pre>`,
-      ].join("");
+      const artifacts: { noteId?: string | null; entryId?: string | null } = {};
+      try {
+        const bundle = await gatherPatientBundle(context, patient, true);
+        const lens = cleanText(args.lens || args.approach || "tcc", 40);
+        const lensName = lensLabel(lens);
+        const rawMermaid = buildNeuroPulseMermaid(bundle, lensName, intent);
+        const mermaid = validateNeuroPulseMermaid(rawMermaid);
+        const title = `NeuroPulse - ${patient.name} - ${new Date().toLocaleDateString("pt-BR")}`;
+        const noteContent = [
+          `<p><strong>NeuroPulse gerado pelo Synapse</strong> - ${escapeHtml(lensName)}</p>`,
+          `<p>${escapeHtml(cleanText(intent || "Fluxograma de causa e efeito criado a partir do histórico do paciente e do chat atual.", 600))}</p>`,
+          `<pre class="mermaid">${escapeHtml(mermaid)}</pre>`,
+        ].join("");
 
-      const { data: note, error: noteError } = await admin
-        .from("personal_notes")
-        .insert({
-          user_id: userId,
-          title,
-          content: noteContent,
-          tags: ["NeuroPulse", "Mermaid", "Synapse"],
-          patient_id: patient.id,
-          module_id: "neuropulse",
-          reference_date: new Date().toISOString(),
-        })
-        .select("id,title")
-        .single();
-      if (noteError) throw noteError;
-
-      const { data: entry, error: entryError } = await admin
-        .from("neuro_pulse_entries")
-        .insert({
-          user_id: userId,
-          title,
-          data: {
-            note_id: note.id,
-            patient_id: patient.id,
-            lens,
-            lens_label: lensName,
-            input: intent,
-            mermaid,
-            source: "synapse",
-            chat_session_id: context.sessionId,
-          },
-        })
-        .select("id,title")
-        .single();
-      if (entryError) throw entryError;
-
-      const steps = [
-        ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
-        createStep("Converter relato em grafo causal", "completed", lensName),
-        createStep("Validar Mermaid", "completed", "Formato flowchart TD aceito pela interface."),
-        createStep("Salvar NeuroPulse", "completed", title),
-      ];
-      const trace = {
-        steps,
-        nodes: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((id) => ({ id, type: "mermaid", reason: "Nó causal NeuroPulse" })),
-        links: [],
-        summary: `Fluxograma NeuroPulse salvo para ${patient.name}.`,
-      };
-      await updateRun(admin, run.id, {
-        steps,
-        trace,
-        result: { mermaid, note, entry, lens, lens_label: lensName },
-        note_id: note.id,
-        pulse_entry_id: entry.id,
-      }, "completed", 100);
-
-      return {
-        ok: true,
-        grounded: true,
-        recordCount: bundle.notes.length + bundle.sessionNotes.length + bundle.chatMessages.length,
-        data: { run_id: run.id, patient, note, entry, mermaid, lens, lens_label: lensName },
-        message: `Criei o fluxograma NeuroPulse de causa e efeito para ${patient.name} e salvei como nota Mermaid.`,
-        structuredData: { type: "neuropulse_diagram", data: { patient, runId: run.id, note, entry, mermaid } },
-        clientAction: {
-          type: "interface_action",
-          data: {
-            action: "open_neuropulse_diagram",
-            target: "notes",
-            notesView: "neuropulse",
+        const { data: note, error: noteError } = await admin
+          .from("personal_notes")
+          .insert(buildNeuroPulseNoteRecord({
+            userId,
             patientId: patient.id,
-            runId: run.id,
-            noteId: note.id,
-            pulseEntryId: entry.id,
-            mermaid,
-            reason: `Abrindo o NeuroPulse gerado para ${patient.name}.`,
+            title,
+            content: noteContent,
+          }))
+          .select("id,title")
+          .single();
+        if (noteError) throw noteError;
+        artifacts.noteId = note.id;
+
+        const { data: entry, error: entryError } = await admin
+          .from("neuro_pulse_entries")
+          .insert({
+            user_id: userId,
+            title,
+            data: {
+              note_id: note.id,
+              patient_id: patient.id,
+              lens,
+              lens_label: lensName,
+              input: intent,
+              mermaid,
+              source: "synapse",
+              chat_session_id: context.sessionId,
+            },
+          })
+          .select("id,title")
+          .single();
+        if (entryError) throw entryError;
+        artifacts.entryId = entry.id;
+
+        const steps = [
+          ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
+          createStep("Converter relato em grafo causal", "completed", lensName),
+          createStep("Validar Mermaid", "completed", "Formato flowchart TD aceito pela interface."),
+          createStep("Salvar NeuroPulse", "completed", title),
+        ];
+        const trace = {
+          steps,
+          nodes: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((id) => ({ id, type: "mermaid", reason: "Nó causal NeuroPulse" })),
+          links: [],
+          summary: `Fluxograma NeuroPulse salvo para ${patient.name}.`,
+        };
+        await updateRun(admin, run.id, {
+          steps,
+          trace,
+          result: { mermaid, note, entry, lens, lens_label: lensName },
+          note_id: note.id,
+          pulse_entry_id: entry.id,
+        }, "completed", 100);
+
+        return {
+          ok: true,
+          grounded: true,
+          recordCount: bundle.notes.length + bundle.sessionNotes.length + bundle.chatMessages.length,
+          data: { run_id: run.id, patient, note, entry, mermaid, lens, lens_label: lensName },
+          message: `Criei o fluxograma NeuroPulse de causa e efeito para ${patient.name} e salvei como nota Mermaid.`,
+          structuredData: { type: "neuropulse_diagram", data: { patient, runId: run.id, note, entry, mermaid } },
+          clientAction: {
+            type: "interface_action",
+            data: {
+              action: "open_neuropulse_diagram",
+              target: "notes",
+              notesView: "neuropulse",
+              patientId: patient.id,
+              runId: run.id,
+              noteId: note.id,
+              pulseEntryId: entry.id,
+              mermaid,
+              reason: `Abrindo o NeuroPulse gerado para ${patient.name}.`,
+            },
           },
-        },
-      };
+        };
+      } catch (error) {
+        await cleanupNeuroPulseArtifacts(admin, userId, artifacts);
+        await markRunFailed(admin, run.id, error);
+        throw error;
+      }
     }
 
     return null;

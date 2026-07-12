@@ -422,7 +422,11 @@ const DesktopFinanceiro = () => {
           </motion.div>
         </nav>
 
-        <div className="finance-frame relative min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/[0.42] shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.45)] backdrop-blur-sm dark:border-black/75 dark:bg-black/[0.28] dark:shadow-[0_28px_96px_-68px_rgba(0,0,0,0.98)]">
+        <div
+          data-synapse-target="finance-workspace"
+          data-synapse-finance-view={activeView}
+          className="finance-frame relative min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/[0.42] shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.45)] backdrop-blur-sm dark:border-black/75 dark:bg-black/[0.28] dark:shadow-[0_28px_96px_-68px_rgba(0,0,0,0.98)]"
+        >
           <AnimatePresence mode="wait">
             <FinanceiroMainContent
               selectedTransaction={selectedTransaction}

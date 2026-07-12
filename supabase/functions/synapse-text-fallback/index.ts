@@ -21,6 +21,12 @@ import {
   type SynapseConversationState,
 } from "./entity-context.ts";
 import { invokeSynapseModel } from "./provider.ts";
+import { resolveExplicitNeuroIntent } from "./neuro-intent-router.ts";
+import {
+  deterministicNeuroReadResponse,
+  sanitizeSynapseResponse,
+  sanitizeSynapseResponseWithWidget,
+} from "./response-sanitizer.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -169,7 +175,7 @@ const cleanHistory = (value: unknown, max = 2600) => String(value || "")
 const appendWidget = (text: string, structured?: any) => structured
   ? `${text}\n\n\`\`\`json synapse_widget\n${JSON.stringify({ __actionType: structured.type, data: structured.data || structured.payload || {} }, null, 2)}\n\`\`\``
   : text;
-const safeUserText = (value: unknown) => String(value || "").replace(UUID_PATTERN, "").replace(/\n{3,}/g, "\n\n").trim();
+const safeUserText = (value: unknown) => sanitizeSynapseResponse(String(value || "").replace(UUID_PATTERN, ""));
 
 function findPending(rows: MessageRow[]): PendingReference | null {
   for (const row of rows) {
@@ -221,11 +227,12 @@ async function saveAssistantMessage(
   content: string,
   attachments: unknown[],
 ) {
+  const safeContent = sanitizeSynapseResponseWithWidget(content);
   const { error } = await admin.from("messages").insert({
     user_id: userId,
     session_id: sessionId,
     role: "assistant",
-    content,
+    content: safeContent,
     attachments: attachments.length ? attachments : null,
   });
   if (error) throw error;
@@ -444,7 +451,11 @@ Deno.serve(async (request) => {
       conversationState = updateContextFromResult(conversationState, pending.action.toolName, pending.action.arguments, result);
       await saveConversationContext(admin, user.id, sessionId, conversationState);
       const response = appendWidget(
-        result.ok ? (result.message || "Ação concluída.") : `Não consegui executar: ${result.error || "erro desconhecido"}.`,
+        safeUserText(
+          result.ok
+            ? (result.message || "Ação concluída.")
+            : `Não consegui executar: ${result.error || "erro desconhecido"}.`,
+        ),
         result.structuredData,
       );
       await saveAssistantMessage(admin, user.id, sessionId, response, [{
@@ -480,6 +491,7 @@ Deno.serve(async (request) => {
 
     const chronological = [...rows].reverse();
     const plannerHint = buildPlannerHint(message);
+    const explicitNeuroIntent = resolveExplicitNeuroIntent(message);
     const systemPrompt = buildSystemPrompt(context, conversationState, loadedContext.memorySummary, pending?.action || null, plannerHint);
     const modelMessages: any[] = [
       { role: "system", content: systemPrompt },
@@ -505,16 +517,30 @@ Deno.serve(async (request) => {
         label: step === 0 ? "Interpretando solicitação" : "Combinando resultados consultados",
         detail: mustGround ? "Selecionando consultas reais do sistema" : "Preparando resposta com o contexto disponível",
       });
-      const modelResult = await invokeSynapseModel({
-        messages: modelMessages,
-        tools: AGENT_TOOLS_V3,
-        toolChoice: step === 0 && mustGround ? "required" : "auto",
-        temperature: 0.12,
-        maxTokens: 2400,
-      });
-      selectedProvider = modelResult.provider;
-      selectedModel = modelResult.model;
-      const assistant = modelResult.data?.choices?.[0]?.message;
+      const forcedCall = step === 0 && explicitNeuroIntent
+        ? {
+          id: `synapse-neuro-${crypto.randomUUID()}`,
+          type: "function",
+          function: {
+            name: explicitNeuroIntent.toolName,
+            arguments: JSON.stringify(explicitNeuroIntent.arguments),
+          },
+        }
+        : null;
+      const modelResult = forcedCall ? null : await invokeSynapseModel({
+          messages: modelMessages,
+          tools: AGENT_TOOLS_V3,
+          toolChoice: step === 0 && mustGround ? "required" : "auto",
+          temperature: 0.12,
+          maxTokens: 2400,
+        });
+      if (modelResult) {
+        selectedProvider = modelResult.provider;
+        selectedModel = modelResult.model;
+      }
+      const assistant = forcedCall
+        ? { content: null, tool_calls: [forcedCall] }
+        : modelResult?.data?.choices?.[0]?.message;
       if (!assistant) throw new Error("Resposta inválida do agente.");
       const calls = Array.isArray(assistant.tool_calls) ? assistant.tool_calls : [];
 
@@ -553,6 +579,13 @@ Deno.serve(async (request) => {
         if (execution.result.structuredData) structured = execution.result.structuredData;
         if (execution.result.clientAction) clientAction = execution.result.clientAction;
         if (execution.result.pendingAction) pendingAction = execution.result.pendingAction as PendingAction;
+        const deterministicRead = forcedCall
+          ? deterministicNeuroReadResponse(name, execution.result)
+          : null;
+        if (deterministicRead) {
+          finalText = deterministicRead;
+          break outer;
+        }
         modelMessages.push({
           role: "tool",
           tool_call_id: call.id,
@@ -605,7 +638,9 @@ Deno.serve(async (request) => {
     const groundedFailure = [...records].reverse().find((item) => !item.result.ok && item.result.grounded);
     let response = safeUserText(finalText);
 
-    if (!response && groundedFailure) response = groundedFailure.result.error || "Não consegui concluir a consulta.";
+    if (!response && groundedFailure) {
+      response = safeUserText(groundedFailure.result.error || "Não consegui concluir a consulta.");
+    }
     if (!response && groundedSuccess) response = "Consulta concluída com os dados disponíveis no NeuroNex.";
     if (!response && clientAction) response = clientAction.data?.reason || "A ação foi preparada na interface.";
     if (!response && mustGround) response = "Não consegui obter dados confirmados do sistema agora. Não vou estimar nem inventar uma resposta.";
@@ -653,7 +688,7 @@ Deno.serve(async (request) => {
 
     console.error("[synapse-text-agent]", error);
     return reply({
-      error: error instanceof Error ? error.message : "Falha no agente Synapse.",
+      error: safeUserText(error instanceof Error ? error.message : "Falha no agente Synapse."),
     }, 500);
   }
   };

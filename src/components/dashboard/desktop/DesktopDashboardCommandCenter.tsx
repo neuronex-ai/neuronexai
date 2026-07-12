@@ -762,7 +762,10 @@ const AgendaPanel = ({
     activeView === "today" ? "Agenda de hoje" : "Agenda dos próximos sete dias";
 
   return (
-    <DesktopWorkspacePanel className="dashboard-panel-surface flex h-full min-h-0 flex-col p-5 lg:p-6">
+    <DesktopWorkspacePanel
+      data-synapse-target="dashboard-agenda"
+      className="dashboard-panel-surface flex h-full min-h-0 flex-col p-5 lg:p-6"
+    >
       <SectionHeader
         eyebrow="Agenda"
         title="Fluxo clínico"
@@ -1046,7 +1049,10 @@ const FinancialOverviewPanel = ({
   const [activeView, setActiveView] = useState<FinancialView>("management");
 
   return (
-    <DesktopWorkspacePanel className="dashboard-panel-surface flex h-full min-h-0 flex-col p-5 lg:p-6">
+    <DesktopWorkspacePanel
+      data-synapse-target="dashboard-finance"
+      className="dashboard-panel-surface flex h-full min-h-0 flex-col p-5 lg:p-6"
+    >
       <SectionHeader
         eyebrow="Financeiro"
         title="Resumo útil"
@@ -1245,7 +1251,10 @@ const PendingWorkPanel = ({
   }), [items]);
 
   return (
-    <DesktopWorkspacePanel className="dashboard-panel-surface p-5 lg:p-6">
+    <DesktopWorkspacePanel
+      data-synapse-target="dashboard-pending"
+      className="dashboard-panel-surface p-5 lg:p-6"
+    >
       <SectionHeader
         eyebrow="Pendências"
         title="Lista operacional"

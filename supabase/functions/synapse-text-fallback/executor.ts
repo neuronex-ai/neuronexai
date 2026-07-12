@@ -263,6 +263,9 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
           { name: "Teleconsulta Desktop", capabilities: ["próxima sessão", "status da sala", "decisão de transcrição", "lobby e convite do paciente"] },
           { name: "Pacientes Desktop", capabilities: ["buscar pacientes", "ver cards cadastrais", "cadastrar/atualizar/inativar com confirmação", "listar pacientes sem próxima sessão"] },
           { name: "Notas Desktop", capabilities: ["notas", "módulos", "tarefas", "arquivos", "Notion básico", "sem importação do Google Drive nesta versão"] },
+          { name: "NeuroView", capabilities: ["visualizar conexões clínicas", "cruzar evidências vinculadas", "destacar padrões de um paciente"] },
+          { name: "NeuroFlow", capabilities: ["criar mapas clínicos pelo histórico", "organizar hipóteses, ciclos e intervenções", "salvar o fluxo vinculado ao paciente após confirmação explícita"] },
+          { name: "NeuroPulse", capabilities: ["transformar relatos em diagramas de causa e efeito", "aplicar uma lente clínica", "salvar a síntese visual vinculada ao paciente após confirmação explícita"] },
           { name: "NeuroFinance", capabilities: ["consultar cobranças", "criar cobranças com confirmação", "acompanhar pagamentos"] },
         ];
         return { ok: true, grounded: true, recordCount: modules.length, data: { query: cleanText(args.query, 240), modules }, structuredData: { type: "system_help", data: { modules } } };

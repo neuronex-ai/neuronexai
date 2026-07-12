@@ -86,6 +86,11 @@ export default function Pacientes() {
     useEffect(() => {
         const handleSynapseAction = (event: Event) => {
             const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
+            if (action?.action === "filter_patients_directory") {
+                setSearchTerm(action.query || "");
+                return;
+            }
+
             if (action?.action !== "open_modal" || action.modal !== "new_patient") return;
 
             if (canAdd) setAgentPatientModalOpen(true);
@@ -95,6 +100,11 @@ export default function Pacientes() {
         window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
         return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
     }, [canAdd]);
+
+    useEffect(() => {
+        const synapseQuery = location.state?.synapseQuery;
+        if (typeof synapseQuery === "string") setSearchTerm(synapseQuery);
+    }, [location.state]);
 
     const filteredPatients = patients?.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -251,7 +261,7 @@ export default function Pacientes() {
                         <div className={cn("flex items-center gap-3 w-full md:w-auto", isMobile && "flex-col md:flex-row")}>
                             {/* Unified Search & Actions Container (Mobile) */}
                             <div className="flex items-center gap-3 w-full">
-                                <div className="relative flex-1 group/search">
+                                <div className="relative flex-1 group/search" data-synapse-target="patients-search">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within/search:text-zinc-900 dark:group-focus-within/search:text-zinc-300 transition-colors" />
                                     <Input
                                         placeholder="Buscar prontuário..."
@@ -310,7 +320,10 @@ export default function Pacientes() {
 
             {/* ─── Main Grid Content ─── */}
             <div className="max-w-[1920px] mx-auto px-4 md:px-10 lg:px-16 xl:px-24 relative z-10 space-y-12">
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8">
+                <div
+                    data-synapse-target="patients-grid"
+                    className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8"
+                >
                     {isLoading ? (
                         [...Array(8)].map((_, i) => (
                             <GlassCard key={i} className="h-[240px] animate-pulse rounded-[32px] motion-reduce:animate-none">
@@ -331,6 +344,7 @@ export default function Pacientes() {
                         filteredPatients?.map((patient, i) => (
                             <GlassCard
                                 key={patient.id}
+                                data-synapse-patient-id={patient.id}
                                 className="desktop-retina-panel desktop-retina-interactive group h-full min-h-[240px] cursor-pointer rounded-[32px] border-border/45 bg-card/72"
                                 innerClassName="p-0 flex flex-col h-full"
                                 onClick={() => navigate(`/pacientes/${patient.id}`)}

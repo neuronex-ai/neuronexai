@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import type { Message } from "@/types";
 import type { SynapseProgressEvent } from "./use-ai-chat";
+import { requiresCanonicalSynapseAgent } from "@/lib/synapse-grounding-policy";
 
 export {
   useChatSessionHistory,
@@ -24,7 +25,6 @@ interface SendInput {
   onProgress?: (event: SynapseProgressEvent) => void;
 }
 
-const INTERNAL_DATA = /\b(paciente|pacientes|consulta|consultas|agenda|agendamento|horário|horario|prontuário|prontuario|sessão|sessao|financeiro|saldo|receita|despesa|lançamento|lancamento|transação|transacao|nota|notas|documento|arquivo|medicação|medicacao|risco|cobrança|cobranca|fatura|neurofinance|neuroscan|teleconsulta|neuronotes|configuração|configuracao|integração|integracao|dashboard|synapse)\b/i;
 const SAFE_FAILURE = "Não consegui consultar os dados confirmados do sistema agora. Para proteger a precisão das informações, não vou estimar nem inventar uma resposta.";
 
 async function invokeProvider(name: string, input: SendInput) {
@@ -57,13 +57,7 @@ async function sendWithFallback(input: SendInput) {
   } catch (canonicalAgentError) {
     console.warn("[Synapse] Agente com ferramentas indisponível.", canonicalAgentError);
 
-    try {
-      return await invokeProvider("synapse-text-gateway", input);
-    } catch (gatewayError) {
-      console.warn("[Synapse] Gateway de recuperação indisponível.", gatewayError);
-    }
-
-    if (INTERNAL_DATA.test(input.message)) {
+    if (requiresCanonicalSynapseAgent(input.message)) {
       return {
         response: SAFE_FAILURE,
         clientAction: null,
@@ -71,9 +65,16 @@ async function sendWithFallback(input: SendInput) {
         provider: "system",
         model: "grounding_guard",
         grounded: false,
+        retryable: true,
         toolsUsed: [],
         recordsFound: 0,
       };
+    }
+
+    try {
+      return await invokeProvider("synapse-text-gateway", input);
+    } catch (gatewayError) {
+      console.warn("[Synapse] Gateway de recuperação indisponível.", gatewayError);
     }
 
     return invokeProvider("gemini-text-chat", input);

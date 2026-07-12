@@ -1,4 +1,9 @@
-import { forwardRef, type ElementType, type ReactNode } from "react";
+import {
+  forwardRef,
+  type ComponentPropsWithoutRef,
+  type ElementType,
+  type ReactNode,
+} from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -24,12 +29,12 @@ export const DesktopWorkspacePanel = ({
   children,
   className,
   highContrast = false,
-}: {
-  children: ReactNode;
-  className?: string;
+  ...props
+}: ComponentPropsWithoutRef<"section"> & {
   highContrast?: boolean;
 }) => (
   <section
+    {...props}
     className={cn(
       "relative overflow-hidden rounded-[34px] border shadow-[0_24px_74px_-56px_hsl(var(--foreground)/0.44)] ring-1 ring-background/65 backdrop-blur-2xl dark:shadow-[0_24px_68px_-54px_rgba(0,0,0,0.9)] dark:ring-white/[0.018]",
       highContrast
@@ -75,13 +80,10 @@ export type DesktopActionTileProps = {
   className?: string;
 };
 
-export const DesktopActionTile = forwardRef<HTMLButtonElement, DesktopActionTileProps>(({
-  icon: Icon,
-  label,
-  onClick,
-  active = false,
-  className,
-}, ref) => (
+export const DesktopActionTile = forwardRef<
+  HTMLButtonElement,
+  DesktopActionTileProps
+>(({ icon: Icon, label, onClick, active = false, className }, ref) => (
   <button
     ref={ref}
     type="button"
@@ -127,15 +129,39 @@ export const DesktopMiniStat = ({
   <div
     className={cn(
       "rounded-[22px] border border-foreground/[0.105] bg-background/76 p-4 shadow-sm dark:border-white/10 dark:bg-zinc-950",
-      accent && "border-foreground bg-foreground text-background dark:border-white dark:bg-white dark:text-zinc-950",
+      accent &&
+        "border-foreground bg-foreground text-background dark:border-white dark:bg-white dark:text-zinc-950",
       tone === "success" && "border-emerald-500/20 bg-emerald-500/[0.055]",
       tone === "warning" && "border-amber-500/25 bg-amber-500/[0.06]",
       tone === "destructive" && "border-rose-500/25 bg-rose-500/[0.055]",
       className,
     )}
   >
-    <p className={cn("text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground", accent && "text-background/58 dark:text-zinc-950/55")}>{label}</p>
-    <p className={cn("mt-2 truncate text-2xl font-black leading-none tracking-[-0.05em] text-foreground tabular-nums", accent && "text-background dark:text-zinc-950")}>{value}</p>
-    {detail ? <p className={cn("mt-2 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground", accent && "text-background/62 dark:text-zinc-950/62")}>{detail}</p> : null}
+    <p
+      className={cn(
+        "text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground",
+        accent && "text-background/58 dark:text-zinc-950/55",
+      )}
+    >
+      {label}
+    </p>
+    <p
+      className={cn(
+        "mt-2 truncate text-2xl font-black leading-none tracking-[-0.05em] text-foreground tabular-nums",
+        accent && "text-background dark:text-zinc-950",
+      )}
+    >
+      {value}
+    </p>
+    {detail ? (
+      <p
+        className={cn(
+          "mt-2 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground",
+          accent && "text-background/62 dark:text-zinc-950/62",
+        )}
+      >
+        {detail}
+      </p>
+    ) : null}
   </div>
 );

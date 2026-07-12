@@ -3,38 +3,75 @@ import { AnimatePresence } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseProvider';
 import { SynapsePill } from './SynapsePill';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
-import { SynapseActionOrchestrator } from './SynapseActionOrchestrator';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
-// Pill:          z-index 9990 (above page content, below modals)
-// Compact Panel: z-index 9991
-// This ensures the shell is always accessible but doesn't block
-// system modals (toasts, dialogs) when in Pill/Compact state.
+// Presence: z-index 40 (above page content, below alerts, sheets and dialogs).
 
 export const SynapseGlobalShell = () => {
-    const { isVisible, shellState, setShellState, actionExperience, cancelActionExperience } = useSynapse();
+    const {
+        actionExperience,
+        cancelActionExperience,
+        isVisible,
+        setActiveTab,
+        setShellState,
+        shellState,
+        toggleVoiceMode,
+        voicePhase,
+        voiceStatus,
+    } = useSynapse();
 
     // ─── Keyboard Shortcut: Ctrl+J ─────────────────────────────────────
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
-            if ((e.ctrlKey || e.metaKey) && e.key === 'j') {
+            if (e.repeat) return;
+
+            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'j') {
                 e.preventDefault();
-                if (shellState === 'pill') {
-                    setShellState('compact');
-                } else if (shellState === 'compact') {
+                setActiveTab('chat');
+                if (shellState === 'compact') {
                     setShellState('pill');
+                } else {
+                    setShellState('compact');
                 }
+                return;
             }
 
-            // Escape to close
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'Space') {
+                e.preventDefault();
+                if (shellState === 'closed') setShellState('pill');
+                void toggleVoiceMode();
+                return;
+            }
+
             if (e.key === 'Escape') {
-                if (actionExperience) cancelActionExperience();
+                if (voicePhase === 'awaiting_confirmation') {
+                    if (actionExperience) cancelActionExperience();
+                    if (voiceStatus === 'connected' || voiceStatus === 'connecting') void toggleVoiceMode();
+                    return;
+                }
+                if (voiceStatus === 'connected' || voiceStatus === 'connecting') {
+                    void toggleVoiceMode();
+                    return;
+                }
+                if (actionExperience) {
+                    cancelActionExperience();
+                    return;
+                }
                 if (shellState === 'compact') {
                     setShellState('pill');
                 }
             }
         },
-        [actionExperience, cancelActionExperience, shellState, setShellState]
+        [
+            actionExperience,
+            cancelActionExperience,
+            setActiveTab,
+            setShellState,
+            shellState,
+            toggleVoiceMode,
+            voicePhase,
+            voiceStatus,
+        ]
     );
 
     useEffect(() => {
@@ -47,24 +84,20 @@ export const SynapseGlobalShell = () => {
 
     return (
         <>
-            {/* Fixed container for Pill + Compact (bottom-right) */}
+            {/* A single bottom-center presence anchors chat, voice and action feedback. */}
             <div
-                className="fixed flex flex-col items-end gap-3"
+                className="fixed flex w-[min(464px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center gap-3"
                 data-synapse-shell="true"
                 style={{
-                    zIndex: 9990,
-                    right: 'max(12px, env(safe-area-inset-right))',
+                    zIndex: 40,
+                    left: '50%',
                     bottom: 'max(12px, env(safe-area-inset-bottom))',
                 }}
             >
-                <SynapseActionOrchestrator />
-                <AnimatePresence initial={false} mode="sync">
-                    {shellState === 'compact' ? (
-                        <SynapseCompactPanel key="compact" />
-                    ) : (
-                        <SynapsePill key="pill" />
-                    )}
+                <AnimatePresence initial={false}>
+                    {shellState === 'compact' ? <SynapseCompactPanel key="compact" /> : null}
                 </AnimatePresence>
+                {shellState !== 'closed' ? <SynapsePill /> : null}
             </div>
         </>
     );

@@ -47,6 +47,10 @@ export interface SynapseNotesAgentRun {
   completed_at: string | null;
 }
 
+export type SynapseNotesAgentRealtimeState = "idle" | "connecting" | "subscribed" | "degraded";
+
+const TERMINAL_RUN_STATUSES = new Set<SynapseNotesAgentStatus>(["completed", "failed", "cancelled"]);
+
 const normalizeRun = (value: unknown): SynapseNotesAgentRun | null => {
   if (!value || typeof value !== "object") return null;
   const run = value as Record<string, any>;
@@ -62,18 +66,23 @@ const normalizeRun = (value: unknown): SynapseNotesAgentRun | null => {
 export const useSynapseNotesAgentRun = (runId?: string | null) => {
   const [run, setRun] = useState<SynapseNotesAgentRun | null>(null);
   const [isLoading, setIsLoading] = useState(Boolean(runId));
+  const [realtimeState, setRealtimeState] = useState<SynapseNotesAgentRealtimeState>(runId ? "connecting" : "idle");
 
   useEffect(() => {
     if (!runId) {
       setRun(null);
       setIsLoading(false);
+      setRealtimeState("idle");
       return;
     }
 
     let isMounted = true;
+    let pollTimer: number | null = null;
+    let pollDelay = 1500;
     setIsLoading(true);
+    setRealtimeState("connecting");
 
-    const fetchRun = async () => {
+    const fetchRun = async (fromPolling = false) => {
       const { data, error } = await supabase
         .from("synapse_notes_agent_runs" as any)
         .select("*")
@@ -83,11 +92,30 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
       if (!isMounted) return;
       if (error) {
         console.error("[Synapse Notes Agent] Falha ao carregar run:", error);
-        setRun(null);
+        if (!fromPolling) setRun(null);
+        if (fromPolling) {
+          pollDelay = Math.min(Math.round(pollDelay * 1.45), 4000);
+          pollTimer = window.setTimeout(() => void fetchRun(true), pollDelay);
+        }
       } else {
-        setRun(normalizeRun(data));
+        const next = normalizeRun(data);
+        setRun(next);
+        if (fromPolling && next && !TERMINAL_RUN_STATUSES.has(next.status)) {
+          pollDelay = Math.min(Math.round(pollDelay * 1.45), 4000);
+          pollTimer = window.setTimeout(() => void fetchRun(true), pollDelay);
+        }
       }
       setIsLoading(false);
+    };
+
+    const beginPolling = () => {
+      if (!isMounted || pollTimer !== null) return;
+      setRealtimeState("degraded");
+      pollDelay = 1500;
+      pollTimer = window.setTimeout(() => {
+        pollTimer = null;
+        void fetchRun(true);
+      }, pollDelay);
     };
 
     void fetchRun();
@@ -102,13 +130,28 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
           if (next) setRun(next);
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (!isMounted) return;
+        if (status === "SUBSCRIBED") {
+          setRealtimeState("subscribed");
+          if (pollTimer !== null) {
+            window.clearTimeout(pollTimer);
+            pollTimer = null;
+          }
+          void fetchRun();
+          return;
+        }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          beginPolling();
+        }
+      });
 
     return () => {
       isMounted = false;
+      if (pollTimer !== null) window.clearTimeout(pollTimer);
       supabase.removeChannel(channel);
     };
   }, [runId]);
 
-  return { run, isLoading };
+  return { run, isLoading, realtimeState };
 };

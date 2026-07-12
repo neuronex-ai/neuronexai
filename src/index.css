@@ -1792,6 +1792,107 @@
     }
   }
 
+  .synapse-presence-dock {
+    isolation: isolate;
+    border-color: hsl(var(--border) / 0.58);
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.9), hsl(var(--card) / 0.82)),
+      hsl(var(--background));
+    box-shadow:
+      0 24px 70px -42px hsl(var(--foreground) / 0.58),
+      inset 0 1px 0 hsl(var(--background) / 0.72),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.018);
+    backdrop-filter: blur(24px) saturate(1.08);
+    -webkit-backdrop-filter: blur(24px) saturate(1.08);
+  }
+
+  .dark .synapse-presence-dock {
+    border-color: rgba(255, 255, 255, 0.075);
+    background:
+      linear-gradient(180deg, rgba(24, 24, 25, 0.91), rgba(8, 8, 9, 0.9)),
+      #090909;
+    box-shadow:
+      0 28px 78px -42px rgba(0, 0, 0, 0.98),
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.018);
+  }
+
+  .synapse-presence-orb {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    box-shadow:
+      0 14px 34px -22px rgba(0, 0, 0, 0.82),
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+  }
+
+  .synapse-presence-orb-surface {
+    transform: scale(0.9);
+    transform-origin: center;
+    opacity: 0.72;
+    will-change: transform, opacity;
+    background:
+      radial-gradient(circle at 36% 28%, rgba(255, 255, 255, 0.96) 0 10%, rgba(228, 228, 231, 0.94) 28%, rgba(113, 113, 122, 0.88) 58%, rgba(24, 24, 27, 0.96) 100%);
+    box-shadow:
+      inset 0 1px 2px rgba(255, 255, 255, 0.7),
+      0 4px 10px -5px rgba(0, 0, 0, 0.8);
+  }
+
+  .synapse-presence-status {
+    border-color: hsl(var(--border) / 0.6);
+    background:
+      linear-gradient(155deg, hsl(var(--background) / 0.94), hsl(var(--card) / 0.9)),
+      hsl(var(--card));
+    box-shadow:
+      0 20px 62px -42px hsl(var(--foreground) / 0.58),
+      inset 0 1px 0 hsl(var(--background) / 0.72);
+    backdrop-filter: blur(22px) saturate(1.06);
+    -webkit-backdrop-filter: blur(22px) saturate(1.06);
+  }
+
+  .synapse-presence-status > div > span:first-child {
+    border-color: hsl(var(--border) / 0.58);
+    background: hsl(var(--foreground) / 0.035);
+  }
+
+  .dark .synapse-presence-status {
+    border-color: rgba(255, 255, 255, 0.07);
+    background:
+      linear-gradient(155deg, rgba(24, 24, 25, 0.95), rgba(9, 9, 10, 0.95)),
+      #0a0a0b;
+    box-shadow:
+      0 22px 68px -44px rgba(0, 0, 0, 0.98),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  }
+
+  .dark .synapse-presence-status > div > span:first-child {
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.045);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .synapse-presence-dock,
+    .synapse-presence-status {
+      background: hsl(var(--background));
+      backdrop-filter: none;
+      -webkit-backdrop-filter: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .synapse-presence-dock,
+    .synapse-presence-status,
+    .synapse-presence-orb {
+      border: 1px solid CanvasText;
+      background: Canvas;
+      color: CanvasText;
+      box-shadow: none;
+    }
+
+    .synapse-presence-orb-surface {
+      display: none;
+    }
+  }
+
   .synapse-desktop-shell {
     position: relative;
     isolation: isolate;
