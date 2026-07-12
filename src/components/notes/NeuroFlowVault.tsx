@@ -334,12 +334,12 @@ export const NeuroFlowVault = ({ onOpenFlow }: NeuroFlowVaultProps) => {
     );
 
     return (
-        <div className="notes-lumen-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent p-4 text-foreground selection:bg-primary/15 sm:p-5 lg:p-6">
-            <header className="notes-toolbar-surface relative z-10 flex shrink-0 flex-col gap-4 rounded-[26px] border border-border/45 p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
+        <div className="notes-lumen-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent p-3 text-foreground selection:bg-primary/15 sm:p-4 lg:p-5">
+            <header className="notes-toolbar-surface relative z-10 flex shrink-0 flex-col gap-3 rounded-[24px] border p-3.5 sm:p-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="min-w-0">
                     <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Mapeamento clínico</p>
-                    <h1 className="mt-1 text-2xl font-black tracking-[-0.045em] text-foreground">NeuroFlow</h1>
-                    <p className="mt-1.5 max-w-xl text-xs font-medium leading-relaxed text-muted-foreground">
+                    <h1 className="mt-0.5 text-xl font-black tracking-[-0.045em] text-foreground">NeuroFlow</h1>
+                    <p className="mt-1 max-w-xl text-[11px] font-medium leading-relaxed text-muted-foreground">
                         Organize hipóteses, relações clínicas e materiais em mapas conectados.
                     </p>
                 </div>
@@ -353,13 +353,13 @@ export const NeuroFlowVault = ({ onOpenFlow }: NeuroFlowVaultProps) => {
                             placeholder="Buscar por título ou marcador"
                             value={searchQuery}
                             onChange={(event) => setSearchQuery(event.target.value)}
-                            className="desktop-retina-inset h-11 rounded-[15px] border-border/45 bg-muted/30 pl-11 pr-4 text-sm shadow-none"
+                            className="desktop-retina-inset h-10 rounded-[14px] border-border/45 bg-muted/30 pl-11 pr-4 text-sm shadow-none"
                         />
                     </label>
                     <Button
                         onClick={handleCreateFlow}
                         disabled={isCreatingFlow}
-                        className="desktop-retina-interactive h-11 shrink-0 rounded-[15px] px-5 text-[10px] font-black uppercase tracking-[0.14em]"
+                        className="desktop-retina-interactive h-10 shrink-0 rounded-[14px] px-5 text-[10px] font-black uppercase tracking-[0.14em]"
                     >
                         {isCreatingFlow ? <Loader2 size={17} className="mr-2 animate-spin" /> : <Plus size={17} className="mr-2" />}
                         {isCreatingFlow ? "Criando" : "Novo mapeamento"}
@@ -367,11 +367,11 @@ export const NeuroFlowVault = ({ onOpenFlow }: NeuroFlowVaultProps) => {
                 </div>
             </header>
 
-            <div className="notes-scroll-surface desktop-content-scroll relative z-10 mt-4 min-h-0 flex-1 overflow-y-auto pr-2 [contain:layout_paint]">
+            <div className="notes-scroll-surface desktop-content-scroll relative z-10 mt-3 min-h-0 flex-1 overflow-y-auto pr-2 [contain:layout_paint]">
                 {isLoading ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" aria-label="Carregando mapeamentos">
                         {[1, 2, 3, 4].map((i) => (
-                            <Skeleton key={i} className="min-h-[260px] rounded-[26px] border border-border/35 bg-muted/25" />
+                            <Skeleton key={i} className="min-h-[226px] rounded-[24px] border border-border/35 bg-muted/25" />
                         ))}
                     </div>
                 ) : (
@@ -381,7 +381,7 @@ export const NeuroFlowVault = ({ onOpenFlow }: NeuroFlowVaultProps) => {
                             whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
                             onClick={handleCreateFlow}
                             disabled={isCreatingFlow}
-                            className="notes-liquid-surface group relative flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-[26px] border border-dashed border-border/55 p-6 text-center transition-[border-color,background-color] hover:border-border hover:bg-muted/30"
+                            className="notes-liquid-surface group relative flex min-h-[226px] flex-col items-center justify-center gap-3 rounded-[24px] border border-dashed p-5 text-center transition-[border-color,background-color] hover:border-border hover:bg-muted/30"
                         >
                             <div className="desktop-retina-inset flex h-14 w-14 items-center justify-center rounded-[20px] border border-border/45 bg-muted/35 text-muted-foreground transition-colors group-hover:text-foreground">
                                 {isCreatingFlow ? <Loader2 size={26} className="animate-spin" /> : <Brain size={26} strokeWidth={1.7} />}
@@ -510,7 +510,7 @@ const FlowCard = memo(function FlowCard({ flow, idx, onClick, onDelete, onRename
             tabIndex={0}
             aria-label={`Abrir mapeamento ${flow.title}`}
             style={{ contain: "layout style" }}
-            className="notes-liquid-surface desktop-retina-interactive group relative flex min-h-[260px] cursor-pointer flex-col overflow-hidden rounded-[26px] border border-border/45 p-5 outline-none transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-border/75 hover:bg-muted/25 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0"
+            className="notes-liquid-surface desktop-retina-interactive group relative flex min-h-[226px] cursor-pointer flex-col overflow-hidden rounded-[24px] border p-4 outline-none transition-[border-color,background-color,transform] hover:-translate-y-0.5 hover:border-border/75 hover:bg-muted/25 focus-visible:ring-2 focus-visible:ring-ring motion-reduce:hover:translate-y-0"
         >
             <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,hsl(var(--foreground)/0.035),transparent_46%,hsl(var(--foreground)/0.012))]" />
 
@@ -549,9 +549,9 @@ const FlowCard = memo(function FlowCard({ flow, idx, onClick, onDelete, onRename
                 </DropdownMenu>
             </div>
 
-            <div className="relative flex flex-1 items-center justify-center py-5">
-                <div className="desktop-retina-inset flex h-16 w-16 items-center justify-center rounded-[23px] border border-border/40 bg-muted/20 text-muted-foreground/35 transition-colors group-hover:text-muted-foreground/60">
-                    <Brain size={30} strokeWidth={1.1} />
+            <div className="relative flex flex-1 items-center justify-center py-3">
+                <div className="desktop-retina-inset flex h-14 w-14 items-center justify-center rounded-[20px] border border-border/40 bg-muted/20 text-muted-foreground/35 transition-colors group-hover:text-muted-foreground/60">
+                    <Brain size={26} strokeWidth={1.1} />
                 </div>
             </div>
 

@@ -117,7 +117,7 @@ export default function Pacientes() {
     };
 
     return (
-        <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 font-sans selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
+        <div className="patients-desktop-shell desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 font-sans selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
             <NewPatientModal
                 open={agentPatientModalOpen}
                 onOpenChange={setAgentPatientModalOpen}

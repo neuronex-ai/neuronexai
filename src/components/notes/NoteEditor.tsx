@@ -210,7 +210,7 @@ export const NoteEditor = ({
       window.removeEventListener('mousemove', handleMouseMove);
       if (toolbarTimeoutRef.current) clearTimeout(toolbarTimeoutRef.current);
     };
-  }, [isFocusMode]);
+  }, [isFocusMode, onToggleFocus]);
 
   // Save on Ctrl+S
   useEffect(() => {
@@ -305,19 +305,19 @@ export const NoteEditor = ({
 
   return (
     <div className={cn(
-      "flex min-h-0 flex-col h-full w-full bg-transparent font-sans relative transition-all duration-700",
-      isFocusMode ? "z-[60] fixed inset-0 overflow-hidden bg-transparent" : ""
+      "flex min-h-0 flex-col h-full w-full bg-transparent font-sans relative transition-[background-color,opacity] duration-300",
+      isFocusMode ? "notes-focus-surface fixed inset-0 z-[60] overflow-hidden" : ""
     )}>
       {/* Editor Toolbar */}
       <AnimatePresence>
         {showToolbar && (
           <motion.div
-            initial={isFocusMode ? { opacity: 0, y: -20, x: "-50%" } : { opacity: 1 }}
-            animate={isFocusMode ? { opacity: 1, y: 0, x: "-50%" } : { opacity: 1 }}
-            exit={isFocusMode ? { opacity: 0, y: -20, x: "-50%" } : { opacity: 1 }}
+            initial={false}
+            animate={isFocusMode ? { opacity: 1, y: 0, x: "-50%" } : { opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -8 }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
             className={cn(
-              "notes-toolbar-surface h-14 px-5 md:px-7 flex items-center justify-between z-50 transition-all duration-700 backdrop-blur-3xl",
+              "notes-toolbar-surface h-[52px] px-4 md:px-6 flex items-center justify-between z-50 transition-[border-radius,box-shadow,background-color] duration-300 backdrop-blur-3xl",
               isFocusMode
                 ? "fixed top-8 left-1/2 w-[90%] max-w-4xl h-14 rounded-2xl border ring-1 ring-foreground/[0.025] dark:ring-white/[0.035]"
                 : "sticky top-0 border-b"
@@ -644,8 +644,8 @@ export const NoteEditor = ({
             exit={{ opacity: 0, scale: 0.9, x: 20 }}
             className="fixed bottom-10 right-10 z-50 pointer-events-none"
           >
-            <div className="flex items-center gap-4 px-6 py-3 rounded-2xl bg-black/40 backdrop-blur-3xl border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] ring-1 ring-white/10">
-              <div className="flex items-center justify-center min-w-[36px] h-7 px-2 rounded-lg bg-white/10 border border-white/10 text-[10px] font-black tracking-tighter text-white/80 shadow-inner">ESC</div>
+            <div className="notes-toolbar-surface flex items-center gap-4 rounded-2xl border px-6 py-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl">
+              <div className="flex h-7 min-w-[36px] items-center justify-center rounded-lg border border-border/60 bg-muted/60 px-2 text-[10px] font-black tracking-tighter text-foreground/80 shadow-inner">ESC</div>
               <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Encerrar Sessão de Foco</span>
             </div>
           </motion.div>

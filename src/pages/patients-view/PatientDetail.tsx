@@ -413,7 +413,7 @@ function DesktopPatientDetail() {
                 <div className="grid h-full min-h-0 grid-cols-1 gap-3 md:grid-cols-[230px_minmax(0,1fr)] lg:grid-cols-[270px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
 
                     {/* LEFT COLUMN: Patient Info */}
-                    <aside className="patient-record-scrollbar z-20 min-h-0 w-full overflow-y-auto overscroll-contain border-b border-border/45 pr-1 dark:border-white/[0.06] md:border-b-0">
+                    <aside className="patient-record-scrollbar z-20 min-h-0 w-full overflow-y-auto overscroll-contain border-b border-border/45 pr-1 md:border-b-0">
                         <section className="patient-record-panel w-full overflow-hidden rounded-[24px] border">
                             <div className="relative overflow-hidden p-5">
                                 <div className="relative z-10 mb-6 flex flex-col items-center text-center">
@@ -504,7 +504,7 @@ function DesktopPatientDetail() {
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="p-6 rounded-2xl border-2 border-dashed border-zinc-100 dark:border-white/[0.075] bg-zinc-50/50 dark:bg-[#080808] text-center">
+                                            <div className="clinical-inset-surface rounded-2xl border border-dashed p-6 text-center">
                                                 <Pill className="h-5 w-5 text-zinc-300 dark:text-zinc-800 mx-auto mb-3 opacity-30" />
                                                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">Nenhuma medicação</span>
                                             </div>

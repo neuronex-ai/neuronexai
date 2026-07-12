@@ -90,6 +90,7 @@ export default function Notes() {
     const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(initialLayout.sidebarCollapsed);
 
     const [isFocusMode, setIsFocusMode] = useState(false);
+    const handleToggleFocus = useCallback(() => setIsFocusMode((current) => !current), []);
     const [selectedFlowId, setSelectedFlowId] = useState<string | null>(null);
     const [synapseRunId, setSynapseRunId] = useState<string | null>(null);
     const [synapsePatientId, setSynapsePatientId] = useState<string | null>(null);
@@ -374,7 +375,7 @@ export default function Notes() {
                                                     setSelectedNoteId(null);
                                                 }}
                                                 isFocusMode={isFocusMode}
-                                                onToggleFocus={() => setIsFocusMode(!isFocusMode)}
+                                                onToggleFocus={handleToggleFocus}
                                                 linkableNotes={(notes || []).map((note) => ({ id: note.id, title: note.title, content: note.content }))}
                                             />
                                         </Suspense>

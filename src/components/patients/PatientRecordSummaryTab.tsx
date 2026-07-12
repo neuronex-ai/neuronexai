@@ -192,7 +192,7 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
           >
             <div className="flex items-start justify-between gap-4">
               <span className={cn(
-                "flex h-10 w-10 items-center justify-center rounded-[15px] border border-border/45 bg-background/52 text-muted-foreground",
+                "clinical-inset-surface flex h-10 w-10 items-center justify-center rounded-[15px] border text-muted-foreground",
                 card.tone === "warning" && "border-amber-500/18 bg-amber-500/8 text-amber-500",
               )}>
                 <card.icon className="h-[18px] w-[18px]" aria-hidden="true" />

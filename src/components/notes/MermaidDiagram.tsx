@@ -26,15 +26,15 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
         theme: "base",
         themeVariables: {
           darkMode: isDark,
-          background: isDark ? "#000000" : "#ffffff",
-          primaryColor: isDark ? "#000000" : "#ffffff",
+          background: isDark ? "#080808" : "#ffffff",
+          primaryColor: isDark ? "#151515" : "#ffffff",
           primaryTextColor: isDark ? "#ffffff" : "#09090b",
-          primaryBorderColor: isDark ? "#ffffff" : "#09090b",
+          primaryBorderColor: isDark ? "#3f3f46" : "#3f3f46",
           lineColor: isDark ? "#71717a" : "#a1a1aa",
           textColor: isDark ? "#e4e4e7" : "#27272a",
-          mainBkg: isDark ? "#000000" : "#ffffff",
-          nodeBorder: isDark ? "#ffffff" : "#09090b",
-          clusterBkg: isDark ? "#000000" : "#ffffff",
+          mainBkg: isDark ? "#151515" : "#ffffff",
+          nodeBorder: isDark ? "#3f3f46" : "#3f3f46",
+          clusterBkg: isDark ? "#0d0d0d" : "#ffffff",
           clusterBorder: isDark ? "#333333" : "#e4e4e7",
           defaultLinkColor: isDark ? "#71717a" : "#a1a1aa",
           fontFamily: "Inter, sans-serif",
@@ -63,7 +63,7 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
         setSvg(svg);
       } catch (e) {
         console.error("Mermaid Render Error:", e);
-        setError("Nao foi possivel renderizar a estrutura logica gerada.");
+        setError("Não foi possível renderizar a estrutura lógica gerada.");
       }
     };
 
@@ -83,7 +83,7 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
           <AlertTriangle className={cn("text-rose-500", compact ? "h-4 w-4" : "h-6 w-6")} />
         </div>
         <p className={cn("mb-2 font-bold text-zinc-900 dark:text-white", compact ? "text-xs" : "text-sm")}>
-          Falha na Visualizacao
+          Falha na visualização
         </p>
         <p className={cn("mb-4 max-w-xs text-zinc-500 dark:text-zinc-400", compact ? "text-[10px]" : "text-xs")}>
           {error}
@@ -106,7 +106,7 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
       <div className={cn("flex h-full flex-col items-center justify-center gap-4", className)}>
         <Loader2 className={cn("animate-spin text-zinc-900/20 dark:text-white/20", compact ? "h-5 w-5" : "h-8 w-8")} />
         <span className={cn("animate-pulse font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-600", compact ? "text-[8px]" : "text-[10px]")}>
-          Construindo Grafico...
+          Construindo gráfico...
         </span>
       </div>
     );
@@ -114,12 +114,13 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
 
   return (
     <div
-      className={cn("group relative h-full w-full overflow-hidden bg-white dark:bg-[#020204]", compact && "rounded-2xl", className)}
+      className={cn("group relative flex h-full min-h-0 w-full min-w-0 overflow-hidden bg-white dark:bg-[#060606]", compact && "rounded-2xl", className)}
       ref={containerRef}
     >
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-[size:24px_24px]" />
 
       <TransformWrapper
+        key={`${compact ? "compact" : "full"}-${svg.length}`}
         initialScale={compact ? 0.82 : 1}
         minScale={compact ? 0.35 : 0.5}
         maxScale={compact ? 2.5 : 4}
@@ -148,10 +149,12 @@ export const MermaidDiagram = ({ chart, compact = false, className }: MermaidDia
             <TransformComponent
               wrapperClass="w-full h-full"
               contentClass="w-full h-full flex items-center justify-center"
+              wrapperStyle={{ width: "100%", height: "100%" }}
+              contentStyle={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}
             >
               <div
                 dangerouslySetInnerHTML={{ __html: svg }}
-                className="mermaid-svg-container"
+                className="mermaid-svg-container flex h-full min-h-0 w-full min-w-0 items-center justify-center [&_svg]:block [&_svg]:h-auto [&_svg]:max-h-full [&_svg]:w-auto [&_svg]:max-w-full"
                 style={{
                   opacity: 0.9,
                   filter: "drop-shadow(0 0 20px rgba(255,255,255,0.05))",

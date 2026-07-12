@@ -28,12 +28,14 @@ describe("desktop patient record contract", () => {
     expect(detail).toContain("PatientSessionsTab");
   });
 
-  it("uses one ownership-checked, RLS-preserving summary RPC", () => {
+  it("prefers the ownership-checked RPC and keeps an RLS-preserving compatibility fallback", () => {
     const hook = source("src/hooks/use-patient-record-summary.ts");
     const migration = source("supabase/migrations/20260712185135_patient_record_summary_rpc.sql");
 
     expect(hook).toContain('supabase.rpc("get_patient_record_summary"');
-    expect(hook).not.toContain('.from("');
+    expect(hook).toContain('supabase.from("patients").select("id,risk_score")');
+    expect(hook).toContain("if (!patientResult.data) throw");
+    expect(hook).toContain("return fetchPatientRecordSummaryFallback(patientId)");
     expect(migration).toContain("security invoker");
     expect(migration).toContain("p.user_id = v_user_id");
     expect(migration).toContain("v_user_id uuid := (select auth.uid())");

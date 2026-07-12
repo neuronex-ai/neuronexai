@@ -94,7 +94,7 @@ export const PatientMoodTab = ({ patientId }: PatientMoodTabProps) => {
                   </time>
                 </div>
                 <h4 className="text-sm font-semibold text-foreground">{config.label}</h4>
-                <div className="mt-3 min-h-16 rounded-[16px] border border-border/35 bg-muted/24 p-3.5">
+                <div className="clinical-inset-surface mt-3 min-h-16 rounded-[16px] border p-3.5">
                   {log.notes ? (
                     <div className="flex gap-2.5">
                       <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />

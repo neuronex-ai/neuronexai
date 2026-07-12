@@ -305,26 +305,26 @@ Relato:
 
     return (
         <div className={cn(
-            "notes-lumen-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent p-4 text-foreground sm:p-5 lg:p-6",
+            "notes-lumen-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent p-3 text-foreground sm:p-4 lg:p-5",
             isFullscreen ? "fixed inset-0 z-[100]" : ""
         )}>
             <NeuralBackground />
             <SynapseAgentRunOverlay run={synapseRun} title="Synapse / NeuroPulse" compact />
-            <header className="notes-toolbar-surface relative z-20 flex shrink-0 flex-col gap-4 rounded-[26px] border border-border/45 p-4 sm:p-5 xl:flex-row xl:items-center xl:justify-between">
-                <div className="flex min-w-0 items-center gap-4">
-                    <div className="desktop-retina-inset flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-border/45 bg-muted/30 text-muted-foreground">
+            <header className="notes-toolbar-surface relative z-20 flex shrink-0 flex-col gap-3 rounded-[24px] border p-3.5 sm:p-4 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                    <div className="desktop-retina-inset flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-border/45 bg-muted/30 text-muted-foreground">
                         <Fingerprint className="h-5 w-5" strokeWidth={1.5} />
                     </div>
                     <div className="min-w-0">
                         <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">Síntese clínica visual</p>
-                        <h2 className="mt-1 text-xl font-black tracking-[-0.045em] text-foreground">NeuroPulse</h2>
-                        <p className="mt-1 text-xs font-medium text-muted-foreground">Transforme relatos e transcrições em relações de causa e efeito.</p>
+                        <h2 className="mt-0.5 text-lg font-black tracking-[-0.045em] text-foreground">NeuroPulse</h2>
+                        <p className="mt-0.5 text-[11px] font-medium text-muted-foreground">Transforme relatos e transcrições em relações de causa e efeito.</p>
                     </div>
                 </div>
 
                 <div className="flex min-w-0 flex-wrap items-center gap-2 rounded-2xl border border-border/40 bg-muted/20 p-1.5">
                     <Select value={selectedPatientId} onValueChange={setSelectedPatientId}>
-                        <SelectTrigger className="h-10 w-[180px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
+                        <SelectTrigger className="h-9 w-[170px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
                             <SelectValue placeholder="Paciente" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-border/50 bg-popover p-2">
@@ -342,7 +342,7 @@ Relato:
                     <div className="h-6 w-px bg-border/50" />
 
                     <Select value={selectedLens} onValueChange={setSelectedLens}>
-                        <SelectTrigger className="h-10 w-[210px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
+                        <SelectTrigger className="h-9 w-[195px] rounded-xl border-0 bg-transparent text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground shadow-none hover:text-foreground focus:ring-0 focus-visible:ring-2 focus-visible:ring-ring">
                             <SelectValue placeholder="Abordagem clínica" />
                         </SelectTrigger>
                         <SelectContent className="rounded-2xl border-border/50 bg-popover p-2">
@@ -357,7 +357,7 @@ Relato:
                     <Button
                         onClick={handleGenerate}
                         disabled={isGenerating || !input.trim()}
-                        className="desktop-retina-interactive h-10 rounded-xl px-5 text-[10px] font-black uppercase tracking-[0.14em]"
+                        className="desktop-retina-interactive h-9 rounded-xl px-5 text-[10px] font-black uppercase tracking-[0.14em]"
                     >
                         {isGenerating ? <RefreshCcw className="h-4 w-4 animate-spin" /> : <><Zap className="mr-2 h-3.5 w-3.5" /><span>Analisar</span></>}
                     </Button>
@@ -365,17 +365,17 @@ Relato:
             </header>
 
             {/* Main Content Area */}
-            <div className="desktop-content-scroll relative z-10 mt-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto xl:flex-row xl:overflow-hidden">
+            <div className="desktop-content-scroll relative z-10 mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto xl:flex-row xl:overflow-hidden">
                 {/* Left: Input Console */}
                 {!isFullscreen && (
                     <motion.div
                         initial={shouldReduceMotion ? false : { opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
-                        className="flex min-h-[270px] w-full shrink-0 flex-col xl:w-[35%] xl:max-w-[500px]"
+                        className="flex min-h-[250px] w-full shrink-0 flex-col xl:w-[34%] xl:max-w-[460px]"
                     >
                         <div className={cn(
-                            "notes-liquid-surface relative flex min-h-0 flex-1 flex-col rounded-[27px] border p-4 transition-[border-color,background-color,box-shadow] sm:p-5",
+                            "notes-liquid-surface relative flex min-h-0 flex-1 flex-col rounded-[24px] border p-4 transition-[border-color,background-color,box-shadow]",
                             isListening
                                 ? "border-foreground/[0.18] bg-muted/30 shadow-[0_20px_60px_-48px_hsl(var(--foreground)/0.55)]"
                                 : "border-border/45 bg-card/60"
@@ -440,7 +440,7 @@ Relato:
 
                 {/* Right: Synthesis Visualization */}
                 <motion.div
-                    className="notes-liquid-surface relative min-h-[330px] min-w-0 flex-1 overflow-hidden rounded-[28px] border border-border/45 bg-card/[0.62]"
+                    className="notes-liquid-surface relative min-h-[300px] min-w-0 flex-1 overflow-hidden rounded-[25px] border bg-card/[0.62]"
                 >
                     <AnimatePresence mode="wait">
                         {isGenerating ? (
@@ -502,10 +502,8 @@ Relato:
                                         </Button>
                                     </div>
                                 </div>
-                                <div ref={diagramRef} className="custom-scrollbar relative flex min-h-0 flex-1 items-center justify-center overflow-auto bg-transparent p-6 sm:p-10">
-                                    <div className="h-full w-full origin-center bg-transparent">
-                                        <MermaidDiagram chart={diagramCode} />
-                                    </div>
+                                <div ref={diagramRef} className="custom-scrollbar relative flex min-h-0 flex-1 overflow-hidden bg-transparent p-4 sm:p-6">
+                                    <MermaidDiagram chart={diagramCode} className="min-h-0 flex-1" />
                                 </div>
                             </motion.div>
                         ) : (

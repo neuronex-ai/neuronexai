@@ -137,7 +137,7 @@ export const RichTextEditor = ({
       Image.configure({
         allowBase64: true,
         HTMLAttributes: {
-          class: 'rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-white/10 max-w-full my-12 transition-all duration-500 hover:scale-[1.02] hover:shadow-primary/20',
+          class: 'rounded-[32px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.5)] border border-border/50 max-w-full my-12 transition-all duration-500 hover:scale-[1.02] hover:shadow-primary/20',
         }
       }),
       Link.configure({
@@ -335,7 +335,7 @@ export const RichTextEditor = ({
             maxWidth: 'none',
             offset: [0, 15]
           }}
-          className="flex items-center gap-1 p-1.5 rounded-[20px] bg-white/95 dark:bg-zinc-900/95 backdrop-blur-3xl border border-zinc-200 dark:border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] overflow-hidden max-w-[95vw] flex-nowrap z-[1000] animate-in zoom-in-95 slide-in-from-bottom-2 ring-1 ring-black/5 dark:ring-white/5"
+          className="notes-toolbar-surface flex max-w-[95vw] flex-nowrap items-center gap-1 overflow-hidden rounded-[20px] border p-1.5 shadow-[0_20px_50px_rgba(0,0,0,0.2)] backdrop-blur-3xl dark:shadow-[0_20px_50px_rgba(0,0,0,0.55)] z-[1000] animate-in zoom-in-95 slide-in-from-bottom-2"
           shouldShow={({ editor, from, to }) => {
             return editor.view.hasFocus() && from !== to && !editor.isActive('image') && !editor.isActive('table') && !editor.isActive('clinicalChart') && !editor.isActive('sentimentPulse') && !editor.isActive('embeddedDoc') && !editor.isActive('noteLink');
           }}
@@ -347,7 +347,7 @@ export const RichTextEditor = ({
             <MenuButton onClick={() => editor.chain().focus().toggleStrike().run()} isActive={editor.isActive('strike')} icon={Strikethrough} title="Tachado" />
           </div>
 
-          <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1.5" />
+          <div className="mx-1.5 h-6 w-px bg-border/70" />
 
           <div className="flex items-center gap-0.5 px-0.5">
             <MenuButton onClick={() => editor.chain().focus().setTextAlign('left').run()} isActive={editor.isActive({ textAlign: 'left' })} icon={AlignLeft} title="Alinhar à Esquerda" />
@@ -356,7 +356,7 @@ export const RichTextEditor = ({
             <MenuButton onClick={() => editor.chain().focus().setTextAlign('justify').run()} isActive={editor.isActive({ textAlign: 'justify' })} icon={AlignJustify} title="Justificar" />
           </div>
 
-          <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1.5" />
+          <div className="mx-1.5 h-6 w-px bg-border/70" />
 
           <div className="flex items-center gap-0.5 px-0.5">
             <MenuButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} isActive={editor.isActive('heading', { level: 1 })} icon={Heading1} title="Título 1" />
@@ -364,14 +364,14 @@ export const RichTextEditor = ({
             <MenuButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} isActive={editor.isActive('heading', { level: 3 })} icon={Heading3} title="Título 3" />
           </div>
 
-          <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1.5" />
+          <div className="mx-1.5 h-6 w-px bg-border/70" />
 
           <div className="flex items-center gap-0.5 px-0.5">
             <MenuButton onClick={() => editor.chain().focus().toggleBulletList().run()} isActive={editor.isActive('bulletList')} icon={List} title="Lista" />
             <MenuButton onClick={() => editor.chain().focus().toggleTaskList().run()} isActive={editor.isActive('taskList')} icon={CheckSquare} title="Tarefas" />
           </div>
 
-          <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1.5" />
+          <div className="mx-1.5 h-6 w-px bg-border/70" />
 
           <div className="flex items-center gap-0.5 px-0.5">
             <MenuButton onClick={() => editor.chain().focus().toggleHighlight().run()} isActive={editor.isActive('highlight')} icon={Highlighter} title="Destaque" />
@@ -380,7 +380,7 @@ export const RichTextEditor = ({
             <MenuButton onClick={() => editor.chain().focus().toggleCodeBlock().run()} isActive={editor.isActive('codeBlock')} icon={Code} title="Código" />
           </div>
 
-          <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-1.5" />
+          <div className="mx-1.5 h-6 w-px bg-border/70" />
 
           <div className="flex items-center gap-0.5 px-0.5">
             <MenuButton onClick={() => editor.chain().focus().toggleSubscript().run()} isActive={editor.isActive('subscript')} icon={SubscriptIcon} title="Subscrito" />
@@ -389,7 +389,7 @@ export const RichTextEditor = ({
         </BubbleMenu>
       )}
 
-      <EditorContent editor={editor} className="w-full font-sans" />
+      <EditorContent editor={editor} className="notes-editor-content w-full font-sans" />
 
     </div>
   );
