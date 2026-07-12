@@ -117,7 +117,7 @@ export default function Pacientes() {
     };
 
     return (
-        <div className="desktop-lumen-page desktop-content-offset w-full min-h-screen pt-24 pb-24 relative font-sans bg-transparent selection:bg-zinc-900/10 dark:selection:bg-white/10 selection:text-zinc-900 dark:selection:text-white">
+        <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 font-sans selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
             <NewPatientModal
                 open={agentPatientModalOpen}
                 onOpenChange={setAgentPatientModalOpen}
@@ -219,13 +219,13 @@ export default function Pacientes() {
             )}>
                 <div className="max-w-[1920px] mx-auto md:px-10 lg:px-16 xl:px-24">
                     <div className={cn(
-                        "desktop-retina-frame w-full flex items-center justify-between py-4 px-8 md:px-10 bg-white/90 dark:bg-[#0c0c0c]/90 backdrop-blur-3xl border border-black/[0.04] dark:border-white/[0.08] rounded-[28px] group transition-all duration-500 ease-apple hover:border-black/[0.08] dark:hover:border-white/[0.12]",
+                        "desktop-retina-frame group flex w-full items-center justify-between rounded-[30px] border border-border/45 bg-card/78 px-8 py-4 transition-[border-color,background-color,box-shadow] duration-300 hover:border-border/70 md:px-10",
                         isMobile && "p-5 flex-col gap-6"
                     )}>
                         {/* Title Section */}
                         <div className="flex items-center justify-between w-full md:w-auto">
                             <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 md:w-11 md:h-11 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-900 dark:text-white shadow-sm transition-transform duration-500 group-hover:scale-110">
+                                <div className="desktop-retina-inset flex h-10 w-10 items-center justify-center rounded-[15px] border border-border/45 bg-muted/30 text-foreground shadow-sm transition-transform duration-300 group-hover:scale-[1.04] md:h-11 md:w-11">
                                     <Users className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -258,7 +258,7 @@ export default function Pacientes() {
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className={cn(
-                                            "pl-11 h-12 bg-zinc-100/50 dark:bg-white/[0.04] border-transparent focus:bg-white dark:focus:bg-white/[0.1] hover:bg-white dark:hover:bg-white/[0.06] rounded-2xl text-xs font-bold tracking-tight transition-all duration-500 placeholder:text-zinc-400 shadow-sm w-full",
+                                            "desktop-retina-inset h-12 w-full rounded-2xl border-border/40 bg-muted/30 pl-11 text-xs font-bold tracking-tight shadow-none transition-[border-color,background-color] placeholder:text-muted-foreground/65 hover:bg-muted/45 focus:bg-background/70",
                                             isMobile && "h-11 rounded-2xl"
                                         )}
                                     />
@@ -331,7 +331,7 @@ export default function Pacientes() {
                         filteredPatients?.map((patient, i) => (
                             <GlassCard
                                 key={patient.id}
-                                className="desktop-retina-panel desktop-retina-interactive h-full min-h-[240px] group cursor-pointer rounded-[32px]"
+                                className="desktop-retina-panel desktop-retina-interactive group h-full min-h-[240px] cursor-pointer rounded-[32px] border-border/45 bg-card/72"
                                 innerClassName="p-0 flex flex-col h-full"
                                 onClick={() => navigate(`/pacientes/${patient.id}`)}
                                 delay={i * 40}
@@ -340,7 +340,7 @@ export default function Pacientes() {
                                     {/* Delete Button (Visible on hover) */}
                                     <button
                                         onClick={(e) => handleDeleteClick(e, patient.id, patient.name)}
-                                        className="absolute top-6 right-6 z-20 w-9 h-9 md:w-10 md:h-10 rounded-xl bg-zinc-50 dark:bg-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-500 hover:bg-rose-500 hover:text-white shadow-sm"
+                                        className="desktop-retina-inset absolute right-6 top-6 z-20 flex h-9 w-9 items-center justify-center rounded-[14px] bg-muted/40 opacity-0 shadow-sm transition-[opacity,background-color,color,transform] duration-200 hover:bg-rose-500 hover:text-white group-hover:opacity-100 md:h-10 md:w-10"
                                         title="Excluir paciente"
                                     >
                                         <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
@@ -371,11 +371,11 @@ export default function Pacientes() {
 
                                     {/* Bottom Info */}
                                     <div className="space-y-2.5 mt-6 md:mt-8">
-                                        <div className="desktop-retina-inset flex items-center gap-3.5 text-[11px] md:text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100/50 px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-zinc-200/50 transition-all group-hover:bg-white">
+                                        <div className="desktop-retina-inset flex items-center gap-3.5 rounded-xl border border-border/45 bg-muted/30 px-4 py-2.5 text-[11px] text-muted-foreground transition-colors group-hover:bg-muted/45 md:rounded-2xl md:py-3 md:text-xs">
                                             <Activity className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                                             <span className="truncate font-bold tracking-tight">{patient.diagnosis || "Sem diagnóstico definido"}</span>
                                         </div>
-                                        <div className="desktop-retina-inset flex items-center gap-3.5 text-[11px] md:text-xs text-zinc-600 dark:text-zinc-400 bg-zinc-100/50 px-4 py-2.5 md:py-3 rounded-xl md:rounded-2xl border border-zinc-200/50 transition-all group-hover:bg-white">
+                                        <div className="desktop-retina-inset flex items-center gap-3.5 rounded-xl border border-border/45 bg-muted/30 px-4 py-2.5 text-[11px] text-muted-foreground transition-colors group-hover:bg-muted/45 md:rounded-2xl md:py-3 md:text-xs">
                                             <Calendar className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
                                             <span className="font-bold tracking-tight">
                                                 {patient.next_session

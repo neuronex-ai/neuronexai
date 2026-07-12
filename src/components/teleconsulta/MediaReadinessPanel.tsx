@@ -86,7 +86,7 @@ export const MediaReadinessPanel = ({
     <div className={cn("space-y-4", className)}>
       <div
         className={cn(
-          "relative overflow-hidden border border-border/45 bg-black shadow-[0_30px_90px_-58px_rgba(0,0,0,0.8)] dark:border-white/10",
+          "teleconsultation-stage relative overflow-hidden bg-black",
           compact ? "aspect-[4/3] rounded-[28px]" : "aspect-video rounded-[30px]",
         )}
       >
@@ -94,7 +94,7 @@ export const MediaReadinessPanel = ({
           <video ref={videoRef} muted playsInline autoPlay className="h-full w-full scale-x-[-1] object-cover" />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 bg-gradient-to-b from-zinc-900 to-black text-white/55">
-            <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/10 bg-white/[0.06]">
+            <div className="flex h-16 w-16 items-center justify-center rounded-[22px] border border-white/[0.07] bg-white/[0.06]">
               <CameraOff className="h-7 w-7" />
             </div>
             <p className="text-[9px] font-black uppercase tracking-[0.18em]">
@@ -104,19 +104,19 @@ export const MediaReadinessPanel = ({
         )}
 
         {readiness.status === "requesting" ? (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/65 text-white backdrop-blur-sm">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-black/78 text-white">
             <Loader2 className="h-7 w-7 animate-spin" />
             <span className="text-[9px] font-black uppercase tracking-[0.18em]">Testando dispositivos</span>
           </div>
         ) : null}
 
         <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-2">
-          <div className={cn("flex items-center gap-2 rounded-full border border-white/10 bg-black/45 px-3 py-2 text-[8px] font-black uppercase tracking-[0.13em] backdrop-blur-xl", network.className)}>
+          <div className={cn("flex items-center gap-2 rounded-full border border-white/[0.07] bg-black/72 px-3 py-2 text-[8px] font-black uppercase tracking-[0.13em]", network.className)}>
             <NetworkIcon className="h-3.5 w-3.5" />
             {network.label}
           </div>
           {readiness.isReady ? (
-            <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/15 px-3 py-2 text-[8px] font-black uppercase tracking-[0.13em] text-emerald-300 backdrop-blur-xl">
+            <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/18 px-3 py-2 text-[8px] font-black uppercase tracking-[0.13em] text-emerald-300">
               <CheckCircle2 className="h-3.5 w-3.5" />
               Teste concluído
             </div>
@@ -129,11 +129,11 @@ export const MediaReadinessPanel = ({
           type="button"
           onClick={() => readiness.setAudioEnabled(!readiness.audioEnabled)}
           className={cn(
-            "flex min-h-14 min-w-0 items-center justify-center gap-2 rounded-[20px] border px-2 text-center text-[9px] font-black uppercase leading-tight tracking-[0.12em] transition active:scale-[0.98]",
+            "teleconsultation-action flex min-h-14 min-w-0 items-center justify-center gap-2 rounded-[18px] border px-2 text-center text-[9px] font-black uppercase leading-tight tracking-[0.12em]",
             compact && "flex-col py-3",
             readiness.audioEnabled
               ? "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-600 dark:text-emerald-300"
-              : "border-border/45 bg-foreground/[0.035] text-muted-foreground dark:border-white/10 dark:bg-white/[0.035]",
+              : "teleconsultation-inset text-muted-foreground",
           )}
         >
           {readiness.audioEnabled ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />}
@@ -143,11 +143,11 @@ export const MediaReadinessPanel = ({
           type="button"
           onClick={() => readiness.setVideoEnabled(!readiness.videoEnabled)}
           className={cn(
-            "flex min-h-14 min-w-0 items-center justify-center gap-2 rounded-[20px] border px-2 text-center text-[9px] font-black uppercase leading-tight tracking-[0.12em] transition active:scale-[0.98]",
+            "teleconsultation-action flex min-h-14 min-w-0 items-center justify-center gap-2 rounded-[18px] border px-2 text-center text-[9px] font-black uppercase leading-tight tracking-[0.12em]",
             compact && "flex-col py-3",
             readiness.videoEnabled
               ? "border-emerald-500/20 bg-emerald-500/[0.08] text-emerald-600 dark:text-emerald-300"
-              : "border-border/45 bg-foreground/[0.035] text-muted-foreground dark:border-white/10 dark:bg-white/[0.035]",
+              : "teleconsultation-inset text-muted-foreground",
           )}
         >
           {readiness.videoEnabled ? <Camera className="h-4 w-4" /> : <CameraOff className="h-4 w-4" />}
@@ -156,7 +156,7 @@ export const MediaReadinessPanel = ({
       </div>
 
       {readiness.audioEnabled ? (
-        <div className="rounded-[20px] border border-border/40 bg-card/70 p-4 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="teleconsultation-inset rounded-[18px] p-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
               <Mic className="h-3.5 w-3.5" />
@@ -169,10 +169,10 @@ export const MediaReadinessPanel = ({
           <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-foreground/[0.06] dark:bg-white/[0.06]">
             <div
               className={cn(
-                "h-full rounded-full transition-[width] duration-100",
+                "h-full w-full origin-left rounded-full transition-transform duration-100 motion-reduce:transition-none",
                 readiness.audioLevel > 0.72 ? "bg-amber-500" : "bg-emerald-500",
               )}
-              style={{ width: `${Math.max(4, readiness.audioLevel * 100)}%` }}
+              style={{ transform: `scaleX(${Math.max(0.04, readiness.audioLevel)})` }}
             />
           </div>
         </div>
@@ -210,7 +210,7 @@ export const MediaReadinessPanel = ({
             <select
               value={readiness.audioInputId || ""}
               onChange={(event) => readiness.setAudioInputId(event.target.value)}
-              className="h-12 w-full rounded-2xl border border-border/45 bg-background px-4 text-xs font-semibold text-foreground outline-none dark:border-white/10"
+              className="teleconsultation-inset h-12 w-full rounded-2xl px-4 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {readiness.audioInputs.map((device, index) => (
                 <option key={device.deviceId} value={device.deviceId}>{deviceLabel(device.label, "Microfone", index)}</option>
@@ -227,7 +227,7 @@ export const MediaReadinessPanel = ({
             <select
               value={readiness.videoInputId || ""}
               onChange={(event) => readiness.setVideoInputId(event.target.value)}
-              className="h-12 w-full rounded-2xl border border-border/45 bg-background px-4 text-xs font-semibold text-foreground outline-none dark:border-white/10"
+              className="teleconsultation-inset h-12 w-full rounded-2xl px-4 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {readiness.videoInputs.map((device, index) => (
                 <option key={device.deviceId} value={device.deviceId}>{deviceLabel(device.label, "Câmera", index)}</option>
@@ -244,7 +244,7 @@ export const MediaReadinessPanel = ({
             <select
               value={readiness.audioOutputId || ""}
               onChange={(event) => readiness.setAudioOutputId(event.target.value)}
-              className="h-12 w-full rounded-2xl border border-border/45 bg-background px-4 text-xs font-semibold text-foreground outline-none dark:border-white/10"
+              className="teleconsultation-inset h-12 w-full rounded-2xl px-4 text-xs font-semibold text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {readiness.audioOutputs.map((device, index) => (
                 <option key={device.deviceId} value={device.deviceId}>{deviceLabel(device.label, "Saída", index)}</option>

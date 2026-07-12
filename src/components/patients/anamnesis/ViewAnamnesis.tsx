@@ -2,7 +2,7 @@
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Loader2, Check, MoreVertical, FileDown, Mail, Trash2, RefreshCcw, ClipboardList, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
@@ -144,8 +144,7 @@ const AnamnesisEntry = memo(function AnamnesisEntry({
             >
                 <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-zinc-950/10 to-transparent dark:via-white/[0.075]" />
                 <div className="relative z-10 flex justify-center">
-                    <div className="relative overflow-hidden rounded-full border border-zinc-200/75 bg-white/84 px-8 py-2 shadow-[0_18px_44px_-36px_rgba(24,24,27,0.42),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-2xl dark:border-white/[0.08] dark:bg-white/[0.035] dark:shadow-[0_20px_48px_-38px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.04)]">
-                        <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.016] dark:opacity-[0.024]" />
+                    <div className="desktop-retina-inset relative overflow-hidden rounded-full border border-border/50 bg-background/82 px-8 py-2">
                         <AutoSaveField
                             type="question"
                             initialValue={item.question}
@@ -160,12 +159,10 @@ const AnamnesisEntry = memo(function AnamnesisEntry({
 
     return (
         <div
-            className="group/item relative overflow-hidden rounded-[28px] border border-zinc-200/70 bg-white/64 p-6 shadow-[0_22px_54px_-44px_rgba(24,24,27,0.42),inset_0_1px_0_rgba(255,255,255,0.76)] backdrop-blur-2xl transition-all duration-300 hover:border-zinc-300/80 hover:bg-white/86 hover:shadow-[0_28px_64px_-46px_rgba(24,24,27,0.5),inset_0_1px_0_rgba(255,255,255,0.88)] dark:border-white/[0.07] dark:bg-[#0a0a0b]/58 dark:shadow-[0_24px_58px_-42px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.032)] dark:hover:border-white/[0.115] dark:hover:bg-[#101012]/76 md:p-7"
+            className="desktop-retina-inset group/item relative overflow-hidden rounded-[26px] border border-border/45 bg-background/64 p-6 transition-colors duration-300 hover:border-border/80 hover:bg-background/82 md:p-7"
             style={{ contentVisibility: "auto", containIntrinsicSize: "190px" }}
         >
-            <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.012] dark:opacity-[0.022]" />
             <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-white/[0.08]" />
-            <div className="pointer-events-none absolute -right-16 -top-16 h-36 w-36 rounded-full bg-zinc-950/[0.025] blur-3xl dark:bg-white/[0.035]" />
             <div className="relative z-10 mb-4">
                 <AutoSaveField
                     type="question"
@@ -193,6 +190,7 @@ interface ViewAnamnesisProps {
 
 export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnamnesisProps = {}) {
     const { id: patientId } = useParams<{ id: string }>();
+    const shouldReduceMotion = useReducedMotion();
     const [data, setData] = useState<ExtractedItem[]>([]);
     const [visibleCount, setVisibleCount] = useState(ANAMNESIS_RENDER_PAGE_SIZE);
     const [isLoading, setIsLoading] = useState(true);
@@ -205,13 +203,8 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
     const { data: profile } = useProfile();
     const { data: patient } = usePatientById(patientId || "");
 
-    useEffect(() => {
-        if (patientId) {
-            fetchAnamnesis();
-        }
-    }, [patientId]);
-
-    const fetchAnamnesis = async () => {
+    const fetchAnamnesis = useCallback(async () => {
+        if (!patientId) return;
         try {
             const { data: records, error } = await supabase
                 .from('patient_anamneses')
@@ -234,7 +227,11 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [patientId]);
+
+    useEffect(() => {
+        void fetchAnamnesis();
+    }, [fetchAnamnesis]);
 
     const [linkModalOpen, setLinkModalOpen] = useState(false);
     const [publicToken, setPublicToken] = useState<string | null>(null);
@@ -495,17 +492,14 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
             <div className="relative flex h-full w-full max-w-5xl flex-1 flex-col px-0.5">
 
                 <motion.div
-                    initial={{ opacity: 0, scale: 0.98, y: 20 }}
+                    initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                    className="group/doc-container relative flex h-full w-full flex-col overflow-hidden rounded-[30px] border border-zinc-200/75 bg-white/68 shadow-[0_26px_70px_-52px_rgba(24,24,27,0.45),inset_0_1px_0_rgba(255,255,255,0.88)] backdrop-blur-2xl dark:border-white/[0.075] dark:bg-[#08090b]/88 dark:shadow-[0_28px_72px_-50px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.035)]"
+                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
+                    className="desktop-retina-panel group/doc-container relative flex h-full w-full flex-col overflow-hidden rounded-[30px] border border-border/50 bg-card/78"
                 >
-                    <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.014] dark:opacity-[0.026]" />
                     <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent opacity-75 dark:via-white/[0.08]" />
-                    <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-zinc-950/[0.035] blur-[96px] dark:bg-white/[0.035]" />
-                    <div className="pointer-events-none absolute -bottom-28 left-1/4 h-72 w-72 rounded-full bg-zinc-950/[0.02] blur-[110px] dark:bg-white/[0.018]" />
 
-                    <div className="relative z-20 flex flex-col items-center justify-between gap-4 border-b border-zinc-200/65 bg-white/36 p-5 backdrop-blur-2xl dark:border-white/[0.06] dark:bg-white/[0.025] sm:flex-row sm:px-6">
+                    <div className="relative z-20 flex flex-col items-center justify-between gap-4 border-b border-border/50 bg-muted/24 p-5 sm:flex-row sm:px-6">
                         <div className="flex items-center gap-4">
                             <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200/70 bg-zinc-950 text-white shadow-[0_18px_38px_-24px_rgba(24,24,27,0.55)] dark:border-white/[0.08] dark:bg-white dark:text-zinc-950 dark:shadow-[0_18px_42px_-28px_rgba(255,255,255,0.3)]">
                                 <ClipboardList className="h-4.5 w-4.5" />
@@ -536,7 +530,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                                         <MoreVertical className="h-5 w-5" />
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-72 rounded-[30px] border-zinc-200/75 bg-white/92 p-3 shadow-[0_32px_76px_-28px_rgba(24,24,27,0.35)] backdrop-blur-3xl ring-1 ring-black/[0.03] dark:border-white/[0.08] dark:bg-[#0a0a0b]/94 dark:shadow-[0_34px_88px_-28px_rgba(0,0,0,0.9)] dark:ring-white/[0.035]">
+                                <DropdownMenuContent align="end" className="desktop-retina-modal w-72 rounded-[26px] border-border/60 bg-popover/96 p-3 shadow-2xl">
                                     <div className="px-4 py-3 text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em] mb-1">Ações do Documento</div>
                                     <DropdownMenuItem onClick={handleDownloadPDF} className="gap-4 rounded-2xl cursor-pointer text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-widest py-4 px-5 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all">
                                         <div className="p-2 rounded-xl bg-zinc-50 dark:bg-white/10"><FileDown className="h-4 w-4" /></div> Baixar PDF
@@ -573,7 +567,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                         </div>
                     </div>
 
-                    <div className="anamnesis-scroll-surface custom-scrollbar relative z-10 flex-1 overflow-y-auto overscroll-contain p-5 [scrollbar-gutter:stable] sm:p-7">
+                    <div className="anamnesis-scroll-surface custom-scrollbar relative z-10 flex-1 overflow-y-auto overscroll-contain p-5 [contain:layout_paint_style] [scrollbar-gutter:stable] sm:p-7">
                         <div className="mx-auto max-w-4xl space-y-4">
                             {visibleData.map((item, idx) => (
                                 <AnamnesisEntry key={`${item.isSection ? "section" : "field"}-${idx}`} item={item} index={idx} onUpdate={handleUpdate} />
@@ -608,8 +602,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                             exit={{ opacity: 0, scale: 0.9, y: 20 }}
                             className="w-full max-w-md"
                         >
-                            <GlassCard className="relative overflow-hidden rounded-[38px] border-zinc-200/75 bg-white/92 p-8 text-center text-zinc-950 shadow-[0_42px_110px_-34px_rgba(24,24,27,0.38)] backdrop-blur-3xl dark:border-white/[0.085] dark:bg-[#09090b]/94 dark:text-white dark:shadow-[0_48px_118px_-32px_rgba(0,0,0,0.92)]">
-                                <div className="premium-noise pointer-events-none absolute inset-0 opacity-[0.014] dark:opacity-[0.03]" />
+                            <GlassCard className="desktop-retina-modal relative overflow-hidden rounded-[34px] border-border/60 bg-background/96 p-8 text-center text-foreground shadow-2xl">
                                 <Button
                                     variant="ghost"
                                     size="icon"

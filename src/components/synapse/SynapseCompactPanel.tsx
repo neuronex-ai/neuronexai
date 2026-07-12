@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { VoiceSpiral } from '@/components/ai-chat/VoiceSpiral';
@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useSynapse, type SynapseActiveTab } from '@/context/SynapseProvider';
 import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
+import { useChatSessionHistory, type ChatSession } from '@/hooks/use-ai-chat';
 import { sanitizeSynapseDisplayText } from '@/lib/synapse-humanize';
 import {
     X,
@@ -28,7 +29,6 @@ import {
 } from 'lucide-react';
 import { SynapseAllActionsModal } from './SynapseAllActionsModal';
 import { SynapseComposer, SynapseConversation } from './SynapseConversation';
-import { supabase } from '@/integrations/supabase/client';
 
 const CONTEXT_LABELS: Record<string, { icon: React.ReactNode; label: string }> = {
     dashboard: { icon: <TrendingUp className="h-3.5 w-3.5" />, label: 'Dashboard' },
@@ -48,7 +48,6 @@ const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.Eleme
     { id: 'timeline', label: 'Atividade', icon: Activity },
 ];
 
-const HISTORY_FETCH_BATCH = 48;
 const TIMELINE_RENDER_LIMIT = 80;
 
 type ActivityCopy = {
@@ -118,20 +117,6 @@ const inferChatActivity = (prompt: string, contextLabel: string): ActivityCopy =
     return { label: 'Processando solicitação', detail: contextDetail };
 };
 
-type ChatSessionRow = {
-    id: string;
-    title?: string | null;
-    updated_at?: string | null;
-    created_at?: string | null;
-    context_state?: {
-        source?: string | null;
-        remoteJid?: string | null;
-        pushName?: string | null;
-        phoneNumber?: string | null;
-        conversation_kind?: 'patient' | 'psychologist' | null;
-    } | null;
-};
-
 type SpeechRecognitionEventLike = {
     results: ArrayLike<{ 0: { transcript: string } }>;
 };
@@ -186,55 +171,15 @@ export const SynapseCompactPanel = () => {
 
     const [isListening, setIsListening] = useState(false);
     const [showAllActions, setShowAllActions] = useState(false);
-    const [sessions, setSessions] = useState<ChatSessionRow[]>([]);
-    const [isLoadingSessions, setIsLoadingSessions] = useState(false);
-    const [isLoadingMoreSessions, setIsLoadingMoreSessions] = useState(false);
-    const [historyOffset, setHistoryOffset] = useState(0);
-    const [hasMoreSessions, setHasMoreSessions] = useState(false);
     const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
-
-    const loadHistorySessions = useCallback(async (offset: number, append: boolean) => {
-        if (append) setIsLoadingMoreSessions(true);
-        else setIsLoadingSessions(true);
-
-        try {
-            const { data, error } = await supabase
-                .from('chat_sessions')
-                .select('id,title,updated_at,created_at,context_state')
-                .order('updated_at', { ascending: false })
-                .range(offset, offset + HISTORY_FETCH_BATCH - 1);
-
-            if (error) {
-                console.error('Error fetching sessions:', error);
-                return;
-            }
-
-            const batch = (data || []) as ChatSessionRow[];
-            const filtered = batch.filter((session) => {
-                if (session.title?.startsWith('NeuroPulse Analysis')) return false;
-                const isWhatsApp = session.context_state?.source === 'whatsapp';
-                return historyChannel === 'whatsapp' ? isWhatsApp : !isWhatsApp;
-            });
-
-            setSessions((current) => {
-                if (!append) return filtered;
-                const knownIds = new Set(current.map((session) => session.id));
-                return [...current, ...filtered.filter((session) => !knownIds.has(session.id))];
-            });
-            setHistoryOffset(offset + batch.length);
-            setHasMoreSessions(batch.length === HISTORY_FETCH_BATCH);
-        } catch (error) {
-            console.error('Error fetching sessions:', error);
-        } finally {
-            setIsLoadingSessions(false);
-            setIsLoadingMoreSessions(false);
-        }
-    }, [historyChannel]);
-
-    useEffect(() => {
-        if (activeTab !== 'history') return;
-        void loadHistorySessions(0, false);
-    }, [activeTab, historyChannel, loadHistorySessions]);
+    const historyQuery = useChatSessionHistory(historyChannel, shellState === 'compact' && activeTab === 'history');
+    const sessions = useMemo(() => {
+        const uniqueSessions = new Map<string, ChatSession>();
+        historyQuery.data?.pages.forEach((page) => {
+            page.sessions.forEach((session) => uniqueSessions.set(session.id, session));
+        });
+        return Array.from(uniqueSessions.values());
+    }, [historyQuery.data]);
 
     useEffect(() => {
         if (shellState === 'compact' && activeTab === 'voice' && voiceStatus === 'disconnected') {
@@ -297,10 +242,18 @@ export const SynapseCompactPanel = () => {
         setShowAllActions(false);
     };
 
-    const visibleTimeline = timeline.slice(-TIMELINE_RENDER_LIMIT).reverse();
+    const visibleTimeline = useMemo(
+        () => timeline.slice(-TIMELINE_RENDER_LIMIT).reverse(),
+        [timeline],
+    );
 
     const ctxInfo = CONTEXT_LABELS[currentContext] || { icon: <Sparkles className="h-3.5 w-3.5" />, label: 'Synapse' };
-    const latestUserPrompt = [...messages].reverse().find((message) => message.role === 'user')?.content || inputDraft;
+    const latestUserPrompt = useMemo(() => {
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+            if (messages[index].role === 'user') return messages[index].content;
+        }
+        return inputDraft;
+    }, [inputDraft, messages]);
     const latestExecutionEntry = visibleTimeline.find((entry) => entry.state === execState);
     const inferredChatActivity = inferChatActivity(latestUserPrompt, ctxInfo.label);
     const chatActivity = execState === 'executing' && latestExecutionEntry
@@ -315,6 +268,11 @@ export const SynapseCompactPanel = () => {
             }
         : inferredChatActivity;
     const isChatProcessing = activeTab === 'chat' && (isSending || execState === 'thinking' || execState === 'executing');
+    const chatActivityMode = execState === 'executing'
+        ? 'executing' as const
+        : progressEvent?.label && progressEvent.stage !== 'received'
+            ? 'responding' as const
+            : 'thinking' as const;
 
     useEffect(() => {
         if (shellState === 'compact' && activeTab === 'chat') {
@@ -324,10 +282,17 @@ export const SynapseCompactPanel = () => {
     }, [activeTab, shellState]);
 
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-        }
-    }, [messages]);
+        if (activeTab !== 'chat' || !scrollRef.current) return;
+        const frame = window.requestAnimationFrame(() => {
+            const viewport = scrollRef.current;
+            if (!viewport) return;
+            viewport.scrollTo({
+                top: viewport.scrollHeight,
+                behavior: 'auto',
+            });
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [activeTab, messages]);
 
     if (shellState !== 'compact') return null;
 
@@ -383,7 +348,6 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
-                style={{ willChange: "transform, opacity" }}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 8, scale: 0.992 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.992 }}
@@ -393,7 +357,7 @@ export const SynapseCompactPanel = () => {
                     scale: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                 }}
                 className={cn(
-                    'synapse-desktop-shell relative flex h-[min(720px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[30px] border',
+                    'synapse-desktop-shell relative flex h-[min(680px,calc(100dvh-24px))] w-[min(472px,calc(100vw-24px))] flex-col overflow-hidden rounded-[32px] border',
                 )}
                 role="dialog"
                 aria-label="Synapse AI"
@@ -402,17 +366,17 @@ export const SynapseCompactPanel = () => {
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
                         <header className="synapse-desktop-chrome shrink-0">
-                            <div className="synapse-desktop-toolbar flex min-h-[68px] items-center gap-2.5 pl-4 pr-3">
+                            <div className="synapse-desktop-toolbar flex min-h-[64px] items-center gap-2.5 pl-4 pr-3">
                                 <span className="w-[92px] shrink-0 truncate text-[14px] font-semibold tracking-[0.01em] text-foreground">
                                     Synapse AI
                                 </span>
 
-                                <nav className="synapse-desktop-tabs flex w-fit max-w-full shrink-0 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
+                                <nav className="synapse-desktop-tabs grid shrink-0 grid-cols-4 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
                                     {PANEL_TABS.map((tab, index) => {
                                         const Icon = tab.icon;
                                         const isActive = activeTab === tab.id;
                                         return (
-                                            <motion.button
+                                            <button
                                                 key={tab.id}
                                                 ref={(node) => { tabRefs.current[index] = node; }}
                                                 id={`synapse-tab-${tab.id}`}
@@ -425,11 +389,10 @@ export const SynapseCompactPanel = () => {
                                                 tabIndex={isActive ? 0 : -1}
                                                 onClick={() => handleTabChange(tab.id)}
                                                 onKeyDown={(event) => handleTabKeyDown(event, index)}
-                                                whileTap={shouldReduceMotion ? undefined : { scale: 0.96, y: 1 }}
                                                 className={cn(
-                                                    'relative flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-[10px] text-[10px] font-semibold transition-[color,width,padding] duration-200',
+                                                    'relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
                                                     'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                                    isActive ? 'min-w-[66px] px-2 text-foreground' : 'w-9 px-0 text-muted-foreground',
+                                                    isActive ? 'text-foreground' : 'text-muted-foreground',
                                                 )}
                                             >
                                                 {isActive ? (
@@ -446,21 +409,8 @@ export const SynapseCompactPanel = () => {
                                                         <span className="absolute -right-1 -top-1 h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
                                                     ) : null}
                                                 </span>
-                                                <AnimatePresence initial={false} mode="wait">
-                                                    {isActive ? (
-                                                        <motion.span
-                                                            key={tab.id}
-                                                            initial={shouldReduceMotion ? false : { opacity: 0, width: 0 }}
-                                                            animate={{ opacity: 1, width: 'auto' }}
-                                                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0 }}
-                                                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: 'easeOut' }}
-                                                            className="relative z-10 overflow-hidden whitespace-nowrap"
-                                                        >
-                                                            {tab.label}
-                                                        </motion.span>
-                                                    ) : null}
-                                                </AnimatePresence>
-                                            </motion.button>
+                                                <span className="sr-only">{tab.label}</span>
+                                            </button>
                                         );
                                     })}
                                 </nav>
@@ -522,18 +472,19 @@ export const SynapseCompactPanel = () => {
                             'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
-                        <AnimatePresence initial={false} mode="wait">
+                        <AnimatePresence initial={false} mode="sync">
                             {activeTab === 'history' ? (
                                 <motion.div
                                     key="history"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 4 }}
+                                    initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -3 }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                                     className="flex flex-col gap-3 py-4"
                                 >
                                     <div className="flex min-h-11 items-center justify-between px-2">
                                         <h3 className="text-[12px] font-semibold text-foreground">Conversas recentes</h3>
-                                        {isLoadingSessions && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
+                                        {historyQuery.isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
                                     </div>
 
                                     <div className="synapse-history-segment grid grid-cols-2 p-1 text-[11px] font-medium text-muted-foreground">
@@ -541,29 +492,45 @@ export const SynapseCompactPanel = () => {
                                             type="button"
                                             onClick={() => setHistoryChannel('neuronex')}
                                             className={cn(
-                                                "relative h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                "relative isolate h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'neuronex'
-                                                    ? "synapse-history-segment-active"
+                                                    ? "text-background"
                                                     : "hover:text-foreground"
                                             )}
                                         >
-                                            NeuroNex
+                                            {historyChannel === 'neuronex' ? (
+                                                <motion.span
+                                                    layoutId="synapse-history-channel"
+                                                    className="synapse-history-segment-active absolute inset-0 -z-10 rounded-[10px]"
+                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
+                                                    aria-hidden="true"
+                                                />
+                                            ) : null}
+                                            <span className="relative z-10">NeuroNex</span>
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => setHistoryChannel('whatsapp')}
                                             className={cn(
-                                                "relative h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                "relative isolate h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                                 historyChannel === 'whatsapp'
-                                                    ? "synapse-history-segment-active"
+                                                    ? "text-background"
                                                     : "hover:text-foreground"
                                             )}
                                         >
-                                            WhatsApp Business
+                                            {historyChannel === 'whatsapp' ? (
+                                                <motion.span
+                                                    layoutId="synapse-history-channel"
+                                                    className="synapse-history-segment-active absolute inset-0 -z-10 rounded-[10px]"
+                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
+                                                    aria-hidden="true"
+                                                />
+                                            ) : null}
+                                            <span className="relative z-10">WhatsApp Business</span>
                                         </button>
                                     </div>
 
-                                    {sessions.length === 0 && !isLoadingSessions ? (
+                                    {sessions.length === 0 && !historyQuery.isLoading ? (
                                         <div className="synapse-empty-state flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
                                             <MessageSquare className="h-7 w-7 opacity-60" />
                                             <p className="text-[12px] font-medium">
@@ -618,24 +585,25 @@ export const SynapseCompactPanel = () => {
                                         </div>
                                     )}
 
-                                    {hasMoreSessions ? (
+                                    {historyQuery.hasNextPage ? (
                                         <button
                                             type="button"
-                                            onClick={() => void loadHistorySessions(historyOffset, true)}
-                                            disabled={isLoadingMoreSessions}
+                                            onClick={() => void historyQuery.fetchNextPage()}
+                                            disabled={historyQuery.isFetchingNextPage}
                                             className="synapse-load-more mt-3 flex min-h-11 w-full items-center justify-center gap-2 text-[11px] font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                         >
-                                            {isLoadingMoreSessions ? <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> : <ChevronRight className="h-3.5 w-3.5 rotate-90" />}
-                                            {isLoadingMoreSessions ? 'Carregando' : 'Carregar mais'}
+                                            {historyQuery.isFetchingNextPage ? <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> : <ChevronRight className="h-3.5 w-3.5 rotate-90" />}
+                                            {historyQuery.isFetchingNextPage ? 'Carregando' : 'Carregar mais'}
                                         </button>
                                     ) : null}
                                 </motion.div>
                             ) : activeTab === 'timeline' ? (
                                 <motion.div
                                     key="timeline"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 4 }}
+                                    initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -3 }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                                     className="flex flex-col gap-4 py-4"
                                 >
                                     {visibleTimeline.length === 0 ? (
@@ -661,9 +629,10 @@ export const SynapseCompactPanel = () => {
                             ) : activeTab === 'voice' ? (
                                 <motion.div
                                     key="voice"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 4 }}
+                                    initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -3 }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
                                     className="synapse-voice-view flex h-full min-h-[430px] flex-col items-center justify-center py-8"
                                 >
                                     <div className="flex w-full items-center justify-between px-2">
@@ -713,7 +682,14 @@ export const SynapseCompactPanel = () => {
                                     )}
                                 </motion.div>
                             ) : (
-                                <div className="synapse-chat-view min-h-full py-3">
+                                <motion.div
+                                    key="chat"
+                                    initial={shouldReduceMotion ? false : { opacity: 0, x: 3 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    exit={{ opacity: 0, x: -3 }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                                    className="synapse-chat-view min-h-full py-3"
+                                >
                                     <div className="synapse-context-pill mx-1 flex w-fit items-center px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
                                         <span>{ctxInfo.label}</span>
                                     </div>
@@ -723,11 +699,12 @@ export const SynapseCompactPanel = () => {
                                         isProcessing={isChatProcessing}
                                         activityLabel={chatActivity.label}
                                         activityDetail={chatActivity.detail}
+                                        activityMode={chatActivityMode}
                                         quickActions={quickActions}
                                         shouldReduceMotion={Boolean(shouldReduceMotion)}
                                         onQuickAction={setInputDraft}
                                     />
-                                </div>
+                                </motion.div>
                             )}
                         </AnimatePresence>
                     </div>

@@ -12,6 +12,10 @@ export type NotificationCategory = 'dashboard' | 'agenda' | 'prontuario' | 'tele
 export type NotificationSeverity = 'success' | 'info' | 'warning' | 'destructive';
 export type AppNotification = { id: string; userId: string; eventId: string | null; type: string; category: NotificationCategory; severity: NotificationSeverity; title: string; message: string; actionUrl: string | null; metadata: Record<string, unknown>; priority: string; createdAt: string; updatedAt: string | null; readAt: string | null; dismissedAt: string | null; isRead: boolean };
 type Row = { id: string; user_id: string; event_id: string | null; type: string; category: string | null; severity: string | null; title: string; message: string; action_url: string | null; data: Record<string, unknown> | null; payload: Record<string, unknown> | null; priority: string | null; created_at: string | null; updated_at: string | null; read: boolean | null; read_at: string | null; dismissed_at: string | null };
+type UseNotificationsOptions = { enableRealtime?: boolean; syncBadge?: boolean };
+
+const EMPTY_NOTIFICATIONS: AppNotification[] = [];
+const recentlyDismissed = new Map<string, AppNotification>();
 
 const category = (value?: string | null): NotificationCategory => {
   const item = value?.toLowerCase();
@@ -70,7 +74,7 @@ const showDesktopNativeNotification = async (item: AppNotification) => {
   }
 };
 
-export const useNotifications = () => {
+export const useNotifications = ({ enableRealtime = false, syncBadge = false }: UseNotificationsOptions = {}) => {
   const { user } = useAuth();
   const { settings } = useNotificationSettings();
   const userId = user?.id;
@@ -82,11 +86,33 @@ export const useNotifications = () => {
     return (result.data || []).map((row) => map(row as Row));
   }});
   const invalidate = useCallback(() => { void client.invalidateQueries({ queryKey: key }); }, [client, key]);
+  const updateCachedNotifications = useCallback(
+    (updater: (current: AppNotification[]) => AppNotification[]) => {
+      client.setQueryData<AppNotification[]>(key, (current) => updater(current || EMPTY_NOTIFICATIONS));
+    },
+    [client, key],
+  );
 
   useEffect(() => {
-    if (!userId) return;
-    const channel = supabase.channel(`notifications:${userId}:${Date.now()}`).on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
-      invalidate();
+    if (!userId || !enableRealtime) return;
+    const channel = supabase.channel(`notifications:${userId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${userId}` }, (payload) => {
+      const row = payload.new as Row | undefined;
+      const previousId = String((payload.old as Partial<Row> | null)?.id || '');
+
+      if (payload.eventType === 'DELETE') {
+        updateCachedNotifications((current) => current.filter((item) => item.id !== previousId));
+        return;
+      }
+
+      if (row?.id) {
+        const item = map(row);
+        updateCachedNotifications((current) => {
+          const withoutCurrent = current.filter((candidate) => candidate.id !== item.id);
+          if (item.dismissedAt) return withoutCurrent;
+          return [item, ...withoutCurrent].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
+        });
+      }
+
       if (payload.eventType === 'INSERT') {
         const item = map(payload.new as Row);
         if (settings?.push_enabled) void showDesktopNativeNotification(item);
@@ -94,10 +120,10 @@ export const useNotifications = () => {
       }
     }).subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [invalidate, settings?.push_enabled, userId]);
+  }, [enableRealtime, settings?.push_enabled, updateCachedNotifications, userId]);
 
   useEffect(() => {
-    if (!userId || !settings?.push_enabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    if (!enableRealtime || !userId || !settings?.push_enabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     let cancelled = false;
     let stop: (() => void) | undefined;
     void hasActivePushSubscription(userId).then((active) => {
@@ -114,7 +140,7 @@ export const useNotifications = () => {
       cancelled = true;
       stop?.();
     };
-  }, [settings?.push_enabled, userId]);
+  }, [enableRealtime, settings?.push_enabled, userId]);
 
   const update = (values: Record<string, unknown>) => async (id?: string) => {
     if (!userId) return;
@@ -123,21 +149,67 @@ export const useNotifications = () => {
     const result = await request;
     if (result.error) throw result.error;
   };
-  const markRead = useMutation({ mutationFn: (id: string) => update({ read: true, read_at: new Date().toISOString() })(id), onSettled: invalidate });
-  const markAll = useMutation({ mutationFn: () => update({ read: true, read_at: new Date().toISOString() })(), onSettled: invalidate });
-  const dismiss = useMutation({ mutationFn: (id: string) => update({ dismissed_at: new Date().toISOString() })(id), onSettled: invalidate });
-  const restore = useMutation({ mutationFn: (id: string) => update({ dismissed_at: null })(id), onSettled: invalidate });
-  const notifications = query.data || [];
-  const unreadCount = notifications.filter((item) => !item.isRead).length;
+  const markRead = useMutation({
+    mutationFn: (id: string) => update({ read: true, read_at: new Date().toISOString() })(id),
+    onMutate: async (id) => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData<AppNotification[]>(key);
+      updateCachedNotifications((current) => current.map((item) => item.id === id ? { ...item, isRead: true, readAt: new Date().toISOString() } : item));
+      return { previous };
+    },
+    onError: (_error, _id, context) => client.setQueryData(key, context?.previous),
+  });
+  const markAll = useMutation({
+    mutationFn: () => update({ read: true, read_at: new Date().toISOString() })(),
+    onMutate: async () => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData<AppNotification[]>(key);
+      const readAt = new Date().toISOString();
+      updateCachedNotifications((current) => current.map((item) => ({ ...item, isRead: true, readAt })));
+      return { previous };
+    },
+    onError: (_error, _variables, context) => client.setQueryData(key, context?.previous),
+  });
+  const dismiss = useMutation({
+    mutationFn: (id: string) => update({ dismissed_at: new Date().toISOString() })(id),
+    onMutate: async (id) => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData<AppNotification[]>(key);
+      const dismissedItem = previous?.find((item) => item.id === id);
+      if (dismissedItem) recentlyDismissed.set(id, dismissedItem);
+      updateCachedNotifications((current) => current.filter((item) => item.id !== id));
+      return { previous };
+    },
+    onError: (_error, _id, context) => client.setQueryData(key, context?.previous),
+  });
+  const restore = useMutation({
+    mutationFn: (id: string) => update({ dismissed_at: null })(id),
+    onMutate: async (id) => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData<AppNotification[]>(key);
+      const restoredItem = recentlyDismissed.get(id);
+      if (restoredItem) {
+        updateCachedNotifications((current) => [restoredItem, ...current].sort((left, right) => right.createdAt.localeCompare(left.createdAt)));
+      }
+      return { previous, restoredItem };
+    },
+    onSuccess: (_data, id, context) => {
+      recentlyDismissed.delete(id);
+      if (!context?.restoredItem) invalidate();
+    },
+    onError: (_error, _id, context) => client.setQueryData(key, context?.previous),
+  });
+  const notifications = query.data || EMPTY_NOTIFICATIONS;
+  const unreadCount = useMemo(() => notifications.reduce((count, item) => count + (item.isRead ? 0 : 1), 0), [notifications]);
 
   useEffect(() => {
-    void setPwaBadge(unreadCount);
-  }, [unreadCount]);
+    if (syncBadge) void setPwaBadge(unreadCount);
+  }, [syncBadge, unreadCount]);
 
   return { ...query, notifications, unreadCount, markAsRead: markRead.mutateAsync, markAllAsRead: markAll.mutateAsync, dismiss: dismiss.mutateAsync, restore: restore.mutateAsync, isMutating: markRead.isPending || markAll.isPending || dismiss.isPending || restore.isPending, refresh: query.refetch };
 };
 
 export const useUnreadNotificationCount = () => {
-  const { unreadCount, isLoading } = useNotifications();
+  const { unreadCount, isLoading } = useNotifications({ enableRealtime: true, syncBadge: true });
   return { unreadCount, isLoading };
 };

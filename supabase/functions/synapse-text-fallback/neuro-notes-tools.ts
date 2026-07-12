@@ -30,7 +30,7 @@ export const NEURO_NOTES_AGENT_TOOLS = new Set([
 const cleanText = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const cleanId = (value: unknown) => {
   const id = cleanText(value, 100);
-  if (!/^[a-zA-Z0-9_-]{6,100}$/.test(id)) throw new Error("Identificador invÃ¡lido.");
+  if (!/^[a-zA-Z0-9_-]{6,100}$/.test(id)) throw new Error("Identificador inválido.");
   return id;
 };
 const clamp = (value: unknown, fallback: number, min: number, max: number) => {
@@ -127,12 +127,12 @@ async function resolvePatient(admin: any, userId: string, args: Record<string, a
       .eq("user_id", userId)
       .maybeSingle();
     if (error) throw error;
-    if (!data) throw new Error("Paciente nÃ£o encontrado ou sem permissÃ£o.");
+    if (!data) throw new Error("Paciente não encontrado ou sem permissão.");
     return data;
   }
 
   const name = escapeLike(cleanText(args.patient_name || args.patient || "", 160));
-  if (!name) throw new Error("Informe o paciente para eu vincular a anÃ¡lise.");
+  if (!name) throw new Error("Informe o paciente para eu vincular a análise.");
 
   const { data, error } = await admin
     .from("patients")
@@ -143,11 +143,11 @@ async function resolvePatient(admin: any, userId: string, args: Record<string, a
     .limit(12);
   if (error) throw error;
   const matches = data || [];
-  if (!matches.length) throw new Error(`NÃ£o encontrei paciente com o nome "${name}".`);
+  if (!matches.length) throw new Error(`Não encontrei paciente com o nome "${name}".`);
   const exact = matches.filter((item: any) => normalizeText(item.name) === normalizeText(name));
   const candidates = exact.length === 1 ? exact : matches;
   if (candidates.length !== 1) {
-    throw new Error(`Encontrei mais de um paciente compatÃ­vel: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}.`);
+    throw new Error(`Encontrei mais de um paciente compatível: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}.`);
   }
   return candidates[0];
 }
@@ -232,12 +232,12 @@ async function gatherPatientBundle(context: AgentToolContext, patient: any, incl
 }
 
 const keywordGroups = [
-  { key: "evitacao", label: "EvitaÃ§Ã£o / esquiva", terms: ["evita", "evitacao", "foge", "adiar", "procrast", "isola", "cancel"] },
-  { key: "ansiedade", label: "Ansiedade / antecipaÃ§Ã£o", terms: ["ansiedade", "ansioso", "medo", "preocup", "rumin", "panico", "tensao"] },
+  { key: "evitacao", label: "Evitação / esquiva", terms: ["evita", "evitacao", "foge", "adiar", "procrast", "isola", "cancel"] },
+  { key: "ansiedade", label: "Ansiedade / antecipação", terms: ["ansiedade", "ansioso", "medo", "preocup", "rumin", "panico", "tensao"] },
   { key: "controle", label: "Controle / hiperresponsabilidade", terms: ["controle", "perfeccion", "cobran", "responsabil", "exig", "falhar"] },
-  { key: "vinculo", label: "VÃ­nculo / pertencimento", terms: ["vinculo", "relacion", "famil", "parceir", "rejei", "abandono", "solid"] },
+  { key: "vinculo", label: "Vínculo / pertencimento", terms: ["vinculo", "relacion", "famil", "parceir", "rejei", "abandono", "solid"] },
   { key: "humor", label: "Humor / energia", terms: ["triste", "depress", "apatia", "desanim", "energia", "irrit", "culpa"] },
-  { key: "corpo", label: "Sinais corporais", terms: ["sono", "insÃ´nia", "insonia", "corpo", "dor", "respira", "cans", "apetite"] },
+  { key: "corpo", label: "Sinais corporais", terms: ["sono", "insônia", "insonia", "corpo", "dor", "respira", "cans", "apetite"] },
 ];
 
 function allTexts(bundle: PatientBundle) {
@@ -330,16 +330,16 @@ function buildNeuroViewTrace(bundle: PatientBundle) {
 function buildInsightSummary(bundle: PatientBundle, themes: Array<{ label: string; score: number }>) {
   const hasHistory = bundle.notes.length + bundle.sessionNotes.length + bundle.pulseEntries.length + bundle.flows.length;
   if (!hasHistory) {
-    return `Ainda hÃ¡ pouco histÃ³rico vinculado a ${bundle.patient.name}. O Synapse abriu o NeuroView, mas nÃ£o encontrou evidÃªncia suficiente para inferir padrÃµes sem inventar.`;
+    return `Ainda há pouco histórico vinculado a ${bundle.patient.name}. O Synapse abriu o NeuroView, mas não encontrou evidência suficiente para inferir padrões sem inventar.`;
   }
 
   const topThemes = themes.slice(0, 4).map((theme) => theme.label);
   const recentNotes = bundle.notes.slice(0, 3).map((note) => note.title).filter(Boolean);
   return [
-    `AnÃ¡lise NeuroView de ${bundle.patient.name} concluÃ­da.`,
-    topThemes.length ? `PadrÃµes mais salientes: ${topThemes.join(", ")}.` : "NÃ£o apareceu uma tag dominante; o padrÃ£o parece depender mais da sequÃªncia das notas do que de um tema Ãºnico.",
-    `Base considerada: ${bundle.notes.length} notas, ${bundle.sessionNotes.length} registros de prontuÃ¡rio, ${bundle.flows.length} fluxos e ${bundle.pulseEntries.length} NeuroPulse entries.`,
-    recentNotes.length ? `EvidÃªncias recentes: ${recentNotes.join("; ")}.` : "",
+    `Análise NeuroView de ${bundle.patient.name} concluída.`,
+    topThemes.length ? `Padrões mais salientes: ${topThemes.join(", ")}.` : "Não apareceu uma tag dominante; o padrão parece depender mais da sequência das notas do que de um tema único.",
+    `Base considerada: ${bundle.notes.length} notas, ${bundle.sessionNotes.length} registros de prontuário, ${bundle.flows.length} fluxos e ${bundle.pulseEntries.length} NeuroPulse entries.`,
+    recentNotes.length ? `Evidências recentes: ${recentNotes.join("; ")}.` : "",
   ].filter(Boolean).join("\n");
 }
 
@@ -363,32 +363,32 @@ function buildWorkflow(bundle: PatientBundle, objective: string) {
       ...extra,
     },
   });
-  const themeA = themes[0]?.label || "PadrÃ£o principal ainda em formaÃ§Ã£o";
+  const themeA = themes[0]?.label || "Padrão principal ainda em formação";
   const themeB = themes[1]?.label || "Resposta emocional/comportamental";
-  const themeC = themes[2]?.label || "HipÃ³tese a acompanhar";
+  const themeC = themes[2]?.label || "Hipótese a acompanhar";
   const firstNote = notes[0];
   const secondNote = notes[1];
 
   const nodes = [
-    mkNode("patient-context", "patient", 0, 0, bundle.patient.name, `Contexto clÃ­nico consolidado. Objetivo: ${objective || "mapear padrÃµes do histÃ³rico"}.`, { patientName: bundle.patient.name, confidence: 0.92 }),
+    mkNode("patient-context", "patient", 0, 0, bundle.patient.name, `Contexto clínico consolidado. Objetivo: ${objective || "mapear padrões do histórico"}.`, { patientName: bundle.patient.name, confidence: 0.92 }),
     mkNode("recurring-trigger", "trigger", 320, -170, themeA, `Sinal recorrente detectado em notas/tags do paciente.`, { sourceNoteId: firstNote?.id }),
-    mkNode("meaning-loop", "thought", 640, -170, "Significado atribuido", `PossÃ­vel interpretaÃ§Ã£o interna que organiza o padrÃ£o: ${themeA}.`, { sourceNoteId: firstNote?.id }),
-    mkNode("emotion-response", "emotion", 960, -170, themeB, `Resposta emocional/somÃ¡tica associada ao padrÃ£o percebido.`, { sourceNoteId: secondNote?.id }),
-    mkNode("behavior-response", "behavior", 960, 80, "Resposta comportamental", "AÃ§Ãµes provÃ¡veis: aproximaÃ§Ã£o, esquiva, controle, pausa ou busca de reasseguramento conforme o contexto.", { confidence: 0.62 }),
-    mkNode("consequence-loop", "loop", 640, 180, "Ciclo de reforÃ§o", "ConsequÃªncias que podem manter o padrÃ£o: alÃ­vio imediato, custo posterior ou repetiÃ§Ã£o do mesmo roteiro.", { confidence: 0.64 }),
-    mkNode("clinical-hypothesis", "diagnostic", 320, 180, themeC, "HipÃ³tese de trabalho a validar em consulta, nÃ£o conclusÃ£o diagnÃ³stica.", { confidence: 0.58 }),
-    mkNode("possible-action", "intervention", 0, 250, "AÃ§Ãµes possÃ­veis", "Explorar exceÃ§Ãµes, mapear antecedentes, testar micro-aÃ§Ãµes e observar respostas do paciente.", { confidence: 0.7 }),
+    mkNode("meaning-loop", "thought", 640, -170, "Significado atribuído", `Possível interpretação interna que organiza o padrão: ${themeA}.`, { sourceNoteId: firstNote?.id }),
+    mkNode("emotion-response", "emotion", 960, -170, themeB, `Resposta emocional/somática associada ao padrão percebido.`, { sourceNoteId: secondNote?.id }),
+    mkNode("behavior-response", "behavior", 960, 80, "Resposta comportamental", "Ações prováveis: aproximação, esquiva, controle, pausa ou busca de reasseguramento conforme o contexto.", { confidence: 0.62 }),
+    mkNode("consequence-loop", "loop", 640, 180, "Ciclo de reforço", "Consequências que podem manter o padrão: alívio imediato, custo posterior ou repetição do mesmo roteiro.", { confidence: 0.64 }),
+    mkNode("clinical-hypothesis", "diagnostic", 320, 180, themeC, "Hipótese de trabalho a validar em consulta, não conclusão diagnóstica.", { confidence: 0.58 }),
+    mkNode("possible-action", "intervention", 0, 250, "Ações possíveis", "Explorar exceções, mapear antecedentes, testar micro-ações e observar respostas do paciente.", { confidence: 0.7 }),
   ];
 
   const edges = [
-    ["patient-context", "recurring-trigger", "histÃ³rico sugere"],
+    ["patient-context", "recurring-trigger", "histórico sugere"],
     ["recurring-trigger", "meaning-loop", "evoca significado"],
-    ["meaning-loop", "emotion-response", "modula emoÃ§Ã£o"],
+    ["meaning-loop", "emotion-response", "modula emoção"],
     ["emotion-response", "behavior-response", "organiza resposta"],
-    ["behavior-response", "consequence-loop", "gera consequÃªncia"],
+    ["behavior-response", "consequence-loop", "gera consequência"],
     ["consequence-loop", "recurring-trigger", "retroalimenta"],
-    ["consequence-loop", "clinical-hypothesis", "orienta hipÃ³tese"],
-    ["clinical-hypothesis", "possible-action", "abre intervenÃ§Ã£o"],
+    ["consequence-loop", "clinical-hypothesis", "orienta hipótese"],
+    ["clinical-hypothesis", "possible-action", "abre intervenção"],
   ].map(([source, target, relation], index) => ({
     id: `synapse-edge-${index + 1}`,
     source,
@@ -421,7 +421,7 @@ function buildWorkflow(bundle: PatientBundle, objective: string) {
 
 function buildNeuroPulseMermaid(bundle: PatientBundle, lensLabel: string, prompt: string) {
   const themes = rankThemes(bundle);
-  const principal = mermaidLabel(themes[0]?.label || prompt || "Relato clinico");
+  const principal = mermaidLabel(themes[0]?.label || prompt || "Relato clínico");
   const secondary = mermaidLabel(themes[1]?.label || "Resposta percebida");
   const third = mermaidLabel(themes[2]?.label || "Hipotese a validar");
   const chatCue = mermaidLabel(bundle.chatMessages.map((m) => m.content).join(" ").slice(-360) || prompt || "Contexto do chat", 96);
@@ -463,19 +463,19 @@ function validateNeuroPulseMermaid(value: string) {
     .replace(/\r\n/g, "\n")
     .trim();
   if (!/^flowchart\s+TD\b/i.test(normalized)) throw new Error("Mermaid precisa iniciar com flowchart TD.");
-  if (/<[a-z!/]/i.test(normalized)) throw new Error("Mermaid nÃ£o pode conter HTML.");
+  if (/<[a-z!/]/i.test(normalized)) throw new Error("Mermaid não pode conter HTML.");
   const nodeLines = normalized.split("\n").filter((line) => /^\s*[A-Z][A-Z0-9]*\["/.test(line));
   const edgeLines = normalized.split("\n").filter((line) => /-->|---/.test(line));
-  if (nodeLines.length > 18) throw new Error("Mermaid excede o limite de 18 nÃ³s.");
+  if (nodeLines.length > 18) throw new Error("Mermaid excede o limite de 18 nós.");
   if (edgeLines.length > 28) throw new Error("Mermaid excede o limite de 28 arestas.");
   return normalized;
 }
 
 function lensLabel(value?: string) {
   const labels: Record<string, string> = {
-    psicanalise: "PsicanÃ¡lise",
+    psicanalise: "Psicanálise",
     tcc: "TCC",
-    sistemica: "SistÃªmica",
+    sistemica: "Sistêmica",
     humanista: "Humanista",
     gestalt: "Gestalt-terapia",
     junguiana: "Junguiana",
@@ -497,18 +497,18 @@ export async function executeNeuroNotesAgentTool(
   const intent = cleanText(args.objective || args.focus || args.prompt || args.reason || "", 800);
   const initialSteps = [
     createStep("Resolver paciente", "completed", patient.name),
-    createStep("Coletar histÃ³rico vinculado", "active", "Notas, prontuÃ¡rio, fluxos e NeuroPulse."),
+    createStep("Coletar histórico vinculado", "active", "Notas, prontuário, fluxos e NeuroPulse."),
   ];
 
     if (name === "analyze_neuroview_patient_patterns") {
-      const run = await createRun(context, "neuroview", patient, intent || "Analisar padrÃµes no NeuroView", initialSteps);
+      const run = await createRun(context, "neuroview", patient, intent || "Analisar padrões no NeuroView", initialSteps);
       const bundle = await gatherPatientBundle(context, patient, false);
       const traceCore = buildNeuroViewTrace(bundle);
       const steps = [
         ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
         createStep("Agrupar sinais recorrentes", "completed", `${traceCore.themes.length} temas candidatos.`),
-        createStep("Cruzar notas e conexÃµes", "completed", `${traceCore.nodes.length} nÃ³s destacados.`),
-        createStep("Sintetizar padrÃµes", "completed", "Resposta clÃ­nica gerada com evidÃªncias."),
+        createStep("Cruzar notas e conexões", "completed", `${traceCore.nodes.length} nós destacados.`),
+        createStep("Sintetizar padrões", "completed", "Resposta clínica gerada com evidências."),
       ];
       const summary = buildInsightSummary(bundle, traceCore.themes);
       const trace = { steps, nodes: traceCore.nodes, links: traceCore.links, summary };
@@ -529,22 +529,22 @@ export async function executeNeuroNotesAgentTool(
             runId: run.id,
             notesView: "neuroview",
             trace,
-            reason: `Abrindo NeuroView para analisar os padrÃµes de ${patient.name}.`,
+            reason: `Abrindo NeuroView para analisar os padrões de ${patient.name}.`,
           },
         },
       };
     }
 
     if (name === "create_neuroflow_from_patient_history") {
-      const run = await createRun(context, "neuroflow", patient, intent || "Construir NeuroFlow pelo histÃ³rico", initialSteps);
+      const run = await createRun(context, "neuroflow", patient, intent || "Construir NeuroFlow pelo histórico", initialSteps);
       const bundle = await gatherPatientBundle(context, patient, false);
       const workflow = buildWorkflow(bundle, intent);
       const title = String(workflow.metadata.title || `Synapse Flow - ${patient.name}`);
-      const flowDescription = `Fluxo gerado pelo Synapse com base no histÃ³rico vinculado de ${patient.name}.`;
+      const flowDescription = `Fluxo gerado pelo Synapse com base no histórico vinculado de ${patient.name}.`;
       await updateRun(admin, run.id, {
         steps: [
           ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
-          createStep("Modelar aÃ§Ãµes e loops", "completed", `${workflow.nodes.length} blocos e ${workflow.edges.length} conexÃµes.`),
+          createStep("Modelar ações e loops", "completed", `${workflow.nodes.length} blocos e ${workflow.edges.length} conexões.`),
           createStep("Salvar NeuroFlow", "active", title),
         ],
         trace: { steps: [], nodes: workflow.nodes.map((node: any) => ({ id: node.id, type: node.type, reason: node.data?.label })), links: workflow.edges.map((edge: any) => ({ source: edge.source, target: edge.target, reason: edge.label })), summary: flowDescription },
@@ -569,7 +569,7 @@ export async function executeNeuroNotesAgentTool(
 
       const steps = [
         ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
-        createStep("Modelar aÃ§Ãµes e loops", "completed", `${workflow.nodes.length} blocos e ${workflow.edges.length} conexÃµes.`),
+        createStep("Modelar ações e loops", "completed", `${workflow.nodes.length} blocos e ${workflow.edges.length} conexões.`),
         createStep("Salvar NeuroFlow", "completed", title),
       ];
       await updateRun(admin, run.id, {
@@ -584,7 +584,7 @@ export async function executeNeuroNotesAgentTool(
         grounded: true,
         recordCount: bundle.notes.length + bundle.sessionNotes.length + bundle.flows.length,
         data: { run_id: run.id, patient, flow, workflow },
-        message: `Criei um NeuroFlow vinculado a ${patient.name} com ${workflow.nodes.length} blocos e ${workflow.edges.length} conexÃµes.`,
+        message: `Criei um NeuroFlow vinculado a ${patient.name} com ${workflow.nodes.length} blocos e ${workflow.edges.length} conexões.`,
         structuredData: { type: "neuroflow_generation", data: { patient, runId: run.id, flow, workflow } },
         clientAction: {
           type: "interface_action",
@@ -611,7 +611,7 @@ export async function executeNeuroNotesAgentTool(
       const title = `NeuroPulse - ${patient.name} - ${new Date().toLocaleDateString("pt-BR")}`;
       const noteContent = [
         `<p><strong>NeuroPulse gerado pelo Synapse</strong> - ${escapeHtml(lensName)}</p>`,
-        `<p>${escapeHtml(cleanText(intent || "Fluxograma de causa e efeito criado a partir do histÃ³rico do paciente e do chat atual.", 600))}</p>`,
+        `<p>${escapeHtml(cleanText(intent || "Fluxograma de causa e efeito criado a partir do histórico do paciente e do chat atual.", 600))}</p>`,
         `<pre class="mermaid">${escapeHtml(mermaid)}</pre>`,
       ].join("");
 
@@ -658,7 +658,7 @@ export async function executeNeuroNotesAgentTool(
       ];
       const trace = {
         steps,
-        nodes: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((id) => ({ id, type: "mermaid", reason: "NÃ³ causal NeuroPulse" })),
+        nodes: ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"].map((id) => ({ id, type: "mermaid", reason: "Nó causal NeuroPulse" })),
         links: [],
         summary: `Fluxograma NeuroPulse salvo para ${patient.name}.`,
       };

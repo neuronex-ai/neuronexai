@@ -91,6 +91,27 @@ export function managementDateKeyOf(
 }
 export const managementCategoryOf = (t: Transaction) =>
   t.category?.trim() || "Sem categoria";
+export const managementOriginOf = (t: Transaction) => {
+  const metadata = metadataOf(t);
+  const raw = String(
+    metadata.financial_entry_origin || metadata.source || t.origin || "manual",
+  ).toLowerCase();
+
+  if (
+    raw === "neurofinance" ||
+    raw === "gateway_auto" ||
+    metadata.neurofinance_charge_id ||
+    metadata.neurofinance_transaction_id
+  ) return "Cobrança NeuroFinance";
+  if (raw === "appointment") return "Agenda";
+  if (raw === "package") return "Pacote";
+  if (raw === "convenio" || raw === "insurance") return "Convênio";
+  if (raw === "subscription" || raw === "recurring") return "Recorrência";
+  if (raw === "manual") return "Lançamento manual";
+  return "Gestão financeira";
+};
+export const managementAllowsManualSettlement = (t: Transaction) =>
+  managementOriginOf(t) !== "Cobrança NeuroFinance";
 export const monthKeyFromDate = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 export function shiftMonthKey(key: string, amount: number) {

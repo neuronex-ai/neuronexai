@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { Transaction } from "@/types";
-import { buildFinancialManagementMetrics } from "../financial-management-model";
+import {
+  buildFinancialManagementMetrics,
+  managementAllowsManualSettlement,
+  managementOriginOf,
+} from "../financial-management-model";
 const tx = (o: Partial<Transaction>): Transaction => ({
   id: "e1",
   user_id: "u1",
@@ -131,5 +135,22 @@ describe("financial management model", () => {
     );
     expect(m.received).toBe(120);
     expect(m.receivable).toBe(180);
+  });
+
+  it("distinguishes manual entries from NeuroFinance projections", () => {
+    const manual = tx({ origin: "manual" });
+    const neurofinance = tx({
+      origin: "gateway_auto",
+      metadata: {
+        financial_entry_status: "pending",
+        financial_entry_origin: "neurofinance",
+        neurofinance_charge_id: "charge-1",
+      },
+    });
+
+    expect(managementOriginOf(manual)).toBe("Lançamento manual");
+    expect(managementAllowsManualSettlement(manual)).toBe(true);
+    expect(managementOriginOf(neurofinance)).toBe("Cobrança NeuroFinance");
+    expect(managementAllowsManualSettlement(neurofinance)).toBe(false);
   });
 });

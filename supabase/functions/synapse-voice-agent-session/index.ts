@@ -44,6 +44,8 @@ const VOICE_CORE_TOOL_NAMES = new Set([
   "get_patient_system_snapshot",
   "get_calendar",
   "request_interface_action",
+  "create_neuroflow_from_patient_history",
+  "create_neuropulse_cause_effect_diagram",
 ]);
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);

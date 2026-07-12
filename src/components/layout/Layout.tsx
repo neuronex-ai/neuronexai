@@ -20,6 +20,7 @@ export const Layout = ({ children }: LayoutProps) => {
       location.pathname === "/neurozap" ||
       location.pathname.startsWith("/financeiro") ||
       location.pathname.startsWith("/pacientes") ||
+      location.pathname.startsWith("/agenda") ||
       location.pathname.startsWith("/teleconsulta") ||
       location.pathname.startsWith("/ajustes") ||
       location.pathname.startsWith("/notas"));

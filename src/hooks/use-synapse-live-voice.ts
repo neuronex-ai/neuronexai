@@ -11,7 +11,7 @@ import {
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
 const SYNAPSE_GLOBAL_VOICE_PROMPT =
-  "Converse em português brasileiro natural. Seja breve e use somente consultas e navegação nesta primeira versão de voz.";
+  "Converse em português brasileiro natural e seja breve. Consulte e navegue quando necessário. Ao receber um pedido explícito, pode preparar NeuroFlow ou NeuroPulse com as ferramentas disponíveis, sempre pedindo a confirmação exigida antes de gravar.";
 
 interface UseSynapseLiveVoiceOptions {
   onConnect?: () => void;

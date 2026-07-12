@@ -4,14 +4,24 @@ import { AISummary, SessionNote } from '@/types';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { toast } from 'sonner';
 
-const fetchSessionNotes = async (patientId: string, userId: string): Promise<SessionNote[]> => {
-  const { data, error } = await supabase
+interface SessionNotesOptions {
+  limit?: number;
+}
+
+const fetchSessionNotes = async (patientId: string, userId: string, options: SessionNotesOptions = {}): Promise<SessionNote[]> => {
+  let query = supabase
     .from('session_notes')
     .select('*')
     .eq('patient_id', patientId)
     .eq('user_id', userId)
     .or('review_status.is.null,review_status.eq.confirmed')
     .order('created_at', { ascending: false });
+
+  if (options.limit && options.limit > 0) {
+    query = query.limit(options.limit);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Erro ao buscar anotações da sessão:', error);
@@ -21,13 +31,13 @@ const fetchSessionNotes = async (patientId: string, userId: string): Promise<Ses
   return data || [];
 };
 
-export const useSessionNotes = (patientId: string) => {
+export const useSessionNotes = (patientId: string, options: SessionNotesOptions = {}) => {
   const { user } = useAuth();
   const userId = user?.id;
 
   return useQuery<SessionNote[], Error>({
-    queryKey: ['sessionNotes', patientId, userId],
-    queryFn: () => fetchSessionNotes(patientId, userId!),
+    queryKey: ['sessionNotes', patientId, userId, options.limit || 'all'],
+    queryFn: () => fetchSessionNotes(patientId, userId!, options),
     enabled: !!patientId && !!userId, // Only run if patientId and userId are provided
   });
 };

@@ -1,4 +1,5 @@
 import type { Edge, Node, Viewport } from 'reactflow';
+import { repairTextEncodingDeep } from '@/lib/text-encoding';
 
 export const NEUROFLOW_WORKFLOW_SCHEMA = 'neuroflow.workflow.v2' as const;
 
@@ -64,7 +65,8 @@ const finiteNumber = (value: unknown, fallback = 0) =>
 
 const sanitizeJsonValue = (value: unknown): unknown => {
   if (value === undefined || typeof value === 'function' || typeof value === 'symbol') return undefined;
-  if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (value === null || typeof value === 'number' || typeof value === 'boolean') return value;
+  if (typeof value === 'string') return repairTextEncodingDeep(value);
   if (Array.isArray(value)) return value.map(sanitizeJsonValue).filter((item) => item !== undefined);
   if (!isRecord(value)) return undefined;
 
@@ -85,7 +87,7 @@ export const emptyNeuroFlowWorkflow = (metadata: NeuroFlowWorkflow['metadata'] =
   nodes: [],
   edges: [],
   viewport: {},
-  metadata,
+  metadata: repairTextEncodingDeep(metadata),
   links: [],
 });
 
@@ -121,7 +123,7 @@ export const serializeNeuroFlowWorkflow = ({
       sourceHandle: edge.sourceHandle || null,
       targetHandle: edge.targetHandle || null,
       type: edge.type || 'neural',
-      label: typeof edge.label === 'string' ? edge.label : null,
+      label: typeof edge.label === 'string' ? repairTextEncodingDeep(edge.label) : null,
       animated: edge.animated ?? true,
       data: sanitizeJsonRecord(edge.data),
     })),
@@ -131,7 +133,7 @@ export const serializeNeuroFlowWorkflow = ({
       zoom: finiteNumber(viewport.zoom, 1),
     },
     metadata: {
-      ...metadata,
+      ...repairTextEncodingDeep(metadata),
       updatedAt: new Date().toISOString(),
     },
     links: collectWorkflowLinks(nodes),
@@ -184,13 +186,15 @@ export const validateNeuroFlowWorkflow = (workflow: NeuroFlowWorkflow): NeuroFlo
 export const parseStoredNeuroFlowWorkflow = (value: unknown): NeuroFlowWorkflow | null => {
   if (!isRecord(value) || value.schema !== NEUROFLOW_WORKFLOW_SCHEMA) return null;
 
+  const repaired = repairTextEncodingDeep(value);
+
   return validateNeuroFlowWorkflow({
     schema: NEUROFLOW_WORKFLOW_SCHEMA,
-    nodes: Array.isArray(value.nodes) ? value.nodes as NeuroFlowWorkflowNode[] : [],
-    edges: Array.isArray(value.edges) ? value.edges as NeuroFlowWorkflowEdge[] : [],
-    viewport: isRecord(value.viewport) ? value.viewport : {},
-    metadata: isRecord(value.metadata) ? value.metadata : {},
-    links: Array.isArray(value.links) ? value.links as NeuroFlowWorkflowLink[] : [],
+    nodes: Array.isArray(repaired.nodes) ? repaired.nodes as NeuroFlowWorkflowNode[] : [],
+    edges: Array.isArray(repaired.edges) ? repaired.edges as NeuroFlowWorkflowEdge[] : [],
+    viewport: isRecord(repaired.viewport) ? repaired.viewport : {},
+    metadata: isRecord(repaired.metadata) ? repaired.metadata : {},
+    links: Array.isArray(repaired.links) ? repaired.links as NeuroFlowWorkflowLink[] : [],
   });
 };
 

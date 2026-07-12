@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
 import { AgendaSettingsModal } from "./AgendaSettingsModal";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
     DndContext,
     DragEndEvent,
@@ -64,6 +64,7 @@ interface WorkingHoursConfig {
 type AppointmentWithGhost = Appointment & { isGhost?: boolean };
 
 export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen }: CalendarViewProps) => {
+    const shouldReduceMotion = useReducedMotion();
     const { user } = useAuth();
     const navigate = useNavigate();
     const { isConnected: isGoogleConnected, isLoading: isLoadingGoogle } = useGoogleAuth();
@@ -90,13 +91,17 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
         }
     }, [user]);
 
-    const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(date, { weekStartsOn: 1 });
-    const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+    const weekDays = useMemo(() => {
+        const start = startOfWeek(date, { weekStartsOn: 1 });
+        const end = endOfWeek(date, { weekStartsOn: 1 });
+        return eachDayOfInterval({ start, end });
+    }, [date]);
 
-    const monthStart = startOfWeek(startOfMonth(date), { weekStartsOn: 1 });
-    const monthEnd = endOfWeek(endOfMonth(date), { weekStartsOn: 1 });
-    const monthDays = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const monthDays = useMemo(() => {
+        const start = startOfWeek(startOfMonth(date), { weekStartsOn: 1 });
+        const end = endOfWeek(endOfMonth(date), { weekStartsOn: 1 });
+        return eachDayOfInterval({ start, end });
+    }, [date]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -336,13 +341,13 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
             onDragEnd={handleDragEnd}
             measuring={{
                 droppable: {
-                    strategy: MeasuringStrategy.Always,
+                    strategy: MeasuringStrategy.WhileDragging,
                 },
             }}
         >
             <div id="agenda-main-calendar" className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3">
-                <header className="relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[28px] border border-zinc-950 bg-zinc-950 p-3 text-white shadow-[0_22px_56px_-38px_rgba(24,24,27,0.58),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-xl dark:border-white/[0.055] dark:bg-[#050506] dark:shadow-[0_24px_64px_-50px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.04)] xl:flex-row xl:items-center">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_0%,rgba(255,255,255,0.08),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.045),transparent_44%)] dark:bg-[radial-gradient(circle_at_12%_0%,rgba(255,255,255,0.026),transparent_30%),linear-gradient(180deg,rgba(255,255,255,0.016),transparent_44%)]" />
+                <header className="desktop-retina-panel relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border border-border/50 bg-card/82 p-3 text-foreground xl:flex-row xl:items-center">
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.024),transparent_38%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
                     {/* Left side: Sidebar Toggle, Title/Date, Google Status */}
                     <div className="relative z-10 flex flex-wrap items-center gap-4">
                         {setSidebarOpen && (
@@ -351,7 +356,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 size="icon"
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
                                 aria-label={sidebarOpen ? "Ocultar painel da agenda" : "Mostrar painel da agenda"}
-                                className="hidden h-10 w-10 rounded-full border border-white/10 bg-white/[0.075] text-white/60 shadow-sm transition-all hover:border-white/20 hover:bg-white/[0.12] hover:text-white active:scale-95 dark:border-white/[0.075] dark:bg-white/[0.05] dark:text-white/60 dark:hover:border-white/20 dark:hover:bg-white/[0.085] dark:hover:text-white xl:flex motion-reduce:transition-none motion-reduce:active:scale-100"
+                                className="desktop-retina-interactive hidden h-10 w-10 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground xl:flex"
                             >
                                 {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
                             </Button>
@@ -360,12 +365,12 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                         <div className="flex items-baseline gap-4">
                             <motion.div
                                 key={`${view}-${date.toISOString()}`}
-                                initial={{ opacity: 0, x: -10 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, x: -8 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 0.3, ease: "easeOut" }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
                             >
-                                <span className="text-4xl font-black leading-none tracking-[-0.065em] text-white xl:text-[2.65rem]">
-                                    {format(date, "dd")} <span className="font-black lowercase text-white/52">{format(date, "MMMM", { locale: ptBR })}</span> <span className="ml-1 text-2xl font-black text-white/28">{format(date, "yyyy")}</span>
+                                <span className="text-4xl font-black leading-none tracking-[-0.065em] text-foreground xl:text-[2.65rem]">
+                                    {format(date, "dd")} <span className="font-black lowercase text-muted-foreground">{format(date, "MMMM", { locale: ptBR })}</span> <span className="ml-1 text-2xl font-black text-muted-foreground/55">{format(date, "yyyy")}</span>
                                 </span>
                             </motion.div>
                         </div>
@@ -373,18 +378,18 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                         {/* Google Connected Badge Moved Here */}
                         <div className="ml-2 hidden sm:block">
                             {isLoadingGoogle ? (
-                                <div className="h-6 w-20 animate-pulse rounded-full bg-white/[0.08]" />
+                                <div className="h-6 w-20 animate-pulse rounded-full bg-muted" />
                             ) : isGoogleConnected ? (
-                                <div className="flex cursor-default items-center gap-2 rounded-full border border-white/10 bg-white/[0.075] px-2.5 py-1 shadow-sm dark:border-white/[0.075] dark:bg-white/[0.05]">
+                                <div className="desktop-retina-inset flex cursor-default items-center gap-2 rounded-full border border-border/50 bg-background/64 px-2.5 py-1">
                                     <div className="relative flex h-1.5 w-1.5">
                                         <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
                                     </div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-white/60">Conectado</span>
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Conectado</span>
                                 </div>
                             ) : (
                                 <Button
                                     onClick={() => navigate('/ajustes?tab=integrations')}
-                                    className="h-6 rounded-full border border-white bg-white px-3 text-[9px] font-black uppercase tracking-widest text-zinc-950 transition-all hover:bg-zinc-100 dark:border-white dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
+                                    className="desktop-retina-interactive h-7 rounded-full bg-foreground px-3 text-[9px] font-black uppercase tracking-widest text-background hover:bg-foreground/88"
                                 >
                                     Conectar
                                 </Button>
@@ -397,7 +402,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
                         {/* View Switcher Controls */}
                         {onViewChange && (
-                            <div className="flex rounded-full border border-white/10 bg-white/[0.075] p-1 shadow-sm dark:border-white/[0.075] dark:bg-white/[0.05]">
+                            <div className="desktop-retina-inset flex rounded-full border border-border/50 bg-muted/36 p-1">
                                 {([
                                     { id: 'daily', label: 'Dia' },
                                     { id: 'weekly', label: 'Sem' },
@@ -408,14 +413,14 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                         onClick={() => onViewChange(tab.id)}
                                         className={cn(
                                             "relative z-10 rounded-full px-4 py-1.5 text-[10px] font-black uppercase tracking-wider transition-colors",
-                                            view === tab.id ? "text-zinc-950" : "text-white/52 hover:text-white"
+                                            view === tab.id ? "text-background" : "text-muted-foreground hover:text-foreground"
                                         )}
                                     >
                                         {view === tab.id && (
                                             <motion.div
                                                 layoutId="activeViewTabCompact"
-                                                className="absolute inset-0 rounded-full bg-white shadow-sm"
-                                                transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                                                className="absolute inset-0 rounded-full bg-foreground shadow-sm"
+                                                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.72 }}
                                             />
                                         )}
                                         <span className="relative z-10">{tab.label}</span>
@@ -424,7 +429,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                             </div>
                         )}
 
-                        <div className="hidden h-6 w-px bg-white/10 sm:block" />
+                        <div className="hidden h-6 w-px bg-border/65 sm:block" />
 
                         {/* Navigation Controls */}
                         <div className="flex items-center gap-1.5">
@@ -432,14 +437,14 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
-                                className="h-10 w-10 rounded-full border border-white/10 bg-white/[0.075] text-white/60 shadow-sm transition-all hover:border-white/20 hover:bg-white/[0.12] hover:text-white hover:shadow-md active:scale-95 dark:border-white/[0.075] dark:bg-white/[0.05] dark:hover:border-white/20 dark:hover:bg-white/[0.085] motion-reduce:transition-none motion-reduce:active:scale-100"
+                                className="desktop-retina-interactive h-10 w-10 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <Button
                                 variant="ghost"
                                 onClick={() => onDateChange(new Date())}
-                                className="h-10 rounded-full border border-white/10 bg-white/[0.075] px-5 text-[10px] font-black uppercase tracking-widest text-white/60 shadow-sm transition-all hover:border-white/20 hover:bg-white/[0.12] hover:text-white hover:shadow-md active:scale-[0.98] dark:border-white/[0.075] dark:bg-white/[0.05] dark:hover:border-white/20 dark:hover:bg-white/[0.085] motion-reduce:transition-none motion-reduce:active:scale-100"
+                                className="desktop-retina-interactive h-10 rounded-full border border-border/50 bg-background/70 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                             >
                                 Hoje
                             </Button>
@@ -447,13 +452,13 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
-                                className="h-10 w-10 rounded-full border border-white/10 bg-white/[0.075] text-white/60 shadow-sm transition-all hover:border-white/20 hover:bg-white/[0.12] hover:text-white hover:shadow-md active:scale-95 dark:border-white/[0.075] dark:bg-white/[0.05] dark:hover:border-white/20 dark:hover:bg-white/[0.085] motion-reduce:transition-none motion-reduce:active:scale-100"
+                                className="desktop-retina-interactive h-10 w-10 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
 
-                        <div className="mx-1 hidden h-6 w-px bg-white/10 sm:block" />
+                        <div className="mx-1 hidden h-6 w-px bg-border/65 sm:block" />
 
                         {/* Settings Button */}
                         <AgendaSettingsModal />
@@ -462,7 +467,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                         <Button
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
-                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white font-bold uppercase tracking-[0.1em] text-zinc-950 shadow-sm transition-all hover:bg-zinc-100 active:scale-95 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 motion-reduce:transition-none motion-reduce:active:scale-100"
+                            className="desktop-retina-interactive flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-foreground font-bold uppercase tracking-[0.1em] text-background hover:bg-foreground/88"
                         >
                             <Plus className="h-4 w-4" />
                         </Button>
@@ -470,7 +475,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 </header>
 
                 {/* Main content area */}
-                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border border-zinc-200/70 bg-white/74 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] dark:border-white/[0.045] dark:bg-[#030304] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.024)]">
+                <div className="desktop-retina-inset flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border border-border/45 bg-background/66">
                     {view === 'monthly' ? renderMonthlyView() : renderTimeGridView()}
                 </div>
 

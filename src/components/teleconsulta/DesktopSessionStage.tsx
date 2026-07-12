@@ -39,6 +39,7 @@ interface DesktopSessionStageProps {
   syncState: string;
   hasNetwork: boolean;
   isCaptureEnabled: boolean;
+  transcriptionEnabled: boolean;
   captureAvailable: boolean;
   speechSupported: boolean;
   interimText?: string;
@@ -86,6 +87,7 @@ export const DesktopSessionStage = ({
   syncState,
   hasNetwork,
   isCaptureEnabled,
+  transcriptionEnabled,
   captureAvailable,
   speechSupported,
   interimText,
@@ -113,15 +115,15 @@ export const DesktopSessionStage = ({
   const renderStage = () => {
     if (!isOnlineSession) {
       return (
-        <div className="desktop-retina-panel relative flex h-full flex-col items-center justify-center overflow-hidden bg-white/45 px-10 text-center backdrop-blur-[60px] dark:bg-[#121212]/88">
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-[560px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-500/[0.045] blur-[140px]" />
+        <div className="relative flex h-full flex-col items-center justify-center overflow-hidden px-8 text-center">
+          <div className="pointer-events-none absolute inset-x-[18%] top-0 h-1/2 bg-gradient-to-b from-white/[0.035] to-transparent" />
           <div className="relative z-10 flex flex-col items-center">
             <div
               className={cn(
-                'flex h-36 w-36 items-center justify-center rounded-[42px] border shadow-2xl transition',
+                'flex h-32 w-32 items-center justify-center rounded-[38px] border transition-colors duration-300 motion-reduce:transition-none',
                 isCaptureEnabled
                   ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500'
-                  : 'border-border/45 bg-card/70 text-muted-foreground dark:border-white/10',
+                  : 'border-white/[0.055] bg-white/[0.035] text-white/45',
               )}
             >
               {isCaptureEnabled ? <Mic className="h-14 w-14" /> : <NotebookPen className="h-14 w-14" />}
@@ -134,7 +136,7 @@ export const DesktopSessionStage = ({
                 : 'O navegador não oferece reconhecimento de fala. As anotações continuam protegidas e recuperáveis.'}
             </p>
             {interimText ? (
-              <p className="mt-5 max-w-xl rounded-2xl bg-card/65 px-5 py-3 text-xs italic text-muted-foreground">{interimText}</p>
+              <p className="mt-5 max-w-xl rounded-2xl bg-white/[0.045] px-5 py-3 text-xs italic text-white/55">{interimText}</p>
             ) : null}
           </div>
         </div>
@@ -143,7 +145,7 @@ export const DesktopSessionStage = ({
 
     if (jitsiError) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-4 bg-card px-8 text-center text-rose-500">
+        <div className="flex h-full flex-col items-center justify-center gap-4 px-8 text-center text-rose-400">
           <AlertCircle className="h-10 w-10" />
           <p className="font-bold">{jitsiError.message}</p>
           <Button variant="outline" onClick={() => window.location.reload()} className="border-rose-500/20 text-rose-500">Recarregar</Button>
@@ -153,7 +155,7 @@ export const DesktopSessionStage = ({
 
     if (!jitsiToken) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-4 bg-card">
+        <div className="flex h-full flex-col items-center justify-center gap-4 text-white/70">
           <Loader2 className="h-9 w-9 animate-spin" />
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Conectando com segurança</p>
         </div>
@@ -170,6 +172,7 @@ export const DesktopSessionStage = ({
         userAvatarUrl={therapistAvatar}
         subject={patientName || 'Consulta'}
         mediaSettings={mediaSettings}
+        transcriptionEnabled={transcriptionEnabled}
         onMeetingEnd={() => {
           if (!reviewRequestedRef.current) onMeetingEnd();
         }}
@@ -181,23 +184,23 @@ export const DesktopSessionStage = ({
   };
 
   return (
-    <section className="desktop-retina-frame relative min-h-0 overflow-hidden rounded-[34px] border border-border/45 bg-black dark:border-white/10">
+    <section className="teleconsultation-stage relative h-full min-h-0 overflow-hidden rounded-[30px]">
       {renderStage()}
       <RiskAlert riskScore={patientRiskScore} />
 
       <div className="pointer-events-none absolute left-5 top-5 z-30 flex items-center gap-2">
-        <div className="rounded-full border border-white/12 bg-black/48 px-4 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-white backdrop-blur-xl">
+        <div className="rounded-full border border-white/[0.07] bg-black/72 px-3.5 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-white">
           {elapsedLabel}
         </div>
         <div
           className={cn(
-            'flex items-center gap-2 rounded-full border px-4 py-2 text-[9px] font-black uppercase tracking-[0.14em] backdrop-blur-xl',
+            'flex items-center gap-2 rounded-full border px-3.5 py-2 text-[9px] font-black uppercase tracking-[0.14em]',
             isCaptureEnabled
               ? 'border-emerald-400/25 bg-emerald-500/16 text-emerald-200'
-              : 'border-white/12 bg-black/48 text-white/70',
+              : 'border-white/[0.07] bg-black/72 text-white/65',
           )}
         >
-          <span className={cn('h-2 w-2 rounded-full', isCaptureEnabled ? 'animate-pulse bg-emerald-400' : 'bg-white/35')} />
+          <span className={cn('h-2 w-2 rounded-full', isCaptureEnabled ? 'animate-pulse bg-emerald-400 motion-reduce:animate-none' : 'bg-white/35')} />
           {captureLabel}
         </div>
       </div>
@@ -205,13 +208,14 @@ export const DesktopSessionStage = ({
       <button
         type="button"
         onClick={onRetrySync}
+        aria-label={`Estado de sincronização: ${syncLabel}. Tentar novamente`}
         className={cn(
-          'absolute right-5 top-5 z-30 flex h-10 items-center gap-2 rounded-full border px-4 text-[9px] font-black uppercase tracking-[0.12em] backdrop-blur-xl',
+          'teleconsultation-action absolute right-5 top-5 z-30 flex h-11 items-center gap-2 rounded-full border px-4 text-[9px] font-black uppercase tracking-[0.12em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55',
           syncState === 'error'
             ? 'border-rose-400/25 bg-rose-500/16 text-rose-200'
             : !hasNetwork
               ? 'border-amber-400/25 bg-amber-500/16 text-amber-100'
-              : 'border-white/12 bg-black/48 text-white/70',
+              : 'border-white/[0.07] bg-black/72 text-white/65',
         )}
       >
         {syncState === 'syncing' ? <Loader2 className="h-4 w-4 animate-spin" /> : !hasNetwork ? <WifiOff className="h-4 w-4" /> : syncState === 'error' ? <CloudOff className="h-4 w-4" /> : <Cloud className="h-4 w-4" />}

@@ -4,6 +4,7 @@ import type { Appointment } from "@/types";
 import { getAppointmentKind } from "@/lib/appointment-metadata";
 import { isCancelledAppointmentStatus, normalizeAppointmentStatus } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
+import { polishPortugueseUiText } from "@/lib/portuguese-ui-text";
 
 export type DashboardNotificationSeverity = "success" | "info" | "warning" | "destructive";
 
@@ -201,8 +202,8 @@ export const buildAttentionQueue = ({
       return {
         id: `notification-${notification.id}`,
         label: getAttentionQueueCategoryLabel(category),
-        title: notification.title,
-        description: notification.message,
+        title: polishPortugueseUiText(notification.title),
+        description: polishPortugueseUiText(notification.message),
         actionUrl: notification.actionUrl || "/dashboard",
         tone: notification.severity === "destructive" ? "destructive" : notification.severity === "warning" ? "warning" : "default",
         source: "notification",

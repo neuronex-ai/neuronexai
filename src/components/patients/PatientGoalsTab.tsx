@@ -41,14 +41,13 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
   const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 pb-8">
       {/* Header / Progress - Redesigned Layout */}
-      <div className="pt-14 pb-8 px-8 rounded-[32px] bg-card border border-border/5 relative overflow-visible shadow-lg mt-10 dark:border-white/[0.085] dark:bg-[#0b0b0d] dark:shadow-[0_24px_62px_-46px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.026)]">
-        <div className="absolute right-0 top-0 w-48 h-48 bg-primary/5 dark:bg-white/[0.015] rounded-full blur-[60px] pointer-events-none" />
+      <div className="desktop-retina-panel relative overflow-hidden rounded-[28px] border border-border/45 bg-card/68 p-6">
 
         {/* Circular Progress - Absolute Positioned at Top Center */}
-        <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-20">
-          <div className="relative w-20 h-20 flex items-center justify-center bg-card rounded-full p-1.5 shadow-2xl border border-border/10 dark:border-white/[0.075] dark:bg-[#141415]">
+        <div className="absolute right-6 top-1/2 z-20 -translate-y-1/2">
+          <div className="desktop-retina-inset relative flex h-16 w-16 items-center justify-center rounded-[22px] border border-border/45 bg-background/62 p-1.5">
             <svg className="w-full h-full -rotate-90 drop-shadow-lg" viewBox="0 0 36 36">
               <path className="text-secondary" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
               <path
@@ -67,7 +66,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between gap-6 relative z-10">
+        <div className="relative z-10 flex items-center justify-between gap-6 pr-24">
           <div className="space-y-1">
             <h3 className="text-xl font-bold text-foreground tracking-tight leading-none">Progresso Terapêutico</h3>
             <p className="text-[13px] text-muted-foreground font-medium opacity-60">
@@ -83,7 +82,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
 
       {/* Add New Goal Input */}
       <div className="flex gap-3">
-        <div className="flex-1 bg-card rounded-2xl border border-border/10 focus-within:border-primary/50 focus-within:bg-secondary/10 transition-all flex items-center px-5 h-14 shadow-sm dark:border-white/[0.075] dark:bg-[#0b0b0d] dark:focus-within:bg-[#111113]">
+        <div className="desktop-retina-inset flex h-14 flex-1 items-center rounded-2xl border border-border/45 bg-background/58 px-5 transition-colors focus-within:border-border/80 focus-within:bg-background/78">
           <Input
             placeholder="Digite uma nova meta ou tarefa..."
             value={newDescription}
@@ -105,7 +104,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
                 <CalendarIcon className="h-4 w-4" />
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-card border-border/10 dark:border-white/[0.085] dark:bg-[#0b0b0d]" align="end">
+            <PopoverContent className="desktop-retina-modal w-auto rounded-[22px] border-border/55 bg-popover/96 p-0" align="end">
               <Calendar
                 mode="single"
                 selected={date}
@@ -116,7 +115,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
             </PopoverContent>
           </Popover>
         </div>
-        <Button onClick={handleAdd} disabled={isAdding || !newDescription.trim()} size="icon" className="w-14 h-14 rounded-2xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 flex-shrink-0 transition-all hover:scale-105">
+        <Button onClick={handleAdd} disabled={isAdding || !newDescription.trim()} size="icon" className="desktop-retina-interactive h-14 w-14 flex-shrink-0 rounded-2xl bg-foreground text-background hover:bg-foreground/88">
           {isAdding ? <Loader2 className="h-5 w-5 animate-spin" /> : <Plus className="h-6 w-6 stroke-[3]" />}
         </Button>
       </div>
@@ -124,7 +123,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
       {/* List */}
       <div className="space-y-3">
         {goals?.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground/40 border border-dashed border-border/10 rounded-3xl bg-secondary/5 dark:border-white/[0.085] dark:bg-[#0b0b0d]">
+          <div className="desktop-retina-panel flex flex-col items-center justify-center rounded-[26px] border border-dashed border-border/50 bg-card/54 py-16 text-muted-foreground/70">
             <Target className="h-12 w-12 mb-3 opacity-20" />
             <p className="text-sm font-medium">Nenhuma meta definida.</p>
             <p className="text-xs mt-1 opacity-60">Comece adicionando objetivos para o paciente.</p>
@@ -134,11 +133,12 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
             <div
               key={goal.id}
               className={cn(
-                "group flex items-center justify-between p-5 rounded-2xl border transition-all duration-300",
+                "desktop-retina-inset group flex items-center justify-between rounded-[22px] border p-5 transition-colors duration-300",
                 goal.is_completed
                   ? "bg-emerald-500/[0.02] border-emerald-500/10"
-                  : "bg-card border-border/5 hover:bg-secondary/10 hover:border-border/10 dark:border-white/[0.075] dark:bg-[#0b0b0d] dark:hover:bg-[#111113] dark:hover:border-white/[0.12]"
+                  : "border-border/40 bg-background/58 hover:border-border/75 hover:bg-background/76"
               )}
+              style={{ contentVisibility: "auto", containIntrinsicSize: "82px" }}
             >
               <div className="flex items-start gap-5 flex-1 min-w-0">
                 <button

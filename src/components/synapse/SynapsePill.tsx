@@ -24,10 +24,10 @@ const spring = {
 } as const;
 
 const primaryControlClassName =
-    "relative flex h-11 w-[58px] shrink-0 items-center justify-center overflow-hidden border border-border/45 bg-background/42 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.045)] transition-[background-color,color,border-color,box-shadow] duration-150 hover:border-border/75 hover:bg-muted/75 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-black/20 dark:hover:border-white/[0.13] dark:hover:bg-white/[0.075]";
+    "relative flex h-11 w-[58px] shrink-0 items-center justify-center overflow-hidden border border-border/45 bg-background/42 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.045)] transition-[background-color,color,border-color,transform] duration-150 hover:border-border/75 hover:bg-muted/75 hover:text-foreground active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.07] dark:bg-black/20 dark:hover:border-white/[0.13] dark:hover:bg-white/[0.075]";
 
 const quickControlClassName =
-    "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-background/52 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.05)] transition-[background-color,color,border-color,box-shadow] duration-150 hover:border-border/80 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:border-white/[0.14] dark:hover:bg-white/[0.085]";
+    "relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border/50 bg-background/52 text-muted-foreground shadow-[inset_0_1px_0_hsl(var(--foreground)/0.05)] transition-[background-color,color,border-color,transform] duration-150 hover:border-border/80 hover:bg-muted hover:text-foreground active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:border-white/[0.14] dark:hover:bg-white/[0.085]";
 
 const clamp = (value: number, min: number, max: number) => Math.min(Math.max(value, min), max);
 
@@ -47,6 +47,7 @@ export const SynapsePill = () => {
     const shouldReduceMotion = Boolean(useReducedMotion());
     const [isExpanded, setIsExpanded] = useState(false);
     const pillRef = useRef<HTMLDivElement>(null);
+    const pillBoundsRef = useRef<DOMRect | null>(null);
     const wasSendingRef = useRef(isSending);
 
     const rawX = useMotionValue(0);
@@ -74,17 +75,19 @@ export const SynapsePill = () => {
     if (shellState !== "pill") return null;
 
     const resetMagnetism = () => {
+        pillBoundsRef.current = null;
         rawX.set(0);
         rawY.set(0);
     };
 
     const handleMouseEnter = () => {
+        pillBoundsRef.current = pillRef.current?.getBoundingClientRect() || null;
         if (!isVoiceActive) setIsExpanded(true);
     };
 
     const handleMouseMove = (event: MouseEvent<HTMLDivElement>) => {
-        if (shouldReduceMotion || !pillRef.current) return;
-        const rect = pillRef.current.getBoundingClientRect();
+        if (shouldReduceMotion || !pillBoundsRef.current) return;
+        const rect = pillBoundsRef.current;
         const centerX = rect.left + rect.width / 2;
         const centerY = rect.top + rect.height / 2;
         rawX.set(clamp((event.clientX - centerX) * 0.035, -5, 5));
@@ -128,7 +131,6 @@ export const SynapsePill = () => {
                     x: shouldReduceMotion ? 0 : magneticX,
                     y: shouldReduceMotion ? 0 : magneticY,
                     transformOrigin: "100% 50%",
-                    willChange: "transform",
                 }}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 8, scale: 0.97 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -145,11 +147,10 @@ export const SynapsePill = () => {
                     }}
                     className={cn(
                         "synapse-optical-shell relative isolate flex items-center justify-start overflow-hidden rounded-full border p-1.5",
-                        !isVoiceActive && "transition-[width] duration-300 ease-out group-hover:!w-[248px] group-focus-within:!w-[248px] motion-reduce:duration-0",
                         "shadow-[0_20px_56px_-30px_hsl(var(--foreground)/0.52),inset_0_1px_0_hsl(var(--background)/0.62)]",
                         "dark:shadow-[0_24px_66px_-28px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.075)]",
                     )}
-                    style={{ contain: "layout paint", transformOrigin: "100% 50%", willChange: "width, height" }}
+                    style={{ contain: "layout paint", transformOrigin: "100% 50%" }}
                 >
                     <AnimatePresence initial={false} mode="wait">
                         {isVoiceActive ? (

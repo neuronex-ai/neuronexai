@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useDesktopClinicalSession, formatSessionElapsed } from '@/hooks/use-desktop-clinical-session';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { Appointment } from '@/types';
 import { DesktopSessionReviewDialog } from './DesktopSessionReviewDialog';
@@ -27,58 +28,79 @@ export const DesktopClinicalSession = ({
 
   useEffect(() => {
     if (!openInviteOnMount || inviteRequestedRef.current) return;
+
+    if (!session.hasTranscriptionDecision) {
+      session.requestTranscriptionDecision();
+      return;
+    }
+
     inviteRequestedRef.current = true;
     session.openPatientInvite();
-  }, [openInviteOnMount, session]);
+  }, [
+    openInviteOnMount,
+    session.hasTranscriptionDecision,
+    session.openPatientInvite,
+    session.requestTranscriptionDecision,
+  ]);
+
+  const consentDialog = session.showConsent && !session.reviewOpen ? (
+    <Dialog open onOpenChange={() => undefined}>
+      <DialogContent
+        showCloseButton={false}
+        overlayClassName="teleconsultation-overlay !z-[179] !backdrop-blur-none"
+        onEscapeKeyDown={(event) => event.preventDefault()}
+        onPointerDownOutside={(event) => event.preventDefault()}
+        data-synapse-target="transcription-decision"
+        aria-label="Decisão de transcrição"
+        className="teleconsultation-surface !z-[180] !w-[min(680px,calc(100vw-2rem))] !max-w-[min(680px,calc(100vw-2rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0"
+      >
+        <DialogTitle className="sr-only">Decisão de transcrição</DialogTitle>
+        <TranscriptionConsentPanel
+          patientName={patientName}
+          isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
+          onGrant={session.handleGrantConsent}
+          onDecline={session.handleDeclineConsent}
+        />
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   if (session.showLobby) {
     return (
       <>
-        <div className="desktop-lumen-page fixed inset-x-0 bottom-0 top-[var(--desktop-navbar-clearance)] z-[100] overflow-hidden bg-transparent">
-          <div className="relative z-10 h-full">
-          <DesktopTeleconsultationLobby
-            patientName={patientName}
-            patient={session.patient}
-            appointmentId={session.appointmentId}
-            appointmentStart={activeAppointment.start_time}
-            meetLink={session.effectiveMeetLink}
-            therapistName={session.therapistName}
-            isOnline={session.isOnlineSession}
-            isLoadingToken={session.isOnlineSession && session.isLoadingToken}
-            canInvitePatient={session.canInvitePatient}
-            hasTranscriptionDecision={session.hasTranscriptionDecision}
-            roomStatus={session.roomStatus}
-            onRequireTranscriptionDecision={() => session.openPatientInvite()}
-            onJoin={session.handleJoinSession}
-          />
+        <div className="desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent">
+          <div className="relative z-10 h-full min-h-0 overflow-hidden">
+            <DesktopTeleconsultationLobby
+              patientName={patientName}
+              patient={session.patient}
+              appointmentId={session.appointmentId}
+              appointmentStart={activeAppointment.start_time}
+              meetLink={session.effectiveMeetLink}
+              therapistName={session.therapistName}
+              isOnline={session.isOnlineSession}
+              isLoadingToken={session.isOnlineSession && session.isLoadingToken}
+              canInvitePatient={session.canInvitePatient}
+              hasTranscriptionDecision={session.hasTranscriptionDecision}
+              roomStatus={session.roomStatus}
+              onRequireTranscriptionDecision={session.requestTranscriptionDecision}
+              onJoin={session.handleJoinSession}
+            />
           </div>
         </div>
-
-        {session.showConsent ? (
-          <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-4 backdrop-blur-md sm:p-6" data-synapse-target="transcription-decision">
-            <div className="desktop-retina-modal w-full max-w-2xl rounded-[32px]">
-              <TranscriptionConsentPanel
-                patientName={patientName}
-                isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
-                onGrant={session.handleGrantConsent}
-                onDecline={session.handleDeclineConsent}
-              />
-            </div>
-          </div>
-        ) : null}
+        {consentDialog}
       </>
     );
   }
 
   return (
     <>
-      <div className="desktop-lumen-page fixed inset-x-0 bottom-0 top-[var(--desktop-navbar-clearance)] z-[100] overflow-hidden bg-transparent">
+      <div className="desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent">
         <div
           className={cn(
-            'relative z-10 grid h-full min-h-0 gap-4 px-4 pb-4 xl:px-5 xl:pb-5',
+            'relative z-10 grid h-full min-h-0 grid-rows-[minmax(0,1fr)] items-stretch gap-3 px-3 pb-3 sm:px-4 sm:pb-4 xl:px-5 xl:pb-5',
             session.isFocusMode
               ? 'grid-cols-1'
-              : 'grid-cols-[minmax(0,1fr)_minmax(340px,390px)]',
+              : 'grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(260px,34vh)] lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_328px] 2xl:grid-cols-[minmax(0,1fr)_360px]',
           )}
         >
           <DesktopSessionStage
@@ -103,6 +125,7 @@ export const DesktopClinicalSession = ({
             syncState={session.syncState}
             hasNetwork={session.hasNetwork}
             isCaptureEnabled={session.isCaptureEnabled}
+            transcriptionEnabled={session.transcriptionEnabled}
             captureAvailable={session.captureAvailable}
             speechSupported={session.speechSupported}
             interimText={session.interimText}
@@ -156,24 +179,14 @@ export const DesktopClinicalSession = ({
         <InvitePatientModal
           isOpen={session.showInviteModal}
           onClose={() => session.setShowInviteModal(false)}
+          appointmentId={session.appointmentId}
           patient={session.patient}
           meetLink={session.effectiveMeetLink}
           therapistName={session.therapistName}
         />
       </div>
 
-      {session.showConsent && session.hasJoined && !session.reviewOpen ? (
-        <div className="fixed inset-0 z-[180] flex items-center justify-center bg-black/62 p-6 backdrop-blur-md" data-synapse-target="transcription-decision">
-          <div className="desktop-retina-modal w-full max-w-2xl rounded-[32px]">
-            <TranscriptionConsentPanel
-              patientName={patientName}
-              isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
-              onGrant={session.handleGrantConsent}
-              onDecline={session.handleDeclineConsent}
-            />
-          </div>
-        </div>
-      ) : null}
+      {session.hasJoined ? consentDialog : null}
 
       <DesktopSessionReviewDialog
         open={session.reviewOpen}

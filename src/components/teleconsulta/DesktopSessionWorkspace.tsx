@@ -7,7 +7,6 @@ import type {
 } from '@/hooks/use-jitsi-token';
 import { cn } from '@/lib/utils';
 import type { Patient } from '@/types';
-import { useState, type ReactNode } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -23,6 +22,7 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
+import { useState } from 'react';
 
 interface DesktopSessionWorkspaceProps {
   patient?: Patient | null;
@@ -41,23 +41,13 @@ interface DesktopSessionWorkspaceProps {
   onRetrySync: () => void;
 }
 
-const WorkspaceCard = ({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-}) => (
-  <section
-    className={cn(
-      'desktop-retina-panel relative min-h-0 overflow-hidden rounded-[28px] border border-border/45 bg-card/82 backdrop-blur-2xl',
-      className,
-    )}
-  >
-    <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-transparent dark:from-white/[0.025]" />
-    <div className="relative h-full min-h-0">{children}</div>
-  </section>
-);
+type WorkspaceTab = 'transcript' | 'notes' | 'patient';
+
+const workspaceTabs = [
+  { id: 'transcript' as const, label: 'Transcrição', icon: FileText },
+  { id: 'notes' as const, label: 'Notas', icon: NotebookPen },
+  { id: 'patient' as const, label: 'Paciente', icon: UserRound },
+];
 
 export const DesktopSessionWorkspace = ({
   patient,
@@ -75,57 +65,54 @@ export const DesktopSessionWorkspace = ({
   onToggleCapture,
   onRetrySync,
 }: DesktopSessionWorkspaceProps) => {
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>('transcript');
   const riskScore = patient?.risk_score || 0;
   const medications = patient?.medications || [];
-  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'transcript' | 'notes' | 'patient'>('transcript');
 
   return (
-    <aside className="flex h-full min-h-0 flex-col gap-3">
-      <nav className="desktop-retina-frame grid shrink-0 grid-cols-3 gap-1 rounded-[20px] border border-border/40 p-1.5" aria-label="Ferramentas da sessão">
-        {[
-          { id: 'transcript' as const, label: 'Transcrição', icon: FileText },
-          { id: 'notes' as const, label: 'Notas', icon: NotebookPen },
-          { id: 'patient' as const, label: 'Paciente', icon: UserRound },
-        ].map((tab) => (
+    <aside className="flex h-full min-h-0 min-w-0 flex-col gap-3" aria-label="Ferramentas clínicas da sessão">
+      <nav className="teleconsultation-surface grid shrink-0 grid-cols-3 gap-1 rounded-[19px] p-1.5" aria-label="Seções da sessão" role="tablist">
+        {workspaceTabs.map((tab) => (
           <button
             key={tab.id}
             type="button"
-            onClick={() => setActiveWorkspaceTab(tab.id)}
-            aria-pressed={activeWorkspaceTab === tab.id}
+            role="tab"
+            onClick={() => setActiveTab(tab.id)}
+            aria-selected={activeTab === tab.id}
             className={cn(
-              'desktop-retina-interactive flex h-10 items-center justify-center gap-2 rounded-[14px] text-[8px] font-black uppercase tracking-[0.12em]',
-              activeWorkspaceTab === tab.id
-                ? 'bg-foreground text-background'
-                : 'text-muted-foreground hover:bg-white/[0.045] hover:text-foreground',
+              'teleconsultation-action flex h-11 min-w-0 items-center justify-center gap-1.5 rounded-[13px] px-2 text-[8px] font-black uppercase tracking-[0.1em] outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              activeTab === tab.id
+                ? 'bg-foreground text-background shadow-sm'
+                : 'text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground',
             )}
           >
-            <tab.icon className="h-3.5 w-3.5" />
-            {tab.label}
+            <tab.icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{tab.label}</span>
           </button>
         ))}
       </nav>
 
-      <div className="min-h-0 flex-1">
-        <WorkspaceCard className={cn('h-full', activeWorkspaceTab !== 'transcript' && 'hidden')}>
+      <section className="teleconsultation-surface min-h-0 flex-1 overflow-hidden rounded-[27px]" role="tabpanel">
+        {activeTab === 'transcript' ? (
           <div className="flex h-full min-h-0 flex-col">
-            <header className="flex items-start justify-between gap-3 border-b border-border/35 px-5 py-4 dark:border-white/10">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-5 py-4 dark:border-white/[0.045]">
               <div>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <FileText className="h-4 w-4" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.18em]">Transcrição</span>
+                  <FileText className="h-4 w-4" aria-hidden="true" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.17em]">Transcrição</span>
                 </div>
                 <p className="mt-2 text-xs font-semibold text-foreground">{captureLabel}</p>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
                   onClick={onRetrySync}
-                  className="h-9 w-9 rounded-xl"
+                  className="h-11 w-11 rounded-[13px]"
                   aria-label="Sincronizar transcrição"
                 >
-                  <RefreshCcw className={cn('h-4 w-4', syncState === 'syncing' && 'animate-spin')} />
+                  <RefreshCcw className={cn('h-4 w-4', syncState === 'syncing' && 'animate-spin motion-reduce:animate-none')} />
                 </Button>
                 <Button
                   type="button"
@@ -134,7 +121,7 @@ export const DesktopSessionWorkspace = ({
                   disabled={!captureAvailable}
                   onClick={onToggleCapture}
                   className={cn(
-                    'h-9 w-9 rounded-xl',
+                    'h-11 w-11 rounded-[13px] border-0',
                     isCaptureEnabled && 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400',
                   )}
                   aria-label={isCaptureEnabled ? 'Pausar captura' : 'Iniciar ou retomar captura'}
@@ -144,61 +131,57 @@ export const DesktopSessionWorkspace = ({
               </div>
             </header>
 
-            <div className="flex items-center gap-2 border-b border-border/25 px-5 py-2.5 text-[8px] font-black uppercase tracking-[0.13em] text-muted-foreground dark:border-white/5">
-              {syncState === 'error' ? (
-                <CloudOff className="h-3.5 w-3.5 text-rose-500" />
-              ) : (
-                <Cloud className="h-3.5 w-3.5" />
-              )}
+            <div className="flex shrink-0 items-center gap-2 border-b border-border/30 px-5 py-2.5 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/[0.035]">
+              {syncState === 'error' ? <CloudOff className="h-3.5 w-3.5 text-rose-500" /> : <Cloud className="h-3.5 w-3.5" />}
               {syncLabel}
               <span className="ml-auto">{segments.length} trechos</span>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+            <div className="teleconsultation-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4">
               {segments.length ? (
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {segments.map((segment) => (
                     <article
                       key={segment.client_segment_id}
-                      className="desktop-retina-inset rounded-[20px] border border-border/35 bg-background/62 p-4"
+                      className="teleconsultation-inset teleconsultation-deferred-section rounded-[18px] p-3.5"
                     >
-                      <p className="text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">
+                      <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">
                         {segment.speaker_label || 'Participante'}
                       </p>
-                      <p className="mt-2 text-xs leading-relaxed text-foreground/88">{segment.text}</p>
+                      <p className="mt-2 text-xs leading-relaxed text-foreground/85">{segment.text}</p>
                     </article>
                   ))}
                 </div>
               ) : (
-                <div className="flex h-full min-h-40 flex-col items-center justify-center rounded-[22px] border border-dashed border-border/45 px-5 text-center dark:border-white/10">
-                  <Mic className="h-6 w-6 text-muted-foreground/45" />
+                <div className="flex h-full min-h-44 flex-col items-center justify-center rounded-[21px] border border-dashed border-border/50 px-5 text-center dark:border-white/[0.055]">
+                  <Mic className="h-6 w-6 text-muted-foreground/40" aria-hidden="true" />
                   <p className="mt-3 text-xs font-semibold text-muted-foreground">Nenhum trecho capturado.</p>
                   <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground/65">
-                    A captura só começa após o consentimento ser registrado.
+                    A captura começa após o consentimento ser registrado.
                   </p>
                 </div>
               )}
               {interimText ? (
-                <p className="mt-3 rounded-2xl bg-foreground/[0.035] px-4 py-3 text-xs italic text-muted-foreground">
+                <p className="mt-3 rounded-[18px] bg-foreground/[0.04] px-4 py-3 text-xs italic text-muted-foreground">
                   {interimText}
                 </p>
               ) : null}
             </div>
           </div>
-        </WorkspaceCard>
+        ) : null}
 
-        <WorkspaceCard className={cn('h-full', activeWorkspaceTab !== 'notes' && 'hidden')}>
+        {activeTab === 'notes' ? (
           <div className="flex h-full min-h-0 flex-col">
-            <header className="flex items-start justify-between gap-3 border-b border-border/35 px-5 py-4 dark:border-white/10">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-5 py-4 dark:border-white/[0.045]">
               <div>
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <NotebookPen className="h-4 w-4" />
-                  <span className="text-[9px] font-black uppercase tracking-[0.18em]">Anotações</span>
+                  <NotebookPen className="h-4 w-4" aria-hidden="true" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.17em]">Anotações</span>
                 </div>
                 <p className="mt-2 text-xs font-semibold text-foreground">Rascunho clínico protegido</p>
               </div>
-              <div className="flex items-center gap-1.5 rounded-full border border-border/35 px-2.5 py-1.5 text-[8px] font-black uppercase tracking-[0.12em] text-muted-foreground dark:border-white/10">
-                <ShieldCheck className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-1.5 rounded-full bg-foreground/[0.045] px-3 py-2 text-[8px] font-black uppercase tracking-[0.11em] text-muted-foreground">
+                <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
                 {notesSyncState === 'saving'
                   ? 'Salvando'
                   : notesSyncState === 'restoring'
@@ -213,70 +196,69 @@ export const DesktopSessionWorkspace = ({
                 value={notes}
                 onChange={(event) => onNotesChange(event.target.value)}
                 placeholder="Registre hipóteses, observações, intervenções e próximos passos..."
-                className="desktop-retina-inset h-full min-h-0 resize-none rounded-[22px] border-border/35 bg-background/58 p-4 text-sm leading-relaxed"
+                className="teleconsultation-inset h-full min-h-0 resize-none rounded-[20px] border-0 p-4 text-sm leading-relaxed shadow-none focus-visible:ring-1"
               />
             </div>
           </div>
-        </WorkspaceCard>
-      <WorkspaceCard className={cn('h-full', activeWorkspaceTab !== 'patient' && 'hidden')}>
-        <div className="flex h-full min-h-0 flex-col overflow-y-auto px-5 py-4">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-foreground text-background">
-                <UserRound className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-[0.17em] text-muted-foreground">Contexto do paciente</p>
-                <h3 className="mt-1 text-base font-black tracking-[-0.03em]">{patientName}</h3>
-              </div>
-            </div>
-            <div
-              className={cn(
-                'flex items-center gap-2 rounded-full px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.12em]',
-                riskScore >= 70
-                  ? 'bg-rose-500/10 text-rose-500'
-                  : riskScore >= 40
-                    ? 'bg-amber-500/10 text-amber-600'
-                    : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
-              )}
-            >
-              {riskScore >= 40 ? <AlertTriangle className="h-3.5 w-3.5" /> : <Activity className="h-3.5 w-3.5" />}
-              Risco {riskScore || 'não informado'}
-            </div>
-          </header>
+        ) : null}
 
-          <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-3">
-            <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
-              <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Hipótese / diagnóstico</p>
-              <p className="mt-2 line-clamp-4 text-xs font-semibold leading-relaxed text-foreground/85">
-                {patient?.diagnosis || 'Nenhuma informação clínica resumida.'}
-              </p>
-            </div>
-            <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
-              <div className="flex items-center gap-2">
-                <Pill className="h-3.5 w-3.5 text-muted-foreground" />
-                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Medicações</p>
+        {activeTab === 'patient' ? (
+          <div className="teleconsultation-scroll h-full min-h-0 overflow-y-auto px-5 py-4">
+            <header className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-3">
+                <div className="teleconsultation-inset flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px]">
+                  <UserRound className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Contexto do paciente</p>
+                  <h3 className="mt-1 truncate text-base font-black tracking-[-0.03em]">{patientName}</h3>
+                </div>
               </div>
-              <div className="mt-2 space-y-1.5">
-                {medications.length ? medications.slice(0, 3).map((medication, index) => (
-                  <p key={`${medication.name}-${index}`} className="text-xs font-semibold text-foreground/82">
-                    {medication.name}{medication.dosage ? ` · ${medication.dosage}` : ''}
-                  </p>
-                )) : (
-                  <p className="text-xs text-muted-foreground">Nenhuma medicação registrada.</p>
+              <div
+                className={cn(
+                  'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-2 text-[8px] font-black uppercase tracking-[0.1em]',
+                  riskScore >= 70
+                    ? 'bg-rose-500/10 text-rose-500'
+                    : riskScore >= 40
+                      ? 'bg-amber-500/10 text-amber-600'
+                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                 )}
+              >
+                {riskScore >= 40 ? <AlertTriangle className="h-3.5 w-3.5" /> : <Activity className="h-3.5 w-3.5" />}
+                {riskScore ? `Risco ${riskScore}` : 'Risco não informado'}
               </div>
-            </div>
-            <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
-              <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Observações permanentes</p>
-              <p className="mt-2 line-clamp-4 text-xs leading-relaxed text-foreground/78">
-                {patient?.notes || 'Sem observações permanentes cadastradas.'}
-              </p>
+            </header>
+
+            <div className="mt-4 space-y-3">
+              <div className="teleconsultation-inset rounded-[19px] p-4">
+                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Hipótese / diagnóstico</p>
+                <p className="mt-2 text-xs font-semibold leading-relaxed text-foreground/85">
+                  {patient?.diagnosis || 'Nenhuma informação clínica resumida.'}
+                </p>
+              </div>
+              <div className="teleconsultation-inset rounded-[19px] p-4">
+                <div className="flex items-center gap-2">
+                  <Pill className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+                  <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Medicações</p>
+                </div>
+                <div className="mt-2 space-y-1.5">
+                  {medications.length ? medications.slice(0, 5).map((medication, index) => (
+                    <p key={`${medication.name}-${index}`} className="text-xs font-semibold text-foreground/82">
+                      {medication.name}{medication.dosage ? ` · ${medication.dosage}` : ''}
+                    </p>
+                  )) : <p className="text-xs text-muted-foreground">Nenhuma medicação registrada.</p>}
+                </div>
+              </div>
+              <div className="teleconsultation-inset rounded-[19px] p-4">
+                <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Observações permanentes</p>
+                <p className="mt-2 text-xs leading-relaxed text-foreground/78">
+                  {patient?.notes || 'Sem observações permanentes cadastradas.'}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
-      </WorkspaceCard>
-      </div>
+        ) : null}
+      </section>
     </aside>
   );
 };

@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Baby, User, UserCheck, ArrowLeft, Info, Loader2, ChevronRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { GlassCard } from "@/components/ui/GlassCard";
 
 interface TemplateAnamnesisProps {
     onBack: () => void;
@@ -149,6 +148,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
     const { id: patientId } = useParams<{ id: string }>();
     const [selectedTemplate, setSelectedTemplate] = useState<typeof TEMPLATES[number] | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const shouldReduceMotion = useReducedMotion();
 
 
     const handleConfirmTemplate = async () => {
@@ -196,13 +196,10 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
 
                 // Clean up any duplicate records (best-effort, ignore errors)
                 if (existingRecords.length > 1) {
-                    for (let i = 1; i < existingRecords.length; i++) {
-                        await supabase
-                            .from('patient_anamneses')
-                            .delete()
-                            .eq('id', existingRecords[i].id)
-                            .then(/* ignore result */);
-                    }
+                    await supabase
+                        .from('patient_anamneses')
+                        .delete()
+                        .in('id', existingRecords.slice(1).map((record) => record.id));
                 }
             } else {
                 // No existing record — insert a new one
@@ -233,18 +230,18 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                 {!selectedTemplate ? (
                     <motion.div
                         key="selection-grid"
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                        className="max-w-6xl mx-auto px-6 py-12"
+                        exit={{ opacity: 0 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
+                        className="mx-auto max-w-6xl px-1 py-4 md:py-6"
                     >
-                        <div className="flex items-center gap-6 mb-16">
+                        <div className="mb-8 flex items-center gap-4">
                             <Button
                                 onClick={onBack}
                                 variant="ghost"
                                 size="icon"
-                                className="h-12 w-12 rounded-2xl bg-zinc-100 dark:bg-white/5 hover:bg-zinc-200 dark:hover:bg-white/10 transition-all"
+                                className="desktop-retina-inset desktop-retina-interactive h-11 w-11 rounded-2xl border border-border/45"
                             >
                                 <ArrowLeft className="w-5 h-5 text-zinc-500" />
                             </Button>
@@ -254,22 +251,21 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                             {TEMPLATES.map((template) => (
-                                <GlassCard
+                                <button
+                                    type="button"
                                     key={template.id}
-                                    className="cursor-pointer group hover:-translate-y-3 transition-all duration-700 rounded-[40px] border-zinc-200/50 dark:border-white/[0.05] overflow-hidden"
+                                    className="desktop-retina-inset desktop-retina-interactive group relative h-full cursor-pointer overflow-hidden rounded-[28px] border border-border/45 bg-background/58 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
                                     onClick={() => setSelectedTemplate(template)}
                                 >
-                                    <div className="absolute top-0 right-0 p-32 bg-zinc-900/5 dark:bg-white/5 rounded-full blur-[60px] opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
-
-                                    <div className="flex flex-col h-full relative z-10 p-10 space-y-8">
-                                        <div className="w-20 h-20 rounded-3xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-2xl group-hover:scale-110 transition-transform duration-700">
-                                            <template.icon className="w-10 h-10" />
+                                    <div className="relative z-10 flex h-full flex-col space-y-6 p-6">
+                                        <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-foreground text-background shadow-sm">
+                                            <template.icon className="h-5 w-5" />
                                         </div>
 
                                         <div className="space-y-4">
-                                            <h3 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight leading-tight">
+                                            <h3 className="text-xl font-black leading-tight tracking-tight text-foreground">
                                                 {template.label}
                                             </h3>
                                             <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
@@ -277,14 +273,14 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                             </p>
                                         </div>
 
-                                        <div className="pt-8 mt-auto border-t border-zinc-100 dark:border-white/5 flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">Ver Estrutura</span>
-                                            <div className="w-10 h-10 rounded-2xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-zinc-900 dark:group-hover:bg-white group-hover:text-white dark:group-hover:text-zinc-900 transition-all duration-500">
+                                        <div className="mt-auto flex items-center justify-between border-t border-border/45 pt-5">
+                                            <span className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground transition-colors group-hover:text-foreground">Ver estrutura</span>
+                                            <div className="desktop-retina-inset flex h-9 w-9 items-center justify-center rounded-xl border border-border/45">
                                                 <ChevronRight className="w-5 h-5" />
                                             </div>
                                         </div>
                                     </div>
-                                </GlassCard>
+                                </button>
                             ))}
                         </div>
                     </motion.div>
@@ -294,19 +290,18 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-6 bg-black/40 backdrop-blur-xl"
+                        className="fixed inset-0 z-50 flex items-center justify-center bg-black/42 p-4 backdrop-blur-sm md:p-6"
                     >
                         <motion.div
-                            initial={{ scale: 0.95, y: 40, opacity: 0 }}
+                            initial={shouldReduceMotion ? false : { scale: 0.985, y: 10, opacity: 0 }}
                             animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 40, opacity: 0 }}
-                            transition={{ type: "spring", duration: 0.8, bounce: 0.1 }}
-                            className="w-full h-full max-w-7xl bg-white dark:bg-[#050505] border border-zinc-200 dark:border-white/5 rounded-[48px] shadow-[0_64px_128px_-32px_rgba(0,0,0,0.3)] overflow-hidden flex flex-col relative"
+                            exit={{ scale: 0.985, y: 8, opacity: 0 }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 360, damping: 34, mass: 0.8 }}
+                            className="desktop-retina-modal relative flex h-[min(860px,calc(100dvh-3rem))] w-full max-w-6xl flex-col overflow-hidden rounded-[34px] border border-border/60 bg-background/96 shadow-2xl"
                         >
-                            <div className="absolute top-0 right-0 p-64 bg-zinc-100/50 dark:bg-white/5 rounded-full blur-[120px] pointer-events-none" />
 
                             {/* Modal Header - Reduced height and added Confirm button */}
-                            <div className="p-6 md:p-8 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between relative z-10 shrink-0">
+                            <div className="relative z-10 flex shrink-0 items-center justify-between border-b border-border/50 bg-muted/18 p-5 md:p-6">
                                 <div className="flex items-center gap-6">
                                     <div className="w-16 h-16 rounded-2xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-xl">
                                         <selectedTemplate.icon className="w-8 h-8" />
@@ -337,7 +332,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                     <Button
                                         onClick={handleConfirmTemplate}
                                         disabled={isSaving}
-                                        className="h-12 px-8 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl text-[10px] gap-2"
+                                        className="desktop-retina-interactive h-11 rounded-xl bg-foreground px-6 text-[10px] font-black uppercase tracking-widest text-background shadow-sm"
                                     >
                                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                         Confirmar Modelo
@@ -346,10 +341,9 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                             </div>
 
                             {/* Modal Content - Preview */}
-                            <div className="flex-1 overflow-y-auto custom-scrollbar p-10 md:p-14 relative z-10 min-h-[500px]">
-                                <div className="max-w-5xl mx-auto space-y-16">
-                                    <div className="bg-zinc-50 dark:bg-white/[0.01] border border-zinc-200 dark:border-white/[0.04] rounded-[32px] p-8 md:p-10 flex gap-6 md:gap-8 backdrop-blur-sm relative group overflow-hidden">
-                                        <div className="absolute inset-0 bg-gradient-to-br from-zinc-100/50 dark:from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+                            <div className="custom-scrollbar relative z-10 min-h-0 flex-1 overflow-y-auto overscroll-contain p-6 [contain:layout_paint_style] [scrollbar-gutter:stable] md:p-8">
+                                <div className="mx-auto max-w-5xl space-y-10">
+                                    <div className="desktop-retina-inset relative flex gap-5 overflow-hidden rounded-[26px] border border-border/45 bg-muted/24 p-6">
                                         <div className="w-14 h-14 shrink-0 rounded-2xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 relative z-10">
                                             <Info className="w-7 h-7" />
                                         </div>
@@ -363,9 +357,9 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                         </div>
                                     </div>
 
-                                    <div className="space-y-20">
+                                    <div className="space-y-12">
                                         {selectedTemplate.sections.map((section, idx) => (
-                                            <div key={idx} className="space-y-8">
+                                            <div key={idx} className="space-y-6" style={{ contentVisibility: "auto", containIntrinsicSize: "420px" }}>
                                                 <div className="flex items-center gap-6">
                                                     <span className="text-5xl font-black text-zinc-100 dark:text-white/5 tracking-tighter tabular-nums">
                                                         {(idx + 1).toString().padStart(2, '0')}
@@ -377,7 +371,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {section.fields.map((field, fIdx) => (
-                                                        <div key={fIdx} className="group relative bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5 rounded-[24px] p-6 hover:bg-zinc-50 dark:hover:bg-white/5 hover:border-zinc-300 dark:hover:border-white/10 transition-all duration-500">
+                                                        <div key={fIdx} className="desktop-retina-inset group relative rounded-[20px] border border-border/40 bg-background/58 p-5 transition-colors hover:border-border/75 hover:bg-background/78">
                                                             <div className="flex items-center gap-4">
                                                                 <div className="w-2 h-2 rounded-full bg-zinc-200 dark:bg-zinc-700 group-hover:bg-zinc-900 dark:group-hover:bg-white transition-colors" />
                                                                 <span className="text-sm font-bold text-zinc-600 dark:text-zinc-300">
@@ -395,18 +389,18 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                             </div>
 
                             {/* Modal Footer */}
-                            <div className="p-10 md:p-12 border-t border-zinc-100 dark:border-white/5 bg-transparent flex justify-end gap-6 relative z-10 shrink-0">
+                            <div className="relative z-10 flex shrink-0 justify-end gap-3 border-t border-border/50 bg-muted/18 p-4 md:p-5">
                                 <Button
                                     variant="outline"
                                     onClick={() => setSelectedTemplate(null)}
-                                    className="h-20 px-12 rounded-[24px] font-black uppercase tracking-widest text-zinc-500 border-zinc-200 dark:border-white/5 hover:bg-zinc-100 dark:hover:bg-white/5 transition-all text-xs"
+                                    className="desktop-retina-interactive h-11 rounded-xl px-6 text-[10px] font-black uppercase tracking-widest"
                                 >
                                     Voltar
                                 </Button>
                                 <Button
                                     onClick={handleConfirmTemplate}
                                     disabled={isSaving}
-                                    className="h-20 px-16 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-[24px] font-black uppercase tracking-widest hover:scale-105 active:scale-95 transition-all shadow-xl text-xs gap-4"
+                                    className="desktop-retina-interactive h-11 rounded-xl bg-foreground px-7 text-[10px] font-black uppercase tracking-widest text-background shadow-sm"
                                 >
                                     {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Check className="w-6 h-6" />}
                                     Aplicar Modelo

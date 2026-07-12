@@ -116,7 +116,7 @@ const invoicePaymentMethod = (invoice: Invoice) => {
   ).toLowerCase();
 
   if (raw.includes("pix")) return "Pix";
-  if (raw.includes("card") || raw.includes("cart")) return "Cartao";
+  if (raw.includes("card") || raw.includes("cart")) return "Cartão";
   if (raw.includes("boleto")) return "Boleto";
   return invoice.payment_url ? "Link de pagamento" : "A combinar";
 };
@@ -141,7 +141,7 @@ export function mapInvoiceToChargeRow(invoice: Invoice): ChargeRow {
     patientId: invoice.patient_id || null,
     patientName: null,
     amount: Number(invoice.amount || 0),
-    description: invoice.description || `Cobranca ${invoice.invoice_number || invoice.id.slice(0, 8)}`,
+    description: invoice.description || `Cobrança ${invoice.invoice_number || invoice.id.slice(0, 8)}`,
     status,
     dueDate: normalizeDateKey(invoice.due_date),
     paidAt: normalizeDateKey((invoice as any).paid_at || (invoice as any).confirmed_at),
@@ -170,7 +170,7 @@ export function mapFinancialEntryToChargeRow(entry: FinancialEntry): ChargeRow {
     patientId: entry.patient_id || null,
     patientName: entry.patients?.name || null,
     amount: Number(entry.amount || 0),
-    description: entry.description || entry.title || "Cobranca manual",
+    description: entry.description || entry.title || "Cobrança manual",
     status: getEffectiveChargeStatus(entry),
     dueDate: normalizeDateKey(entry.due_date),
     paidAt: normalizeDateKey(entry.paid_at),

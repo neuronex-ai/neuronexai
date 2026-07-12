@@ -5,11 +5,14 @@ import { useAuth } from "@/components/auth/SessionContextProvider";
 import type { Message } from "@/types";
 
 export {
+  useChatSessionHistory,
   useChatSessions,
   useCreateChatSession,
   useDeleteChatSession,
   useSessionMessages,
 } from "./use-ai-chat";
+
+export type { ChatHistoryChannel } from "./use-ai-chat";
 
 interface SendInput {
   message: string;

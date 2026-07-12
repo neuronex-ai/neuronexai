@@ -548,7 +548,7 @@ const InsuranceAgreementWizard = ({
             disabled={isPending}
             onClick={step === 1 ? () => {
               if (!name.trim()) {
-                toast.error("Informe o nome do convÃªnio.");
+                toast.error("Informe o nome do convênio.");
                 return;
               }
               setStep(2);

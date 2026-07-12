@@ -4,7 +4,7 @@ import { useNotifications, type AppNotification, type NotificationCategory } fro
 import { cn } from '@/lib/utils';
 import { format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AnimatePresence, motion, useReducedMotion, type PanInfo } from 'framer-motion';
+import { motion, useReducedMotion } from 'framer-motion';
 import {
   AlertCircle,
   AlertTriangle,
@@ -26,10 +26,11 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { polishPortugueseUiText } from '@/lib/portuguese-ui-text';
 
 type NotificationFilter = 'all' | NotificationCategory;
 const NOTIFICATION_PAGE_SIZE = 30;
@@ -38,26 +39,26 @@ const filters: Array<{ value: NotificationFilter; label: string }> = [
   { value: 'all', label: 'Todas' },
   { value: 'dashboard', label: 'Painel' },
   { value: 'agenda', label: 'Agenda' },
-  { value: 'prontuario', label: 'Prontuario' },
+  { value: 'prontuario', label: 'Prontuário' },
   { value: 'teleconsulta', label: 'Teleconsulta' },
   { value: 'financeiro', label: 'Financeiro' },
   { value: 'neurodrive', label: 'NeuroDrive' },
   { value: 'synapse', label: 'Synapse' },
   { value: 'ajustes', label: 'Ajustes' },
-  { value: 'seguranca', label: 'Seguranca' },
+  { value: 'seguranca', label: 'Segurança' },
   { value: 'sistema', label: 'Sistema' },
 ];
 
 const categoryLabel: Record<NotificationCategory, string> = {
   dashboard: 'Painel',
   agenda: 'Agenda',
-  prontuario: 'Prontuario',
+  prontuario: 'Prontuário',
   teleconsulta: 'Teleconsulta',
   neurodrive: 'NeuroDrive',
   financeiro: 'Financeiro',
   synapse: 'Synapse',
   ajustes: 'Ajustes',
-  seguranca: 'Seguranca',
+  seguranca: 'Segurança',
   sistema: 'Sistema',
 };
 
@@ -90,7 +91,7 @@ const financeTag = (notification: AppNotification) => {
   if (notification.category !== 'financeiro') return null;
   const scope = String(notification.metadata.financeScope || notification.metadata.finance_scope || '').toLowerCase();
   if (scope === 'neurofinance') return 'NeuroFinance';
-  if (scope === 'gestao' || scope === 'gestao_financeira') return 'Gestao';
+  if (scope === 'gestao' || scope === 'gestao_financeira') return 'Gestão';
   return null;
 };
 
@@ -104,22 +105,22 @@ export const AlertsPanel = () => {
     dismiss,
     restore,
     isMutating,
-  } = useNotifications();
+  } = useNotifications({ enableRealtime: false, syncBadge: false });
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const reduceMotion = useReducedMotion();
   const [filter, setFilter] = useState<NotificationFilter>('all');
   const [visibleCount, setVisibleCount] = useState(NOTIFICATION_PAGE_SIZE);
+  const [isFilterPending, startFilterTransition] = useTransition();
 
   useEffect(() => {
     setVisibleCount(NOTIFICATION_PAGE_SIZE);
-  }, [filter, notifications.length]);
+  }, [filter]);
 
   const filteredNotifications = useMemo(() => {
-    const sorted = [...notifications].sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime());
     return filter === 'all'
-      ? sorted
-      : sorted.filter((notification) => notification.category === filter);
+      ? notifications
+      : notifications.filter((notification) => notification.category === filter);
   }, [filter, notifications]);
 
   const visibleNotifications = useMemo(
@@ -134,21 +135,23 @@ export const AlertsPanel = () => {
     const groups = new Map<string, AppNotification[]>();
     visibleNotifications.forEach((notification) => {
       const label = groupLabel(notification.createdAt);
-      groups.set(label, [...(groups.get(label) || []), notification]);
+      const existing = groups.get(label);
+      if (existing) existing.push(notification);
+      else groups.set(label, [notification]);
     });
     return Array.from(groups.entries());
   }, [visibleNotifications]);
 
-  const handleRead = async (notification: AppNotification) => {
+  const handleRead = useCallback(async (notification: AppNotification) => {
     if (!notification.isRead) await markAsRead(notification.id);
-  };
+  }, [markAsRead]);
 
-  const handleAction = async (notification: AppNotification) => {
+  const handleAction = useCallback(async (notification: AppNotification) => {
     await handleRead(notification);
     if (notification.actionUrl) navigate(notification.actionUrl);
-  };
+  }, [handleRead, navigate]);
 
-  const handleDismiss = async (notification: AppNotification) => {
+  const handleDismiss = useCallback(async (notification: AppNotification) => {
     await dismiss(notification.id);
     toast.success('Notificação dispensada', {
       action: {
@@ -156,12 +159,7 @@ export const AlertsPanel = () => {
         onClick: () => void restore(notification.id),
       },
     });
-  };
-
-  const handleDragEnd = (notification: AppNotification, info: PanInfo) => {
-    if (info.offset.x <= -85) void handleDismiss(notification);
-    if (info.offset.x >= 85) void handleRead(notification);
-  };
+  }, [dismiss, restore]);
 
   if (isLoading) {
     return (
@@ -173,14 +171,14 @@ export const AlertsPanel = () => {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-transparent">
-      <header className="sticky top-0 z-20 border-b border-border/35 bg-background/92 px-5 pb-4 pt-6 backdrop-blur-2xl dark:border-white/10">
+      <header className="notification-panel-header sticky top-0 z-20 border-b border-border/35 px-5 pb-3 pt-4 dark:border-white/[0.065]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <Bell className="h-4 w-4 text-muted-foreground" />
               <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Central persistente</p>
             </div>
-            <h3 className="mt-2 text-xl font-black tracking-[-0.04em] text-foreground">Notificações</h3>
+            <h3 className="mt-1.5 text-xl font-black tracking-[-0.04em] text-foreground">Notificações</h3>
             <p className="mt-1 text-xs font-medium text-muted-foreground">
               {unreadCount > 0 ? `${unreadCount} não lida${unreadCount === 1 ? '' : 's'}` : 'Tudo em dia'}
             </p>
@@ -200,7 +198,7 @@ export const AlertsPanel = () => {
           ) : null}
         </div>
 
-        <div className="mt-5 flex items-center justify-between gap-3 rounded-xl border border-border/35 bg-muted/45 px-3 py-2 dark:border-white/8">
+        <div className="mt-3 flex items-center justify-between gap-3 rounded-[14px] border border-border/35 bg-muted/45 px-3 py-1.5 dark:border-white/8">
           <div className="min-w-0">
             <p className="text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/70">Filtro</p>
             <p className="mt-0.5 truncate text-xs font-black text-foreground">{activeFilterLabel}</p>
@@ -211,8 +209,8 @@ export const AlertsPanel = () => {
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-10 w-10 rounded-xl border-border/50 bg-background/70"
-                aria-label="Filtrar notificacoes"
+                className="h-9 w-9 rounded-[13px] border-border/50 bg-background/70"
+                aria-label="Filtrar notificações"
               >
                 <ListFilter className="h-4 w-4" />
               </Button>
@@ -223,7 +221,7 @@ export const AlertsPanel = () => {
                   <button
                     key={item.value}
                     type="button"
-                    onClick={() => setFilter(item.value)}
+                    onClick={() => startFilterTransition(() => setFilter(item.value))}
                     className={cn(
                       'flex min-h-10 w-full items-center justify-between rounded-xl px-3 text-left text-[10px] font-black uppercase tracking-[0.12em] transition-colors',
                       filter === item.value
@@ -241,33 +239,27 @@ export const AlertsPanel = () => {
         </div>
       </header>
 
-      <div className={cn('min-h-0 flex-1 overflow-y-auto custom-scrollbar', isMobile ? 'px-4 pb-24 pt-4' : 'px-4 pb-5 pt-4')}>
-        <AnimatePresence mode="popLayout">
+      <div className={cn('notification-scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar [scrollbar-gutter:stable]', isMobile ? 'px-4 pb-24 pt-4' : 'px-4 pb-5 pt-4')}>
+        <motion.div
+          key={filter}
+          initial={reduceMotion ? false : { opacity: 0, x: 3 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={reduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+          aria-busy={isFilterPending}
+        >
           {groupedNotifications.length > 0 ? (
             groupedNotifications.map(([label, items]) => (
-              <motion.section
+              <section
                 key={label}
-                layout
-                initial={reduceMotion ? false : { opacity: 0, y: 8 }}
-                animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                exit={reduceMotion ? { opacity: 0 } : { opacity: 0 }}
-                className="mb-6"
+                className="mb-5"
               >
                 <p className="mb-3 px-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">{label}</p>
-                <div className="space-y-3">
+                <div className="space-y-2.5">
                   {items.map((notification) => (
-                    <motion.article
+                    <article
                       key={notification.id}
-                      layout
-                      drag={isMobile ? 'x' : false}
-                      dragConstraints={{ left: 0, right: 0 }}
-                      dragElastic={0.22}
-                      onDragEnd={(_event, info) => handleDragEnd(notification, info)}
-                      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
-                      animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.97 }}
                       className={cn(
-                        'group relative overflow-hidden rounded-[24px] border p-4 shadow-sm transition',
+                        'notification-card desktop-tactile group relative overflow-hidden rounded-[22px] border p-3.5',
                         notification.isRead
                           ? 'border-border/35 bg-card/55 dark:border-white/8'
                           : 'border-foreground/15 bg-card shadow-md dark:border-white/15',
@@ -301,13 +293,13 @@ export const AlertsPanel = () => {
                                   </span>
                                 ) : null}
                               </div>
-                              <h4 className="mt-1 text-sm font-black leading-tight tracking-[-0.02em] text-foreground">{notification.title}</h4>
+                              <h4 className="mt-1 text-sm font-black leading-tight tracking-[-0.02em] text-foreground">{polishPortugueseUiText(notification.title)}</h4>
                             </div>
                             <span className="shrink-0 text-[9px] font-bold text-muted-foreground">{timeLabel(notification.createdAt)}</span>
                           </div>
-                          <p className="mt-2 text-xs font-medium leading-relaxed text-muted-foreground">{notification.message}</p>
+                          <p className="mt-1.5 text-xs font-medium leading-relaxed text-muted-foreground">{polishPortugueseUiText(notification.message)}</p>
 
-                          <div className="mt-4 flex items-center justify-between gap-2">
+                          <div className="mt-3 flex items-center justify-between gap-2">
                             {notification.actionUrl ? (
                               <Button
                                 type="button"
@@ -347,17 +339,13 @@ export const AlertsPanel = () => {
                           </div>
                         </div>
                       </div>
-                    </motion.article>
+                    </article>
                   ))}
                 </div>
-              </motion.section>
+              </section>
             ))
           ) : (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="flex min-h-[360px] flex-col items-center justify-center px-8 text-center"
-            >
+            <div className="flex min-h-[360px] flex-col items-center justify-center px-8 text-center">
               <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-border/35 bg-muted/45 dark:border-white/8">
                 <Shield className="h-10 w-10 text-muted-foreground/35" strokeWidth={1.2} />
               </div>
@@ -365,9 +353,9 @@ export const AlertsPanel = () => {
               <p className="mt-2 max-w-xs text-xs font-medium leading-relaxed text-muted-foreground/75">
                 Não há itens nesta categoria. Leitura e descarte permanecem sincronizados entre dispositivos.
               </p>
-            </motion.div>
+            </div>
           )}
-        </AnimatePresence>
+        </motion.div>
         {hasMoreNotifications ? (
           <div className="px-2 pb-4 pt-1">
             <Button

@@ -303,7 +303,7 @@ export const createPatientPortalAccess = (input: { email: string; password: stri
       password: input.password,
       inviteToken: input.inviteToken || "",
     },
-    "NÃ£o foi possÃ­vel criar o acesso do paciente.",
+    "Não foi possível criar o acesso do paciente.",
   );
 
 export const sendPatientPortalAccessLink = (input: { email: string; inviteToken?: string }) =>
@@ -314,7 +314,7 @@ export const sendPatientPortalAccessLink = (input: { email: string; inviteToken?
       email: input.email,
       inviteToken: input.inviteToken || "",
     },
-    "NÃ£o foi possÃ­vel enviar o link de acesso.",
+    "Não foi possível enviar o link de acesso.",
   );
 
 export const sendPatientPortalPasswordReset = (input: { email: string; inviteToken?: string }) =>
@@ -325,7 +325,7 @@ export const sendPatientPortalPasswordReset = (input: { email: string; inviteTok
       email: input.email,
       inviteToken: input.inviteToken || "",
     },
-    "NÃ£o foi possÃ­vel enviar o e-mail de redefiniÃ§Ã£o.",
+    "Não foi possível enviar o e-mail de redefinição.",
   );
 
 export const usePatientPortalCurrent = () => {

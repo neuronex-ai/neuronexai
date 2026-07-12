@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { toast } from 'sonner';
@@ -11,7 +11,19 @@ export interface ChatSession {
   title: string;
   created_at: string;
   updated_at: string;
+  context_state?: {
+    source?: string | null;
+    remoteJid?: string | null;
+    pushName?: string | null;
+    phoneNumber?: string | null;
+    conversation_kind?: 'patient' | 'psychologist' | null;
+  } | null;
 }
+
+export type ChatHistoryChannel = 'neuronex' | 'whatsapp';
+
+const CHAT_HISTORY_PAGE_SIZE = 48;
+const CHAT_MESSAGE_RENDER_LIMIT = 160;
 
 const GEMINI_CHAT_URL = edgeFunctionUrl("gemini-text-chat");
 
@@ -94,9 +106,10 @@ const readEventStream = async (
 const fetchChatSessions = async (userId: string): Promise<ChatSession[]> => {
   const { data, error } = await supabase
     .from('chat_sessions')
-    .select('*')
+    .select('id,title,created_at,updated_at,context_state')
     .eq('user_id', userId)
-    .order('updated_at', { ascending: false });
+    .order('updated_at', { ascending: false })
+    .limit(160);
 
   if (error) throw new Error(error.message);
   return data || [];
@@ -108,7 +121,47 @@ export const useChatSessions = () => {
     queryKey: ['chatSessions', user?.id],
     queryFn: () => fetchChatSessions(user!.id),
     enabled: !!user,
-    staleTime: 1000 * 60 * 2, // 2 minutos
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+  });
+};
+
+export const useChatSessionHistory = (channel: ChatHistoryChannel, enabled = true) => {
+  const { user } = useAuth();
+
+  return useInfiniteQuery({
+    queryKey: ['chatSessionHistory', user?.id, channel],
+    enabled: Boolean(user?.id && enabled),
+    initialPageParam: 0,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 30,
+    refetchOnWindowFocus: false,
+    queryFn: async ({ pageParam }) => {
+      const offset = Number(pageParam || 0);
+      const { data, error } = await supabase
+        .from('chat_sessions')
+        .select('id,title,created_at,updated_at,context_state')
+        .eq('user_id', user!.id)
+        .order('updated_at', { ascending: false })
+        .range(offset, offset + CHAT_HISTORY_PAGE_SIZE - 1);
+
+      if (error) throw error;
+
+      const batch = (data || []) as ChatSession[];
+      const sessions = batch.filter((session) => {
+        if (session.title?.startsWith('NeuroPulse Analysis')) return false;
+        const isWhatsApp = session.context_state?.source === 'whatsapp';
+        return channel === 'whatsapp' ? isWhatsApp : !isWhatsApp;
+      });
+
+      return {
+        sessions,
+        nextOffset: offset + batch.length,
+        hasMore: batch.length === CHAT_HISTORY_PAGE_SIZE,
+      };
+    },
+    getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.nextOffset : undefined,
   });
 };
 
@@ -165,12 +218,13 @@ export const useDeleteChatSession = () => {
 const fetchMessages = async (sessionId: string): Promise<Message[]> => {
   const { data, error } = await supabase
     .from('messages')
-    .select('*')
+    .select('id,content,role,created_at,user_id,session_id,attachments')
     .eq('session_id', sessionId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(CHAT_MESSAGE_RENDER_LIMIT);
 
   if (error) throw new Error(error.message);
-  return data as Message[] || [];
+  return ((data as Message[] | null) || []).reverse();
 };
 
 export const useSessionMessages = (sessionId: string | null) => {
@@ -178,7 +232,8 @@ export const useSessionMessages = (sessionId: string | null) => {
     queryKey: ['sessionMessages', sessionId],
     queryFn: () => fetchMessages(sessionId!),
     enabled: !!sessionId,
-    staleTime: 0, // Always fetch fresh data when switching sessions to ensure history is visible
+    staleTime: 30_000,
+    gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
   });
 };
@@ -248,7 +303,7 @@ export const useSendChatMessage = () => {
   return useMutation({
     mutationFn: ({ message, sessionId, attachments, context, streamProgress, onProgress }: SendChatMessageVariables) => {
       if (!accessToken) throw new Error("Sessão inválida.");
-      if (!user?.id) throw new Error("UsuÃ¡rio nÃ£o autenticado");
+      if (!user?.id) throw new Error("Usuário não autenticado");
       return sendMessageToAI(message, sessionId, attachments || [], context || {}, accessToken, { streamProgress, onProgress });
     },
     onMutate: async ({ message, sessionId }) => {

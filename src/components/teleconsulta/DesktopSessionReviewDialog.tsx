@@ -116,30 +116,32 @@ export const DesktopSessionReviewDialog = ({
       <DialogContent
         onEscapeKeyDown={(event) => event.preventDefault()}
         onPointerDownOutside={(event) => event.preventDefault()}
+        overlayClassName="teleconsultation-overlay !backdrop-blur-none"
+        showCloseButton={false}
         className={cn(
-          'desktop-retina-modal desktop-retina-form !grid !w-[min(980px,calc(100vw-2rem))] !max-w-[min(980px,calc(100vw-2rem))] !grid-cols-none !gap-0 !overflow-hidden !rounded-[28px] !border-border/45 !bg-background/98 !p-0 backdrop-blur-3xl dark:!border-white/10',
+          'teleconsultation-surface desktop-retina-form !grid !w-[min(940px,calc(100vw-2rem))] !max-w-[min(940px,calc(100vw-2rem))] !grid-cols-none !gap-0 !overflow-hidden !rounded-[28px] !p-0',
           '!max-h-[calc(100dvh-2rem)] sm:!max-h-[calc(100dvh-2rem)] sm:!overflow-hidden sm:!rounded-[28px] sm:!p-0',
         )}
       >
         <div className="flex max-h-[calc(100dvh-2rem)] min-h-0 flex-col">
-          <DialogHeader className="shrink-0 border-b border-border/35 px-5 py-4 text-center dark:border-white/10 sm:px-7">
-            <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl border border-emerald-500/20 bg-emerald-500/10 text-emerald-500">
+          <DialogHeader className="shrink-0 border-b border-border/35 px-5 py-4 text-center dark:border-white/[0.045] sm:px-7">
+            <div className="teleconsultation-inset mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl text-emerald-500">
               <Sparkles className="h-5 w-5" />
             </div>
             <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
               Revisão profissional obrigatória
             </p>
             <DialogTitle className="mt-2 text-2xl font-black tracking-[-0.04em] sm:text-3xl">
-              Concluir sessão com {patientName}
+              Revisar sessão com {patientName}
             </DialogTitle>
             <DialogDescription className="mx-auto mt-2 max-w-2xl text-sm leading-relaxed">
-              O resumo de sessão se manterá pendente por 48h após a sessão. Depois desse prazo, será confirmado automaticamente pelo sistema.
+              Revise agora ou mantenha o resumo pendente por até 48 horas. A versão original gerada pela NeuroNex AI permanece preservada.
             </DialogDescription>
           </DialogHeader>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
             {isGenerating ? (
-              <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-border/40 bg-card/70 p-8 text-center dark:border-white/10">
+              <div className="teleconsultation-inset flex min-h-[260px] flex-col items-center justify-center rounded-[24px] p-8 text-center">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 <h3 className="mt-5 text-lg font-black tracking-[-0.03em]">Gerando resumo pendente</h3>
                 <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-muted-foreground">
@@ -148,7 +150,7 @@ export const DesktopSessionReviewDialog = ({
               </div>
             ) : summary ? (
               <div className="space-y-4">
-                <section className="rounded-[24px] border border-border/40 bg-card/75 p-4 shadow-sm dark:border-white/10 sm:p-5">
+                <section className="teleconsultation-inset rounded-[24px] p-4 sm:p-5">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="space-y-2">
                       <span className="inline-flex items-center gap-2 rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-amber-600 dark:text-amber-300">
@@ -171,7 +173,7 @@ export const DesktopSessionReviewDialog = ({
                         value={summaryDraft.sentiment}
                         onValueChange={(value) => setSummaryDraft((current) => ({ ...current, sentiment: value }))}
                       >
-                        <SelectTrigger className="h-10 rounded-2xl border-border/45 bg-background/75 text-xs font-bold dark:border-white/10">
+                        <SelectTrigger className="h-10 rounded-2xl border-border/45 bg-background/75 text-xs font-bold dark:border-white/[0.055]">
                           <SelectValue placeholder="Selecionar emoção" />
                         </SelectTrigger>
                         <SelectContent>
@@ -189,7 +191,7 @@ export const DesktopSessionReviewDialog = ({
                     <Textarea
                       value={summaryDraft.summary}
                       onChange={(event) => setSummaryDraft((current) => ({ ...current, summary: event.target.value }))}
-                      className="min-h-[190px] resize-y rounded-[20px] border-border/40 bg-background/70 text-sm leading-7 text-foreground/90 dark:border-white/10"
+                      className="min-h-[190px] resize-y rounded-[20px] border-border/40 bg-background/70 text-sm leading-7 text-foreground/90 dark:border-white/[0.055]"
                       placeholder="Resumo gerado pela IA"
                     />
                   </div>
@@ -198,11 +200,11 @@ export const DesktopSessionReviewDialog = ({
                 {(topics.length > 0 || nextSteps.length > 0) ? (
                   <div className="grid gap-4 md:grid-cols-2">
                     {topics.length > 0 ? (
-                      <section className="rounded-[22px] border border-border/40 bg-card/55 p-4 dark:border-white/10">
+                      <section className="teleconsultation-inset rounded-[22px] p-4">
                         <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Temas abordados</p>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {topics.map((topic) => (
-                            <span key={topic} className="rounded-full border border-border/45 bg-background/70 px-3 py-1.5 text-[11px] font-bold text-foreground/80 dark:border-white/10">
+                            <span key={topic} className="rounded-full border border-border/45 bg-background/70 px-3 py-1.5 text-[11px] font-bold text-foreground/80 dark:border-white/[0.055]">
                               {topic}
                             </span>
                           ))}
@@ -211,7 +213,7 @@ export const DesktopSessionReviewDialog = ({
                     ) : null}
 
                     {nextSteps.length > 0 ? (
-                      <section className="rounded-[22px] border border-border/40 bg-card/55 p-4 dark:border-white/10">
+                      <section className="teleconsultation-inset rounded-[22px] p-4">
                         <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Próximos focos</p>
                         <ul className="mt-3 space-y-2">
                           {nextSteps.map((step) => (
@@ -226,14 +228,14 @@ export const DesktopSessionReviewDialog = ({
                   </div>
                 ) : null}
 
-                <section className="rounded-[22px] border border-border/40 bg-muted/35 p-4 text-center dark:border-white/10">
+                <section className="rounded-[22px] border border-border/40 bg-muted/35 p-4 text-center dark:border-white/[0.055]">
                   <p className="text-xs font-semibold leading-relaxed text-muted-foreground">
                     Após a confirmação, o resumo passa a integrar o prontuário/registro clínico e deixa de ser editável pela rotina comum. Se houver edição, a versão original gerada pela NeuroNex AI será preservada para auditoria e consulta discreta no histórico.
                   </p>
                 </section>
               </div>
             ) : (
-              <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[24px] border border-border/40 bg-card/70 p-8 text-center dark:border-white/10">
+              <div className="teleconsultation-inset flex min-h-[260px] flex-col items-center justify-center rounded-[24px] p-8 text-center">
                 <AlertTriangle className="h-8 w-8 text-amber-500" />
                 <h3 className="mt-5 text-lg font-black tracking-[-0.03em]">Resumo ainda não disponível</h3>
                 <p className="mt-2 max-w-md text-sm font-medium leading-relaxed text-muted-foreground">
@@ -245,7 +247,7 @@ export const DesktopSessionReviewDialog = ({
             <button
               type="button"
               onClick={() => setDetailsOpen((current) => !current)}
-              className="mt-4 flex w-full items-center justify-between rounded-[18px] border border-border/40 bg-card/55 px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground transition hover:bg-card dark:border-white/10"
+              className="teleconsultation-action mt-4 flex w-full items-center justify-between rounded-[18px] border border-border/40 bg-card/55 px-4 py-3 text-left text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground hover:bg-card dark:border-white/[0.055]"
             >
               <span className="flex items-center gap-2">
                 <FileText className="h-4 w-4" />
@@ -255,8 +257,8 @@ export const DesktopSessionReviewDialog = ({
             </button>
 
             {detailsOpen ? (
-              <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <div className="rounded-[18px] border border-border/40 bg-background/70 p-4 dark:border-white/10">
+              <div className="mt-3 grid gap-3 motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-top-1 motion-safe:duration-200 md:grid-cols-2">
+                <div className="teleconsultation-inset rounded-[18px] p-4">
                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
                     Transcrição ({segmentsCount} trechos)
                   </p>
@@ -264,7 +266,7 @@ export const DesktopSessionReviewDialog = ({
                     {transcript || 'Nenhuma transcrição capturada.'}
                   </pre>
                 </div>
-                <div className="rounded-[18px] border border-border/40 bg-background/70 p-4 dark:border-white/10">
+                <div className="teleconsultation-inset rounded-[18px] p-4">
                   <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">Anotações</p>
                   <pre className="mt-3 max-h-44 whitespace-pre-wrap overflow-auto text-xs leading-relaxed text-muted-foreground">
                     {notes || 'Nenhuma anotação adicional.'}
@@ -287,25 +289,25 @@ export const DesktopSessionReviewDialog = ({
             ) : null}
           </div>
 
-          <div className="grid shrink-0 gap-3 border-t border-border/35 bg-background/95 px-4 py-4 dark:border-white/10 sm:grid-cols-2 sm:px-6">
+          <div className="grid shrink-0 gap-3 border-t border-border/35 bg-background/95 px-4 py-4 dark:border-white/[0.045] sm:grid-cols-2 sm:px-6">
             <Button
               type="button"
               variant="outline"
               disabled={!canFinish}
               onClick={onPreserve}
-              className="h-12 rounded-2xl border-border/50 text-[10px] font-black uppercase tracking-[0.14em] dark:border-white/10"
+              className="teleconsultation-action h-12 rounded-2xl border-border/50 text-[10px] font-black uppercase tracking-[0.14em] dark:border-white/[0.055]"
             >
               {completionMode === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Confirmar depois
+              Revisar depois
             </Button>
             <Button
               type="button"
               disabled={!canFinish || !canGenerate}
               onClick={() => onGenerate(summaryDraft)}
-              className="h-12 rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.14em] text-background"
+              className="teleconsultation-action h-12 rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.14em] text-background"
             >
               {completionMode === 'saving' ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
-              Confirmo resumo gerado
+              Confirmar agora
             </Button>
           </div>
         </div>

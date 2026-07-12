@@ -15,11 +15,11 @@ import { cn } from "@/lib/utils";
 const DAYS_OF_WEEK = [
   { id: "0", label: "Domingo", short: "Dom" },
   { id: "1", label: "Segunda-feira", short: "Seg" },
-  { id: "2", label: "Terca-feira", short: "Ter" },
+  { id: "2", label: "Terça-feira", short: "Ter" },
   { id: "3", label: "Quarta-feira", short: "Qua" },
   { id: "4", label: "Quinta-feira", short: "Qui" },
   { id: "5", label: "Sexta-feira", short: "Sex" },
-  { id: "6", label: "Sabado", short: "Sab" },
+  { id: "6", label: "Sábado", short: "Sáb" },
 ];
 
 type WorkingDayHours = { enabled: boolean; start: string; end: string };
@@ -79,11 +79,11 @@ export const AgendaSettingsModal = () => {
         .eq("id", user.id);
 
       if (error) throw error;
-      toast.success("Horarios atualizados com sucesso.");
+      toast.success("Horários atualizados com sucesso.");
       setOpen(false);
     } catch (error) {
       console.error("Save error detail:", error);
-      toast.error(error instanceof Error ? error.message : "Erro ao salvar configuracao.");
+      toast.error(error instanceof Error ? error.message : "Erro ao salvar configuração.");
     } finally {
       setIsSaving(false);
     }
@@ -106,13 +106,13 @@ export const AgendaSettingsModal = () => {
       size="md"
       eyebrow="Agenda"
       title="Sua grade"
-      description="Defina os dias e intervalos em que voce atende."
+      description="Defina os dias e intervalos em que você atende."
       heroIcon={<ModalHeroIcon icon={Clock} ariaLabel="Grade de atendimento" />}
       trigger={
         <Button
           variant="ghost"
           size="icon"
-          className="h-10 w-10 shrink-0 rounded-full border border-white/10 bg-white/[0.075] text-white/60 shadow-sm motion-safe:transition-colors hover:border-white/20 hover:bg-white/[0.12] hover:text-white dark:border-white/[0.075] dark:bg-white/[0.05] dark:hover:border-white/20 dark:hover:bg-white/[0.085]"
+          className="desktop-retina-interactive h-10 w-10 shrink-0 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
           aria-label="Configurar grade da agenda"
         >
           <Settings className="h-4 w-4" />
@@ -125,7 +125,7 @@ export const AgendaSettingsModal = () => {
           className="h-12 w-full rounded-2xl bg-foreground text-[10.5px] font-black uppercase tracking-[0.16em] text-background shadow-xl disabled:opacity-50"
         >
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-          {isSaving ? "Salvando..." : "Salvar configuracao"}
+          {isSaving ? "Salvando..." : "Salvar configuração"}
         </Button>
       }
     >
@@ -165,9 +165,9 @@ export const AgendaSettingsModal = () => {
                         value={hw.start}
                         onChange={(event) => updateDay(day.id, "start", event.target.value)}
                         className="h-10 w-[104px] rounded-xl border-border/70 bg-background text-center text-sm font-bold"
-                        aria-label={`Inicio em ${day.label}`}
+                        aria-label={`Início em ${day.label}`}
                       />
-                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ate</span>
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">até</span>
                       <Input
                         type="time"
                         value={hw.end}
@@ -187,9 +187,9 @@ export const AgendaSettingsModal = () => {
                         value={hw.start}
                         onChange={(event) => updateDay(day.id, "start", event.target.value)}
                         className="h-10 flex-1 rounded-xl border-border/70 bg-background text-center text-sm font-bold"
-                        aria-label={`Inicio em ${day.label}`}
+                        aria-label={`Início em ${day.label}`}
                       />
-                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">ate</span>
+                      <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">até</span>
                       <Input
                         type="time"
                         value={hw.end}

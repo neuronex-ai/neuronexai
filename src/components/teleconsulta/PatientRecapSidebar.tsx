@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
-import { BrainCircuit, History, Sparkles } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { SessionNote } from "@/types";
-import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { motion, AnimatePresence } from "framer-motion";
+import { Skeleton } from '@/components/ui/skeleton';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+import type { AISummary } from '@/types';
+import { useQuery } from '@tanstack/react-query';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { BrainCircuit, CalendarClock, CircleDot, Sparkles } from 'lucide-react';
 
 interface PatientRecapSidebarProps {
   patientId?: string | null;
@@ -14,206 +13,123 @@ interface PatientRecapSidebarProps {
   className?: string;
 }
 
-export const PatientRecapSidebar = ({ patientId, patientName, className }: PatientRecapSidebarProps) => {
-  const [lastNote, setLastNote] = useState<SessionNote | null>(null);
-  const [loading, setLoading] = useState(false);
+interface RecapNote {
+  id: string;
+  created_at: string;
+  ai_summary: AISummary | null;
+}
 
-  useEffect(() => {
-    if (!patientId) {
-      setLastNote(null);
-      return;
-    }
-
-    const fetchLastSessionContext = async () => {
-      setLoading(true);
+export const PatientRecapSidebar = ({
+  patientId,
+  patientName,
+  className,
+}: PatientRecapSidebarProps) => {
+  const { data: lastNote, isLoading } = useQuery({
+    queryKey: ['teleconsultation-patient-recap', patientId],
+    enabled: Boolean(patientId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    queryFn: async () => {
+      if (!patientId) return null;
       const { data, error } = await supabase
         .from('session_notes')
-        .select('*')
+        .select('id, created_at, ai_summary')
         .eq('patient_id', patientId)
         .not('ai_summary', 'is', null)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (!error && data) {
-        setLastNote(data as any);
-      } else {
-        setLastNote(null);
-      }
-      setLoading(false);
-    };
-
-    fetchLastSessionContext();
-  }, [patientId]);
+      if (error) throw error;
+      return data as RecapNote | null;
+    },
+  });
 
   if (!patientId) return null;
 
-  const topics = lastNote?.ai_summary?.topics?.slice(0, 3) || [];
-  const sentiment = lastNote?.ai_summary?.sentiment || "Neutro";
+  const summary = lastNote?.ai_summary;
+  const topics = summary?.topics?.filter(Boolean).slice(0, 4) || [];
+  const firstName = patientName?.trim().split(/\s+/)[0] || 'paciente';
 
   return (
-    <AnimatePresence mode="wait">
-      {patientId ? (
-        <motion.aside
-          key={patientId}
-          initial={{ opacity: 0, x: 20, scale: 0.98 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: 20, scale: 0.98 }}
-          transition={{ type: "spring", stiffness: 300, damping: 30 }}
-          className={cn("relative flex flex-col h-full overflow-hidden rounded-[40px] transition-all duration-500", className)}
-        >
-          {/* --- Premium Glassmorphism Layers --- */}
-          {/* 1. Base Blur & Tint */}
-          {/* 1. Base Blur & Tint */}
-          <div className="absolute inset-0 bg-white/60 dark:bg-[#050505]/60 backdrop-blur-[60px] z-0 transition-colors duration-500" />
+    <section className={cn('teleconsultation-surface flex h-full min-h-0 flex-col overflow-hidden rounded-[30px]', className)}>
+      <header className="shrink-0 border-b border-border/40 px-5 py-5 dark:border-white/[0.045] sm:px-6">
+        <div className="flex items-center gap-2.5 text-muted-foreground">
+          <div className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-border/45 bg-foreground/[0.035] dark:border-white/[0.05]">
+            <BrainCircuit className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <span className="text-[9px] font-black uppercase tracking-[0.22em]">Synapse · contexto</span>
+        </div>
+        <h2 className="mt-5 text-2xl font-black leading-tight tracking-[-0.045em] text-foreground">
+          Última sessão com <span className="text-muted-foreground">{firstName}</span>
+        </h2>
+        {lastNote ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="teleconsultation-inset inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.11em] text-muted-foreground">
+              <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
+              {format(new Date(lastNote.created_at), "dd 'de' MMMM", { locale: ptBR })}
+            </span>
+            <span className="teleconsultation-inset rounded-full px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.11em] text-muted-foreground">
+              {summary?.sentiment || 'Neutro'}
+            </span>
+          </div>
+        ) : null}
+      </header>
 
-          {/* 2. Noise Texture */}
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] mix-blend-overlay z-0 pointer-events-none" />
-
-          {/* 3. Subtle Gradient Flow */}
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-black/[0.03] dark:bg-white/[0.03] rounded-full blur-[120px] pointer-events-none" />
-          <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-black/[0.02] dark:bg-white/[0.02] rounded-full blur-[100px] pointer-events-none" />
-
-          {/* 4. Glass Borders/Reflections */}
-          {/* 4. Glass Borders/Reflections */}
-          <div className="absolute inset-0 rounded-[40px] border border-white/20 dark:border-white/10 pointer-events-none z-20 shadow-[inset_0_1px_1px_rgba(31,38,135,0.07)] dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15)] transition-colors duration-500" />
-
-          {/* Scrollable Container */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10">
-            <div className="p-8 space-y-10">
-              {/* Header Section */}
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="relative flex items-center justify-center w-4 h-4">
-                    <div className="absolute w-2 h-2 bg-zinc-900 dark:bg-white rounded-full shadow-[0_0_12px_rgba(0,0,0,0.2)] dark:shadow-[0_0_12px_rgba(255,255,255,0.8)]" />
-                    <div className="absolute w-4 h-4 bg-zinc-900/20 dark:bg-white/20 rounded-full blur-[4px] animate-pulse" />
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[11px] font-black uppercase tracking-[0.4em] text-zinc-900 dark:text-white leading-none">Synapse AI</span>
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <h3 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tighter leading-[1.1]">
-                    Última sessão com <br />
-                    <span className="text-zinc-500 dark:text-white/40 font-medium">{patientName?.split(' ')[0]}</span>
-                  </h3>
-
-                  {lastNote && (
-                    <div className="flex flex-wrap items-center gap-2 pt-1">
-                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08] shadow-sm">
-                        <History className="w-3 h-3 text-zinc-500 dark:text-white/50" />
-                        <span className="text-[10px] font-mono text-zinc-600 dark:text-white/70 uppercase tracking-wider">
-                          {format(new Date(lastNote.created_at), "dd 'de' MMMM", { locale: ptBR })}
-                        </span>
-                      </div>
-                      <div className="px-3 py-1.5 rounded-full bg-black/5 dark:bg-white/[0.05] border border-black/5 dark:border-white/[0.08] shadow-sm">
-                        <span className="text-[10px] font-mono text-zinc-500 dark:text-white/50 uppercase tracking-widest">{sentiment}</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+      <div className="teleconsultation-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6" aria-live="polite">
+        {isLoading ? (
+          <div className="space-y-4" role="status" aria-label="Carregando contexto clínico">
+            <Skeleton className="h-36 rounded-[22px]" />
+            <Skeleton className="h-16 rounded-[18px]" />
+            <Skeleton className="h-16 rounded-[18px]" />
+          </div>
+        ) : !lastNote ? (
+          <div className="flex min-h-64 flex-col items-center justify-center rounded-[24px] border border-dashed border-border/55 px-6 text-center dark:border-white/[0.06]">
+            <Sparkles className="h-6 w-6 text-muted-foreground/40" aria-hidden="true" />
+            <h3 className="mt-4 text-sm font-bold text-foreground">Contexto ainda indisponível</h3>
+            <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              O resumo aparecerá aqui depois da primeira sessão revisada.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-5">
+            <section aria-labelledby="recap-summary-title">
+              <p id="recap-summary-title" className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                Síntese profissional
+              </p>
+              <div className="teleconsultation-inset mt-3 rounded-[22px] p-4">
+                <p className="text-sm font-medium leading-7 text-foreground/82">
+                  {summary?.summary || 'Ainda não há uma síntese clínica disponível.'}
+                </p>
               </div>
+            </section>
 
-              {/* Main Insight Body */}
-              <div className="space-y-12 pb-10">
-                {loading ? (
-                  <div className="space-y-8">
-                    <div className="space-y-4">
-                      <Skeleton className="h-[2px] w-12 bg-black/10 dark:bg-white/10" />
-                      <Skeleton className="h-48 w-full rounded-[32px] bg-black/[0.02] dark:bg-white/[0.02]" />
-                    </div>
-                    <div className="space-y-4">
-                      <Skeleton className="h-[2px] w-12 bg-black/10 dark:bg-white/10" />
-                      <Skeleton className="h-12 w-full rounded-[24px] bg-black/[0.02] dark:bg-white/[0.02]" />
-                      <Skeleton className="h-12 w-full rounded-[24px] bg-black/[0.02] dark:bg-white/[0.02]" />
-                    </div>
+            <section aria-labelledby="recap-topics-title">
+              <p id="recap-topics-title" className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                Pontos de atenção
+              </p>
+              <div className="mt-3 space-y-2.5">
+                {topics.length ? topics.map((topic, index) => (
+                  <div key={`${topic}-${index}`} className="teleconsultation-inset flex items-start gap-3 rounded-[18px] px-4 py-3.5">
+                    <span className="mt-0.5 text-[9px] font-black text-muted-foreground">0{index + 1}</span>
+                    <p className="text-xs font-semibold leading-relaxed text-foreground/80">{topic}</p>
                   </div>
-                ) : !lastNote ? (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex flex-col items-center justify-center py-24 text-center space-y-5 border border-dashed border-white/5 rounded-[40px] bg-white/[0.01]"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center">
-                      <Sparkles className="w-5 h-5 text-white/10" />
-                    </div>
-                    <p className="text-[10px] text-white/20 font-black uppercase tracking-[0.2em]">Contexto não encontrado</p>
-                  </motion.div>
-                ) : (
-                  <div className="space-y-12">
-                    {/* Summary Section */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-3 px-1">
-                        <div className="h-[1px] w-4 bg-zinc-300 dark:bg-white/20" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 dark:text-white/30">Síntese Profissional</span>
-                      </div>
-                      <div className="p-8 rounded-[40px] bg-white dark:bg-white/[0.03] border border-black/5 dark:border-white/[0.08] shadow-2xl relative group overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-b from-black/[0.02] dark:from-white/[0.02] to-transparent pointer-events-none" />
-                        <p className="text-[15px] text-zinc-700 dark:text-white/80 leading-[1.8] font-normal relative z-10">
-                          {lastNote?.ai_summary?.summary || "Faltando dados para geração de resumo."}
-                        </p>
-                        <div className="absolute top-0 right-0 p-6 opacity-10">
-                          <Sparkles size={16} className="text-zinc-900 dark:text-white" />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Topics Section */}
-                    <div className="space-y-6">
-                      <div className="flex items-center gap-3 px-1">
-                        <div className="h-[1px] w-4 bg-zinc-300 dark:bg-white/20" />
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-400 dark:text-white/30">Vértices de Atenção</span>
-                      </div>
-
-                      <div className="flex flex-col gap-3">
-                        {topics.length > 0 ? topics.map((topic, i) => (
-                          <motion.div
-                            key={i}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2 + (i * 0.1) }}
-                            className="group p-6 rounded-[28px] bg-white dark:bg-white/[0.04] border border-black/5 dark:border-white/[0.08] hover:bg-zinc-50 dark:hover:bg-white/[0.06] hover:border-black/10 dark:hover:border-white/20 transition-all duration-500 flex items-start gap-5 shadow-sm"
-                          >
-                            <span className="text-[10px] font-mono text-zinc-400 dark:text-white/20 pt-1.5">0{i + 1}</span>
-                            <span className="text-[14px] font-medium text-zinc-700 dark:text-white/80 leading-relaxed group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">{topic}</span>
-                          </motion.div>
-                        )) : (
-                          <p className="text-xs text-zinc-400 dark:text-white/20 italic font-mono uppercase tracking-widest pl-2">Nada detectado.</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action Advice */}
-                    <div className="mt-8 p-6 rounded-[24px] bg-black/[0.02] dark:bg-white/[0.02] border border-black/[0.04] dark:border-white/[0.04] border-dashed flex items-center gap-5">
-                      <div className="w-2 h-2 rounded-full bg-zinc-400 dark:bg-white/10 animate-pulse" />
-                      <p className="text-[11px] text-zinc-500 dark:text-white/30 font-medium leading-relaxed italic">
-                        Sugestão: Valide se as tensões mencionadas na sessão de {format(new Date(lastNote.created_at), "dd/MM")} ainda persistem.
-                      </p>
-                    </div>
-                  </div>
+                )) : (
+                  <p className="rounded-[18px] border border-dashed border-border/50 px-4 py-6 text-center text-xs text-muted-foreground">
+                    Nenhum ponto destacado no resumo.
+                  </p>
                 )}
               </div>
+            </section>
+
+            <div className="flex items-start gap-3 rounded-[18px] border border-border/40 px-4 py-3.5 text-xs leading-relaxed text-muted-foreground dark:border-white/[0.045]">
+              <CircleDot className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              Confirme se os pontos da sessão anterior continuam relevantes antes de utilizá-los no atendimento atual.
             </div>
           </div>
-        </motion.aside>
-      ) : (
-        <motion.aside
-          key="empty"
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: 20 }}
-          className={cn(
-            "flex flex-col h-full bg-white/40 dark:bg-[#050505]/40 backdrop-blur-[60px] border-l border-white/10 dark:border-white/5 items-center justify-center p-8 transition-colors duration-500",
-            className
-          )}
-        >
-          <div className="flex flex-col items-center gap-4 opacity-20">
-            <BrainCircuit size={40} className="text-zinc-900 dark:text-white" strokeWidth={1} />
-            <p className="text-[9px] font-black uppercase tracking-[0.4em] text-zinc-900 dark:text-white">NeuroNex Recapitulação</p>
-          </div>
-        </motion.aside>
-      )}
-    </AnimatePresence>
+        )}
+      </div>
+    </section>
   );
 };

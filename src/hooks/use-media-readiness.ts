@@ -163,6 +163,8 @@ export const useMediaReadiness = ({
   const streamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const animationFrameRef = useRef<number | null>(null);
+  const lastAudioLevelRef = useRef(0);
+  const lastAudioSampleAtRef = useRef(0);
   const mountedRef = useRef(true);
   const configRef = useRef({
     audioEnabled: initialAudioEnabled,
@@ -185,6 +187,8 @@ export const useMediaReadiness = ({
       void audioContextRef.current.close().catch(() => undefined);
       audioContextRef.current = null;
     }
+    lastAudioLevelRef.current = 0;
+    lastAudioSampleAtRef.current = 0;
     if (mountedRef.current) setAudioLevel(0);
   }, []);
 
@@ -219,14 +223,26 @@ export const useMediaReadiness = ({
       audioContextRef.current = context;
       const values = new Uint8Array(analyser.frequencyBinCount);
 
-      const sample = () => {
+      const sample = (timestamp: number) => {
         analyser.getByteFrequencyData(values);
         const average = values.reduce((sum, value) => sum + value, 0) / values.length;
-        if (mountedRef.current) setAudioLevel(Math.min(1, average / 72));
+        const nextLevel = Math.min(1, average / 72);
+        // Updating React state at the browser's full animation-frame rate made
+        // the entire pre-join panel render ~60 times per second. Twelve visual
+        // samples per second remain responsive while keeping layout work calm.
+        if (
+          mountedRef.current &&
+          timestamp - lastAudioSampleAtRef.current >= 80 &&
+          Math.abs(nextLevel - lastAudioLevelRef.current) >= 0.012
+        ) {
+          lastAudioSampleAtRef.current = timestamp;
+          lastAudioLevelRef.current = nextLevel;
+          setAudioLevel(nextLevel);
+        }
         animationFrameRef.current = requestAnimationFrame(sample);
       };
 
-      sample();
+      animationFrameRef.current = requestAnimationFrame(sample);
     } catch {
       setAudioLevel(0);
     }

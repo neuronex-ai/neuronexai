@@ -1,7 +1,7 @@
 import { SessionNote, Patient, AISummary } from "@/types";
 import { Sparkles, TrendingUp, TrendingDown, Meh, Edit, Trash2, FileDown, Mail, MessageSquare, NotebookPen, ListTodo, Plus, Loader2, Check, MoreVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { useProfile } from "@/hooks/use-profile";
 import { useCreatePersonalNote } from "@/hooks/use-create-personal-note";
@@ -62,6 +62,7 @@ const ExpandableText = ({ text, className, limit = 150 }: { text: string, classN
 };
 
 export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCardProps) => {
+  const shouldReduceMotion = useReducedMotion();
   const { data: profile } = useProfile();
   const { mutate: createNote } = useCreatePersonalNote();
   const { mutate: createReminder } = useCreateReminder();
@@ -207,12 +208,11 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
   return (
     <>
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-        className="group/card relative overflow-hidden rounded-[26px] border border-border/70 bg-card/78 p-6 shadow-[0_18px_48px_-36px_rgba(15,23,42,0.45)] backdrop-blur-xl sm:p-7 dark:border-white/[0.085] dark:bg-[#0b0b0d] dark:shadow-[0_18px_48px_-40px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.026)]"
+        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.24, ease: [0.32, 0.72, 0, 1] }}
+        className="desktop-retina-panel group/card relative overflow-hidden rounded-[28px] border border-border/45 bg-card/68 p-6 sm:p-7"
       >
-        <div className="pointer-events-none absolute inset-0 opacity-[0.025] dark:opacity-[0.025] [background-image:url('/noise.png')]" />
 
         <div className="relative z-10 mb-6 flex items-start justify-between gap-4">
           <div className="flex flex-col gap-2">
@@ -233,7 +233,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
                   <MoreVertical className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 border-border/70 bg-popover/95 p-2 text-popover-foreground shadow-xl backdrop-blur-xl">
+              <DropdownMenuContent align="end" className="desktop-retina-modal w-64 rounded-[22px] border-border/60 bg-popover/96 p-2 text-popover-foreground shadow-xl">
                 <DropdownMenuItem onClick={handleDownloadPDF} className="cursor-pointer gap-3 rounded-lg py-2.5">
                   <FileDown className="h-4 w-4 text-blue-400" /> Baixar PDF
                 </DropdownMenuItem>
@@ -342,7 +342,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
       </motion.div>
 
       <Dialog open={isEditing} onOpenChange={setIsEditing}>
-        <DialogContent className="sm:max-w-[600px] glass-panel border-border/10 p-0 overflow-hidden">
+        <DialogContent className="desktop-retina-modal overflow-hidden rounded-[30px] border-border/60 p-0 sm:max-w-[600px]">
           <DialogHeader className="p-6 border-b border-border/10 bg-secondary/20">
             <DialogTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2">
               {editType === "summary" ? <Sparkles className="h-4 w-4 text-primary" /> : <ListTodo className="h-4 w-4 text-primary" />}

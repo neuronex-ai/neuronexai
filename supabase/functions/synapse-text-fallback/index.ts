@@ -137,7 +137,7 @@ const CONFIRM = /^\s*(confirmo|sim[,! ]*confirmo|pode executar|pode fazer|autori
 const CANCEL = /^\s*(cancelar|cancele|não confirmo|nao confirmo|desistir|desisto)\s*[.!]?\s*$/i;
 const SYSTEM_DATA = /\b(paciente|pacientes|consulta|consultas|agenda|agendamento|horário|horario|prontuário|prontuario|sessão|sessao|financeiro|neurofinance|saldo|receita|despesa|lançamento|lancamento|transação|transacao|nota fiscal|nfs-e|nfse|nota|notas|documento|arquivo|medicação|medicacao|risco|cobrança|cobranca|fatura|pagamento|email|e-mail|lembrete)\b/i;
 const MUTATION_INTENT = /\b(crie|criar|cadastre|cadastrar|agende|agendar|remarque|remarcar|cancele|cancelar|envie|enviar|registre|registrar|atualize|atualizar|emita|emitir|cobre|cobrar)\b/i;
-const NEURO_NOTES_AGENT_INTENT = /\b(neuroview|neuroflow|neuropulse|fluxograma|diagrama|mermaid|causa e efeito|grafo de notas|padrao|padroes|padrÃ£o|padrÃµes)\b/i;
+const NEURO_NOTES_AGENT_INTENT = /\b(neuroview|neuroflow|neuropulse|fluxograma|diagrama|mermaid|causa e efeito|grafo de notas|padrao|padroes|padrão|padrões)\b/i;
 const UUID_PATTERN = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
 
 type MessageRow = {

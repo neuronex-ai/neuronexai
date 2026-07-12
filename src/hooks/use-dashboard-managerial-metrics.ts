@@ -34,14 +34,24 @@ export function useDashboardManagerialMetrics() {
       if (!userId) throw new Error("Usuário não autenticado");
 
       const now = new Date();
-      const start = format(startOfMonth(now), "yyyy-MM-dd");
-      const end = format(endOfMonth(now), "yyyy-MM-dd");
+      const monthStart = startOfMonth(now);
+      const monthEnd = endOfMonth(now);
+      const start = format(monthStart, "yyyy-MM-dd");
+      const end = format(monthEnd, "yyyy-MM-dd");
+      const startTimestamp = monthStart.toISOString();
+      const endTimestamp = monthEnd.toISOString();
 
       const { data, error } = await supabase
         .from("financial_entries")
         .select("amount,type,status,due_date,competence_date,paid_at,created_at")
         .eq("professional_id", userId)
         .neq("status", "cancelled")
+        .or([
+          `and(paid_at.gte.${startTimestamp},paid_at.lte.${endTimestamp})`,
+          `and(competence_date.gte.${start},competence_date.lte.${end})`,
+          `and(due_date.gte.${start},due_date.lte.${end})`,
+          `and(created_at.gte.${startTimestamp},created_at.lte.${endTimestamp})`,
+        ].join(","))
         .order("due_date", { ascending: false })
         .limit(1000);
 

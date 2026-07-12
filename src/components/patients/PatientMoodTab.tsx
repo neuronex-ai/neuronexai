@@ -1,210 +1,208 @@
-import { GlassCard } from "@/components/ui/GlassCard";
+import { useEffect, useMemo, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useReducedMotion } from "framer-motion";
+import { Angry, ChevronLeft, ChevronRight, Frown, History, Laugh, Meh, MessageSquare, Smile, TrendingUp } from "lucide-react";
+import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePatientMoodLogs } from "@/hooks/use-patient-mood-logs";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { motion } from "framer-motion";
-import { Angry, Frown, History, Laugh, Meh, MessageSquare, Smile, TrendingUp } from "lucide-react";
-import { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 interface PatientMoodTabProps {
   patientId: string;
 }
 
-const moodConfig: Record<number, { label: string, icon: any, color: string, bg: string, border: string }> = {
-  1: { label: "Péssimo", icon: Angry, color: "#f43f5e", bg: "bg-rose-500/10", border: "border-rose-500/20" }, // Rose 500
-  2: { label: "Ruim", icon: Frown, color: "#f97316", bg: "bg-orange-500/10", border: "border-orange-500/20" }, // Orange 500
-  3: { label: "Neutro", icon: Meh, color: "#eab308", bg: "bg-yellow-500/10", border: "border-yellow-500/20" }, // Yellow 500
-  4: { label: "Bem", icon: Smile, color: "#10b981", bg: "bg-emerald-500/10", border: "border-emerald-500/20" }, // Emerald 500
-  5: { label: "Ótimo", icon: Laugh, color: "#3b82f6", bg: "bg-blue-500/10", border: "border-blue-500/20" }, // Blue 500
+const MOOD_PAGE_SIZE = 9;
+const CHART_POINT_LIMIT = 30;
+
+const moodConfig: Record<number, { label: string; icon: typeof Smile; color: string; bg: string; border: string }> = {
+  1: { label: "Péssimo", icon: Angry, color: "#e11d48", bg: "bg-rose-500/10", border: "border-rose-500/18" },
+  2: { label: "Ruim", icon: Frown, color: "#ea580c", bg: "bg-orange-500/10", border: "border-orange-500/18" },
+  3: { label: "Neutro", icon: Meh, color: "#71717a", bg: "bg-zinc-500/10", border: "border-zinc-500/18" },
+  4: { label: "Bem", icon: Smile, color: "#059669", bg: "bg-emerald-500/10", border: "border-emerald-500/18" },
+  5: { label: "Ótimo", icon: Laugh, color: "#047857", bg: "bg-emerald-500/10", border: "border-emerald-500/18" },
 };
 
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    const score = payload[0].value;
-    const config = moodConfig[score];
-    const Icon = config.icon;
+const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value?: number }>; label?: string }) => {
+  const score = payload?.[0]?.value;
+  if (!active || typeof score !== "number") return null;
 
-    return (
-      <div className="bg-white/90 dark:bg-[#0b0b0d] backdrop-blur-2xl border border-zinc-200 dark:border-white/[0.085] p-4 rounded-2xl shadow-2xl ring-1 ring-black/5 dark:ring-white/5">
-        <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 border-b border-zinc-100 dark:border-white/[0.065] pb-2">
-          {label}
-        </p>
-        <div className="flex items-center gap-3">
-          <div className={cn("p-2 rounded-lg", config.bg)}>
-            <Icon className="h-4 w-4" style={{ color: config.color }} />
-          </div>
-          <span className="text-sm font-bold text-zinc-900 dark:text-white uppercase tracking-tight">{config.label}</span>
-        </div>
+  const config = moodConfig[score] || moodConfig[3];
+  const Icon = config.icon;
+
+  return (
+    <div className="desktop-retina-modal rounded-[18px] border border-border/55 bg-popover/96 p-3 shadow-xl">
+      <p className="mb-2 border-b border-border/45 pb-2 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <div className="flex items-center gap-2.5">
+        <span className={cn("flex h-8 w-8 items-center justify-center rounded-xl", config.bg)}>
+          <Icon className="h-4 w-4" style={{ color: config.color }} aria-hidden="true" />
+        </span>
+        <span className="text-sm font-semibold text-foreground">{config.label}</span>
       </div>
-    );
-  }
-  return null;
+    </div>
+  );
 };
 
 export const PatientMoodTab = ({ patientId }: PatientMoodTabProps) => {
-  const { data: logs, isLoading } = usePatientMoodLogs(patientId);
+  const { data: logs = [], isLoading } = usePatientMoodLogs(patientId);
+  const shouldReduceMotion = useReducedMotion();
+  const [page, setPage] = useState(1);
+
+  const orderedLogs = useMemo(
+    () => [...logs].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [logs],
+  );
+  const chartData = useMemo(
+    () => [...orderedLogs]
+      .slice(0, CHART_POINT_LIMIT)
+      .reverse()
+      .map((log) => ({
+        date: format(new Date(log.created_at), "dd/MM"),
+        fullDate: format(new Date(log.created_at), "dd 'de' MMMM", { locale: ptBR }),
+        score: log.mood_score,
+      })),
+    [orderedLogs],
+  );
+  const averageMood = useMemo(
+    () => (logs.length ? logs.reduce((total, log) => total + log.mood_score, 0) / logs.length : 0),
+    [logs],
+  );
+  const totalPages = Math.max(1, Math.ceil(orderedLogs.length / MOOD_PAGE_SIZE));
+  const visibleLogs = useMemo(
+    () => orderedLogs.slice((page - 1) * MOOD_PAGE_SIZE, page * MOOD_PAGE_SIZE),
+    [orderedLogs, page],
+  );
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
 
   if (isLoading) {
     return (
-      <div className="space-y-8 py-4">
-        <Skeleton className="h-72 w-full bg-zinc-100 dark:bg-zinc-800/40 rounded-[32px]" />
-        <div className="space-y-4">
-          <Skeleton className="h-24 w-full bg-zinc-100 dark:bg-zinc-800/40 rounded-[24px]" />
-          <Skeleton className="h-24 w-full bg-zinc-100 dark:bg-zinc-800/40 rounded-[24px]" />
-        </div>
+      <div className="space-y-5" aria-busy="true" aria-label="Carregando histórico de humor">
+        <Skeleton className="h-[390px] w-full rounded-[28px]" />
+        <Skeleton className="h-56 w-full rounded-[28px]" />
       </div>
     );
   }
 
-  if (!logs || logs.length === 0) {
+  if (logs.length === 0) {
     return (
-      <GlassCard 
-        className="flex flex-col items-center justify-center min-h-[400px] text-center border-dashed dark:!border-white/[0.085] dark:!bg-[#0b0b0d]"
-        innerClassName="flex flex-col items-center justify-center h-full w-full p-8"
-      >
-        <div className="w-20 h-20 bg-zinc-100 dark:bg-[#141415] rounded-full flex items-center justify-center mb-6 shadow-inner ring-1 ring-zinc-200/50 dark:ring-white/[0.075]">
-          <Smile className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
-        </div>
-        <p className="text-sm font-medium text-zinc-500 dark:text-zinc-400 max-w-[280px] leading-relaxed">
-          O paciente ainda não registrou estados emocionais no diário.
-        </p>
-      </GlassCard>
+      <div className="desktop-retina-panel flex min-h-[400px] flex-col items-center justify-center rounded-[28px] border border-dashed border-border/55 bg-card/58 p-8 text-center">
+        <span className="desktop-retina-inset mb-5 flex h-14 w-14 items-center justify-center rounded-[20px] border border-border/45 text-muted-foreground">
+          <Smile className="h-6 w-6" aria-hidden="true" />
+        </span>
+        <p className="text-sm font-semibold text-foreground">Nenhum registro emocional</p>
+        <p className="mt-1 max-w-sm text-xs leading-relaxed text-muted-foreground">Os registros feitos pelo paciente aparecerão aqui.</p>
+      </div>
     );
   }
 
-  const chartData = logs.map(log => ({
-    date: format(new Date(log.created_at), "dd/MM"),
-    fullDate: format(new Date(log.created_at), "dd 'de' MMMM", { locale: ptBR }),
-    score: log.mood_score,
-  }));
-
-  const avgMood = logs.reduce((acc, log) => acc + log.mood_score, 0) / logs.length;
-
   return (
-    <div className="space-y-12 animate-fade-in pb-32">
-
-      {/* Analytics Card */}
-      <GlassCard className="relative overflow-hidden !bg-white dark:!border-white/[0.085] dark:!bg-[#0b0b0d] dark:!shadow-[0_24px_62px_-46px_rgba(0,0,0,0.96),inset_0_1px_0_rgba(255,255,255,0.026)]" innerClassName="p-8 md:p-12">
-        <div className="absolute top-0 right-0 p-40 bg-primary/5 dark:bg-white/[0.015] rounded-full blur-[100px] pointer-events-none" />
-
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-6 relative z-10">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 rounded-2xl bg-zinc-100 dark:bg-[#141415] flex items-center justify-center text-zinc-900 dark:text-white border border-zinc-200 dark:border-white/[0.075] shadow-lg">
-              <TrendingUp className="h-7 w-7" />
-            </div>
+    <div className="space-y-5 pb-8">
+      <section className="desktop-retina-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/68 p-5 md:p-6">
+        <header className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3.5">
+            <span className="desktop-retina-inset flex h-11 w-11 items-center justify-center rounded-2xl border border-border/45 text-foreground">
+              <TrendingUp className="h-5 w-5" aria-hidden="true" />
+            </span>
             <div>
-              <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight leading-none mb-1.5">Tendência Emocional</h3>
-              <p className="text-[10px] font-bold text-zinc-500 dark:text-zinc-500 uppercase tracking-[0.2em] leading-none">Análise de Variação de Humor</p>
+              <h3 className="text-lg font-semibold tracking-tight text-foreground">Tendência emocional</h3>
+              <p className="text-[9px] font-bold uppercase tracking-[0.17em] text-muted-foreground">Variação dos registros de humor</p>
             </div>
           </div>
-          <div className="flex items-center gap-4 bg-zinc-100/50 dark:bg-[#080809] p-1 rounded-2xl border border-zinc-200/50 dark:border-white/[0.065] backdrop-blur-md">
-            <div className="px-5 py-3 rounded-xl bg-white dark:bg-[#141415] border border-zinc-200 dark:border-white/[0.075] shadow-lg">
-              <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1 leading-none">Média Geral</p>
-              <p className="text-2xl font-black text-zinc-900 dark:text-white tracking-tighter leading-none">{avgMood.toFixed(1)}</p>
+          <div className="desktop-retina-inset flex items-center divide-x divide-border/50 rounded-[18px] border border-border/45 bg-background/55">
+            <div className="px-4 py-2.5">
+              <p className="text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">Média</p>
+              <p className="text-xl font-black tracking-[-0.04em] text-foreground">{averageMood.toFixed(1)}</p>
             </div>
-            <div className="pr-6 pl-2 hidden sm:block">
-              <p className="text-[9px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-1 leading-none">Registros</p>
-              <p className="text-sm font-bold text-zinc-900 dark:text-white leading-none">{logs.length}</p>
+            <div className="px-4 py-2.5">
+              <p className="text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">Registros</p>
+              <p className="text-xl font-black tracking-[-0.04em] text-foreground">{logs.length}</p>
             </div>
           </div>
-        </div>
+        </header>
 
-        <div className="h-[300px] w-full relative z-10 bg-zinc-100/30 dark:bg-[#080809] rounded-[32px] p-6 border border-zinc-200/50 dark:border-white/[0.065] shadow-inner">
+        <div className="desktop-retina-inset h-[300px] w-full rounded-[24px] border border-border/40 bg-background/52 p-4">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 20, right: 30, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.03)" vertical={false} />
-              <XAxis
-                dataKey="date"
-                stroke="transparent"
-                tick={{ fill: "rgba(100,100,100,0.5)", fontSize: 10, fontWeight: 700 }}
-                dy={15}
-              />
-              <YAxis
-                domain={[1, 5]}
-                ticks={[1, 2, 3, 4, 5]}
-                stroke="transparent"
-                tick={{ fill: "rgba(100,100,100,0.5)", fontSize: 10, fontWeight: 700 }}
-              />
-              <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(0,0,0,0.1)', strokeWidth: 2 }} />
-              <ReferenceLine y={3} stroke="rgba(0,0,0,0.05)" strokeDasharray="6 6" />
+            <LineChart data={chartData} margin={{ top: 16, right: 22, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 6" stroke="hsl(var(--border) / 0.55)" vertical={false} />
+              <XAxis dataKey="date" stroke="transparent" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 700 }} dy={12} />
+              <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} stroke="transparent" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 700 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ stroke: "hsl(var(--foreground) / 0.12)", strokeWidth: 1 }} />
+              <ReferenceLine y={3} stroke="hsl(var(--border))" strokeDasharray="6 6" />
               <Line
                 type="monotone"
                 dataKey="score"
-                stroke="#6366f1"
-                strokeWidth={5}
-                dot={{ r: 6, fill: "#6366f1", strokeWidth: 4, stroke: "#fff" }}
-                activeDot={{ r: 8, strokeWidth: 0, fill: "#4f46e5" }}
-                animationDuration={1500}
+                stroke="hsl(var(--foreground))"
+                strokeWidth={3}
+                dot={{ r: 4, fill: "hsl(var(--background))", strokeWidth: 2, stroke: "hsl(var(--foreground))" }}
+                activeDot={{ r: 6, strokeWidth: 2, fill: "hsl(var(--foreground))", stroke: "hsl(var(--background))" }}
+                isAnimationActive={!shouldReduceMotion}
+                animationDuration={360}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
-      </GlassCard>
+      </section>
 
-      <div className="space-y-8">
-        <div className="flex items-center gap-4 px-4 text-zinc-400 dark:text-zinc-600">
-          <div className="h-px flex-1 bg-gradient-to-r from-transparent to-zinc-200 dark:to-white/10" />
-          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.3em]">
-            <History className="h-4 w-4" />
-            Histórico Detalhado
+      <section className="desktop-retina-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/62">
+        <header className="flex items-center justify-between border-b border-border/45 px-5 py-4 md:px-6">
+          <div className="flex items-center gap-3">
+            <History className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <h3 className="text-sm font-semibold text-foreground">Histórico detalhado</h3>
           </div>
-          <div className="h-px flex-1 bg-gradient-to-l from-transparent to-zinc-200 dark:to-white/10" />
-        </div>
+          {totalPages > 1 ? <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">Página {page} de {totalPages}</span> : null}
+        </header>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {[...logs].reverse().map((log, idx) => {
+        <div className="grid gap-3 p-4 md:grid-cols-2 md:p-5 xl:grid-cols-3">
+          {visibleLogs.map((log) => {
             const config = moodConfig[log.mood_score] || moodConfig[3];
             const Icon = config.icon;
 
             return (
-              <motion.div
+              <article
                 key={log.id}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.05 }}
-                className="group relative flex flex-col p-6 rounded-[32px] bg-white dark:bg-[#0b0b0d] border border-zinc-200/50 dark:border-white/[0.085] hover:border-zinc-300 dark:hover:border-white/[0.12] hover:bg-zinc-50 dark:hover:bg-[#111113] transition-all duration-500 hover:shadow-2xl hover:-translate-y-1 overflow-hidden"
+                className="desktop-retina-inset rounded-[22px] border border-border/40 bg-background/58 p-5"
+                style={{ contentVisibility: "auto", containIntrinsicSize: "190px" }}
               >
-                <div className={cn("absolute top-0 right-0 p-12 opacity-10 blur-2xl rounded-full transition-all group-hover:opacity-30", config.bg)} />
-
-                <div className="flex items-center justify-between mb-6 relative z-10">
-                  <div className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center border shadow-lg transition-transform duration-500 group-hover:scale-110",
-                    "bg-white dark:bg-[#141415]",
-                    config.border
-                  )}>
-                    <Icon className="h-6 w-6" style={{ color: config.color }} />
-                  </div>
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-zinc-400 dark:text-zinc-600 uppercase tracking-widest mb-0.5 leading-none">Data do Registro</p>
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white leading-none">
-                      {format(new Date(log.created_at), "dd/MM • HH:mm")}
-                    </p>
-                  </div>
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <span className={cn("flex h-10 w-10 items-center justify-center rounded-[15px] border", config.bg, config.border)}>
+                    <Icon className="h-5 w-5" style={{ color: config.color }} aria-hidden="true" />
+                  </span>
+                  <time className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground" dateTime={log.created_at}>
+                    {format(new Date(log.created_at), "dd/MM • HH:mm")}
+                  </time>
                 </div>
-
-                <div className="relative z-10 space-y-3">
-                  <h4 className="text-sm font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-wide">{config.label}</h4>
-
-                  <div className="bg-zinc-100/50 dark:bg-[#141415] p-4 rounded-2xl border border-zinc-200/50 dark:border-white/[0.075] min-h-[4rem] group-hover:border-zinc-300 dark:group-hover:border-white/[0.11] transition-all">
-                    {log.notes ? (
-                      <div className="flex gap-3">
-                        <MessageSquare className="h-3.5 w-3.5 text-zinc-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium italic">"{log.notes}"</p>
-                      </div>
-                    ) : (
-                      <div className="h-full flex items-center justify-center opacity-30 italic text-[10px] font-bold uppercase tracking-wider">
-                        Nenhum Comentário
-                      </div>
-                    )}
-                  </div>
+                <h4 className="text-sm font-semibold text-foreground">{config.label}</h4>
+                <div className="mt-3 min-h-16 rounded-[16px] border border-border/35 bg-muted/24 p-3.5">
+                  {log.notes ? (
+                    <div className="flex gap-2.5">
+                      <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
+                      <p className="text-xs leading-relaxed text-muted-foreground">{log.notes}</p>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground/65">Sem comentário.</p>
+                  )}
                 </div>
-              </motion.div>
+              </article>
             );
           })}
         </div>
-      </div>
+
+        {totalPages > 1 ? (
+          <footer className="flex items-center justify-between border-t border-border/45 bg-muted/18 px-4 py-3 md:px-5">
+            <Button type="button" variant="outline" className="desktop-retina-interactive h-10 rounded-xl" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+              <ChevronLeft className="mr-2 h-4 w-4" aria-hidden="true" /> Anterior
+            </Button>
+            <Button type="button" variant="outline" className="desktop-retina-interactive h-10 rounded-xl" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+              Próxima <ChevronRight className="ml-2 h-4 w-4" aria-hidden="true" />
+            </Button>
+          </footer>
+        ) : null}
+      </section>
     </div>
   );
 };

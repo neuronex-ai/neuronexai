@@ -32,17 +32,17 @@ const PAYMENT_METHODS: Array<{ id: FinancialEntryPaymentMethod; label: string }>
   { id: "manual", label: "A combinar" },
   { id: "pix", label: "Pix externo" },
   { id: "boleto", label: "Boleto externo" },
-  { id: "card", label: "Cartao" },
+  { id: "card", label: "Cartão" },
   { id: "cash", label: "Dinheiro" },
-  { id: "external_transfer", label: "Transferencia" },
-  { id: "convenio", label: "Convenio" },
+  { id: "external_transfer", label: "Transferência" },
+  { id: "convenio", label: "Convênio" },
   { id: "other", label: "Outro" },
 ];
 
 const PLAN_LABELS: Record<string, string> = {
-  per_session: "Sessao avulsa",
+  per_session: "Sessão avulsa",
   monthly: "Mensalidade",
-  insurance: "Convenio",
+  insurance: "Convênio",
   exempt: "Isento",
 };
 
@@ -109,7 +109,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     });
 
     if (financial?.session_value_cents) {
-      cards.push({ icon: CalendarClock, label: "Valor da sessao", value: formatCentsAsBRL(financial.session_value_cents) });
+      cards.push({ icon: CalendarClock, label: "Valor da sessão", value: formatCentsAsBRL(financial.session_value_cents) });
     }
     if (financial?.monthly_value_cents) {
       cards.push({ icon: CalendarClock, label: "Mensalidade", value: formatCentsAsBRL(financial.monthly_value_cents) });
@@ -117,7 +117,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     if (activeAgreement) {
       cards.push({
         icon: ShieldCheck,
-        label: "Convenio",
+        label: "Convênio",
         value: `${activeAgreement.name} - ${activeAgreement.expected_receipt_days} dia(s)`,
         tone: "success",
       });
@@ -132,7 +132,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       });
     }
     if (responsible?.name) {
-      cards.push({ icon: UserRound, label: "Responsavel financeiro", value: responsible.name });
+      cards.push({ icon: UserRound, label: "Responsável financeiro", value: responsible.name });
     }
     return cards;
   }, [activeAgreement, activePackages.data, financial, planType, responsible]);
@@ -152,7 +152,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     if (!financial) return;
 
     if (financial.plan_type === "per_session") {
-      setDescription("Sessao avulsa");
+      setDescription("Sessão avulsa");
       setAmount(financial.session_value_cents ? String(centsToAmount(financial.session_value_cents).toFixed(2)).replace(".", ",") : "");
       setPaymentMethod("manual");
       setDueDate(formatDateInput(new Date()));
@@ -172,7 +172,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
         activeAgreement?.repass_type === "currency"
           ? centsToAmount(activeAgreement.repass_value_cents)
           : sessionAmount*Math.max(0,Number(activeAgreement?.repass_percentage||0))/100;
-      setDescription(activeAgreement ? `Repasse ${activeAgreement.name}` : "Repasse de convenio");
+      setDescription(activeAgreement ? `Repasse ${activeAgreement.name}` : "Repasse de convênio");
       setAmount(agreementAmount ? String(agreementAmount.toFixed(2)).replace(".", ",") : "");
       setPaymentMethod("convenio");
       setPayerType("insurer");
@@ -193,7 +193,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     const valuePerSession = selectedPackage.price && selectedPackage.total_sessions > 0
       ? Number(selectedPackage.price) / selectedPackage.total_sessions
       : 0;
-    setDescription(`Sessao de pacote - ${selectedPackage.description || selectedPackage.name || "pacote"}`);
+    setDescription(`Sessão de pacote — ${selectedPackage.description || selectedPackage.name || "pacote"}`);
     if (valuePerSession > 0) setAmount(String(valuePerSession.toFixed(2)).replace(".", ","));
     setNotes((current) => current || `${remaining} sessão(ões) restantes no pacote selecionado.`);
   }, [selectedPackage]);
@@ -225,7 +225,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     }
 
     if (isExempt && !overrideExempt) {
-      toast.error("Paciente isento. Confirme o override para criar a cobrança.");
+      toast.error("Paciente isento. Autorize a exceção para criar a cobrança.");
       return;
     }
     if(isExempt&&overrideReason.trim().length<3){toast.error("Informe o motivo da cobrança.");return;}
@@ -271,7 +271,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="finance-modal-surface max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/10 dark:bg-zinc-950">
+      <DialogContent className="finance-modal-surface desktop-retina-modal desktop-retina-form max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-border/55 bg-background/96 p-0 shadow-2xl">
         <div className="finance-separator border-b border-zinc-200 px-6 py-5 dark:border-white/10">
           <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">Nova cobrança manual</DialogTitle>
           <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -402,7 +402,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
             {!patientId ? (
               <div className="finance-inset rounded-[20px] border border-dashed border-zinc-200 p-4 text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-                Selecione um paciente para preencher defaults de convenio, pacote, mensalidade ou sessao avulsa.
+                Selecione um paciente para sugerirmos os dados de convênio, pacote, mensalidade ou sessão avulsa.
               </div>
             ) : null}
 

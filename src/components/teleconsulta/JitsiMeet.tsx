@@ -9,6 +9,7 @@ interface JitsiMeetProps {
   userAvatarUrl?: string;
   subject?: string;
   mediaSettings?: MediaDeviceChoice | null;
+  transcriptionEnabled?: boolean;
   onMeetingEnd: () => void;
   onTranscriptUpdate?: (entry: { participant: { name: string }; text: string }) => void;
   onMuteStatusChanged?: (status: { audio: boolean; video: boolean }) => void;
@@ -31,6 +32,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
   userAvatarUrl,
   subject,
   mediaSettings,
+  transcriptionEnabled = false,
   onMeetingEnd,
   onTranscriptUpdate,
   onMuteStatusChanged,
@@ -40,7 +42,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
   const apiRef = useRef<any>(null);
   const callbacksRef = useRef({
     onMeetingEnd,
-    onTranscriptUpdate,
+    onTranscriptUpdate: transcriptionEnabled ? onTranscriptUpdate : undefined,
     onMuteStatusChanged,
     onConferenceJoined,
   });
@@ -52,11 +54,11 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
   useEffect(() => {
     callbacksRef.current = {
       onMeetingEnd,
-      onTranscriptUpdate,
+      onTranscriptUpdate: transcriptionEnabled ? onTranscriptUpdate : undefined,
       onMuteStatusChanged,
       onConferenceJoined,
     };
-  }, [onConferenceJoined, onMeetingEnd, onMuteStatusChanged, onTranscriptUpdate]);
+  }, [onConferenceJoined, onMeetingEnd, onMuteStatusChanged, onTranscriptUpdate, transcriptionEnabled]);
 
   useImperativeHandle(ref, () => ({
     toggleAudio: () => apiRef.current?.executeCommand('toggleAudio'),
@@ -67,18 +69,22 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
   }));
 
   useEffect(() => {
+    let disposed = false;
+    let injectedScript: HTMLScriptElement | null = null;
+
     if (!window.JitsiMeetExternalAPI) {
       const script = document.createElement('script');
       script.src = 'https://8x8.vc/vpaas-magic-cookie-dc267e44c7014498a3a128625367fc67/external_api.js';
       script.async = true;
       script.onload = initJitsi;
       document.body.appendChild(script);
+      injectedScript = script;
     } else {
       initJitsi();
     }
 
     function initJitsi() {
-      if (!jitsiContainerRef.current || apiRef.current) return;
+      if (disposed || !jitsiContainerRef.current || apiRef.current) return;
 
       const domain = '8x8.vc';
       const options = {
@@ -106,6 +112,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
           enableWelcomePage: false,
           enableClosePage: false,
           toolbarButtons: [],
+          mainToolbarButtons: [],
           buttonsWithNotifyClick: [],
           toolbarConfig: {
             alwaysVisible: false,
@@ -115,6 +122,11 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
           notifications: [],
           disable1On1Mode: true,
           disableProfile: true,
+          transcribingEnabled: transcriptionEnabled,
+          transcription: {
+            enabled: transcriptionEnabled,
+          },
+          startWithSubtitles: false,
           hideConferenceTimer: true,
           hideConferenceSubject: false,
           subject: subject || 'Teleconsulta NeuroNex',
@@ -139,6 +151,26 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
       const api = new window.JitsiMeetExternalAPI(domain, options);
       apiRef.current = api;
 
+      const suppressNativeControls = () => {
+        try {
+          api.executeCommand('overwriteConfig', {
+            toolbarButtons: [],
+            mainToolbarButtons: [],
+            toolbarConfig: { alwaysVisible: false, timeout: 1 },
+          });
+        } catch {
+          // Older Jitsi deployments already receive the same values through
+          // configOverwrite and can safely ignore this runtime reinforcement.
+        }
+      };
+
+      suppressNativeControls();
+      const iframe = typeof api.getIFrame === 'function' ? api.getIFrame() : null;
+      if (iframe) {
+        iframe.title = `Sala de teleconsulta com ${subject || 'paciente'}`;
+        iframe.style.backgroundColor = '#050505';
+      }
+
       if (subject) {
         window.setTimeout(() => {
           api.executeCommand('subject', subject);
@@ -148,6 +180,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
       api.addEventListeners({
         readyToClose: () => callbacksRef.current.onMeetingEnd(),
         videoConferenceJoined: async () => {
+          suppressNativeControls();
           try {
             if (mediaSettings?.audioInputId && api.setAudioInputDevice) {
               await api.setAudioInputDevice(mediaSettings.audioInputLabel || '', mediaSettings.audioInputId);
@@ -185,6 +218,8 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
     }
 
     return () => {
+      disposed = true;
+      if (injectedScript) injectedScript.onload = null;
       if (apiRef.current) {
         apiRef.current.dispose();
         apiRef.current = null;
@@ -197,7 +232,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
   return (
     <div
       ref={jitsiContainerRef}
-      className="h-full w-full overflow-hidden rounded-[24px] bg-[#050505]"
+      className="h-full min-h-0 w-full overflow-hidden bg-[#050505] [&>iframe]:!h-full [&>iframe]:!min-h-0 [&>iframe]:!border-0"
       style={{ pointerEvents: 'auto' }}
     />
   );

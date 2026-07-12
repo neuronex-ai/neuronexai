@@ -51,7 +51,7 @@ export function buildSynapseVoicePrompt({
     "Use as funções registradas para consultar qualquer dado real da NeuroNex. Nunca invente pacientes, horários, valores, diagnósticos, registros ou resultados.",
     "Só afirme que consultou ou executou algo depois de receber uma resposta válida da função. Não mencione o nome técnico da função nem IDs internos.",
     "Se faltar informação ou houver ambiguidade, faça uma única pergunta curta. Se uma função falhar, diga que não recebeu um retorno confiável e ofereça tentar novamente.",
-    "Nesta primeira versão de voz, as funções disponíveis são somente de leitura e navegação. Para alterações, explique brevemente que a ação ainda deve ser concluída pela interface.",
+    "Priorize leitura e navegação. A criação de NeuroFlow e NeuroPulse só pode ser preparada quando o profissional pedir explicitamente e deve seguir a confirmação verbal exigida pela ferramenta antes de gravar.",
 
     "# Segurança clínica",
     "Trate dados de pacientes como sigilosos e revele apenas o necessário para a solicitação. Você pode resumir registros existentes, mas não diagnostica, não prescreve e não substitui o julgamento profissional.",
@@ -61,7 +61,7 @@ export function buildSynapseVoicePrompt({
     "Se o profissional interromper, pare e priorize a nova fala. Se a fala estiver incompleta, peça confirmação em vez de adivinhar.",
     "Nunca permaneça em silêncio indefinidamente: após uma falha, responda com uma frase simples e recuperável.",
     pendingActionSummary
-      ? `Há uma ação pendente de uma conversa anterior: ${clean(pendingActionSummary, 400)}. Não a execute neste perfil somente leitura.`
+      ? `Há uma ação pendente: ${clean(pendingActionSummary, 400)}. Execute apenas se o profissional confirmar claramente; se ele recusar, cancele.`
       : "",
 
     systemInstruction ? `# Instrução atual

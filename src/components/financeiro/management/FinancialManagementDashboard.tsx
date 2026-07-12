@@ -40,7 +40,9 @@ import {
 import {
   buildFinancialManagementMetrics,
   managementCategoryOf,
+  managementAllowsManualSettlement,
   managementDateKeyOf,
+  managementOriginOf,
   managementOutstandingAmountOf,
   managementStatusOf,
   monthKeyFromDate,
@@ -87,6 +89,7 @@ const compact = (v: number) =>
     maximumFractionDigits: 1,
   }).format(Number.isFinite(v) ? v : 0);
 const amount = (t: Transaction) => Math.abs(Number(t.amount || 0));
+const ENTRIES_PAGE_SIZE = 20;
 const date = (t: Transaction, b: FinancialBasis) => {
   const k = managementDateKeyOf(t, b);
   return k ? k.split("-").reverse().join("/") : "Sem data";
@@ -129,12 +132,13 @@ function Rows({
     );
   return (
     <div className="finance-inset overflow-x-auto rounded-2xl border border-border/60 dark:border-black/75">
-      <table className="w-full min-w-[720px] text-sm">
+      <table className="w-full min-w-[920px] text-sm">
         <thead className="border-b border-border/55 bg-muted/35 text-left text-muted-foreground dark:border-black/70 dark:bg-black/20">
           <tr>
             <th className="p-3">Data</th>
             <th className="p-3">Descrição</th>
             <th className="p-3">Categoria</th>
+            <th className="p-3">Origem</th>
             <th className="p-3">Status</th>
             <th className="p-3 text-right">Valor</th>
             <th />
@@ -162,6 +166,11 @@ function Rows({
                   {managementCategoryOf(t)}
                 </td>
                 <td className="p-3">
+                  <span className="inline-flex rounded-full border border-border/55 bg-muted/35 px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+                    {managementOriginOf(t)}
+                  </span>
+                </td>
+                <td className="p-3">
                   <span
                     className={cn(
                       "rounded-full px-2 py-1 text-xs",
@@ -182,7 +191,7 @@ function Rows({
                   {t.type === "income" ? "+" : "−"} {money(amount(t))}
                 </td>
                 <td className="p-3 text-right">
-                  {open && onSettle ? (
+                  {open && onSettle && managementAllowsManualSettlement(t) ? (
                     <Button
                       size="sm"
                       variant="outline"
@@ -230,7 +239,7 @@ function Planning({
         : "",
     );
     setNotes(p.goal?.notes || "");
-  }, [p.goal?.id, p.monthKey]);
+  }, [p.goal, p.monthKey]);
   const parse = (x: string) =>
     Number(x.replace(/\./g, "").replace(",", ".")) || 0;
   const save = async () => {
@@ -306,6 +315,7 @@ export const FinancialManagementDashboard = (props: Props) => {
   const [chargeOpen, setChargeOpen] = useState(false);
   const [settlement, setSettlement] = useState<Transaction | null>(null);
   const [search, setSearch] = useState("");
+  const [entriesPage, setEntriesPage] = useState(1);
   const rows = props.managementTransactions || props.allTransactions;
   const metrics = useMemo(
     () =>
@@ -324,13 +334,28 @@ export const FinancialManagementDashboard = (props: Props) => {
     "gestao-relatorios": "gestao-lancamentos",
   };
   const view = aliases[props.activeView] || props.activeView;
-  const filtered = rows.filter(
-    (t) =>
-      !search ||
-      `${t.description} ${t.patient_name || t.patients?.name || ""} ${t.category || ""}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
+  const filtered = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase("pt-BR");
+    if (!query) return rows;
+    return rows.filter((transaction) =>
+      `${transaction.description} ${transaction.patient_name || transaction.patients?.name || ""} ${transaction.category || ""} ${managementOriginOf(transaction)}`
+        .toLocaleLowerCase("pt-BR")
+        .includes(query),
+    );
+  }, [rows, search]);
+  const entriesPageCount = Math.max(1, Math.ceil(filtered.length / ENTRIES_PAGE_SIZE));
+  const visibleEntries = useMemo(
+    () => filtered.slice((entriesPage - 1) * ENTRIES_PAGE_SIZE, entriesPage * ENTRIES_PAGE_SIZE),
+    [entriesPage, filtered],
   );
+
+  useEffect(() => {
+    setEntriesPage(1);
+  }, [basis, search]);
+
+  useEffect(() => {
+    setEntriesPage((current) => Math.min(current, entriesPageCount));
+  }, [entriesPageCount]);
   const openEntry = (type: "income" | "expense") => {
     setEntryType(type);
     setEntryOpen(true);
@@ -338,12 +363,13 @@ export const FinancialManagementDashboard = (props: Props) => {
   const exportCsv = () => {
     const q = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
     const csv = [
-      ["Data", "Descrição", "Tipo", "Categoria", "Status", "Valor"],
+      ["Data", "Descrição", "Tipo", "Categoria", "Origem", "Status", "Valor"],
       ...filtered.map((t) => [
         date(t, basis),
         t.description,
         t.type,
         t.category,
+        managementOriginOf(t),
         managementStatusOf(t),
         amount(t),
       ]),
@@ -544,11 +570,45 @@ export const FinancialManagementDashboard = (props: Props) => {
               />
             </div>
             <Rows
-              rows={filtered}
+              rows={visibleEntries}
               basis={basis}
               onOpen={props.setSelectedTransaction}
               onSettle={setSettlement}
             />
+            <div className="mt-4 flex flex-col gap-3 text-xs font-semibold text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+              <span>
+                {filtered.length === 0
+                  ? "Nenhum lançamento encontrado"
+                  : `${(entriesPage - 1) * ENTRIES_PAGE_SIZE + 1}–${Math.min(entriesPage * ENTRIES_PAGE_SIZE, filtered.length)} de ${filtered.length} lançamentos`}
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-full"
+                  aria-label="Página anterior de lançamentos"
+                  onClick={() => setEntriesPage((current) => Math.max(1, current - 1))}
+                  disabled={entriesPage <= 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="min-w-14 text-center text-[10px] font-black uppercase tracking-widest">
+                  {entriesPage}/{entriesPageCount}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-full"
+                  aria-label="Próxima página de lançamentos"
+                  onClick={() => setEntriesPage((current) => Math.min(entriesPageCount, current + 1))}
+                  disabled={entriesPage >= entriesPageCount}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           </Panel>
         ) : null}
         {view === "gestao-cobrancas" ? (

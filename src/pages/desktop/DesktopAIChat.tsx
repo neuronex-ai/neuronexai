@@ -140,7 +140,7 @@ export default function DesktopAIChat() {
                 setInvoiceDraftData(payload);
                 setIsInvoiceModalOpen(true);
             } else {
-                toast.error("Rascunho de cobranca incompleto.");
+                toast.error("Rascunho de cobrança incompleto.");
             }
         } else if (action.type === "navigation_action") {
             const path = getNavigationPath(payload);
@@ -322,7 +322,7 @@ export default function DesktopAIChat() {
                             size="icon"
                             onClick={() => setIsSidebarOpen((current) => !current)}
                             className={cn("h-11 w-11 shrink-0 rounded-full", liquidGlassButtonClassName)}
-                            aria-label={isSidebarOpen ? "Fechar historico de conversas" : "Abrir historico de conversas"}
+                            aria-label={isSidebarOpen ? "Fechar histórico de conversas" : "Abrir histórico de conversas"}
                             aria-pressed={isSidebarOpen}
                         >
                             {isSidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <History className="h-5 w-5" />}
@@ -397,7 +397,7 @@ export default function DesktopAIChat() {
                 open={isInvoiceModalOpen}
                 onOpenChange={setIsInvoiceModalOpen}
                 initialData={invoiceDraftData}
-                onSent={() => toast.success("Cobranca criada com sucesso!")}
+                onSent={() => toast.success("Cobrança criada com sucesso!")}
             />
         </div>
     );

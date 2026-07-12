@@ -1,3 +1,6 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import type { LucideIcon } from 'lucide-react';
 import {
   Copy,
   Eye,
@@ -14,8 +17,6 @@ import {
   Video,
   VideoOff,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { toast } from 'sonner';
 
 interface SessionControlsProps {
@@ -40,6 +41,53 @@ interface SessionControlsProps {
   onToggleCapture?: () => void;
 }
 
+interface ControlButtonProps {
+  icon: LucideIcon;
+  active?: boolean;
+  onClick?: () => void;
+  label: string;
+  danger?: boolean;
+  disabled?: boolean;
+  className?: string;
+}
+
+const ControlButton = ({
+  icon: Icon,
+  active,
+  onClick,
+  label,
+  danger = false,
+  disabled = false,
+  className,
+}: ControlButtonProps) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <button
+        type="button"
+        onClick={onClick}
+        disabled={disabled}
+        aria-label={label}
+        aria-pressed={danger || active === undefined ? undefined : active}
+        className={cn(
+          'teleconsultation-action relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+          danger
+            ? 'bg-rose-500/14 text-rose-500 hover:bg-rose-500/22'
+            : active
+              ? 'bg-foreground text-background shadow-[0_12px_28px_-18px_rgba(0,0,0,0.55)]'
+              : 'bg-foreground/[0.055] text-muted-foreground hover:bg-foreground/[0.1] hover:text-foreground dark:bg-white/[0.045] dark:hover:bg-white/[0.085]',
+          disabled && 'cursor-not-allowed opacity-35',
+          className,
+        )}
+      >
+        <Icon className={cn('h-[18px] w-[18px]', danger && 'fill-current')} aria-hidden="true" />
+      </button>
+    </TooltipTrigger>
+    <TooltipContent side="top" className="rounded-xl border-border/50 bg-popover px-3 py-2 text-[10px] font-bold text-popover-foreground shadow-lg dark:border-white/[0.055]">
+      {label}
+    </TooltipContent>
+  </Tooltip>
+);
+
 export const SessionControls = ({
   isFocusMode,
   onToggleFocus,
@@ -61,83 +109,36 @@ export const SessionControls = ({
   captureDisabled = false,
   onToggleCapture,
 }: SessionControlsProps) => {
-  const handleCopyLink = () => {
-    if (meetLink) {
-      void navigator.clipboard.writeText(meetLink);
-      toast.success('Link copiado para a área de transferência');
+  const handleCopyLink = async () => {
+    if (!meetLink) return;
+    try {
+      await navigator.clipboard.writeText(meetLink);
+      toast.success('Link copiado para a área de transferência.');
+    } catch {
+      toast.error('Não foi possível copiar o link.');
     }
   };
 
-  const ControlButton = ({
-    icon: Icon,
-    active,
-    onClick,
-    label,
-    danger = false,
-    secondary = false,
-    disabled = false,
-    className,
-  }: any) => (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <button
-          type="button"
-          onClick={onClick}
-          disabled={disabled}
-          className={cn(
-            'group relative flex h-12 w-12 items-center justify-center overflow-hidden rounded-full transition-all duration-500 ease-apple',
-            danger
-              ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20'
-              : secondary
-                ? 'border border-white/10 bg-white/5 text-zinc-600 hover:bg-white/10 hover:text-zinc-900 dark:border-transparent dark:bg-white/5 dark:text-zinc-400 dark:hover:text-white'
-                : active
-                  ? 'scale-110 bg-zinc-900 text-white shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:bg-white dark:text-black dark:shadow-[0_0_20px_rgba(255,255,255,0.2)]'
-                  : 'border border-white/10 bg-white/10 text-zinc-600 hover:border-white/20 hover:bg-white/20 dark:border-transparent dark:bg-black/30 dark:text-zinc-400 dark:hover:border-transparent dark:hover:bg-white/10',
-            disabled && 'cursor-not-allowed opacity-40',
-            className,
-          )}
-        >
-          <Icon className={cn('h-5 w-5 transition-all duration-300', danger ? 'fill-current' : 'stroke-[2]', active && 'scale-90')} />
-          {danger ? <div className="absolute inset-0 bg-rose-500/10 opacity-0 blur-xl transition-opacity duration-500 group-hover:opacity-100" /> : null}
-        </button>
-      </TooltipTrigger>
-      <TooltipContent side="top" className="rounded-full border border-white/20 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-zinc-900 shadow-xl backdrop-blur-xl dark:border-white/10 dark:bg-zinc-900/80 dark:text-zinc-100">
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  );
-
   return (
-    <div className="pointer-events-none mx-auto flex w-full max-w-5xl items-center justify-between px-6">
-      <div
-        className={cn(
-          'flex items-center gap-3 transition-all duration-300',
-          isChatOpen ? 'pointer-events-none -translate-x-5 opacity-0' : 'pointer-events-auto opacity-100',
-        )}
-      >
+    <div className="pointer-events-none mx-auto flex w-full items-center justify-center px-3">
+      <div className="teleconsultation-control-dock pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-[26px] p-2">
         {isOnline ? (
           <>
-            <ControlButton icon={Copy} secondary onClick={handleCopyLink} label="Copiar link" />
-            <ControlButton icon={MessageSquare} secondary onClick={onToggleChat} label="Chat" />
-            <ControlButton icon={Send} secondary onClick={onOpenInvite} label="Enviar convite" />
-          </>
-        ) : null}
-      </div>
-
-      <div className="desktop-retina-frame pointer-events-auto flex items-center gap-4 rounded-[40px] border border-white/20 bg-white/60 px-8 py-4 backdrop-blur-[40px] transition-all duration-500 hover:border-white/30 dark:border-transparent dark:bg-[#080808]/88 dark:hover:border-transparent">
-        {isOnline ? (
-          <>
+            <ControlButton icon={Copy} onClick={() => void handleCopyLink()} label="Copiar link da sala" />
+            <ControlButton icon={MessageSquare} active={isChatOpen} onClick={onToggleChat} label={isChatOpen ? 'Fechar chat' : 'Abrir chat'} />
+            <ControlButton icon={Send} onClick={onOpenInvite} label="Enviar convite" />
+            <span className="mx-0.5 h-7 w-px bg-border/60 dark:bg-white/[0.055]" aria-hidden="true" />
             <ControlButton
               icon={isAudioEnabled ? Mic : MicOff}
               active={!isAudioEnabled}
               onClick={onToggleAudio}
-              label={isAudioEnabled ? 'Mutar' : 'Desmutar'}
+              label={isAudioEnabled ? 'Desligar microfone' : 'Ligar microfone'}
             />
             <ControlButton
               icon={isVideoEnabled ? Video : VideoOff}
               active={!isVideoEnabled}
               onClick={onToggleVideo}
-              label={isVideoEnabled ? 'Desligar vídeo' : 'Ligar vídeo'}
+              label={isVideoEnabled ? 'Desligar câmera' : 'Ligar câmera'}
             />
             <ControlButton
               icon={isScreenSharing ? MonitorOff : MonitorUp}
@@ -162,20 +163,17 @@ export const SessionControls = ({
           icon={isFocusMode ? EyeOff : Eye}
           active={isFocusMode}
           onClick={onToggleFocus}
-          label={isFocusMode ? 'Sair do foco' : 'Modo foco'}
+          label={isFocusMode ? 'Sair do modo foco' : 'Ativar modo foco'}
         />
-
         <ControlButton
           icon={Phone}
           danger
           disabled={isProcessing}
           onClick={onEndSession}
-          label="Encerrar e revisar"
-          className="ml-2 h-14 w-14"
+          label="Encerrar e revisar sessão"
+          className="ml-0.5 h-12 w-12"
         />
       </div>
-
-      <div className="w-[144px]" />
     </div>
   );
 };

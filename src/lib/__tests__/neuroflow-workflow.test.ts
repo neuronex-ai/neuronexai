@@ -3,6 +3,7 @@ import {
   NEUROFLOW_WORKFLOW_SCHEMA,
   deserializeNeuroFlowWorkflow,
   serializeNeuroFlowWorkflow,
+  parseStoredNeuroFlowWorkflow,
   validateNeuroFlowWorkflow,
 } from '../neuroflow-workflow';
 
@@ -38,5 +39,19 @@ describe('neuroflow workflow v2', () => {
       metadata: {},
       links: [],
     })).toThrow(/conexao invalida/i);
+  });
+
+  it('repairs legacy mojibake while loading a stored workflow', () => {
+    const restored = parseStoredNeuroFlowWorkflow({
+      schema: NEUROFLOW_WORKFLOW_SCHEMA,
+      nodes: [{ id: 'a', type: 'item', position: { x: 0, y: 0 }, data: { label: 'HipÃ³tese clÃ­nica' } }],
+      edges: [],
+      viewport: {},
+      metadata: { title: 'SessÃ£o inicial' },
+      links: [],
+    });
+
+    expect(restored?.nodes[0].data.label).toBe('Hipótese clínica');
+    expect(restored?.metadata.title).toBe('Sessão inicial');
   });
 });

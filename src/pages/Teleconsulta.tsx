@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAppointments } from '@/hooks/use-appointments';
 import { UpcomingSessionsPanel } from '@/components/teleconsulta/UpcomingSessionsPanel';
 import { ActiveSessionPanel } from '@/components/teleconsulta/ActiveSessionPanel';
@@ -56,10 +56,13 @@ const TeleconsultaCore = () => {
     return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
   }, []);
 
-  const clinicalSessions = (appointments || []).filter((appointment) => {
-    if (isCancelledAppointmentStatus(appointment.status, appointment.notes)) return false;
-    return getAppointmentKind(appointment) === 'session';
-  });
+  const clinicalSessions = useMemo(
+    () => (appointments || []).filter((appointment) => {
+      if (isCancelledAppointmentStatus(appointment.status, appointment.notes)) return false;
+      return getAppointmentKind(appointment) === 'session';
+    }),
+    [appointments],
+  );
 
   const activeAppointment = clinicalSessions.find((appointment) => appointment.id === activeAppointmentId);
   const upcomingSessions = clinicalSessions.filter((appointment) => appointment.id !== activeAppointmentId);
@@ -78,8 +81,9 @@ const TeleconsultaCore = () => {
 
   if (activeAppointment) {
     return (
-      <div className="desktop-lumen-page relative min-h-screen overflow-hidden bg-transparent">
+      <div className="desktop-lumen-page teleconsultation-shell relative h-dvh overflow-hidden bg-transparent">
         <ActiveSessionPanel
+          key={activeAppointment.id}
           activeAppointment={activeAppointment}
           patientName={activeAppointment.patient_name || 'Paciente'}
           onSessionEnd={endSession}
@@ -90,7 +94,7 @@ const TeleconsultaCore = () => {
   }
 
   return (
-    <div className="desktop-lumen-page desktop-content-offset page-spacing relative min-h-screen overflow-hidden pb-10">
+    <div className="desktop-lumen-page desktop-content-offset teleconsultation-shell relative h-dvh overflow-hidden bg-transparent">
       <UpcomingSessionsPanel
         upcomingSessions={upcomingSessions}
         activeAppointment={activeAppointment}

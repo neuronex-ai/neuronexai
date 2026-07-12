@@ -62,8 +62,18 @@ const sourceLabels: Record<string, string> = {
   manual: "Manual",
   appointment: "Agenda",
   package: "Pacote",
-  convenio: "Convenio",
+  convenio: "Convênio",
+  insurance: "Convênio",
+  subscription: "Recorrência",
+  recurring: "Recorrência",
+  single: "Cobrança avulsa",
+  installment: "Parcelamento",
 };
+
+const chargeOriginLabel = (charge: ChargeRow) =>
+  sourceLabels[charge.source] || sourceLabels[charge.origin] || "Gestão financeira";
+const isProviderManagedCharge = (charge: ChargeRow) =>
+  charge.scope === "neurofinance" || charge.source === "neurofinance";
 
 const filterStatusOptions: { id: ChargeStatusFilter; label: string }[] = [
   { id: "planned", label: "Planejada" },
@@ -77,7 +87,7 @@ const managementTypeOptions: { id: ChargeTypeFilter; label: string }[] = [
   { id: "manual", label: "Manual" },
   { id: "appointment", label: "Agenda" },
   { id: "package", label: "Pacote" },
-  { id: "insurance", label: "Convenio" },
+  { id: "insurance", label: "Convênio" },
   { id: "subscription", label: "Mensalidade" },
 ];
 
@@ -128,7 +138,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
     receivedEnd,
   });
 
-  const charges = data?.charges || [];
+  const charges = useMemo(() => data?.charges ?? [], [data?.charges]);
   const total = data?.total || 0;
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const totalAmount = charges.reduce((sum, charge) => sum + Number(charge.amount || 0), 0);
@@ -239,7 +249,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
 
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="relative overflow-hidden rounded-[28px] border border-zinc-200/70 bg-white/82 p-5 shadow-[0_18px_54px_-46px_rgba(24,24,27,0.65)] dark:border-white/[0.08] dark:bg-white/[0.025]">
+      <div className="finance-panel relative overflow-hidden rounded-[28px] border border-border/55 bg-card/74 p-5 shadow-[0_18px_54px_-46px_hsl(var(--foreground)/0.35)] dark:border-black/75 dark:bg-zinc-900/[0.52]">
         <div className="relative z-10 space-y-5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-3">
@@ -285,7 +295,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
                     className="h-12 rounded-[14px] border-zinc-200 bg-white/70 px-5 text-[10px] font-black uppercase tracking-[0.16em] dark:border-white/10 dark:bg-white/[0.035]"
                   >
                     <MoreVertical className="mr-2 h-4 w-4" />
-                    Acoes
+                    Ações
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent align="end" className="w-72 rounded-[20px] border-zinc-200 bg-white/95 p-2 shadow-2xl dark:border-white/10 dark:bg-zinc-950/95">
@@ -333,15 +343,16 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
             </div>
           ) : null}
 
-          <div className="overflow-hidden rounded-[20px] border border-zinc-200/75 bg-white/70 dark:border-white/[0.08] dark:bg-white/[0.018]">
-            <div className="grid grid-cols-[42px_minmax(190px,1.1fr)_120px_minmax(180px,1.2fr)_150px_145px_150px] gap-4 border-b border-zinc-200/70 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-400 dark:border-white/[0.08]">
+          <div className="overflow-x-auto rounded-[20px] border border-border/55 bg-background/52 dark:border-black/70 dark:bg-black/15">
+            <div className="grid min-w-[1220px] grid-cols-[42px_minmax(170px,1fr)_115px_minmax(170px,1.1fr)_145px_135px_135px_150px] gap-4 border-b border-border/55 px-5 py-3 text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground dark:border-black/70">
               <Checkbox checked={allVisibleSelected} onCheckedChange={toggleAllVisible} aria-label="Selecionar cobranças visíveis" />
               <span>Paciente</span>
               <span>Valor</span>
-              <span>Descricao</span>
+              <span>Descrição</span>
+              <span>Origem</span>
               <span>Status</span>
               <span>Vencimento</span>
-              <span className="text-right">Acoes</span>
+              <span className="text-right">Ações</span>
             </div>
 
             <div className="divide-y divide-zinc-200/60 dark:divide-white/[0.06]">
@@ -369,7 +380,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
                       toast.success("Link copiado.");
                     }}
                     onSync={() => runNeurofinanceAction(charge, "sync")}
-                    onCancel={() => scope === "management" ? updateManagementStatus(charge, "cancelled") : runNeurofinanceAction(charge, "cancel")}
+                    onCancel={() => isProviderManagedCharge(charge) ? runNeurofinanceAction(charge, "cancel") : updateManagementStatus(charge, "cancelled")}
                     onMarkPaid={() => updateManagementStatus(charge, "paid")}
                     onMarkPending={() => updateManagementStatus(charge, "pending")}
                     isWorking={invoiceActions.runAction.isPending || updateEntry.isPending}
@@ -409,7 +420,7 @@ export function ChargesWorkspace({ scope, initialStatusFilters = [], title }: Ch
           }}
           onMarkPaid={(row) => updateManagementStatus(row, "paid")}
           onMarkPending={(row) => updateManagementStatus(row, "pending")}
-          onCancel={(row) => (scope === "management" ? updateManagementStatus(row, "cancelled") : runNeurofinanceAction(row, "cancel"))}
+          onCancel={(row) => (isProviderManagedCharge(row) ? runNeurofinanceAction(row, "cancel") : updateManagementStatus(row, "cancelled"))}
           isWorking={invoiceActions.runAction.isPending || updateEntry.isPending}
         />
       </div>
@@ -444,9 +455,10 @@ function ChargeRowItem({
 }) {
   const status = statusCopy[charge.status] || statusCopy.pending;
   const StatusIcon = status.icon;
+  const providerManaged = isProviderManagedCharge(charge);
 
   return (
-    <div className="grid grid-cols-[42px_minmax(190px,1.1fr)_120px_minmax(180px,1.2fr)_150px_145px_150px] items-center gap-4 px-5 py-4 text-sm transition-colors hover:bg-zinc-50/80 dark:hover:bg-white/[0.035]">
+    <div className="grid min-w-[1220px] grid-cols-[42px_minmax(170px,1fr)_115px_minmax(170px,1.1fr)_145px_135px_135px_150px] items-center gap-4 px-5 py-4 text-sm transition-colors hover:bg-muted/35">
       <Checkbox checked={selected} onCheckedChange={onToggleSelected} aria-label={`Selecionar ${charge.description}`} />
       <button type="button" onClick={onOpen} className="min-w-0 text-left">
         <div className="flex items-center gap-3">
@@ -455,9 +467,7 @@ function ChargeRowItem({
           </div>
           <div className="min-w-0">
             <p className="truncate font-black text-zinc-950 dark:text-white">{patientName}</p>
-            <p className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">
-              {sourceLabels[charge.source] || sourceLabels[charge.origin] || charge.source}
-            </p>
+            <p className="mt-0.5 truncate text-[10px] font-bold text-muted-foreground">Paciente vinculado</p>
           </div>
         </div>
       </button>
@@ -466,13 +476,16 @@ function ChargeRowItem({
         <p className="truncate font-bold text-zinc-900 dark:text-white">{charge.description}</p>
         <p className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.14em] text-zinc-400">{charge.paymentMethod || "Método não informado"}</p>
       </button>
+      <span className="inline-flex w-fit rounded-full border border-border/55 bg-muted/35 px-2.5 py-1 text-[10px] font-bold text-muted-foreground">
+        {chargeOriginLabel(charge)}
+      </span>
       <span className={cn("inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em]", status.tone)}>
         <StatusIcon className="h-3.5 w-3.5" />
         {status.label}
       </span>
       <p className="text-xs font-bold text-zinc-500 dark:text-zinc-300">{dateLabel(charge.dueDate)}</p>
       <div className="flex justify-end gap-1.5">
-        {charge.scope === "management" ? (
+        {charge.scope === "management" && !providerManaged ? (
           <>
             <IconButton label="Marcar como paga" onClick={onMarkPaid} disabled={isWorking || charge.status === "paid"} icon={CheckCircle2} />
             <IconButton label="Voltar para pendente" onClick={onMarkPending} disabled={isWorking || charge.status === "pending"} icon={Clock} />
@@ -565,8 +578,8 @@ function AdvancedFilters({
     <SharedAdvancedFilterPopover activeFilters={activeFilters} onClear={clearFilters}>
       <div className="grid gap-8 p-7 lg:grid-cols-[1.1fr_1fr_1.35fr]">
         <div className="space-y-5">
-          <FilterDateGroup title="Periodo de vencimento" start={dueStart} end={dueEnd} onStart={setDueStart} onEnd={setDueEnd} />
-          <FilterDateGroup title="Periodo de recebimento" start={receivedStart} end={receivedEnd} onStart={setReceivedStart} onEnd={setReceivedEnd} />
+          <FilterDateGroup title="Período de vencimento" start={dueStart} end={dueEnd} onStart={setDueStart} onEnd={setDueEnd} />
+          <FilterDateGroup title="Período de recebimento" start={receivedStart} end={receivedEnd} onStart={setReceivedStart} onEnd={setReceivedEnd} />
         </div>
         <FilterCheckGroup title="Tipos de cobrança" options={typeOptions} selected={typeFilters} onToggle={toggleType} />
         <FilterCheckGroup title="Situação das cobranças" options={filterStatusOptions} selected={statusFilters} onToggle={toggleStatus} twoColumns />
@@ -581,7 +594,7 @@ function FilterDateGroup({ title, start, end, onStart, onEnd }: { title: string;
       <p className="mb-3 text-sm font-black tracking-tight text-zinc-900 dark:text-white">{title}</p>
       <div className="flex items-center gap-3">
         <DateInput value={start} onChange={onStart} />
-        <span className="text-xs font-semibold text-zinc-400">ate</span>
+        <span className="text-xs font-semibold text-zinc-400">até</span>
         <DateInput value={end} onChange={onEnd} />
       </div>
     </div>
@@ -652,6 +665,7 @@ function ChargeDetailDialog({
 }) {
   const status = charge ? statusCopy[charge.status] : statusCopy.pending;
   const StatusIcon = status.icon;
+  const providerManaged = charge ? isProviderManagedCharge(charge) : false;
 
   return (
     <Dialog open={Boolean(charge)} onOpenChange={onOpenChange}>
@@ -668,7 +682,7 @@ function ChargeDetailDialog({
               <div className="grid gap-3 md:grid-cols-2">
                 <Detail label="Paciente" value={patientName} />
                 <Detail label="Valor" value={formatCurrency(charge.amount)} />
-                <Detail label="Origem" value={sourceLabels[charge.source] || sourceLabels[charge.origin] || charge.source} />
+                <Detail label="Origem" value={chargeOriginLabel(charge)} />
                 <Detail label="Método" value={charge.paymentMethod || "Não informado"} />
                 <Detail label="Vencimento" value={dateLabel(charge.dueDate)} />
                 <Detail label="Recebimento" value={dateLabel(charge.paidAt)} />
@@ -679,7 +693,7 @@ function ChargeDetailDialog({
               </span>
             </div>
             <div className="finance-separator flex flex-wrap justify-end gap-2 border-t border-zinc-200 px-6 py-5 dark:border-white/10">
-              {charge.scope === "management" ? (
+              {charge.scope === "management" && !providerManaged ? (
                 <>
                   <Button variant="outline" onClick={() => onMarkPending(charge)} disabled={isWorking || charge.status === "pending"} className="rounded-[14px]">
                     <Clock className="mr-2 h-4 w-4" />

@@ -44,7 +44,9 @@ export const useDesktopClinicalSession = (
 ) => {
   const [showLobby, setShowLobby] = useState(true);
   const [hasJoined, setHasJoined] = useState(false);
-  const [showConsent, setShowConsent] = useState(false);
+  // The transcription choice belongs to the pre-join step. Reconfirm it each
+  // time an online room is prepared so capture cannot start from stale data.
+  const [showConsent, setShowConsent] = useState(() => activeAppointment.type === 'online');
   const [mediaSettings, setMediaSettings] = useState<MediaDeviceChoice | null>(null);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
@@ -127,6 +129,7 @@ export const useDesktopClinicalSession = (
   const isProcessing = completionMode !== 'idle' || isUpdatingAppointment || isGeneratingProntuario;
   const captureAvailable = isOnlineSession || speechSupported;
   const hasTranscriptionDecision = !isOnlineSession || Boolean(transcriptionDecision);
+  const transcriptionEnabled = transcriptionDecision?.enabled === true;
   const canInvitePatient = isOnlineSession && hasTranscriptionDecision && roomStatus !== 'closed';
 
   const captureLabel = useMemo(() => {
@@ -204,11 +207,18 @@ export const useDesktopClinicalSession = (
     setShowInviteModal(true);
   }, [hasTranscriptionDecision, roomStatus]);
 
+  const requestTranscriptionDecision = useCallback(() => {
+    if (!isOnlineSession) return;
+    setShowConsent(true);
+  }, [isOnlineSession]);
+
   useEffect(() => {
     const nextDecision = getTranscriptionDecision(activeAppointment.metadata);
-    if (nextDecision) setTranscriptionDecision(nextDecision);
+    // Always reset the decision when moving between appointments. Keeping the
+    // previous session's state here could silently bypass the pre-join choice.
+    setTranscriptionDecision(nextDecision);
     setRoomStatus(activeAppointment.metadata?.teleconsultationRoom?.status || 'waiting');
-  }, [activeAppointment.metadata]);
+  }, [activeAppointment.id, activeAppointment.metadata]);
 
   useEffect(() => {
     if (!hasJoined) return;
@@ -251,20 +261,14 @@ export const useDesktopClinicalSession = (
   }, [activeAppointment.metadata, appointmentId, hasJoined, isOnlineSession, roomStatus, transcriptionDecision, user?.id]);
 
   useEffect(() => {
-    if (isOnlineSession) {
-      void ensureTranscript().catch((error) => {
-        toast.error(error instanceof Error ? error.message : 'Não foi possível preparar a transcrição.');
-      });
-      setShowConsent(!transcriptionDecision && !reviewOpen);
-      return;
-    }
-
-    if (!isOnlineSession && !hasJoined) return;
+    // Opening an online lobby must not create or start a transcript. The
+    // consent handlers below are the only entry point for that workflow.
+    if (isOnlineSession || !hasJoined) return;
     void ensureTranscript().catch((error) => {
       toast.error(error instanceof Error ? error.message : 'Não foi possível preparar a transcrição.');
     });
     setShowConsent(consentStatus === 'pending');
-  }, [consentStatus, ensureTranscript, hasJoined, isOnlineSession, reviewOpen, transcriptionDecision]);
+  }, [consentStatus, ensureTranscript, hasJoined, isOnlineSession]);
 
   const handleJoinSession = useCallback((selection: MediaDeviceChoice) => {
     if (isOnlineSession && !hasTranscriptionDecision) {
@@ -291,7 +295,12 @@ export const useDesktopClinicalSession = (
         toast.error(error instanceof Error ? error.message : 'Não foi possível abrir a sala para o paciente.');
       });
     }
-  }, [isOnlineSession, persistRoomStatus]);
+    if (transcriptionEnabled && consentStatus === 'granted' && !isCaptureEnabled) {
+      void startCapture().catch((error) => {
+        toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a transcrição.');
+      });
+    }
+  }, [consentStatus, isCaptureEnabled, isOnlineSession, persistRoomStatus, startCapture, transcriptionEnabled]);
 
   const handleGrantConsent = useCallback(async (
     method: Parameters<typeof grantConsent>[0],
@@ -305,13 +314,17 @@ export const useDesktopClinicalSession = (
         toast.warning('Transcrição presencial indisponível. A sessão seguirá com anotações protegidas.');
         return;
       }
-      await startCapture();
       setShowConsent(false);
-      toast.success('Consentimento registrado e captura iniciada.');
+      if (hasJoined) {
+        await startCapture();
+        toast.success('Consentimento registrado e transcrição iniciada.');
+      } else {
+        toast.success('Decisão registrada. A transcrição começará ao entrar na sessão.');
+      }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível iniciar a captura.');
     }
-  }, [grantConsent, isOnlineSession, persistTranscriptionDecision, speechSupported, startCapture]);
+  }, [grantConsent, hasJoined, isOnlineSession, persistTranscriptionDecision, speechSupported, startCapture]);
 
   const handleDeclineConsent = useCallback(async (notes?: string) => {
     try {
@@ -477,56 +490,6 @@ export const useDesktopClinicalSession = (
     return note;
   }, [queryClient, reviewSummaryNote, user?.id]);
 
-  const completeWithAi = useCallback(async () => {
-    if (!patientId || !hasNetwork) return;
-    setCompletionMode('generating');
-    setCompletionError(null);
-    try {
-      if (!reviewSummaryNote?.id) return;
-      setCompletionMode('saving');
-      const confirmedNote = await confirmSummaryNote(reviewSummaryNote.id);
-      await finishSession(false, confirmedNote.id);
-      toast.success('Sessão concluída e resumo confirmado.');
-      return;
-      await retrySync();
-      if (transcriptId) await markReviewed();
-      const result = await generateProntuario({
-        patientId: patientId!,
-        appointmentId,
-        notes: reviewNotes,
-        chatHistory: reviewTranscript,
-      });
-      const summaryNoteId = result.sessionNote?.id;
-      if (transcriptId && summaryNoteId) await linkSummaryNote(summaryNoteId);
-      await finishSession(false, summaryNoteId);
-      toast.success('Sessão concluída e rascunho clínico gerado.');
-    } catch (error) {
-      setCompletionError(error instanceof Error ? error.message : 'Não foi possível concluir a sessão.');
-    } finally {
-      setCompletionMode('idle');
-    }
-  }, [appointmentId, finishSession, generateProntuario, hasNetwork, linkSummaryNote, markReviewed, patientId, retrySync, reviewNotes, reviewTranscript, transcriptId]);
-
-  const completeWithoutAi = useCallback(async () => {
-    if (!hasNetwork) return;
-    setCompletionMode('saving');
-    setCompletionError(null);
-    try {
-      if (!reviewSummaryNote?.id) return;
-      await finishSession(true, reviewSummaryNote.id);
-      toast.warning('Sessão concluída. O resumo ficou pendente por até 48h.');
-      return;
-      await retrySync();
-      if (transcriptId) await markReviewed();
-      await finishSession(true);
-      toast.warning('Sessão concluída e rascunho preservado para depois.');
-    } catch (error) {
-      setCompletionError(error instanceof Error ? error.message : 'Não foi possível salvar a conclusão.');
-    } finally {
-      setCompletionMode('idle');
-    }
-  }, [finishSession, hasNetwork, markReviewed, retrySync, transcriptId]);
-
   const confirmGeneratedSummary = useCallback(async (finalSummary?: AISummary) => {
     if (!reviewSummaryNote?.id || !hasNetwork) return;
     setCompletionMode('saving');
@@ -556,9 +519,6 @@ export const useDesktopClinicalSession = (
     }
   }, [finishSession, hasNetwork, reviewSummaryNote?.id]);
 
-  void completeWithAi;
-  void completeWithoutAi;
-
   return {
     user,
     patient,
@@ -580,6 +540,7 @@ export const useDesktopClinicalSession = (
     hasJoined,
     showConsent,
     transcriptionDecision,
+    transcriptionEnabled,
     hasTranscriptionDecision,
     roomStatus,
     canInvitePatient,
@@ -630,6 +591,7 @@ export const useDesktopClinicalSession = (
     setIsVideoEnabled,
     setIsChatOpen,
     openPatientInvite,
+    requestTranscriptionDecision,
     setShowInviteModal,
     setReviewTranscript,
     setReviewNotes,

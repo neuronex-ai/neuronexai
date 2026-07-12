@@ -116,10 +116,10 @@ export default function DesktopAgenda() {
     }, [appointments, searchQuery, selectedTag]);
 
     return (
-        <div className="relative flex h-screen w-full flex-col overflow-hidden bg-transparent pt-10 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
-            <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 pb-4 md:px-6 lg:px-8 xl:px-10">
-                <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-[40px] border border-border/45 bg-card/42 p-2 shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.5)] backdrop-blur-sm dark:border-white/[0.04] dark:bg-white/[0.02] dark:shadow-[0_22px_70px_-60px_rgba(0,0,0,0.86)] md:p-3">
-                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_0%,hsl(var(--foreground)/0.012),transparent_32%),linear-gradient(180deg,hsl(var(--background)/0.06),transparent_42%)] dark:bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.006),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.006),transparent_42%)]" />
+        <div className="desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-4 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
+            <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-8 xl:px-10">
+                <div className="agenda-desktop-shell desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border border-border/45 bg-card/44 p-2 md:p-3">
+                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,hsl(var(--foreground)/0.018),transparent_40%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(155deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
                 <AnimatePresence>
                     {sidebarOpen && (
                         <>
@@ -140,11 +140,11 @@ export default function DesktopAgenda() {
                                 animate={{ opacity: 1, x: 0, scale: 1 }}
                                 exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -18, scale: 0.985 }}
                                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-                                className="absolute inset-y-3 left-3 z-40 hidden w-[318px] flex-col overflow-hidden xl:flex"
+                                className="absolute inset-y-3 left-3 z-40 hidden min-h-0 w-[324px] flex-col overflow-hidden xl:flex"
                             >
-                                <div className="relative h-full w-full rounded-[34px] border border-zinc-200/70 bg-white/84 p-2 shadow-[0_30px_90px_-46px_rgba(24,24,27,0.44),inset_0_1px_0_rgba(255,255,255,0.86)] backdrop-blur-3xl dark:border-white/[0.075] dark:bg-[#070708]/94 dark:shadow-[0_32px_94px_-50px_rgba(0,0,0,0.98),inset_0_1px_0_rgba(255,255,255,0.038)]">
-                                    <div className="pointer-events-none absolute inset-0 rounded-[34px] bg-[linear-gradient(145deg,rgba(255,255,255,0.54),transparent_38%),radial-gradient(circle_at_0%_0%,rgba(24,24,27,0.035),transparent_36%)] dark:bg-[linear-gradient(145deg,rgba(255,255,255,0.04),transparent_40%),radial-gradient(circle_at_0%_0%,rgba(255,255,255,0.028),transparent_36%)]" />
-                                    <div className="relative z-10 h-full">
+                                <div className="desktop-retina-panel relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] border border-border/55 bg-card/94 p-2 backdrop-blur-2xl">
+                                    <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[linear-gradient(150deg,hsl(var(--foreground)/0.025),transparent_38%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.02),transparent_42%)]" />
+                                    <div className="relative z-10 flex h-full min-h-0 flex-col">
                                         <Sidebar
                                             selectedDate={selectedDate}
                                             onDateChange={setSelectedDate}
@@ -163,8 +163,8 @@ export default function DesktopAgenda() {
                 </AnimatePresence>
 
                 <main className="relative z-10 flex h-full min-w-0 flex-1 flex-col" data-synapse-target="daily-schedule">
-                    <div className="relative flex-1 overflow-hidden rounded-[34px] border border-zinc-200/70 bg-white/72 shadow-[0_20px_64px_-48px_rgba(24,24,27,0.36),inset_0_1px_0_rgba(255,255,255,0.82)] ring-1 ring-zinc-950/[0.024] dark:border-white/[0.055] dark:bg-[#050506] dark:shadow-[0_26px_72px_-58px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.028)] dark:ring-white/[0.018]">
-                        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_10%,rgba(24,24,27,0.02),transparent_34%),radial-gradient(circle_at_92%_88%,rgba(24,24,27,0.012),transparent_38%)] dark:bg-[radial-gradient(circle_at_18%_10%,rgba(255,255,255,0.014),transparent_34%),radial-gradient(circle_at_92%_88%,rgba(255,255,255,0.004),transparent_38%)]" />
+                    <div className="desktop-retina-panel relative min-h-0 flex-1 overflow-hidden rounded-[32px] border border-border/50 bg-card/82">
+                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,hsl(var(--foreground)/0.014),transparent_38%)] dark:bg-[linear-gradient(155deg,rgba(255,255,255,0.012),transparent_42%)]" />
                         <CalendarView
                             date={selectedDate}
                             onDateChange={setSelectedDate}

@@ -1,13 +1,14 @@
-import { useEffect, useRef, useState } from "react";
-import { X, Send, Loader2, MessageSquare } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { supabase } from "@/integrations/supabase/client";
-import { SessionChatMessage } from "@/types/chat";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { supabase } from '@/integrations/supabase/client';
+import { cn } from '@/lib/utils';
+import type { SessionChatMessage } from '@/types/chat';
+import { format } from 'date-fns';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Loader2, MessageSquare, Send, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 
 interface SessionChatProps {
   isOpen: boolean;
@@ -22,165 +23,184 @@ export const SessionChat = ({
   onClose,
   appointmentId,
   currentUserId,
-  currentUserName
+  currentUserName,
 }: SessionChatProps) => {
   const [messages, setMessages] = useState<SessionChatMessage[]>([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [newMessage, setNewMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!appointmentId) return;
+    if (!appointmentId || !isOpen) return;
+    let active = true;
 
     const fetchMessages = async () => {
       setIsLoading(true);
       const { data, error } = await supabase
         .from('session_chat_messages')
-        .select('*')
+        .select('id, appointment_id, sender_id, sender_name, sender_role, content, created_at')
         .eq('appointment_id', appointmentId)
-        .order('created_at', { ascending: true });
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-      if (!error && data) {
-        setMessages(data);
-      }
+      if (!active) return;
+      if (!error && data) setMessages((data as SessionChatMessage[]).reverse());
       setIsLoading(false);
     };
 
-    fetchMessages();
+    void fetchMessages();
 
     const channel = supabase
-      .channel(`session-chat-${appointmentId}-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+      .channel(`session-chat-${appointmentId}`)
       .on<SessionChatMessage>(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
           table: 'session_chat_messages',
-          filter: `appointment_id=eq.${appointmentId}`
+          filter: `appointment_id=eq.${appointmentId}`,
         },
         (payload) => {
-          setMessages(prev => [...prev, payload.new]);
-        }
+          setMessages((current) => {
+            if (current.some((message) => message.id === payload.new.id)) return current;
+            return [...current.slice(-99), payload.new];
+          });
+        },
       )
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      active = false;
+      void supabase.removeChannel(channel);
     };
-  }, [appointmentId]);
+  }, [appointmentId, isOpen]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
+    if (!isOpen || !scrollRef.current) return;
+    const frame = window.requestAnimationFrame(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [messages, isOpen]);
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if (!newMessage.trim() || isSending) return;
+  const handleSendMessage = async (event?: React.FormEvent) => {
+    event?.preventDefault();
+    const content = newMessage.trim();
+    if (!content || isSending) return;
 
     setIsSending(true);
+    const { error } = await supabase.from('session_chat_messages').insert({
+      appointment_id: appointmentId,
+      sender_id: currentUserId,
+      sender_name: currentUserName,
+      sender_role: 'therapist',
+      content,
+    });
 
-    const { error } = await supabase
-      .from('session_chat_messages')
-      .insert({
-        appointment_id: appointmentId,
-        sender_id: currentUserId,
-        sender_name: currentUserName,
-        sender_role: 'therapist',
-        content: newMessage.trim()
-      });
-
-    if (!error) {
-      setNewMessage("");
-    } else {
-      console.error("Error sending message:", error);
-    }
+    if (error) toast.error('Não foi possível enviar a mensagem.');
+    else setNewMessage('');
     setIsSending(false);
   };
 
   return (
     <AnimatePresence>
-      {isOpen && (
+      {isOpen ? (
         <>
-          <motion.div
+          <motion.button
+            type="button"
+            aria-label="Fechar chat"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+            className="absolute inset-0 z-40 bg-black/55 lg:hidden"
           />
-          <motion.div
-            initial={{ x: "-100%", opacity: 0 }}
+          <motion.aside
+            initial={{ x: -18, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: "-100%", opacity: 0 }}
-            transition={{ type: "spring", damping: 30, stiffness: 300 }}
-            className="absolute left-6 top-24 bottom-28 w-full max-w-sm bg-white/60 dark:bg-[#050505]/60 backdrop-blur-[40px] border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] z-30 flex flex-col rounded-[24px] overflow-hidden"
+            exit={{ x: -18, opacity: 0 }}
+            transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+            className="teleconsultation-surface absolute bottom-24 left-4 top-20 z-50 flex w-[min(360px,calc(100%-2rem))] min-h-0 flex-col overflow-hidden rounded-[24px] sm:left-5"
+            aria-label="Chat da sessão"
           >
-            <div className="flex items-center justify-between p-4 border-b border-white/10 dark:border-white/5 bg-white/5 dark:bg-white/[0.02]">
+            <header className="flex shrink-0 items-center justify-between border-b border-border/40 p-4 dark:border-white/[0.045]">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-xl bg-white/10 dark:bg-white/5 border border-white/10">
-                  <MessageSquare className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />
+                <div className="teleconsultation-inset flex h-9 w-9 items-center justify-center rounded-[13px]">
+                  <MessageSquare className="h-4 w-4" aria-hidden="true" />
                 </div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white tracking-tight">Chat da Sessão</h3>
+                <h3 className="text-sm font-black tracking-[-0.02em] text-foreground">Chat da sessão</h3>
               </div>
-              <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 rounded-full hover:bg-black/5 dark:hover:bg-white/10 transition-colors">
-                <X className="w-4 h-4 text-zinc-500 dark:text-zinc-400" />
+              <Button variant="ghost" size="icon" onClick={onClose} className="h-11 w-11 rounded-full" aria-label="Fechar chat">
+                <X className="h-4 w-4" />
               </Button>
-            </div>
+            </header>
 
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[url('/noise.png')] bg-opacity-5">
+            <div ref={scrollRef} className="teleconsultation-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite">
               {isLoading ? (
-                <div className="flex items-center justify-center h-full text-muted-foreground"><Loader2 className="w-5 h-5 animate-spin" /></div>
+                <div className="flex h-full items-center justify-center text-muted-foreground" role="status">
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                </div>
               ) : messages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-center space-y-2 opacity-30">
-                  <MessageSquare className="w-8 h-8" />
+                <div className="flex h-full flex-col items-center justify-center space-y-2 text-center text-muted-foreground/55">
+                  <MessageSquare className="h-8 w-8" aria-hidden="true" />
                   <p className="text-xs">Nenhuma mensagem ainda.</p>
                 </div>
-              ) : (
-                messages.map((msg) => {
-                  const isMe = msg.sender_id === currentUserId;
-                  return (
-                    <div key={msg.id} className={cn("flex flex-col max-w-[85%]", isMe ? "ml-auto items-end" : "mr-auto items-start")}>
-                      <div className="flex items-end gap-2 mb-1.5">
-                        {!isMe && (
-                          <Avatar className="w-5 h-5 border border-white/20 dark:border-white/10 shadow-sm">
-                            <AvatarFallback className="text-[9px] bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">{msg.sender_name?.[0]?.toUpperCase()}</AvatarFallback>
-                          </Avatar>
-                        )}
-                        <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wide">{isMe ? 'Você' : msg.sender_name}</span>
-                      </div>
-                      <div className={cn("px-4 py-2.5 text-sm leading-relaxed shadow-sm break-words relative overflow-hidden transition-all duration-300",
-                        isMe
-                          ? "bg-zinc-900 dark:bg-white text-white dark:text-black rounded-[20px] rounded-tr-sm"
-                          : "bg-white/80 dark:bg-white/10 border border-black/5 dark:border-white/10 text-zinc-800 dark:text-zinc-200 rounded-[20px] rounded-tl-sm backdrop-blur-md"
-                      )}>
-                        {msg.content}
-                      </div>
-                      <span className="text-[9px] text-zinc-400 dark:text-zinc-500 mt-1 px-1">{format(new Date(msg.created_at), 'HH:mm')}</span>
+              ) : messages.map((message) => {
+                const isMe = message.sender_id === currentUserId;
+                return (
+                  <article key={message.id} className={cn('teleconsultation-deferred-section flex max-w-[88%] flex-col', isMe ? 'ml-auto items-end' : 'mr-auto items-start')}>
+                    <div className="mb-1.5 flex items-end gap-2">
+                      {!isMe ? (
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="bg-muted text-[9px] text-muted-foreground">
+                            {message.sender_name?.[0]?.toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : null}
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                        {isMe ? 'Você' : message.sender_name}
+                      </span>
                     </div>
-                  );
-                })
-              )}
+                    <div className={cn(
+                      'break-words px-4 py-2.5 text-sm leading-relaxed',
+                      isMe
+                        ? 'rounded-[18px] rounded-tr-sm bg-foreground text-background'
+                        : 'teleconsultation-inset rounded-[18px] rounded-tl-sm text-foreground/85',
+                    )}>
+                      {message.content}
+                    </div>
+                    <time className="mt-1 px-1 text-[9px] text-muted-foreground" dateTime={message.created_at}>
+                      {format(new Date(message.created_at), 'HH:mm')}
+                    </time>
+                  </article>
+                );
+              })}
             </div>
 
-            <div className="p-4 border-t border-white/10 dark:border-white/5 bg-white/5 dark:bg-black/20 backdrop-blur-md">
-              <form onSubmit={handleSendMessage} className="flex items-center gap-2 bg-white/50 dark:bg-white/5 p-1.5 pr-2 rounded-full border border-black/5 dark:border-white/10 focus-within:border-zinc-400 dark:focus-within:border-white/30 focus-within:ring-4 focus-within:ring-zinc-500/10 dark:focus-within:ring-white/5 transition-all duration-300">
+            <footer className="shrink-0 border-t border-border/40 p-3 dark:border-white/[0.045]">
+              <form onSubmit={(event) => void handleSendMessage(event)} className="teleconsultation-inset flex items-center gap-2 rounded-full p-1.5 pl-2 focus-within:ring-2 focus-within:ring-ring">
                 <Input
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={(event) => setNewMessage(event.target.value)}
                   placeholder="Digite uma mensagem..."
-                  className="flex-1 border-0 bg-transparent focus-visible:ring-0 text-sm h-9 px-4 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 text-zinc-900 dark:text-zinc-100"
+                  className="h-9 flex-1 border-0 bg-transparent px-3 text-sm shadow-none focus-visible:ring-0"
                 />
-                <Button type="submit" size="icon" disabled={!newMessage.trim() || isSending} className={cn("h-8 w-8 rounded-full transition-all duration-300 shadow-sm", newMessage.trim() ? "bg-emerald-500 text-white hover:bg-emerald-600 scale-100" : "bg-black/5 dark:bg-white/5 text-zinc-400 dark:text-white/20 scale-90")}>
-                  {isSending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3.5 h-3.5 ml-0.5" />}
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!newMessage.trim() || isSending}
+                  className="teleconsultation-action h-11 w-11 rounded-full bg-foreground text-background"
+                  aria-label="Enviar mensagem"
+                >
+                  {isSending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                 </Button>
               </form>
-            </div>
-          </motion.div>
+            </footer>
+          </motion.aside>
         </>
-      )}
+      ) : null}
     </AnimatePresence>
   );
 };

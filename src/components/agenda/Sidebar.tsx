@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Appointment } from "@/types";
 import { isSameDay, setMonth, setYear, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -116,19 +117,29 @@ export const Sidebar = ({
   onTagChange,
   onClose
 }: SidebarProps) => {
-  const todayAppointments = appointments.filter(app =>
-    isSameDay(new Date(app.start_time), selectedDate)
-  );
+  const { attended, unscored } = useMemo(() => {
+    let attendedCount = 0;
+    let unscoredCount = 0;
 
-  const attended = todayAppointments.filter(a => normalizeAppointmentStatus(a.status, a.notes) === 'attended').length;
-  const unscored = todayAppointments.filter(a => normalizeAppointmentStatus(a.status, a.notes) === 'unscored').length;
+    for (const appointment of appointments) {
+      if (!isSameDay(new Date(appointment.start_time), selectedDate)) continue;
+      const status = normalizeAppointmentStatus(appointment.status, appointment.notes);
+      if (status === "attended") attendedCount += 1;
+      if (status === "unscored") unscoredCount += 1;
+    }
+
+    return { attended: attendedCount, unscored: unscoredCount };
+  }, [appointments, selectedDate]);
 
   return (
-    <div className="no-scrollbar flex h-full flex-col gap-3 overflow-y-auto px-0.5 pb-1">
+    <div
+      className="agenda-sidebar-scroll custom-scrollbar flex h-full min-h-0 flex-col gap-3 overflow-y-scroll overscroll-contain px-0.5 pb-2 pr-1 [scrollbar-gutter:stable]"
+      style={{ touchAction: "pan-y" }}
+    >
       
       {/* 1. Calendar Section - High Fidelity Monochrome */}
-      <div className="relative shrink-0 overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white p-5 text-zinc-950 shadow-[0_18px_46px_-36px_rgba(24,24,27,0.28),inset_0_1px_0_rgba(255,255,255,0.86)] ring-1 ring-zinc-950/[0.025] transition-all duration-500 dark:border-white/[0.06] dark:bg-[#050506] dark:text-white dark:shadow-[0_24px_64px_-48px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.035)] dark:ring-white/[0.018] motion-reduce:transition-none">
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_16%_0%,rgba(24,24,27,0.035),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.5),transparent_44%)] dark:bg-[radial-gradient(circle_at_16%_0%,rgba(255,255,255,0.024),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.024),transparent_42%)]" />
+      <div className="desktop-retina-inset relative shrink-0 overflow-hidden rounded-[28px] border border-border/55 bg-background/78 p-5 text-foreground transition-colors duration-300 motion-reduce:transition-none">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.022),transparent_42%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_44%)]" />
         
         <div className="relative z-10 mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -194,8 +205,8 @@ export const Sidebar = ({
       </div>
 
       {/* 3. Search & Filters - Minimalist Area */}
-      <div className="relative flex flex-1 flex-col gap-7 overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white/72 p-5 shadow-[0_18px_46px_-38px_rgba(24,24,27,0.22)] dark:border-white/[0.055] dark:bg-[#050506]/94 dark:shadow-[0_22px_54px_-46px_rgba(0,0,0,0.94)]">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,rgba(255,255,255,0.36),transparent_40%)] opacity-70 dark:bg-[linear-gradient(145deg,rgba(255,255,255,0.02),transparent_42%)] dark:opacity-100" />
+      <div className="desktop-retina-inset relative flex min-h-[250px] shrink-0 flex-col gap-7 overflow-hidden rounded-[28px] border border-border/50 bg-background/72 p-5">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.018),transparent_42%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.014),transparent_44%)]" />
         
         {/* Search Block */}
         <div className="relative z-10 space-y-3">
@@ -237,10 +248,8 @@ export const Sidebar = ({
           </div>
         </div>
 
-        {/* Brand Accent */}
-        <div className="relative z-10 mt-auto flex items-center justify-between border-t border-zinc-200/50 pt-6 opacity-30 dark:border-white/[0.03]">
-          <span className="text-[7px] font-black uppercase tracking-[0.3em]">Synapse Agenda</span>
-          <div className="w-1 h-1 rounded-full bg-zinc-900 dark:bg-white" />
+        <div className="relative z-10 mt-auto border-t border-border/45 pt-5">
+          <span className="text-[7px] font-black uppercase tracking-[0.26em] text-muted-foreground">Agenda NeuroNex</span>
         </div>
       </div>
     </div>
@@ -248,7 +257,7 @@ export const Sidebar = ({
 };
 
 const MetricCard = ({ label, value }: { label: string, value: number }) => (
-  <div className="group rounded-[24px] border border-zinc-200/70 bg-white/82 p-4 shadow-[0_14px_34px_-30px_rgba(24,24,27,0.26)] transition-all hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-white hover:shadow-[0_18px_40px_-30px_rgba(24,24,27,0.34)] dark:border-white/[0.055] dark:bg-white/[0.03] dark:shadow-[0_18px_42px_-36px_rgba(0,0,0,0.9)] dark:hover:border-white/12 dark:hover:bg-white/[0.05] motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+  <div className="desktop-retina-inset desktop-retina-interactive group rounded-[22px] border border-border/50 bg-background/76 p-4 hover:border-border/80 hover:bg-background/94">
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
         <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">{label}</span>

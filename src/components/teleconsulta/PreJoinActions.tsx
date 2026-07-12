@@ -90,7 +90,7 @@ export const PreJoinActions = ({
 
   const buttonClass = (tone: "emerald" | "sky" | "amber") =>
     cn(
-      "h-11 w-11 shrink-0 rounded-full border border-black/5 bg-white/5 shadow-sm backdrop-blur-md transition-all duration-500 ease-apple hover:scale-105 hover:bg-white/10 active:scale-95 dark:border-white/10 dark:bg-black/20 dark:hover:bg-white/5",
+      "teleconsultation-inset teleconsultation-action h-11 w-11 shrink-0 rounded-full shadow-none",
       disabled && "opacity-45",
       tone === "emerald" && "group hover:[&>svg]:text-emerald-500",
       tone === "sky" && "group hover:[&>svg]:text-sky-500",
@@ -98,7 +98,7 @@ export const PreJoinActions = ({
     );
 
   return (
-    <div className="flex w-full min-w-0 flex-wrap items-center gap-2 animate-fade-up delay-200">
+    <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
       <Button
         variant="outline"
         size="icon"

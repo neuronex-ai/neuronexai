@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Upload, X, Loader2, FileText, FileType, Image as ImageIcon, Sparkles, Wand2, Edit2, Check, Save, FileJson, ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +35,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
     const [error, setError] = useState<string | null>(null);
     const [scanDuration, setScanDuration] = useState(0);
     const [isSaving, setIsSaving] = useState(false);
+    const shouldReduceMotion = useReducedMotion();
 
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -131,13 +132,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
 
     const progressiveReveal = (items: ExtractedItem[]) => {
         setExtractedData(items);
-        setVisibleCount(0);
-        let count = 0;
-        const revealInterval = setInterval(() => {
-            count++;
-            setVisibleCount(count);
-            if (count >= items.length) clearInterval(revealInterval);
-        }, 60);
+        setVisibleCount(items.length);
     };
 
     const startScan = async () => {
@@ -248,13 +243,10 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
 
                 // Clean up any duplicate records (best-effort, ignore errors)
                 if (existingRecords.length > 1) {
-                    for (let i = 1; i < existingRecords.length; i++) {
-                        await supabase
-                            .from('patient_anamneses')
-                            .delete()
-                            .eq('id', existingRecords[i].id)
-                            .then(/* ignore result */);
-                    }
+                    await supabase
+                        .from('patient_anamneses')
+                        .delete()
+                        .in('id', existingRecords.slice(1).map((record) => record.id));
                 }
             } else {
                 // No existing record — insert a new one
@@ -301,7 +293,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
     const showUpload = !showResults;
 
     return (
-        <div className="w-full h-full p-4 md:p-10 flex flex-col gap-8 animate-in fade-in duration-700">
+        <div className="flex h-full w-full flex-col gap-6 p-1 md:p-4">
 
             <header className="flex items-center justify-between shrink-0 relative z-10">
                 <div className="flex items-center gap-5">
@@ -331,13 +323,13 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                     {showUpload && (
                         <motion.div
                             key="upload-area"
-                            initial={{ opacity: 0 }}
+                            initial={shouldReduceMotion ? false : { opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                             className="flex-1 flex items-center justify-center"
                         >
                             <GlassCard className={cn(
-                                "relative w-full max-w-[520px] rounded-[40px] border-zinc-200/50 dark:border-white/5 transition-all duration-500 group",
+                                "desktop-retina-panel group relative w-full max-w-[520px] rounded-[30px] border-border/50 bg-card/72 transition-colors duration-300",
                                 isDragging ? "bg-zinc-900/5 dark:bg-white/5 border-zinc-900 dark:border-white scale-[1.01]" : "hover:bg-white dark:hover:bg-zinc-900/30",
                                 "shadow-[0_40px_80px_-24px_rgba(0,0,0,0.08)] dark:shadow-[0_40px_80px_-24px_rgba(0,0,0,0.4)]"
                             )}>
@@ -446,7 +438,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
 
                 {showResults && (
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
                         className="flex-1 flex flex-col gap-4 min-h-0"
@@ -482,15 +474,13 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                         </div>
 
                         {/* Results container */}
-                        <div className="flex-1 rounded-[32px] bg-white dark:bg-zinc-950/40 border border-zinc-200 dark:border-white/5 overflow-hidden relative shadow-lg">
-                            <div className="h-full overflow-y-auto p-8 md:p-12 custom-scrollbar scroll-smooth pb-40">
+                        <div className="desktop-retina-panel relative flex-1 overflow-hidden rounded-[28px] border border-border/45 bg-card/68">
+                            <div className="custom-scrollbar h-full overflow-y-auto overscroll-contain p-6 pb-40 [contain:layout_paint_style] [scrollbar-gutter:stable] md:p-8 md:pb-40">
                                 <div className="max-w-3xl mx-auto space-y-6">
                                     {extractedData.slice(0, visibleCount).map((item, idx) => (
-                                        <motion.div
+                                    <div
                                             key={idx}
-                                            initial={{ opacity: 0, y: 16 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+                                            style={{ contentVisibility: "auto", containIntrinsicSize: item.isSection ? "72px" : "180px" }}
                                         >
                                             {item.isSection ? (
                                                 <div className="flex items-center gap-6 pt-8 pb-4 mt-6 first:mt-0">
@@ -519,7 +509,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                     <div className="h-px bg-zinc-100 dark:bg-white/5 flex-1" />
                                                 </div>
                                             ) : (
-                                                <div className="group relative p-6 rounded-2xl bg-zinc-50/50 dark:bg-white/[0.02] border border-transparent hover:border-zinc-200 dark:hover:border-white/5 hover:bg-white dark:hover:bg-white/[0.03] transition-all duration-300">
+                                                <div className="desktop-retina-inset group relative rounded-[22px] border border-border/40 bg-background/56 p-5 transition-colors duration-300 hover:border-border/75 hover:bg-background/76">
                                                     <div className="flex justify-between items-start mb-2 gap-4">
                                                         {item.isEditing ? (
                                                             <Input
@@ -552,7 +542,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                     )}
                                                 </div>
                                             )}
-                                        </motion.div>
+                                        </div>
                                     ))}
                                 </div>
                             </div>

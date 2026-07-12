@@ -193,7 +193,7 @@ export const Navbar = () => {
               align="center"
               sideOffset={14}
               className={cn(
-                "h-[620px] w-[430px] max-h-[78vh] p-0 backdrop-blur-[32px] shadow-[0_48px_96px_-24px_rgba(0,0,0,0.5)] rounded-[32px] overflow-hidden z-[70]",
+                "notification-popover-surface h-[590px] w-[420px] max-h-[76vh] overflow-hidden rounded-[30px] p-0 shadow-[0_36px_88px_-42px_rgba(0,0,0,0.72)] z-[70]",
                 isDarkTheme
                   ? "desktop-retina-modal border border-white/10 bg-[#080808]/95 ring-1 ring-white/5"
                   : "border border-zinc-200 bg-white/95 ring-1 ring-black/5"

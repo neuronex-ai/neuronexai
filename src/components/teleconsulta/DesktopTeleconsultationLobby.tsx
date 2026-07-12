@@ -1,15 +1,23 @@
 "use client";
 
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { CalendarClock, Loader2, LockKeyhole, Play, ShieldCheck } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Button } from '@/components/ui/button';
+import type { MediaDeviceChoice } from '@/hooks/use-media-readiness';
+import type { Patient } from '@/types';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import {
+  CalendarClock,
+  CheckCircle2,
+  Loader2,
+  LockKeyhole,
+  Play,
+  ShieldCheck,
+  Video,
+} from 'lucide-react';
+import { useCallback, useState } from 'react';
 
-import { Button } from "@/components/ui/button";
-import type { MediaDeviceChoice } from "@/hooks/use-media-readiness";
-import type { Patient } from "@/types";
-import { MediaReadinessPanel } from "./MediaReadinessPanel";
-import { PreJoinActions } from "./PreJoinActions";
+import { MediaReadinessPanel } from './MediaReadinessPanel';
+import { PreJoinActions } from './PreJoinActions';
 
 interface DesktopTeleconsultationLobbyProps {
   patientName: string;
@@ -22,7 +30,7 @@ interface DesktopTeleconsultationLobbyProps {
   isLoadingToken: boolean;
   canInvitePatient?: boolean;
   hasTranscriptionDecision?: boolean;
-  roomStatus?: "waiting" | "open" | "closed";
+  roomStatus?: 'waiting' | 'open' | 'closed';
   onRequireTranscriptionDecision?: () => void;
   onJoin: (selection: MediaDeviceChoice) => void;
 }
@@ -38,7 +46,7 @@ export const DesktopTeleconsultationLobby = ({
   isLoadingToken,
   canInvitePatient = true,
   hasTranscriptionDecision = true,
-  roomStatus = "waiting",
+  roomStatus = 'waiting',
   onRequireTranscriptionDecision,
   onJoin,
 }: DesktopTeleconsultationLobbyProps) => {
@@ -54,97 +62,143 @@ export const DesktopTeleconsultationLobby = ({
   }, []);
 
   const isDecisionBlocked = isOnline && !hasTranscriptionDecision;
-  const isRoomClosed = isOnline && roomStatus === "closed";
-  const isJoinDisabled = !isReady || (isOnline && (isLoadingToken || isDecisionBlocked || isRoomClosed));
+  const isRoomClosed = isOnline && roomStatus === 'closed';
+  const isJoinDisabled = !isDecisionBlocked && (!isReady || (isOnline && (isLoadingToken || isRoomClosed)));
+
+  const handlePrimaryAction = () => {
+    if (isDecisionBlocked) {
+      onRequireTranscriptionDecision?.();
+      return;
+    }
+    onJoin(selection);
+  };
 
   return (
-    <div className="relative z-10 h-full w-full overflow-y-auto bg-transparent px-4 pb-4 xl:px-5 xl:pb-5">
-      <div className="mx-auto grid min-h-full max-w-7xl gap-4 xl:grid-cols-[1.35fr_0.65fr] xl:items-start">
-        <section className="desktop-retina-panel rounded-[28px] border border-border/40 bg-card/75 p-4 xl:p-5">
-          <MediaReadinessPanel
-            variant="desktop"
-            initialAudioEnabled
-            initialVideoEnabled={isOnline}
-            onReadinessChange={handleReadinessChange}
-          />
-        </section>
-
-        <aside className="space-y-3 xl:sticky xl:top-0">
-          <section className="rounded-[28px] bg-foreground p-5 text-background dark:bg-white dark:text-zinc-950">
-            <p className="text-[9px] font-black uppercase tracking-[0.22em] opacity-45">
-              {isOnline ? "Pré-entrada da teleconsulta" : "Preparação da sessão presencial"}
-            </p>
-            <h1 className="mt-3 text-3xl font-black leading-[0.95] tracking-[-0.05em] xl:text-4xl">{patientName}</h1>
-            {appointmentStart ? (
-              <div className="mt-4 flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-sm font-semibold dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
-                <CalendarClock className="h-4 w-4" />
-                {format(new Date(appointmentStart), "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
-              </div>
-            ) : null}
-            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-background/10 bg-background/[0.07] p-3 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
-              <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
-              <p className="text-xs font-medium leading-relaxed opacity-70">
-                {isOnline
-                  ? "Defina a transcrição, revise os dispositivos e só então libere o convite da sala."
-                  : "Confirme o consentimento antes de iniciar qualquer captura de áudio da sessão presencial."}
-              </p>
+    <div className="teleconsultation-scroll relative z-10 h-full min-h-0 w-full touch-pan-y overflow-y-auto overscroll-contain bg-transparent px-4 pb-6 md:px-6 xl:px-8">
+      <div className="mx-auto min-h-full w-full max-w-[1560px] space-y-4 pb-3">
+        <header className="teleconsultation-surface flex flex-col gap-4 rounded-[28px] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="teleconsultation-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] text-emerald-600 dark:text-emerald-400">
+              <Video className="h-5 w-5" aria-hidden="true" />
             </div>
+            <div className="min-w-0">
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                {isOnline ? 'Pré-entrada da teleconsulta' : 'Preparação da sessão presencial'}
+              </p>
+              <h1 className="mt-1 truncate text-2xl font-black tracking-[-0.045em] text-foreground sm:text-3xl">
+                Sessão com {patientName}
+              </h1>
+            </div>
+          </div>
+          {appointmentStart ? (
+            <div className="teleconsultation-inset inline-flex min-h-11 items-center gap-2.5 rounded-[16px] px-4 text-xs font-bold text-foreground">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              {format(new Date(appointmentStart), "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR })}
+            </div>
+          ) : null}
+        </header>
+
+        <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(330px,0.55fr)] xl:items-start">
+          <section className="teleconsultation-surface rounded-[30px] p-4 sm:p-5" aria-label="Teste de dispositivos">
+            <MediaReadinessPanel
+              variant="desktop"
+              initialAudioEnabled
+              initialVideoEnabled={isOnline}
+              onReadinessChange={handleReadinessChange}
+            />
           </section>
 
-          {isOnline ? (
-            <section className="desktop-retina-panel rounded-[24px] border border-border/40 bg-card/75 p-4">
-              <p className="mb-3 text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">Enviar link ao paciente</p>
-              <PreJoinActions
-                appointmentId={appointmentId}
-                patient={patient}
-                meetLink={meetLink}
-                therapistName={therapistName}
-                disabled={!canInvitePatient}
-                disabledReason={
-                  !hasTranscriptionDecision
-                    ? "Defina se a teleconsulta será transcrita antes de convidar."
-                    : roomStatus === "closed"
-                      ? "Esta sala já foi encerrada."
-                      : undefined
-                }
-                onDisabledClick={onRequireTranscriptionDecision}
-              />
+          <aside className="space-y-3 xl:sticky xl:top-0">
+            <section className="teleconsultation-surface rounded-[28px] p-5 sm:p-6">
+              <div className="flex items-start gap-3">
+                <div className="teleconsultation-inset flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-muted-foreground">
+                  <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Privacidade clínica</p>
+                  <h2 className="mt-2 text-lg font-black tracking-[-0.03em] text-foreground">Antes de abrir a sala</h2>
+                  <p className="mt-2 text-xs font-medium leading-relaxed text-muted-foreground">
+                    {isOnline
+                      ? 'Defina a transcrição e revise câmera, microfone e saída de áudio. O convite só será liberado depois dessa decisão.'
+                      : 'Confirme o consentimento antes de iniciar qualquer captura de áudio da sessão presencial.'}
+                  </p>
+                </div>
+              </div>
+
+              {isOnline ? (
+                <div className="teleconsultation-inset mt-5 flex items-center gap-3 rounded-[18px] px-4 py-3.5">
+                  {hasTranscriptionDecision ? (
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
+                  ) : (
+                    <LockKeyhole className="h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+                  )}
+                  <div>
+                    <p className="text-[9px] font-black uppercase tracking-[0.13em] text-foreground">
+                      {hasTranscriptionDecision ? 'Decisão registrada' : 'Decisão pendente'}
+                    </p>
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      {hasTranscriptionDecision ? 'A sala pode ser liberada.' : 'Escolha se deseja transcrever a consulta.'}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             </section>
-          ) : null}
 
-          <Button
-            type="button"
-            disabled={isJoinDisabled}
-            onClick={() => onJoin(selection)}
-            className="h-14 w-full rounded-[20px] bg-foreground text-[10px] font-black uppercase tracking-[0.2em] text-background shadow-xl disabled:opacity-45"
-          >
-            {isOnline && isLoadingToken ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Preparando sala
-              </>
-            ) : (
-              <>
-                {isDecisionBlocked ? <LockKeyhole className="mr-2 h-4 w-4" /> : <Play className="mr-2 h-4 w-4 fill-current" />}
-                {isDecisionBlocked ? "Definir transcrição" : isOnline ? "Entrar na sessão" : "Iniciar sessão presencial"}
-              </>
-            )}
-          </Button>
+            {isOnline ? (
+              <section className="teleconsultation-surface rounded-[24px] p-4">
+                <p className="mb-3 text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">Enviar link ao paciente</p>
+                <PreJoinActions
+                  appointmentId={appointmentId}
+                  patient={patient}
+                  meetLink={meetLink}
+                  therapistName={therapistName}
+                  disabled={!canInvitePatient}
+                  disabledReason={
+                    !hasTranscriptionDecision
+                      ? 'Defina se a teleconsulta será transcrita antes de convidar.'
+                      : roomStatus === 'closed'
+                        ? 'Esta sala já foi encerrada.'
+                        : undefined
+                  }
+                  onDisabledClick={onRequireTranscriptionDecision}
+                />
+              </section>
+            ) : null}
 
-          {isDecisionBlocked ? (
-            <p className="text-center text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground/65">
-              A decisão de transcrição é obrigatória antes de liberar o convite.
+            <Button
+              type="button"
+              disabled={isJoinDisabled}
+              onClick={handlePrimaryAction}
+              className="teleconsultation-action h-14 w-full rounded-[19px] bg-foreground text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-none disabled:opacity-45"
+            >
+              {isOnline && isLoadingToken && !isDecisionBlocked ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Preparando sala
+                </>
+              ) : (
+                <>
+                  {isDecisionBlocked ? (
+                    <LockKeyhole className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Play className="mr-2 h-4 w-4 fill-current" />
+                  )}
+                  {isDecisionBlocked ? 'Definir transcrição' : isOnline ? 'Entrar na sessão' : 'Iniciar sessão presencial'}
+                </>
+              )}
+            </Button>
+
+            <p className="px-3 text-center text-[9px] font-bold leading-relaxed text-muted-foreground/70">
+              {isRoomClosed
+                ? 'Esta sala já foi encerrada.'
+                : isDecisionBlocked
+                  ? 'A decisão de transcrição é obrigatória antes de liberar a sala.'
+                  : !isReady
+                    ? 'Conclua o teste dos dispositivos para continuar.'
+                    : 'Dispositivos prontos. Você pode entrar quando quiser.'}
             </p>
-          ) : isRoomClosed ? (
-            <p className="text-center text-[8px] font-black uppercase tracking-[0.14em] text-rose-500/80">
-              Esta sala já foi encerrada.
-            </p>
-          ) : !isReady ? (
-            <p className="text-center text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground/55">
-              Conclua o teste ou desligue o dispositivo indisponível.
-            </p>
-          ) : null}
-        </aside>
+          </aside>
+        </div>
       </div>
     </div>
   );

@@ -1,16 +1,9 @@
 "use client";
 
-import { AnamnesisTab } from "@/components/patients/anamnesis/AnamnesisTab";
 import { DocumentGeneratorModal } from "@/components/patients/DocumentGeneratorModal";
 import { EditPatientModal } from "@/components/patients/EditPatientModal";
 import { InvitePatientModal } from "@/components/patients/InvitePatientModal";
-import { PatientDocumentsTab } from "@/components/patients/PatientDocumentsTab";
-import { PatientFinanceTab } from "@/components/patients/PatientFinanceTab";
-import { PatientGoalsTab } from "@/components/patients/PatientGoalsTab";
 import { PatientHistoryTab } from "@/components/patients/PatientHistoryTab";
-import { PatientMoodTab } from "@/components/patients/PatientMoodTab";
-import { PatientPackagesTab } from "@/components/patients/PatientPackagesTab";
-import { PatientPendingSessionReviewsTab } from "@/components/patients/PatientPendingSessionReviewsTab";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,11 +17,10 @@ import {
     Smile, Target,
     Wallet
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 
-import { BiofeedbackWidget } from "@/components/patients/BiofeedbackWidget";
 import { ClinicalSummaryCard } from "@/components/patients/ClinicalSummaryCard";
 import { MedicationUpdateModal } from "@/components/patients/MedicationUpdateModal";
 import {
@@ -40,13 +32,38 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobilePatientDetail } from "@/mobile/pages/MobilePatientDetail";
+
+const loadAnamnesisTab = () => import("@/components/patients/anamnesis/AnamnesisTab").then((module) => ({ default: module.AnamnesisTab }));
+const loadBiofeedbackWidget = () => import("@/components/patients/BiofeedbackWidget").then((module) => ({ default: module.BiofeedbackWidget }));
+const loadPatientDocumentsTab = () => import("@/components/patients/PatientDocumentsTab").then((module) => ({ default: module.PatientDocumentsTab }));
+const loadPatientFinanceTab = () => import("@/components/patients/PatientFinanceTab").then((module) => ({ default: module.PatientFinanceTab }));
+const loadPatientGoalsTab = () => import("@/components/patients/PatientGoalsTab").then((module) => ({ default: module.PatientGoalsTab }));
+const loadPatientMoodTab = () => import("@/components/patients/PatientMoodTab").then((module) => ({ default: module.PatientMoodTab }));
+const loadPatientPackagesTab = () => import("@/components/patients/PatientPackagesTab").then((module) => ({ default: module.PatientPackagesTab }));
+const loadPatientPendingReviewsTab = () => import("@/components/patients/PatientPendingSessionReviewsTab").then((module) => ({ default: module.PatientPendingSessionReviewsTab }));
+
+const AnamnesisTab = lazy(loadAnamnesisTab);
+const BiofeedbackWidget = lazy(loadBiofeedbackWidget);
+const PatientDocumentsTab = lazy(loadPatientDocumentsTab);
+const PatientFinanceTab = lazy(loadPatientFinanceTab);
+const PatientGoalsTab = lazy(loadPatientGoalsTab);
+const PatientMoodTab = lazy(loadPatientMoodTab);
+const PatientPackagesTab = lazy(loadPatientPackagesTab);
+const PatientPendingSessionReviewsTab = lazy(loadPatientPendingReviewsTab);
+
+const PatientTabFallback = () => (
+    <div className="space-y-3" aria-busy="true" aria-label="Carregando seção do prontuário">
+        <Skeleton className="h-28 w-full rounded-[24px]" />
+        <Skeleton className="h-64 w-full rounded-[28px]" />
+    </div>
+);
 
 export default function PatientDetail() {
     const { id } = useParams<{ id: string }>();
@@ -59,6 +76,7 @@ export default function PatientDetail() {
     const [startX, setStartX] = useState(0);
     const [scrollLeft, setScrollLeft] = useState(0);
     const [inviteModalOpen, setInviteModalOpen] = useState(false);
+    const shouldReduceMotion = useReducedMotion();
     const { features, hasPaidAccess, accessState, isDevAccount } = useSubscription();
     const canInvitePatientPortal = Boolean(features.hasPatientPortal && (hasPaidAccess || accessState === "admin_override" || isDevAccount));
 
@@ -69,8 +87,31 @@ export default function PatientDetail() {
         }
     }, [searchParams]);
 
+    useEffect(() => {
+        const preload = () => {
+            void Promise.allSettled([
+                loadAnamnesisTab(),
+                loadBiofeedbackWidget(),
+                loadPatientDocumentsTab(),
+                loadPatientFinanceTab(),
+                loadPatientGoalsTab(),
+                loadPatientMoodTab(),
+                loadPatientPackagesTab(),
+                loadPatientPendingReviewsTab(),
+            ]);
+        };
+
+        if ("requestIdleCallback" in window) {
+            const idleId = window.requestIdleCallback(preload, { timeout: 1800 });
+            return () => window.cancelIdleCallback(idleId);
+        }
+
+        const timeoutId = globalThis.setTimeout(preload, 650);
+        return () => globalThis.clearTimeout(timeoutId);
+    }, []);
+
     const { data: patient, isLoading: isLoadingPatient } = usePatientById(id || "");
-    const { data: notes, isLoading: isLoadingNotes } = useSessionNotes(id || "");
+    const { data: notes, isLoading: isLoadingNotes } = useSessionNotes(id || "", { limit: 1 });
     const queryClient = useQueryClient();
 
     const handleStatusChange = async (newStatus: string) => {
@@ -130,7 +171,7 @@ export default function PatientDetail() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen w-full p-6 md:p-8 space-y-8 max-w-[1800px] mx-auto pt-32">
+            <div className="desktop-lumen-page desktop-content-offset mx-auto min-h-screen w-full max-w-[1800px] space-y-8 p-6 md:p-8">
                 <div className="flex items-center gap-4">
                     <Skeleton className="h-10 w-10 rounded-full bg-white/5" />
                     <Skeleton className="h-8 w-48 bg-white/5 rounded-lg" />
@@ -176,15 +217,15 @@ export default function PatientDetail() {
     ];
 
     return (
-        <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full pb-28 pt-24 font-sans text-foreground selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
-            <div className="relative z-10 mx-auto w-full max-w-[2200px] px-5">
+        <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 font-sans text-foreground selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
+            <div className="relative z-10 mx-auto w-full max-w-[2200px] px-4 md:px-6 lg:px-8 xl:px-10">
 
             {/* ─── Header Top Bar ─── */}
             <motion.div
-                initial={{ opacity: 0, y: -20 }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, ease: "circOut" }}
-                className="desktop-retina-frame sticky top-[calc(var(--desktop-navbar-clearance)-1.5rem)] z-40 rounded-[26px] border border-border/60 bg-background/88 px-4 py-3 backdrop-blur-xl"
+                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.32, ease: [0.32, 0.72, 0, 1] }}
+                className="patient-record-header desktop-retina-frame sticky top-[var(--desktop-navbar-clearance)] z-40 rounded-[30px] border border-border/50 bg-background/88 px-4 py-3 backdrop-blur-xl"
             >
                 <div className="flex w-full items-center gap-4">
 
@@ -223,15 +264,24 @@ export default function PatientDetail() {
                                     key={tab.val}
                                     type="button"
                                     onClick={() => setActiveTab(tab.val)}
+                                    aria-current={activeTab === tab.val ? "page" : undefined}
                                     className={cn(
-                                        "desktop-retina-interactive relative flex h-10 items-center gap-2 whitespace-nowrap rounded-[15px] px-4 text-[9px] font-black uppercase tracking-[0.16em]",
+                                        "desktop-retina-interactive relative flex h-10 items-center gap-2 overflow-hidden whitespace-nowrap rounded-[15px] px-4 text-[9px] font-black uppercase tracking-[0.16em]",
                                         activeTab === tab.val
-                                            ? "bg-foreground text-background"
+                                            ? "text-background"
                                             : "text-muted-foreground hover:bg-background hover:text-foreground"
                                     )}
                                 >
-                                    <tab.icon className="h-3.5 w-3.5" />
-                                    {tab.label}
+                                    {activeTab === tab.val ? (
+                                        <motion.span
+                                            layoutId="patient-record-active-tab"
+                                            aria-hidden="true"
+                                            className="absolute inset-0 rounded-[15px] bg-foreground"
+                                            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 38, mass: 0.7 }}
+                                        />
+                                    ) : null}
+                                    <tab.icon className="relative z-10 h-3.5 w-3.5" />
+                                    <span className="relative z-10">{tab.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -272,11 +322,11 @@ export default function PatientDetail() {
 
 
             {/* ─── Main Layout Grid ─── */}
-            <div className="relative z-10">
-                <div className="grid grid-cols-1 items-start xl:grid-cols-[310px_minmax(0,1fr)]">
+            <div className="patient-record-shell desktop-retina-frame relative z-10 mt-4 rounded-[36px] border border-border/45 bg-background/45 p-3 shadow-[0_28px_82px_-64px_hsl(var(--foreground)/0.4)] dark:bg-black/20">
+                <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[310px_minmax(0,1fr)]">
 
                     {/* LEFT COLUMN: Patient Info */}
-                    <aside className="z-20 w-full space-y-5 border-b border-border/55 py-5 pr-5 dark:border-white/[0.085] xl:sticky xl:top-[86px] xl:border-b-0 xl:border-r">
+                    <aside className="z-20 w-full space-y-5 border-b border-border/45 pb-5 dark:border-white/[0.06] xl:sticky xl:top-[calc(var(--desktop-navbar-clearance)+6.5rem)] xl:border-b-0">
                         <GlassCard
                             className="desktop-retina-panel w-full !rounded-[24px] !border-border/60 !bg-card/70 !backdrop-blur-xl"
                             innerClassName="p-0"
@@ -382,7 +432,7 @@ export default function PatientDetail() {
                     </aside>
 
                     {/* RIGHT COLUMN: Content Area */}
-                    <main className="desktop-retina-frame min-w-0 space-y-7 rounded-[32px] border border-border/45 p-5 pb-16 md:p-7 lg:p-8">
+                    <main className="patient-record-content desktop-retina-frame min-w-0 space-y-7 rounded-[34px] border border-border/45 bg-card/62 p-5 pb-14 md:p-7 lg:p-8">
 
                         <div className="relative flex min-h-[760px] w-full flex-col">
                             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col h-full">
@@ -451,9 +501,9 @@ export default function PatientDetail() {
                                 <div className="h-full">
                                     <TabsContent value="history" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
                                         <motion.div
-                                            initial={{ opacity: 0, y: 8 }}
+                                            initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
                                             animate={{ opacity: 1, y: 0 }}
-                                            transition={{ duration: 0.22, ease: "easeOut" }}
+                                            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
                                             className="space-y-7"
                                         >
                                             <ClinicalSummaryCard latestNote={latestNote} patient={patient} />
@@ -461,28 +511,28 @@ export default function PatientDetail() {
                                         </motion.div>
                                     </TabsContent>
                                     <TabsContent value="pending_reviews" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <PatientPendingSessionReviewsTab patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><PatientPendingSessionReviewsTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="anamnesis" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <AnamnesisTab />
+                                        <Suspense fallback={<PatientTabFallback />}><AnamnesisTab /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="mood" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <PatientMoodTab patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><PatientMoodTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="biofeedback" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <BiofeedbackWidget patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><BiofeedbackWidget patientId={id!} /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="goals" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <PatientGoalsTab patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><PatientGoalsTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="packages" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <PatientPackagesTab patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><PatientPackagesTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="finance" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <PatientFinanceTab patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><PatientFinanceTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                     <TabsContent value="documents" className="mt-0 h-full focus-visible:outline-none data-[state=inactive]:hidden">
-                                        <PatientDocumentsTab patientId={id!} />
+                                        <Suspense fallback={<PatientTabFallback />}><PatientDocumentsTab patientId={id!} /></Suspense>
                                     </TabsContent>
                                 </div>
                             </Tabs>
