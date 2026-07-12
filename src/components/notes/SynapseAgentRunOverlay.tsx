@@ -17,6 +17,17 @@ const statusIcon = (status?: string) => {
   return <span className="h-2 w-2 rounded-full bg-zinc-500/50" />;
 };
 
+const STATUS_COPY: Record<string, string> = {
+  queued: "Organizando contexto",
+  gathering: "Reunindo sinais clínicos",
+  reasoning: "Relacionando evidências",
+  drafting: "Estruturando resultado",
+  applying: "Aplicando com segurança",
+  completed: "Resultado conectado",
+  failed: "Não foi possível concluir",
+  cancelled: "Ação cancelada",
+};
+
 export const SynapseAgentRunOverlay = ({
   run,
   title,
@@ -38,12 +49,12 @@ export const SynapseAgentRunOverlay = ({
         exit={shouldReduceMotion ? undefined : { opacity: 0, y: 10, scale: 0.98 }}
         transition={{ duration: shouldReduceMotion ? 0 : 0.28, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "pointer-events-auto absolute z-[65] overflow-hidden rounded-2xl border border-white/10 bg-black/45 p-4 text-white shadow-2xl shadow-black/20 backdrop-blur-3xl ring-1 ring-white/5 [.light_&]:border-zinc-200/70 [.light_&]:bg-white/70 [.light_&]:text-zinc-950 [.light_&]:shadow-zinc-900/10",
+          "pointer-events-none absolute z-[65] overflow-hidden rounded-[22px] border border-white/[0.065] bg-[linear-gradient(148deg,rgba(25,25,26,0.94),rgba(9,9,10,0.96))] p-4 text-white shadow-[0_24px_70px_-40px_rgba(255,255,255,0.18)] backdrop-blur-2xl [.light_&]:border-zinc-200/70 [.light_&]:bg-white/88 [.light_&]:text-zinc-950 [.light_&]:shadow-zinc-900/10",
           compact ? "bottom-6 left-6 w-[320px]" : "bottom-8 left-8 w-[380px]",
           className,
         )}
       >
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_42%,rgba(255,255,255,0.04))] [.light_&]:bg-[linear-gradient(135deg,rgba(255,255,255,0.72),transparent_46%,rgba(0,0,0,0.03))]" />
+        <div className="pointer-events-none absolute inset-x-7 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent [.light_&]:via-zinc-950/15" />
         <div className="relative z-10 space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -52,8 +63,8 @@ export const SynapseAgentRunOverlay = ({
               </div>
               <div>
                 <h3 className="text-xs font-black uppercase tracking-[0.24em]">{title}</h3>
-                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.24em] text-zinc-400 [.light_&]:text-zinc-500">
-                  {run.status} / {Math.round(run.progress || 0)}%
+                <p className="mt-1 text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400 [.light_&]:text-zinc-500">
+                  {STATUS_COPY[run.status] || "Processando"} · {Math.round(run.progress || 0)}%
                 </p>
               </div>
             </div>
@@ -62,7 +73,7 @@ export const SynapseAgentRunOverlay = ({
 
           <div className="h-1 overflow-hidden rounded-full bg-white/10 [.light_&]:bg-zinc-200">
             <motion.div
-              className="h-full rounded-full bg-white [.light_&]:bg-zinc-950"
+              className="h-full rounded-full bg-zinc-100/85 [.light_&]:bg-zinc-950"
               initial={false}
               animate={{ width: `${Math.max(4, Math.min(100, run.progress || 0))}%` }}
               transition={{ duration: shouldReduceMotion ? 0 : 0.35 }}

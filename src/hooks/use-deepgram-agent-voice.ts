@@ -147,6 +147,11 @@ const TOOL_LABELS: Record<string, string> = {
   get_medication_info: "Informações de medicação",
   get_latest_scientific_updates: "Atualizações científicas",
   search_normative_docs: "Normas profissionais",
+  analyze_neuroview_patient_patterns: "Análise no NeuroView",
+  create_neuroflow_from_patient_history: "Criação no NeuroFlow",
+  create_neuropulse_cause_effect_diagram: "Diagrama no NeuroPulse",
+  confirm_pending_action: "Confirmação da ação",
+  cancel_pending_action: "Cancelamento da ação",
 };
 
 const toHumanToolLabel = (value: unknown) => {

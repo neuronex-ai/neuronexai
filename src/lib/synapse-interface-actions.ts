@@ -74,6 +74,9 @@ export interface SynapseActionLifecycleEvent {
   action: SynapseInterfaceActionName;
   label: string;
   message: string;
+  runId?: string;
+  product?: "neuroview" | "neuroflow" | "neuropulse";
+  targetSelector?: string;
 }
 
 type Navigate = (path: string, options?: { replace?: boolean; state?: unknown }) => void;
@@ -113,6 +116,53 @@ const sleep = (milliseconds: number, signal: AbortSignal) =>
     signal.addEventListener("abort", () => { window.clearTimeout(timeout); reject(new DOMException("Cancelled", "AbortError")); }, { once: true });
   });
 
+const nextFrame = (signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    if (signal.aborted) return reject(new DOMException("Cancelled", "AbortError"));
+    const onAbort = () => {
+      window.cancelAnimationFrame(frame);
+      reject(new DOMException("Cancelled", "AbortError"));
+    };
+    const frame = window.requestAnimationFrame(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    });
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
+const waitForTarget = (selector: string, signal: AbortSignal, timeoutMs = 4200) =>
+  new Promise<Element | null>((resolve, reject) => {
+    if (!selector) return resolve(null);
+    if (signal.aborted) return reject(new DOMException("Cancelled", "AbortError"));
+
+    const existing = document.querySelector(selector);
+    if (existing) return resolve(existing);
+
+    let settled = false;
+    const finish = (node: Element | null) => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(timeout);
+      signal.removeEventListener("abort", onAbort);
+      resolve(node);
+    };
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(timeout);
+      reject(new DOMException("Cancelled", "AbortError"));
+    };
+    const observer = new MutationObserver(() => {
+      const node = document.querySelector(selector);
+      if (node) finish(node);
+    });
+    const timeout = window.setTimeout(() => finish(document.querySelector(selector)), timeoutMs);
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
 const validEntityId = (value?: string) => Boolean(value && (UUID_PATTERN.test(value) || SAFE_ID_PATTERN.test(value)));
 const safeNotesView = (value?: string): SynapseNotesView | undefined => value && NOTES_VIEWS.has(value) ? value as SynapseNotesView : undefined;
 const emitPageAction = (action: SynapseInterfaceAction) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PAGE_ACTION_EVENT, { detail: action })); };
@@ -146,13 +196,26 @@ const ACTION_LABELS: Partial<Record<SynapseInterfaceActionName, string>> = {
 export const describeSynapseInterfaceAction = (action: SynapseInterfaceAction) =>
   ACTION_LABELS[action.action] || action.reason || "Atualizando a interface";
 
-const highlightNode = (node: Element | null) => {
+const highlightNode = (node: Element | null, product?: "neuroview" | "neuroflow" | "neuropulse") => {
   if (!(node instanceof HTMLElement)) return false;
-  node.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  node.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center", inline: "nearest" });
   node.dataset.synapseHighlighted = "true";
+  if (product) node.dataset.synapseProduct = product;
   node.classList.add("synapse-interface-highlight");
-  window.setTimeout(() => { node.classList.remove("synapse-interface-highlight"); delete node.dataset.synapseHighlighted; }, 4200);
+  window.setTimeout(() => {
+    node.classList.remove("synapse-interface-highlight");
+    delete node.dataset.synapseHighlighted;
+    delete node.dataset.synapseProduct;
+  }, 4600);
   return true;
+};
+
+const notesProduct = (action: SynapseInterfaceAction) => {
+  if (action.action === "open_neuroview_reasoning") return "neuroview" as const;
+  if (action.action === "open_neuroflow_generation") return "neuroflow" as const;
+  if (action.action === "open_neuropulse_diagram") return "neuropulse" as const;
+  return undefined;
 };
 
 const targetSelector = (action: SynapseInterfaceAction) => {
@@ -241,9 +304,18 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
   const lifecycleId = globalThis.crypto?.randomUUID?.() || `synapse-action-${Date.now()}`;
   const label = describeSynapseInterfaceAction(action);
   let lastPhase: SynapseActionPhase = "preparing";
-  const report = (phase: SynapseActionPhase, message: string) => {
+  const report = (phase: SynapseActionPhase, message: string, selector?: string) => {
     lastPhase = phase;
-    options.onLifecycle?.({ id: lifecycleId, phase, action: action.action, label, message });
+    options.onLifecycle?.({
+      id: lifecycleId,
+      phase,
+      action: action.action,
+      label,
+      message,
+      runId: action.runId,
+      product: notesProduct(action),
+      targetSelector: selector,
+    });
   };
   const reportPhase = (phase: SynapseActionPhase, message: string) => {
     if (lastPhase !== phase) report(phase, message);
@@ -252,9 +324,9 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
     reportPhase("focusing", "Destacando o resultado na tela");
     emitPageAction(pageAction);
   };
-  const focusNode = (node: Element | null) => {
-    reportPhase("focusing", "Destacando o resultado na tela");
-    return highlightNode(node);
+  const focusNode = (node: Element | null, selector?: string) => {
+    if (lastPhase !== "focusing") report("focusing", "Conectando o resultado à interface", selector);
+    return highlightNode(node, notesProduct(action));
   };
   report("preparing", "Preparando a solicitação");
   try {
@@ -341,11 +413,12 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         if (action.noteId && validEntityId(action.noteId)) query.set("noteId", action.noteId);
         const path = query.toString() ? `/notas?${query.toString()}` : "/notas";
         navigate(path, { state: { synapseNotesView: notesView, synapseQuery: action.query || "", synapseNoteId: action.noteId, synapseModuleId: action.moduleId, synapseTaskId: action.taskId, synapseFileId: action.fileId, synapseFlowId: action.flowId, synapseRunId: action.runId, synapsePatientId: action.patientId, synapsePulseEntryId: action.pulseEntryId, synapseMermaid: action.mermaid, synapseTrace: action.trace, synapseAction: action.action } });
-        await sleep(560, controller.signal);
+        await nextFrame(controller.signal);
         focusPageAction({ ...action, notesView });
-        await sleep(180, controller.signal);
         const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : notesView === "neuroview" ? "neuroview_graph" : notesView === "neuroflow" ? "neuroflow_canvas" : notesView === "neuropulse" ? "neuropulse_panel" : action.query ? "notes_search" : "notes_editor");
-        focusNode(document.querySelector(targetSelector({ ...action, element })));
+        const selector = targetSelector({ ...action, element });
+        const node = await waitForTarget(selector, controller.signal);
+        focusNode(node, selector);
         break;
       }
       case "highlight_element": {

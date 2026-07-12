@@ -73,8 +73,10 @@ interface SynapseContextType {
     isVoiceSpeaking: boolean;
     voicePhase: string;
     isVoiceToolActive: boolean;
+    voiceActivityToolName: string;
     voiceActivityLabel: string;
     voiceActivityMessage: string;
+    voiceActivityElapsedMs: number;
     getVoiceInputVolume: () => number;
     toggleVoiceMode: () => Promise<void>;
     isVoiceExpanded: boolean;
@@ -203,23 +205,10 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     }, []);
 
     useEffect(() => {
-        if (!actionExperience || ['completed', 'error'].includes(actionExperience.phase)) return;
-
-        const cancelOnUserInteraction = (event: PointerEvent) => {
-            const target = event.target instanceof Element ? event.target : null;
-            if (target?.closest('[data-synapse-shell="true"]')) return;
-            cancelActionExperience();
-        };
-
-        document.addEventListener('pointerdown', cancelOnUserInteraction, true);
-        return () => document.removeEventListener('pointerdown', cancelOnUserInteraction, true);
-    }, [actionExperience, cancelActionExperience]);
-
-    useEffect(() => {
         if (!actionExperience || !['completed', 'error'].includes(actionExperience.phase)) return;
         const timeout = window.setTimeout(
             () => setActionExperience((current) => current?.id === actionExperience.id ? null : current),
-            actionExperience.phase === 'completed' ? 2200 : 3600,
+            actionExperience.phase === 'completed' ? 4200 : 5200,
         );
         return () => window.clearTimeout(timeout);
     }, [actionExperience]);
@@ -318,8 +307,10 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 isVoiceSpeaking: synapseVoice.isSpeaking,
                 voicePhase: String(synapseVoice.voicePhase || synapseVoice.status),
                 isVoiceToolActive: synapseVoice.isToolActive,
+                voiceActivityToolName: synapseVoice.activeTool?.name || '',
                 voiceActivityLabel: synapseVoice.activeToolLabel,
                 voiceActivityMessage: synapseVoice.activeToolMessage,
+                voiceActivityElapsedMs: synapseVoice.activeToolElapsedMs,
                 getVoiceInputVolume: synapseVoice.getInputVolume,
                 toggleVoiceMode,
                 isVoiceExpanded,
