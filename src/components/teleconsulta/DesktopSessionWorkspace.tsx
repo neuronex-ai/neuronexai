@@ -7,7 +7,7 @@ import type {
 } from '@/hooks/use-jitsi-token';
 import { cn } from '@/lib/utils';
 import type { Patient } from '@/types';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   Activity,
   AlertTriangle,
@@ -77,11 +77,36 @@ export const DesktopSessionWorkspace = ({
 }: DesktopSessionWorkspaceProps) => {
   const riskScore = patient?.risk_score || 0;
   const medications = patient?.medications || [];
+  const [activeWorkspaceTab, setActiveWorkspaceTab] = useState<'transcript' | 'notes' | 'patient'>('transcript');
 
   return (
-    <aside className="grid h-full min-h-0 grid-rows-[minmax(0,1.12fr)_minmax(220px,0.88fr)] gap-4">
-      <div className="grid min-h-0 grid-cols-2 gap-4">
-        <WorkspaceCard>
+    <aside className="flex h-full min-h-0 flex-col gap-3">
+      <nav className="desktop-retina-frame grid shrink-0 grid-cols-3 gap-1 rounded-[20px] border border-border/40 p-1.5" aria-label="Ferramentas da sessão">
+        {[
+          { id: 'transcript' as const, label: 'Transcrição', icon: FileText },
+          { id: 'notes' as const, label: 'Notas', icon: NotebookPen },
+          { id: 'patient' as const, label: 'Paciente', icon: UserRound },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            onClick={() => setActiveWorkspaceTab(tab.id)}
+            aria-pressed={activeWorkspaceTab === tab.id}
+            className={cn(
+              'desktop-retina-interactive flex h-10 items-center justify-center gap-2 rounded-[14px] text-[8px] font-black uppercase tracking-[0.12em]',
+              activeWorkspaceTab === tab.id
+                ? 'bg-foreground text-background'
+                : 'text-muted-foreground hover:bg-white/[0.045] hover:text-foreground',
+            )}
+          >
+            <tab.icon className="h-3.5 w-3.5" />
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      <div className="min-h-0 flex-1">
+        <WorkspaceCard className={cn('h-full', activeWorkspaceTab !== 'transcript' && 'hidden')}>
           <div className="flex h-full min-h-0 flex-col">
             <header className="flex items-start justify-between gap-3 border-b border-border/35 px-5 py-4 dark:border-white/10">
               <div>
@@ -162,7 +187,7 @@ export const DesktopSessionWorkspace = ({
           </div>
         </WorkspaceCard>
 
-        <WorkspaceCard>
+        <WorkspaceCard className={cn('h-full', activeWorkspaceTab !== 'notes' && 'hidden')}>
           <div className="flex h-full min-h-0 flex-col">
             <header className="flex items-start justify-between gap-3 border-b border-border/35 px-5 py-4 dark:border-white/10">
               <div>
@@ -193,10 +218,8 @@ export const DesktopSessionWorkspace = ({
             </div>
           </div>
         </WorkspaceCard>
-      </div>
-
-      <WorkspaceCard>
-        <div className="flex h-full min-h-0 flex-col px-5 py-4">
+      <WorkspaceCard className={cn('h-full', activeWorkspaceTab !== 'patient' && 'hidden')}>
+        <div className="flex h-full min-h-0 flex-col overflow-y-auto px-5 py-4">
           <header className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-foreground text-background">
@@ -222,7 +245,7 @@ export const DesktopSessionWorkspace = ({
             </div>
           </header>
 
-          <div className="mt-4 grid min-h-0 flex-1 grid-cols-[0.95fr_1.05fr_1fr] gap-3">
+          <div className="mt-4 grid min-h-0 flex-1 grid-cols-1 gap-3">
             <div className="desktop-retina-inset rounded-[20px] bg-background/58 p-4">
               <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">Hipótese / diagnóstico</p>
               <p className="mt-2 line-clamp-4 text-xs font-semibold leading-relaxed text-foreground/85">
@@ -253,6 +276,7 @@ export const DesktopSessionWorkspace = ({
           </div>
         </div>
       </WorkspaceCard>
+      </div>
     </aside>
   );
 };

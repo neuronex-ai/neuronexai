@@ -406,8 +406,7 @@ export default function Notes() {
     };
 
     return (
-        <div className="notes-lumen-canvas relative z-0 flex h-screen min-h-0 w-full flex-col overflow-hidden bg-background font-sans text-foreground selection:bg-primary/20">
-            <div className="notes-lumen-field pointer-events-none fixed inset-0 z-0" />
+        <div className="notes-lumen-canvas relative z-0 flex h-screen min-h-0 w-full flex-col overflow-hidden bg-transparent font-sans text-foreground selection:bg-primary/20">
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 items-stretch px-5 pb-5 pt-28">
                 <div className="relative z-10 flex h-full min-h-0 min-w-0 flex-1 overflow-hidden rounded-[34px] border border-border/45 bg-card/42 shadow-[0_22px_90px_-76px_hsl(var(--foreground)/0.7)] ring-1 ring-foreground/[0.025] backdrop-blur-sm dark:border-white/[0.04] dark:bg-white/[0.02] dark:ring-white/[0.035]">
                     <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: shouldReduceMotion ? 0 : 1, ease: [0.16, 1, 0.3, 1] }} className="group/main-window pointer-events-auto relative flex h-full min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent shadow-none">

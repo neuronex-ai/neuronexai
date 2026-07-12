@@ -89,10 +89,10 @@ export const SessionControls = ({
             danger
               ? 'border border-rose-500/20 bg-rose-500/10 text-rose-500 hover:bg-rose-500/20'
               : secondary
-                ? 'border border-white/10 bg-white/5 text-zinc-600 hover:bg-white/10 hover:text-zinc-900 dark:bg-white/5 dark:text-zinc-400 dark:hover:text-white'
+                ? 'border border-white/10 bg-white/5 text-zinc-600 hover:bg-white/10 hover:text-zinc-900 dark:border-transparent dark:bg-white/5 dark:text-zinc-400 dark:hover:text-white'
                 : active
                   ? 'scale-110 bg-zinc-900 text-white shadow-[0_0_20px_rgba(0,0,0,0.1)] dark:bg-white dark:text-black dark:shadow-[0_0_20px_rgba(255,255,255,0.2)]'
-                  : 'border border-white/10 bg-white/10 text-zinc-600 hover:border-white/20 hover:bg-white/20 dark:bg-black/20 dark:text-zinc-400 dark:hover:bg-white/10',
+                  : 'border border-white/10 bg-white/10 text-zinc-600 hover:border-white/20 hover:bg-white/20 dark:border-transparent dark:bg-black/30 dark:text-zinc-400 dark:hover:border-transparent dark:hover:bg-white/10',
             disabled && 'cursor-not-allowed opacity-40',
             className,
           )}
@@ -124,7 +124,7 @@ export const SessionControls = ({
         ) : null}
       </div>
 
-      <div className="pointer-events-auto flex items-center gap-4 rounded-[40px] border border-white/20 bg-white/60 px-8 py-4 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] backdrop-blur-[40px] transition-all duration-500 hover:border-white/30 dark:border-white/10 dark:bg-[#050505]/60 dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] dark:hover:border-white/20">
+      <div className="desktop-retina-frame pointer-events-auto flex items-center gap-4 rounded-[40px] border border-white/20 bg-white/60 px-8 py-4 backdrop-blur-[40px] transition-all duration-500 hover:border-white/30 dark:border-transparent dark:bg-[#080808]/88 dark:hover:border-transparent">
         {isOnline ? (
           <>
             <ControlButton

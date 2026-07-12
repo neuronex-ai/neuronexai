@@ -5,6 +5,7 @@ import { Navbar } from "./Navbar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
+import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -17,6 +18,10 @@ export const Layout = ({ children }: LayoutProps) => {
     !isMobile &&
     (location.pathname === "/dashboard" ||
       location.pathname === "/neurozap" ||
+      location.pathname.startsWith("/financeiro") ||
+      location.pathname.startsWith("/pacientes") ||
+      location.pathname.startsWith("/teleconsulta") ||
+      location.pathname.startsWith("/ajustes") ||
       location.pathname.startsWith("/notas"));
 
   return (
@@ -24,7 +29,7 @@ export const Layout = ({ children }: LayoutProps) => {
       "min-h-screen flex flex-col relative bg-background text-foreground"
     )}>
       {/* Camada global de canvas: todas as telas desktop devem revelar a mesma base. */}
-      <div className="absolute inset-0 bg-gradient-to-br from-transparent via-zinc-100/20 to-transparent pointer-events-none dark:via-zinc-900/10" />
+      {!isMobile ? <DesktopLumenBackdrop /> : null}
 
       {!isMobile && <Navbar />}
       <main className={cn(

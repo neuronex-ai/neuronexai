@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useAppointments } from '@/hooks/use-appointments';
 import { UpcomingSessionsPanel } from '@/components/teleconsulta/UpcomingSessionsPanel';
 import { ActiveSessionPanel } from '@/components/teleconsulta/ActiveSessionPanel';
-import { DesktopLumenBackdrop } from '@/components/ui/DesktopLumenBackdrop';
 import { addMonths, endOfWeek, startOfWeek } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
@@ -79,8 +78,7 @@ const TeleconsultaCore = () => {
 
   if (activeAppointment) {
     return (
-      <div className="desktop-lumen-page relative min-h-screen overflow-hidden bg-background">
-        <DesktopLumenBackdrop />
+      <div className="desktop-lumen-page relative min-h-screen overflow-hidden bg-transparent">
         <ActiveSessionPanel
           activeAppointment={activeAppointment}
           patientName={activeAppointment.patient_name || 'Paciente'}
@@ -92,8 +90,7 @@ const TeleconsultaCore = () => {
   }
 
   return (
-    <div className="desktop-lumen-page desktop-content-offset page-spacing relative min-h-screen overflow-hidden pb-10 pt-24">
-      <DesktopLumenBackdrop />
+    <div className="desktop-lumen-page desktop-content-offset page-spacing relative min-h-screen overflow-hidden pb-10">
       <UpcomingSessionsPanel
         upcomingSessions={upcomingSessions}
         activeAppointment={activeAppointment}

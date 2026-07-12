@@ -48,7 +48,7 @@ export const UpcomingSessionsPanel = ({
 
     if (isLoading) {
         return (
-            <div className="h-full flex items-center justify-center bg-background">
+            <div className="h-full flex items-center justify-center bg-transparent">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground/50" />
             </div>
         );
@@ -57,7 +57,7 @@ export const UpcomingSessionsPanel = ({
     return (
         <div className="relative z-10 flex h-full w-full overflow-hidden bg-transparent">
             {/* Main Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pr-8 lg:pt-8">
+            <div className="flex-1 overflow-y-auto custom-scrollbar px-6 pb-6 pr-8 pt-0">
                 <div className="max-w-5xl mx-auto space-y-8">
 
                     {/* Header - Floating Bar Style */}

@@ -314,13 +314,12 @@ const DesktopFinanceiro = () => {
   };
 
   return (
-    <div className="finance-desktop relative flex min-h-screen w-full flex-col bg-background pt-10 font-sans text-foreground selection:bg-primary/20">
+    <div className="finance-desktop desktop-content-offset relative flex min-h-screen w-full flex-col bg-transparent font-sans text-foreground selection:bg-primary/20">
       <NewTransactionModal
         open={agentTransactionModalOpen}
         onOpenChange={setAgentTransactionModalOpen}
         showTrigger={false}
       />
-      <div className="finance-lumen-field pointer-events-none fixed inset-0 z-0" />
       <div className="relative z-10 mx-auto flex w-full max-w-[2200px] flex-1 gap-5 px-5 pb-10 md:px-7 lg:gap-6 lg:px-10 xl:px-14 2xl:px-16">
         <nav
           aria-label="Navegação do Financeiro"

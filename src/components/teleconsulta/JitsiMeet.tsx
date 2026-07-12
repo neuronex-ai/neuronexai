@@ -106,6 +106,12 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
           enableWelcomePage: false,
           enableClosePage: false,
           toolbarButtons: [],
+          buttonsWithNotifyClick: [],
+          toolbarConfig: {
+            alwaysVisible: false,
+            autoHideWhileChatIsOpen: true,
+            timeout: 1,
+          },
           notifications: [],
           disable1On1Mode: true,
           disableProfile: true,
@@ -115,6 +121,7 @@ const JitsiMeetComponent = forwardRef<JitsiRef, JitsiMeetProps>(({
         },
         interfaceConfigOverwrite: {
           TOOLBAR_BUTTONS: [],
+          TOOLBAR_ALWAYS_VISIBLE: false,
           SHOW_JITSI_WATERMARK: false,
           SHOW_WATERMARK_FOR_GUESTS: false,
           SHOW_BRAND_WATERMARK: false,

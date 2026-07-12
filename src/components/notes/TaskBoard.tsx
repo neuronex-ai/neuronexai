@@ -375,7 +375,6 @@ export const TaskBoard = ({
             className="relative bg-transparent font-sans selection:bg-white selection:text-black [.light_&]:selection:bg-zinc-900 [.light_&]:selection:text-white"
             style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden', minHeight: 0, minWidth: 0 }}
         >
-            <div className="absolute inset-0 bg-[radial-gradient(#444_1px,transparent_1px)] [background-size:64px_64px] opacity-[0.03] dark:opacity-[0.05] pointer-events-none" />
 
             <motion.div
                 initial={false}

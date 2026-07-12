@@ -3,13 +3,11 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
-import { User, MessageSquare, Building, CreditCard, LogOut, Bell, CheckCircle2, ChevronRight, Monitor, Moon, Sun, Shield, Wallet, Settings, ArrowLeft, Sparkles, Link2 } from "lucide-react";
+import { User, MessageSquare, Building, CreditCard, LogOut, Bell, CheckCircle2, ChevronRight, Monitor, Moon, Sun, Shield, Wallet, ArrowLeft, Sparkles, Link2 } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { TodoistIcon } from "@/components/icons/TodoistIcon";
 import { NotionIcon } from "@/components/icons/NotionIcon";
 import { cn } from "@/lib/utils";
-import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 
 // Hooks
@@ -40,6 +38,13 @@ import { MobileSettings } from "@/mobile/pages/MobileSettings";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { UpgradePlanModal } from "@/components/dashboard/UpgradePlanModal";
 
+const getSettingsTab = (search: string) => {
+    const requestedTab = new URLSearchParams(search).get('tab') || 'profile';
+    if (requestedTab === 'google') return 'integrations';
+    if (requestedTab === 'reports' || requestedTab === 'organization') return 'profile';
+    return requestedTab;
+};
+
 const Ajustes = () => {
     const isMobile = useIsMobile();
     const { startTour } = useTour();
@@ -54,21 +59,14 @@ const Ajustes = () => {
 
     const location = useLocation();
     const navigate = useNavigate();
-    const queryClient = useQueryClient();
     const [callbackStatus, setCallbackStatus] = useState<'success' | 'failure' | null>(null);
     const [callbackMessage, setCallbackMessage] = useState<string | undefined>(undefined);
     const [integrationSuggestion, setIntegrationSuggestion] = useState("");
 
-    const params = new URLSearchParams(location.search);
-    const getTabFromParams = () => {
-        const requestedTab = params.get('tab') || 'profile';
-        if (requestedTab === 'google') return 'integrations';
-        if (requestedTab === 'reports' || requestedTab === 'organization') return 'profile';
-        return requestedTab;
-    };
-    const [activeTab, setActiveTab] = useState(getTabFromParams);
+    const [activeTab, setActiveTab] = useState(() => getSettingsTab(location.search));
 
     useEffect(() => {
+        const params = new URLSearchParams(location.search);
         const status = params.get('status') as 'success' | 'failure' | null;
 
         if (status) {
@@ -76,10 +74,10 @@ const Ajustes = () => {
             setCallbackMessage(params.get('message') || undefined);
             window.history.replaceState({}, document.title, location.pathname);
         }
-    }, [location, navigate, queryClient]);
+    }, [location.pathname, location.search]);
 
     useEffect(() => {
-        setActiveTab(getTabFromParams());
+        setActiveTab(getSettingsTab(location.search));
     }, [location.search]);
 
     const handleLogout = async () => {
@@ -142,90 +140,89 @@ const Ajustes = () => {
         { val: "fiscal", label: "Dados Fiscais", icon: Building },
     ];
 
+    const menuSections = [
+        {
+            label: "Conta",
+            items: menuItems.filter((item) => ["profile", "security", "subscription"].includes(item.val)),
+        },
+        {
+            label: "Experiência",
+            items: menuItems.filter((item) => ["prefs", "notifications", "communication"].includes(item.val)),
+        },
+        {
+            label: "Operação",
+            items: menuItems.filter((item) => ["payments", "integrations", "fiscal"].includes(item.val)),
+        },
+    ].filter((section) => section.items.length > 0);
+
     if (isMobile) return <MobileSettings />;
     if (callbackStatus) return <CallbackStatus status={callbackStatus} message={callbackMessage} onClose={() => setCallbackStatus(null)} />;
 
     return (
-        <div className="desktop-lumen-page w-full min-h-screen bg-background font-sans selection:bg-primary/20 flex">
-            <DesktopLumenBackdrop />
-            <div className="desktop-content-offset flex-1 pb-24 pt-24 relative space-y-10">
-                <div className="max-w-[1600px] mx-auto px-6 lg:px-8 xl:px-10 relative z-10 space-y-10">
-                    {/* Header - Floating Bar Style Polished */}
-                    <div className="mb-12 relative z-40 w-full animate-in fade-in slide-in-from-top-4 duration-700">
-                        <div className="desktop-retina-frame w-full flex items-center justify-between p-1.5 pl-3 bg-white/80 dark:bg-[#080808]/86 backdrop-blur-3xl border border-zinc-200 dark:border-white/10 rounded-full ring-1 ring-black/5 dark:ring-white/[0.025] relative overflow-hidden group">
-
-                            {/* Subtle Inner Glow */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none" />
-
-                            {/* Left Side: Back & Title */}
-                            <div className="flex items-center gap-5 relative z-10">
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => navigate('/dashboard')}
-                                    className="h-11 w-11 rounded-full bg-zinc-100 dark:bg-white/[0.03] hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all duration-300 border border-zinc-200 dark:border-white/5 hover:border-zinc-300 dark:hover:border-white/20 active:scale-95 shadow-sm dark:shadow-inner"
-                                >
-                                    <ArrowLeft className="h-4 w-4" />
-                                </Button>
-
-                                <div className="flex flex-col justify-center h-full -space-y-1">
-                                    <div className="flex items-center gap-1.5">
-                                        <div className="h-1 w-1 rounded-full bg-primary animate-pulse" />
-                                        <span className="text-[10px] font-black text-zinc-400 dark:text-zinc-500 uppercase tracking-[0.2em] leading-none">Configurações</span>
-                                    </div>
-                                    <h1 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-zinc-100 tracking-tight leading-none pt-1">Ajustes & Integrações</h1>
-                                </div>
-                            </div>
-
-                            {/* Right Side: Quick Actions/Indicators */}
-                            <div className="flex items-center gap-3 pr-2 relative z-10">
-                                <div className="hidden md:flex items-center gap-2 px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-full border border-zinc-200 dark:border-white/5">
-                                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                                    <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">Plano {plan}</span>
-                                </div>
-                                <div className="h-10 w-10 rounded-full bg-gradient-to-tr from-white to-zinc-100 dark:from-zinc-800 dark:to-zinc-900 border border-zinc-200 dark:border-white/10 flex items-center justify-center shadow-lg hover:scale-105 transition-transform">
-                                    <Settings className="h-4 w-4 text-zinc-500 dark:text-zinc-300" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
+        <div className="desktop-lumen-page w-full min-h-screen bg-transparent font-sans selection:bg-primary/20 flex">
+            <div className="desktop-content-offset flex-1 pb-24 relative">
+                <div className="max-w-[2200px] mx-auto px-5 md:px-7 lg:px-10 xl:px-14 2xl:px-16 relative z-10">
                     <div className="animate-fade-up">
-                        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full flex flex-col md:flex-row gap-12">
-
+                        <Tabs value={activeTab} onValueChange={setActiveTab} className="settings-desktop-shell desktop-retina-frame grid min-h-[720px] w-full overflow-hidden rounded-[38px] border border-border/45 md:h-[calc(100vh-var(--desktop-navbar-clearance)-1.5rem)] md:grid-cols-[280px_minmax(0,1fr)]">
                             {/* Sidebar Menu */}
-                            <div className="w-full md:w-64 shrink-0 space-y-8">
-                                <TabsList className="flex flex-col h-auto bg-transparent gap-1 w-full items-stretch p-0">
-                                    {menuItems.map(item => (
-                                        <TabsTrigger
-                                            key={item.val}
-                                            value={item.val}
-                                            className={cn(
-                                                "desktop-retina-interactive group relative justify-between px-4 py-3.5 rounded-2xl text-xs font-semibold border border-transparent",
-                                                "data-[state=active]:bg-white dark:data-[state=active]:bg-zinc-900 data-[state=active]:text-zinc-900 dark:data-[state=active]:text-foreground data-[state=active]:border-zinc-200 dark:data-[state=active]:border-white/10 data-[state=active]:shadow-lg dark:data-[state=active]:shadow-[0_4px_12px_rgba(0,0,0,0.2)]",
-                                                "text-zinc-600 dark:text-muted-foreground hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-900/40"
-                                            )}
+                            <aside className="settings-sidebar-surface flex h-full w-full min-h-0 flex-col overflow-hidden border-b border-border/45 p-4 md:border-b-0 md:border-r md:p-5">
+                                <div className="mb-5 border-b border-border/45 px-1 pb-5">
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => navigate('/dashboard')}
+                                            className="desktop-retina-inset h-10 w-10 shrink-0 rounded-2xl border border-border/45 text-muted-foreground hover:text-foreground"
+                                            aria-label="Voltar ao painel"
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/5 flex items-center justify-center group-data-[state=active]:bg-primary/10 group-data-[state=active]:border-primary/20 transition-all shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none">
-                                                    <item.icon className="h-3.5 w-3.5 text-zinc-400 dark:text-white/70 group-data-[state=active]:text-primary group-data-[state=active]:opacity-100" />
-                                                </div>
-                                                {item.label}
-                                            </div>
-                                            <ChevronRight className="h-3 w-3 opacity-0 group-data-[state=active]:opacity-100 -translate-x-2 group-data-[state=active]:translate-x-0 transition-all text-zinc-400 dark:text-muted-foreground" />
-                                        </TabsTrigger>
+                                            <ArrowLeft className="h-4 w-4" />
+                                        </Button>
+                                        <div className="min-w-0">
+                                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/65">Configurações</p>
+                                            <h1 className="mt-1 truncate text-base font-black tracking-[-0.025em] text-foreground">Ajustes</h1>
+                                        </div>
+                                    </div>
+                                    <div className="desktop-retina-inset mt-4 flex items-center justify-between rounded-2xl border border-border/40 px-3 py-2.5">
+                                        <span className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Plano atual</span>
+                                        <span className="text-[9px] font-black uppercase tracking-[0.12em] text-foreground">{plan}</span>
+                                    </div>
+                                </div>
+                                <TabsList className="flex min-h-0 flex-1 flex-col h-auto bg-transparent gap-4 w-full items-stretch overflow-y-auto p-0 pr-1 custom-scrollbar">
+                                    {menuSections.map((section) => (
+                                        <div key={section.label} className="space-y-1">
+                                            <p className="px-3 pb-1 pt-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/55">{section.label}</p>
+                                            {section.items.map((item) => (
+                                                <TabsTrigger
+                                                    key={item.val}
+                                                    value={item.val}
+                                                    className={cn(
+                                                        "desktop-retina-interactive group relative w-full justify-between px-3 py-2.5 rounded-2xl text-[11px] font-semibold border border-transparent",
+                                                        "data-[state=active]:bg-white dark:data-[state=active]:bg-white/[0.075] data-[state=active]:text-zinc-900 dark:data-[state=active]:text-white data-[state=active]:border-zinc-200 dark:data-[state=active]:border-white/[0.055]",
+                                                        "text-zinc-600 dark:text-muted-foreground hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/[0.035]"
+                                                    )}
+                                                >
+                                                    <span className="flex items-center gap-3">
+                                                        <span className="desktop-retina-inset flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-white dark:border-white/[0.04] dark:bg-black/20">
+                                                            <item.icon className="h-3.5 w-3.5 text-zinc-400 dark:text-white/65 group-data-[state=active]:text-foreground" />
+                                                        </span>
+                                                        {item.label}
+                                                    </span>
+                                                    <ChevronRight className="h-3 w-3 -translate-x-1 opacity-0 transition-all group-data-[state=active]:translate-x-0 group-data-[state=active]:opacity-65" />
+                                                </TabsTrigger>
+                                            ))}
+                                        </div>
                                     ))}
                                 </TabsList>
-                                <div className="pt-6 border-t border-zinc-200/60 dark:border-white/5 px-2">
+                                <div className="mt-4 border-t border-zinc-200/60 px-2 pt-4 dark:border-white/[0.045]">
                                     <Button onClick={handleLogout} variant="ghost" className="w-full justify-start gap-3 text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-11 rounded-2xl px-3 text-xs font-bold transition-all">
                                         <LogOut className="h-4 w-4" /> Sair da Conta
                                     </Button>
                                 </div>
-                            </div>
+                            </aside>
 
-                            <div className="flex-1 min-w-0">
+                            <section className="custom-scrollbar h-full min-w-0 overflow-y-auto p-4 md:p-5 lg:p-6">
                                 <AnimatePresence mode="wait">
-                                    <div className="desktop-retina-frame min-h-[700px] w-full bg-white/60 backdrop-blur-[40px] border border-zinc-200 rounded-[48px] p-8 md:p-12 relative overflow-hidden ring-1 ring-black/5 dark:ring-white/[0.025]">
+                                    <div className="settings-detail-surface desktop-retina-panel desktop-retina-form min-h-full w-full bg-white/60 backdrop-blur-[40px] border border-zinc-200 rounded-[32px] p-7 md:p-9 lg:p-10 relative overflow-hidden">
 
                                         <TabsContent value="profile" className="mt-0 animate-in fade-in zoom-in-95 duration-500 relative z-10">
                                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
@@ -241,7 +238,7 @@ const Ajustes = () => {
                                         <TabsContent value="security" className="mt-0 animate-in fade-in zoom-in-95 duration-500 relative z-10"><SecuritySettingsPanel /></TabsContent>
 
                                         <TabsContent value="subscription" className="mt-0 animate-in fade-in zoom-in-95 duration-500 relative z-10">
-                                            <div className="bg-zinc-50/50 dark:bg-zinc-900/40 rounded-[40px] border border-zinc-200 dark:border-white/10 p-12 text-center space-y-6 max-w-2xl mx-auto mt-8 shadow-2xl backdrop-blur-xl">
+                                            <div className="desktop-retina-panel rounded-[32px] border border-zinc-200 p-10 text-center space-y-6 max-w-2xl mx-auto mt-6 backdrop-blur-xl">
                                                 <div className="w-20 h-20 bg-primary/10 rounded-[32px] border border-primary/30 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-primary/10 ring-1 ring-white/5">
                                                     <CreditCard className="w-8 h-8 text-primary" />
                                                 </div>
@@ -268,14 +265,14 @@ const Ajustes = () => {
 
                                                 {plan === 'Essential' ? (
                                                     <UpgradePlanModal currentPlan={plan}>
-                                                        <Button className="rounded-full px-10 h-12 font-bold tracking-wide shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all hover:-translate-y-1 bg-primary text-primary-foreground border border-white/10">
+                                                        <Button className="desktop-retina-interactive rounded-full px-10 h-12 font-bold tracking-wide bg-primary text-primary-foreground border border-white/10">
                                                             Ver Planos Upgrade
                                                         </Button>
                                                     </UpgradePlanModal>
                                                 ) : plan === 'Professional' ? (
                                                     <div className="flex flex-col items-center gap-4">
                                                         <UpgradePlanModal currentPlan={plan}>
-                                                            <Button className="rounded-full px-10 h-12 font-bold tracking-wide shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all hover:-translate-y-1 bg-primary text-primary-foreground border border-white/10">
+                                                            <Button className="desktop-retina-interactive rounded-full px-10 h-12 font-bold tracking-wide bg-primary text-primary-foreground border border-white/10">
                                                                 Upgrade para Enterprise
                                                             </Button>
                                                         </UpgradePlanModal>
@@ -304,10 +301,10 @@ const Ajustes = () => {
                                                         <button
                                                             onClick={() => theme !== 'dark' && toggleTheme()}
                                                             className={cn(
-                                                                "relative group p-5 rounded-[32px] border transition-all duration-500 flex flex-col items-center gap-4 overflow-hidden shadow-2xl",
+                                                                "desktop-retina-panel desktop-retina-interactive relative group p-5 rounded-[28px] border flex flex-col items-center gap-4 overflow-hidden",
                                                                 theme === 'dark'
-                                                                    ? "bg-zinc-900/80 border-white/25 ring-1 ring-white/10"
-                                                                    : "bg-zinc-900/20 border-white/10 hover:bg-zinc-900/40 hover:border-white/20"
+                                                                    ? "bg-zinc-900/80 border-white/10 ring-1 ring-white/[0.04]"
+                                                                    : "bg-zinc-900/20 border-white/[0.045] hover:bg-zinc-900/40 hover:border-white/[0.065]"
                                                             )}
                                                         >
                                                             <div className="w-full aspect-video rounded-2xl bg-[#050505] border border-white/10 flex items-center justify-center relative overflow-hidden shadow-2xl ring-1 ring-white/5">
@@ -320,7 +317,7 @@ const Ajustes = () => {
                                                         <button
                                                             onClick={() => theme !== 'light' && toggleTheme()}
                                                             className={cn(
-                                                                "relative group p-5 rounded-[32px] border transition-all duration-500 flex flex-col items-center gap-4 overflow-hidden shadow-2xl",
+                                                                "desktop-retina-panel desktop-retina-interactive relative group p-5 rounded-[28px] border flex flex-col items-center gap-4 overflow-hidden",
                                                                 theme === 'light'
                                                                     ? "bg-zinc-100 border-zinc-300 ring-1 ring-zinc-200"
                                                                     : "bg-zinc-900/20 border-white/10 hover:bg-zinc-900/40 hover:border-white/20"
@@ -333,7 +330,7 @@ const Ajustes = () => {
                                                         </button>
                                                     </div>
 
-                                                    <div className="mt-8 grid gap-4 rounded-[32px] border border-zinc-200 bg-zinc-50/80 p-5 dark:border-white/10 dark:bg-white/[0.03]">
+                                                    <div className="desktop-retina-inset mt-8 grid gap-4 rounded-[26px] border border-zinc-200 bg-zinc-50/80 p-5">
                                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                                             <div>
                                                                 <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Densidade</p>
@@ -445,7 +442,7 @@ const Ajustes = () => {
                                                     <Button
                                                         onClick={handleReplayTour}
                                                         variant="outline"
-                                                        className="h-12 px-8 rounded-full bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/15 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/15 font-bold transition-all shadow-xl hover:-translate-y-0.5"
+                                                        className="desktop-retina-interactive h-12 px-8 rounded-full bg-zinc-50 dark:bg-white/5 border-zinc-200 dark:border-white/[0.055] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-white/10 font-bold"
                                                     >
                                                         Reiniciar Tour do Aplicativo
                                                     </Button>
@@ -476,8 +473,7 @@ const Ajustes = () => {
 
                                                 <div className="space-y-6">
                                                     {/* Google Workspace */}
-                                                    <div className="p-8 rounded-[40px] bg-zinc-50/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-center justify-between gap-8 group shadow-2xl hover:shadow-primary/5 transition-all relative overflow-hidden backdrop-blur-lg">
-                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-3xl pointer-events-none opacity-40" />
+                                                    <div className="desktop-retina-panel desktop-retina-interactive p-7 rounded-[30px] bg-zinc-50/50 border border-zinc-200 flex flex-col md:flex-row items-center justify-between gap-8 group relative overflow-hidden backdrop-blur-lg">
                                                         <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
                                                             <div className={cn(
                                                                 "w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all duration-700 shadow-xl shrink-0 ring-1 ring-inset",
@@ -515,8 +511,7 @@ const Ajustes = () => {
                                                     </div>
 
                                                     {/* Todoist */}
-                                                    <div className="p-8 rounded-[40px] bg-zinc-50/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-center justify-between gap-8 group shadow-2xl hover:shadow-red-500/5 transition-all relative overflow-hidden backdrop-blur-lg">
-                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/10 blur-3xl pointer-events-none opacity-40" />
+                                                    <div className="desktop-retina-panel desktop-retina-interactive p-7 rounded-[30px] bg-zinc-50/50 border border-zinc-200 flex flex-col md:flex-row items-center justify-between gap-8 group relative overflow-hidden backdrop-blur-lg">
                                                         <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
                                                             <div className={cn(
                                                                 "w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all duration-700 shadow-2xl shrink-0 ring-1 ring-inset",
@@ -552,8 +547,7 @@ const Ajustes = () => {
                                                     </div>
 
                                                     {/* Notion */}
-                                                    <div className="p-8 rounded-[40px] bg-zinc-50/50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 flex flex-col md:flex-row items-center justify-between gap-8 group shadow-2xl hover:shadow-stone-500/5 transition-all relative overflow-hidden backdrop-blur-lg">
-                                                        <div className="absolute top-0 right-0 w-32 h-32 bg-stone-500/10 blur-3xl pointer-events-none opacity-40" />
+                                                    <div className="desktop-retina-panel desktop-retina-interactive p-7 rounded-[30px] bg-zinc-50/50 border border-zinc-200 flex flex-col md:flex-row items-center justify-between gap-8 group relative overflow-hidden backdrop-blur-lg">
                                                         <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
                                                             <div className={cn(
                                                                 "w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all duration-700 shadow-2xl shrink-0 ring-1 ring-inset",
@@ -590,8 +584,7 @@ const Ajustes = () => {
 
                                                 </div>
 
-                                                <div className="relative overflow-hidden rounded-[40px] border border-zinc-200 dark:border-white/10 bg-white/70 dark:bg-zinc-950/60 p-8 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.35)] dark:shadow-[0_32px_120px_-36px_rgba(0,0,0,0.95)] backdrop-blur-2xl">
-                                                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.65),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.5),transparent_45%)] dark:bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.12),transparent_30%),linear-gradient(135deg,rgba(255,255,255,0.05),transparent_45%)] pointer-events-none" />
+                                                <div className="desktop-retina-panel relative overflow-hidden rounded-[30px] border border-zinc-200 bg-white/70 p-8 backdrop-blur-2xl">
                                                     <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] items-center">
                                                         <div className="space-y-5">
                                                             <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 dark:border-white/10 bg-zinc-100/80 dark:bg-white/[0.04] px-3 py-1.5">
@@ -618,7 +611,7 @@ const Ajustes = () => {
                                                                 />
                                                                 <Button
                                                                     onClick={handleIntegrationSuggestion}
-                                                                    className="h-12 rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.16em] shadow-xl transition-all hover:-translate-y-0.5"
+                                                                    className="desktop-retina-interactive h-12 rounded-2xl px-6 text-[10px] font-black uppercase tracking-[0.16em]"
                                                                 >
                                                                     Sugerir app
                                                                 </Button>
@@ -627,8 +620,7 @@ const Ajustes = () => {
 
                                                         <div className="relative min-h-[240px] [perspective:900px]">
                                                             <motion.div
-                                                                animate={{ rotateX: [58, 52, 58], rotateZ: [-12, -7, -12], y: [0, -8, 0] }}
-                                                                transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
+                                                                initial={{ rotateX: 56, rotateZ: -9 }}
                                                                 className="absolute left-1/2 top-1/2 h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-[36px] border border-zinc-200 bg-gradient-to-br from-white via-zinc-100 to-zinc-300 shadow-[0_32px_80px_-28px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.8)] dark:border-white/10 dark:from-zinc-700 dark:via-zinc-900 dark:to-black dark:shadow-[0_42px_100px_-28px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.18)] [transform-style:preserve-3d]"
                                                             >
                                                                 <div className="absolute inset-4 rounded-[28px] border border-white/60 bg-white/45 shadow-inner dark:border-white/10 dark:bg-white/[0.03]" />
@@ -644,8 +636,7 @@ const Ajustes = () => {
                                                             ].map((item) => (
                                                                 <motion.div
                                                                     key={item.label}
-                                                                    animate={{ y: [0, -10, 0], rotate: [-2, 2, -2] }}
-                                                                    transition={{ duration: 4.5, delay: item.delay, repeat: Infinity, ease: "easeInOut" }}
+                                                                    initial={{ y: item.delay * -2, rotate: item.delay - 1 }}
                                                                     className="absolute h-16 w-16 rounded-3xl border border-zinc-200 bg-white/85 p-3 text-center shadow-[0_18px_40px_-22px_rgba(0,0,0,0.55)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.06]"
                                                                     style={{ left: item.x, top: item.y }}
                                                                 >
@@ -661,7 +652,7 @@ const Ajustes = () => {
 
                                     </div>
                                 </AnimatePresence>
-                            </div>
+                            </section>
                         </Tabs>
                     </div>
                 </div>

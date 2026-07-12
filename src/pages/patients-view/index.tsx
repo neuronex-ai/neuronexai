@@ -11,7 +11,6 @@ import {
     DialogContent, DialogDescription, DialogTitle
 } from "@/components/ui/dialog";
 import { GlassCard } from "@/components/ui/GlassCard";
-import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useSubscription } from "@/context/SubscriptionContext";
@@ -119,7 +118,6 @@ export default function Pacientes() {
 
     return (
         <div className="desktop-lumen-page desktop-content-offset w-full min-h-screen pt-24 pb-24 relative font-sans bg-transparent selection:bg-zinc-900/10 dark:selection:bg-white/10 selection:text-zinc-900 dark:selection:text-white">
-            <DesktopLumenBackdrop />
             <NewPatientModal
                 open={agentPatientModalOpen}
                 onOpenChange={setAgentPatientModalOpen}

@@ -58,7 +58,7 @@ export const DesktopTeleconsultationLobby = ({
   const isJoinDisabled = !isReady || (isOnline && (isLoadingToken || isDecisionBlocked || isRoomClosed));
 
   return (
-    <div className="relative z-10 h-full w-full overflow-y-auto bg-transparent p-4 xl:p-5">
+    <div className="relative z-10 h-full w-full overflow-y-auto bg-transparent px-4 pb-4 xl:px-5 xl:pb-5">
       <div className="mx-auto grid min-h-full max-w-7xl gap-4 xl:grid-cols-[1.35fr_0.65fr] xl:items-start">
         <section className="desktop-retina-panel rounded-[28px] border border-border/40 bg-card/75 p-4 xl:p-5">
           <MediaReadinessPanel

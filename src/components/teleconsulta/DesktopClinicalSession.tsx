@@ -8,7 +8,6 @@ import { DesktopSessionWorkspace } from './DesktopSessionWorkspace';
 import { DesktopTeleconsultationLobby } from './DesktopTeleconsultationLobby';
 import { InvitePatientModal } from './InvitePatientModal';
 import { TranscriptionConsentPanel } from './TranscriptionConsentPanel';
-import { DesktopLumenBackdrop } from '@/components/ui/DesktopLumenBackdrop';
 
 interface DesktopClinicalSessionProps {
   activeAppointment: Appointment;
@@ -35,8 +34,7 @@ export const DesktopClinicalSession = ({
   if (session.showLobby) {
     return (
       <>
-        <div className="desktop-lumen-page fixed inset-0 z-[100] overflow-hidden bg-background pt-[var(--desktop-navbar-clearance)]">
-          <DesktopLumenBackdrop />
+        <div className="desktop-lumen-page fixed inset-x-0 bottom-0 top-[var(--desktop-navbar-clearance)] z-[100] overflow-hidden bg-transparent">
           <div className="relative z-10 h-full">
           <DesktopTeleconsultationLobby
             patientName={patientName}
@@ -74,14 +72,13 @@ export const DesktopClinicalSession = ({
 
   return (
     <>
-      <div className="desktop-lumen-page fixed inset-0 z-[100] overflow-hidden bg-background pt-[var(--desktop-navbar-clearance)]">
-        <DesktopLumenBackdrop />
+      <div className="desktop-lumen-page fixed inset-x-0 bottom-0 top-[var(--desktop-navbar-clearance)] z-[100] overflow-hidden bg-transparent">
         <div
           className={cn(
-            'relative z-10 grid h-full min-h-0 gap-4 p-4 xl:p-5',
+            'relative z-10 grid h-full min-h-0 gap-4 px-4 pb-4 xl:px-5 xl:pb-5',
             session.isFocusMode
               ? 'grid-cols-1'
-              : 'grid-cols-[minmax(0,1.2fr)_minmax(520px,0.8fr)]',
+              : 'grid-cols-[minmax(0,1fr)_minmax(340px,390px)]',
           )}
         >
           <DesktopSessionStage

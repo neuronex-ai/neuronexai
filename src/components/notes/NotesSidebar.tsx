@@ -132,7 +132,6 @@ export const NotesSidebar = ({
             </span>
           )}
         </span>
-        {isActive && !isCollapsed && <span className="h-1.5 w-1.5 rounded-full bg-current opacity-35" />}
         {isActive && isCollapsed && (
           <motion.span
             layoutId="notes-rail-active"
@@ -152,8 +151,7 @@ export const NotesSidebar = ({
           "[.light_&]:border-zinc-200/60",
         )}>
           {!isCollapsed && (
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-white shadow-[0_0_12px_rgba(255,255,255,0.35)] [.light_&]:bg-zinc-950 [.light_&]:shadow-none" />
+            <div className="flex min-w-0 items-center">
               <div className="min-w-0">
                 <p className="truncate text-[9px] font-black uppercase tracking-[0.38em] text-zinc-300 [.light_&]:text-zinc-700">NeuroDrive</p>
                 <p className="mt-1 text-[8px] font-bold uppercase tracking-[0.18em] text-zinc-600 [.light_&]:text-zinc-400">Notas e conexões</p>

@@ -1239,7 +1239,7 @@ export const DesktopDashboardCommandCenter = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-background pb-24 pt-28 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
+    <div className="relative min-h-screen w-full bg-transparent pb-24 pt-28 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_50%_10%,hsl(var(--foreground)/0.008),transparent_34%)] dark:bg-[radial-gradient(circle_at_50%_10%,rgba(255,255,255,0.003),transparent_34%)]" />
       <main className="page-spacing relative z-10 flex w-full max-w-[2200px] flex-col gap-4 px-6 md:px-8 lg:px-12 xl:px-16">
         <DesktopWorkspaceShell>

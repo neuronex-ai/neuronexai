@@ -44,7 +44,6 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 
 import { GlassCard } from "@/components/ui/GlassCard";
-import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { MobilePatientDetail } from "@/mobile/pages/MobilePatientDetail";
@@ -178,7 +177,6 @@ export default function PatientDetail() {
 
     return (
         <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full pb-28 pt-24 font-sans text-foreground selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
-            <DesktopLumenBackdrop />
             <div className="relative z-10 mx-auto w-full max-w-[2200px] px-5">
 
             {/* ─── Header Top Bar ─── */}
