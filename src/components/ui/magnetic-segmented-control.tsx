@@ -5,16 +5,16 @@ import { type KeyboardEvent, type ReactNode, useId, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-export type MagneticSegmentOption<Value extends string> = {
+export type MagneticSegmentOption<Value extends string = string> = {
   value: Value;
   label: ReactNode;
   ariaLabel?: string;
 };
 
-type MagneticSegmentedControlProps<Value extends string> = {
-  value: Value;
-  onValueChange: (value: Value) => void;
-  options: readonly MagneticSegmentOption<Value>[];
+type MagneticSegmentedControlProps<Options extends readonly MagneticSegmentOption[]> = {
+  value: Options[number]["value"];
+  onValueChange: (value: Options[number]["value"]) => void;
+  options: Options;
   ariaLabel: string;
   id?: string;
   indicatorId?: string;
@@ -23,7 +23,7 @@ type MagneticSegmentedControlProps<Value extends string> = {
   behavior?: "tabs" | "single-select";
 };
 
-export const MagneticSegmentedControl = <Value extends string>({
+export const MagneticSegmentedControl = <const Options extends readonly MagneticSegmentOption[]>({
   value,
   onValueChange,
   options,
@@ -33,7 +33,7 @@ export const MagneticSegmentedControl = <Value extends string>({
   className,
   triggerClassName,
   behavior = "tabs",
-}: MagneticSegmentedControlProps<Value>) => {
+}: MagneticSegmentedControlProps<Options>) => {
   const generatedId = useId().replace(/:/g, "");
   const controlId = id || `magnetic-segment-${generatedId}`;
   const prefersReducedMotion = useReducedMotion();
