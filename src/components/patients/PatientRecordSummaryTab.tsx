@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { usePatientRecordSummary } from "@/hooks/use-patient-record-summary";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/types";
@@ -58,6 +59,14 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
         <Activity className="mb-4 h-7 w-7 text-muted-foreground" aria-hidden="true" />
         <p className="text-sm font-semibold text-foreground">Não foi possível montar o resumo agora.</p>
         <p className="mt-1 text-xs text-muted-foreground">As demais áreas do prontuário continuam disponíveis.</p>
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-5 min-h-11 rounded-xl px-5"
+          onClick={() => void summary.refetch()}
+        >
+          Tentar novamente
+        </Button>
       </div>
     );
   }
@@ -186,7 +195,7 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
                 "flex h-10 w-10 items-center justify-center rounded-[15px] border border-border/45 bg-background/52 text-muted-foreground",
                 card.tone === "warning" && "border-amber-500/18 bg-amber-500/8 text-amber-500",
               )}>
-                <card.icon className="h-4.5 w-4.5" aria-hidden="true" />
+                <card.icon className="h-[18px] w-[18px]" aria-hidden="true" />
               </span>
               <ChevronRight className="h-4 w-4 text-muted-foreground/45 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:text-foreground motion-reduce:transition-none" aria-hidden="true" />
             </div>

@@ -50,10 +50,15 @@ export function PatientSessionsTab({ patient, patientId, latestNote, view, onVie
         <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={view}
+            id={`patient-sessions-panel-${view}`}
+            role="tabpanel"
+            aria-labelledby={`patient-sessions-tab-${view}`}
+            tabIndex={0}
             initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
             animate={{ opacity: 1, y: 0 }}
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
             transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+            className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
           >
             {view === "history" ? (
               <div className="space-y-5">

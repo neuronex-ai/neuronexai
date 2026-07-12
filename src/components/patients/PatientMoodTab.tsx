@@ -51,7 +51,7 @@ export const PatientMoodTab = ({ patientId }: PatientMoodTabProps) => {
 
   if (logs.length === 0) {
     return (
-      <div className="desktop-retina-panel flex min-h-[400px] flex-col items-center justify-center rounded-[28px] border border-dashed border-border/55 bg-card/58 p-8 text-center">
+      <div className="patient-record-card flex min-h-[400px] flex-col items-center justify-center rounded-[28px] border border-dashed p-8 text-center">
         <span className="desktop-retina-inset mb-5 flex h-14 w-14 items-center justify-center rounded-[20px] border border-border/45 text-muted-foreground">
           <Smile className="h-6 w-6" aria-hidden="true" />
         </span>

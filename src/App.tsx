@@ -144,7 +144,7 @@ const SharedRoutes = () => {
 
         {/* ─── Semi-Public Routes ─────────────────────────── */}
         <Route path="/confirmar-agendamento/:token" element={<ConfirmAppointment />} />
-        <Route path="/join/:appointmentId" element={<JoinSession />} />
+        <Route path="/join/:inviteToken" element={<JoinSession />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/anamnese-externa/:id" element={<AnamnesisPublic />} />
         <Route path="/id/:profileId" element={<PublicProfessionalProfile />} />

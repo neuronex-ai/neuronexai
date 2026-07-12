@@ -53,6 +53,15 @@ serve(async (req) => {
     if (!resolved) return json({ error: "Convite inválido, expirado ou revogado." }, 410);
 
     const { invite, appointment } = resolved;
+    const now = new Date().toISOString();
+    const { error: revokePreviousError } = await admin
+      .from("teleconsultation_participants")
+      .update({ revoked_at: now, last_seen_at: now })
+      .eq("user_id", user.id)
+      .is("revoked_at", null)
+      .neq("invite_id", invite.id);
+    if (revokePreviousError) throw revokePreviousError;
+
     const { data: participant, error: participantError } = await admin
       .from("teleconsultation_participants")
       .upsert({
@@ -62,7 +71,7 @@ serve(async (req) => {
         display_name: displayName,
         expires_at: invite.expires_at,
         revoked_at: null,
-        last_seen_at: new Date().toISOString(),
+        last_seen_at: now,
       }, { onConflict: "invite_id,user_id" })
       .select("id,user_id,appointment_id,display_name,expires_at")
       .single();
@@ -70,7 +79,7 @@ serve(async (req) => {
 
     await admin
       .from("teleconsultation_invites")
-      .update({ last_used_at: new Date().toISOString() })
+      .update({ last_used_at: now })
       .eq("id", invite.id);
 
     return json({

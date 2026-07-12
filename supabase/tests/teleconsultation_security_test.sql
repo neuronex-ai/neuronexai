@@ -2,10 +2,14 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select plan(14);
+select plan(15);
 
 select ok(to_regclass('public.teleconsultation_invites') is not null, 'convites seguros existem');
 select ok(to_regclass('public.teleconsultation_participants') is not null, 'participantes temporários existem');
+select ok(
+  to_regclass('public.teleconsultation_participants_one_active_room_per_user_idx') is not null,
+  'cada sessão anônima mantém somente uma sala ativa'
+);
 
 select ok(
   (select relrowsecurity from pg_class where oid = 'public.appointments'::regclass),

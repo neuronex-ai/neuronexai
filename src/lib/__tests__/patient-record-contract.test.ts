@@ -38,6 +38,9 @@ describe("desktop patient record contract", () => {
     expect(migration).toContain("p.user_id = v_user_id");
     expect(migration).toContain("v_user_id uuid := (select auth.uid())");
     expect(migration).toContain("revoke all on function public.get_patient_record_summary(uuid) from public, anon");
+    expect(migration).toContain("pp.package_status = 'active'");
+    expect(migration).toContain("Patient anamneses owner delete");
+    expect(migration).not.toContain('USING (true)');
   });
 
   it("shares the mood chart and uses accessible anamnesis dialogs", () => {
@@ -52,6 +55,7 @@ describe("desktop patient record contract", () => {
     expect(template).toContain("<Dialog open=");
     expect(view).toContain("<AlertDialog open={confirmDeleteOpen}");
     expect(view).not.toContain('className="fixed inset-0');
+    expect(view).toContain("onResetToSelection?.()");
   });
 
   it("does not reintroduce blue-shifted neutral surfaces", () => {

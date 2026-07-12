@@ -116,6 +116,10 @@ create table if not exists public.teleconsultation_participants (
 create index if not exists teleconsultation_participants_user_appointment_idx
   on public.teleconsultation_participants(user_id, appointment_id);
 
+create unique index if not exists teleconsultation_participants_one_active_room_per_user_idx
+  on public.teleconsultation_participants(user_id)
+  where revoked_at is null;
+
 create index if not exists teleconsultation_participants_appointment_expiry_idx
   on public.teleconsultation_participants(appointment_id, expires_at)
   where revoked_at is null;

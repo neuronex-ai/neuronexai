@@ -322,6 +322,12 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
         });
     }, [data.length]);
 
+    useEffect(() => {
+        if (!isLoading && data.length === 0) {
+            onResetToSelection?.();
+        }
+    }, [data.length, isLoading, onResetToSelection]);
+
     const visibleData = useMemo(
         () => data.slice(0, Math.min(visibleCount, data.length)),
         [data, visibleCount]
@@ -427,10 +433,6 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
     }
 
     if (!data.length && !isLoading) {
-        // No data found — redirect back to the selection screen
-        if (onResetToSelection) {
-            onResetToSelection();
-        }
         return null;
     }
 

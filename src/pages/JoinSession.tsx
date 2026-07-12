@@ -52,7 +52,7 @@ const JITSI_APP_ID = 'vpaas-magic-cookie-dc267e44c7014498a3a128625367fc67';
 const SECURE_INVITE_PATTERN = /^[a-f0-9]{64}$/i;
 
 const JoinSession = () => {
-  const { appointmentId: inviteToken = '' } = useParams<{ appointmentId: string }>();
+  const { inviteToken = '' } = useParams<{ inviteToken: string }>();
   const navigate = useNavigate();
   const guestClient = useMemo(() => createTeleconsultationGuestClient(), []);
   const jitsiRef = useRef<JitsiRef>(null);

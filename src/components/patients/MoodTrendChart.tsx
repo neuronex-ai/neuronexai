@@ -62,17 +62,21 @@ const MoodTooltip = ({
 
 export function MoodTrendChart({ logs, audience = "professional", className }: MoodTrendChartProps) {
   const shouldReduceMotion = useReducedMotion();
-  const rows = useMemo(
+  const validRows = useMemo(
     () => logs
-      .filter((log): log is MoodTrendLog & { created_at: string } => Boolean(log.created_at))
+      .filter((log): log is MoodTrendLog & { created_at: string } => (
+        Boolean(log.created_at) && Number.isFinite(new Date(log.created_at || "").getTime())
+      ))
       .slice()
-      .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime())
-      .slice(-14),
+      .sort((left, right) => new Date(left.created_at).getTime() - new Date(right.created_at).getTime()),
     [logs],
   );
+  const rows = useMemo(() => validRows.slice(-14), [validRows]);
   const average = useMemo(
-    () => rows.length ? rows.reduce((total, log) => total + Number(log.mood_score || 0), 0) / rows.length : 0,
-    [rows],
+    () => validRows.length
+      ? validRows.reduce((total, log) => total + Number(log.mood_score || 0), 0) / validRows.length
+      : 0,
+    [validRows],
   );
   const chartData = useMemo(
     () => rows.map((log) => ({
@@ -107,14 +111,14 @@ export function MoodTrendChart({ logs, audience = "professional", className }: M
           </div>
           <div className="px-4 py-2.5">
             <p className="text-[8px] font-black uppercase tracking-[0.15em] text-muted-foreground">Registros</p>
-            <p className="text-xl font-black tracking-[-0.04em] text-foreground">{rows.length}</p>
+            <p className="text-xl font-black tracking-[-0.04em] text-foreground">{validRows.length}</p>
           </div>
         </div>
       </header>
 
       <figure
         className="desktop-retina-inset relative z-10 h-[300px] w-full rounded-[26px] border border-border/40 bg-background/52 p-5"
-        aria-label={`Tendência emocional baseada em ${rows.length} registros`}
+        aria-label={`Tendência emocional baseada em ${validRows.length} registros`}
       >
         {chartData.length < 2 ? (
           <div className="flex h-full items-center justify-center text-center">
@@ -122,7 +126,7 @@ export function MoodTrendChart({ logs, audience = "professional", className }: M
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 16, right: 22, left: -20, bottom: 0 }}>
+            <LineChart accessibilityLayer data={chartData} margin={{ top: 16, right: 22, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(120,120,120,0.12)" vertical={false} />
               <XAxis dataKey="date" stroke="transparent" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 700 }} dy={12} />
               <YAxis domain={[1, 5]} ticks={[1, 2, 3, 4, 5]} stroke="transparent" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 10, fontWeight: 700 }} />
