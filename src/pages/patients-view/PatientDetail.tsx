@@ -38,8 +38,10 @@ import { toast } from "sonner";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { MobilePatientDetail } from "@/mobile/pages/MobilePatientDetail";
 
+const MobilePatientDetail = lazy(() =>
+    import("@/mobile/pages/MobilePatientDetail").then((module) => ({ default: module.MobilePatientDetail })),
+);
 const loadAnamnesisTab = () => import("@/components/patients/anamnesis/AnamnesisTab").then((module) => ({ default: module.AnamnesisTab }));
 const loadBiofeedbackWidget = () => import("@/components/patients/BiofeedbackWidget").then((module) => ({ default: module.BiofeedbackWidget }));
 const loadPatientDocumentsTab = () => import("@/components/patients/PatientDocumentsTab").then((module) => ({ default: module.PatientDocumentsTab }));
@@ -65,11 +67,26 @@ const PatientTabFallback = () => (
     </div>
 );
 
-export default function PatientDetail() {
+const PatientDetail = () => {
+    const isMobile = useIsMobile();
+
+    if (isMobile) {
+        return (
+            <Suspense fallback={<PatientTabFallback />}>
+                <MobilePatientDetail />
+            </Suspense>
+        );
+    }
+
+    return <DesktopPatientDetail />;
+};
+
+export default PatientDetail;
+
+function DesktopPatientDetail() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const isMobile = useIsMobile();
     const [activeTab, setActiveTab] = useState("history");
     const scrollContainerRef = useRef<HTMLDivElement>(null);
     const [isDragging, setIsDragging] = useState(false);
@@ -150,12 +167,6 @@ export default function PatientDetail() {
         const walk = (x - startX) * 2; // Scroll speed
         scrollContainerRef.current.scrollLeft = scrollLeft - walk;
     };
-
-
-    if (isMobile) {
-        return <MobilePatientDetail />;
-    }
-
 
 
     const isLoading = isLoadingPatient || isLoadingNotes;
@@ -419,7 +430,7 @@ export default function PatientDetail() {
                                                 </div>
                                             ))
                                         ) : (
-                                            <div className="p-6 rounded-2xl border-2 border-dashed border-zinc-100 dark:border-white/[0.075] bg-zinc-50/50 dark:bg-[#080809] text-center">
+                                            <div className="p-6 rounded-2xl border-2 border-dashed border-zinc-100 dark:border-white/[0.075] bg-zinc-50/50 dark:bg-[#080808] text-center">
                                                 <Pill className="h-5 w-5 text-zinc-300 dark:text-zinc-800 mx-auto mb-3 opacity-30" />
                                                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest italic">Nenhuma medicação</span>
                                             </div>

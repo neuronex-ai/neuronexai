@@ -28,18 +28,17 @@ import "@/styles/neurofinance-onboarding-mobile.css";
 
 // Pages
 const Index = lazy(() => import("@/pages/Index"));
-
-import AuthPage from "./pages/auth/AuthPage";
-import EmailConfirmedPage from "./pages/auth/EmailConfirmedPage";
-import ResetPasswordPage from "./pages/auth/ResetPasswordPage";
-import CreateAccount from "./pages/auth/CreateAccount";
-import AccountCreated from "./pages/auth/AccountCreated";
-import InitialSettings from "./pages/auth/InitialSettings";
-import GoogleConnectionSuccess from "./pages/auth/GoogleConnectionSuccess";
-import ConfirmAppointment from "./pages/ConfirmAppointment";
-import JoinSession from "./pages/JoinSession";
-import PaymentCallback from "./pages/PaymentCallback";
-import NotFound from "./pages/public/NotFound";
+const AuthPage = lazy(() => import("./pages/auth/AuthPage"));
+const EmailConfirmedPage = lazy(() => import("./pages/auth/EmailConfirmedPage"));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage"));
+const CreateAccount = lazy(() => import("./pages/auth/CreateAccount"));
+const AccountCreated = lazy(() => import("./pages/auth/AccountCreated"));
+const InitialSettings = lazy(() => import("./pages/auth/InitialSettings"));
+const GoogleConnectionSuccess = lazy(() => import("./pages/auth/GoogleConnectionSuccess"));
+const ConfirmAppointment = lazy(() => import("./pages/ConfirmAppointment"));
+const JoinSession = lazy(() => import("./pages/JoinSession"));
+const PaymentCallback = lazy(() => import("./pages/PaymentCallback"));
+const NotFound = lazy(() => import("./pages/public/NotFound"));
 
 // Lazy Loaded Internal Pages (Optimized)
 const Dashboard = lazy(() => import("@/pages/Dashboard"));
@@ -49,7 +48,7 @@ const PatientDetail = lazy(() => import("@/pages/patients-view/PatientDetail"));
 const Notes = lazy(() => import("@/pages/Notes"));
 const Financeiro = lazy(() => import("@/pages/Financeiro"));
 
-import Ajustes from "./pages/Ajustes";
+const Ajustes = lazy(() => import("./pages/Ajustes"));
 const AIChat = lazy(() => import("./pages/AIChat"));
 const Teleconsulta = lazy(() => import("./pages/Teleconsulta"));
 const PatientPortal = lazy(() => import("./pages/PatientPortal"));
@@ -73,8 +72,8 @@ const queryClient = new QueryClient();
 const PageLoader = () => (
   <div className="h-screen w-full flex items-center justify-center bg-background">
     <div className="relative">
-      <div className="absolute inset-0 bg-foreground/10 blur-2xl animate-pulse rounded-full" />
-      <Loader2 className="h-8 w-8 animate-spin text-foreground/20 relative z-10" />
+      <div className="absolute inset-0 animate-pulse rounded-full bg-foreground/10 blur-2xl motion-reduce:animate-none" />
+      <Loader2 className="relative z-10 h-8 w-8 animate-spin text-foreground/20 motion-reduce:animate-none" />
     </div>
   </div>
 );
