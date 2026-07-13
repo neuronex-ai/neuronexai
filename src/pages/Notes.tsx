@@ -2,7 +2,7 @@
 
 import { lazy, Suspense, useState, useMemo, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useLocation, useNavigate, useSearchParams, type NavigateFunction } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion, type Transition } from "framer-motion";
 
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
@@ -25,11 +25,10 @@ import { NeuroFlowVault } from "@/components/notes/NeuroFlowVault";
 import { NeuroPulse } from "@/components/notes/NeuroPulse";
 import { FilesManager } from "@/components/notes/FilesManager";
 import { NotionPagesPanel } from "@/components/notes/NotionPagesPanel";
-import { SynapseAssistedSurfaceStage } from "@/components/synapse/SynapseAssistedSurfaceStage";
-import type { SynapseAssistedProduct } from "@/lib/synapse-assisted-surface-registry";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSynapseNotesAgentRun } from "@/hooks/use-synapse-notes-agent-run";
+import { clearSynapseNotesNavigationState } from "@/lib/synapse-navigation";
 import { MobileNotes } from "@/mobile/pages/MobileNotes";
 
 const NoteEditor = lazy(() =>
@@ -39,14 +38,6 @@ const NoteEditor = lazy(() =>
 const NOTES_LAYOUT_STORAGE_KEY = "neuronex:notes-layout";
 type NotesViewMode = "notes" | "tasks" | "neuroview" | "neuroflow" | "neuropulse" | "files" | "notion";
 const SYNAPSE_SUPPORTED_NOTES_VIEWS = new Set<SynapseNotesView>(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
-
-export const clearSynapseNotesNavigationState = (
-    navigate: NavigateFunction,
-    pathname: string,
-    search: string,
-) => {
-    navigate(`${pathname}${search}`, { replace: true, state: null });
-};
 
 const loadLayoutPreference = () => {
     try {
@@ -110,7 +101,6 @@ export default function Notes() {
     const [synapseNoteId, setSynapseNoteId] = useState<string | null>(null);
     const [synapseMermaid, setSynapseMermaid] = useState<string | null>(null);
     const [synapseTrace, setSynapseTrace] = useState<unknown>(null);
-    const [synapseAssistedPreview, setSynapseAssistedPreview] = useState<SynapseAssistedProduct | null>(null);
     const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
 
     useEffect(() => {
@@ -197,7 +187,6 @@ export default function Notes() {
         else if (["open_notes_desktop", "open_note", "filter_notes", "open_new_note", "open_note_module"].includes(String(actionName))) setViewMode("notes");
 
         if (action.runId) setSynapseRunId(action.runId);
-        if (action.runId || action.flowId || action.pulseEntryId || action.trace) setSynapseAssistedPreview(null);
         if (action.patientId) setSynapsePatientId(action.patientId);
         if (action.pulseEntryId) setSynapsePulseEntryId(action.pulseEntryId);
         if (action.noteId) setSynapseNoteId(action.noteId);
@@ -258,9 +247,6 @@ export default function Notes() {
             mermaid: state.synapseMermaid,
             trace: state.synapseTrace,
         });
-        if (["neuroview", "neuroflow", "neuropulse"].includes(String(state.synapseAssistedPreview ? state.synapseNotesView : ""))) {
-            setSynapseAssistedPreview(state.synapseNotesView as SynapseAssistedProduct);
-        }
         clearSynapseNotesNavigationState(navigate, location.pathname, location.search);
     }, [applySynapseNotesAction, location.pathname, location.search, location.state, navigate]);
 
@@ -364,21 +350,18 @@ export default function Notes() {
                 return (
                     <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroview-graph" data-synapse-product="neuroview" data-synapse-run-id={synapseRunId || undefined}>
                         <NeuroView synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapseTrace={synapseTrace} />
-                        {synapseAssistedPreview === "neuroview" && <SynapseAssistedSurfaceStage product="neuroview" onDismiss={() => setSynapseAssistedPreview(null)} />}
                     </motion.div>
                 );
             case "neuroflow":
                 return (
-                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroflow-canvas" data-synapse-product="neuroflow" data-synapse-run-id={synapseRunId || undefined}>
+                    <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroflow-canvas" data-synapse-ready={selectedFlowId ? undefined : "true"} data-synapse-product="neuroflow" data-synapse-run-id={synapseRunId || undefined}>
                         {selectedFlowId ? <NeuroFlow flowId={selectedFlowId} synapseRunId={synapseRunId} onBack={() => setSelectedFlowId(null)} /> : <NeuroFlowVault onOpenFlow={setSelectedFlowId} />}
-                        {synapseAssistedPreview === "neuroflow" && <SynapseAssistedSurfaceStage product="neuroflow" onDismiss={() => setSynapseAssistedPreview(null)} />}
                     </motion.div>
                 );
             case "neuropulse":
                 return (
                     <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0" data-synapse-target="neuropulse-panel" data-synapse-product="neuropulse" data-synapse-run-id={synapseRunId || undefined}>
                         <NeuroPulse synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapsePulseEntryId={synapsePulseEntryId} synapseNoteId={synapseNoteId} synapseMermaid={synapseMermaid} />
-                        {synapseAssistedPreview === "neuropulse" && <SynapseAssistedSurfaceStage product="neuropulse" onDismiss={() => setSynapseAssistedPreview(null)} />}
                     </motion.div>
                 );
             default:

@@ -97,7 +97,13 @@ export interface SynapseActionExecutionResult {
   message: string;
   durationMs: number;
   cancelled?: boolean;
+  lifecycleId?: string;
 }
+
+export const isCurrentCancelledSynapseAction = (
+  result: SynapseActionExecutionResult,
+  currentLifecycleId?: string | null,
+) => Boolean(result.cancelled && result.lifecycleId && result.lifecycleId === currentLifecycleId);
 
 export type SynapseActionPhase = "preparing" | "navigating" | "focusing" | "completed" | "error";
 
@@ -298,7 +304,7 @@ const targetSelector = (action: SynapseInterfaceAction) => {
     files_manager: "[data-synapse-target='files-manager']",
     notion_panel: "[data-synapse-target='notion-panel']",
     neuroview_graph: "[data-synapse-target='neuroview-graph']",
-    neuroflow_canvas: "[data-synapse-target='neuroflow-canvas']",
+    neuroflow_canvas: "[data-synapse-target='neuroflow-canvas'][data-synapse-ready='true']",
     neuropulse_panel: "[data-synapse-target='neuropulse-panel']",
   };
   if (action.element) return selectors[action.element];
@@ -434,6 +440,7 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
           element: action.action === "open_patient_record" ? action.element || "patient_summary" : action.element || "patient_header",
         });
         const node = await waitForTarget(selector, controller.signal);
+        if (!node) throw new Error("A área foi aberta, mas o resultado ainda não ficou disponível.");
         focusNode(node, selector);
         break;
       }
@@ -509,6 +516,7 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : notesView === "neuroview" ? "neuroview_graph" : notesView === "neuroflow" ? "neuroflow_canvas" : notesView === "neuropulse" ? "neuropulse_panel" : action.query ? "notes_search" : "notes_editor");
         const selector = targetSelector({ ...action, element });
         const node = await waitForTarget(selector, controller.signal);
+        if (!node) throw new Error("A área foi aberta, mas o resultado ainda não ficou disponível.");
         focusNode(node, selector);
         break;
       }
@@ -527,13 +535,13 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         break;
       }
     }
-    const result: SynapseActionExecutionResult = { success: true, action: action.action, message: "Ação executada com segurança.", durationMs: Math.round(performance.now() - startedAt) };
+    const result: SynapseActionExecutionResult = { success: true, action: action.action, message: "Ação executada com segurança.", durationMs: Math.round(performance.now() - startedAt), lifecycleId };
     reportPhase("completed", "Ação concluída");
     await recordTelemetry(action, options.channel, result);
     return result;
   } catch (error) {
     const cancelled = error instanceof DOMException && error.name === "AbortError";
-    const result: SynapseActionExecutionResult = { success: false, cancelled, action: action.action, message: cancelled ? "Ação cancelada." : error instanceof Error ? error.message : "Falha na ação.", durationMs: Math.round(performance.now() - startedAt) };
+    const result: SynapseActionExecutionResult = { success: false, cancelled, action: action.action, message: cancelled ? "Ação cancelada." : error instanceof Error ? error.message : "Falha na ação.", durationMs: Math.round(performance.now() - startedAt), lifecycleId };
     if (!cancelled) reportPhase("error", "Não foi possível concluir a ação");
     await recordTelemetry(action, options.channel, result, error);
     return result;

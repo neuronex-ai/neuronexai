@@ -1806,6 +1806,15 @@
     -webkit-backdrop-filter: blur(24px) saturate(1.08);
   }
 
+  .synapse-presence-layer {
+    z-index: 90;
+    pointer-events: none;
+  }
+
+  .synapse-presence-layer > * {
+    pointer-events: auto;
+  }
+
   .dark .synapse-presence-dock {
     border-color: rgba(255, 255, 255, 0.075);
     background:
@@ -1906,6 +1915,32 @@
       inset 0 1px 0 hsl(var(--background) / 0.18);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+  }
+
+  .synapse-desktop-shell.synapse-inspector-panel {
+    position: fixed;
+    z-index: 90;
+    inset-inline-end: max(0.75rem, env(safe-area-inset-right));
+    top: calc(var(--desktop-navbar-clearance) + 0.5rem);
+    bottom: max(5.75rem, calc(env(safe-area-inset-bottom) + 5.25rem));
+    height: auto;
+    max-height: none;
+    min-height: 0;
+  }
+
+  @media (max-width: 899px) {
+    .synapse-desktop-shell.synapse-inspector-panel {
+      inset-inline-end: max(0.75rem, env(safe-area-inset-right));
+      width: min(416px, calc(100vw - 1.5rem));
+    }
+  }
+
+  @media (max-height: 620px) {
+    .synapse-desktop-shell.synapse-inspector-panel {
+      top: calc(var(--desktop-navbar-clearance) + 0.25rem);
+      bottom: max(5.25rem, calc(env(safe-area-inset-bottom) + 4.75rem));
+      border-radius: 24px;
+    }
   }
 
   .synapse-desktop-shell::before,

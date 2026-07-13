@@ -14,6 +14,7 @@ import { useSendChatMessage } from '@/hooks/use-ai-chat-resilient';
 import { Message } from '@/types';
 import {
     executeSynapseInterfaceAction,
+    isCurrentCancelledSynapseAction,
     normalizeSynapseClientAction,
     type SynapseInterfaceAction,
 } from '@/lib/synapse-interface-actions';
@@ -98,6 +99,7 @@ export const useSynapseChat = () => {
 
     const isInitializing = useRef(false);
     const lastPatientIdRef = useRef<string | null>(null);
+    const activeLifecycleIdRef = useRef<string | null>(null);
 
     useEffect(() => {
         if (activePatientId) lastPatientIdRef.current = activePatientId;
@@ -173,8 +175,16 @@ export const useSynapseChat = () => {
                             const result = await executeSynapseInterfaceAction(action, {
                                 navigate,
                                 channel: 'text',
-                                onLifecycle: setActionExperience,
+                                onLifecycle: (event) => {
+                                    activeLifecycleIdRef.current = event.id;
+                                    setActionExperience(event);
+                                },
                             });
+
+                            if (isCurrentCancelledSynapseAction(result, activeLifecycleIdRef.current)) {
+                                activeLifecycleIdRef.current = null;
+                                setActionExperience(null);
+                            }
 
                             setExecState(result.success ? 'success' : result.cancelled ? 'idle' : 'error');
                             addTimelineEntry({

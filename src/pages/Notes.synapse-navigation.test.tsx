@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { HashRouter, useLocation, useNavigate } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
-import { clearSynapseNotesNavigationState } from "./Notes";
+import { clearSynapseNotesNavigationState } from "@/lib/synapse-navigation";
 
 const HashStateConsumer = () => {
   const location = useLocation();
@@ -45,7 +45,7 @@ describe("Notes Synapse navigation cleanup", () => {
 
     try {
       render(
-        <HashRouter>
+        <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <HashStateConsumer />
         </HashRouter>,
       );

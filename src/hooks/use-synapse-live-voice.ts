@@ -5,6 +5,7 @@ import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
 import {
   executeSynapseInterfaceAction,
+  isCurrentCancelledSynapseAction,
   normalizeSynapseClientAction,
   type SynapseActionLifecycleEvent,
 } from "@/lib/synapse-interface-actions";
@@ -20,8 +21,17 @@ interface UseSynapseLiveVoiceOptions {
   onDisconnect?: () => void;
   onError?: (error: string) => void;
   onClientAction?: (action: unknown) => void;
-  onActionLifecycle?: (event: SynapseActionLifecycleEvent) => void;
+  onActionLifecycle?: (event: SynapseActionLifecycleEvent | null) => void;
 }
+
+export const shouldPreviewAssistedVoiceTool = (
+  toolName?: string | null,
+  phase?: string | null,
+  confirmationRequired = false,
+) => {
+  if (!toolName || phase === "awaiting_confirmation" || confirmationRequired) return false;
+  return getSynapseAssistedSurface(toolName)?.product === "neuroview";
+};
 
 export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const navigate = useNavigate();
@@ -34,6 +44,7 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   }), [activePatientId, contextSummary, currentContext]);
   const connectedRef = useRef(false);
   const previewedToolRef = useRef<string | null>(null);
+  const activeLifecycleIdRef = useRef<string | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
   const {
@@ -61,6 +72,7 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     outputSampleRate,
     systemInstruction: SYNAPSE_GLOBAL_VOICE_PROMPT,
     context: voiceContext,
+    trackAudioIntensity: false,
     onClientAction: (rawAction) => {
       optionsRef.current?.onClientAction?.(rawAction);
       const action = normalizeSynapseClientAction(rawAction);
@@ -70,7 +82,15 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
       void executeSynapseInterfaceAction(action, {
         navigate,
         channel: "voice",
-        onLifecycle: optionsRef.current?.onActionLifecycle,
+        onLifecycle: (event) => {
+          activeLifecycleIdRef.current = event.id;
+          optionsRef.current?.onActionLifecycle?.(event);
+        },
+      }).then((result) => {
+        if (isCurrentCancelledSynapseAction(result, activeLifecycleIdRef.current)) {
+          activeLifecycleIdRef.current = null;
+          optionsRef.current?.onActionLifecycle?.(null);
+        }
       });
     },
   });
@@ -116,6 +136,7 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     const previewKey = `${id || name}:${name}:${activeTool?.startedAt || 0}`;
     if (!name || previewedToolRef.current === previewKey) return;
 
+    if (!shouldPreviewAssistedVoiceTool(name, String(voicePhase), Boolean(activeTool?.confirmationRequired))) return;
     const preview = getSynapseAssistedSurface(name);
     if (!preview) return;
 
@@ -126,10 +147,9 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
         synapseAction: preview.action,
         synapseNotesView: preview.notesView,
         synapsePatientId: activePatientId,
-        synapseAssistedPreview: true,
       },
     });
-  }, [activePatientId, activeTool?.id, activeTool?.name, activeTool?.startedAt, location.pathname, navigate]);
+  }, [activePatientId, activeTool?.confirmationRequired, activeTool?.id, activeTool?.name, activeTool?.startedAt, location.pathname, navigate, voicePhase]);
 
   const startSession = useCallback(async () => {
     const config = await refreshVoiceConfig();

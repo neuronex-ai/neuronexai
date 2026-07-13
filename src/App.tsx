@@ -71,10 +71,10 @@ const queryClient = new QueryClient();
 
 // ─── Loading State ────────────────────────────────────────────────────
 const PageLoader = () => (
-  <div className="h-screen w-full flex items-center justify-center bg-background">
-    <div className="relative">
-      <div className="absolute inset-0 animate-pulse rounded-full bg-foreground/10 blur-2xl motion-reduce:animate-none" />
-      <Loader2 className="relative z-10 h-8 w-8 animate-spin text-foreground/20 motion-reduce:animate-none" />
+  <div className="flex min-h-[100dvh] w-full items-center justify-center bg-transparent px-6" role="status" aria-live="polite">
+    <div className="flex items-center gap-3 rounded-full border border-border/55 bg-card/75 px-4 py-3 shadow-lg backdrop-blur-xl dark:border-white/[0.07] dark:bg-zinc-950/72">
+      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" aria-hidden="true" />
+      <span className="text-xs font-medium text-muted-foreground">Abrindo área</span>
     </div>
   </div>
 );

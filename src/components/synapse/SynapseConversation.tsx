@@ -13,6 +13,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { cn } from '@/lib/utils';
+import { sanitizeSynapseDisplayText } from '@/lib/synapse-humanize';
 import { parseSynapseWidgetFromContent } from '@/lib/synapse-widget-parser';
 import type { Message } from '@/types';
 
@@ -69,6 +70,12 @@ const formatMessageTime = (value: string) => {
     }).format(date);
 };
 
+const formatAssistantContent = (content: string) =>
+    sanitizeSynapseDisplayText(content, '')
+        .replace(/\(\s*\)/g, '')
+        .replace(/\s+([,.;:!?])/g, '$1')
+        .trim();
+
 const SynapseMessageMark = ({ className }: { className?: string }) => (
     <span
         className={cn('synapse-desktop-message-mark flex h-8 w-8 shrink-0 items-center justify-center', className)}
@@ -81,10 +88,11 @@ const SynapseMessageMark = ({ className }: { className?: string }) => (
 const SynapseMarkdownMessage = memo(function SynapseMarkdownMessage({ content }: { content: string }) {
     const parsedMessage = parseSynapseWidgetFromContent(content);
     const cleanContent = parsedMessage.cleanContent || (parsedMessage.widgetData ? '' : content);
+    const displayContent = formatAssistantContent(cleanContent);
 
     return (
         <>
-            {cleanContent ? (
+            {displayContent ? (
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -111,7 +119,7 @@ const SynapseMarkdownMessage = memo(function SynapseMarkdownMessage({ content }:
                         },
                     }}
                 >
-                    {cleanContent}
+                    {displayContent}
                 </ReactMarkdown>
             ) : null}
             {parsedMessage.widgetData ? <SynapseWidgetRenderer widgetData={parsedMessage.widgetData} compact /> : null}
@@ -171,10 +179,11 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
     const [copied, setCopied] = useState(false);
     const isUser = message.role === 'user';
     const messageTime = formatMessageTime(message.created_at);
+    const copyContent = isUser ? message.content : formatAssistantContent(message.content);
 
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(message.content);
+            await navigator.clipboard.writeText(copyContent);
             setCopied(true);
             window.setTimeout(() => setCopied(false), 1800);
         } catch (error) {

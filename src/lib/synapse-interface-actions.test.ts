@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeSynapseClientAction } from "./synapse-interface-actions";
+import { isCurrentCancelledSynapseAction, normalizeSynapseClientAction } from "./synapse-interface-actions";
 
 describe("normalizeSynapseClientAction", () => {
   it("accepts a structured daily schedule action", () => {
@@ -124,5 +124,19 @@ describe("normalizeSynapseClientAction", () => {
       target: "dashboard",
       element: undefined,
     });
+  });
+
+  it("does not let a stale cancellation clear a newer action lifecycle", () => {
+    const cancelled = {
+      success: false,
+      cancelled: true,
+      lifecycleId: "action-old",
+      action: "navigate" as const,
+      message: "Ação cancelada.",
+      durationMs: 20,
+    };
+
+    expect(isCurrentCancelledSynapseAction(cancelled, "action-new")).toBe(false);
+    expect(isCurrentCancelledSynapseAction(cancelled, "action-old")).toBe(true);
   });
 });

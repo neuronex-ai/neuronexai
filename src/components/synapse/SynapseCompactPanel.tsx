@@ -218,8 +218,24 @@ export const SynapseCompactPanel = () => {
                 };
 
                 recognitionRef.current = recognition;
+
+                return () => {
+                    recognition.onresult = null;
+                    recognition.onerror = null;
+                    recognition.onend = null;
+                    try {
+                        recognition.stop();
+                    } catch {
+                        // Some engines throw when stop is called before recognition starts.
+                    }
+                    if (recognitionRef.current === recognition) recognitionRef.current = null;
+                };
             }
+
+            return undefined;
         }
+
+        return undefined;
     }, []);
 
     const toggleListening = () => {

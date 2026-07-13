@@ -65,6 +65,25 @@ describe('SynapseConversation', () => {
         fireEvent.click(screen.getByRole('button', { name: 'Copiar mensagem' }));
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('**Hoje** você tem três atendimentos.');
     });
+
+    it('does not expose internal tool identifiers from historical assistant messages', () => {
+        render(
+            <SynapseConversation
+                messages={[{
+                    ...messages[1],
+                    id: 'assistant-technical',
+                    content: 'Posso registrar uma nota de sessao (create_session_note) para voce.',
+                }]}
+                isSending={false}
+                quickActions={[]}
+                shouldReduceMotion
+                onQuickAction={() => undefined}
+            />,
+        );
+
+        expect(screen.queryByText(/create_session_note/i)).not.toBeInTheDocument();
+        expect(screen.getByText(/Posso registrar uma nota de sessao para voce/i)).toBeInTheDocument();
+    });
 });
 
 describe('SynapseComposer', () => {

@@ -6,7 +6,7 @@ import { SynapsePill } from './SynapsePill';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
-// Presence: z-index 40 (above page content, below alerts, sheets and dialogs).
+// Assistant chrome: z-index 90 (above page content, below alerts, sheets and dialogs).
 
 export const SynapseGlobalShell = () => {
     const {

@@ -34,6 +34,7 @@ interface Options {
   onSpeakingStart?: () => void;
   onSpeakingEnd?: () => void;
   onAudioIntensity?: (intensity: number) => void;
+  trackAudioIntensity?: boolean;
 }
 
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
@@ -192,6 +193,7 @@ export function useDeepgramAgentVoice({
   onSpeakingStart,
   onSpeakingEnd,
   onAudioIntensity,
+  trackAudioIntensity = true,
 }: Options = {}) {
   const [isConnected, setIsConnected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -225,6 +227,7 @@ export function useDeepgramAgentVoice({
   const voiceSessionIdRef = useRef<string | null>(voiceSessionId || null);
   const activeToolRef = useRef<SynapseVoiceToolState | null>(null);
   const pendingStartRef = useRef<PendingStart | null>(null);
+  const startingPromiseRef = useRef<Promise<void> | null>(null);
   const targetInputSampleRate = normalizeSampleRate(inputSampleRate, 48000);
   const targetOutputSampleRate = normalizeSampleRate(outputSampleRate, 24000);
   const inputSampleRateRef = useRef(targetInputSampleRate);
@@ -284,9 +287,9 @@ export function useDeepgramAgentVoice({
     const shouldPublish = level === 0 || now - lastAudioStateUpdateRef.current >= 80;
     if (!shouldPublish) return;
     lastAudioStateUpdateRef.current = now;
-    setAudioIntensity(level);
+    if (trackAudioIntensity) setAudioIntensity(level);
     callbacksRef.current.onAudioIntensity?.(level);
-  }, []);
+  }, [trackAudioIntensity]);
 
   const setActiveToolState = useCallback((tool: SynapseVoiceToolState | null) => {
     activeToolRef.current = tool;
@@ -406,6 +409,7 @@ export function useDeepgramAgentVoice({
     if (pending) {
       pendingStartRef.current = null;
       window.clearTimeout(pending.timeoutId);
+      pending.reject(new Error("A preparação da voz foi cancelada."));
     }
     const ws = wsRef.current;
     wsRef.current = null;
@@ -679,7 +683,7 @@ export function useDeepgramAgentVoice({
     ensurePlayer().enqueue(buffer);
   }, [ensurePlayer]);
 
-  const startSession = useCallback(async (override?: SynapseVoiceStartOverride) => {
+  const startSessionAttempt = useCallback(async (override?: SynapseVoiceStartOverride) => {
     await closeEverything();
     activeRef.current = true;
     readyRef.current = false;
@@ -784,6 +788,16 @@ export function useDeepgramAgentVoice({
       throw startError;
     }
   }, [closeEverything, context, gatewayUrl, handleBinaryAudio, handleGatewayMessage, inputSampleRate, language, outputSampleRate, rejectPendingStart, setActiveToolState, startInput, systemInstruction]);
+
+  const startSession = useCallback((override?: SynapseVoiceStartOverride) => {
+    if (startingPromiseRef.current) return startingPromiseRef.current;
+    const pending = startSessionAttempt(override);
+    startingPromiseRef.current = pending;
+    void pending.finally(() => {
+      if (startingPromiseRef.current === pending) startingPromiseRef.current = null;
+    }).catch(() => undefined);
+    return pending;
+  }, [startSessionAttempt]);
 
   const endSession = useCallback(() => {
     void closeEverything();

@@ -237,7 +237,6 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     });
 
     useEffect(() => {
-        if (activeTab !== 'voice') return;
         if (synapseVoice.status === 'error') {
             setExecState('error');
             return;
@@ -255,10 +254,10 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
             return;
         }
         setExecState('idle');
-    }, [activeTab, synapseVoice.isSpeaking, synapseVoice.isToolActive, synapseVoice.status]);
+    }, [synapseVoice.isSpeaking, synapseVoice.isToolActive, synapseVoice.status]);
 
     const toggleVoiceMode = useCallback(async () => {
-        if (synapseVoice.status === 'connected') {
+        if (synapseVoice.status === 'connected' || synapseVoice.status === 'connecting' || synapseVoice.status === 'disconnecting') {
             await synapseVoice.endSession();
             setActiveTab('chat');
             setExecState('idle');

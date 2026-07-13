@@ -33,6 +33,7 @@ interface UseSynapseVoiceOptions {
   onResponseText?: (text: string) => void;
   onAudioIntensity?: (intensity: number) => void;
   onClientAction?: (action: ClientAction) => void;
+  trackAudioIntensity?: boolean;
 }
 
 export function useSynapseVoice(options: UseSynapseVoiceOptions) {
@@ -56,6 +57,7 @@ export function useSynapseVoice(options: UseSynapseVoiceOptions) {
     onResponseText: options.onResponseText,
     onAudioIntensity: options.onAudioIntensity,
     onClientAction: options.onClientAction,
+    trackAudioIntensity: options.trackAudioIntensity,
   });
   const deepgramStartSession = deepgram.startSession;
   const deepgramEndSession = deepgram.endSession;

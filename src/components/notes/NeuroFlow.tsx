@@ -162,6 +162,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
 
   const loadFlow = useCallback(async () => {
     if (!flowId) return;
+    let loaded = false;
     isHydratingRef.current = true;
     hasAutoFittedRef.current = false;
     setIsLoading(true);
@@ -215,6 +216,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
           updatedAt: undefined,
         },
       });
+      loaded = true;
     } catch (e) {
       console.error("[NeuroFlow] Não foi possível carregar o mapeamento", e);
       setLoadError("Não foi possível abrir este mapeamento agora.");
@@ -222,7 +224,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
       window.setTimeout(() => {
         isHydratingRef.current = false;
         setIsLoading(false);
-        setSaveStatus(loadError ? 'error' : 'saved');
+        setSaveStatus(loaded ? 'saved' : 'error');
       }, 0);
     }
   }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion]);
@@ -508,6 +510,8 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
     <div
       className="relative isolate h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent [contain:layout_paint_size] transition-colors duration-500"
       ref={reactFlowWrapper as any}
+      data-synapse-target="neuroflow-canvas"
+      data-synapse-ready="true"
     >
       <ReactFlow
         nodes={nodes}
