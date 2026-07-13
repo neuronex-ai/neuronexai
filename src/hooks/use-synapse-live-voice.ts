@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAI } from "@/context/AIContext";
 import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
@@ -9,7 +9,6 @@ import {
   normalizeSynapseClientAction,
   type SynapseActionLifecycleEvent,
 } from "@/lib/synapse-interface-actions";
-import { getSynapseAssistedSurface } from "@/lib/synapse-assisted-surface-registry";
 
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
@@ -24,18 +23,8 @@ interface UseSynapseLiveVoiceOptions {
   onActionLifecycle?: (event: SynapseActionLifecycleEvent | null) => void;
 }
 
-export const shouldPreviewAssistedVoiceTool = (
-  toolName?: string | null,
-  phase?: string | null,
-  confirmationRequired = false,
-) => {
-  if (!toolName || phase === "awaiting_confirmation" || confirmationRequired) return false;
-  return getSynapseAssistedSurface(toolName)?.product === "neuroview";
-};
-
 export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const navigate = useNavigate();
-  const location = useLocation();
   const { currentContext, activePatientId, contextSummary } = useAI();
   const voiceContext = useMemo(() => ({
     currentContext,
@@ -43,7 +32,6 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     contextSummary,
   }), [activePatientId, contextSummary, currentContext]);
   const connectedRef = useRef(false);
-  const previewedToolRef = useRef<string | null>(null);
   const activeLifecycleIdRef = useRef<string | null>(null);
   const optionsRef = useRef(options);
   optionsRef.current = options;
@@ -130,27 +118,6 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const lastFunctionStatus = "lastFunctionStatus" in voice ? voice.lastFunctionStatus : null;
   const activeTool = "activeTool" in voice ? voice.activeTool : null;
 
-  useEffect(() => {
-    const name = activeTool?.name;
-    const id = activeTool?.id;
-    const previewKey = `${id || name}:${name}:${activeTool?.startedAt || 0}`;
-    if (!name || previewedToolRef.current === previewKey) return;
-
-    if (!shouldPreviewAssistedVoiceTool(name, String(voicePhase), Boolean(activeTool?.confirmationRequired))) return;
-    const preview = getSynapseAssistedSurface(name);
-    if (!preview) return;
-
-    previewedToolRef.current = previewKey;
-    navigate("/notas", {
-      replace: location.pathname === "/notas",
-      state: {
-        synapseAction: preview.action,
-        synapseNotesView: preview.notesView,
-        synapsePatientId: activePatientId,
-      },
-    });
-  }, [activePatientId, activeTool?.confirmationRequired, activeTool?.id, activeTool?.name, activeTool?.startedAt, location.pathname, navigate, voicePhase]);
-
   const startSession = useCallback(async () => {
     const config = await refreshVoiceConfig();
     await voiceStartSession({
@@ -182,6 +149,8 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     activeTool,
     lastFunctionStatus,
     getInputVolume: voice.getAudioVolume,
+    getInputAudioSignal: voice.getInputAudioSignal,
+    getOutputAudioSignal: voice.getOutputAudioSignal,
     startSession,
     endSession,
   };

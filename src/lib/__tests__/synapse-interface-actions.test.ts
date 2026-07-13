@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { normalizeSynapseClientAction } from "../synapse-interface-actions";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { executeSynapseInterfaceAction, normalizeSynapseClientAction } from "../synapse-interface-actions";
+
+vi.mock("@/integrations/supabase/client", () => ({
+  supabase: {
+    from: () => ({ insert: () => Promise.resolve({ error: null }) }),
+  },
+}));
 
 describe("synapse interface actions", () => {
+  afterEach(() => {
+    document.body.innerHTML = "";
+    vi.restoreAllMocks();
+  });
   it("normalizes NeuroFlow generation actions with run and flow ids", () => {
     const action = normalizeSynapseClientAction({
       type: "interface_action",
@@ -28,5 +38,32 @@ describe("synapse interface actions", () => {
       type: "interface_action",
       data: { action: "open_private_credentials" },
     })).toBeNull();
+  });
+
+  it("waits for the explicit NeuroFlow surface-ready handshake", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    const navigate = vi.fn(() => {
+      window.setTimeout(() => {
+        const surface = document.createElement("div");
+        surface.dataset.synapseTarget = "neuroflow-canvas";
+        surface.dataset.synapseReady = "true";
+        surface.dataset.synapseRunId = "run-123456";
+        document.body.appendChild(surface);
+        window.dispatchEvent(new CustomEvent("synapse:surface-ready", {
+          detail: { target: "neuroflow-canvas", runId: "run-123456" },
+        }));
+      }, 20);
+    });
+
+    const result = await executeSynapseInterfaceAction({
+      action: "open_neuroflow_generation",
+      notesView: "neuroflow",
+      flowId: "flow-123456",
+      runId: "run-123456",
+    }, { navigate, channel: "voice" });
+
+    expect(result.success).toBe(true);
+    expect(navigate).toHaveBeenCalledWith("/notas", expect.any(Object));
+    expect(document.querySelector("[data-synapse-ready='true']")).not.toBeNull();
   });
 });

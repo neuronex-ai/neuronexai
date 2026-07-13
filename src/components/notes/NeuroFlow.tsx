@@ -32,6 +32,7 @@ import { TableNode } from './nodes/TableNode';
 import { TranscriptionNode } from './nodes/TranscriptionNode';
 import { NodeType, SegundoCerebro } from './SegundoCerebro';
 import { useReducedMotion } from 'framer-motion';
+import { useSynapseNotesAgentRun } from '@/hooks/use-synapse-notes-agent-run';
 
 const nodeTypes = {
   start: NeuralNode,
@@ -91,7 +92,7 @@ interface NeuroFlowContentProps {
   onBack?: () => void;
 }
 
-const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
+const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProps) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -107,6 +108,9 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
   const retrySaveTimerRef = useRef<number | null>(null);
   const saveTimerRef = useRef<number | null>(null);
   const latestGraphRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
+  const stagedGraphRef = useRef<{ nodes: Node[]; edges: Edge[] }>({ nodes: [], edges: [] });
+  const revealedNodeIdsRef = useRef<Set<string>>(new Set());
+  const isSynapseReplayingRef = useRef(Boolean(synapseRunId));
   const saveRevisionRef = useRef<number | null>(null);
   const lastSavedFingerprintRef = useRef<string | null>(null);
   const isLoadingRef = useRef(true);
@@ -119,6 +123,7 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
   const { screenToFlowPosition, getViewport, zoomIn, zoomOut, fitView } = useReactFlow();
   const { theme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
+  const { events, playedEvents, eventsLoaded } = useSynapseNotesAgentRun(synapseRunId);
 
   // Modal States
   const [editModalNoteId, setEditModalNoteId] = useState<string | null>(null);
@@ -210,12 +215,20 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
           data: { label: 'Início da Sessão', patientId: currentPatientId }
         }];
 
-      setNodes(nextNodes.map(attachRuntimeNodeData));
-      setEdges(restored.edges.map((edge) => ({
+      const hydratedNodes = nextNodes.map(attachRuntimeNodeData);
+      const hydratedEdges = restored.edges.map((edge) => ({
         ...edge,
         type: edge.type || 'neural',
         animated: shouldReduceMotion ? false : edge.animated ?? true,
-      })));
+      }));
+      stagedGraphRef.current = { nodes: hydratedNodes, edges: hydratedEdges };
+      if (synapseRunId) {
+        setNodes([]);
+        setEdges([]);
+      } else {
+        setNodes(hydratedNodes);
+        setEdges(hydratedEdges);
+      }
 
       lastSavedFingerprintRef.current = JSON.stringify({
         nodes: workflow.nodes,
@@ -226,6 +239,11 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
         },
       });
       loaded = true;
+      window.requestAnimationFrame(() => {
+        window.dispatchEvent(new CustomEvent('synapse:surface-ready', {
+          detail: { target: 'neuroflow-canvas', runId: synapseRunId || null, flowId },
+        }));
+      });
     } catch (e) {
       if (requestId !== loadRequestRef.current) return;
       console.error("[NeuroFlow] Não foi possível carregar o mapeamento", e);
@@ -239,7 +257,70 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
         }, 0);
       }
     }
-  }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion]);
+  }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion, synapseRunId]);
+
+  useEffect(() => {
+    if (!synapseRunId || isLoading || !eventsLoaded) return;
+    const staged = stagedGraphRef.current;
+    const hasProtocol = events.length > 0;
+    const completed = playedEvents.some((event) => event.event_type === 'complete');
+    isSynapseReplayingRef.current = hasProtocol && !completed;
+
+    if (!hasProtocol || completed) {
+      revealedNodeIdsRef.current = new Set(staged.nodes.map((node) => node.id));
+      setNodes(staged.nodes);
+      setEdges(staged.edges);
+      if (staged.nodes.length) {
+        window.requestAnimationFrame(() => fitView({ padding: 0.28, duration: shouldReduceMotion ? 0 : 520 }));
+      }
+      return;
+    }
+
+    const visibleNodeIds = new Set(
+      playedEvents
+        .filter((event) => event.event_type === 'node_reveal')
+        .map((event) => String(event.payload.nodeId || ''))
+        .filter(Boolean),
+    );
+    const visibleEdgeIds = new Set(
+      playedEvents
+        .filter((event) => event.event_type === 'edge_reveal')
+        .map((event) => String(event.payload.edgeId || ''))
+        .filter(Boolean),
+    );
+    const newlyRevealedIds = new Set(Array.from(visibleNodeIds).filter((id) => !revealedNodeIdsRef.current.has(id)));
+    revealedNodeIdsRef.current = visibleNodeIds;
+    const visibleNodes = staged.nodes
+      .filter((node) => visibleNodeIds.has(node.id))
+      .map((node) => ({
+        ...node,
+        style: {
+          ...(node.style || {}),
+          opacity: newlyRevealedIds.has(node.id) && !shouldReduceMotion ? 0 : 1,
+          filter: newlyRevealedIds.has(node.id) && !shouldReduceMotion ? 'blur(8px)' : 'blur(0px)',
+          transition: 'opacity 360ms cubic-bezier(0.22, 1, 0.36, 1), filter 420ms cubic-bezier(0.22, 1, 0.36, 1)',
+        },
+      }));
+    const visibleEdges = staged.edges.filter((edge) => (
+      visibleEdgeIds.has(edge.id)
+      && visibleNodeIds.has(edge.source)
+      && visibleNodeIds.has(edge.target)
+    ));
+    setNodes(visibleNodes);
+    setEdges(visibleEdges);
+    if (newlyRevealedIds.size && !shouldReduceMotion) {
+      window.requestAnimationFrame(() => setNodes((current) => current.map((node) => (
+        newlyRevealedIds.has(node.id)
+          ? { ...node, style: { ...(node.style || {}), opacity: 1, filter: 'blur(0px)' } }
+          : node
+      ))));
+    }
+
+    const latestNode = visibleNodes[visibleNodes.length - 1];
+    if (latestNode && !shouldReduceMotion) {
+      window.requestAnimationFrame(() => fitView({ nodes: [latestNode], padding: 1.2, duration: 420, minZoom: 0.52, maxZoom: 0.9 }));
+    }
+  }, [events.length, eventsLoaded, fitView, isLoading, playedEvents, setEdges, setNodes, shouldReduceMotion, synapseRunId]);
 
   useEffect(() => {
     void loadFlow();
@@ -265,7 +346,7 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
   }, [nodes, edges]);
 
   const saveState = useCallback(async () => {
-    if (!flowId || isLoadingRef.current || isHydratingRef.current) return;
+    if (!flowId || isLoadingRef.current || isHydratingRef.current || isSynapseReplayingRef.current) return;
     if (isSavingRef.current) {
       pendingSaveRef.current = true;
       return;
@@ -361,7 +442,7 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
   }, [saveState]);
 
   const scheduleSave = useCallback((delay = 1200) => {
-    if (!flowId || isLoadingRef.current || isHydratingRef.current) return;
+    if (!flowId || isLoadingRef.current || isHydratingRef.current || isSynapseReplayingRef.current) return;
     if (saveTimerRef.current) {
       window.clearTimeout(saveTimerRef.current);
     }
@@ -529,6 +610,7 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
       ref={reactFlowWrapper as any}
       data-synapse-target="neuroflow-canvas"
       data-synapse-ready="true"
+      data-synapse-run-id={synapseRunId || undefined}
     >
       <ReactFlow
         nodes={nodes}

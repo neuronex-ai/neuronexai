@@ -1,5 +1,8 @@
 import { executeAgentTool } from "./executor.ts";
 import {
+  buildNeuroFlowRevealEvents,
+  buildNeuroPulseRevealEvents,
+  buildNeuroViewFocusEvents,
   buildNeuroPulseNoteRecord,
   cleanupNeuroPulseArtifacts,
 } from "./neuro-notes-tools.ts";
@@ -100,4 +103,34 @@ Deno.test("cleanup compensatório remove entry e nota parcialmente persistidas",
     true,
     "nota removida",
   );
+});
+
+Deno.test("protocolo NeuroFlow revela nós antes das arestas e termina explicitamente", () => {
+  const events = buildNeuroFlowRevealEvents({
+    nodes: [
+      { id: "patient", type: "patient", data: { label: "Paciente" } },
+      { id: "evidence", type: "evidence", data: { label: "Evidência" } },
+    ],
+    edges: [{ id: "edge-1", source: "patient", target: "evidence", label: "sustenta" }],
+  });
+
+  equal(events[0].type, "node_reveal", "primeiro evento");
+  equal(events[1].type, "node_reveal", "segundo evento");
+  equal(events[2].type, "edge_reveal", "aresta após os nós");
+  equal(events.at(-1)?.type, "complete", "evento terminal");
+});
+
+Deno.test("NeuroView e NeuroPulse usam eventos focais ordenados", () => {
+  const neuroView = buildNeuroViewFocusEvents(
+    [{ id: "pat-1" }, { id: "note-1" }],
+    [{ source: "pat-1", target: "note-1", reason: "evidência" }],
+  );
+  equal(neuroView[0].type, "focus_node", "foco inicial NeuroView");
+  equal(neuroView.some((event) => event.type === "focus_link"), true, "conexão real NeuroView");
+  equal(neuroView.at(-1)?.type, "complete", "fim NeuroView");
+
+  const neuroPulse = buildNeuroPulseRevealEvents();
+  equal(neuroPulse[0].type, "node_reveal", "primeiro nó NeuroPulse");
+  equal(neuroPulse.some((event) => event.type === "edge_reveal"), true, "arestas NeuroPulse");
+  equal(neuroPulse.at(-1)?.type, "complete", "fim NeuroPulse");
 });

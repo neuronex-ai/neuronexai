@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 import { supabase } from "@/integrations/supabase/client";
 
 export type SynapseNotesAgentProduct = "neuroview" | "neuroflow" | "neuropulse";
@@ -24,6 +25,23 @@ export interface SynapseNotesAgentTrace {
   nodes?: Array<{ id: string; type?: string; weight?: number; reason?: string }>;
   links?: Array<{ source: string; target: string; reason?: string }>;
   summary?: string;
+}
+
+export type SynapseNotesAgentEventType =
+  | "node_reveal"
+  | "edge_reveal"
+  | "focus_node"
+  | "focus_link"
+  | "complete"
+  | "error";
+
+export interface SynapseNotesAgentEvent {
+  id: string;
+  run_id: string;
+  sequence: number;
+  event_type: SynapseNotesAgentEventType;
+  payload: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface SynapseNotesAgentRun {
@@ -63,14 +81,58 @@ const normalizeRun = (value: unknown): SynapseNotesAgentRun | null => {
   } as SynapseNotesAgentRun;
 };
 
+const normalizeEvent = (value: unknown): SynapseNotesAgentEvent | null => {
+  if (!value || typeof value !== "object") return null;
+  const event = value as Record<string, unknown>;
+  const eventType = String(event.event_type || "") as SynapseNotesAgentEventType;
+  if (!["node_reveal", "edge_reveal", "focus_node", "focus_link", "complete", "error"].includes(eventType)) return null;
+  const sequence = Number(event.sequence);
+  if (!Number.isInteger(sequence) || sequence < 1) return null;
+  return {
+    id: String(event.id || `${event.run_id || "run"}-${sequence}`),
+    run_id: String(event.run_id || ""),
+    sequence,
+    event_type: eventType,
+    payload: event.payload && typeof event.payload === "object" && !Array.isArray(event.payload)
+      ? event.payload as Record<string, unknown>
+      : {},
+    created_at: String(event.created_at || ""),
+  };
+};
+
+const mergeEvents = (current: SynapseNotesAgentEvent[], incoming: unknown[]) => {
+  const bySequence = new Map(current.map((event) => [event.sequence, event]));
+  incoming.forEach((value) => {
+    const event = normalizeEvent(value);
+    if (event) bySequence.set(event.sequence, event);
+  });
+  return Array.from(bySequence.values()).sort((a, b) => a.sequence - b.sequence);
+};
+
+const replayDelay = (event: SynapseNotesAgentEvent | undefined, reducedMotion: boolean | null) => {
+  if (reducedMotion) return 0;
+  if (!event) return 180;
+  if (event.event_type === "focus_node" || event.event_type === "focus_link") return 680;
+  if (event.event_type === "node_reveal") return 360;
+  if (event.event_type === "edge_reveal") return 240;
+  return 180;
+};
+
 export const useSynapseNotesAgentRun = (runId?: string | null) => {
+  const shouldReduceMotion = useReducedMotion();
   const [run, setRun] = useState<SynapseNotesAgentRun | null>(null);
+  const [events, setEvents] = useState<SynapseNotesAgentEvent[]>([]);
+  const [eventsLoaded, setEventsLoaded] = useState(!runId);
+  const [replayCursor, setReplayCursor] = useState(0);
   const [isLoading, setIsLoading] = useState(Boolean(runId));
   const [realtimeState, setRealtimeState] = useState<SynapseNotesAgentRealtimeState>(runId ? "connecting" : "idle");
 
   useEffect(() => {
     if (!runId) {
       setRun(null);
+      setEvents([]);
+      setEventsLoaded(true);
+      setReplayCursor(0);
       setIsLoading(false);
       setRealtimeState("idle");
       return;
@@ -81,6 +143,9 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
     let pollDelay = 1500;
     setIsLoading(true);
     setRealtimeState("connecting");
+    setEvents([]);
+    setEventsLoaded(false);
+    setReplayCursor(0);
 
     const fetchRun = async (fromPolling = false) => {
       const { data, error } = await supabase
@@ -118,7 +183,25 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
       }, pollDelay);
     };
 
+    const fetchEvents = async () => {
+      const { data, error } = await supabase
+        .from("synapse_notes_agent_run_events" as any)
+        .select("id,run_id,sequence,event_type,payload,created_at")
+        .eq("run_id", runId)
+        .order("sequence", { ascending: true });
+
+      if (!isMounted) return;
+      if (error) {
+        console.error("[Synapse Notes Agent] Falha ao carregar eventos:", error);
+        setEventsLoaded(true);
+        return;
+      }
+      setEvents((current) => mergeEvents(current, data || []));
+      setEventsLoaded(true);
+    };
+
     void fetchRun();
+    void fetchEvents();
 
     const channel = supabase
       .channel(`synapse_notes_agent_run_${runId}`)
@@ -130,6 +213,11 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
           if (next) setRun(next);
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "synapse_notes_agent_run_events", filter: `run_id=eq.${runId}` },
+        (payload) => setEvents((current) => mergeEvents(current, [(payload as any).new])),
+      )
       .subscribe((status) => {
         if (!isMounted) return;
         if (status === "SUBSCRIBED") {
@@ -139,6 +227,7 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
             pollTimer = null;
           }
           void fetchRun();
+          void fetchEvents();
           return;
         }
         if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
@@ -153,5 +242,27 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
     };
   }, [runId]);
 
-  return { run, isLoading, realtimeState };
+  useEffect(() => {
+    if (!runId || replayCursor >= events.length) return;
+    const nextEvent = events[replayCursor];
+    const timer = window.setTimeout(
+      () => setReplayCursor((current) => Math.min(current + 1, events.length)),
+      replayDelay(nextEvent, shouldReduceMotion),
+    );
+    return () => window.clearTimeout(timer);
+  }, [events, replayCursor, runId, shouldReduceMotion]);
+
+  const playedEvents = useMemo(() => events.slice(0, replayCursor), [events, replayCursor]);
+  const activeEvent = playedEvents.length ? playedEvents[playedEvents.length - 1] : null;
+
+  return {
+    run,
+    events,
+    eventsLoaded,
+    playedEvents,
+    activeEvent,
+    isReplaying: replayCursor < events.length,
+    isLoading,
+    realtimeState,
+  };
 };

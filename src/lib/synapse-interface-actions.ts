@@ -153,6 +153,7 @@ const INTERFACE_ELEMENTS = new Set<SynapseInterfaceElement>([
 const ALLOWED_INTERFACE_ACTIONS = new Set<SynapseInterfaceActionName>(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
 
 const PAGE_ACTION_EVENT = "synapse:page-action";
+const SURFACE_READY_EVENT = "synapse:surface-ready";
 
 let activeController: AbortController | null = null;
 
@@ -207,6 +208,48 @@ const waitForTarget = (selector: string, signal: AbortSignal, timeoutMs = 4200) 
     });
     const timeout = window.setTimeout(() => finish(document.querySelector(selector)), timeoutMs);
     observer.observe(document.documentElement, { childList: true, subtree: true });
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+
+const waitForSurfaceReady = (selector: string, runId: string | undefined, signal: AbortSignal) =>
+  new Promise<Element | null>((resolve, reject) => {
+    if (!selector) return resolve(null);
+    if (signal.aborted) return reject(new DOMException("Cancelled", "AbortError"));
+    const existing = document.querySelector(selector);
+    if (existing) return resolve(existing);
+
+    let settled = false;
+    const finish = (node: Element | null) => {
+      if (settled || !node) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(safetyTimeout);
+      signal.removeEventListener("abort", onAbort);
+      window.removeEventListener(SURFACE_READY_EVENT, onReady as EventListener);
+      resolve(node);
+    };
+    const onAbort = () => {
+      if (settled) return;
+      settled = true;
+      observer.disconnect();
+      window.clearTimeout(safetyTimeout);
+      window.removeEventListener(SURFACE_READY_EVENT, onReady as EventListener);
+      reject(new DOMException("Cancelled", "AbortError"));
+    };
+    const onReady = (event: Event) => {
+      const detail = (event as CustomEvent<{ runId?: string | null }>).detail;
+      if (runId && detail?.runId && detail.runId !== runId) return;
+      finish(document.querySelector(selector));
+    };
+    const observer = new MutationObserver(() => finish(document.querySelector(selector)));
+    const safetyTimeout = window.setTimeout(() => finish(document.querySelector(selector)), 15000);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-synapse-ready", "data-synapse-run-id"],
+    });
+    window.addEventListener(SURFACE_READY_EVENT, onReady as EventListener);
     signal.addEventListener("abort", onAbort, { once: true });
   });
 
@@ -268,12 +311,6 @@ const notesProduct = (action: SynapseInterfaceAction) => {
 };
 
 const targetSelector = (action: SynapseInterfaceAction) => {
-  if (action.appointmentId && validEntityId(action.appointmentId)) {
-    const escaped = CSS.escape(action.appointmentId);
-    return `[data-synapse-appointment-id="${escaped}"], [data-appointment-id="${escaped}"]`;
-  }
-  if (action.noteId && validEntityId(action.noteId)) return `[data-synapse-note-id="${CSS.escape(action.noteId)}"]`;
-  if (action.fileId && validEntityId(action.fileId)) return `[data-synapse-file-id="${CSS.escape(action.fileId)}"]`;
   const selectors: Record<SynapseInterfaceElement, string> = {
     next_appointment: "[data-synapse-target='next-appointment']",
     daily_schedule: "[data-synapse-target='daily-schedule']",
@@ -303,11 +340,17 @@ const targetSelector = (action: SynapseInterfaceAction) => {
     tasks_board: "[data-synapse-target='tasks-board']",
     files_manager: "[data-synapse-target='files-manager']",
     notion_panel: "[data-synapse-target='notion-panel']",
-    neuroview_graph: "[data-synapse-target='neuroview-graph']",
+    neuroview_graph: "[data-synapse-target='neuroview-graph'][data-synapse-ready='true']",
     neuroflow_canvas: "[data-synapse-target='neuroflow-canvas'][data-synapse-ready='true']",
-    neuropulse_panel: "[data-synapse-target='neuropulse-panel']",
+    neuropulse_panel: "[data-synapse-target='neuropulse-panel'][data-synapse-ready='true']",
   };
   if (action.element) return selectors[action.element];
+  if (action.appointmentId && validEntityId(action.appointmentId)) {
+    const escaped = CSS.escape(action.appointmentId);
+    return `[data-synapse-appointment-id="${escaped}"], [data-appointment-id="${escaped}"]`;
+  }
+  if (action.noteId && validEntityId(action.noteId)) return `[data-synapse-note-id="${CSS.escape(action.noteId)}"]`;
+  if (action.fileId && validEntityId(action.fileId)) return `[data-synapse-file-id="${CSS.escape(action.fileId)}"]`;
   if (action.patientId && validEntityId(action.patientId)) {
     return `[data-synapse-patient-id="${CSS.escape(action.patientId)}"]`;
   }
@@ -515,7 +558,9 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         focusPageAction({ ...action, notesView });
         const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : notesView === "neuroview" ? "neuroview_graph" : notesView === "neuroflow" ? "neuroflow_canvas" : notesView === "neuropulse" ? "neuropulse_panel" : action.query ? "notes_search" : "notes_editor");
         const selector = targetSelector({ ...action, element });
-        const node = await waitForTarget(selector, controller.signal);
+        const node = notesProduct(action)
+          ? await waitForSurfaceReady(selector, action.runId, controller.signal)
+          : await waitForTarget(selector, controller.signal);
         if (!node) throw new Error("A área foi aberta, mas o resultado ainda não ficou disponível.");
         focusNode(node, selector);
         break;

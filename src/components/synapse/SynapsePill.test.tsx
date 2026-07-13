@@ -4,8 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SynapsePill } from './SynapsePill';
 
 const mocks = vi.hoisted(() => ({
-    setActiveTab: vi.fn(),
-    setShellState: vi.fn(),
     toggleVoiceMode: vi.fn().mockResolvedValue(undefined),
     context: {} as Record<string, unknown>,
 }));
@@ -14,40 +12,38 @@ vi.mock('@/context/SynapseProvider', () => ({
     useSynapse: () => mocks.context,
 }));
 
-describe('Synapse adaptive presence', () => {
+vi.mock('./SynapseLiquidOrb', () => ({
+    SynapseLiquidOrb: () => <span data-testid="liquid-orb" />,
+}));
+
+describe('Synapse voice presence', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.context = {
             actionExperience: null,
-            activeTab: 'chat',
             execState: 'idle',
-            getVoiceInputVolume: () => 0,
+            getVoiceInputSignal: () => ({ rms: 0, low: 0, mid: 0, high: 0 }),
+            getVoiceOutputSignal: () => ({ rms: 0, low: 0, mid: 0, high: 0 }),
             isVoiceSpeaking: false,
             isVoiceToolActive: false,
-            setActiveTab: mocks.setActiveTab,
-            setShellState: mocks.setShellState,
-            shellState: 'pill',
             toggleVoiceMode: mocks.toggleVoiceMode,
             voiceActivityLabel: '',
-            voiceActivityMessage: '',
             voicePhase: 'idle',
             voiceStatus: 'disconnected',
         };
     });
 
-    it('offers voice and text from one bottom dock', () => {
+    it('renders only the voice orb as the persistent control', () => {
         render(<SynapsePill />);
 
-        expect(screen.getByRole('toolbar', { name: 'Presença Synapse' })).toBeInTheDocument();
         fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversa por voz' }));
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
-
-        fireEvent.click(screen.getByRole('button', { name: 'Abrir conversa por texto' }));
-        expect(mocks.setActiveTab).toHaveBeenCalledWith('chat');
-        expect(mocks.setShellState).toHaveBeenCalledWith('compact');
+        expect(screen.getByTestId('liquid-orb')).toBeInTheDocument();
+        expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: /conversa por texto/i })).not.toBeInTheDocument();
     });
 
-    it('collapses to the larger listening orb while voice is active', () => {
+    it('uses the same orb click to end a continuous voice session', () => {
         mocks.context = {
             ...mocks.context,
             execState: 'listening',
@@ -56,12 +52,13 @@ describe('Synapse adaptive presence', () => {
         };
         render(<SynapsePill />);
 
-        expect(screen.getByRole('button', { name: 'Encerrar conversa por voz' })).toHaveAttribute('aria-pressed', 'true');
-        expect(screen.queryByRole('button', { name: /conversa por texto/i })).not.toBeInTheDocument();
-        expect(screen.getByRole('status')).toHaveTextContent('Ouvindo');
+        const orb = screen.getByRole('button', { name: 'Encerrar conversa por voz' });
+        expect(orb).toHaveAttribute('aria-pressed', 'true');
+        fireEvent.click(orb);
+        expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
     });
 
-    it('exposes action progress and a textual state', () => {
+    it('shows action feedback as one compact sentence without icons or progress bars', () => {
         mocks.context = {
             ...mocks.context,
             actionExperience: {
@@ -74,7 +71,8 @@ describe('Synapse adaptive presence', () => {
         };
         render(<SynapsePill />);
 
-        expect(screen.getByRole('status')).toHaveTextContent('Abrindo NeuroView');
-        expect(screen.getByRole('progressbar', { name: 'Progresso do Synapse' })).toHaveAttribute('aria-valuenow', '48');
+        expect(document.querySelector('.synapse-presence-status')).toHaveTextContent('Abrindo NeuroView');
+        expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+        expect(document.querySelector('.synapse-presence-status svg')).not.toBeInTheDocument();
     });
 });

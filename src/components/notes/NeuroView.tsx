@@ -78,7 +78,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
     const { theme } = useTheme();
     const isDarkMode = theme === "dark";
     const shouldReduceMotion = useReducedMotion();
-    const { run } = useSynapseNotesAgentRun(synapseRunId);
+    const { run, activeEvent, eventsLoaded } = useSynapseNotesAgentRun(synapseRunId);
     // Universe mode
     const [isUniverseMode, setIsUniverseMode] = useState(false);
 
@@ -104,7 +104,6 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
     const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
     const [isPatientSidebarOpen, setIsPatientSidebarOpen] = useState(true);
-    const [traceIndex, setTraceIndex] = useState(0);
 
     useEffect(() => {
         const targetNodeIds = new Set(targetGraphData.nodes.map((node) => node.id));
@@ -244,18 +243,30 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
             .map((node) => node.id)
             .filter((id): id is string => typeof id === "string" && id.length > 0)
     ), [activeTrace]);
-    const traceHoverNode = traceNodeIds.length ? nodeMap[traceNodeIds[Math.min(traceIndex, traceNodeIds.length - 1)]] || null : null;
+    const activeFocusNodeId = useMemo(() => {
+        if (activeEvent?.event_type === "focus_node") return String(activeEvent.payload.nodeId || "");
+        if (activeEvent?.event_type === "focus_link") {
+            return String(activeEvent.payload.target || activeEvent.payload.source || "");
+        }
+        return eventsLoaded ? traceNodeIds[0] || "" : "";
+    }, [activeEvent, eventsLoaded, traceNodeIds]);
+    const traceHoverNode = activeFocusNodeId ? nodeMap[activeFocusNodeId] || null : null;
     const effectiveHoverNode = hoverNode || traceHoverNode;
     useEffect(() => {
-        if (!traceNodeIds.length || shouldReduceMotion) {
-            setTraceIndex(0);
-            return;
-        }
-        const interval = window.setInterval(() => {
-            setTraceIndex((current) => (current + 1) % traceNodeIds.length);
-        }, 980);
-        return () => window.clearInterval(interval);
-    }, [shouldReduceMotion, traceNodeIds.length]);
+        if (!traceHoverNode || !graphRef.current) return;
+        const x = Number(traceHoverNode.x);
+        const y = Number(traceHoverNode.y);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+        graphRef.current.centerAt(x, y, shouldReduceMotion ? 0 : 520);
+        if (!shouldReduceMotion) graphRef.current.zoom(1.42, 520);
+    }, [shouldReduceMotion, traceHoverNode]);
+
+    useEffect(() => {
+        if (isLoading || !graphSize.width || !graphSize.height) return;
+        window.dispatchEvent(new CustomEvent("synapse:surface-ready", {
+            detail: { target: "neuroview-graph", runId: synapseRunId || null },
+        }));
+    }, [graphSize.height, graphSize.width, isLoading, synapseRunId]);
 
     useEffect(() => {
         const element = containerRef.current;
@@ -565,6 +576,10 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
         <div
             ref={containerRef}
             className="group/canvas relative isolate h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent [contain:layout_paint_size] [.light_&]:bg-transparent"
+            data-synapse-target="neuroview-graph"
+            data-synapse-ready={isLoading ? undefined : "true"}
+            data-synapse-run-id={synapseRunId || undefined}
+            data-synapse-patient-id={synapsePatientId || undefined}
         >
 
             {/* Cinematic Background */}

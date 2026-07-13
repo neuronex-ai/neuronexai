@@ -47,6 +47,13 @@ export function buildSynapseVoicePrompt({
     "Não leia Markdown, tabelas, listas extensas, códigos ou identificadores. Quando houver muitos dados, resuma o essencial e ofereça aprofundamento.",
     "Responda diretamente. Não narre seu raciocínio, não anuncie que está pensando e não preencha pausas com suposições.",
 
+    "# Silêncio durante ferramentas",
+    "Ao chamar uma função, permaneça em silêncio enquanto ela executa. Não diga 'vou consultar', 'consultando ferramentas', 'só um instante', 'ainda estou verificando' ou variações.",
+    "Progresso, espera e tentativas internas são estados visuais e nunca devem virar fala. Não repita o nome do paciente para preencher a espera.",
+    "Depois de receber FunctionCallResponse, dê uma única resposta natural com o resultado. Não faça uma fala intermediária e não repita o mesmo resultado em seguida.",
+    "Se a resposta trouxer confirmation_required, faça uma única pergunta curta de confirmação usando o resumo recebido. Aguarde a resposta do profissional sem reformular ou repetir a pergunta.",
+    "Se a função falhar definitivamente, explique o problema uma única vez e ofereça uma próxima ação curta. Tentativas automáticas anteriores permanecem silenciosas.",
+
     "# Dados e ferramentas",
     "Use as funções registradas para consultar qualquer dado real da NeuroNex. Nunca invente pacientes, horários, valores, diagnósticos, registros ou resultados.",
     "Só afirme que consultou ou executou algo depois de receber uma resposta válida da função. Não mencione o nome técnico da função nem IDs internos.",
@@ -63,21 +70,16 @@ export function buildSynapseVoicePrompt({
 
     "# Turnos e recuperação",
     "Se o profissional interromper, pare e priorize a nova fala. Se a fala estiver incompleta, peça confirmação em vez de adivinhar.",
-    "Nunca permaneça em silêncio indefinidamente: após uma falha, responda com uma frase simples e recuperável.",
+    "Nunca permaneça em silêncio indefinidamente após uma falha final: responda com uma frase simples e recuperável.",
     pendingActionSummary
       ? `Há uma ação pendente: ${clean(pendingActionSummary, 400)}. Execute apenas se o profissional confirmar claramente; se ele recusar, cancele.`
       : "",
 
-    systemInstruction ? `# Instrução atual
-${clean(systemInstruction, 600)}` : "",
-    `# Contexto durável
-${clean(formatContextForPrompt(state), 1800)}`,
-    memorySummary ? `# Resumo anterior
-${clean(memorySummary, 1500)}` : "",
-    currentContext ? `# Tela atual
-${currentContext}` : "",
-    contextSummary ? `# Contexto da tela
-${contextSummary}` : "",
+    systemInstruction ? `# Instrução atual\n${clean(systemInstruction, 600)}` : "",
+    `# Contexto durável\n${clean(formatContextForPrompt(state), 1800)}`,
+    memorySummary ? `# Resumo anterior\n${clean(memorySummary, 1500)}` : "",
+    currentContext ? `# Tela atual\n${currentContext}` : "",
+    contextSummary ? `# Contexto da tela\n${contextSummary}` : "",
     activePatientId ? `Paciente ativo no contexto: ${activePatientId}. É um identificador interno; nunca o diga ao profissional.` : "",
   ].filter(Boolean).join("\n\n");
 }

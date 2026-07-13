@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PcmAudioPlayer } from "@/lib/pcm-audio-player";
+import { analysePcm16, PcmAudioPlayer, SILENT_PCM_SIGNAL, type PcmAudioSignal } from "@/lib/pcm-audio-player";
 import type {
   SynapseVoiceFunctionStatus,
   SynapseVoicePhase,
@@ -221,6 +221,7 @@ export function useDeepgramAgentVoice({
   const readyRef = useRef(false);
   const listeningRef = useRef(false);
   const volumeRef = useRef(0);
+  const inputSignalRef = useRef<PcmAudioSignal>(SILENT_PCM_SIGNAL);
   const lastAudioStateUpdateRef = useRef(0);
   const sessionIdRef = useRef<string | null>(sessionId || null);
   const conversationIdRef = useRef<string | null>(conversationId || sessionId || null);
@@ -281,8 +282,9 @@ export function useDeepgramAgentVoice({
     return () => window.clearInterval(timer);
   }, [activeTool]);
 
-  const setLevel = useCallback((level: number) => {
+  const setLevel = useCallback((level: number, signal?: PcmAudioSignal) => {
     volumeRef.current = level;
+    inputSignalRef.current = signal || (level === 0 ? SILENT_PCM_SIGNAL : inputSignalRef.current);
     const now = performance.now();
     const shouldPublish = level === 0 || now - lastAudioStateUpdateRef.current >= 80;
     if (!shouldPublish) return;
@@ -465,7 +467,8 @@ export function useDeepgramAgentVoice({
     worklet.port.onmessage = (event: MessageEvent) => {
       const payload = event.data as { type?: string; audio?: ArrayBuffer; level?: number };
       if (payload.type !== "audio" || !payload.audio) return;
-      setLevel(Number(payload.level || 0));
+      const signal = analysePcm16(payload.audio, effectiveInputSampleRate);
+      setLevel(Number(payload.level || signal.rms || 0), signal);
       const ws = wsRef.current;
       if (!activeRef.current || !readyRef.current || !listeningRef.current) return;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -849,6 +852,8 @@ export function useDeepgramAgentVoice({
     voiceSessionId: currentVoiceSessionId,
     audioIntensity,
     getAudioVolume: () => volumeRef.current,
+    getInputAudioSignal: () => inputSignalRef.current,
+    getOutputAudioSignal: () => playerRef.current?.getSignal() || SILENT_PCM_SIGNAL,
     transcript,
     lastResponse,
     startSession,

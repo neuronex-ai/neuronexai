@@ -1,4 +1,5 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 
 import { VoiceFunctionRunner } from "../../server/voice-agent-gateway/function-runner.js";
 import { normalizeVoiceText } from "../../server/voice-agent-gateway/speech-normalizer.js";
@@ -34,7 +35,7 @@ describe("VoiceFunctionRunner", () => {
     vi.restoreAllMocks();
   });
 
-  it("injects initial and slow progress feedback while a tool is running", async () => {
+  it("keeps start and progress feedback non-verbal while a tool is running", async () => {
     let resolveTool: ((value: ReturnType<typeof toolResponse>) => void) | undefined;
     const { runner, deepgram, client } = createHarness(vi.fn(() => new Promise((resolve) => {
       resolveTool = resolve;
@@ -45,18 +46,18 @@ describe("VoiceFunctionRunner", () => {
     });
     await tick();
 
-    expect(deepgram[0]).toMatchObject({ type: "InjectAgentMessage", behavior: "queue" });
+    expect(deepgram).toEqual([]);
     expect(client.some((event) => event.type === "function_status" && event.status === "started")).toBe(true);
 
     await vi.advanceTimersByTimeAsync(5500);
-    expect(deepgram.some((event) => event.type === "InjectAgentMessage" && String(event.message).includes("Ana"))).toBe(true);
-    expect(deepgram.filter((event) => event.type === "InjectAgentMessage").every((event) => !("content" in event))).toBe(true);
+    expect(deepgram).toEqual([]);
     expect(client.some((event) => event.type === "function_status" && event.status === "progress")).toBe(true);
 
     resolveTool?.(toolResponse({ ok: true, spoken_summary: "Achei o resumo de Ana." }));
     await task;
 
-    expect(deepgram.some((event) => event.type === "FunctionCallResponse" && event.name === "get_patient_overview")).toBe(true);
+    expect(deepgram).toHaveLength(1);
+    expect(deepgram[0]).toMatchObject({ type: "FunctionCallResponse", name: "get_patient_overview" });
     expect(client.some((event) => event.type === "function_status" && event.status === "completed")).toBe(true);
   });
 
@@ -65,7 +66,7 @@ describe("VoiceFunctionRunner", () => {
       .fn()
       .mockResolvedValueOnce(toolResponse({ ok: false, retryable: true, spoken_summary: "Timeout temporario." }))
       .mockResolvedValueOnce(toolResponse({ ok: true, spoken_summary: "Agora deu certo." }));
-    const { runner, client } = createHarness(invokeTool);
+    const { runner, deepgram, client } = createHarness(invokeTool);
 
     const task = runner.handleFunctionCallRequest({
       functions: [{ id: "fn-2", name: "list_appointments", arguments: "{}" }],
@@ -75,6 +76,8 @@ describe("VoiceFunctionRunner", () => {
     await task;
 
     expect(invokeTool).toHaveBeenCalledTimes(2);
+    expect(deepgram.some((event) => event.type === "InjectAgentMessage")).toBe(false);
+    expect(deepgram.filter((event) => event.type === "FunctionCallResponse")).toHaveLength(1);
     expect(client.some((event) => event.type === "function_status" && event.status === "retrying")).toBe(true);
   });
 
@@ -105,7 +108,7 @@ describe("VoiceFunctionRunner", () => {
   });
 
   it("keeps a prepared sensitive action awaiting confirmation", async () => {
-    const { runner, client } = createHarness(vi.fn(async () => toolResponse({
+    const { runner, deepgram, client } = createHarness(vi.fn(async () => toolResponse({
       ok: true,
       confirmation_required: true,
       spoken_summary: "Preparei o agendamento. Posso confirmar?",
@@ -117,6 +120,40 @@ describe("VoiceFunctionRunner", () => {
 
     expect(client.some((event) => event.type === "function_status" && event.status === "confirmation_required")).toBe(true);
     expect(client.some((event) => event.type === "voice_state" && event.phase === "awaiting_confirmation")).toBe(true);
+    expect(deepgram.filter((event) => event.type === "FunctionCallResponse")).toHaveLength(1);
+    const response = deepgram.find((event) => event.type === "FunctionCallResponse");
+    expect(JSON.parse(String(response?.content || "{}"))).toMatchObject({
+      confirmation_required: true,
+      spoken_summary: "Preparei o agendamento. Posso confirmar?",
+    });
+  });
+
+  it("deduplicates repeated function call ids without repeating execution or response", async () => {
+    const invokeTool = vi.fn(async () => toolResponse({ ok: true, spoken_summary: "Resumo pronto." }));
+    const { runner, deepgram, client } = createHarness(invokeTool);
+    const request = {
+      functions: [{ id: "fn-duplicate", name: "get_patient_overview", arguments: "{}" }],
+    };
+
+    await runner.handleFunctionCallRequest(request);
+    await runner.handleFunctionCallRequest(request);
+
+    expect(invokeTool).toHaveBeenCalledTimes(1);
+    expect(deepgram.filter((event) => event.type === "FunctionCallResponse")).toHaveLength(1);
+    expect(client.some((event) => event.type === "function_status" && event.status === "duplicate_ignored")).toBe(true);
+  });
+
+  it("keeps Node and Edge gateways free of injected agent filler speech", () => {
+    const nodeSource = readFileSync("server/voice-agent-gateway/function-runner.js", "utf8");
+    const edgeSource = readFileSync("supabase/functions/synapse-voice-gateway/index.ts", "utf8");
+    const promptSource = readFileSync("supabase/functions/_shared/synapse-voice-prompt.ts", "utf8");
+
+    expect(nodeSource).not.toContain("InjectAgentMessage");
+    expect(edgeSource).not.toContain("InjectAgentMessage");
+    expect(nodeSource).toContain('status: "duplicate_ignored"');
+    expect(edgeSource).toContain('status: "duplicate_ignored"');
+    expect(promptSource).toContain("Ao chamar uma função, permaneça em silêncio enquanto ela executa.");
+    expect(promptSource).toContain("Depois de receber FunctionCallResponse, dê uma única resposta natural");
   });
 
   it("aborts an active function when the user asks to cancel", async () => {

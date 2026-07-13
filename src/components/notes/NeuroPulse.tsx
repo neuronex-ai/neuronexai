@@ -14,7 +14,7 @@ import {
     Brain, Download, FileText, Fingerprint, Maximize2, Mic, MicOff,
     RefreshCcw, Zap
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { MermaidDiagram } from "./MermaidDiagram";
 
 import { useCreateChatSession, useSendChatMessage } from "@/hooks/use-ai-chat";
@@ -83,7 +83,21 @@ export const NeuroPulse = ({
     const shouldReduceMotion = useReducedMotion();
     const { data: patients = [] } = usePatients();
     const { createNote } = usePersonalNotes();
-    const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
+    const { run: synapseRun, events, playedEvents, eventsLoaded } = useSynapseNotesAgentRun(synapseRunId);
+    const progressiveReveal = useMemo(() => {
+        if (!synapseRunId || shouldReduceMotion) return undefined;
+        const complete = eventsLoaded && (
+            events.length === 0 || playedEvents.some((event) => event.event_type === "complete")
+        );
+        return {
+            nodeIds: playedEvents
+                .filter((event) => event.event_type === "node_reveal")
+                .map((event) => String(event.payload.nodeId || ""))
+                .filter(Boolean),
+            edgeCount: playedEvents.filter((event) => event.event_type === "edge_reveal").length,
+            complete,
+        };
+    }, [events.length, eventsLoaded, playedEvents, shouldReduceMotion, synapseRunId]);
 
     // Hooks
     const { mutateAsync: createSession } = useCreateChatSession();
@@ -145,6 +159,14 @@ export const NeuroPulse = ({
         const runIntent = typeof synapseRun?.intent === "string" ? synapseRun.intent : "";
         if (runIntent && !input.trim()) setInput(runIntent);
     }, [input, synapseMermaid, synapseNoteId, synapsePatientId, synapseRun]);
+
+    useEffect(() => {
+        window.requestAnimationFrame(() => {
+            window.dispatchEvent(new CustomEvent("synapse:surface-ready", {
+                detail: { target: "neuropulse-panel", runId: synapseRunId || null },
+            }));
+        });
+    }, [synapseRunId]);
 
     const toggleListening = () => {
         if (!recognitionRef.current) {
@@ -303,10 +325,16 @@ Relato:
     };
 
     return (
-        <div className={cn(
+        <div
+          className={cn(
             "notes-lumen-canvas relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-transparent p-3 text-foreground sm:p-4 lg:p-5",
             isFullscreen ? "fixed inset-0 z-[100]" : ""
-        )}>
+          )}
+          data-synapse-target="neuropulse-panel"
+          data-synapse-ready="true"
+          data-synapse-run-id={synapseRunId || undefined}
+          data-synapse-pulse-entry-id={synapsePulseEntryId || undefined}
+        >
             <NeuralBackground />
             <header className="notes-toolbar-surface relative z-20 flex shrink-0 flex-col gap-3 rounded-[24px] border p-3.5 sm:p-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
@@ -479,11 +507,6 @@ Relato:
                                             Nota criada
                                         </div>
                                     )}
-                                    {(synapseRunId || synapsePulseEntryId) && (
-                                        <div className="hidden items-center rounded-xl border border-border/45 bg-muted/40 px-3 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground md:flex">
-                                            Synapse
-                                        </div>
-                                    )}
                                     <div className="notes-toolbar-surface flex rounded-xl border border-border/45 bg-card/90 p-1 shadow-lg">
                                         <Button size="icon" variant="ghost" title="Regenerar" aria-label="Regenerar diagrama" className={neuroPulseIconButtonClass} onClick={handleGenerate} disabled={isGenerating}>
                                             <RefreshCcw className={cn("h-4 w-4", isGenerating && "animate-spin")} />
@@ -501,7 +524,12 @@ Relato:
                                     </div>
                                 </div>
                                 <div ref={diagramRef} className="custom-scrollbar relative flex min-h-0 flex-1 overflow-hidden bg-transparent p-4 sm:p-6">
-                                    <MermaidDiagram chart={diagramCode} className="min-h-0 flex-1" layoutKey={isFullscreen ? "fullscreen" : "panel"} />
+                                    <MermaidDiagram
+                                        chart={diagramCode}
+                                        className="min-h-0 flex-1"
+                                        layoutKey={isFullscreen ? "fullscreen" : "panel"}
+                                        progressiveReveal={progressiveReveal}
+                                    />
                                 </div>
                             </motion.div>
                         ) : (

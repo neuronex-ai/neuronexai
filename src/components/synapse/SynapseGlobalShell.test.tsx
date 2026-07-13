@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SynapseGlobalShell } from './SynapseGlobalShell';
 
 const mocks = vi.hoisted(() => ({
-    setActiveTab: vi.fn(),
     setShellState: vi.fn(),
     toggleVoiceMode: vi.fn().mockResolvedValue(undefined),
     cancelActionExperience: vi.fn(),
@@ -16,21 +15,16 @@ vi.mock('@/context/SynapseProvider', () => ({
 }));
 
 vi.mock('./SynapsePill', () => ({
-    SynapsePill: () => <div data-testid="presence-dock" />,
+    SynapsePill: () => <div data-testid="voice-orb" />,
 }));
 
-vi.mock('./SynapseCompactPanel', () => ({
-    SynapseCompactPanel: () => <div data-testid="compact-panel" />,
-}));
-
-describe('SynapseGlobalShell shortcuts', () => {
+describe('SynapseGlobalShell voice-only presence', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.context = {
             actionExperience: null,
             cancelActionExperience: mocks.cancelActionExperience,
             isVisible: true,
-            setActiveTab: mocks.setActiveTab,
             setShellState: mocks.setShellState,
             shellState: 'pill',
             toggleVoiceMode: mocks.toggleVoiceMode,
@@ -39,37 +33,33 @@ describe('SynapseGlobalShell shortcuts', () => {
         };
     });
 
-    it('opens the textual panel with Ctrl+J', () => {
+    it('keeps the text chat shortcut disabled while the chat is hidden', () => {
         render(<SynapseGlobalShell />);
 
         fireEvent.keyDown(document, { key: 'j', code: 'KeyJ', ctrlKey: true });
 
-        expect(mocks.setActiveTab).toHaveBeenCalledWith('chat');
-        expect(mocks.setShellState).toHaveBeenCalledWith('compact');
+        expect(mocks.setShellState).not.toHaveBeenCalled();
+        expect(screen.getByTestId('voice-orb')).toBeInTheDocument();
+        expect(screen.queryByTestId('compact-panel')).not.toBeInTheDocument();
     });
 
-    it('toggles voice with Ctrl+Shift+Space without opening a second panel', () => {
+    it('toggles voice with Ctrl+Shift+Space', () => {
         render(<SynapseGlobalShell />);
 
         fireEvent.keyDown(document, { key: ' ', code: 'Space', ctrlKey: true, shiftKey: true });
 
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
-        expect(mocks.setActiveTab).not.toHaveBeenCalled();
-        expect(screen.getByTestId('presence-dock')).toBeInTheDocument();
     });
 
-    it('ends an active voice session before collapsing the textual panel', () => {
+    it('ends the active voice session with Escape', () => {
         mocks.context = {
             ...mocks.context,
-            shellState: 'compact',
             voicePhase: 'listening',
             voiceStatus: 'connected',
         };
         render(<SynapseGlobalShell />);
 
         fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
-
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
-        expect(mocks.setShellState).not.toHaveBeenCalledWith('pill');
     });
 });

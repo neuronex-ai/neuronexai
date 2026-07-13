@@ -8,6 +8,7 @@ import {
     cancelSynapseInterfaceAction,
     type SynapseActionLifecycleEvent,
 } from '@/lib/synapse-interface-actions';
+import type { PcmAudioSignal } from '@/lib/pcm-audio-player';
 
 // ─── Types ────────────────────────────────────────────────────────────
 
@@ -78,6 +79,8 @@ interface SynapseContextType {
     voiceActivityMessage: string;
     voiceActivityElapsedMs: number;
     getVoiceInputVolume: () => number;
+    getVoiceInputSignal: () => PcmAudioSignal;
+    getVoiceOutputSignal: () => PcmAudioSignal;
     toggleVoiceMode: () => Promise<void>;
     isVoiceExpanded: boolean;
     setIsVoiceExpanded: (expanded: boolean) => void;
@@ -311,6 +314,8 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 voiceActivityMessage: synapseVoice.activeToolMessage,
                 voiceActivityElapsedMs: synapseVoice.activeToolElapsedMs,
                 getVoiceInputVolume: synapseVoice.getInputVolume,
+                getVoiceInputSignal: synapseVoice.getInputAudioSignal,
+                getVoiceOutputSignal: synapseVoice.getOutputAudioSignal,
                 toggleVoiceMode,
                 isVoiceExpanded,
                 setIsVoiceExpanded,

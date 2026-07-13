@@ -10,9 +10,14 @@ interface MermaidDiagramProps {
   compact?: boolean;
   className?: string;
   layoutKey?: string | number;
+  progressiveReveal?: {
+    nodeIds: string[];
+    edgeCount: number;
+    complete: boolean;
+  };
 }
 
-export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = "default" }: MermaidDiagramProps) => {
+export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = "default", progressiveReveal }: MermaidDiagramProps) => {
   const [svg, setSvg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +75,33 @@ export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = 
 
     void renderChart();
   }, [chart]);
+
+  useEffect(() => {
+    if (!svg || !containerRef.current || !progressiveReveal) return;
+    const allowedNodes = new Set(progressiveReveal.nodeIds);
+    const nodeGroups = Array.from(containerRef.current.querySelectorAll<SVGGElement>("g.node"));
+    nodeGroups.forEach((node) => {
+      const visible = progressiveReveal.complete || Array.from(allowedNodes).some((id) => (
+        node.id === id || node.id.includes(`-${id}-`) || node.id.endsWith(`-${id}`)
+      ));
+      node.style.transition = "opacity 360ms cubic-bezier(0.22, 1, 0.36, 1), filter 420ms cubic-bezier(0.22, 1, 0.36, 1)";
+      node.style.opacity = visible ? "1" : "0";
+      node.style.filter = visible ? "blur(0px)" : "blur(8px)";
+      node.style.pointerEvents = visible ? "auto" : "none";
+    });
+
+    const edgeGroups = Array.from(containerRef.current.querySelectorAll<SVGGElement>("g.edgePath"));
+    edgeGroups.forEach((edge, index) => {
+      const visible = progressiveReveal.complete || index < progressiveReveal.edgeCount;
+      edge.style.transition = "opacity 300ms cubic-bezier(0.22, 1, 0.36, 1)";
+      edge.style.opacity = visible ? "1" : "0";
+    });
+    const edgeLabels = Array.from(containerRef.current.querySelectorAll<SVGGElement>("g.edgeLabel"));
+    edgeLabels.forEach((label, index) => {
+      label.style.transition = "opacity 300ms cubic-bezier(0.22, 1, 0.36, 1)";
+      label.style.opacity = progressiveReveal.complete || index < progressiveReveal.edgeCount ? "1" : "0";
+    });
+  }, [progressiveReveal, svg]);
 
   if (error) {
     return (

@@ -1,9 +1,7 @@
 import { useEffect, useCallback } from 'react';
-import { AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { useSynapse } from '@/context/SynapseProvider';
 import { SynapsePill } from './SynapsePill';
-import { SynapseCompactPanel } from './SynapseCompactPanel';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
 // Assistant chrome: z-index 90 (above page content, below alerts, sheets and dialogs).
@@ -13,7 +11,6 @@ export const SynapseGlobalShell = () => {
         actionExperience,
         cancelActionExperience,
         isVisible,
-        setActiveTab,
         setShellState,
         shellState,
         toggleVoiceMode,
@@ -25,17 +22,6 @@ export const SynapseGlobalShell = () => {
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             if (e.repeat) return;
-
-            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'j') {
-                e.preventDefault();
-                setActiveTab('chat');
-                if (shellState === 'compact') {
-                    setShellState('pill');
-                } else {
-                    setShellState('compact');
-                }
-                return;
-            }
 
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'Space') {
                 e.preventDefault();
@@ -58,15 +44,11 @@ export const SynapseGlobalShell = () => {
                     cancelActionExperience();
                     return;
                 }
-                if (shellState === 'compact') {
-                    setShellState('pill');
-                }
             }
         },
         [
             actionExperience,
             cancelActionExperience,
-            setActiveTab,
             setShellState,
             shellState,
             toggleVoiceMode,
@@ -85,14 +67,9 @@ export const SynapseGlobalShell = () => {
 
     const shell = (
         <>
-            {/* The compact conversation sheet shares the same bottom-center spatial anchor as the persistent presence. */}
-            <AnimatePresence initial={false}>
-                {shellState === 'compact' ? <SynapseCompactPanel key="compact" /> : null}
-            </AnimatePresence>
-
             {shellState !== 'closed' ? (
                 <div
-                    className="synapse-presence-layer fixed flex w-[min(464px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center"
+                    className="synapse-presence-layer fixed flex w-[min(280px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center"
                     data-synapse-shell="true"
                     data-synapse-shell-placement="bottom-center"
                     style={{

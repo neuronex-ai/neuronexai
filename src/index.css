@@ -1792,20 +1792,6 @@
     }
   }
 
-  .synapse-presence-dock {
-    isolation: isolate;
-    border-color: hsl(var(--border) / 0.58);
-    background:
-      linear-gradient(180deg, hsl(var(--background) / 0.9), hsl(var(--card) / 0.82)),
-      hsl(var(--background));
-    box-shadow:
-      0 24px 70px -42px hsl(var(--foreground) / 0.58),
-      inset 0 1px 0 hsl(var(--background) / 0.72),
-      inset 0 0 0 1px hsl(var(--foreground) / 0.018);
-    backdrop-filter: blur(24px) saturate(1.08);
-    -webkit-backdrop-filter: blur(24px) saturate(1.08);
-  }
-
   .synapse-presence-layer {
     z-index: 90;
     pointer-events: none;
@@ -1815,51 +1801,32 @@
     pointer-events: auto;
   }
 
-  .dark .synapse-presence-dock {
-    border-color: rgba(255, 255, 255, 0.075);
-    background:
-      linear-gradient(180deg, rgba(24, 24, 25, 0.91), rgba(8, 8, 9, 0.9)),
-      #090909;
-    box-shadow:
-      0 28px 78px -42px rgba(0, 0, 0, 0.98),
-      inset 0 1px 0 rgba(255, 255, 255, 0.075),
-      inset 0 0 0 1px rgba(255, 255, 255, 0.018);
-  }
-
   .synapse-presence-orb {
     isolation: isolate;
-    border: 1px solid hsl(var(--foreground) / 0.16);
-    background:
-      radial-gradient(circle at 34% 24%, hsl(var(--background) / 0.82), transparent 34%),
-      hsl(var(--foreground) / 0.08);
+    border: 0;
+    background: transparent;
     box-shadow:
-      0 19px 38px -21px hsl(var(--foreground) / 0.72),
-      0 0 0 1px hsl(var(--background) / 0.45),
-      inset 0 1px 0 hsl(var(--background) / 0.72),
-      inset 0 -1px 0 hsl(var(--foreground) / 0.12);
+      0 20px 42px -24px hsl(var(--foreground) / 0.58),
+      0 0 0 1px hsl(var(--foreground) / 0.08);
     transform: translateZ(0);
   }
 
   .dark .synapse-presence-orb {
-    border-color: rgba(255, 255, 255, 0.11);
-    background:
-      radial-gradient(circle at 34% 24%, rgba(255, 255, 255, 0.12), transparent 34%),
-      #08090b;
+    background: transparent;
     box-shadow:
-      0 22px 46px -23px rgba(0, 0, 0, 0.98),
-      0 0 0 1px rgba(255, 255, 255, 0.025),
-      inset 0 1px 0 rgba(255, 255, 255, 0.11),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.82);
+      0 24px 52px -26px rgba(0, 0, 0, 0.98),
+      0 0 28px -14px rgba(236, 241, 255, 0.62),
+      0 0 0 1px rgba(255, 255, 255, 0.055);
   }
 
   .synapse-liquid-orb {
     position: absolute;
-    inset: 1px;
+    inset: 0;
     z-index: 0;
     overflow: hidden;
     border-radius: 999px;
     transform: translateZ(0);
-    filter: drop-shadow(0 7px 12px rgba(0, 0, 0, 0.22));
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.28));
   }
 
   .synapse-liquid-orb-canvas,
@@ -1881,16 +1848,23 @@
 
   .synapse-liquid-orb-fallback {
     z-index: 1;
-    inset: 7%;
-    width: 86%;
-    height: 86%;
+    inset: 4%;
+    width: 92%;
+    height: 92%;
     background:
-      radial-gradient(circle at 32% 24%, rgba(255, 255, 255, 0.98) 0 7%, rgba(255, 255, 255, 0.4) 21%, transparent 37%),
-      radial-gradient(circle at 67% 75%, rgba(111, 119, 137, 0.42), transparent 42%),
-      radial-gradient(circle at 48% 45%, #d7dae0, #676d78 62%, #16191f 100%);
+      radial-gradient(circle at 29% 21%, rgba(255, 255, 255, 0.92) 0 5%, rgba(255, 255, 255, 0.28) 19%, transparent 35%),
+      radial-gradient(circle at 64% 73%, rgba(105, 109, 118, 0.32), transparent 45%),
+      radial-gradient(circle at 48% 45%, #a9adb5, #4a4e56 64%, #15171b 100%);
     box-shadow:
       inset 4px 7px 12px rgba(255, 255, 255, 0.48),
       inset -5px -8px 16px rgba(4, 5, 7, 0.7);
+  }
+
+  .dark .synapse-liquid-orb-fallback {
+    background:
+      radial-gradient(circle at 29% 21%, rgba(255, 255, 255, 1) 0 6%, rgba(255, 255, 255, 0.55) 18%, transparent 35%),
+      radial-gradient(circle at 66% 72%, rgba(213, 220, 233, 0.58), transparent 44%),
+      radial-gradient(circle at 48% 45%, #f4f6fb, #7d838e 58%, #090b0f 100%);
   }
 
   .synapse-liquid-orb-lens {
@@ -1898,10 +1872,10 @@
     inset: 5%;
     width: 90%;
     height: 90%;
-    border: 1px solid rgba(255, 255, 255, 0.24);
+    border: 1px solid rgba(255, 255, 255, 0.28);
     background:
-      linear-gradient(145deg, rgba(255, 255, 255, 0.13), transparent 30% 68%, rgba(255, 255, 255, 0.035)),
-      radial-gradient(circle at 38% 18%, rgba(255, 255, 255, 0.25), transparent 26%);
+      linear-gradient(145deg, rgba(255, 255, 255, 0.16), transparent 30% 68%, rgba(255, 255, 255, 0.04)),
+      radial-gradient(circle at 38% 18%, rgba(255, 255, 255, 0.32), transparent 26%);
     box-shadow:
       inset 0 1px 2px rgba(255, 255, 255, 0.36),
       inset 0 -8px 18px rgba(0, 0, 0, 0.13);
@@ -1913,19 +1887,12 @@
     inset: 13%;
     width: 74%;
     height: 74%;
-    opacity: 0.34;
+    opacity: 0.24;
     background:
-      conic-gradient(from 22deg, transparent, rgba(174, 209, 255, 0.3), transparent 18%, rgba(226, 186, 255, 0.24), transparent 43%, rgba(175, 255, 239, 0.2), transparent 67%);
+      conic-gradient(from 22deg, transparent, rgba(255, 255, 255, 0.34), transparent 18%, rgba(205, 208, 215, 0.2), transparent 43%, rgba(255, 255, 255, 0.22), transparent 67%);
     filter: blur(4px);
     mix-blend-mode: screen;
     animation: synapse-liquid-caustic 7.6s linear infinite;
-  }
-
-  .synapse-liquid-orb-glyph {
-    color: rgba(255, 255, 255, 0.9);
-    filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.74));
-    mix-blend-mode: difference;
-    transition: opacity 180ms ease, transform 180ms ease;
   }
 
   [data-synapse-presence-state="listening"] .synapse-liquid-orb,
@@ -1947,15 +1914,10 @@
       linear-gradient(155deg, hsl(var(--background) / 0.94), hsl(var(--card) / 0.9)),
       hsl(var(--card));
     box-shadow:
-      0 20px 62px -42px hsl(var(--foreground) / 0.58),
+      0 18px 54px -40px hsl(var(--foreground) / 0.5),
       inset 0 1px 0 hsl(var(--background) / 0.72);
     backdrop-filter: blur(22px) saturate(1.06);
     -webkit-backdrop-filter: blur(22px) saturate(1.06);
-  }
-
-  .synapse-presence-status > div > span:first-child {
-    border-color: hsl(var(--border) / 0.58);
-    background: hsl(var(--foreground) / 0.035);
   }
 
   .dark .synapse-presence-status {
@@ -1968,13 +1930,7 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.055);
   }
 
-  .dark .synapse-presence-status > div > span:first-child {
-    border-color: rgba(255, 255, 255, 0.07);
-    background: rgba(255, 255, 255, 0.045);
-  }
-
   @media (prefers-reduced-transparency: reduce) {
-    .synapse-presence-dock,
     .synapse-presence-status {
       background: hsl(var(--background));
       backdrop-filter: none;
@@ -1983,7 +1939,6 @@
   }
 
   @media (forced-colors: active) {
-    .synapse-presence-dock,
     .synapse-presence-status,
     .synapse-presence-orb {
       border: 1px solid CanvasText;
@@ -3293,6 +3248,7 @@
     .notes-neuroview-backdrop,
     .dashboard-schedule-orbit,
     .dashboard-schedule-scan,
+    .synapse-liquid-orb-caustic,
     .synapse-message-enter {
       animation: none !important;
       transition: none !important;

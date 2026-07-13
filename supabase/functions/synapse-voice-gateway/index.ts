@@ -276,27 +276,14 @@ const taskLabel = (name: string, args: Record<string, unknown> = {}) => {
   return patient ? `${label} de ${patient}` : label;
 };
 
-const initialMessage = (name: string, args: Record<string, unknown>) => {
-  const patient = patientFromArgs(args);
-  if (patient) return `Vou conferir as informacoes de ${patient} no sistema.`;
-  return `Vou consultar ${taskLabel(name, args)} no sistema.`;
-};
+const initialStatusMessage = (name: string, args: Record<string, unknown>) =>
+  `Consultando ${taskLabel(name, args)}.`;
 
-const progressMessage = (name: string, args: Record<string, unknown>, count: number) => {
-  const patient = patientFromArgs(args);
-  const base = taskLabel(name, args);
-  if (patient) {
-    return count === 0
-      ? `Ainda estou buscando as informacoes de ${patient}, so mais um instante.`
-      : `Continuo conferindo ${base}; ja volto com o resultado.`;
-  }
-  return count === 0
-    ? `Ainda estou conferindo ${base}, so mais um instante.`
-    : "Continuo trabalhando nisso; ja volto com o resultado.";
-};
+const progressStatusMessage = (name: string, args: Record<string, unknown>) =>
+  `${taskLabel(name, args)} em andamento.`;
 
-const retryMessage = (name: string, args: Record<string, unknown>) =>
-  `A consulta oscilou por aqui. Vou tentar ${taskLabel(name, args)} mais uma vez.`;
+const retryStatusMessage = (name: string, args: Record<string, unknown>) =>
+  `Tentando novamente: ${taskLabel(name, args)}.`;
 
 const makeAbortError = (message = "Operacao cancelada.") => {
   const error = new Error(message);
@@ -417,6 +404,7 @@ class EdgeVoiceFunctionRunner {
     signal?: AbortSignal;
   }) => Promise<Record<string, unknown>>;
   private tasks = new Map<string, VoiceTask>();
+  private handledCallIds = new Set<string>();
   private lastInterruptionAt = 0;
   private queue: Promise<void> = Promise.resolve();
 
@@ -435,10 +423,25 @@ class EdgeVoiceFunctionRunner {
     this.invokeTool = options.invokeTool;
   }
 
-  injectAgentMessage(message: string, behavior = "queue") {
-    const text = clean(message, 420);
-    if (!text) return;
-    this.sendDeepgram({ type: "InjectAgentMessage", message: text, behavior });
+  claimCall(id: string, name: string, args: Record<string, unknown>) {
+    if (this.handledCallIds.has(id)) {
+      this.sendClient({
+        type: "function_status",
+        status: "duplicate_ignored",
+        id,
+        name,
+        label: taskLabel(name, args),
+        message: "Solicitacao duplicada ignorada.",
+      });
+      return false;
+    }
+
+    this.handledCallIds.add(id);
+    if (this.handledCallIds.size > 256) {
+      const oldest = this.handledCallIds.values().next().value;
+      if (oldest) this.handledCallIds.delete(oldest);
+    }
+    return true;
   }
 
   sendFunctionResponse(id: string, name: string, content: unknown, thoughtSignature = "") {
@@ -504,6 +507,7 @@ class EdgeVoiceFunctionRunner {
     const thoughtSignature = clean(fn.thought_signature, 4000);
     const args = safeJsonParse(fn.arguments);
     if (!name) return;
+    if (!this.claimCall(id, name, args)) return;
 
     const controller = new AbortController();
     const task: VoiceTask = {
@@ -521,11 +525,10 @@ class EdgeVoiceFunctionRunner {
     };
     this.tasks.set(id, task);
 
-    const firstMessage = initialMessage(name, args);
+    const firstMessage = initialStatusMessage(name, args);
     task.message = firstMessage;
     this.sendStatus(task, "started", { message: firstMessage });
     this.sendVoiceState("tool_active", task);
-    this.injectAgentMessage(firstMessage, "queue");
     this.scheduleProgress(task, SLOW_FUNCTION_MS);
     let keepAwaitingConfirmation = false;
 
@@ -536,8 +539,6 @@ class EdgeVoiceFunctionRunner {
       if (result?.clientAction) this.sendClient({ type: "client_action", action: result.clientAction });
       if (task.interrupted && payload.ok) {
         payload.interrupted = true;
-        payload.message = `Resultado anterior pronto: ${payload.message}`;
-        payload.spoken_summary = payload.message;
       }
 
       this.sendFunctionResponse(id, name, payload, thoughtSignature);
@@ -582,9 +583,8 @@ class EdgeVoiceFunctionRunner {
         return;
       }
 
-      const message = progressMessage(task.name, task.args, task.progressCount);
+      const message = progressStatusMessage(task.name, task.args);
       task.progressCount += 1;
-      this.injectAgentMessage(message, "queue");
       this.sendStatus(task, "progress", { message });
       this.sendVoiceState("tool_active", task);
       if (task.progressCount < MAX_PROGRESS_MESSAGES) this.scheduleProgress(task, FOLLOWUP_FUNCTION_MS);
@@ -596,8 +596,7 @@ class EdgeVoiceFunctionRunner {
     let lastError: unknown = null;
     for (let attempt = 0; attempt <= MAX_TOOL_RETRIES; attempt += 1) {
       if (attempt > 0) {
-        const message = retryMessage(task.name, task.args);
-        this.injectAgentMessage(message, "queue");
+        const message = retryStatusMessage(task.name, task.args);
         this.sendStatus(task, "retrying", { message, attempt });
         this.sendVoiceState("tool_retrying", task);
         await wait(650, task.controller.signal);

@@ -10,6 +10,11 @@ interface RunStep {
   at: string;
 }
 
+interface RunEventInput {
+  type: "node_reveal" | "edge_reveal" | "focus_node" | "focus_link" | "complete" | "error";
+  payload: Record<string, unknown>;
+}
+
 interface PatientBundle {
   patient: any;
   notes: any[];
@@ -73,6 +78,76 @@ const createStep = (title: string, status: RunStep["status"], description?: stri
   description,
   at: new Date().toISOString(),
 });
+
+const nodeEvent = (nodeId: string, extra: Record<string, unknown> = {}): RunEventInput => ({
+  type: "node_reveal",
+  payload: { nodeId, ...extra },
+});
+
+const edgeEvent = (edge: { id?: string; source: string; target: string }, extra: Record<string, unknown> = {}): RunEventInput => ({
+  type: "edge_reveal",
+  payload: { edgeId: edge.id || `${edge.source}->${edge.target}`, source: edge.source, target: edge.target, ...extra },
+});
+
+export const buildNeuroFlowRevealEvents = (workflow: { nodes: any[]; edges: any[] }): RunEventInput[] => {
+  const revealed = new Set<string>();
+  const emittedEdges = new Set<string>();
+  const events: RunEventInput[] = [];
+
+  workflow.nodes.forEach((node) => {
+    events.push(nodeEvent(node.id, { label: node.data?.label, nodeType: node.type }));
+    revealed.add(node.id);
+    workflow.edges.forEach((edge) => {
+      if (emittedEdges.has(edge.id) || !revealed.has(edge.source) || !revealed.has(edge.target)) return;
+      events.push(edgeEvent(edge, { label: edge.label }));
+      emittedEdges.add(edge.id);
+    });
+  });
+
+  workflow.edges.forEach((edge) => {
+    if (!emittedEdges.has(edge.id)) events.push(edgeEvent(edge, { label: edge.label }));
+  });
+  events.push({ type: "complete", payload: { artifact: "neuroflow" } });
+  return events;
+};
+
+export const buildNeuroViewFocusEvents = (
+  nodes: Array<{ id: string; reason?: string }>,
+  links: Array<{ source: string; target: string; reason?: string }>,
+): RunEventInput[] => {
+  const events: RunEventInput[] = [];
+  nodes.forEach((node) => {
+    events.push({ type: "focus_node", payload: { nodeId: node.id, reason: node.reason } });
+    links
+      .filter((link) => link.target === node.id || link.source === node.id)
+      .slice(0, 2)
+      .forEach((link) => events.push({
+        type: "focus_link",
+        payload: { source: link.source, target: link.target, reason: link.reason },
+      }));
+  });
+  events.push({ type: "complete", payload: { artifact: "neuroview" } });
+  return events;
+};
+
+export const buildNeuroPulseRevealEvents = (): RunEventInput[] => {
+  const nodeIds = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"];
+  const links = [
+    ["A", "B"], ["B", "C"], ["C", "D"], ["D", "E"], ["E", "F"],
+    ["F", "G"], ["G", "H"], ["H", "C"], ["D", "I"], ["I", "J"],
+  ];
+  const revealed = new Set<string>();
+  const events: RunEventInput[] = [];
+  nodeIds.forEach((nodeId) => {
+    events.push(nodeEvent(nodeId, { artifact: "neuropulse" }));
+    revealed.add(nodeId);
+    links.forEach(([source, target]) => {
+      if (target === nodeId && revealed.has(source)) events.push(edgeEvent({ source, target }));
+    });
+  });
+  events.push({ type: "complete", payload: { artifact: "neuropulse" } });
+  return events;
+};
 
 async function updateRun(
   admin: any,
@@ -345,7 +420,7 @@ function buildInsightSummary(bundle: PatientBundle, themes: Array<{ label: strin
 
 function buildWorkflow(bundle: PatientBundle, objective: string) {
   const themes = rankThemes(bundle);
-  const notes = evidenceNotes(bundle, 6);
+  const notes = evidenceNotes(bundle, 4);
   const patientId = bundle.patient.id;
   const title = `Synapse Flow - ${bundle.patient.name}`;
   const mkNode = (id: string, type: string, x: number, y: number, label: string, description: string, extra: Record<string, unknown> = {}) => ({
@@ -364,46 +439,57 @@ function buildWorkflow(bundle: PatientBundle, objective: string) {
     },
   });
   const themeA = themes[0]?.label || "Padrão principal ainda em formação";
-  const themeB = themes[1]?.label || "Resposta emocional/comportamental";
+  const themeB = themes[1]?.label || "Resposta emocional e comportamental";
   const themeC = themes[2]?.label || "Hipótese a acompanhar";
-  const firstNote = notes[0];
-  const secondNote = notes[1];
+  const evidence = notes.length ? notes.slice(0, 3) : [{
+    id: "context",
+    title: "Contexto clínico disponível",
+    excerpt: cleanText(bundle.patient?.notes || bundle.patient?.diagnosis || "Histórico ainda breve; validar em sessão.", 240),
+  }];
 
   const nodes = [
-    mkNode("patient-context", "patient", 0, 0, bundle.patient.name, `Contexto clínico consolidado. Objetivo: ${objective || "mapear padrões do histórico"}.`, { patientName: bundle.patient.name, confidence: 0.92 }),
-    mkNode("recurring-trigger", "trigger", 320, -170, themeA, `Sinal recorrente detectado em notas/tags do paciente.`, { sourceNoteId: firstNote?.id }),
-    mkNode("meaning-loop", "thought", 640, -170, "Significado atribuído", `Possível interpretação interna que organiza o padrão: ${themeA}.`, { sourceNoteId: firstNote?.id }),
-    mkNode("emotion-response", "emotion", 960, -170, themeB, `Resposta emocional/somática associada ao padrão percebido.`, { sourceNoteId: secondNote?.id }),
-    mkNode("behavior-response", "behavior", 960, 80, "Resposta comportamental", "Ações prováveis: aproximação, esquiva, controle, pausa ou busca de reasseguramento conforme o contexto.", { confidence: 0.62 }),
-    mkNode("consequence-loop", "loop", 640, 180, "Ciclo de reforço", "Consequências que podem manter o padrão: alívio imediato, custo posterior ou repetição do mesmo roteiro.", { confidence: 0.64 }),
-    mkNode("clinical-hypothesis", "diagnostic", 320, 180, themeC, "Hipótese de trabalho a validar em consulta, não conclusão diagnóstica.", { confidence: 0.58 }),
-    mkNode("possible-action", "intervention", 0, 250, "Ações possíveis", "Explorar exceções, mapear antecedentes, testar micro-ações e observar respostas do paciente.", { confidence: 0.7 }),
+    mkNode("patient-context", "patient", 0, 160, bundle.patient.name, `Objetivo clínico: ${objective || "mapear padrões do histórico"}.`, { patientName: bundle.patient.name, confidence: 0.94 }),
+    ...evidence.map((note, index) => mkNode(
+      `evidence-${index + 1}`,
+      "evidence",
+      340,
+      index * 230,
+      note.title,
+      note.excerpt || "Evidência vinculada ao prontuário.",
+      { sourceNoteId: note.id === "context" ? undefined : note.id, confidence: Math.max(0.64, 0.9 - index * 0.08) },
+    )),
+    mkNode("recurring-pattern", "trigger", 720, 70, themeA, "Padrão recorrente sustentado pelas evidências destacadas.", { sourceNoteId: notes[0]?.id, confidence: 0.78 }),
+    mkNode("response-pattern", "emotion", 720, 340, themeB, "Resposta emocional ou comportamental que acompanha o padrão.", { sourceNoteId: notes[1]?.id, confidence: 0.7 }),
+    mkNode("clinical-hypothesis", "diagnostic", 1080, 70, themeC, "Hipótese de trabalho, a validar em consulta; não representa conclusão diagnóstica.", { confidence: 0.62 }),
+    mkNode("maintenance-loop", "loop", 1080, 340, "Ciclo de manutenção", "Relação entre gatilho, resposta e consequência que pode manter o padrão observado.", { confidence: 0.66 }),
+    mkNode("possible-action", "intervention", 1440, 205, "Próximo movimento clínico", "Explorar exceções, testar uma microintervenção e observar a resposta antes de consolidar a hipótese.", { confidence: 0.72 }),
   ];
 
-  const edges = [
-    ["patient-context", "recurring-trigger", "histórico sugere"],
-    ["recurring-trigger", "meaning-loop", "evoca significado"],
-    ["meaning-loop", "emotion-response", "modula emoção"],
-    ["emotion-response", "behavior-response", "organiza resposta"],
-    ["behavior-response", "consequence-loop", "gera consequência"],
-    ["consequence-loop", "recurring-trigger", "retroalimenta"],
-    ["consequence-loop", "clinical-hypothesis", "orienta hipótese"],
+  const rawEdges: Array<[string, string, string]> = [
+    ...evidence.map((_, index) => ["patient-context", `evidence-${index + 1}`, "evidência vinculada"] as [string, string, string]),
+    ...evidence.map((_, index) => [`evidence-${index + 1}`, index % 2 === 0 ? "recurring-pattern" : "response-pattern", "sustenta leitura"] as [string, string, string]),
+    ["recurring-pattern", "clinical-hypothesis", "orienta hipótese"],
+    ["recurring-pattern", "response-pattern", "modula resposta"],
+    ["response-pattern", "maintenance-loop", "produz consequência"],
+    ["maintenance-loop", "recurring-pattern", "retroalimenta"],
     ["clinical-hypothesis", "possible-action", "abre intervenção"],
-  ].map(([source, target, relation], index) => ({
+    ["maintenance-loop", "possible-action", "indica ponto de mudança"],
+  ];
+  const edges = rawEdges.map(([source, target, relation], index) => ({
     id: `synapse-edge-${index + 1}`,
     source,
     target,
     type: "neural",
     animated: true,
     label: relation,
-    data: { relation, strength: index < 5 ? 0.76 : 0.62, polarity: "supports", source: "synapse" },
+    data: { relation, strength: index < evidence.length * 2 ? 0.8 : 0.66, polarity: "supports", source: "synapse" },
   }));
 
   return {
     schema: "neuroflow.workflow.v2",
     nodes,
     edges,
-    viewport: { x: 120, y: 130, zoom: 0.74 },
+    viewport: { x: 90, y: 110, zoom: 0.62 },
     metadata: {
       title,
       patientId,
@@ -414,7 +500,7 @@ function buildWorkflow(bundle: PatientBundle, objective: string) {
     },
     links: [
       { type: "patient", id: patientId, nodeId: "patient-context", label: bundle.patient.name },
-      ...notes.slice(0, 4).map((note) => ({ type: "note", id: note.id, nodeId: "recurring-trigger", label: note.title })),
+      ...notes.slice(0, 3).map((note, index) => ({ type: "note", id: note.id, nodeId: `evidence-${index + 1}`, label: note.title })),
     ],
   };
 }
@@ -541,6 +627,19 @@ async function markRunFailed(admin: any, runId: string, error: unknown) {
     1200,
   );
   try {
+    const { error: eventError } = await admin
+      .from("synapse_notes_agent_run_events")
+      .upsert({
+        run_id: runId,
+        sequence: 1,
+        event_type: "error",
+        payload: { message },
+      }, { onConflict: "run_id,sequence" });
+    if (eventError) console.warn("[synapse-neuro-notes] failed to persist error event", eventError);
+  } catch (eventError) {
+    console.warn("[synapse-neuro-notes] failed to persist error event", eventError);
+  }
+  try {
     await updateRun(admin, runId, {
       error_message: message,
       steps: [createStep("Concluir criação assistida", "failed", message)],
@@ -567,6 +666,7 @@ export async function executeNeuroNotesAgentTool(
 
     if (name === "analyze_neuroview_patient_patterns") {
       const run = await createRun(context, "neuroview", patient, intent || "Analisar padrões no NeuroView", initialSteps);
+      try {
       const bundle = await gatherPatientBundle(context, patient, false);
       const traceCore = buildNeuroViewTrace(bundle);
       const steps = [
@@ -577,7 +677,16 @@ export async function executeNeuroNotesAgentTool(
       ];
       const summary = buildInsightSummary(bundle, traceCore.themes);
       const trace = { steps, nodes: traceCore.nodes, links: traceCore.links, summary };
-      await updateRun(admin, run.id, { steps, trace, result: { summary, themes: traceCore.themes, evidence: traceCore.evidence } }, "completed", 100);
+      const events = buildNeuroViewFocusEvents(traceCore.nodes, traceCore.links);
+      const { error: completeError } = await admin.rpc("complete_synapse_neuroview_run", {
+        p_run_id: run.id,
+        p_user_id: userId,
+        p_steps: steps,
+        p_trace: trace,
+        p_result: { summary, themes: traceCore.themes, evidence: traceCore.evidence },
+        p_events: events,
+      });
+      if (completeError) throw completeError;
       return {
         ok: true,
         grounded: true,
@@ -598,51 +707,42 @@ export async function executeNeuroNotesAgentTool(
           },
         },
       };
+      } catch (error) {
+        await markRunFailed(admin, run.id, error);
+        throw error;
+      }
     }
 
     if (name === "create_neuroflow_from_patient_history") {
       const run = await createRun(context, "neuroflow", patient, intent || "Construir NeuroFlow pelo histórico", initialSteps);
+      try {
       const bundle = await gatherPatientBundle(context, patient, false);
       const workflow = buildWorkflow(bundle, intent);
       const title = String(workflow.metadata.title || `Synapse Flow - ${patient.name}`);
       const flowDescription = `Fluxo gerado pelo Synapse com base no histórico vinculado de ${patient.name}.`;
-      await updateRun(admin, run.id, {
-        steps: [
-          ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
-          createStep("Modelar ações e loops", "completed", `${workflow.nodes.length} blocos e ${workflow.edges.length} conexões.`),
-          createStep("Salvar NeuroFlow", "active", title),
-        ],
-        trace: { steps: [], nodes: workflow.nodes.map((node: any) => ({ id: node.id, type: node.type, reason: node.data?.label })), links: workflow.edges.map((edge: any) => ({ source: edge.source, target: edge.target, reason: edge.label })), summary: flowDescription },
-        result: { workflow },
-      }, "applying", 82);
-
-      const { data: flow, error: flowError } = await admin
-        .from("neuro_flows")
-        .insert({
-          user_id: userId,
-          patient_id: patient.id,
-          title,
-          description: flowDescription,
-          tags: ["Synapse", "NeuroFlow", "Paciente"],
-          workflow,
-          workflow_schema_version: "neuroflow.workflow.v2",
-          last_saved_at: new Date().toISOString(),
-        })
-        .select("id,title,patient_id")
-        .single();
-      if (flowError) throw flowError;
-
       const steps = [
         ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
         createStep("Modelar ações e loops", "completed", `${workflow.nodes.length} blocos e ${workflow.edges.length} conexões.`),
         createStep("Salvar NeuroFlow", "completed", title),
       ];
-      await updateRun(admin, run.id, {
+      const trace = {
         steps,
-        target_flow_id: flow.id,
-        trace: { steps, nodes: workflow.nodes.map((node: any) => ({ id: node.id, type: node.type, reason: node.data?.label })), links: workflow.edges.map((edge: any) => ({ source: edge.source, target: edge.target, reason: edge.label })), summary: flowDescription },
-        result: { workflow, flow },
-      }, "completed", 100);
+        nodes: workflow.nodes.map((node: any) => ({ id: node.id, type: node.type, reason: node.data?.label })),
+        links: workflow.edges.map((edge: any) => ({ source: edge.source, target: edge.target, reason: edge.label })),
+        summary: flowDescription,
+      };
+      const { data: committedFlow, error: flowError } = await admin.rpc("commit_synapse_neuroflow_run", {
+        p_run_id: run.id,
+        p_user_id: userId,
+        p_title: title,
+        p_description: flowDescription,
+        p_workflow: workflow,
+        p_steps: steps,
+        p_trace: trace,
+        p_events: buildNeuroFlowRevealEvents(workflow),
+      });
+      if (flowError) throw flowError;
+      const flow = committedFlow as { id: string; title: string; patient_id: string };
 
       return {
         ok: true,
@@ -664,11 +764,14 @@ export async function executeNeuroNotesAgentTool(
           },
         },
       };
+      } catch (error) {
+        await markRunFailed(admin, run.id, error);
+        throw error;
+      }
     }
 
     if (name === "create_neuropulse_cause_effect_diagram") {
       const run = await createRun(context, "neuropulse", patient, intent || "Gerar fluxograma causa e efeito", initialSteps);
-      const artifacts: { noteId?: string | null; entryId?: string | null } = {};
       try {
         const bundle = await gatherPatientBundle(context, patient, true);
         const lens = cleanText(args.lens || args.approach || "tcc", 40);
@@ -682,40 +785,6 @@ export async function executeNeuroNotesAgentTool(
           `<pre class="mermaid">${escapeHtml(mermaid)}</pre>`,
         ].join("");
 
-        const { data: note, error: noteError } = await admin
-          .from("personal_notes")
-          .insert(buildNeuroPulseNoteRecord({
-            userId,
-            patientId: patient.id,
-            title,
-            content: noteContent,
-          }))
-          .select("id,title")
-          .single();
-        if (noteError) throw noteError;
-        artifacts.noteId = note.id;
-
-        const { data: entry, error: entryError } = await admin
-          .from("neuro_pulse_entries")
-          .insert({
-            user_id: userId,
-            title,
-            data: {
-              note_id: note.id,
-              patient_id: patient.id,
-              lens,
-              lens_label: lensName,
-              input: intent,
-              mermaid,
-              source: "synapse",
-              chat_session_id: context.sessionId,
-            },
-          })
-          .select("id,title")
-          .single();
-        if (entryError) throw entryError;
-        artifacts.entryId = entry.id;
-
         const steps = [
           ...initialSteps.map((step) => ({ ...step, status: "completed" as const })),
           createStep("Converter relato em grafo causal", "completed", lensName),
@@ -728,13 +797,27 @@ export async function executeNeuroNotesAgentTool(
           links: [],
           summary: `Fluxograma NeuroPulse salvo para ${patient.name}.`,
         };
-        await updateRun(admin, run.id, {
-          steps,
-          trace,
-          result: { mermaid, note, entry, lens, lens_label: lensName },
-          note_id: note.id,
-          pulse_entry_id: entry.id,
-        }, "completed", 100);
+        const entryData = {
+          lens,
+          lens_label: lensName,
+          input: intent,
+          mermaid,
+          source: "synapse",
+          chat_session_id: context.sessionId,
+        };
+        const { data: committedArtifacts, error: commitError } = await admin.rpc("commit_synapse_neuropulse_run", {
+          p_run_id: run.id,
+          p_user_id: userId,
+          p_title: title,
+          p_note_content: noteContent,
+          p_entry_data: entryData,
+          p_steps: steps,
+          p_trace: trace,
+          p_events: buildNeuroPulseRevealEvents(),
+        });
+        if (commitError) throw commitError;
+        const note = (committedArtifacts as any).note as { id: string; title: string };
+        const entry = (committedArtifacts as any).entry as { id: string; title: string };
 
         return {
           ok: true,
@@ -759,7 +842,6 @@ export async function executeNeuroNotesAgentTool(
           },
         };
       } catch (error) {
-        await cleanupNeuroPulseArtifacts(admin, userId, artifacts);
         await markRunFailed(admin, run.id, error);
         throw error;
       }
