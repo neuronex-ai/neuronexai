@@ -22,6 +22,10 @@ import { ChargesWorkspace } from "@/components/financeiro/ChargesWorkspace";
 import { FinancialSettlementModal } from "@/components/financeiro/FinancialSettlementModal";
 import { ManualChargeModal } from "@/components/financeiro/ManualChargeModal";
 import { NewTransactionModal } from "@/components/financeiro/NewTransactionModal";
+import {
+  SYNAPSE_PAGE_ACTION_EVENT,
+  type SynapseInterfaceAction,
+} from "@/lib/synapse-interface-actions";
 import { RecurringManager } from "@/components/financeiro/RecurringManager";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
@@ -357,6 +361,19 @@ export const FinancialManagementDashboard = (props: Props) => {
   useEffect(() => {
     setEntriesPage((current) => Math.min(current, entriesPageCount));
   }, [entriesPageCount]);
+
+  useEffect(() => {
+    const handleSynapseAction = (event: Event) => {
+      const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
+      if (action?.action === "open_modal" && action.modal === "new_charge") {
+        setChargeOpen(true);
+      }
+    };
+
+    window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+    return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+  }, []);
+
   const openEntry = (type: "income" | "expense") => {
     setEntryType(type);
     setEntryOpen(true);

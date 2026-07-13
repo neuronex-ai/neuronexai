@@ -1,4 +1,5 @@
 import type { AgentToolContext, AgentToolResult } from "./executor.ts";
+import { formatPatientAmbiguity, resolvePatientByName } from "./patient-resolver.ts";
 
 type Product = "neuroview" | "neuroflow" | "neuropulse";
 type RunStatus = "queued" | "gathering" | "reasoning" | "drafting" | "applying" | "completed" | "failed";
@@ -206,25 +207,22 @@ async function resolvePatient(admin: any, userId: string, args: Record<string, a
     return data;
   }
 
-  const name = escapeLike(cleanText(args.patient_name || args.patient || "", 160));
+  const name = cleanText(args.patient_name || args.patient || "", 160);
   if (!name) throw new Error("Informe o paciente para eu vincular a análise.");
+
+  const resolution = await resolvePatientByName(admin, userId, name);
+  if (resolution.status === "not_found") throw new Error(`Não encontrei paciente compatível com “${name}”.`);
+  if (resolution.status === "ambiguous") throw new Error(formatPatientAmbiguity(resolution.candidates));
 
   const { data, error } = await admin
     .from("patients")
     .select("id,name,status,diagnosis,notes,risk_score,last_session,next_session,created_at")
+    .eq("id", resolution.patient.id)
     .eq("user_id", userId)
-    .ilike("name", `%${name}%`)
-    .order("name")
-    .limit(12);
+    .maybeSingle();
   if (error) throw error;
-  const matches = data || [];
-  if (!matches.length) throw new Error(`Não encontrei paciente com o nome "${name}".`);
-  const exact = matches.filter((item: any) => normalizeText(item.name) === normalizeText(name));
-  const candidates = exact.length === 1 ? exact : matches;
-  if (candidates.length !== 1) {
-    throw new Error(`Encontrei mais de um paciente compatível: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}.`);
-  }
-  return candidates[0];
+  if (!data) throw new Error("Paciente não encontrado ou sem permissão.");
+  return data;
 }
 
 async function optionalQuery(label: string, query: PromiseLike<{ data: any; error: any }>) {

@@ -252,6 +252,7 @@ export const CommandSearch = ({ open, setOpen }: { open: boolean, setOpen: (open
                 <div className="fixed inset-0 z-[9998] flex items-start justify-center px-4 pt-[15vh] pointer-events-auto">
                     {/* Backdrop */}
                     <motion.div
+                        data-synapse-target="global-search-dialog"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}

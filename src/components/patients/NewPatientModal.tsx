@@ -48,6 +48,7 @@ export const NewPatientModal = ({
     <Dialog open={modalOpen} onOpenChange={handleOpenChange}>
       {triggerButton ? <DialogTrigger asChild>{triggerButton}</DialogTrigger> : null}
       <DialogContent
+        data-synapse-target="new-patient-modal"
         showCloseButton={false}
         className={cn(
           "desktop-retina-modal desktop-retina-form z-[180] flex h-dvh max-h-dvh w-dvw max-w-none grid-cols-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0",

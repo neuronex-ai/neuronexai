@@ -55,6 +55,8 @@ import {
   phoneDigitsFrom,
 } from "@/lib/whatsapp-identity";
 import { toast } from "sonner";
+import { useLocation } from "react-router-dom";
+import { SYNAPSE_PAGE_ACTION_EVENT, type SynapseInterfaceAction } from "@/lib/synapse-interface-actions";
 
 const WHATSAPP_BUSINESS_LOGO = "/whatsapp-business-logo-white.png";
 
@@ -299,6 +301,7 @@ export function LegacyConnectionDialog({
 
   return (
     <AppModalShell
+      dataSynapseTarget="neurozap-connection"
       open={open}
       onOpenChange={onOpenChange}
       title="Conectar WhatsApp business"
@@ -561,6 +564,7 @@ function ConnectionDialog({
 
   return (
     <AppModalShell
+      dataSynapseTarget="neurozap-connection"
       open={open}
       onOpenChange={onOpenChange}
       title="Conectar WhatsApp Business"
@@ -707,6 +711,7 @@ function ConnectionDialog({
 }
 
 export default function NeuroZap() {
+  const location = useLocation();
   const [selectedConversation, setSelectedConversation] = useState<WAConversation | null>(null);
   const [replyText, setReplyText] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -771,6 +776,22 @@ export default function NeuroZap() {
   }, []);
 
   useEffect(() => {
+    if (location.state?.synapseDestination === "neurozap.connection") {
+      setSettingsOpen(true);
+      window.history.replaceState({}, document.title, location.pathname);
+    }
+  }, [location.pathname, location.state]);
+
+  useEffect(() => {
+    const handleSynapseAction = (event: Event) => {
+      const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
+      if (action?.destination === "neurozap.connection") setSettingsOpen(true);
+    };
+    window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+    return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+  }, []);
+
+  useEffect(() => {
     if (!connected && selectedConversation) {
       setSelectedConversation(null);
       setShowMobileChat(false);
@@ -821,7 +842,7 @@ export default function NeuroZap() {
   };
 
   return (
-    <div className="notes-lumen-canvas relative z-0 min-h-screen w-full bg-transparent font-sans text-foreground selection:bg-primary/20">
+    <div data-synapse-target="neurozap-overview" className="notes-lumen-canvas relative z-0 min-h-screen w-full bg-transparent font-sans text-foreground selection:bg-primary/20">
       <div className="notes-lumen-field pointer-events-none fixed inset-0 z-0" />
       <ConnectionDialog
         open={settingsOpen}

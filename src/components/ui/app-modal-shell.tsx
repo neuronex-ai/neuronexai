@@ -114,6 +114,7 @@ interface AppModalShellProps {
   footer?: React.ReactNode;
   size?: AppModalShellSize;
   align?: AppModalShellAlign;
+  dataSynapseTarget?: string;
   preventClose?: boolean;
   className?: string;
   bodyClassName?: string;
@@ -141,6 +142,7 @@ export function AppModalShell({
   footer,
   size = "md",
   align = "center",
+  dataSynapseTarget,
   preventClose = false,
   className,
   bodyClassName,
@@ -155,6 +157,7 @@ export function AppModalShell({
 
   return (
     <ResponsiveModal
+      dataSynapseTarget={dataSynapseTarget}
       open={open}
       onOpenChange={handleOpenChange}
       trigger={trigger}

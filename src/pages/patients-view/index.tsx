@@ -104,7 +104,12 @@ export default function Pacientes() {
     useEffect(() => {
         const synapseQuery = location.state?.synapseQuery;
         if (typeof synapseQuery === "string") setSearchTerm(synapseQuery);
-    }, [location.state]);
+        if (location.state?.synapseDestination === "patients.new") {
+            if (canAdd) setAgentPatientModalOpen(true);
+            else setShowUpsellModal(true);
+            window.history.replaceState({}, document.title, location.pathname);
+        }
+    }, [canAdd, location.pathname, location.state]);
 
     const filteredPatients = patients?.filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||

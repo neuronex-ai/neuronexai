@@ -1,4 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
+import {
+  resolveSynapseDestination,
+  safeSynapseDestination,
+  type SynapseDestination,
+} from "@/lib/synapse-destinations";
 
 export type SynapseInterfaceActionName =
   | "navigate"
@@ -82,6 +87,7 @@ export type SynapseInterfaceElement =
 export interface SynapseInterfaceAction {
   action: SynapseInterfaceActionName;
   target?: SynapseNavigationTarget;
+  destination?: SynapseDestination;
   patientId?: string;
   appointmentId?: string;
   noteId?: string;
@@ -100,8 +106,11 @@ export interface SynapseInterfaceAction {
   date?: string;
   query?: string;
   notesView?: SynapseNotesView;
+  filesTab?: "personal" | "patients";
+  agendaView?: "daily" | "weekly" | "monthly";
+  workspaceTab?: "transcript" | "notes" | "patient";
   element?: SynapseInterfaceElement;
-  modal?: "new_appointment" | "new_patient" | "new_transaction" | "patient_details" | "patient_invite" | "new_note";
+  modal?: "new_appointment" | "new_patient" | "new_transaction" | "new_charge" | "patient_details" | "patient_invite" | "new_note";
   reason?: string;
 }
 
@@ -148,6 +157,7 @@ const MODAL_ROUTES: Record<NonNullable<SynapseInterfaceAction["modal"]>, string>
   new_appointment: "/agenda",
   new_patient: "/pacientes",
   new_transaction: "/financeiro",
+  new_charge: "/financeiro",
   patient_details: "/pacientes",
   patient_invite: "/teleconsulta",
   new_note: "/notas",
@@ -344,6 +354,9 @@ const notesProduct = (action: SynapseInterfaceAction) => {
   if (action.action === "open_neuroview_reasoning") return "neuroview" as const;
   if (action.action === "open_neuroflow_generation") return "neuroflow" as const;
   if (action.action === "open_neuropulse_diagram") return "neuropulse" as const;
+  if (action.destination === "notes.neuroview") return "neuroview" as const;
+  if (action.destination === "notes.neuroflow") return "neuroflow" as const;
+  if (action.destination === "notes.neuropulse") return "neuropulse" as const;
   return undefined;
 };
 
@@ -411,6 +424,7 @@ async function recordTelemetry(action: SynapseInterfaceAction, channel: "text" |
   const safePayload = {
     action: action.action,
     target: action.target || null,
+    destination: action.destination || null,
     has_patient_id: Boolean(action.patientId),
     has_appointment_id: Boolean(action.appointmentId),
     has_note_id: Boolean(action.noteId),
@@ -449,6 +463,7 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
     return {
       action,
       target: data.target,
+      destination: safeSynapseDestination(data.destination),
       patientId: data.patientId || data.patient_id,
       appointmentId: data.appointmentId || data.appointment_id,
       noteId: data.noteId || data.note_id,
@@ -467,6 +482,15 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
       date: data.date,
       query: data.query,
       notesView: safeNotesView(data.notesView || data.notes_view),
+      filesTab: ["personal", "patients"].includes(data.filesTab || data.files_tab)
+        ? data.filesTab || data.files_tab
+        : undefined,
+      agendaView: ["daily", "weekly", "monthly"].includes(data.agendaView || data.agenda_view)
+        ? data.agendaView || data.agenda_view
+        : undefined,
+      workspaceTab: ["transcript", "notes", "patient"].includes(data.workspaceTab || data.workspace_tab)
+        ? data.workspaceTab || data.workspace_tab
+        : undefined,
       element: safeInterfaceElement(data.element),
       modal: data.modal,
       reason: data.reason,
@@ -533,6 +557,37 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
     if (action.action !== "highlight_element") reportPhase("navigating", "Abrindo a área correta");
     switch (action.action) {
       case "navigate": {
+        if (action.destination) {
+          const destination = resolveSynapseDestination(action.destination, {
+            patientId: action.patientId,
+            appointmentId: action.appointmentId,
+            date: action.date,
+          });
+          if (destination.requires === "patient") throw new Error("Paciente necessário para abrir essa seção.");
+          if (destination.requires === "appointment") throw new Error("Consulta necessária para abrir essa seção.");
+          if (!destination.path && !destination.pageAction) throw new Error("Destino não permitido.");
+
+          if (destination.path) {
+            navigate(destination.path, destination.state ? { state: destination.state } : undefined);
+            await nextFrame(controller.signal);
+          }
+
+          const pageAction = {
+            ...action,
+            ...(destination.pageAction || {}),
+            destination: action.destination,
+          } as SynapseInterfaceAction;
+          focusPageAction(pageAction);
+
+          if (destination.selector) {
+            const node = notesProduct(action)
+              ? await waitForSurfaceReady(destination.selector, action.runId, controller.signal)
+              : await waitForTarget(destination.selector, controller.signal);
+            if (!node) throw new Error("A área foi aberta, mas o destino ainda não ficou disponível.");
+            focusNode(node, destination.selector);
+          }
+          break;
+        }
         if (!action.target || !ROUTES[action.target]) throw new Error("Destino não permitido.");
         const state = action.target === "teleconsultation" && action.appointmentId ? { activeAppointmentId: action.appointmentId } : action.query ? { synapseQuery: action.query } : undefined;
         const route = action.target === "finance"

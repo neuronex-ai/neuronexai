@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { NotionIcon } from "@/components/icons/NotionIcon";
@@ -110,13 +110,13 @@ const getFileIcon = (name: string, className?: string) => {
 
 const getDocumentIdFromPath = (path: string) => path.replace(/^r2:/, "");
 
-export const FilesManager = () => {
+export const FilesManager = ({ initialTab = "personal" }: { initialTab?: "personal" | "patients" }) => {
     const shouldReduceMotion = useReducedMotion();
     const { user, session } = useAuth();
     const queryClient = useQueryClient();
     const fileInputRef = useRef<HTMLInputElement>(null);
     const patientFileInputRef = useRef<HTMLInputElement>(null);
-    const [activeTab, setActiveTab] = useState<"personal" | "patients">("personal");
+    const [activeTab, setActiveTab] = useState<"personal" | "patients">(initialTab);
     const [searchQuery, setSearchQuery] = useState("");
     const [expandedPatient, setExpandedPatient] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -143,6 +143,10 @@ export const FilesManager = () => {
     const [importingDriveFileId, setImportingDriveFileId] = useState<string | null>(null);
 
     const userId = user?.id;
+
+    useEffect(() => {
+        setActiveTab(initialTab);
+    }, [initialTab]);
 
     // Fetch personal files
     const { data: personalFiles, isLoading: isLoadingPersonal } = useQuery<FileItem[]>({

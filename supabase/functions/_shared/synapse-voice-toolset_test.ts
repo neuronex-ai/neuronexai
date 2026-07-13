@@ -18,7 +18,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(functions.length, 15, "quantidade de funções de voz");
   equal(
     SYNAPSE_VOICE_TOOLSET_VERSION,
-    "neuronex.voice-core.v3",
+    "neuronex.voice-core.v4",
     "versão do payload de sessão",
   );
   equal(
@@ -74,6 +74,7 @@ Deno.test("navegação assistida expõe as superfícies read-first do Desktop", 
   }
 
   const actions = navigation?.parameters?.properties?.action?.enum || [];
+  const destinations = navigation?.parameters?.properties?.destination?.enum || [];
   const scopes = navigation?.parameters?.properties?.neuroview_scope?.enum || [];
   const modes = navigation?.parameters?.properties?.neuroview_mode?.enum || [];
   equal(actions.includes("open_neuroview_reasoning"), true, "ação contínua do NeuroView");
@@ -81,4 +82,14 @@ Deno.test("navegação assistida expõe as superfícies read-first do Desktop", 
   equal(modes.join(","), "2d,3d", "modos do NeuroView");
   equal(Boolean(navigation?.parameters?.properties?.neuroview_node_ids), true, "IDs do subgrafo");
   equal(Boolean(navigation?.parameters?.properties?.neuroview_focus_node_id), true, "node focal");
+  for (const destination of [
+    "patient.sessions.pending",
+    "notes.files.patients",
+    "finance.extrato.assinaturas",
+    "teleconsultation.notes",
+    "settings.integrations",
+    "global.search",
+  ]) {
+    equal(destinations.includes(destination), true, `destino profundo ${destination}`);
+  }
 });

@@ -73,6 +73,7 @@ export const NewTransactionModal = ({
     <Dialog open={value} onOpenChange={setValue}>
       {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
       <DialogContent
+        data-synapse-target="new-transaction-modal"
         showCloseButton={false}
         className="finance-modal-surface max-w-xl overflow-hidden rounded-[28px] p-0"
       >

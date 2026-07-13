@@ -17,6 +17,34 @@ const fn = (name: string, description: string, parameters: JsonSchema) => ({
   function: { name, description, parameters },
 });
 
+export const SYNAPSE_INTERFACE_DESTINATIONS = [
+  "dashboard.overview", "dashboard.agenda", "dashboard.finance", "dashboard.pending",
+  "agenda.day", "agenda.week", "agenda.month", "agenda.new-appointment",
+  "patients.directory", "patients.new",
+  "patient.summary", "patient.sessions.history", "patient.sessions.pending", "patient.anamnesis",
+  "patient.mood", "patient.goals", "patient.packages", "patient.finance", "patient.documents",
+  "notes.notes", "notes.new", "notes.tasks", "notes.files.personal", "notes.files.patients",
+  "notes.notion", "notes.neuroview", "notes.neuroflow", "notes.neuropulse",
+  "finance.gestao-visao-geral", "finance.gestao-lancamentos", "finance.gestao-cobrancas",
+  "finance.gestao-recebimentos", "finance.gestao-planejamento", "finance.conta-digital",
+  "finance.pix-pagar", "finance.pix-transferir", "finance.pix-qrcode",
+  "finance.pix-receber.recebidos", "finance.pix-receber.cobrancas", "finance.pix-chaves",
+  "finance.pix-salarios", "finance.pix-limites", "finance.extrato.realizado",
+  "finance.extrato.futuro", "finance.extrato.assinaturas", "finance.cobrancas-historia",
+  "finance.cobrancas-simulador", "finance.cobrancas-config", "finance.cobrancas-chargebacks",
+  "finance.pagamentos-boletos", "finance.pagamentos-agendados", "finance.pagamentos-agendar",
+  "finance.pagamentos-grupos", "finance.antecipacoes-lista", "finance.antecipacoes-solicitar",
+  "finance.antecipacoes-automatica", "finance.transferencias", "finance.contas-bancarias",
+  "finance.fiscal-dados", "finance.fiscal-nova", "finance.fiscal-lista", "finance.tarifas",
+  "finance.saude-conta", "finance.new-transaction", "finance.new-charge",
+  "teleconsultation.overview", "teleconsultation.lobby", "teleconsultation.invite",
+  "teleconsultation.transcript", "teleconsultation.notes", "teleconsultation.patient",
+  "settings.profile", "settings.security", "settings.subscription", "settings.preferences",
+  "settings.notifications", "settings.communication", "settings.neurofinance",
+  "settings.integrations", "settings.fiscal", "settings.data-control",
+  "neurozap.overview", "neurozap.connection", "synapse.chat", "global.search",
+] as const;
+
 const patientReference = {
   patient_name: { type: "string", description: "Nome humano informado pelo profissional. Prefira sempre este campo e nunca peça ID ao usuário." },
   patient_id: { type: "string", description: "Identificador exclusivamente interno, opcional. Nunca solicite ou exponha ao usuário." },
@@ -104,6 +132,7 @@ export const AGENT_TOOLS = [
   fn("request_interface_action", "Solicita uma ação visual estruturada. Use para abrir áreas, fichas, modais e superfícies assistidas ou para mudar o foco, escopo e modo do NeuroView sem expor rotas/URLs internas.", objectSchema({
     action: { type: "string", enum: ["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"] },
     target: { type: "string", enum: ["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"] },
+    destination: { type: "string", enum: SYNAPSE_INTERFACE_DESTINATIONS, description: "Destino profundo e seguro. Para abrir uma aba, subaba ou modal existente, use action=navigate e escolha o destino exato deste catálogo." },
     ...patientReference,
     ...noteReference,
     ...moduleReference,
@@ -125,7 +154,7 @@ export const AGENT_TOOLS = [
       "patients_grid", "notes_search", "notes_editor", "notes_list", "notes_sidebar", "tasks_board",
       "files_manager", "notion_panel", "neuroview_graph", "neuroflow_canvas", "neuropulse_panel",
     ] },
-    modal: { type: "string", enum: ["new_appointment", "new_patient", "new_transaction", "patient_details", "patient_invite", "new_note"] },
+    modal: { type: "string", enum: ["new_appointment", "new_patient", "new_transaction", "new_charge", "patient_details", "patient_invite", "new_note"] },
     reason: { type: "string" },
   }, ["action"])),
 

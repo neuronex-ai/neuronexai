@@ -1,5 +1,6 @@
 // @ts-nocheck
 import type { AgentToolContext, AgentToolResult, PendingAction } from "./executor.ts";
+import { formatPatientAmbiguity, resolvePatientByName as resolvePatientNameReference } from "./patient-resolver.ts";
 
 export const NOTES_READ_TOOLS = new Set([
   "get_notes_desktop_overview",
@@ -196,23 +197,12 @@ async function listFiles(admin: any, userId: string, args: Record<string, any> =
 }
 
 async function resolvePatientByName(admin: any, userId: string, name: string) {
-  const term = escapeLike(cleanText(name, 160));
+  const term = cleanText(name, 160);
   if (!term) return null;
-  const { data, error } = await admin
-    .from("patients")
-    .select("id,name,status,email,phone")
-    .eq("user_id", userId)
-    .ilike("name", `%${term}%`)
-    .order("name")
-    .limit(12);
-  if (error) throw error;
-  const matches = data || [];
-  if (!matches.length) throw new Error(`Não encontrei paciente com o nome “${term}”.`);
-  const normalized = normalizeText(term);
-  const exact = matches.filter((item: any) => normalizeText(item.name) === normalized);
-  const candidates = exact.length === 1 ? exact : matches;
-  if (candidates.length !== 1) throw new Error(`Encontrei mais de um paciente compatível: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}.`);
-  return candidates[0];
+  const resolution = await resolvePatientNameReference(admin, userId, term);
+  if (resolution.status === "not_found") throw new Error(`Não encontrei paciente compatível com “${term}”.`);
+  if (resolution.status === "ambiguous") throw new Error(formatPatientAmbiguity(resolution.candidates));
+  return resolution.patient;
 }
 
 async function resolveModule(admin: any, userId: string, args: Record<string, any>) {

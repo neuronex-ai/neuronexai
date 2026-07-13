@@ -88,6 +88,7 @@ export default function Notes() {
     const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedNotionPageId, setSelectedNotionPageId] = useState<string | null>(null);
+    const [synapseFilesTab, setSynapseFilesTab] = useState<"personal" | "patients">("personal");
 
     const initialLayout = useMemo(loadLayoutPreference, []);
     const [isListCollapsed, setIsListCollapsed] = useState(initialLayout.listCollapsed);
@@ -240,6 +241,8 @@ export default function Notes() {
             setViewMode("neuroflow");
         }
 
+        if (action.filesTab) setSynapseFilesTab(action.filesTab);
+
         if (typeof action.query === "string") {
             setSearchQuery(action.query);
             if (isListCollapsed) setIsListCollapsed(false);
@@ -293,6 +296,8 @@ export default function Notes() {
             neuroViewMode: state.synapseNeuroViewMode,
             neuroViewNodeIds: state.synapseNeuroViewNodeIds,
             neuroViewFocusNodeId: state.synapseNeuroViewFocusNodeId,
+            filesTab: state.synapseFilesTab,
+            destination: state.synapseDestination,
         });
         clearSynapseNotesNavigationState(navigate, location.pathname, location.search);
     }, [applySynapseNotesAction, location.pathname, location.search, location.state, navigate]);
@@ -359,7 +364,7 @@ export default function Notes() {
             case "files":
                 return (
                     <motion.div {...motionProps} className="flex-1 h-full min-h-0 min-w-0" data-synapse-target="files-manager">
-                        <FilesManager />
+                        <FilesManager initialTab={synapseFilesTab} />
                     </motion.div>
                 );
             case "notion":

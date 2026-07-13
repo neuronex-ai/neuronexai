@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,11 +21,17 @@ import { useRefundPayment } from "@/hooks/use-neurofinance-payments";
 type ViewTab = "recebidos" | "cobrancas";
 
 export function PixReceber() {
+    const location = useLocation();
     const [activeTab, setActiveTab] = useState<ViewTab>("recebidos");
     const [searchTerm, setSearchTerm] = useState("");
     const { data: pixRecebidos, isLoading: isLoadingPix, refetch: refetchPix } = usePixRecebidos();
     const { data: cobList, isLoading: isLoadingCob, refetch: refetchCob } = usePixCobList();
     const { mutate: refundPayment, isPending: isRefunding } = useRefundPayment();
+
+    useEffect(() => {
+        const subview = new URLSearchParams(location.search).get("subview");
+        setActiveTab(subview === "cobrancas" ? "cobrancas" : "recebidos");
+    }, [location.search]);
 
     const handleRefund = (id: string) => {
         if (window.confirm("Confirma a devolução deste Pix? Revise o pagador e o valor antes de continuar.")) {
@@ -32,8 +39,8 @@ export function PixReceber() {
         }
     };
 
-    const pixItems = pixRecebidos?.payments || [];
-    const cobItems = cobList?.charges || [];
+    const pixItems = useMemo(() => pixRecebidos?.payments || [], [pixRecebidos?.payments]);
+    const cobItems = useMemo(() => cobList?.charges || [], [cobList?.charges]);
     const normalizedSearch = searchTerm.trim().toLowerCase();
 
     const filteredPixItems = useMemo(() => pixItems.filter((pix: any) => {

@@ -5,6 +5,9 @@ export interface PatientCandidate {
   diagnosis?: string | null;
   last_session?: string | null;
   next_session?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  cpf?: string | null;
 }
 
 export type PatientResolution =
@@ -12,13 +15,59 @@ export type PatientResolution =
   | { status: "ambiguous"; candidates: PatientCandidate[] }
   | { status: "not_found"; candidates: PatientCandidate[] };
 
-const normalize = (value: unknown) => String(value || "")
+const baseNormalize = (value: unknown) => String(value || "")
   .normalize("NFD")
   .replace(/[\u0300-\u036f]/g, "")
   .toLowerCase()
   .replace(/[^a-z0-9\s]/g, " ")
   .replace(/\s+/g, " ")
   .trim();
+
+const LETTER_WORDS: Record<string, string> = {
+  a: "a", be: "b", b: "b", ce: "c", c: "c", de: "d", d: "d", e: "e",
+  efe: "f", f: "f", ge: "g", g: "g", aga: "h", h: "h", i: "i", jota: "j",
+  j: "j", ca: "k", ka: "k", k: "k", ele: "l", l: "l", eme: "m", m: "m",
+  ene: "n", n: "n", o: "o", pe: "p", p: "p", que: "q", q: "q", erre: "r",
+  r: "r", esse: "s", s: "s", te: "t", t: "t", u: "u", ve: "v", v: "v",
+  dablio: "w", w: "w", xis: "x", x: "x", ipsilon: "y", y: "y", ze: "z", z: "z",
+};
+
+const normalizeSpelledName = (value: unknown) => {
+  const normalized = baseNormalize(value);
+  const tokens = normalized.split(" ").filter(Boolean);
+  const boundaries = new Set(["espaco", "space"]);
+  const letterCount = tokens.filter((token) => LETTER_WORDS[token]).length;
+  const meaningfulCount = tokens.filter((token) => !boundaries.has(token)).length;
+  if (letterCount < 4 || letterCount / Math.max(meaningfulCount, 1) < 0.8) return normalized;
+
+  const segments: string[] = [];
+  let current = "";
+  for (const token of tokens) {
+    if (boundaries.has(token)) {
+      if (current) segments.push(current);
+      current = "";
+      continue;
+    }
+    const letter = LETTER_WORDS[token];
+    if (!letter) return normalized;
+    current += letter;
+  }
+  if (current) segments.push(current);
+  return segments.join(" ");
+};
+
+export const normalizePatientName = (value: unknown) => normalizeSpelledName(value);
+
+const phonetic = (value: string) => value
+  .replace(/th/g, "t")
+  .replace(/ph/g, "f")
+  .replace(/y/g, "i")
+  .replace(/w/g, "v")
+  .replace(/h/g, "")
+  .replace(/ck/g, "k")
+  .replace(/qu/g, "k");
+
+const compact = (value: string) => value.replace(/\s+/g, "");
 
 const editDistance = (left: string, right: string) => {
   const rows = left.length + 1;
@@ -45,48 +94,77 @@ const similarity = (left: string, right: string) => {
   return 1 - distance / Math.max(left.length, right.length, 1);
 };
 
-const scoreCandidate = (query: string, candidate: PatientCandidate) => {
-  const target = normalize(candidate.name);
-  if (!query || !target) return 0;
-  if (target === query) return 100;
-  if (target.startsWith(`${query} `) || query.startsWith(`${target} `)) return 92;
-  if (target.includes(query) || query.includes(target)) return 86;
-
-  const queryTokens = new Set(query.split(" ").filter(Boolean));
-  const targetTokens = new Set(target.split(" ").filter(Boolean));
-  const overlap = [...queryTokens].filter((token) => targetTokens.has(token)).length;
-  const tokenScore = overlap / Math.max(queryTokens.size, 1);
-  return Math.round(Math.max(similarity(query, target) * 75, tokenScore * 80));
+const tokenSimilarity = (queryToken: string, targetToken: string) => {
+  if (queryToken === targetToken) return 1;
+  if (phonetic(queryToken) === phonetic(targetToken)) return 0.98;
+  if (queryToken.length >= 3 && targetToken.length >= 3 && (
+    targetToken.startsWith(queryToken) || queryToken.startsWith(targetToken)
+  )) return 0.94;
+  return Math.max(similarity(queryToken, targetToken), similarity(phonetic(queryToken), phonetic(targetToken)));
 };
 
-export async function resolvePatientByName(
-  admin: any,
-  userId: string,
+export const scorePatientCandidate = (queryValue: unknown, candidate: PatientCandidate) => {
+  const query = normalizePatientName(queryValue);
+  const target = normalizePatientName(candidate.name);
+  if (!query || !target) return 0;
+  if (target === query) return 100;
+  if (compact(target) === compact(query)) return 100;
+
+  const queryPhonetic = phonetic(query);
+  const targetPhonetic = phonetic(target);
+  if (compact(targetPhonetic) === compact(queryPhonetic)) return 98;
+  if (target.startsWith(`${query} `) || query.startsWith(`${target} `)) return 96;
+  if (targetPhonetic.startsWith(`${queryPhonetic} `) || queryPhonetic.startsWith(`${targetPhonetic} `)) return 94;
+  if (target.includes(query) || query.includes(target)) return 91;
+
+  const queryTokens = query.split(" ").filter(Boolean);
+  const targetTokens = target.split(" ").filter(Boolean);
+  const tokenScores = queryTokens.map((queryToken) =>
+    Math.max(...targetTokens.map((targetToken) => tokenSimilarity(queryToken, targetToken))),
+  );
+  const weakestToken = Math.min(...tokenScores);
+  const averageToken = tokenScores.reduce((sum, score) => sum + score, 0) / Math.max(tokenScores.length, 1);
+  if (weakestToken >= 0.92) return Math.round(82 + averageToken * 12);
+  if (weakestToken >= 0.78) return Math.round(averageToken * 100);
+  return Math.round(Math.max(similarity(query, target), similarity(queryPhonetic, targetPhonetic)) * 82);
+};
+
+export interface RankedPatientCandidate {
+  patient: PatientCandidate;
+  score: number;
+}
+
+export const rankPatientCandidates = (
   patientName: unknown,
-): Promise<PatientResolution> {
-  const query = normalize(patientName);
-  if (!query) return { status: "not_found", candidates: [] };
+  candidates: PatientCandidate[],
+): RankedPatientCandidate[] => candidates
+  .map((patient) => ({ patient, score: scorePatientCandidate(patientName, patient) }))
+  .filter((item) => item.score >= 55)
+  .sort((left, right) => right.score - left.score || left.patient.name.localeCompare(right.patient.name, "pt-BR"));
 
-  const { data, error } = await admin
-    .from("patients")
-    .select("id,name,status,diagnosis,last_session,next_session")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(200);
-
-  if (error) throw error;
-
-  const ranked = ((data || []) as PatientCandidate[])
-    .map((patient) => ({ patient, score: scoreCandidate(query, patient) }))
-    .filter((item) => item.score >= 55)
-    .sort((a, b) => b.score - a.score);
-
-  if (!ranked.length) return { status: "not_found", candidates: [] };
+export function resolvePatientCandidates(
+  patientName: unknown,
+  candidates: PatientCandidate[],
+  options: { preferredPatientId?: string | null } = {},
+): PatientResolution {
+  const ranked = rankPatientCandidates(patientName, candidates);
+  if (!ranked.length || ranked[0].score < 65) return { status: "not_found", candidates: [] };
 
   const best = ranked[0];
   const second = ranked[1];
-  const clearlyResolved = best.score >= 86 && (!second || best.score - second.score >= 10);
-  if (clearlyResolved) {
+  const preferred = options.preferredPatientId
+    ? ranked.find((item) => item.patient.id === options.preferredPatientId)
+    : undefined;
+  if (preferred && preferred.score >= 86 && best.score - preferred.score <= 5) {
+    return {
+      status: "resolved",
+      patient: preferred.patient,
+      candidates: ranked.slice(0, 5).map((item) => item.patient),
+    };
+  }
+
+  const margin = second ? best.score - second.score : Number.POSITIVE_INFINITY;
+  if ((best.score >= 94 && margin >= 7) || (best.score >= 88 && margin >= 10)) {
     return {
       status: "resolved",
       patient: best.patient,
@@ -94,19 +172,32 @@ export async function resolvePatientByName(
     };
   }
 
-  const plausible = ranked.filter((item) => item.score >= Math.max(65, best.score - 8));
-  if (plausible.length === 1 && best.score >= 72) {
-    return {
-      status: "resolved",
-      patient: best.patient,
-      candidates: [best.patient],
-    };
+  const plausible = ranked.filter((item) => item.score >= Math.max(78, best.score - 7));
+  if (plausible.length === 1 && best.score >= 88) {
+    return { status: "resolved", patient: best.patient, candidates: [best.patient] };
   }
+  return { status: "ambiguous", candidates: plausible.slice(0, 5).map((item) => item.patient) };
+}
 
-  return {
-    status: "ambiguous",
-    candidates: plausible.slice(0, 5).map((item) => item.patient),
-  };
+export async function resolvePatientByName(
+  admin: any,
+  userId: string,
+  patientName: unknown,
+  options: { preferredPatientId?: string | null } = {},
+): Promise<PatientResolution> {
+  const query = normalizePatientName(patientName);
+  if (!query) return { status: "not_found", candidates: [] };
+
+  const { data, error } = await admin
+    .from("patients")
+    .select("id,name,status,diagnosis,last_session,next_session,email,phone,cpf")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  if (error) throw error;
+
+  return resolvePatientCandidates(query, (data || []) as PatientCandidate[], options);
 }
 
 export function formatPatientAmbiguity(candidates: PatientCandidate[]) {

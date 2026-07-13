@@ -34,7 +34,9 @@ export default function DesktopAgenda() {
         const targetId = stateAppointmentId || queryAppointmentId;
 
         if (targetId) setOpenedAppointmentId(targetId);
-        if (location.state?.synapseView === "daily") setView("daily");
+        if (["daily", "weekly", "monthly"].includes(location.state?.synapseView)) {
+            setView(location.state.synapseView);
+        }
         if (location.state?.synapseDate) setSelectedDate(new Date(location.state.synapseDate));
     }, [location.state, searchParams]);
 
@@ -56,7 +58,7 @@ export default function DesktopAgenda() {
             if (!action) return;
 
             if (action.action === "open_daily_schedule") {
-                setView("daily");
+                setView(action.agendaView || "daily");
                 if (action.date) setSelectedDate(new Date(action.date));
             }
 

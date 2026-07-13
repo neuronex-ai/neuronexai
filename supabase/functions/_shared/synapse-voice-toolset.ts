@@ -2,7 +2,7 @@ import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v3";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v4";
 
 /**
  * Keep the Deepgram tool surface intentionally small. Besides improving intent

@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { MUTATING_TOOLS } from "./tools.ts";
+import { MUTATING_TOOLS, SYNAPSE_INTERFACE_DESTINATIONS } from "./tools.ts";
 import {
   executeConfirmedNotesMutation,
   executeNotesTool,
@@ -9,6 +9,11 @@ import {
 } from "./notes-tools.ts";
 import { executeNeuroNotesAgentTool } from "./neuro-notes-tools.ts";
 import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
+import {
+  formatPatientAmbiguity,
+  resolvePatientCandidates,
+  resolvePatientByName as resolvePatientNameReference,
+} from "./patient-resolver.ts";
 
 export interface AgentToolContext {
   admin: any;
@@ -129,14 +134,29 @@ function mapAppointment(item: any) {
   return { id: item.id, patient_id: item.patient_id, patient_name: item.patient?.name || (item.type === "block" ? "Bloqueio" : "Sem paciente"), patient_email: item.patient?.email || null, patient_phone: item.patient?.phone || null, start_time: item.start_time, end_time: item.end_time, start_time_local: item.start_time ? formatDateTime(item.start_time) : null, end_time_local: item.end_time ? formatDateTime(item.end_time) : null, time_label: item.start_time ? formatTime(item.start_time) : null, date: item.start_time ? localDate(item.start_time) : null, type: item.type, status: item.status, notes: item.notes, location: item.location || null, google_meet_link: typeof item.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(item.google_meet_link) ? item.google_meet_link : null, price: item.price ?? null, metadata: item.metadata || {} };
 }
 async function queryPatients(admin: any, userId: string, args: Record<string, any> = {}) {
-  let query = admin.from("patients").select("id,name,email,phone,cpf,status,diagnosis,birth_date,address,emergency_contact,risk_score,last_session,next_session,created_at").eq("user_id", userId).order("name").limit(clamp(args.limit, 50, 1, 100));
+  const resultLimit = clamp(args.limit, 50, 1, 100);
+  const term = cleanText(args.query, 120).replace(/[%_]/g, "");
+  let query = admin.from("patients").select("id,name,email,phone,cpf,status,diagnosis,birth_date,address,emergency_contact,risk_score,last_session,next_session,created_at").eq("user_id", userId).order("name").limit(term ? 200 : resultLimit);
   const status = cleanText(args.status || "all", 30);
   if (status && status !== "all") query = query.eq("status", status);
-  const term = cleanText(args.query, 120).replace(/[%_]/g, "");
-  if (term) query = query.or(`name.ilike.%${term}%,email.ilike.%${term}%,phone.ilike.%${term}%`);
   const { data, error } = await query;
   if (error) throw error;
-  return (data || []).map(mapPatient);
+  const patients = (data || []).map(mapPatient);
+  if (!term) return patients.slice(0, resultLimit);
+
+  const normalizedContactTerm = term.toLocaleLowerCase("pt-BR").replace(/\s+/g, "");
+  const contactMatches = patients.filter((patient: any) => [patient.email, patient.phone, patient.cpf]
+    .filter(Boolean)
+    .some((value) => String(value).toLocaleLowerCase("pt-BR").replace(/\s+/g, "").includes(normalizedContactTerm)));
+  const nameResolution = resolvePatientCandidates(term, patients);
+  const nameMatches = nameResolution.status === "resolved"
+    ? [nameResolution.patient]
+    : nameResolution.status === "ambiguous"
+      ? nameResolution.candidates
+      : [];
+  const unique = new Map<string, any>();
+  for (const patient of [...contactMatches, ...nameMatches]) unique.set(patient.id, patient);
+  return Array.from(unique.values()).slice(0, resultLimit);
 }
 async function queryAppointments(admin: any, userId: string, startDate: string, endDate: string, options: Record<string, any> = {}) {
   const period = dateBounds(startDate, endDate);
@@ -171,13 +191,10 @@ function summarizeAgenda(appointments: any[], period: { start: string; end: stri
 async function resolvePatientByName(admin: any, userId: string, name: string) {
   const term = cleanText(name, 160).replace(/[%_]/g, "");
   if (!term) return null;
-  const patients = await queryPatients(admin, userId, { query: term, limit: 12 });
-  if (!patients.length) throw new Error(`Não encontrei paciente com o nome “${term}”.`);
-  const normalized = term.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-  const exact = patients.filter((item: any) => String(item.name || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() === normalized);
-  const candidates = exact.length === 1 ? exact : patients;
-  if (candidates.length !== 1) throw new Error(`Encontrei mais de um paciente compatível: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}.`);
-  return candidates[0];
+  const resolution = await resolvePatientNameReference(admin, userId, term);
+  if (resolution.status === "not_found") throw new Error(`Não encontrei paciente compatível com “${term}”.`);
+  if (resolution.status === "ambiguous") throw new Error(formatPatientAmbiguity(resolution.candidates));
+  return resolution.patient;
 }
 async function findAppointment(admin: any, userId: string, args: Record<string, any>) {
   if (args.appointment_id) {
@@ -463,16 +480,24 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
       case "request_interface_action": {
         const allowedActions = new Set(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
         const allowedTargets = new Set(["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"]);
+        const allowedDestinations = new Set<string>(SYNAPSE_INTERFACE_DESTINATIONS);
         const allowedNeuroViewScopes = new Set(["all", "patient", "subgraph"]);
         const allowedNeuroViewModes = new Set(["2d", "3d"]);
         const action = cleanText(args.action, 50);
         const target = args.target ? cleanText(args.target, 50) : undefined;
+        const destination = args.destination ? cleanText(args.destination, 100) : undefined;
         const neuroViewScope = args.neuroview_scope ? cleanText(args.neuroview_scope, 20) : undefined;
         const neuroViewMode = args.neuroview_mode ? cleanText(args.neuroview_mode, 10) : undefined;
         const neuroViewNodeIds = cleanGraphNodeIds(args.neuroview_node_ids);
         const neuroViewFocusNodeId = args.neuroview_focus_node_id ? cleanGraphNodeId(args.neuroview_focus_node_id) : undefined;
         if (!allowedActions.has(action)) throw new Error("Ação visual inválida.");
         if (target && !allowedTargets.has(target)) throw new Error("Destino visual inválido.");
+        if (destination && !allowedDestinations.has(destination)) throw new Error("Destino profundo inválido.");
+        if (destination && action !== "navigate") throw new Error("Destinos profundos devem usar a ação de navegação.");
+        if (destination?.startsWith("patient.") && !args.patient_id) throw new Error("Paciente ausente para abrir essa seção do prontuário.");
+        if (destination?.startsWith("teleconsultation.") && destination !== "teleconsultation.overview" && !args.appointment_id) {
+          throw new Error("Consulta ausente para abrir essa seção da teleconsulta.");
+        }
         if (neuroViewScope && !allowedNeuroViewScopes.has(neuroViewScope)) throw new Error("Escopo do NeuroView inválido.");
         if (neuroViewMode && !allowedNeuroViewModes.has(neuroViewMode)) throw new Error("Modo do NeuroView inválido.");
         if ((neuroViewScope || neuroViewMode || neuroViewNodeIds || neuroViewFocusNodeId) && action !== "open_neuroview_reasoning") {
@@ -480,8 +505,8 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
         }
         if (neuroViewScope === "subgraph" && !neuroViewNodeIds?.length) throw new Error("Subgrafo sem nodes válidos.");
         if (neuroViewScope === "patient" && !args.patient_id) throw new Error("Paciente ausente para o grafo individual.");
-        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, neuroViewScope, neuroViewMode, neuroViewNodeIds, neuroViewFocusNodeId, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
-        return { ok: true, grounded: false, data: { action_requested: action }, clientAction };
+        const clientAction = { type: "interface_action", data: { action, target, destination, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, neuroViewScope, neuroViewMode, neuroViewNodeIds, neuroViewFocusNodeId, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
+        return { ok: true, grounded: false, data: { action_requested: action, destination: destination || null }, clientAction };
       }
       default: return { ok: false, grounded: false, error: `Ferramenta não suportada: ${name}` };
     }
@@ -518,7 +543,7 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
       case "create_patient": {
         const { data, error } = await admin.from("patients").insert({ user_id: userId, name: cleanText(args.name, 160), email: args.email ? cleanText(args.email, 200) : null, phone: args.phone ? cleanText(args.phone, 50) : null, cpf: args.cpf ? cleanText(args.cpf, 30) : null, diagnosis: args.diagnosis ? cleanText(args.diagnosis, 500) : null, notes: args.notes ? cleanText(args.notes, 5000) : null, status: "pending", birth_date: args.birth_date || null, address: args.address ? cleanText(args.address, 500) : null, emergency_contact: args.emergency_contact ? cleanText(args.emergency_contact, 300) : null, medications: [] }).select("id,name,status,email,phone,diagnosis").single();
         if (error) throw error;
-        return { ok: true, grounded: true, recordCount: 1, data: { patient: data }, message: `Paciente ${data.name} cadastrado com sucesso.`, structuredData: { type: "patient_card", data } };
+        return { ok: true, grounded: true, recordCount: 1, data: { patient: data }, message: `Paciente ${data.name} cadastrado com sucesso.`, structuredData: { type: "patient_card", data }, clientAction: { type: "interface_action", data: { action: "open_patient", patientId: data.id, reason: "Paciente cadastrado" } } };
       }
       case "update_patient":
       case "update_patient_basic_info": {
@@ -529,13 +554,13 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         if (!Object.keys(update).length) throw new Error("Nenhum campo foi informado para atualização.");
         const { data, error } = await admin.from("patients").update(update).eq("id", patientId).eq("user_id", userId).select("id,name,status,email,phone,diagnosis,birth_date,address,emergency_contact").single();
         if (error) throw error;
-        return { ok: true, grounded: true, recordCount: 1, data: { patient: data, updated_fields: Object.keys(update) }, message: `Dados de ${data.name} atualizados com sucesso.`, structuredData: { type: "patient_updated", data } };
+        return { ok: true, grounded: true, recordCount: 1, data: { patient: data, updated_fields: Object.keys(update) }, message: `Dados de ${data.name} atualizados com sucesso.`, structuredData: { type: "patient_updated", data }, clientAction: { type: "interface_action", data: { action: "open_patient", patientId: data.id, reason: "Cadastro atualizado" } } };
       }
       case "inactivate_patient": {
         const patientId = cleanId(args.patient_id);
         const { data, error } = await admin.from("patients").update({ status: "inactive", notes: args.reason ? `[Inativado pelo Synapse: ${cleanText(args.reason, 500)}]` : undefined }).eq("id", patientId).eq("user_id", userId).select("id,name,status,email,phone").single();
         if (error) throw error;
-        return { ok: true, grounded: true, recordCount: 1, data: { patient: data }, message: `Paciente ${data.name} inativado com segurança.`, structuredData: { type: "patient_updated", data } };
+        return { ok: true, grounded: true, recordCount: 1, data: { patient: data }, message: `Paciente ${data.name} inativado com segurança.`, structuredData: { type: "patient_updated", data }, clientAction: { type: "interface_action", data: { action: "open_patient", patientId: data.id, reason: "Cadastro inativado" } } };
       }
       case "create_session_note": {
         const patientId = cleanId(args.patient_id);
@@ -543,7 +568,7 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         if (!patient) throw new Error("Paciente não encontrado.");
         const { data, error } = await admin.from("session_notes").insert({ user_id: userId, patient_id: patientId, appointment_id: args.appointment_id ? cleanId(args.appointment_id) : null, notes: cleanText(args.notes, 12000), created_at: new Date().toISOString() }).select("id,created_at").single();
         if (error) throw error;
-        return { ok: true, grounded: true, recordCount: 1, data: { note: data, patient_name: patient.name }, message: `Anotação registrada no prontuário de ${patient.name}.`, structuredData: { type: "session_note_created", data: { ...data, patientName: patient.name } } };
+        return { ok: true, grounded: true, recordCount: 1, data: { note: data, patient_id: patientId, patient_name: patient.name }, message: `Anotação registrada no prontuário de ${patient.name}.`, structuredData: { type: "session_note_created", data: { ...data, patientName: patient.name } }, clientAction: { type: "interface_action", data: { action: "navigate", destination: "patient.sessions.history", patientId, reason: "Anotação registrada no prontuário" } } };
       }
       case "create_appointment": {
         const start = brazilIso(args.datetime);
@@ -568,7 +593,7 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
           }
         }
         const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Agendamento criado para ${appointment.start_time_local}.`, structuredData: { type: "appointment_card", data: appointment } };
+        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Agendamento criado para ${appointment.start_time_local}.`, structuredData: { type: "appointment_card", data: appointment }, clientAction: { type: "interface_action", data: { action: "scroll_to_appointment", appointmentId: appointment.id, date: appointment.start_time, reason: "Agendamento criado" } } };
       }
       case "reschedule_appointment": {
         const appointmentId = cleanId(args.appointment_id);
@@ -588,7 +613,7 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
           data.google_meet_link = invite.meetLink;
         }
         const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} remarcada para ${appointment.start_time_local}.`, structuredData: { type: "appointment_rescheduled", data: appointment } };
+        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} remarcada para ${appointment.start_time_local}.`, structuredData: { type: "appointment_rescheduled", data: appointment }, clientAction: { type: "interface_action", data: { action: "scroll_to_appointment", appointmentId: appointment.id, date: appointment.start_time, reason: "Consulta remarcada" } } };
       }
       case "cancel_appointment": {
         const appointmentId = cleanId(args.appointment_id);
@@ -600,7 +625,7 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         const { data, error } = await admin.from("appointments").update({ status: "cancelled", notes, metadata, updated_at: new Date().toISOString() }).eq("id", appointmentId).eq("user_id", userId).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
         if (error) throw error;
         const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} cancelada.`, structuredData: { type: "appointment_cancelled", data: { ...appointment, reason } } };
+        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} cancelada.`, structuredData: { type: "appointment_cancelled", data: { ...appointment, reason } }, clientAction: { type: "interface_action", data: { action: "scroll_to_appointment", appointmentId: appointment.id, date: appointment.start_time, reason: "Consulta cancelada" } } };
       }
       case "set_teleconsultation_transcription_decision": {
         const appointmentId = cleanId(args.appointment_id);
@@ -632,10 +657,10 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         const date = cleanText(args.date || new Date().toISOString().slice(0, 10), 10);
         const idempotencyKey = `synapse:fallback:${sessionId}:${pending.actionId}`;
         const { data: existing } = await admin.from("financial_entries").select("*").eq("professional_id", userId).eq("idempotency_key", idempotencyKey).maybeSingle();
-        if (existing) return { ok: true, grounded: true, recordCount: 1, data: { entry: existing }, message: "Esse lançamento já estava registrado; mantive o registro existente.", structuredData: { type: "transaction_created", data: { transaction: existing } } };
+        if (existing) return { ok: true, grounded: true, recordCount: 1, data: { entry: existing }, message: "Esse lançamento já estava registrado; mantive o registro existente.", structuredData: { type: "transaction_created", data: { transaction: existing } }, clientAction: { type: "interface_action", data: { action: "navigate", destination: "finance.gestao-lancamentos", reason: "Lançamento localizado" } } };
         const { data, error } = await admin.from("financial_entries").insert({ professional_id: userId, idempotency_key: idempotencyKey, title: cleanText(args.title, 200), description: args.description ? cleanText(args.description, 1000) : cleanText(args.title, 200), amount, type: args.entry_type, patient_id: args.patient_id ? cleanId(args.patient_id) : null, due_date: date, competence_date: date, paid_at: `${date}T12:00:00.000Z`, status: "paid", payment_method: "manual", origin: "manual", metadata: { category: cleanText(args.category || "Outros", 100), source: "synapse_fallback_agent", session_id: sessionId } }).select().single();
         if (error) throw error;
-        return { ok: true, grounded: true, recordCount: 1, data: { entry: data }, message: `${args.entry_type === "expense" ? "Despesa" : "Receita"} de ${formatMoney(amount)} registrada com sucesso.`, structuredData: { type: "transaction_created", data: { transaction: data } } };
+        return { ok: true, grounded: true, recordCount: 1, data: { entry: data }, message: `${args.entry_type === "expense" ? "Despesa" : "Receita"} de ${formatMoney(amount)} registrada com sucesso.`, structuredData: { type: "transaction_created", data: { transaction: data } }, clientAction: { type: "interface_action", data: { action: "navigate", destination: "finance.gestao-lancamentos", reason: "Lançamento registrado" } } };
       }
       default: return { ok: false, grounded: false, error: "Ação pendente desconhecida." };
     }

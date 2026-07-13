@@ -23,6 +23,7 @@ interface ResponsiveModalProps {
   drawerClassName?: string;
   contentStyle?: React.CSSProperties;
   showCloseButton?: boolean;
+  dataSynapseTarget?: string;
 }
 
 export const ResponsiveModal = ({
@@ -34,6 +35,7 @@ export const ResponsiveModal = ({
   drawerClassName,
   contentStyle,
   showCloseButton = true,
+  dataSynapseTarget,
 }: ResponsiveModalProps) => {
   const isMobile = useIsMobile();
 
@@ -42,6 +44,7 @@ export const ResponsiveModal = ({
       <Drawer open={open} onOpenChange={onOpenChange}>
         {trigger && <DrawerTrigger asChild>{trigger}</DrawerTrigger>}
         <DrawerContent
+          data-synapse-target={dataSynapseTarget}
           style={contentStyle}
           className={cn(
           "max-h-[96vh] flex flex-col bg-white dark:bg-[#080809] border-t border-zinc-200 dark:border-white/10 rounded-t-[42px] outline-none shadow-[0_-30px_60px_-15px_rgba(0,0,0,0.5)] dark:shadow-[0_-30px_80px_-15px_rgba(0,0,0,0.8)]",
@@ -60,7 +63,7 @@ export const ResponsiveModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent style={contentStyle} className={className} showCloseButton={showCloseButton}>
+      <DialogContent data-synapse-target={dataSynapseTarget} style={contentStyle} className={className} showCloseButton={showCloseButton}>
         {children}
       </DialogContent>
     </Dialog>

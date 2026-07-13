@@ -8,6 +8,7 @@ import type {
   SessionTranscriptSyncState,
 } from '@/hooks/use-jitsi-token';
 import { cn } from '@/lib/utils';
+import { SYNAPSE_PAGE_ACTION_EVENT, type SynapseInterfaceAction } from '@/lib/synapse-interface-actions';
 import type { Patient } from '@/types';
 import {
   Activity,
@@ -24,9 +25,10 @@ import {
   ShieldCheck,
   UserRound,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 interface DesktopSessionWorkspaceProps {
+  initialTab?: WorkspaceTab;
   patient?: Patient | null;
   patientName: string;
   segments: SessionTranscriptSegment[];
@@ -52,6 +54,7 @@ const workspaceTabs = [
 ];
 
 export const DesktopSessionWorkspace = ({
+  initialTab = 'transcript',
   patient,
   patientName,
   segments,
@@ -67,9 +70,20 @@ export const DesktopSessionWorkspace = ({
   onToggleCapture,
   onRetrySync,
 }: DesktopSessionWorkspaceProps) => {
-  const [activeTab, setActiveTab] = useState<WorkspaceTab>('transcript');
+  const [activeTab, setActiveTab] = useState<WorkspaceTab>(initialTab);
   const riskScore = patient?.risk_score || 0;
   const medications = patient?.medications || [];
+
+  useEffect(() => setActiveTab(initialTab), [initialTab]);
+
+  useEffect(() => {
+    const handleSynapseAction = (event: Event) => {
+      const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
+      if (action?.workspaceTab) setActiveTab(action.workspaceTab);
+    };
+    window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+    return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
+  }, []);
 
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col gap-3" aria-label="Ferramentas clínicas da sessão">
@@ -96,7 +110,7 @@ export const DesktopSessionWorkspace = ({
       <section className="teleconsultation-surface min-h-0 flex-1 overflow-hidden rounded-[27px]">
         <StableTabViewport value={activeTab} id="teleconsultation-workspace" className="h-full">
         {activeTab === 'transcript' ? (
-          <div className="flex h-full min-h-0 flex-col">
+          <div data-synapse-target="teleconsultation-workspace-transcript" className="flex h-full min-h-0 flex-col">
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-5 py-4 dark:border-white/[0.045]">
               <div>
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -173,7 +187,7 @@ export const DesktopSessionWorkspace = ({
         ) : null}
 
         {activeTab === 'notes' ? (
-          <div className="flex h-full min-h-0 flex-col">
+          <div data-synapse-target="teleconsultation-workspace-notes" className="flex h-full min-h-0 flex-col">
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 px-5 py-4 dark:border-white/[0.045]">
               <div>
                 <div className="flex items-center gap-2 text-muted-foreground">
@@ -205,7 +219,7 @@ export const DesktopSessionWorkspace = ({
         ) : null}
 
         {activeTab === 'patient' ? (
-          <div className="teleconsultation-scroll h-full min-h-0 overflow-y-auto px-5 py-4">
+          <div data-synapse-target="teleconsultation-workspace-patient" className="teleconsultation-scroll h-full min-h-0 overflow-y-auto px-5 py-4">
             <header className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="teleconsultation-inset flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px]">

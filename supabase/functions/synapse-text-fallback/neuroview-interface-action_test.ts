@@ -39,3 +39,25 @@ Deno.test("subgrafo sem IDs não produz uma ação visual vazia", async () => {
   equal(result.ok, false, "resultado");
   equal(result.error, "Subgrafo sem nodes válidos.", "erro seguro");
 });
+
+Deno.test("destino profundo do prontuário é validado e preserva o paciente", async () => {
+  const result = await executeAgentTool("request_interface_action", {
+    action: "navigate",
+    destination: "patient.sessions.pending",
+    patient_id: "patient-123456",
+  }, context);
+
+  equal(result.ok, true, "resultado");
+  equal(result.clientAction?.data?.destination, "patient.sessions.pending", "destino");
+  equal(result.clientAction?.data?.patientId, "patient-123456", "paciente");
+});
+
+Deno.test("destino profundo desconhecido é recusado", async () => {
+  const result = await executeAgentTool("request_interface_action", {
+    action: "navigate",
+    destination: "admin.private-secrets",
+  }, context);
+
+  equal(result.ok, false, "resultado");
+  equal(result.error, "Destino profundo inválido.", "erro seguro");
+});

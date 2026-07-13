@@ -1003,6 +1003,7 @@ export async function executeConfirmedMutationV3(
           data: { charge },
           message: `Cobrança de ${formatMoney(charge.amount)} criada para ${args.patient_name}.`,
           structuredData: { type: "neurofinance_charge", data: charge },
+          clientAction: { type: "interface_action", data: { action: "navigate", destination: "finance.gestao-cobrancas", reason: "Cobrança criada" } },
         };
       }
 
@@ -1036,6 +1037,7 @@ export async function executeConfirmedMutationV3(
           data: { invoice, patient_name: args.patient_name },
           message: `A NFS-e de ${formatMoney(Number(args.amount))} foi solicitada para ${args.patient_name}. Vou acompanhar o status; a autorização final depende da prefeitura.`,
           structuredData: invoice ? { type: "fiscal_invoice", data: invoice } : undefined,
+          clientAction: { type: "interface_action", data: { action: "navigate", destination: "finance.fiscal-lista", reason: "NFS-e solicitada" } },
         };
       }
 

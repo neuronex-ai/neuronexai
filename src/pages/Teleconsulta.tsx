@@ -22,6 +22,7 @@ const DesktopTeleconsulta = () => {
   const location = useLocation();
   const [activeAppointmentId, setActiveAppointmentId] = useState<string | undefined>(undefined);
   const [inviteRequestedAppointmentId, setInviteRequestedAppointmentId] = useState<string | undefined>(undefined);
+  const [workspaceTab, setWorkspaceTab] = useState<'transcript' | 'notes' | 'patient'>('transcript');
 
   const [dateRange] = useState(() => {
     const start = startOfWeek(new Date(), { weekStartsOn: 1 });
@@ -39,6 +40,9 @@ const DesktopTeleconsulta = () => {
       const targetAppointment = appointments.find((appointment) => appointment.id === location.state.activeAppointmentId);
       if (targetAppointment) {
         setActiveAppointmentId(targetAppointment.id);
+        if (['transcript', 'notes', 'patient'].includes(location.state?.synapseWorkspaceTab)) {
+          setWorkspaceTab(location.state.synapseWorkspaceTab);
+        }
         if (location.state?.openInvite) setInviteRequestedAppointmentId(targetAppointment.id);
         window.history.replaceState({}, document.title, location.pathname);
       }
@@ -51,6 +55,7 @@ const DesktopTeleconsulta = () => {
       if (!action?.appointmentId) return;
       if (!['open_teleconsultation_lobby', 'open_patient_invite_modal'].includes(action.action)) return;
       setActiveAppointmentId(action.appointmentId);
+      if (action.workspaceTab) setWorkspaceTab(action.workspaceTab);
       if (action.action === 'open_patient_invite_modal') setInviteRequestedAppointmentId(action.appointmentId);
     };
     window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
@@ -88,6 +93,7 @@ const DesktopTeleconsulta = () => {
           patientName={activeAppointment.patient_name || 'Paciente'}
           onSessionEnd={endSession}
           openInviteOnMount={inviteRequestedAppointmentId === activeAppointment.id}
+          initialWorkspaceTab={workspaceTab}
         />
       </div>
     );

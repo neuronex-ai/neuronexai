@@ -271,7 +271,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="finance-modal-surface desktop-retina-modal desktop-retina-form max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-border/55 bg-background/96 p-0 shadow-2xl">
+      <DialogContent data-synapse-target="new-charge-modal" className="finance-modal-surface desktop-retina-modal desktop-retina-form max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-border/55 bg-background/96 p-0 shadow-2xl">
         <div className="finance-separator border-b border-zinc-200 px-6 py-5 dark:border-white/10">
           <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">Nova cobrança manual</DialogTitle>
           <DialogDescription className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">

@@ -1296,6 +1296,7 @@ export function NewAppointmentModal({
 
   return (
     <ResponsiveModal
+      dataSynapseTarget="new-appointment-modal"
       open={isOpen}
       onOpenChange={onOpenChange}
       trigger={children}

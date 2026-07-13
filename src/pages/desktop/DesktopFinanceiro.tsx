@@ -164,6 +164,11 @@ const getInitialFinanceView = (pathname: string, search: string): FinanceView =>
   return shouldOpenNeuroFinance ? "conta-digital" : "gestao-visao-geral";
 };
 
+const getInitialStatementTab = (search: string): "realizado" | "futuro" | "assinaturas" => {
+  const subview = new URLSearchParams(search).get("subview");
+  return subview === "futuro" || subview === "assinaturas" ? subview : "realizado";
+};
+
 const DesktopFinanceiro = () => {
   const location = useLocation();
   const shouldReduceSidebarMotion = useReducedMotion();
@@ -173,7 +178,7 @@ const DesktopFinanceiro = () => {
   const { data: nbFutureDetails, isLoading: isNbFutureLoading } = useNeuroFinanceBalanceDetails("futuro");
 
   const [activeView, setActiveView] = useState<FinanceView>(() => getInitialFinanceView(location.pathname, location.search));
-  const [extratoTab, setExtratoTab] = useState<"realizado" | "futuro" | "assinaturas">("realizado");
+  const [extratoTab, setExtratoTab] = useState<"realizado" | "futuro" | "assinaturas">(() => getInitialStatementTab(location.search));
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(false);
@@ -186,6 +191,7 @@ const DesktopFinanceiro = () => {
   useEffect(() => {
     const nextView = getInitialFinanceView(location.pathname, location.search);
     setActiveView((current) => (current === nextView ? current : nextView));
+    setExtratoTab(getInitialStatementTab(location.search));
   }, [location.pathname, location.search]);
 
   const allTransactions = useMemo(() => {

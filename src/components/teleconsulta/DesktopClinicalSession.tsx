@@ -15,9 +15,10 @@ interface DesktopClinicalSessionProps {
   patientName: string;
   onSessionEnd: () => void;
   openInviteOnMount?: boolean;
+  initialWorkspaceTab?: 'transcript' | 'notes' | 'patient';
 }
 
-export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessionEnd, openInviteOnMount = false }: DesktopClinicalSessionProps) => {
+export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessionEnd, openInviteOnMount = false, initialWorkspaceTab = 'transcript' }: DesktopClinicalSessionProps) => {
   const session = useDesktopClinicalSession(activeAppointment, patientName, onSessionEnd);
   const inviteRequestedRef = useRef(false);
   const { hasTranscriptionDecision, openPatientInvite, requestTranscriptionDecision } = session;
@@ -148,6 +149,7 @@ export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessi
 
           {!session.isFocusMode ? (
             <DesktopSessionWorkspace
+              initialTab={initialWorkspaceTab}
               patient={session.patient}
               patientName={patientName}
               segments={session.segments}

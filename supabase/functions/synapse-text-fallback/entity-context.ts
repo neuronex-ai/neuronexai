@@ -1,3 +1,5 @@
+import { resolvePatientByName } from "./patient-resolver.ts";
+
 export interface SynapseConversationState {
   activePatientId?: string | null;
   activePatientName?: string | null;
@@ -37,8 +39,6 @@ const safeId = (value: unknown) => {
   const id = clean(value, 100);
   return /^[a-zA-Z0-9_-]{6,100}$/.test(id) ? id : "";
 };
-const normalizeHumanText = (value: unknown) => clean(value, 180).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
-const escapeLike = (value: string) => value.replace(/[%_]/g, "");
 
 export async function loadConversationContext(admin: any, userId: string, sessionId: string): Promise<LoadedConversationContext> {
   const { data, error } = await admin.from("chat_sessions").select("context_state,memory_summary,memory_updated_at").eq("id", sessionId).eq("user_id", userId).maybeSingle();
@@ -67,14 +67,6 @@ async function findOwnedPatientById(admin: any, userId: string, patientId: strin
   return data || null;
 }
 
-async function findOwnedPatientsByName(admin: any, userId: string, patientName: string) {
-  const term = escapeLike(clean(patientName, 160));
-  if (!term) return [];
-  const { data, error } = await admin.from("patients").select("id,name,status,email,phone,cpf").eq("user_id", userId).ilike("name", `%${term}%`).order("name").limit(12);
-  if (error) throw error;
-  return data || [];
-}
-
 export async function resolvePatientReference(admin: any, userId: string, args: Record<string, any>, state: SynapseConversationState, options: { required?: boolean } = {}) {
   const explicitId = safeId(args.patient_id || args.patientId);
   if (explicitId) {
@@ -84,13 +76,19 @@ export async function resolvePatientReference(admin: any, userId: string, args: 
   }
   const explicitName = clean(args.patient_name || args.patientName || "", 160);
   if (explicitName) {
-    const matches = await findOwnedPatientsByName(admin, userId, explicitName);
-    if (!matches.length) throw new EntityResolutionError(`Não encontrei paciente com o nome “${explicitName}”.`, { resolution: "patient_not_found", query: explicitName });
-    const normalizedQuery = normalizeHumanText(explicitName);
-    const exact = matches.filter((item: any) => normalizeHumanText(item.name) === normalizedQuery);
-    const candidates = exact.length === 1 ? exact : matches;
-    if (candidates.length !== 1) throw new EntityResolutionError(`Encontrei mais de um paciente compatível com “${explicitName}”. Qual deles: ${candidates.slice(0, 5).map((item: any) => item.name).join(", ")}?`, { resolution: "patient_ambiguous", candidates: candidates.slice(0, 5).map((item: any) => ({ name: item.name, status: item.status })) });
-    const patient = candidates[0];
+    const resolution = await resolvePatientByName(admin, userId, explicitName, {
+      preferredPatientId: safeId(state.activePatientId) || null,
+    });
+    if (resolution.status === "not_found") {
+      throw new EntityResolutionError(`Não encontrei paciente compatível com “${explicitName}”.`, { resolution: "patient_not_found", query: explicitName });
+    }
+    if (resolution.status === "ambiguous") {
+      throw new EntityResolutionError(`Encontrei mais de um paciente compatível com “${explicitName}”. Qual deles: ${resolution.candidates.slice(0, 5).map((item) => item.name).join(", ")}?`, {
+        resolution: "patient_ambiguous",
+        candidates: resolution.candidates.slice(0, 5).map((item) => ({ name: item.name, status: item.status })),
+      });
+    }
+    const patient = resolution.patient;
     return { patient, args: { ...args, patient_id: patient.id, patient_name: patient.name } };
   }
   const contextualId = safeId(state.activePatientId);
@@ -175,7 +173,8 @@ export async function enrichToolArguments(admin: any, userId: string, toolName: 
 export function updateContextFromResult(current: SynapseConversationState, toolName: string, args: Record<string, any>, result: any): SynapseConversationState {
   const next: SynapseConversationState = { ...current, lastTool: toolName, updatedAt: new Date().toISOString() };
   const data = result?.data || result || {};
-  const patient = data.patient || data?.appointment?.patient || data?.appointment || data?.session?.appointment || data?.charge?.patient || data?.invoice?.patient;
+  const singlePatient = Array.isArray(data.patients) && data.patients.length === 1 ? data.patients[0] : null;
+  const patient = data.patient || singlePatient || data?.appointment?.patient || data?.appointment || data?.session?.appointment || data?.charge?.patient || data?.invoice?.patient;
   const patientId = safeId(patient?.id || data.patient_id || data?.appointment?.patient_id || data?.session?.appointment?.patient_id || data?.charge?.patient_id || args.patient_id);
   const patientName = clean(patient?.name || data.patient_name || data?.appointment?.patient_name || data?.session?.appointment?.patient_name || data?.charge?.patient_name || args.patient_name, 180);
   if (patientId) next.activePatientId = patientId;

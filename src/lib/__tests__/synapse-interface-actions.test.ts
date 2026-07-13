@@ -40,6 +40,26 @@ describe("synapse interface actions", () => {
     })).toBeNull();
   });
 
+  it("normalizes only whitelisted deep destinations and their context", () => {
+    expect(normalizeSynapseClientAction({
+      type: "interface_action",
+      data: {
+        action: "navigate",
+        destination: "patient.sessions.pending",
+        patient_id: "patient-123456",
+      },
+    })).toMatchObject({
+      action: "navigate",
+      destination: "patient.sessions.pending",
+      patientId: "patient-123456",
+    });
+
+    expect(normalizeSynapseClientAction({
+      type: "interface_action",
+      data: { action: "navigate", destination: "admin.private-secrets" },
+    })).toMatchObject({ action: "navigate", destination: undefined });
+  });
+
   it("normalizes continuous NeuroView scope, focus and 3D directives", () => {
     const action = normalizeSynapseClientAction({
       type: "interface_action",

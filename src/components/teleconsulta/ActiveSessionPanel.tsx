@@ -6,6 +6,7 @@ interface ActiveSessionPanelProps {
   patientName: string;
   onSessionEnd: () => void;
   openInviteOnMount?: boolean;
+  initialWorkspaceTab?: 'transcript' | 'notes' | 'patient';
 }
 
 export const ActiveSessionPanel = (props: ActiveSessionPanelProps) => (
