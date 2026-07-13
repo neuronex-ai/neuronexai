@@ -62,7 +62,7 @@ export const SynapsePill = () => {
     const statusText = actionExperience?.label || voiceActivityLabel || PRESENCE_COPY[presenceState];
 
     return (
-        <div className="relative flex w-full flex-col items-center gap-2.5" data-synapse-presence-state={presenceState}>
+        <div className="relative flex w-full flex-col items-center gap-2" data-synapse-presence-state={presenceState}>
             <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                 {statusText}
             </span>
@@ -91,7 +91,7 @@ export const SynapsePill = () => {
                 whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.965 }}
                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 32, mass: 0.72 }}
-                className="synapse-presence-orb relative h-[61px] w-[61px] shrink-0 overflow-hidden rounded-full border-none outline-none focus-visible:outline-none disabled:cursor-wait disabled:opacity-70"
+                className="synapse-presence-orb relative h-[52px] w-[52px] shrink-0 overflow-hidden rounded-full border-none outline-none focus-visible:outline-none disabled:cursor-wait disabled:opacity-70"
                 aria-label={isVoiceSessionActive ? "Encerrar conversa por voz" : "Iniciar conversa por voz"}
                 aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
                 aria-pressed={isVoiceSessionActive}

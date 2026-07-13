@@ -1,342 +1,321 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 
-import type { PcmAudioSignal } from "@/lib/pcm-audio-player";
+type PresenceVisualState =
+    | "idle"
+    | "connecting"
+    | "listening"
+    | "thinking"
+    | "speaking"
+    | "awaiting_confirmation"
+    | "executing"
+    | "focusing"
+    | "completed"
+    | "error";
 
-type SynapseLiquidOrbProps = {
-    state: string;
-    getInputSignal: () => PcmAudioSignal;
-    getOutputSignal: () => PcmAudioSignal;
-    reducedMotion: boolean;
-};
-
-const STATE_ENERGY: Record<string, number> = {
-    idle: 0.2,
-    connecting: 0.4,
-    listening: 0.5,
-    thinking: 0.72,
-    speaking: 0.82,
-    awaiting_confirmation: 0.34,
-    executing: 0.68,
-    focusing: 0.56,
-    completed: 0.28,
-    error: 0.22,
-};
-
-const vertexShaderSource = `#version 300 es
-in vec2 a_position;
-out vec2 v_uv;
-void main() {
-  v_uv = a_position * 0.5 + 0.5;
-  gl_Position = vec4(a_position, 0.0, 1.0);
-}`;
-
-const fragmentShaderSource = `#version 300 es
-precision highp float;
-
-in vec2 v_uv;
-out vec4 outColor;
-
-uniform float u_time;
-uniform float u_energy;
-uniform vec4 u_input;
-uniform vec4 u_output;
-uniform float u_dark;
-
-float hash31(vec3 p) {
-  p = fract(p * 0.1031);
-  p += dot(p, p.yzx + 33.33);
-  return fract((p.x + p.y) * p.z);
+interface SynapseLiquidOrbProps {
+    state: PresenceVisualState;
+    getInputSignal?: () => number;
+    getOutputSignal?: () => number;
+    reducedMotion?: boolean;
 }
 
-float noise3(vec3 p) {
-  vec3 i = floor(p);
-  vec3 f = fract(p);
-  f = f * f * (3.0 - 2.0 * f);
-  return mix(
-    mix(mix(hash31(i), hash31(i + vec3(1,0,0)), f.x), mix(hash31(i + vec3(0,1,0)), hash31(i + vec3(1,1,0)), f.x), f.y),
-    mix(mix(hash31(i + vec3(0,0,1)), hash31(i + vec3(1,0,1)), f.x), mix(hash31(i + vec3(0,1,1)), hash31(i + vec3(1,1,1)), f.x), f.y),
-    f.z
-  );
+interface OrbColor {
+    stop1: string;
+    stop2: string;
+    stop3: string;
 }
 
-float fbm3(vec3 p) {
-  float value = 0.0;
-  float amplitude = 0.54;
-  for (int i = 0; i < 4; i++) {
-    value += noise3(p) * amplitude;
-    p = p * 2.03 + vec3(7.1, 11.7, 5.3);
-    amplitude *= 0.48;
-  }
-  return value;
-}
-
-void main() {
-  vec2 p = (v_uv - 0.5) * 2.0;
-  float inputRms = smoothstep(0.018, 0.8, u_input.x);
-  float outputRms = smoothstep(0.012, 0.72, u_output.x);
-  float voice = max(inputRms, outputRms);
-  float low = clamp(u_input.y + u_output.y, 0.0, 1.0);
-  float mid = clamp(u_input.z + u_output.z, 0.0, 1.0);
-  float high = clamp(u_input.w + u_output.w, 0.0, 1.0);
-  float vitality = clamp(u_energy + voice * 0.55, 0.0, 1.0);
-  float time = u_time * (0.72 + vitality * 0.3);
-
-  float edgeField = fbm3(vec3(p * 2.3, time * 0.13));
-  float breath = sin(time * 1.17) * 0.008 + sin(time * 0.41 + 1.8) * 0.006;
-  float radius = 0.89 + breath + (edgeField - 0.5) * (0.018 + low * 0.024);
-  float distanceToCenter = length(p);
-  float antialias = max(fwidth(distanceToCenter) * 1.45, 0.0025);
-  float silhouette = 1.0 - smoothstep(radius - antialias, radius + antialias, distanceToCenter);
-  if (silhouette <= 0.001) {
-    outColor = vec4(0.0);
-    return;
-  }
-
-  float zExtent = sqrt(max(radius * radius - dot(p, p), 0.0));
-  float rayLength = zExtent * 2.0;
-  float stepSize = rayLength / 18.0;
-  float z = -zExtent + stepSize * 0.5;
-  float density = 0.0;
-  float luminous = 0.0;
-  float filaments = 0.0;
-  for (int stepIndex = 0; stepIndex < 18; stepIndex++) {
-    vec3 samplePoint = vec3(p, z);
-    float swirlAngle = time * 0.16 + z * 0.78 + fbm3(samplePoint * 1.35) * 1.25;
-    mat2 swirl = mat2(cos(swirlAngle), -sin(swirlAngle), sin(swirlAngle), cos(swirlAngle));
-    vec3 flowPoint = vec3(swirl * samplePoint.xy, samplePoint.z);
-    float broad = fbm3(flowPoint * 2.05 + vec3(time * 0.12, -time * 0.09, time * 0.07));
-    float detail = fbm3(flowPoint * 5.1 + vec3(-time * 0.16, time * 0.11, 9.4));
-    float ribbon = pow(max(0.0, 1.0 - abs(sin((flowPoint.x - flowPoint.y * 0.72 + broad * 1.8) * 4.2 - time * 0.34))), 7.0);
-    float radial = 1.0 - smoothstep(0.12, radius, length(samplePoint));
-    float localDensity = smoothstep(0.43, 0.82, broad * 0.72 + detail * 0.38) * radial;
-    density += localDensity * stepSize;
-    filaments += ribbon * radial * stepSize;
-    luminous += pow(max(0.0, detail - 0.54), 3.0) * radial * stepSize;
-    z += stepSize;
-  }
-
-  vec3 normal = normalize(vec3(p / max(radius, 0.001), zExtent / max(radius, 0.001)));
-  vec3 viewDirection = vec3(0.0, 0.0, 1.0);
-  float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 2.2);
-  vec3 keyLight = normalize(vec3(-0.55, 0.76, 0.62));
-  vec3 rimLight = normalize(vec3(0.75, -0.48, 0.5));
-  float specular = pow(max(dot(reflect(-keyLight, normal), viewDirection), 0.0), 92.0);
-  float rimSpecular = pow(max(dot(reflect(-rimLight, normal), viewDirection), 0.0), 38.0);
-
-  vec3 darkCore = mix(vec3(0.16, 0.17, 0.19), vec3(0.018, 0.021, 0.026), u_dark);
-  vec3 smoke = mix(vec3(0.31, 0.32, 0.35), vec3(0.37, 0.39, 0.43), u_dark);
-  vec3 silver = mix(vec3(0.07, 0.075, 0.085), vec3(0.94, 0.96, 0.99), u_dark);
-  vec3 pearl = mix(vec3(0.14, 0.15, 0.17), vec3(1.0), u_dark);
-
-  vec3 color = mix(darkCore, smoke, clamp(density * 1.45, 0.0, 1.0));
-  color += silver * filaments * (0.43 + vitality * 0.42 + mid * 0.26);
-  color += pearl * luminous * (0.56 + high * 0.52);
-  color += pearl * (specular * 0.95 + rimSpecular * 0.28);
-  color = mix(color, silver, fresnel * (0.62 + voice * 0.13));
-  color += pearl * pow(fresnel, 5.0) * 0.36;
-
-  float glassAlpha = silhouette * mix(0.88, 0.99, fresnel);
-  outColor = vec4(color, glassAlpha);
-}`;
-
-const compileShader = (gl: WebGL2RenderingContext, type: number, source: string) => {
-    const shader = gl.createShader(type);
-    if (!shader) return null;
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.warn("[SynapseLiquidOrb] Falha ao compilar shader:", gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
+const STATE_COLORS: Record<PresenceVisualState, OrbColor> = {
+    idle: {
+        stop1: "rgba(99, 102, 241, 0.85)",   // Indigo
+        stop2: "rgba(168, 85, 247, 0.75)",   // Purple
+        stop3: "rgba(59, 130, 246, 0.4)"     // Blue
+    },
+    connecting: {
+        stop1: "rgba(245, 158, 11, 0.85)",   // Amber
+        stop2: "rgba(236, 72, 153, 0.7)",    // Pink
+        stop3: "rgba(239, 68, 68, 0.3)"      // Red
+    },
+    listening: {
+        stop1: "rgba(6, 182, 212, 0.9)",     // Cyan
+        stop2: "rgba(59, 130, 246, 0.8)",    // Blue
+        stop3: "rgba(168, 85, 247, 0.5)"     // Purple
+    },
+    thinking: {
+        stop1: "rgba(139, 92, 246, 0.9)",    // Violet
+        stop2: "rgba(236, 72, 153, 0.75)",   // Pink
+        stop3: "rgba(99, 102, 241, 0.5)"     // Indigo
+    },
+    speaking: {
+        stop1: "rgba(236, 72, 153, 0.95)",   // Pink
+        stop2: "rgba(249, 115, 22, 0.85)",   // Orange
+        stop3: "rgba(6, 182, 212, 0.5)"      // Cyan
+    },
+    awaiting_confirmation: {
+        stop1: "rgba(234, 179, 8, 0.9)",     // Yellow
+        stop2: "rgba(249, 115, 22, 0.8)",    // Orange
+        stop3: "rgba(239, 68, 68, 0.4)"      // Red
+    },
+    executing: {
+        stop1: "rgba(16, 185, 129, 0.9)",    // Emerald
+        stop2: "rgba(59, 130, 246, 0.8)",    // Blue
+        stop3: "rgba(99, 102, 241, 0.4)"     // Indigo
+    },
+    focusing: {
+        stop1: "rgba(6, 182, 212, 0.9)",     // Cyan
+        stop2: "rgba(139, 92, 246, 0.8)",    // Violet
+        stop3: "rgba(255, 255, 255, 0.6)"    // White highlight
+    },
+    completed: {
+        stop1: "rgba(16, 185, 129, 0.95)",   // Emerald
+        stop2: "rgba(34, 197, 94, 0.8)",     // Green
+        stop3: "rgba(255, 255, 255, 0.5)"    // White highlight
+    },
+    error: {
+        stop1: "rgba(239, 68, 68, 0.95)",    // Red
+        stop2: "rgba(185, 28, 28, 0.85)",    // Crimson
+        stop3: "rgba(0, 0, 0, 0.6)"          // Deep dark core
     }
-    return shader;
 };
 
-const signalTuple = (signal: PcmAudioSignal) => [signal.rms, signal.low, signal.mid, signal.high] as const;
-
-export const SynapseLiquidOrb = ({ state, getInputSignal, getOutputSignal, reducedMotion }: SynapseLiquidOrbProps) => {
+export const SynapseLiquidOrb = ({
+    state,
+    getInputSignal,
+    getOutputSignal,
+    reducedMotion = false
+}: SynapseLiquidOrbProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const stateRef = useRef(state);
-    const inputSignalRef = useRef(getInputSignal);
-    const outputSignalRef = useRef(getOutputSignal);
-    const drawOnceRef = useRef<(() => void) | null>(null);
-    stateRef.current = state;
-    inputSignalRef.current = getInputSignal;
-    outputSignalRef.current = getOutputSignal;
+    const stateRef = useRef<PresenceVisualState>(state);
+    
+    // Smooth transition spring physics states
+    const transitionRef = useRef({
+        targetScale: 1.0,
+        currentScale: 1.0,
+        targetTurbulence: 0.15,
+        currentTurbulence: 0.15,
+        targetSpeed: 1.0,
+        currentSpeed: 1.0,
+    });
+
+    useEffect(() => {
+        stateRef.current = state;
+        
+        // Define target physical constants per state
+        const config: Record<PresenceVisualState, { scale: number; turbulence: number; speed: number }> = {
+            idle: { scale: 0.88, turbulence: 0.10, speed: 0.6 },
+            connecting: { scale: 0.94, turbulence: 0.28, speed: 1.8 },
+            listening: { scale: 1.02, turbulence: 0.35, speed: 1.4 },
+            thinking: { scale: 1.05, turbulence: 0.55, speed: 2.5 },
+            speaking: { scale: 1.08, turbulence: 0.48, speed: 1.7 },
+            awaiting_confirmation: { scale: 0.95, turbulence: 0.22, speed: 0.9 },
+            executing: { scale: 1.0, turbulence: 0.40, speed: 2.2 },
+            focusing: { scale: 1.03, turbulence: 0.18, speed: 1.1 },
+            completed: { scale: 1.05, turbulence: 0.08, speed: 0.4 },
+            error: { scale: 0.92, turbulence: 0.65, speed: 3.2 }
+        };
+
+        const target = config[state] || config.idle;
+        transitionRef.current.targetScale = target.scale;
+        transitionRef.current.targetTurbulence = target.turbulence;
+        transitionRef.current.targetSpeed = target.speed;
+    }, [state]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || typeof window === "undefined") return;
+        if (!canvas) return;
 
-        let cleanupRenderer: (() => void) | undefined;
-        let contextLost = false;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
 
-        const disposeRenderer = () => {
-            const dispose = cleanupRenderer;
-            cleanupRenderer = undefined;
-            dispose?.();
+        let animationFrameId: number;
+        let time = 0;
+
+        // Ultra high-res drawing buffer
+        const resizeCanvas = () => {
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = 120 * dpr;
+            canvas.height = 120 * dpr;
+            canvas.style.width = "100%";
+            canvas.style.height = "100%";
+            ctx.scale(dpr, dpr);
         };
+        resizeCanvas();
 
-        const initialiseRenderer = () => {
-            disposeRenderer();
-            const gl = canvas.getContext("webgl2", {
-                alpha: true,
-                antialias: true,
-                depth: false,
-                premultipliedAlpha: true,
-                powerPreference: "high-performance",
-            });
-            if (!gl) return;
+        // Simple spring math
+        const lerp = (start: number, end: number, amt: number) => (1 - amt) * start + amt * end;
 
-            const vertexShader = compileShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
-            const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
-            if (!vertexShader || !fragmentShader) {
-                if (vertexShader) gl.deleteShader(vertexShader);
-                if (fragmentShader) gl.deleteShader(fragmentShader);
-                canvas.style.opacity = "0";
-                return;
-            }
-            const program = gl.createProgram();
-            if (!program) {
-                gl.deleteShader(vertexShader);
-                gl.deleteShader(fragmentShader);
-                canvas.style.opacity = "0";
-                return;
-            }
-            gl.attachShader(program, vertexShader);
-            gl.attachShader(program, fragmentShader);
-            gl.linkProgram(program);
-            if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-                console.warn("[SynapseLiquidOrb] Falha ao vincular programa WebGL:", gl.getProgramInfoLog(program));
-                gl.deleteProgram(program);
-                gl.deleteShader(vertexShader);
-                gl.deleteShader(fragmentShader);
-                canvas.style.opacity = "0";
-                return;
-            }
-            canvas.style.opacity = "1";
+        // Wave simulation parameters
+        const waveCount = 5;
+        const waveOffsets = Array.from({ length: waveCount }, (_, i) => (i * Math.PI * 2) / waveCount);
 
-            const buffer = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-            const position = gl.getAttribLocation(program, "a_position");
-            gl.enableVertexAttribArray(position);
-            gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+        const render = () => {
+            const width = 120;
+            const height = 120;
+            const centerX = width / 2;
+            const centerY = height / 2;
 
-            const uniforms = {
-                time: gl.getUniformLocation(program, "u_time"),
-                energy: gl.getUniformLocation(program, "u_energy"),
-                input: gl.getUniformLocation(program, "u_input"),
-                output: gl.getUniformLocation(program, "u_output"),
-                dark: gl.getUniformLocation(program, "u_dark"),
-            };
-            let frame = 0;
-            const startTime = performance.now();
-            let smoothedInput = [0, 0, 0, 0];
-            let smoothedOutput = [0, 0, 0, 0];
-            let cachedWidth = 1;
-            let cachedHeight = 1;
+            ctx.clearRect(0, 0, width, height);
 
-            const resize = () => {
-                const rect = canvas.getBoundingClientRect();
-                const dpr = Math.min(window.devicePixelRatio || 1, 3);
-                cachedWidth = Math.max(1, Math.round(rect.width * dpr));
-                cachedHeight = Math.max(1, Math.round(rect.height * dpr));
-                if (canvas.width !== cachedWidth || canvas.height !== cachedHeight) {
-                    canvas.width = cachedWidth;
-                    canvas.height = cachedHeight;
-                    gl.viewport(0, 0, cachedWidth, cachedHeight);
+            // Fetch dynamic audio/signals
+            const inputVal = getInputSignal ? getInputSignal() : 0;
+            const outputVal = getOutputSignal ? getOutputSignal() : 0;
+            
+            // Integrate response signal based on active states
+            const activeState = stateRef.current;
+            const signalPower = activeState === "listening" ? inputVal : activeState === "speaking" ? outputVal : 0;
+            
+            // Dynamic boost to physics values
+            const signalBoost = Math.max(0, signalPower * 1.6);
+
+            // Fast spring simulation
+            const t = transitionRef.current;
+            const speedFactor = reducedMotion ? 0.08 : 0.15;
+            t.currentScale = lerp(t.currentScale, t.targetScale + (signalBoost * 0.12), speedFactor);
+            t.currentTurbulence = lerp(t.currentTurbulence, t.targetTurbulence + (signalBoost * 0.45), speedFactor);
+            t.currentSpeed = lerp(t.currentSpeed, t.targetSpeed + (signalBoost * 1.5), speedFactor);
+
+            // Update physical time coordinate
+            time += (0.015 * t.currentSpeed);
+
+            // Get current gradients
+            const colors = STATE_COLORS[activeState] || STATE_COLORS.idle;
+
+            // Draw fluid orb components using organic compositing
+            ctx.globalCompositeOperation = "screen";
+
+            for (let w = 0; w < waveCount; w++) {
+                const angleOffset = waveOffsets[w];
+                const waveScale = t.currentScale * (0.88 + Math.sin(time + w) * 0.05);
+                const radius = (width / 3.4) * waveScale;
+
+                ctx.beginPath();
+                const points = 36; // Higher resolution circle pathing for liquid smoothness
+                
+                for (let i = 0; i <= points; i++) {
+                    const angle = (i * Math.PI * 2) / points;
+                    
+                    // Complex high-frequency harmonic physical noise (Siri-like liquid waves)
+                    const noise1 = Math.sin(angle * 3 + time * 1.5 + angleOffset) * 12 * t.currentTurbulence;
+                    const noise2 = Math.cos(angle * 5 - time * 2.2 + angleOffset * 2) * 6 * t.currentTurbulence;
+                    const noise3 = Math.sin(angle * 1.5 + time * 0.8) * 8 * t.currentTurbulence;
+                    
+                    // Physical deformation based on dynamic signals
+                    const audioDeformation = signalBoost * Math.sin(angle * 6 + time * 4) * 18;
+
+                    const currentRadius = radius + noise1 + noise2 + noise3 + audioDeformation;
+
+                    const x = centerX + Math.cos(angle) * currentRadius;
+                    const y = centerY + Math.sin(angle) * currentRadius;
+
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
                 }
-            };
+                ctx.closePath();
 
-            const draw = (now: number) => {
-                if (contextLost) return;
-                const input = signalTuple(inputSignalRef.current());
-                const output = signalTuple(outputSignalRef.current());
-                for (let index = 0; index < 4; index += 1) {
-                    smoothedInput[index] += (input[index] - smoothedInput[index]) * (input[index] > smoothedInput[index] ? 0.25 : 0.075);
-                    smoothedOutput[index] += (output[index] - smoothedOutput[index]) * (output[index] > smoothedOutput[index] ? 0.3 : 0.085);
+                // Advanced gradient coloring for the organic volumetric 3D liquid feel
+                const gradientX = centerX + Math.cos(time + angleOffset) * 12;
+                const gradientY = centerY + Math.sin(time + angleOffset) * 12;
+                const grad = ctx.createRadialGradient(
+                    gradientX,
+                    gradientY,
+                    2,
+                    centerX,
+                    centerY,
+                    radius * 1.45
+                );
+
+                // Add colors with subtle rotation offsets to mimic organic shifting light
+                if (w === 0) {
+                    grad.addColorStop(0, colors.stop1);
+                    grad.addColorStop(0.5, colors.stop2);
+                    grad.addColorStop(1, "rgba(0,0,0,0)");
+                } else if (w === 1) {
+                    grad.addColorStop(0, colors.stop2);
+                    grad.addColorStop(0.6, colors.stop3);
+                    grad.addColorStop(1, "rgba(0,0,0,0)");
+                } else {
+                    grad.addColorStop(0, colors.stop3);
+                    grad.addColorStop(0.5, colors.stop1);
+                    grad.addColorStop(1, "rgba(0,0,0,0)");
                 }
-                gl.useProgram(program);
-                gl.uniform1f(uniforms.time, (now - startTime) / 1000);
-                gl.uniform1f(uniforms.energy, STATE_ENERGY[stateRef.current] ?? 0.2);
-                gl.uniform4fv(uniforms.input, smoothedInput);
-                gl.uniform4fv(uniforms.output, smoothedOutput);
-                gl.uniform1f(uniforms.dark, document.documentElement.classList.contains("dark") ? 1 : 0);
-                gl.clearColor(0, 0, 0, 0);
-                gl.clear(gl.COLOR_BUFFER_BIT);
-                gl.drawArrays(gl.TRIANGLES, 0, 3);
-                if (!reducedMotion && document.visibilityState !== "hidden") frame = window.requestAnimationFrame(draw);
-            };
 
-            const start = () => {
-                if (frame || document.visibilityState === "hidden" || contextLost) return;
-                frame = window.requestAnimationFrame(draw);
-            };
-            const handleVisibility = () => {
-                if (document.visibilityState === "hidden") {
-                    window.cancelAnimationFrame(frame);
-                    frame = 0;
-                } else start();
-            };
-            const resizeObserver = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
-            resizeObserver?.observe(canvas);
-            window.addEventListener("resize", resize, { passive: true });
-            document.addEventListener("visibilitychange", handleVisibility);
-            resize();
-            drawOnceRef.current = () => draw(performance.now());
-            if (reducedMotion) draw(performance.now());
-            else start();
+                ctx.fillStyle = grad;
+                ctx.fill();
+            }
 
-            cleanupRenderer = () => {
-                window.cancelAnimationFrame(frame);
-                drawOnceRef.current = null;
-                resizeObserver?.disconnect();
-                window.removeEventListener("resize", resize);
-                document.removeEventListener("visibilitychange", handleVisibility);
-                gl.deleteBuffer(buffer);
-                gl.deleteProgram(program);
-                gl.deleteShader(vertexShader);
-                gl.deleteShader(fragmentShader);
-            };
+            // Draw a bright, high-fidelity inner core to make it pop and look 3D glass/light emission
+            ctx.globalCompositeOperation = "source-over";
+            ctx.beginPath();
+            const coreRadius = (width / 5) * t.currentScale * (0.9 + Math.sin(time * 2.5) * 0.05);
+            ctx.arc(centerX, centerY, coreRadius, 0, Math.PI * 2);
+            
+            const coreGrad = ctx.createRadialGradient(
+                centerX - 3,
+                centerY - 3,
+                0,
+                centerX,
+                centerY,
+                coreRadius
+            );
+            coreGrad.addColorStop(0, "rgba(255, 255, 255, 0.8)");
+            coreGrad.addColorStop(0.3, colors.stop1);
+            coreGrad.addColorStop(1, "rgba(255, 255, 255, 0)");
+            
+            ctx.fillStyle = coreGrad;
+            ctx.fill();
+
+            // Subtle outer atmospheric glow
+            ctx.globalCompositeOperation = "screen";
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, width / 2.2, 0, Math.PI * 2);
+            const atmosphereGrad = ctx.createRadialGradient(
+                centerX,
+                centerY,
+                width / 4,
+                centerX,
+                centerY,
+                width / 2
+            );
+            atmosphereGrad.addColorStop(0, "rgba(255, 255, 255, 0)");
+            atmosphereGrad.addColorStop(0.5, colors.stop2);
+            atmosphereGrad.addColorStop(1, "rgba(0, 0, 0, 0)");
+            
+            ctx.fillStyle = atmosphereGrad;
+            ctx.fill();
+
+            animationFrameId = requestAnimationFrame(render);
         };
 
-        const handleContextLost = (event: Event) => {
-            event.preventDefault();
-            contextLost = true;
-            canvas.style.opacity = "0";
-            disposeRenderer();
-        };
-        const handleContextRestored = () => {
-            contextLost = false;
-            initialiseRenderer();
-        };
-        canvas.addEventListener("webglcontextlost", handleContextLost);
-        canvas.addEventListener("webglcontextrestored", handleContextRestored);
-        const themeObserver = new MutationObserver(() => {
-            if (reducedMotion) drawOnceRef.current?.();
-        });
-        themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-        initialiseRenderer();
+        render();
 
         return () => {
-            disposeRenderer();
-            themeObserver.disconnect();
-            canvas.removeEventListener("webglcontextlost", handleContextLost);
-            canvas.removeEventListener("webglcontextrestored", handleContextRestored);
+            cancelAnimationFrame(animationFrameId);
         };
-    }, [reducedMotion]);
-
-    useEffect(() => {
-        if (reducedMotion) drawOnceRef.current?.();
-    }, [reducedMotion, state]);
+    }, [getInputSignal, getOutputSignal, reducedMotion]);
 
     return (
-        <span className="synapse-liquid-orb" aria-hidden="true">
-            <span className="synapse-liquid-orb-fallback" />
-            <canvas ref={canvasRef} className="synapse-liquid-orb-canvas" />
-            <span className="synapse-liquid-orb-lens" />
-            <span className="synapse-liquid-orb-caustic" />
-        </span>
+        <div className="relative flex items-center justify-center w-full h-full">
+            {/* Soft backdrop neon blur simulation */}
+            <div 
+                className="absolute inset-0 rounded-full transition-colors duration-500 pointer-events-none filter blur-xl opacity-60 scale-95"
+                style={{
+                    backgroundColor: state === "error" ? "rgba(239, 68, 68, 0.45)" :
+                                     state === "listening" ? "rgba(6, 182, 212, 0.35)" :
+                                     state === "thinking" ? "rgba(139, 92, 246, 0.4)" :
+                                     state === "speaking" ? "rgba(236, 72, 153, 0.45)" :
+                                     state === "executing" ? "rgba(16, 185, 129, 0.35)" :
+                                     "rgba(99, 102, 241, 0.3)"
+                }}
+            />
+            <canvas
+                ref={canvasRef}
+                className="relative block w-full h-full select-none pointer-events-none z-10"
+            />
+        </div>
     );
 };
