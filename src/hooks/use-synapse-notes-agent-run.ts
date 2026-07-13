@@ -203,8 +203,11 @@ export const useSynapseNotesAgentRun = (runId?: string | null) => {
     void fetchRun();
     void fetchEvents();
 
+    // Realtime now reuses a channel when its topic matches an existing one. A
+    // previous effect can still be unsubscribing when this effect starts (for
+    // example, during a React remount), so give this subscription its own topic.
     const channel = supabase
-      .channel(`synapse_notes_agent_run_${runId}`)
+      .channel(`synapse_notes_agent_run_${runId}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "synapse_notes_agent_runs", filter: `id=eq.${runId}` },
