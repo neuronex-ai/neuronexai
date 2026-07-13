@@ -133,30 +133,30 @@ const SynapseEmptyConversation = ({
 }: Pick<SynapseConversationProps, 'quickActions' | 'shouldReduceMotion' | 'onQuickAction'>) => (
     <div
         key="empty"
-        className="flex min-h-full flex-col items-center justify-center px-2 py-12 text-center"
+        className="flex min-h-full flex-col items-center justify-center px-2 py-8 text-center"
     >
         <div
-            className="synapse-desktop-empty-mark flex h-[68px] w-[68px] items-center justify-center"
+            className="synapse-desktop-empty-mark flex h-12 w-12 items-center justify-center"
             aria-hidden="true"
         >
-            <Sparkles className="relative z-10 h-6 w-6" />
+            <Sparkles className="relative z-10 h-[18px] w-[18px]" />
         </div>
 
-        <div className="mt-6 space-y-2">
-            <h2 className="text-[18px] font-semibold leading-6 text-foreground">Como posso ajudar?</h2>
-            <p className="mx-auto max-w-[300px] text-[13px] leading-5 text-muted-foreground">
+        <div className="mt-4 space-y-1.5">
+            <h2 className="text-[16px] font-semibold leading-6 text-foreground">Como posso ajudar?</h2>
+            <p className="mx-auto max-w-[292px] text-[12px] leading-5 text-muted-foreground">
                 Converse naturalmente com o Synapse sobre sua rotina clínica.
             </p>
         </div>
 
         {quickActions.length > 0 ? (
-            <div className="mt-7 grid w-full max-w-[360px] grid-cols-1 gap-2 min-[410px]:grid-cols-2">
+            <div className="mt-5 grid w-full max-w-[360px] grid-cols-1 gap-2 min-[410px]:grid-cols-2">
                 {quickActions.slice(0, 4).map((tool) => (
                     <button
                         key={tool.id}
                         type="button"
                         onClick={() => onQuickAction(tool.name)}
-                        className="synapse-desktop-prompt flex min-h-11 items-center gap-2.5 px-3 text-left text-[12px] font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-px"
+                        className="synapse-desktop-prompt flex min-h-11 items-center gap-2.5 px-3 text-left text-[11px] font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-px"
                     >
                         <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span className="line-clamp-2 leading-4">{tool.name}</span>
@@ -204,7 +204,7 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
             <div className={cn('flex min-w-0 max-w-[84%] flex-col', isUser ? 'items-end' : 'items-start')}>
                 <div
                     className={cn(
-                        'synapse-desktop-message group relative min-w-0 px-4 py-3',
+                        'synapse-desktop-message group relative min-w-0 px-3.5 py-2.5',
                         isUser ? 'synapse-desktop-message-user' : 'synapse-desktop-message-assistant pr-11',
                     )}
                 >
@@ -370,7 +370,7 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
 
     return (
         <div className="synapse-desktop-composer-dock shrink-0 px-3.5 pb-3 pt-2">
-            <div className="synapse-desktop-composer flex min-h-[58px] items-end gap-2 p-1.5">
+            <div className="synapse-desktop-composer flex min-h-[54px] items-end gap-2 p-1.5">
                 <textarea
                     ref={setTextareaRef}
                     value={value}

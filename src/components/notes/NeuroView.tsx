@@ -12,8 +12,7 @@ import { GraphDetailsPanel } from "./graph/GraphDetailsPanel";
 import { PersonalNote, Patient } from "@/types";
 import { NeuroViewUniverse } from "./NeuroViewUniverse";
 import { useTheme } from "@/hooks/use-theme";
-import { useSynapseNotesAgentRun, type SynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/use-synapse-notes-agent-run";
-import { SynapseAgentRunOverlay } from "./SynapseAgentRunOverlay";
+import { useSynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/use-synapse-notes-agent-run";
 import { useReducedMotion } from "framer-motion";
 
 // --- DEFAULT CONFIG ---
@@ -247,31 +246,6 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
     ), [activeTrace]);
     const traceHoverNode = traceNodeIds.length ? nodeMap[traceNodeIds[Math.min(traceIndex, traceNodeIds.length - 1)]] || null : null;
     const effectiveHoverNode = hoverNode || traceHoverNode;
-    const overlayRun = useMemo(() => {
-        if (run) return run;
-        if (!activeTrace) return null;
-        return {
-            id: synapseRunId || "inline-neuroview-trace",
-            product: "neuroview",
-            patient_id: synapsePatientId || null,
-            chat_session_id: null,
-            status: "completed",
-            intent: null,
-            progress: 100,
-            steps: activeTrace.steps || [],
-            trace: activeTrace,
-            result: {},
-            target_flow_id: null,
-            pulse_entry_id: null,
-            note_id: null,
-            error_message: null,
-            user_id: "",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
-        } as SynapseNotesAgentRun;
-    }, [activeTrace, run, synapsePatientId, synapseRunId]);
-
     useEffect(() => {
         if (!traceNodeIds.length || shouldReduceMotion) {
             setTraceIndex(0);
@@ -631,8 +605,6 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
                     </div>
                 </div>
             )}
-
-            <SynapseAgentRunOverlay run={overlayRun} title="Synapse / NeuroView" />
 
             <div className="absolute inset-0 z-10 overflow-hidden">
                 <ForceGraph2D

@@ -25,7 +25,6 @@ import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useSynapseNotesAgentRun } from "@/hooks/use-synapse-notes-agent-run";
-import { SynapseAgentRunOverlay } from "./SynapseAgentRunOverlay";
 import { normalizeNeuroPulseMermaid } from "@/lib/neuropulse-mermaid";
 
 const LENSES = [
@@ -309,7 +308,6 @@ Relato:
             isFullscreen ? "fixed inset-0 z-[100]" : ""
         )}>
             <NeuralBackground />
-            <SynapseAgentRunOverlay run={synapseRun} title="Synapse / NeuroPulse" compact />
             <header className="notes-toolbar-surface relative z-20 flex shrink-0 flex-col gap-3 rounded-[24px] border p-3.5 sm:p-4 xl:flex-row xl:items-center xl:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                     <div className="desktop-retina-inset flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border border-border/45 bg-muted/30 text-muted-foreground">

@@ -85,7 +85,7 @@ export const SynapseGlobalShell = () => {
 
     const shell = (
         <>
-            {/* The inspector is independent from the persistent bottom-center presence. */}
+            {/* The compact conversation sheet shares the same bottom-center spatial anchor as the persistent presence. */}
             <AnimatePresence initial={false}>
                 {shellState === 'compact' ? <SynapseCompactPanel key="compact" /> : null}
             </AnimatePresence>

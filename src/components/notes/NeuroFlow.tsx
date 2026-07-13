@@ -31,8 +31,6 @@ import { MoodNode } from './nodes/MoodNode';
 import { TableNode } from './nodes/TableNode';
 import { TranscriptionNode } from './nodes/TranscriptionNode';
 import { NodeType, SegundoCerebro } from './SegundoCerebro';
-import { useSynapseNotesAgentRun } from '@/hooks/use-synapse-notes-agent-run';
-import { SynapseAgentRunOverlay } from './SynapseAgentRunOverlay';
 import { useReducedMotion } from 'framer-motion';
 
 const nodeTypes = {
@@ -93,9 +91,8 @@ interface NeuroFlowContentProps {
   onBack?: () => void;
 }
 
-const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProps) => {
+const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -114,6 +111,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
   const lastSavedFingerprintRef = useRef<string | null>(null);
   const isLoadingRef = useRef(true);
   const isHydratingRef = useRef(false);
+  const loadRequestRef = useRef(0);
   const hasAutoFittedRef = useRef(false);
   const flowTitleRef = useRef(flowTitle);
   const patientIdRef = useRef(patientId);
@@ -162,17 +160,28 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
 
   const loadFlow = useCallback(async () => {
     if (!flowId) return;
+    const requestId = ++loadRequestRef.current;
     let loaded = false;
     isHydratingRef.current = true;
     hasAutoFittedRef.current = false;
     setIsLoading(true);
     setLoadError(null);
     try {
-      const { data: flowData, error: flowError } = await supabase
-        .from('neuro_flows')
-        .select('title, patient_id, workflow, save_revision')
-        .eq('id', flowId)
-        .single();
+      const fetchFlow = () => supabase
+          .from('neuro_flows')
+          .select('title, patient_id, workflow, save_revision')
+          .eq('id', flowId)
+          .single();
+
+      let { data: flowData, error: flowError } = await fetchFlow();
+      for (let attempt = 0; attempt < 2 && flowError?.code === 'PGRST116'; attempt += 1) {
+        await new Promise((resolve) => window.setTimeout(resolve, 240 * (attempt + 1)));
+        const next = await fetchFlow();
+        flowData = next.data;
+        flowError = next.error;
+      }
+
+      if (requestId !== loadRequestRef.current) return;
 
       if (flowError) throw flowError;
 
@@ -218,9 +227,11 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
       });
       loaded = true;
     } catch (e) {
+      if (requestId !== loadRequestRef.current) return;
       console.error("[NeuroFlow] Não foi possível carregar o mapeamento", e);
       setLoadError("Não foi possível abrir este mapeamento agora.");
     } finally {
+      if (requestId !== loadRequestRef.current) return;
       window.setTimeout(() => {
         isHydratingRef.current = false;
         setIsLoading(false);
@@ -229,7 +240,12 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
     }
   }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion]);
 
-  useEffect(() => { loadFlow(); }, [loadFlow]);
+  useEffect(() => {
+    void loadFlow();
+    return () => {
+      loadRequestRef.current += 1;
+    };
+  }, [loadFlow]);
 
   useEffect(() => {
     return () => {
@@ -614,8 +630,6 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
           </div>
         </Panel>
       </ReactFlow>
-
-      <SynapseAgentRunOverlay run={synapseRun} title="Synapse / NeuroFlow" compact />
 
       <style>{`
         .react-flow__viewport {

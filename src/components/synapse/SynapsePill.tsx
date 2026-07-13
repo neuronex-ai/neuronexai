@@ -11,6 +11,7 @@ import {
 
 import { useSynapse } from "@/context/SynapseProvider";
 import { cn } from "@/lib/utils";
+import { SynapseLiquidOrb } from "./SynapseLiquidOrb";
 
 type PresenceVisualState =
     | "idle"
@@ -63,11 +64,8 @@ export const SynapsePill = () => {
         voiceStatus,
     } = useSynapse();
     const shouldReduceMotion = Boolean(useReducedMotion());
-    const audioSurfaceRef = useRef<HTMLSpanElement>(null);
     const chatButtonRef = useRef<HTMLButtonElement>(null);
     const previousShellStateRef = useRef(shellState);
-    const volumeReaderRef = useRef(getVoiceInputVolume);
-    volumeReaderRef.current = getVoiceInputVolume;
 
     const presenceState = useMemo<PresenceVisualState>(() => {
         if (voicePhase === "awaiting_confirmation") return "awaiting_confirmation";
@@ -97,47 +95,6 @@ export const SynapsePill = () => {
         const frame = window.requestAnimationFrame(() => chatButtonRef.current?.focus());
         return () => window.cancelAnimationFrame(frame);
     }, [isVoiceSessionActive, shellState]);
-
-    useEffect(() => {
-        const surface = audioSurfaceRef.current;
-        if (!surface) return;
-
-        const animatedState = presenceState === "listening" || presenceState === "speaking";
-        if (shouldReduceMotion || !animatedState) {
-            surface.style.transform = "scale(0.9)";
-            surface.style.opacity = "0.72";
-            return;
-        }
-
-        let frame = 0;
-        const tick = (time: number) => {
-            const rawLevel = presenceState === "listening"
-                ? volumeReaderRef.current()
-                : (Math.sin(time / 210) + 1) / 2;
-            const level = Math.max(0, Math.min(1, Number(rawLevel) || 0));
-            surface.style.transform = `scale(${(0.88 + level * 0.24).toFixed(3)})`;
-            surface.style.opacity = (0.68 + level * 0.28).toFixed(3);
-            frame = window.requestAnimationFrame(tick);
-        };
-        const start = () => {
-            if (!frame && document.visibilityState !== "hidden") frame = window.requestAnimationFrame(tick);
-        };
-        const handleVisibility = () => {
-            if (document.visibilityState === "hidden") {
-                window.cancelAnimationFrame(frame);
-                frame = 0;
-            } else {
-                start();
-            }
-        };
-
-        start();
-        document.addEventListener("visibilitychange", handleVisibility);
-        return () => {
-            document.removeEventListener("visibilitychange", handleVisibility);
-            window.cancelAnimationFrame(frame);
-        };
-    }, [presenceState, shouldReduceMotion]);
 
     const togglePanel = () => {
         if (isPanelOpen) {
@@ -170,11 +127,11 @@ export const SynapsePill = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 5, scale: 0.99 }}
                         transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 390, damping: 38, mass: 0.74 }}
-                        className="synapse-presence-status pointer-events-none w-[min(360px,calc(100vw-24px))] overflow-hidden rounded-[20px] border px-3.5 py-3 text-left"
+                        className="synapse-presence-status pointer-events-none w-[min(326px,calc(100vw-24px))] overflow-hidden rounded-[18px] border px-3 py-2.5 text-left"
                     >
                         <div className="flex min-w-0 items-center gap-3">
                             <span className={cn(
-                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] border",
+                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border",
                                 presenceState === "error" && "text-destructive",
                             )}>
                                 {presenceState === "error" ? <TriangleAlert className="h-4 w-4" />
@@ -231,7 +188,7 @@ export const SynapsePill = () => {
                     animate={{ width: orbSize, height: orbSize }}
                     transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 430, damping: 36, mass: 0.72 }}
                     className={cn(
-                        "synapse-presence-orb relative flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-white text-zinc-950",
+                        "synapse-presence-orb relative flex shrink-0 items-center justify-center overflow-hidden rounded-full text-white",
                         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
                         "disabled:cursor-wait disabled:opacity-70",
                     )}
@@ -240,21 +197,18 @@ export const SynapsePill = () => {
                     aria-pressed={isVoiceSessionActive}
                     title={`${stateCopy.label} — ${isVoiceSessionActive ? "encerrar voz" : "iniciar voz"}`}
                 >
-                    <span className="absolute inset-[5px] rounded-full border border-black/[0.10]" aria-hidden="true" />
-                    <span
-                        ref={audioSurfaceRef}
-                        className="synapse-presence-orb-surface absolute inset-[9px] rounded-full"
-                        aria-hidden="true"
+                    <SynapseLiquidOrb
+                        state={presenceState}
+                        getInputVolume={getVoiceInputVolume}
+                        reducedMotion={shouldReduceMotion}
                     />
-                    {isBusy && !shouldReduceMotion ? (
-                        <motion.span
-                            className="absolute inset-[4px] rounded-full border border-zinc-950/35 border-r-transparent"
-                            animate={{ rotate: 360 }}
-                            transition={{ duration: 1.25, repeat: Infinity, ease: "linear" }}
-                            aria-hidden="true"
-                        />
-                    ) : null}
-                    <span className="relative z-10 flex items-center justify-center" aria-hidden="true">
+                    <span
+                        className={cn(
+                            "synapse-liquid-orb-glyph relative z-10 flex items-center justify-center",
+                            (presenceState === "listening" || presenceState === "speaking") && "opacity-0",
+                        )}
+                        aria-hidden="true"
+                    >
                         {presenceState === "error" ? <TriangleAlert className="h-[17px] w-[17px]" />
                             : presenceState === "completed" ? <Check className="h-[17px] w-[17px]" />
                                 : presenceState === "awaiting_confirmation" ? <ShieldCheck className="h-[17px] w-[17px]" />
