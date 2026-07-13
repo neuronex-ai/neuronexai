@@ -3,20 +3,20 @@ import { useEffect, useRef } from "react";
 type SynapseLiquidOrbProps = {
     state: string;
     getInputVolume: () => number;
-    reducedMotion?: boolean;
+    reducedMotion: boolean;
 };
 
 const STATE_ENERGY: Record<string, number> = {
-    idle: 0.18,
-    connecting: 0.38,
-    listening: 0.58,
-    thinking: 0.82,
-    speaking: 0.78,
-    awaiting_confirmation: 0.45,
-    executing: 0.72,
-    focusing: 0.55,
-    completed: 0.28,
-    error: 0.22,
+    idle: 0.12,
+    connecting: 0.34,
+    listening: 0.52,
+    thinking: 0.68,
+    speaking: 0.74,
+    awaiting_confirmation: 0.34,
+    executing: 0.62,
+    focusing: 0.48,
+    completed: 0.24,
+    error: 0.2,
 };
 
 const vertexShaderSource = `#version 300 es
@@ -68,24 +68,20 @@ float fbm(vec2 p) {
 void main() {
   vec2 p = (v_uv - 0.5) * 2.0;
   float t = u_time;
-  float audio = smoothstep(0.01, 0.9, u_audio);
-  float vitality = clamp(u_energy * 0.7 + audio * 0.8, 0.0, 1.0);
+  float audio = smoothstep(0.015, 0.82, u_audio);
+  float vitality = clamp(u_energy + audio * 0.52, 0.0, 1.0);
 
-  vec2 pointerBend = (u_pointer - 0.5) * 0.12;
-  p -= pointerBend * (0.3 + vitality * 0.5);
+  vec2 pointerBend = (u_pointer - 0.5) * 0.085;
+  p -= pointerBend * (0.25 + vitality * 0.34);
 
-  // Dynamic noise fields matching iOS 18 fluid motion
-  float slowField = fbm(p * 2.2 + vec2(t * 0.12, -t * 0.1));
-  float fineField = fbm(p * 6.2 + vec2(-t * 0.18, t * 0.15));
-  float breathing = sin(t * 1.4) * 0.012 + sin(t * 0.6 + 2.1) * 0.015;
-  
-  // High response liquid waves
-  float liquidEdge = (slowField - 0.5) * (0.02 + vitality * 0.12);
-  float radius = 0.8 + breathing + liquidEdge;
+  float slowField = fbm(p * 2.65 + vec2(t * 0.075, -t * 0.061));
+  float fineField = fbm(p * 5.8 + vec2(-t * 0.11, t * 0.087));
+  float breathing = sin(t * 1.15) * 0.006 + sin(t * 0.43 + 1.7) * 0.008;
+  float liquidEdge = (slowField - 0.5) * (0.016 + vitality * 0.032);
+  float radius = 0.855 + breathing + liquidEdge;
   float distanceToCenter = length(p);
-  float antialias = max(fwidth(distanceToCenter) * 1.5, 0.003);
+  float antialias = max(fwidth(distanceToCenter) * 1.35, 0.0025);
   float alpha = 1.0 - smoothstep(radius - antialias, radius + antialias, distanceToCenter);
-  
   if (alpha <= 0.001) {
     outColor = vec4(0.0);
     return;
@@ -94,50 +90,43 @@ void main() {
   float z = sqrt(max(radius * radius - dot(p, p), 0.0)) / radius;
   vec3 normal = normalize(vec3(p / radius, z));
   vec2 flow = vec2(
-    fbm(p * 3.5 + vec2(t * 0.22, 13.4)),
-    fbm(p * 3.5 + vec2(19.2, -t * 0.21))
+    fbm(p * 4.1 + vec2(t * 0.13, 11.7)),
+    fbm(p * 4.0 + vec2(17.3, -t * 0.12))
   ) - 0.5;
-  normal.xy += flow * (0.06 + vitality * 0.16);
+  normal.xy += flow * (0.055 + vitality * 0.085);
   normal = normalize(normal);
 
   vec3 viewDirection = vec3(0.0, 0.0, 1.0);
-  float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 2.2);
-  float innerFresnel = pow(1.0 - max(z, 0.0), 4.5);
+  float fresnel = pow(1.0 - max(dot(normal, viewDirection), 0.0), 2.45);
+  float innerFresnel = pow(1.0 - max(z, 0.0), 5.0);
 
-  vec3 lightA = normalize(vec3(-0.4, 0.8, 0.6));
-  vec3 lightB = normalize(vec3(0.6, -0.4, 0.5));
+  vec3 lightA = normalize(vec3(-0.52, 0.78, 0.56));
+  vec3 lightB = normalize(vec3(0.72, -0.42, 0.49));
   float diffuseA = max(dot(normal, lightA), 0.0);
   float diffuseB = max(dot(normal, lightB), 0.0);
-  float specularA = pow(max(dot(reflect(-lightA, normal), viewDirection), 0.0), 96.0);
-  float specularB = pow(max(dot(reflect(-lightB, normal), viewDirection), 0.0), 48.0);
+  float specularA = pow(max(dot(reflect(-lightA, normal), viewDirection), 0.0), 82.0);
+  float specularB = pow(max(dot(reflect(-lightB, normal), viewDirection), 0.0), 34.0);
 
-  float causticBands = sin((normal.x * 6.0 + normal.y * 4.5 + fineField * 4.0) - t * (0.5 + vitality * 0.4));
-  float caustics = pow(max(0.0, causticBands * 0.5 + 0.5), 8.0) * (0.18 + vitality * 0.28);
-  float internalGlow = pow(max(0.0, 1.0 - distanceToCenter / radius), 1.5);
+  float causticBands = sin((normal.x * 5.4 + normal.y * 4.1 + fineField * 3.2) - t * (0.34 + vitality * 0.22));
+  float caustics = pow(max(0.0, causticBands * 0.5 + 0.5), 7.0) * (0.16 + vitality * 0.19);
+  float internalGlow = pow(max(0.0, 1.0 - distanceToCenter / radius), 1.7);
 
-  // High contrast palette:
-  // Dark mode = Brilliant Pearlescent White Liquid Orb
-  // Light mode = Rich Deep Liquid Graphite Glass
-  vec3 graphite = mix(vec3(0.12, 0.13, 0.15), vec3(0.85, 0.88, 0.92), u_dark);
-  vec3 pearl = mix(vec3(0.1, 0.11, 0.12), vec3(0.98, 0.99, 1.0), u_dark);
-  vec3 deepGlass = mix(vec3(0.88, 0.90, 0.94), vec3(0.04, 0.05, 0.07), u_dark);
-  
-  vec3 color = mix(deepGlass, graphite, 0.2 + diffuseA * 0.4);
-  color += pearl * (specularA * 1.1 + specularB * 0.3);
+  vec3 graphite = mix(vec3(0.74, 0.76, 0.79), vec3(0.085, 0.092, 0.105), u_dark);
+  vec3 pearl = mix(vec3(0.985, 0.99, 1.0), vec3(0.82, 0.85, 0.9), u_dark);
+  vec3 deepGlass = mix(vec3(0.32, 0.35, 0.39), vec3(0.025, 0.029, 0.038), u_dark);
+  vec3 color = mix(deepGlass, graphite, 0.38 + diffuseA * 0.34);
+  color += pearl * (specularA * 0.94 + specularB * 0.24);
   color += pearl * caustics;
-  color += pearl * internalGlow * (0.12 + audio * 0.25);
+  color += pearl * internalGlow * (0.09 + audio * 0.12);
 
-  // Elegant subtle refractive dispersion edge
-  vec3 spectral = mix(
-    vec3(0.1, 0.15, 0.2), 
-    vec3(0.3, 0.5, 0.8) * max(normal.x, 0.0) + vec3(0.6, 0.4, 0.8) * max(-normal.x, 0.0) + vec3(0.4, 0.7, 0.7) * max(normal.y, 0.0),
-    u_dark
-  );
-  
-  color += spectral * fresnel * (0.08 + vitality * 0.12);
-  color = mix(color, pearl, fresnel * 0.5 + innerFresnel * 0.1);
+  // Subtle spectral dispersion is constrained to the refractive edge.
+  vec3 spectral = vec3(0.28, 0.58, 0.94) * max(normal.x, 0.0)
+                + vec3(0.74, 0.36, 0.92) * max(-normal.x, 0.0)
+                + vec3(0.31, 0.88, 0.78) * max(normal.y, 0.0);
+  color += spectral * fresnel * (0.055 + vitality * 0.055);
+  color = mix(color, pearl, fresnel * 0.47 + innerFresnel * 0.08);
 
-  float glassAlpha = alpha * mix(0.93, 0.99, fresnel);
+  float glassAlpha = alpha * mix(0.94, 0.985, fresnel);
   outColor = vec4(color, glassAlpha);
 }`;
 
@@ -153,7 +142,7 @@ const compileShader = (gl: WebGL2RenderingContext, type: number, source: string)
     return shader;
 };
 
-export const SynapseLiquidOrb = ({ state, getInputVolume, reducedMotion = false }: SynapseLiquidOrbProps) => {
+export const SynapseLiquidOrb = ({ state, getInputVolume, reducedMotion }: SynapseLiquidOrbProps) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const stateRef = useRef(state);
     const volumeRef = useRef(getInputVolume);
@@ -205,7 +194,7 @@ export const SynapseLiquidOrb = ({ state, getInputVolume, reducedMotion = false 
 
         const resize = () => {
             const rect = canvas.getBoundingClientRect();
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            const dpr = Math.min(window.devicePixelRatio || 1, 3);
             const width = Math.max(1, Math.round(rect.width * dpr));
             const height = Math.max(1, Math.round(rect.height * dpr));
             if (canvas.width !== width || canvas.height !== height) {
@@ -217,24 +206,18 @@ export const SynapseLiquidOrb = ({ state, getInputVolume, reducedMotion = false 
 
         const draw = (now: number) => {
             resize();
-            // Add slight continuous self-pulsating fluctuation even on silence for organic siri feel
-            const selfPulse = 0.03 * Math.sin(now * 0.003) + 0.01 * Math.cos(now * 0.007);
-            const targetAudio = Math.max(0, Math.min(1, (Number(volumeRef.current()) || 0) + Math.abs(selfPulse)));
-            smoothedAudio += (targetAudio - smoothedAudio) * (targetAudio > smoothedAudio ? 0.32 : 0.09);
-            
+            const targetAudio = Math.max(0, Math.min(1, Number(volumeRef.current()) || 0));
+            smoothedAudio += (targetAudio - smoothedAudio) * (targetAudio > smoothedAudio ? 0.24 : 0.075);
             gl.useProgram(program);
             gl.uniform1f(timeUniform, (now - startTime) / 1000);
-            gl.uniform1f(energyUniform, STATE_ENERGY[stateRef.current] ?? 0.22);
+            gl.uniform1f(energyUniform, STATE_ENERGY[stateRef.current] ?? 0.18);
             gl.uniform1f(audioUniform, smoothedAudio);
             gl.uniform2f(pointerUniform, pointerRef.current[0], pointerRef.current[1]);
             gl.uniform1f(darkUniform, document.documentElement.classList.contains("dark") || darkQuery.matches ? 1 : 0);
-            
             gl.clearColor(0, 0, 0, 0);
             gl.clear(gl.COLOR_BUFFER_BIT);
             gl.drawArrays(gl.TRIANGLES, 0, 3);
-            if (!reducedMotion && document.visibilityState !== "hidden") {
-                frame = window.requestAnimationFrame(draw);
-            }
+            if (!reducedMotion && document.visibilityState !== "hidden") frame = window.requestAnimationFrame(draw);
         };
 
         const start = () => {
@@ -278,17 +261,11 @@ export const SynapseLiquidOrb = ({ state, getInputVolume, reducedMotion = false 
     }, [reducedMotion]);
 
     return (
-        <span className="relative block w-72 h-72 mx-auto cursor-pointer select-none group" aria-hidden="true">
-            {/* Ambient liquid glow behind the glass orb */}
-            <span className="absolute inset-0 rounded-full bg-gradient-to-tr from-cyan-400/20 via-white/10 to-purple-500/20 blur-3xl opacity-80 group-hover:scale-105 transition-transform duration-1000 ease-out" />
-            
-            {/* The primary Canvas rendering the WebGL fluid */}
-            <canvas ref={canvasRef} className="w-full h-full relative z-10 block pointer-events-none drop-shadow-[0_0_40px_rgba(255,255,255,0.15)] dark:drop-shadow-[0_0_50px_rgba(255,255,255,0.25)]" />
-            
-            {/* Realistic high-end glass 3D optical lens refraction effects */}
-            <span className="absolute inset-0 rounded-full border border-white/20 pointer-events-none z-20 bg-gradient-to-tr from-transparent via-white/5 to-white/10 mix-blend-overlay" />
-            <span className="absolute inset-[3px] rounded-full border border-white/10 pointer-events-none z-20 bg-gradient-to-b from-white/15 to-transparent mix-blend-screen opacity-70" />
-            <span className="absolute top-[8%] left-[15%] w-16 h-8 rounded-full bg-gradient-to-b from-white/40 to-transparent blur-[2px] rotate-[-12deg] pointer-events-none z-20" />
+        <span className="synapse-liquid-orb" aria-hidden="true">
+            <span className="synapse-liquid-orb-fallback" />
+            <canvas ref={canvasRef} className="synapse-liquid-orb-canvas" />
+            <span className="synapse-liquid-orb-lens" />
+            <span className="synapse-liquid-orb-caustic" />
         </span>
     );
 };
