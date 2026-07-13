@@ -60,7 +60,7 @@ type MessageRow = {
 type PendingReference = { row: MessageRow; action: PendingAction; attachments: any[] };
 type AuthResult =
   | { error: Response }
-  | { authorization: string; admin: any; user: { id: string } };
+  | { authorization: string; admin: any; userClient: any; user: { id: string } };
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const arrayValue = (value: unknown) =>
@@ -209,6 +209,7 @@ function normalizeFunctionPayload(payload: Record<string, unknown>) {
     cancelled: Boolean(payload.cancelled),
     data: ok ? payload.data ?? null : null,
     error: ok ? null : clean(payload.error || spoken, 1400),
+    error_code: ok ? null : clean(payload.error_code || payload.errorCode, 80) || "tool_failed",
     grounded: Boolean(payload.grounded),
     recordCount: Number(payload.recordCount || 0),
     structuredData: payload.structuredData || null,
@@ -240,7 +241,7 @@ async function authenticate(request: Request): Promise<AuthResult> {
   const user = authData.user;
   if (authError || !user) return { error: json({ error: "Sessao invalida." }, 401) };
 
-  return { authorization, admin, user };
+  return { authorization, admin, userClient, user };
 }
 
 async function logVoiceAction(
@@ -349,6 +350,7 @@ serve(async (request): Promise<Response> => {
       sessionId,
       authorization: auth.authorization,
       requestOrigin: request.headers.get("origin") || null,
+      userClient: auth.userClient,
     };
 
     if (action === "cancel_pending_action" || clean(body.name, 120) === "cancel_pending_action") {
@@ -565,6 +567,24 @@ serve(async (request): Promise<Response> => {
       ]);
     }
 
+    await recordVoiceTurn(auth.admin, {
+      userId: auth.user.id,
+      conversationId: sessionId,
+      voiceSessionId,
+      role: "tool",
+      content: `${name}:${result.ok ? "success" : result.errorCode || "tool_failed"}`,
+      origin: "synapse_voice_tool",
+      toolCallId: clean(body.callId || body.id, 120) || null,
+      toolName: name,
+      confirmationRequired: Boolean(result.pendingAction),
+      metadata: {
+        ok: result.ok,
+        code: result.ok ? null : result.errorCode || "tool_failed",
+        record_count: Number(result.recordCount || 0),
+        has_client_action: Boolean(result.clientAction),
+      },
+    });
+
     await logVoiceAction(auth.admin, {
       userId: auth.user.id,
       conversationId: sessionId,
@@ -593,6 +613,7 @@ serve(async (request): Promise<Response> => {
         message: toolMessage,
         data: result.ok ? result.data || null : null,
         error: result.ok ? null : result.error || "Falha ao consultar o sistema.",
+        error_code: result.ok ? null : result.errorCode || "tool_failed",
         retryable: !result.ok && isRetryableError(result.error || toolMessage),
         needs_clarification: !result.ok && needsClarification(result.error || toolMessage),
         grounded: result.grounded,

@@ -16,13 +16,12 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal, flushSync } from "react-dom";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { getAppointmentKind } from "@/lib/appointment-metadata";
-import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
 import { useAuth } from "@/components/auth/SessionContextProvider";
+import {
+    searchSynapseWorkspace,
+    type SynapseWorkspaceSearchResult,
+} from "@/lib/synapse-workspace-search";
 
 interface SearchResult {
     id: string;
@@ -32,6 +31,40 @@ interface SearchResult {
     url: string;
     date?: string;
 }
+
+const workspaceType: Record<SynapseWorkspaceSearchResult["entity_type"], SearchResult["type"]> = {
+    patient: "patient",
+    session_note: "note",
+    appointment: "appointment",
+    reminder: "reminder",
+    personal_note: "personal_note",
+    message: "ai",
+};
+
+const workspaceUrl = (result: SynapseWorkspaceSearchResult) => {
+    switch (result.entity_type) {
+        case "patient":
+            return `/pacientes/${result.entity_id}`;
+        case "session_note":
+        case "personal_note":
+            return `/notas?noteId=${result.entity_id}`;
+        case "appointment":
+            return `/agenda?appointmentId=${result.entity_id}`;
+        case "reminder":
+            return "/dashboard";
+        case "message":
+            return "/synapse-ai";
+    }
+};
+
+const toCommandSearchResult = (result: SynapseWorkspaceSearchResult): SearchResult => ({
+    id: result.entity_id,
+    title: result.title,
+    subtitle: result.subtitle || result.excerpt || "Resultado do Synapse",
+    type: workspaceType[result.entity_type],
+    url: workspaceUrl(result),
+    date: result.occurred_at || undefined,
+});
 
 export const CommandSearch = ({ open, setOpen }: { open: boolean, setOpen: (open: boolean) => void }) => {
     const { user } = useAuth();
@@ -110,6 +143,7 @@ export const CommandSearch = ({ open, setOpen }: { open: boolean, setOpen: (open
             return;
         }
 
+        let cancelled = false;
         const delayDebounceFn = setTimeout(async () => {
             setLoading(true);
             try {
@@ -118,28 +152,8 @@ export const CommandSearch = ({ open, setOpen }: { open: boolean, setOpen: (open
                     return;
                 }
 
-                // Fetch basic data from multiple tables
-                const [
-                    { data: patients },
-                    { data: notes },
-                    { data: appointments },
-                    { data: reminders },
-                    { data: personalNotes },
-                    { data: aiMessages }
-                ] = await Promise.all([
-                    supabase.from('patients').select('id, name').eq('user_id', user.id).ilike('name', `%${query}%`).limit(3),
-                    supabase.from('session_notes').select('id, patient_id, created_at, patients(name)').eq('user_id', user.id).ilike('notes', `%${query}%`).limit(3),
-                    supabase
-                        .from('appointments')
-                        .select('id, patient_id, patient_name, start_time, end_time, type, notes, location, metadata, patients(name)')
-                        .eq('user_id', user.id)
-                        .or(`patient_name.ilike.%${query}%,notes.ilike.%${query}%,location.ilike.%${query}%`)
-                        .order('start_time', { ascending: false })
-                        .limit(5),
-                    supabase.from('reminders').select('id, title, due_date').eq('user_id', user.id).ilike('title', `%${query}%`).limit(3),
-                    supabase.from('personal_notes').select('id, title, created_at').eq('user_id', user.id).ilike('title', `%${query}%`).limit(3),
-                    supabase.from('messages').select('id, content, created_at').eq('user_id', user.id).ilike('content', `%${query}%`).limit(3)
-                ]);
+                const matches = await searchSynapseWorkspace(query, { limit: 24 });
+                if (cancelled) return;
 
                 const formattedResults: SearchResult[] = [];
 
@@ -152,73 +166,21 @@ export const CommandSearch = ({ open, setOpen }: { open: boolean, setOpen: (open
                     url: `/synapse-ai?q=${encodeURIComponent(query)}`
                 });
 
-                patients?.forEach(p => formattedResults.push({
-                    id: p.id,
-                    title: p.name,
-                    subtitle: 'Registro de Paciente',
-                    type: 'patient',
-                    url: `/pacientes/${p.id}`
-                }));
-
-                notes?.forEach((n: any) => {
-                    const pName = Array.isArray(n.patients) ? n.patients[0]?.name : n.patients?.name;
-                    formattedResults.push({
-                        id: n.id,
-                        title: `Sessão: ${pName || 'Paciente'}`,
-                        subtitle: `Nota de ${format(new Date(n.created_at), "dd/MM/yyyy")}`,
-                        type: 'note',
-                        url: `/notas?noteId=${n.id}`
-                    });
-                });
-
-                appointments?.forEach((a: any) => {
-                    const appointment = {
-                        ...a,
-                        patient_name: a.patient_name || (Array.isArray(a.patients) ? a.patients[0]?.name : a.patients?.name),
-                    };
-                    const kind = getAppointmentKind(appointment);
-                    formattedResults.push({
-                        id: a.id,
-                        title: `${kind === 'event' ? 'Evento' : kind === 'block' ? 'Bloqueio' : 'Consulta'}: ${getAppointmentDisplayTitle(appointment)}`,
-                        subtitle: format(new Date(a.start_time), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR }),
-                        type: 'appointment',
-                        url: `/agenda?appointmentId=${a.id}`
-                    });
-                });
-
-                reminders?.forEach(r => formattedResults.push({
-                    id: r.id,
-                    title: r.title,
-                    subtitle: `Lembrete p/ ${format(new Date(r.due_date), "dd/MM")}`,
-                    type: 'reminder',
-                    url: `/dashboard`
-                }));
-
-                personalNotes?.forEach(pn => formattedResults.push({
-                    id: pn.id,
-                    title: pn.title,
-                    subtitle: 'Nota Pessoal / Protocolo',
-                    type: 'personal_note',
-                    url: `/notas?noteId=${pn.id}`
-                }));
-
-                aiMessages?.forEach(m => formattedResults.push({
-                    id: m.id,
-                    title: m.content.substring(0, 40) + '...',
-                    subtitle: 'Histórico Synapse AI',
-                    type: 'ai',
-                    url: `/synapse-ai`
-                }));
+                matches.forEach((match) => formattedResults.push(toCommandSearchResult(match)));
 
                 setResults(formattedResults);
             } catch (err) {
                 console.error("Search error:", err);
+                if (!cancelled) setResults([]);
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
         }, 400);
 
-        return () => clearTimeout(delayDebounceFn);
+        return () => {
+            cancelled = true;
+            clearTimeout(delayDebounceFn);
+        };
     }, [query, user?.id]);
 
     const closeAndNavigate = (url: string) => {

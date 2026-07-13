@@ -12,6 +12,7 @@ import {
   type SynapseConversationState,
 } from "./entity-context.ts";
 import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
+import { normalizeSynapseError } from "../_shared/synapse-errors.ts";
 
 export interface AgentToolContextV3 {
   admin: any;
@@ -19,6 +20,7 @@ export interface AgentToolContextV3 {
   sessionId: string;
   authorization: string;
   requestOrigin?: string | null;
+  userClient?: any;
 }
 
 export interface AgentToolExecutionV3 {
@@ -454,6 +456,33 @@ async function executeNewReadTool(
   const { admin, userId } = context;
 
   switch (name) {
+    case "search_workspace": {
+      if (!context.userClient) throw new Error("Cliente autenticado indisponível para a busca unificada.");
+      const query = clean(args.query, 240);
+      if (!query) throw new Error("Informe o termo que deseja pesquisar.");
+      const entityTypes = Array.isArray(args.entity_types)
+        ? args.entity_types.map((value: unknown) => clean(value, 40)).filter(Boolean).slice(0, 6)
+        : null;
+      const { data, error } = await context.userClient.rpc("search_synapse_workspace", {
+        p_query: query,
+        p_entity_types: entityTypes?.length ? entityTypes : null,
+        p_limit: clamp(args.limit, 12, 1, 50),
+      });
+      if (error) throw error;
+      const results = (data || []).map((item: any) => ({
+        entity_type: item.entity_type,
+        entity_id: item.entity_id,
+        patient_id: item.patient_id,
+        title: clean(item.title, 180),
+        subtitle: clean(item.subtitle, 180) || null,
+        excerpt: clean(item.excerpt, 280) || null,
+        occurred_at: item.occurred_at,
+        score: Number(item.score || 0),
+        match_reason: item.match_reason,
+      }));
+      return { ok: true, grounded: true, recordCount: results.length, data: { query, results }, structuredData: { type: "workspace_search", data: { results } } };
+    }
+
     case "get_dashboard_schedule": {
       const today = new Date();
       const startDate = clean(args.start_date || dateOnly(today), 10);
@@ -823,8 +852,10 @@ export async function executeAgentToolV3(
   state: SynapseConversationState,
 ): Promise<AgentToolExecutionV3> {
   try {
-    const enriched = await enrichToolArguments(context.admin, context.userId, name, originalArgs, state);
-    const args = enriched.args;
+    const enriched = await enrichToolArguments(context.admin, context.userId, name, originalArgs, state, context.userClient);
+    const contextArgs = enriched.args;
+    const args = { ...contextArgs };
+    delete args._confirmed_patient_alias;
     let result: AgentToolResult;
 
     if (MUTATING_TOOLS_V3.has(name) && [
@@ -841,7 +872,7 @@ export async function executeAgentToolV3(
 
     return {
       result,
-      state: updateContextFromResult(state, name, args, result),
+      state: updateContextFromResult(state, name, contextArgs, result),
       resolvedArgs: args,
     };
   } catch (error) {
@@ -853,16 +884,21 @@ export async function executeAgentToolV3(
           error: error.message,
           data: error.details,
           recordCount: 0,
+          errorCode: error.code,
         },
         state,
         resolvedArgs: originalArgs,
       };
     }
+    const normalized = normalizeSynapseError(error);
+    console.warn("[synapse-tool] execution failed", JSON.stringify({ phase: "execute", tool: name, code: normalized.code }));
     return {
       result: {
         ok: false,
         grounded: true,
-        error: error instanceof Error ? error.message : "Falha ao consultar o sistema.",
+        error: normalized.message,
+        errorCode: normalized.code,
+        data: normalized.details,
       },
       state,
       resolvedArgs: originalArgs,

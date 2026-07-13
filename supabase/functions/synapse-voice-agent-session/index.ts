@@ -152,6 +152,47 @@ async function loadPendingActionSummary(admin: any, userId: string, conversation
   return "";
 }
 
+async function loadRecentAgentContext(admin: any, userId: string, conversationId: string) {
+  const { data, error } = await admin
+    .from("synapse_voice_turns")
+    .select("role,transcript,response_text,tool_name,metadata,created_at")
+    .eq("user_id", userId)
+    .eq("conversation_id", conversationId)
+    .eq("is_final", true)
+    .order("created_at", { ascending: false })
+    .limit(32);
+  if (error) {
+    console.warn("[synapse-voice-agent-session] recent context load failed", error.message);
+    return [];
+  }
+
+  let toolPairs = 0;
+  let size = 0;
+  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+  for (const row of [...(data || [])].reverse()) {
+    let role: "user" | "assistant";
+    let content = "";
+    if (row.role === "user") {
+      role = "user";
+      content = clean(row.transcript, 1200);
+    } else if (row.role === "assistant") {
+      role = "assistant";
+      content = clean(row.response_text, 1600);
+    } else if (row.role === "tool" && toolPairs < 4) {
+      role = "assistant";
+      const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
+      content = clean(`[Resultado seguro da função ${row.tool_name || "Synapse"}: ${JSON.stringify(metadata)}]`, 900);
+      toolPairs += 1;
+    } else {
+      continue;
+    }
+    if (!content || size + content.length > 12000) continue;
+    messages.push({ role, content });
+    size += content.length;
+  }
+  return messages.slice(-12);
+}
+
 function buildSpeakConfig() {
   const azureVoice = clean(Deno.env.get("AZURE_SPEECH_VOICE") || DEFAULT_AZURE_TTS_VOICE, 160);
   const cartesiaVoice = clean(Deno.env.get("CARTESIA_FALLBACK_VOICE_ID") || DEFAULT_CARTESIA_VOICE_ID, 160);
@@ -236,6 +277,7 @@ function buildAgentSettings(
   prompt: string,
   context: Record<string, unknown>,
   functions: Array<Record<string, unknown>>,
+  contextMessages: Array<{ role: "user" | "assistant"; content: string }>,
 ) {
   const { speak, ttsProvider, ttsVoice } = buildSpeakConfig();
   const listenModel = Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi";
@@ -280,6 +322,7 @@ function buildAgentSettings(
         },
       },
       agent: {
+        context: contextMessages.length ? { messages: contextMessages } : undefined,
         listen: {
           provider: listenProvider,
         },
@@ -350,6 +393,7 @@ serve(async (request) => {
       return json({ error: "Ferramentas reais do Synapse nao foram registradas para o modo voz." }, 500);
     }
     const pendingActionSummary = await loadPendingActionSummary(admin, user.id, conversationId);
+    const contextMessages = await loadRecentAgentContext(admin, user.id, conversationId);
     const prompt = buildSynapseVoicePrompt({
       systemInstruction: clean(body.systemInstruction, 600),
       state: loadedContext.state,
@@ -358,7 +402,7 @@ serve(async (request) => {
       professionalName: profile.professionalName,
       pendingActionSummary,
     });
-    const { settings, metadata } = buildAgentSettings(prompt, context, functions);
+    const { settings, metadata } = buildAgentSettings(prompt, context, functions, contextMessages);
     const voiceSessionId = await ensureVoiceSessionRecord(
       admin,
       user.id,

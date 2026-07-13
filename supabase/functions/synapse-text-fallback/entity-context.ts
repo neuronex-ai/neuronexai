@@ -1,4 +1,10 @@
-import { resolvePatientByName } from "./patient-resolver.ts";
+import { normalizePatientName, resolvePatientByName } from "./patient-resolver.ts";
+
+export interface ConfirmedPatientAlias {
+  alias: string;
+  patientId: string;
+  confirmedAt: string;
+}
 
 export interface SynapseConversationState {
   activePatientId?: string | null;
@@ -13,6 +19,7 @@ export interface SynapseConversationState {
   activeTaskTitle?: string | null;
   activeFileId?: string | null;
   activeFileName?: string | null;
+  patientAliases?: ConfirmedPatientAlias[];
   lastTool?: string | null;
   updatedAt?: string | null;
   [key: string]: unknown;
@@ -26,10 +33,12 @@ export interface LoadedConversationContext {
 }
 
 export class EntityResolutionError extends Error {
+  code: "patient_not_found" | "patient_ambiguous" | "patient_name_required";
   details: Record<string, unknown>;
   constructor(message: string, details: Record<string, unknown> = {}) {
     super(message);
     this.name = "EntityResolutionError";
+    this.code = (details.resolution as EntityResolutionError["code"]) || "patient_not_found";
     this.details = details;
   }
 }
@@ -67,7 +76,9 @@ async function findOwnedPatientById(admin: any, userId: string, patientId: strin
   return data || null;
 }
 
-export async function resolvePatientReference(admin: any, userId: string, args: Record<string, any>, state: SynapseConversationState, options: { required?: boolean } = {}) {
+type PatientReferenceOptions = { required?: boolean; searchClient?: any };
+
+export async function resolvePatientReference(admin: any, userId: string, args: Record<string, any>, state: SynapseConversationState, options: PatientReferenceOptions = {}) {
   const explicitId = safeId(args.patient_id || args.patientId);
   if (explicitId) {
     const patient = await findOwnedPatientById(admin, userId, explicitId);
@@ -76,8 +87,17 @@ export async function resolvePatientReference(admin: any, userId: string, args: 
   }
   const explicitName = clean(args.patient_name || args.patientName || "", 160);
   if (explicitName) {
+    const normalizedAlias = normalizePatientName(explicitName);
+    const alias = (state.patientAliases || []).find((item) =>
+      item.alias === normalizedAlias && safeId(item.patientId)
+    );
+    if (alias) {
+      const patient = await findOwnedPatientById(admin, userId, alias.patientId);
+      if (patient) return { patient, args: { ...args, patient_id: patient.id, patient_name: patient.name, _confirmed_patient_alias: normalizedAlias } };
+    }
     const resolution = await resolvePatientByName(admin, userId, explicitName, {
       preferredPatientId: safeId(state.activePatientId) || null,
+      searchClient: options.searchClient,
     });
     if (resolution.status === "not_found") {
       throw new EntityResolutionError(`Não encontrei paciente compatível com “${explicitName}”.`, { resolution: "patient_not_found", query: explicitName });
@@ -89,7 +109,7 @@ export async function resolvePatientReference(admin: any, userId: string, args: 
       });
     }
     const patient = resolution.patient;
-    return { patient, args: { ...args, patient_id: patient.id, patient_name: patient.name } };
+    return { patient, args: { ...args, patient_id: patient.id, patient_name: patient.name, _confirmed_patient_alias: normalizedAlias } };
   }
   const contextualId = safeId(state.activePatientId);
   if (contextualId) {
@@ -104,7 +124,7 @@ const sameLocalDate = (iso: string, date: string) => new Intl.DateTimeFormat("en
 const localTime = (iso: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 const localDateTime = (iso: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", dateStyle: "short", timeStyle: "short" }).format(new Date(iso));
 
-export async function resolveAppointmentReference(admin: any, userId: string, args: Record<string, any>, state: SynapseConversationState, options: { required?: boolean } = {}) {
+export async function resolveAppointmentReference(admin: any, userId: string, args: Record<string, any>, state: SynapseConversationState, options: PatientReferenceOptions = {}) {
   const explicitId = safeId(args.appointment_id || args.appointmentId);
   if (explicitId) {
     const { data, error } = await admin.from("appointments").select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,patient:patient_id(name,email,phone)").eq("id", explicitId).eq("user_id", userId).maybeSingle();
@@ -112,7 +132,7 @@ export async function resolveAppointmentReference(admin: any, userId: string, ar
     if (!data) throw new EntityResolutionError("Não encontrei essa consulta na sua agenda.");
     return { appointment: data, args: { ...args, appointment_id: data.id } };
   }
-  const patientResolution = await resolvePatientReference(admin, userId, args, state, { required: false });
+  const patientResolution = await resolvePatientReference(admin, userId, args, state, { required: false, searchClient: options.searchClient });
   const patient = patientResolution.patient;
   const contextualAppointmentId = safeId(state.activeAppointmentId);
   if (!patient && contextualAppointmentId) return resolveAppointmentReference(admin, userId, { ...args, appointment_id: contextualAppointmentId }, state, options);
@@ -148,17 +168,17 @@ const NOTE_CONTEXT_TOOLS = new Set([
 const TASK_CONTEXT_TOOLS = new Set(["get_task_details", "update_task", "complete_task", "reopen_task", "move_task_category", "delete_task"]);
 const FILE_CONTEXT_TOOLS = new Set(["get_file_details", "link_file_to_patient", "unlink_file_from_patient", "delete_file"]);
 
-export async function enrichToolArguments(admin: any, userId: string, toolName: string, originalArgs: Record<string, any>, state: SynapseConversationState) {
+export async function enrichToolArguments(admin: any, userId: string, toolName: string, originalArgs: Record<string, any>, state: SynapseConversationState, searchClient?: any) {
   let args = { ...originalArgs };
   let patient: any = null;
   let appointment: any = null;
   if (PATIENT_REQUIRED_TOOLS.has(toolName) || PATIENT_OPTIONAL_TOOLS.has(toolName)) {
-    const patientResult = await resolvePatientReference(admin, userId, args, state, { required: PATIENT_REQUIRED_TOOLS.has(toolName) });
+    const patientResult = await resolvePatientReference(admin, userId, args, state, { required: PATIENT_REQUIRED_TOOLS.has(toolName), searchClient });
     args = patientResult.args;
     patient = patientResult.patient;
   }
   if (APPOINTMENT_REQUIRED_TOOLS.has(toolName)) {
-    const appointmentResult = await resolveAppointmentReference(admin, userId, args, state, { required: true });
+    const appointmentResult = await resolveAppointmentReference(admin, userId, args, state, { required: true, searchClient });
     args = appointmentResult.args;
     appointment = appointmentResult.appointment;
   }
@@ -179,6 +199,11 @@ export function updateContextFromResult(current: SynapseConversationState, toolN
   const patientName = clean(patient?.name || data.patient_name || data?.appointment?.patient_name || data?.session?.appointment?.patient_name || data?.charge?.patient_name || args.patient_name, 180);
   if (patientId) next.activePatientId = patientId;
   if (patientName) next.activePatientName = patientName;
+  const confirmedAlias = normalizePatientName(args._confirmed_patient_alias);
+  if (patientId && confirmedAlias && confirmedAlias !== normalizePatientName(patientName)) {
+    const aliases = (next.patientAliases || []).filter((item) => item.alias !== confirmedAlias && item.patientId !== patientId);
+    next.patientAliases = [{ alias: confirmedAlias, patientId, confirmedAt: new Date().toISOString() }, ...aliases].slice(0, 10);
+  }
   const appointment = data.appointment || data?.session?.appointment || (Array.isArray(data.appointments) && data.appointments.length === 1 ? data.appointments[0] : null);
   const appointmentId = safeId(appointment?.id || data.appointment_id || args.appointment_id);
   if (appointmentId) next.activeAppointmentId = appointmentId;

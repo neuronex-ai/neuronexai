@@ -232,8 +232,8 @@ export const SynapseLiquidOrb = ({ state, getInputSignal, getOutputSignal, reduc
             };
             let frame = 0;
             const startTime = performance.now();
-            let smoothedInput = [0, 0, 0, 0];
-            let smoothedOutput = [0, 0, 0, 0];
+            const smoothedInput = [0, 0, 0, 0];
+            const smoothedOutput = [0, 0, 0, 0];
             let cachedWidth = 1;
             let cachedHeight = 1;
 

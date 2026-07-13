@@ -19,6 +19,7 @@ export interface SynapseToolPolicy {
 
 export const SYNAPSE_READ_TOOL_NAMES = [
   "get_system_help",
+  "search_workspace",
   "get_workspace_overview",
   "list_patients",
   "search_patients",

@@ -2,7 +2,7 @@ import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v5";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v6";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 /**
@@ -11,7 +11,7 @@ export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
  */
 export const SYNAPSE_VOICE_CORE_TOOL_NAMES = [
   "get_system_help",
-  "get_workspace_overview",
+  "search_workspace",
   "get_dashboard_daily_briefing",
   "get_dashboard_schedule",
   "search_patients",

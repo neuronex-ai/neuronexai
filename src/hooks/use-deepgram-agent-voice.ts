@@ -723,6 +723,7 @@ export function useDeepgramAgentVoice({
           success: result.success === true,
           message: clean(result.message, 800),
           cancelled: Boolean(result.cancelled),
+          error_code: result.success === true ? null : "client_action_failed",
           durationMs: Number.isFinite(Number(result.durationMs))
             ? Math.max(0, Math.round(Number(result.durationMs)))
             : Math.round(performance.now() - startedAt),

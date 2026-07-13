@@ -519,6 +519,15 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
       if (normalized.modal === "patient_details") return { ...normalized, action: "open_patient" };
       if (normalized.modal === "patient_invite") return { ...normalized, action: "open_patient_invite_modal" };
     }
+    if (normalized.action === "navigate" && normalized.destination === "notes.neuroview") {
+      return { ...normalized, action: "open_neuroview_reasoning", destination: undefined, notesView: "neuroview" };
+    }
+    if (normalized.action === "navigate" && normalized.destination === "notes.neuroflow") {
+      return { ...normalized, action: "open_neuroflow_generation", destination: undefined, notesView: "neuroflow" };
+    }
+    if (normalized.action === "navigate" && normalized.destination === "notes.neuropulse") {
+      return { ...normalized, action: "open_neuropulse_diagram", destination: undefined, notesView: "neuropulse" };
+    }
     return normalized;
   }
   if (envelope.type === "navigation_action" && typeof data.path === "string") {

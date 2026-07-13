@@ -402,32 +402,22 @@ const applyClientActionResult = (
     message,
     cancelled: Boolean(result?.cancelled),
     timed_out: Boolean(result?.timed_out),
+    error_code: success ? null : (result?.timed_out === true ? "client_action_timeout" : "client_action_failed"),
     duration_ms: Number.isFinite(Number(result?.durationMs))
       ? Math.max(0, Math.round(Number(result.durationMs)))
       : undefined,
   };
 
   if (success) return { ...payload, client_action: clientAction };
-  if (name === "request_interface_action") {
-    return {
-      ...payload,
-      ok: false,
-      spoken_summary: message,
-      message,
-      retryable: false,
-      needs_clarification: false,
-      error: message,
-      client_action: clientAction,
-    };
-  }
-
-  const warnings = Array.isArray(payload?.warnings)
-    ? [...payload.warnings, message]
-    : [message];
   return {
     ...payload,
-    warning: message,
-    warnings,
+    ok: false,
+    spoken_summary: message,
+    message,
+    retryable: result?.timed_out === true,
+    needs_clarification: false,
+    error: message,
+    error_code: result?.timed_out === true ? "client_action_timeout" : "client_action_failed",
     client_action: clientAction,
   };
 };

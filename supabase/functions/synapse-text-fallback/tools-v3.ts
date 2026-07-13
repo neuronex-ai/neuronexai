@@ -54,6 +54,19 @@ const dashboardPeriod = {
 
 const EXTRA_TOOLS = [
   fn(
+    "search_workspace",
+    "Pesquisa de forma unificada pacientes, prontuários, agenda, lembretes, notas e histórico do Synapse. Use quando o pedido citar parcialmente uma pessoa ou informação e ainda não houver entidade canônica confirmada.",
+    objectSchema({
+      query: { type: "string", description: "Nome parcial, termo, assunto ou trecho informado pelo profissional." },
+      entity_types: {
+        type: "array",
+        items: { type: "string", enum: ["patient", "session_note", "appointment", "reminder", "personal_note", "message"] },
+        maxItems: 6,
+      },
+      limit: { type: "integer", minimum: 1, maximum: 50 },
+    }, ["query"]),
+  ),
+  fn(
     "get_dashboard_daily_briefing",
     "Consulta um briefing real do Dashboard Desktop: próximo atendimento, agenda de hoje, semana, pendências e resumo financeiro útil. Use para pedidos como 'resuma meu dia', 'o que tenho hoje' ou 'como está meu dashboard'.",
     objectSchema({}),
@@ -242,6 +255,7 @@ export const MUTATING_TOOLS_V3 = new Set([
 
 export const SYSTEM_DATA_TOOLS_V3 = new Set([
   ...BASE_SYSTEM_DATA_TOOLS,
+  "search_workspace",
   "get_dashboard_daily_briefing",
   "get_dashboard_schedule",
   "get_dashboard_next_appointment",

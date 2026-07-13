@@ -5,6 +5,8 @@ import {
   SYNAPSE_VOICE_DISPATCH_TOOL_NAME,
   SYNAPSE_VOICE_TOOLSET_VERSION,
 } from "./synapse-voice-toolset.ts";
+import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
+import { SYNAPSE_VOICE_BLOCKED_TOOL_NAMES } from "./synapse-tool-contract.ts";
 
 const equal = (actual: unknown, expected: unknown, message: string) => {
   if (actual !== expected) {
@@ -19,7 +21,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(functions.length, 16, "quantidade de funções de voz");
   equal(
     SYNAPSE_VOICE_TOOLSET_VERSION,
-    "neuronex.voice-core.v5",
+    "neuronex.voice-core.v6",
     "versão do payload de sessão",
   );
   equal(
@@ -39,6 +41,8 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
     true,
     "ponte para o catalogo completo",
   );
+  equal(names.includes("search_workspace"), true, "busca unificada no núcleo");
+  equal(names.includes("get_workspace_overview"), false, "overview movido ao dispatcher");
 });
 
 Deno.test("ponte de voz alcanca capacidades permitidas fora do nucleo sem liberar exclusoes", () => {
@@ -63,6 +67,18 @@ Deno.test("ponte de voz alcanca capacidades permitidas fora do nucleo sem libera
 
   for (const name of ["delete_file", "delete_task", "neurofinance_refund"]) {
     equal(delegatedNames.includes(name), false, `capacidade bloqueada ${name}`);
+  }
+});
+
+Deno.test("todo o catálogo V3 está no núcleo, dispatcher ou bloqueado por política", () => {
+  const functions = buildSynapseVoiceFunctions();
+  const direct = new Set(functions.map((tool) => tool.name));
+  const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
+  const delegated = new Set(dispatch?.parameters?.properties?.tool_name?.enum || []);
+  const blocked = new Set<string>(SYNAPSE_VOICE_BLOCKED_TOOL_NAMES);
+  for (const tool of AGENT_TOOLS_V3) {
+    const name = tool.function.name;
+    equal(direct.has(name) || delegated.has(name) || blocked.has(name), true, `cobertura de ${name}`);
   }
 });
 

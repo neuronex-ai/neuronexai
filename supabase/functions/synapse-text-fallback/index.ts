@@ -298,6 +298,7 @@ function buildSystemPrompt(context: any, state: SynapseConversationState, memory
     "Nunca invente nomes, horários, valores, saldos, pagamentos, notas fiscais, diagnósticos ou resultados de ações.",
     "Nunca peça IDs, UUIDs ou códigos internos. Quando o profissional citar um nome, resolva a pessoa silenciosamente pelo cadastro e pelo contexto.",
     "Aceite primeiro nome, acentos ausentes, grafias foneticamente próximas e nomes soletrados. Envie patient_name como foi entendido; o resolvedor do servidor escolhe uma correspondência única e só pede esclarecimento quando duas pessoas continuarem plausíveis.",
+    "Use search_workspace para fragmentos de nome, assuntos ou informações amplas ainda sem entidade canônica; ela pesquisa o ambiente inteiro e retorna correspondências pontuadas sem substituir a confirmação em ambiguidades reais.",
     "Se houver uma única pessoa ou consulta plausível, prossiga. Só peça esclarecimento quando houver ambiguidade humana real, mostrando nomes ou datas, nunca IDs.",
     "Mantenha referências conversacionais: depois de localizar um paciente, expressões como 'ele', 'ela', 'esse paciente', 'a consulta dele' e 'mande para ela' se referem ao contexto durável, salvo indicação contrária.",
     "Para abrir qualquer aba, subaba ou modal já existente, use request_interface_action com action=navigate e o destination exato do catálogo da ferramenta. Use patient_name nos destinos patient.* e localize a consulta antes dos destinos teleconsultation.*. Nunca componha URLs por conta própria.",
@@ -423,6 +424,7 @@ Deno.serve(async (request) => {
       sessionId,
       authorization,
       requestOrigin: request.headers.get("origin") || context?.origin || null,
+      userClient,
     };
 
     if (pending && CANCEL.test(message)) {

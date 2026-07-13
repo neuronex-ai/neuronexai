@@ -1,9 +1,11 @@
 import { updateContextFromResult } from "./entity-context.ts";
 import {
   normalizePatientName,
+  resolvePatientByName,
   resolvePatientCandidates,
   type PatientCandidate,
 } from "./patient-resolver.ts";
+import { normalizeSynapseError } from "../_shared/synapse-errors.ts";
 
 const equal = (actual: unknown, expected: unknown, label: string) => {
   if (actual !== expected) throw new Error(`${label}: esperado ${expected}, recebido ${actual}`);
@@ -34,6 +36,20 @@ Deno.test("resolve nome sem acento e nome completo soletrado", () => {
   if (nathalia.status === "resolved") equal(nathalia.patient.name, "Nathalia Gasperi", "paciente soletrada");
 });
 
+Deno.test("remove expressão paciente, aceita prefixo e soletra dentro de uma frase", () => {
+  const prefix = resolvePatientCandidates("paciente nath", patients);
+  equal(prefix.status, "resolved", "prefixo com expressão");
+  const phrase = "Synapse, vou soletrar para você: ene a te aga a ele i a espaço ge a esse pe e erre i";
+  equal(normalizePatientName(phrase), "nathalia gasperi", "soletração embutida");
+  equal(resolvePatientCandidates(phrase, patients).status, "resolved", "frase soletrada");
+});
+
+Deno.test("nome social participa do ranking", () => {
+  const candidates = [{ id: "patient-social", name: "Ana Pereira", social_name: "Nathália Pereira" }];
+  const result = resolvePatientCandidates("natalia", candidates);
+  equal(result.status, "resolved", "nome social");
+});
+
 Deno.test("pede esclarecimento entre homônimas e usa o contexto durável para desempatar", () => {
   const homonyms = [
     ...patients,
@@ -55,4 +71,27 @@ Deno.test("uma busca com resultado único atualiza o paciente canônico da conve
   });
   equal(state.activePatientId, "patient-nathalia", "id persistido");
   equal(state.activePatientName, "Nathalia Gasperi", "nome canônico persistido");
+});
+
+Deno.test("consulta somente colunas reais de patients e ordena por created_at", async () => {
+  let selected = "";
+  let ordered = "";
+  const rows = [{ id: "patient-nathalia", name: "Nathalia Gasperi" }];
+  const chain: any = {
+    select(value: string) { selected = value; return this; },
+    eq() { return this; },
+    order(value: string) { ordered = value; return this; },
+    limit() { return Promise.resolve({ data: rows, error: null }); },
+  };
+  const admin = { from: () => chain };
+  const result = await resolvePatientByName(admin, "user-1", "Nathalia");
+  equal(result.status, "resolved", "resultado");
+  equal(selected.includes("updated_at"), false, "não consulta coluna inexistente");
+  equal(ordered, "created_at", "ordenação válida");
+});
+
+Deno.test("normaliza erro PostgREST representado como objeto simples", () => {
+  const normalized = normalizeSynapseError({ code: "42703", message: "column patients.updated_at does not exist" }, "resolver_query_failed");
+  equal(normalized.code, "resolver_query_failed", "código operacional");
+  equal(normalized.details.providerCode, "42703", "código PostgREST");
 });

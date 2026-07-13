@@ -61,3 +61,17 @@ Deno.test("destino profundo desconhecido é recusado", async () => {
   equal(result.ok, false, "resultado");
   equal(result.error, "Destino profundo inválido.", "erro seguro");
 });
+
+Deno.test("navegação com diretivas do NeuroView é canonicalizada antes da validação", async () => {
+  const result = await executeAgentTool("request_interface_action", {
+    action: "navigate",
+    destination: "notes.neuroview",
+    patient_id: "patient-nathalia",
+    neuroview_scope: "patient",
+    neuroview_mode: "3d",
+  }, context);
+  equal(result.ok, true, "resultado");
+  equal(result.clientAction?.data?.action, "open_neuroview_reasoning", "ação canônica");
+  equal(result.clientAction?.data?.notesView, "neuroview", "superfície");
+  equal(result.clientAction?.data?.neuroViewMode, "3d", "modo");
+});

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { SynapseVoiceConfig } from '@/types/synapse-voice';
 
@@ -34,6 +34,12 @@ const localBrowserGatewayUrl = () => {
 };
 
 const isSecureGatewayUrl = (value: string) => /^wss:\/\//i.test(value);
+const conversationStorageKey = (userId: string) => `synapse:voice-conversation:${userId}`;
+const readStoredConversation = (userId: string) => {
+    if (typeof window === 'undefined') return null;
+    const value = window.sessionStorage.getItem(conversationStorageKey(userId));
+    return value && /^[0-9a-f-]{36}$/i.test(value) ? value : null;
+};
 
 const resolveGatewayUrl = (remoteGatewayUrl: unknown) => {
     const remote = typeof remoteGatewayUrl === 'string' ? remoteGatewayUrl.trim() : '';
@@ -57,12 +63,26 @@ export function useVoiceConfig() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    useEffect(() => {
+        const { data } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event !== 'SIGNED_OUT' || typeof window === 'undefined') return;
+            if (session?.user?.id) window.sessionStorage.removeItem(conversationStorageKey(session.user.id));
+            Object.keys(window.sessionStorage)
+                .filter((key) => key.startsWith('synapse:voice-conversation:'))
+                .forEach((key) => window.sessionStorage.removeItem(key));
+        });
+        return () => data.subscription.unsubscribe();
+    }, []);
+
     const refresh = useCallback(async (): Promise<SynapseVoiceConfig> => {
         setIsLoading(true);
         setError(null);
         try {
+            const { data: authData } = await supabase.auth.getUser();
+            const userId = authData.user?.id || '';
+            const storedConversationId = userId ? readStoredConversation(userId) : null;
             const { data, error: invokeError } = await supabase.functions.invoke('synapse-voice-agent-session', {
-                body: { includeSettings: false, context: { route: 'voice-config' } },
+                body: { includeSettings: false, conversationId: storedConversationId, context: { route: 'voice-config' } },
             });
             if (invokeError) throw invokeError;
             if (data?.error) throw new Error(String(data.error));
@@ -75,6 +95,9 @@ export function useVoiceConfig() {
 
             if (provider !== 'deepgram-agent') {
                 throw new Error('Config de voz invalida para o Synapse.');
+            }
+            if (userId && conversationId && typeof window !== 'undefined') {
+                window.sessionStorage.setItem(conversationStorageKey(userId), conversationId);
             }
 
             const next: SynapseVoiceConfig = {

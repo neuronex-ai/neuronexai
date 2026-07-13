@@ -42,6 +42,7 @@ export interface AgentToolResult {
   clientAction?: any;
   pendingAction?: PendingAction;
   message?: string;
+  errorCode?: string;
 }
 
 const CANCELLED_STATUSES = new Set(["cancelled", "canceled", "cancelled_by_patient", "cancelled_by_professional"]);
@@ -483,13 +484,27 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
         const allowedDestinations = new Set<string>(SYNAPSE_INTERFACE_DESTINATIONS);
         const allowedNeuroViewScopes = new Set(["all", "patient", "subgraph"]);
         const allowedNeuroViewModes = new Set(["2d", "3d"]);
-        const action = cleanText(args.action, 50);
+        let action = cleanText(args.action, 50);
         const target = args.target ? cleanText(args.target, 50) : undefined;
-        const destination = args.destination ? cleanText(args.destination, 100) : undefined;
+        let destination = args.destination ? cleanText(args.destination, 100) : undefined;
         const neuroViewScope = args.neuroview_scope ? cleanText(args.neuroview_scope, 20) : undefined;
         const neuroViewMode = args.neuroview_mode ? cleanText(args.neuroview_mode, 10) : undefined;
         const neuroViewNodeIds = cleanGraphNodeIds(args.neuroview_node_ids);
         const neuroViewFocusNodeId = args.neuroview_focus_node_id ? cleanGraphNodeId(args.neuroview_focus_node_id) : undefined;
+        let notesView = args.notes_view ? cleanText(args.notes_view, 30) : undefined;
+        if (action === "navigate" && destination === "notes.neuroview") {
+          action = "open_neuroview_reasoning";
+          destination = undefined;
+          notesView = "neuroview";
+        } else if (action === "navigate" && destination === "notes.neuroflow") {
+          action = "open_neuroflow_generation";
+          destination = undefined;
+          notesView = "neuroflow";
+        } else if (action === "navigate" && destination === "notes.neuropulse") {
+          action = "open_neuropulse_diagram";
+          destination = undefined;
+          notesView = "neuropulse";
+        }
         if (!allowedActions.has(action)) throw new Error("Ação visual inválida.");
         if (target && !allowedTargets.has(target)) throw new Error("Destino visual inválido.");
         if (destination && !allowedDestinations.has(destination)) throw new Error("Destino profundo inválido.");
@@ -505,7 +520,7 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
         }
         if (neuroViewScope === "subgraph" && !neuroViewNodeIds?.length) throw new Error("Subgrafo sem nodes válidos.");
         if (neuroViewScope === "patient" && !args.patient_id) throw new Error("Paciente ausente para o grafo individual.");
-        const clientAction = { type: "interface_action", data: { action, target, destination, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, neuroViewScope, neuroViewMode, neuroViewNodeIds, neuroViewFocusNodeId, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
+        const clientAction = { type: "interface_action", data: { action, target, destination, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, neuroViewScope, neuroViewMode, neuroViewNodeIds, neuroViewFocusNodeId, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
         return { ok: true, grounded: false, data: { action_requested: action, destination: destination || null }, clientAction };
       }
       default: return { ok: false, grounded: false, error: `Ferramenta não suportada: ${name}` };

@@ -1,6 +1,9 @@
+import { SynapseOperationalError } from "../_shared/synapse-errors.ts";
+
 export interface PatientCandidate {
   id: string;
   name: string;
+  social_name?: string | null;
   status?: string | null;
   diagnosis?: string | null;
   last_session?: string | null;
@@ -32,18 +35,56 @@ const LETTER_WORDS: Record<string, string> = {
   dablio: "w", w: "w", xis: "x", x: "x", ipsilon: "y", y: "y", ze: "z", z: "z",
 };
 
+const SPELL_BOUNDARIES = new Set(["espaco", "space"]);
+
+const extractSpelledName = (value: unknown) => {
+  const tokens = baseNormalize(value).split(" ").filter(Boolean);
+  let best: string[] = [];
+  let segments: string[] = [];
+  let current = "";
+  let letterCount = 0;
+
+  const finishRun = () => {
+    if (current) segments.push(current);
+    if (letterCount >= 4 && segments.join("").length > best.join("").length) {
+      best = [...segments];
+    }
+    segments = [];
+    current = "";
+    letterCount = 0;
+  };
+
+  for (const token of tokens) {
+    if (SPELL_BOUNDARIES.has(token)) {
+      if (current) segments.push(current);
+      current = "";
+      continue;
+    }
+    const letter = LETTER_WORDS[token];
+    if (!letter) {
+      finishRun();
+      continue;
+    }
+    current += letter;
+    letterCount += 1;
+  }
+  finishRun();
+  return best.length ? best.join(" ") : "";
+};
+
 const normalizeSpelledName = (value: unknown) => {
   const normalized = baseNormalize(value);
+  const embeddedSpelling = extractSpelledName(value);
+  if (embeddedSpelling) return embeddedSpelling;
   const tokens = normalized.split(" ").filter(Boolean);
-  const boundaries = new Set(["espaco", "space"]);
   const letterCount = tokens.filter((token) => LETTER_WORDS[token]).length;
-  const meaningfulCount = tokens.filter((token) => !boundaries.has(token)).length;
+  const meaningfulCount = tokens.filter((token) => !SPELL_BOUNDARIES.has(token)).length;
   if (letterCount < 4 || letterCount / Math.max(meaningfulCount, 1) < 0.8) return normalized;
 
   const segments: string[] = [];
   let current = "";
   for (const token of tokens) {
-    if (boundaries.has(token)) {
+    if (SPELL_BOUNDARIES.has(token)) {
       if (current) segments.push(current);
       current = "";
       continue;
@@ -56,7 +97,11 @@ const normalizeSpelledName = (value: unknown) => {
   return segments.join(" ");
 };
 
-export const normalizePatientName = (value: unknown) => normalizeSpelledName(value);
+export const normalizePatientName = (value: unknown) => normalizeSpelledName(value)
+  .replace(/^(?:(?:a|o)\s+)?paciente\s+/, "")
+  .replace(/^nome\s+(?:da|do)\s+paciente\s+/, "")
+  .replace(/\s+por\s+favor$/, "")
+  .trim();
 
 const phonetic = (value: string) => value
   .replace(/th/g, "t")
@@ -103,9 +148,7 @@ const tokenSimilarity = (queryToken: string, targetToken: string) => {
   return Math.max(similarity(queryToken, targetToken), similarity(phonetic(queryToken), phonetic(targetToken)));
 };
 
-export const scorePatientCandidate = (queryValue: unknown, candidate: PatientCandidate) => {
-  const query = normalizePatientName(queryValue);
-  const target = normalizePatientName(candidate.name);
+const scoreNormalizedPatientName = (query: string, target: string) => {
   if (!query || !target) return 0;
   if (target === query) return 100;
   if (compact(target) === compact(query)) return 100;
@@ -127,6 +170,14 @@ export const scorePatientCandidate = (queryValue: unknown, candidate: PatientCan
   if (weakestToken >= 0.92) return Math.round(82 + averageToken * 12);
   if (weakestToken >= 0.78) return Math.round(averageToken * 100);
   return Math.round(Math.max(similarity(query, target), similarity(queryPhonetic, targetPhonetic)) * 82);
+};
+
+export const scorePatientCandidate = (queryValue: unknown, candidate: PatientCandidate) => {
+  const query = normalizePatientName(queryValue);
+  const targets = [candidate.name, candidate.social_name]
+    .map(normalizePatientName)
+    .filter(Boolean);
+  return Math.max(0, ...targets.map((target) => scoreNormalizedPatientName(query, target)));
 };
 
 export interface RankedPatientCandidate {
@@ -183,19 +234,56 @@ export async function resolvePatientByName(
   admin: any,
   userId: string,
   patientName: unknown,
-  options: { preferredPatientId?: string | null } = {},
+  options: {
+    preferredPatientId?: string | null;
+    searchClient?: any;
+  } = {},
 ): Promise<PatientResolution> {
   const query = normalizePatientName(patientName);
   if (!query) return { status: "not_found", candidates: [] };
 
-  const { data, error } = await admin
-    .from("patients")
-    .select("id,name,status,diagnosis,last_session,next_session,email,phone,cpf")
-    .eq("user_id", userId)
-    .order("updated_at", { ascending: false })
-    .limit(200);
+  let candidateIds: string[] | null = null;
+  if (options.searchClient) {
+    const { data: searchRows, error: searchError } = await options.searchClient.rpc(
+      "search_synapse_workspace",
+      {
+        p_query: query,
+        p_entity_types: ["patient"],
+        p_limit: 20,
+      },
+    );
+    if (searchError) {
+      throw new SynapseOperationalError(
+        "resolver_query_failed",
+        "Não consegui consultar o diretório de pacientes com segurança.",
+        { providerCode: searchError.code || undefined },
+      );
+    }
+    candidateIds = Array.from(new Set(
+      (searchRows || [])
+        .map((row: any) => String(row?.entity_id || "").trim())
+        .filter(Boolean),
+    ));
+    if (!candidateIds.length) return { status: "not_found", candidates: [] };
+  }
 
-  if (error) throw error;
+  let patientQuery = admin
+    .from("patients")
+    .select("id,name,social_name,status,diagnosis,last_session,next_session,email,phone,cpf")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+  if (candidateIds) patientQuery = patientQuery.in("id", candidateIds);
+
+  const { data, error } = await patientQuery;
+
+  if (error) {
+    throw new SynapseOperationalError(
+      "resolver_query_failed",
+      "Não consegui consultar o diretório de pacientes com segurança.",
+      { providerCode: error.code || undefined },
+    );
+  }
 
   return resolvePatientCandidates(query, (data || []) as PatientCandidate[], options);
 }
