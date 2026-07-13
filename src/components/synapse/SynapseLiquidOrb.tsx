@@ -84,7 +84,6 @@ void main() {
   float edgeField = fbm3(vec3(p * 2.3, time * 0.13));
   float breath = sin(time * 1.17) * 0.008 + sin(time * 0.41 + 1.8) * 0.006;
   
-  // Reduzido o raio base de 0.89 para 0.75 (~15% menor) para evitar cortes e reduzir tamanho
   float radius = 0.75 + breath + (edgeField - 0.5) * (0.015 + low * 0.02);
   float distanceToCenter = length(p);
   float antialias = max(fwidth(distanceToCenter) * 1.45, 0.0025);
@@ -135,7 +134,6 @@ void main() {
   color += pearl * luminous * (0.56 + high * 0.52);
   color += pearl * (specular * 0.95 + rimSpecular * 0.28);
   
-  // Suavizado e reduzido o anel de brilho externo (fresnel) para remover o anel branco proeminente
   color = mix(color, silver, fresnel * (0.15 + voice * 0.05));
   color += pearl * pow(fresnel, 5.0) * 0.1;
 
@@ -337,6 +335,30 @@ export const SynapseLiquidOrb = ({ state, getInputSignal, getOutputSignal, reduc
 
     return (
         <span className="synapse-liquid-orb" aria-hidden="true">
+            <style dangerouslySetInnerHTML={{ __html: `
+                .synapse-presence-orb,
+                .synapse-liquid-orb,
+                .synapse-liquid-orb-canvas,
+                .synapse-liquid-orb-lens,
+                .synapse-liquid-orb-caustic,
+                .synapse-liquid-orb-fallback {
+                    border: none !important;
+                    outline: none !important;
+                    box-shadow: none !important;
+                }
+                .synapse-liquid-orb-lens {
+                    background: transparent !important;
+                    background-image: none !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                }
+                .synapse-liquid-orb-caustic {
+                    background: transparent !important;
+                    background-image: none !important;
+                    box-shadow: none !important;
+                    border: none !important;
+                }
+            `}} />
             <span className="synapse-liquid-orb-fallback" />
             <canvas ref={canvasRef} className="synapse-liquid-orb-canvas" />
             <span className="synapse-liquid-orb-lens" />
