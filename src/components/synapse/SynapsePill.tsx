@@ -91,7 +91,7 @@ export const SynapsePill = () => {
                 whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.965 }}
                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 32, mass: 0.72 }}
-                className="synapse-presence-orb relative h-[72px] w-[72px] shrink-0 overflow-hidden rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-70"
+                className="synapse-presence-orb relative h-[61px] w-[61px] shrink-0 overflow-hidden rounded-full border-none outline-none focus-visible:outline-none disabled:cursor-wait disabled:opacity-70"
                 aria-label={isVoiceSessionActive ? "Encerrar conversa por voz" : "Iniciar conversa por voz"}
                 aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
                 aria-pressed={isVoiceSessionActive}
