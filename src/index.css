@@ -2021,6 +2021,19 @@
     height: clamp(390px, 56dvh, 570px);
     max-height: calc(100dvh - var(--desktop-navbar-clearance) - 7.25rem);
     min-height: 0;
+    box-shadow:
+      0 32px 92px -46px hsl(var(--foreground) / 0.62),
+      0 10px 28px -22px hsl(var(--foreground) / 0.36),
+      inset 0 1px 0 hsl(var(--background) / 0.42),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.018);
+  }
+
+  .dark .synapse-desktop-shell.synapse-chat-panel {
+    box-shadow:
+      0 38px 110px -48px rgba(0, 0, 0, 0.98),
+      0 12px 34px -24px rgba(0, 0, 0, 0.88),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.014);
   }
 
   @media (max-height: 620px) {
@@ -2395,10 +2408,12 @@
 
   .synapse-desktop-message-assistant {
     border: 1px solid hsl(var(--border) / 0.6);
-    border-radius: 19px 19px 19px 6px;
+    border-radius: 21px 21px 21px 8px;
     color: hsl(var(--foreground));
-    background: hsl(var(--card) / 0.64);
+    background: hsl(var(--card) / 0.58);
     box-shadow: inset 0 1px 0 hsl(var(--background) / 0.14);
+    backdrop-filter: blur(16px) saturate(1.08);
+    -webkit-backdrop-filter: blur(16px) saturate(1.08);
   }
 
   .dark .synapse-desktop-message-assistant {
@@ -2411,14 +2426,14 @@
 
   .synapse-desktop-message-user {
     border: 1px solid hsl(var(--foreground));
-    border-radius: 19px 19px 6px 19px;
+    border-radius: 21px 21px 8px 21px;
     color: hsl(var(--background));
     background: hsl(var(--foreground));
     box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
   }
 
   .synapse-desktop-prose {
-    font-size: 14px;
+    font-size: 13.5px;
     font-weight: 450;
     line-height: 1.58;
     letter-spacing: 0;
@@ -2503,7 +2518,7 @@
 
   .synapse-desktop-thinking {
     border: 1px solid hsl(var(--border) / 0.58);
-    border-radius: 18px 18px 18px 6px;
+    border-radius: 20px 20px 20px 8px;
     color: hsl(var(--foreground) / 0.68);
     background:
       linear-gradient(180deg, hsl(var(--background) / 0.42), hsl(var(--foreground) / 0.024)),
@@ -2537,8 +2552,10 @@
   .synapse-desktop-composer {
     border: 1px solid hsl(var(--border) / 0.65);
     border-radius: 20px;
-    background: hsl(var(--background) / 0.38);
+    background: hsl(var(--background) / 0.34);
     box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
+    backdrop-filter: blur(18px) saturate(1.08);
+    -webkit-backdrop-filter: blur(18px) saturate(1.08);
     transition: border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
   }
 

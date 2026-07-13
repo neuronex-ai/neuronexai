@@ -381,7 +381,7 @@ export const SynapseCompactPanel = () => {
                                                 onClick={() => handleTabChange(tab.id)}
                                                 onKeyDown={(event) => handleTabKeyDown(event, index)}
                                                 className={cn(
-                                                    'relative flex h-10 min-w-10 shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-[12px] px-2.5 text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
+                                                    'relative flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-[13px] px-2.5 text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
                                                     'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                                     isActive ? 'text-foreground' : 'text-muted-foreground',
                                                 )}
@@ -425,7 +425,7 @@ export const SynapseCompactPanel = () => {
                                                 <button
                                                     type="button"
                                                     onClick={() => setConfirmClearOpen(true)}
-                                                    className="synapse-desktop-control flex h-10 w-10 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                    className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                     aria-label="Limpar conversa"
                                                 >
                                                     <Trash2 className="h-3.5 w-3.5" />
@@ -439,7 +439,7 @@ export const SynapseCompactPanel = () => {
                                             <button
                                                 type="button"
                                                 onClick={() => setShellState('pill')}
-                                                className="synapse-desktop-control flex h-10 w-10 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                                 aria-label="Recolher Synapse"
                                             >
                                                 <X className="h-3.5 w-3.5" />

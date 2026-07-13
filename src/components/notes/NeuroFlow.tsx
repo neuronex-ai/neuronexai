@@ -231,12 +231,13 @@ const NeuroFlowContent = ({ flowId, onBack }: NeuroFlowContentProps) => {
       console.error("[NeuroFlow] Não foi possível carregar o mapeamento", e);
       setLoadError("Não foi possível abrir este mapeamento agora.");
     } finally {
-      if (requestId !== loadRequestRef.current) return;
-      window.setTimeout(() => {
-        isHydratingRef.current = false;
-        setIsLoading(false);
-        setSaveStatus(loaded ? 'saved' : 'error');
-      }, 0);
+      if (requestId === loadRequestRef.current) {
+        window.setTimeout(() => {
+          isHydratingRef.current = false;
+          setIsLoading(false);
+          setSaveStatus(loaded ? 'saved' : 'error');
+        }, 0);
+      }
     }
   }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion]);
 
