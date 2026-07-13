@@ -83,7 +83,9 @@ void main() {
 
   float edgeField = fbm3(vec3(p * 2.3, time * 0.13));
   float breath = sin(time * 1.17) * 0.008 + sin(time * 0.41 + 1.8) * 0.006;
-  float radius = 0.89 + breath + (edgeField - 0.5) * (0.018 + low * 0.024);
+  
+  // Reduzido o raio base de 0.89 para 0.75 (~15% menor) para evitar cortes e reduzir tamanho
+  float radius = 0.75 + breath + (edgeField - 0.5) * (0.015 + low * 0.02);
   float distanceToCenter = length(p);
   float antialias = max(fwidth(distanceToCenter) * 1.45, 0.0025);
   float silhouette = 1.0 - smoothstep(radius - antialias, radius + antialias, distanceToCenter);
@@ -132,8 +134,10 @@ void main() {
   color += silver * filaments * (0.43 + vitality * 0.42 + mid * 0.26);
   color += pearl * luminous * (0.56 + high * 0.52);
   color += pearl * (specular * 0.95 + rimSpecular * 0.28);
-  color = mix(color, silver, fresnel * (0.62 + voice * 0.13));
-  color += pearl * pow(fresnel, 5.0) * 0.36;
+  
+  // Suavizado e reduzido o anel de brilho externo (fresnel) para remover o anel branco proeminente
+  color = mix(color, silver, fresnel * (0.15 + voice * 0.05));
+  color += pearl * pow(fresnel, 5.0) * 0.1;
 
   float glassAlpha = silhouette * mix(0.88, 0.99, fresnel);
   outColor = vec4(color, glassAlpha);
