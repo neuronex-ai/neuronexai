@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { createPortal } from 'react-dom';
 import { useSynapse } from '@/context/SynapseProvider';
 import { SynapsePill } from './SynapsePill';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
@@ -82,23 +83,28 @@ export const SynapseGlobalShell = () => {
     // Don't render on mobile, unauthenticated, or non-Electron
     if (!isVisible) return null;
 
-    return (
+    const shell = (
         <>
-            {/* A single bottom-center presence anchors chat, voice and action feedback. */}
-            <div
-                className="fixed flex w-[min(464px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center gap-3"
-                data-synapse-shell="true"
-                style={{
-                    zIndex: 40,
-                    left: '50%',
-                    bottom: 'max(12px, env(safe-area-inset-bottom))',
-                }}
-            >
-                <AnimatePresence initial={false}>
-                    {shellState === 'compact' ? <SynapseCompactPanel key="compact" /> : null}
-                </AnimatePresence>
-                {shellState !== 'closed' ? <SynapsePill /> : null}
-            </div>
+            {/* The inspector is independent from the persistent bottom-center presence. */}
+            <AnimatePresence initial={false}>
+                {shellState === 'compact' ? <SynapseCompactPanel key="compact" /> : null}
+            </AnimatePresence>
+
+            {shellState !== 'closed' ? (
+                <div
+                    className="synapse-presence-layer fixed flex w-[min(464px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center"
+                    data-synapse-shell="true"
+                    data-synapse-shell-placement="bottom-center"
+                    style={{
+                        left: '50%',
+                        bottom: 'max(12px, env(safe-area-inset-bottom))',
+                    }}
+                >
+                    <SynapsePill />
+                </div>
+            ) : null}
         </>
     );
+
+    return typeof document === 'undefined' ? shell : createPortal(shell, document.body);
 };

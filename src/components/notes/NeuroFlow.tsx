@@ -11,7 +11,7 @@ import {
 } from '@/lib/neuroflow-workflow';
 import { cn } from '@/lib/utils';
 import {
-    ChevronLeft, Layers, Loader2, Lock, Maximize, Plus, Unlock, ZoomIn, ZoomOut
+    AlertTriangle, ChevronLeft, Layers, Loader2, Lock, Maximize, Plus, RotateCcw, Unlock, ZoomIn, ZoomOut
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
@@ -99,6 +99,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [isLibraryOpen, setIsLibraryOpen] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
@@ -164,6 +165,7 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
     isHydratingRef.current = true;
     hasAutoFittedRef.current = false;
     setIsLoading(true);
+    setLoadError(null);
     try {
       const { data: flowData, error: flowError } = await supabase
         .from('neuro_flows')
@@ -214,12 +216,13 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
         },
       });
     } catch (e) {
-      console.error(e);
+      console.error("[NeuroFlow] Não foi possível carregar o mapeamento", e);
+      setLoadError("Não foi possível abrir este mapeamento agora.");
     } finally {
       window.setTimeout(() => {
         isHydratingRef.current = false;
         setIsLoading(false);
-        setSaveStatus('saved');
+        setSaveStatus(loadError ? 'error' : 'saved');
       }, 0);
     }
   }, [attachRuntimeNodeData, flowId, setNodes, setEdges, shouldReduceMotion]);
@@ -463,6 +466,40 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
       <div className="h-full w-full flex flex-col items-center justify-center bg-transparent transition-colors duration-500">
         <Loader2 className="h-10 w-10 animate-spin text-zinc-900 dark:text-white mb-6" />
         <p className="text-[10px] text-zinc-400 dark:text-zinc-700 font-black uppercase tracking-[0.6em]">Processando</p>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="flex h-full min-h-0 w-full items-center justify-center bg-transparent px-6">
+        <section
+          className="w-full max-w-[520px] rounded-[26px] border border-border/60 bg-card/90 p-6 text-center shadow-xl backdrop-blur-xl dark:border-white/[0.075] dark:bg-[linear-gradient(145deg,rgba(24,24,25,0.94),rgba(10,10,11,0.96))]"
+          role="alert"
+          aria-labelledby="neuroflow-load-error-title"
+        >
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-[16px] border border-border/60 bg-muted/60 text-muted-foreground dark:border-white/[0.08] dark:bg-white/[0.045]">
+            <AlertTriangle className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <h2 id="neuroflow-load-error-title" className="mt-5 text-lg font-semibold tracking-[-0.02em] text-foreground">
+            Não foi possível abrir o NeuroFlow
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            O mapeamento pode ainda estar sendo preparado. Tente novamente em alguns instantes.
+          </p>
+          <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-center">
+            {onBack ? (
+              <Button variant="outline" className="min-h-11 rounded-[14px]" onClick={onBack}>
+                <ChevronLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+                Voltar aos mapeamentos
+              </Button>
+            ) : null}
+            <Button className="min-h-11 rounded-[14px]" onClick={() => void loadFlow()}>
+              <RotateCcw className="mr-2 h-4 w-4" aria-hidden="true" />
+              Tentar novamente
+            </Button>
+          </div>
+        </section>
       </div>
     );
   }

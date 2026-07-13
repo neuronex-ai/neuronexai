@@ -2,7 +2,7 @@
 
 import { lazy, Suspense, useState, useMemo, useEffect, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams, type NavigateFunction } from "react-router-dom";
 import { motion, AnimatePresence, useReducedMotion, type Transition } from "framer-motion";
 
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
@@ -39,6 +39,14 @@ const NoteEditor = lazy(() =>
 const NOTES_LAYOUT_STORAGE_KEY = "neuronex:notes-layout";
 type NotesViewMode = "notes" | "tasks" | "neuroview" | "neuroflow" | "neuropulse" | "files" | "notion";
 const SYNAPSE_SUPPORTED_NOTES_VIEWS = new Set<SynapseNotesView>(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
+
+export const clearSynapseNotesNavigationState = (
+    navigate: NavigateFunction,
+    pathname: string,
+    search: string,
+) => {
+    navigate(`${pathname}${search}`, { replace: true, state: null });
+};
 
 const loadLayoutPreference = () => {
     try {
@@ -80,6 +88,7 @@ export default function Notes() {
     const shouldReduceMotion = useReducedMotion();
     const [searchParams] = useSearchParams();
     const location = useLocation();
+    const navigate = useNavigate();
     const noteIdParam = searchParams.get("noteId");
 
     const [viewMode, setViewMode] = useState<NotesViewMode>("notes");
@@ -252,8 +261,8 @@ export default function Notes() {
         if (["neuroview", "neuroflow", "neuropulse"].includes(String(state.synapseAssistedPreview ? state.synapseNotesView : ""))) {
             setSynapseAssistedPreview(state.synapseNotesView as SynapseAssistedProduct);
         }
-        window.history.replaceState({}, document.title, `${location.pathname}${location.search}`);
-    }, [applySynapseNotesAction, location.pathname, location.search, location.state]);
+        clearSynapseNotesNavigationState(navigate, location.pathname, location.search);
+    }, [applySynapseNotesAction, location.pathname, location.search, location.state, navigate]);
 
     useEffect(() => {
         const handleSynapseAction = (event: Event) => {

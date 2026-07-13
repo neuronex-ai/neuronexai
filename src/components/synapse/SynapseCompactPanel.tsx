@@ -329,21 +329,21 @@ export const SynapseCompactPanel = () => {
     return (
         <>
             <motion.div
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 8, scale: 0.992 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.992 }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 14 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 10 }}
                 transition={shouldReduceMotion ? { duration: 0 } : {
                     opacity: { duration: 0.16, ease: 'easeOut' },
-                    y: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
-                    scale: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
+                    x: { type: 'spring', stiffness: 440, damping: 42, mass: 0.78 },
                 }}
                 id="synapse-panel"
                 className={cn(
-                    'synapse-desktop-shell relative flex h-[min(620px,calc(100dvh-104px))] min-h-[360px] w-[min(464px,calc(100vw-24px))] flex-col overflow-hidden rounded-[30px] border',
+                    'synapse-desktop-shell synapse-inspector-panel flex min-h-0 w-[min(416px,calc(100vw-24px))] flex-col overflow-hidden rounded-[30px] border',
                 )}
-                role="dialog"
-                aria-label="Synapse AI"
-                aria-modal="false"
+                role="complementary"
+                aria-label="Assistente Synapse"
+                data-synapse-shell="true"
+                data-synapse-shell-placement="trailing"
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>

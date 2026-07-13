@@ -21,6 +21,7 @@ import { ElectronTitleBar } from "@/components/electron/ElectronTitleBar";
 import { ElectronUpdateManager } from "@/components/electron/ElectronUpdateManager";
 import { useEffect, lazy, Suspense, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
+import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
 import "@/styles/neurofinance-onboarding-overrides.css";
 import "@/styles/neurofinance-onboarding-mobile.css";
 
@@ -127,8 +128,9 @@ const SharedRoutes = () => {
   const electronMode = isElectron();
 
   return (
-    <Suspense fallback={<PageLoader />}>
-      <Routes>
+    <RouteRecoveryBoundary>
+      <Suspense fallback={<PageLoader />}>
+        <Routes>
         {/* ─── Root Route ─────────────────────────────────── */}
         <Route path="/" element={<Index />} />
 
@@ -190,8 +192,9 @@ const SharedRoutes = () => {
         {/* ─── Fallback ───────────────────────────────────── */}
         <Route path="/404" element={<NotFound />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </RouteRecoveryBoundary>
   );
 };
 
