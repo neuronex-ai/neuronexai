@@ -83,6 +83,23 @@ describe("synapse interface actions", () => {
     });
   });
 
+  it("maps legacy modal intents to existing native actions", () => {
+    expect(normalizeSynapseClientAction({
+      type: "interface_action",
+      data: { action: "open_modal", modal: "new_note" },
+    })).toMatchObject({ action: "open_new_note", notesView: "notes" });
+
+    expect(normalizeSynapseClientAction({
+      type: "interface_action",
+      data: { action: "open_modal", modal: "patient_details", patient_id: "patient-123456" },
+    })).toMatchObject({ action: "open_patient", patientId: "patient-123456" });
+
+    expect(normalizeSynapseClientAction({
+      type: "interface_action",
+      data: { action: "open_modal", modal: "patient_invite", appointment_id: "appointment-123456" },
+    })).toMatchObject({ action: "open_patient_invite_modal", appointmentId: "appointment-123456" });
+  });
+
   it("waits for the explicit NeuroFlow surface-ready handshake", async () => {
     Element.prototype.scrollIntoView = vi.fn();
     const navigate = vi.fn(() => {

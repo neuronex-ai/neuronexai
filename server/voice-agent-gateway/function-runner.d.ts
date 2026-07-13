@@ -18,6 +18,17 @@ export class VoiceFunctionRunner {
       thought_signature?: string;
     }>;
   }): Promise<void>;
+  handleClientActionResult(payload: {
+    type?: string;
+    id?: string;
+    callId?: string;
+    call_id?: string;
+    success?: boolean;
+    message?: string;
+    cancelled?: boolean;
+    durationMs?: number;
+    duration_ms?: number;
+  }): boolean;
   onUserStartedSpeaking(): void;
   onUserTranscript(transcript: string): void;
 }

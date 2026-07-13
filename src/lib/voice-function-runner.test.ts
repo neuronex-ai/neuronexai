@@ -128,6 +128,91 @@ describe("VoiceFunctionRunner", () => {
     });
   });
 
+  it("waits for the browser ACK before answering a pure interface action", async () => {
+    const { runner, deepgram, client } = createHarness(vi.fn(async () => ({
+      ...toolResponse({ ok: true, spoken_summary: "Abrindo a agenda." }),
+      clientAction: { type: "interface_action", data: { action: "navigate", destination: "agenda.day" } },
+    })));
+
+    const task = runner.handleFunctionCallRequest({
+      functions: [{ id: "fn-client-action", name: "request_interface_action", arguments: "{}" }],
+    });
+    for (let index = 0; index < 4; index += 1) await tick();
+
+    expect(client.some((event) =>
+      event.type === "client_action" && event.callId === "fn-client-action"
+    )).toBe(true);
+    expect(deepgram).toEqual([]);
+
+    expect(runner.handleClientActionResult({
+      type: "client_action_result",
+      callId: "fn-client-action",
+      success: false,
+      message: "A agenda abriu, mas o painel diario nao ficou disponivel.",
+      durationMs: 4200,
+    })).toBe(true);
+    await task;
+
+    const response = deepgram.find((event) => event.type === "FunctionCallResponse");
+    expect(JSON.parse(String(response?.content || "{}"))).toMatchObject({
+      ok: false,
+      error: "A agenda abriu, mas o painel diario nao ficou disponivel.",
+      client_action: {
+        success: false,
+        duration_ms: 4200,
+      },
+    });
+  });
+
+  it("preserves a completed mutation and adds a warning when only its visual follow-up fails", async () => {
+    const { runner, deepgram, client } = createHarness(vi.fn(async () => ({
+      ...toolResponse({ ok: true, spoken_summary: "Agendamento criado com sucesso." }),
+      clientAction: { type: "interface_action", data: { action: "scroll_to_appointment" } },
+    })));
+
+    const task = runner.handleFunctionCallRequest({
+      functions: [{ id: "fn-mutation-action", name: "confirm_pending_action", arguments: "{}" }],
+    });
+    for (let index = 0; index < 4; index += 1) await tick();
+    expect(client.some((event) =>
+      event.type === "client_action" && event.callId === "fn-mutation-action"
+    )).toBe(true);
+    runner.handleClientActionResult({
+      id: "fn-mutation-action",
+      success: false,
+      message: "O agendamento foi salvo, mas nao consegui destaca-lo na agenda.",
+    });
+    await task;
+
+    const response = deepgram.find((event) => event.type === "FunctionCallResponse");
+    expect(JSON.parse(String(response?.content || "{}"))).toMatchObject({
+      ok: true,
+      spoken_summary: "Agendamento criado com sucesso.",
+      warning: "O agendamento foi salvo, mas nao consegui destaca-lo na agenda.",
+      client_action: { success: false },
+    });
+  });
+
+  it("turns a missing browser ACK into a bounded interface failure", async () => {
+    const { runner, deepgram } = createHarness(vi.fn(async () => ({
+      ...toolResponse({ ok: true, spoken_summary: "Abrindo pacientes." }),
+      clientAction: { type: "interface_action", data: { action: "navigate", destination: "patients.directory" } },
+    })));
+
+    const task = runner.handleFunctionCallRequest({
+      functions: [{ id: "fn-client-timeout", name: "request_interface_action", arguments: "{}" }],
+    });
+    await tick();
+    await vi.advanceTimersByTimeAsync(20000);
+    await task;
+
+    const response = deepgram.find((event) => event.type === "FunctionCallResponse");
+    expect(JSON.parse(String(response?.content || "{}"))).toMatchObject({
+      ok: false,
+      client_action: { success: false, timed_out: true },
+    });
+  });
+
   it("deduplicates repeated function call ids without repeating execution or response", async () => {
     const invokeTool = vi.fn(async () => toolResponse({ ok: true, spoken_summary: "Resumo pronto." }));
     const { runner, deepgram, client } = createHarness(invokeTool);
@@ -153,7 +238,50 @@ describe("VoiceFunctionRunner", () => {
     expect(nodeSource).toContain('status: "duplicate_ignored"');
     expect(edgeSource).toContain('status: "duplicate_ignored"');
     expect(promptSource).toContain("Ao chamar uma função, permaneça em silêncio enquanto ela executa.");
-    expect(promptSource).toContain("Depois de receber FunctionCallResponse, dê uma única resposta natural");
+    expect(promptSource).toContain("Depois de receber FunctionCallResponse, dê uma resposta natural");
+  });
+
+  it("keeps the managed GPT-5.4 Mini contract aligned across voice gateways", () => {
+    const sessionSource = readFileSync("supabase/functions/synapse-voice-agent-session/index.ts", "utf8");
+    const edgeGatewaySource = readFileSync("supabase/functions/synapse-voice-gateway/index.ts", "utf8");
+    const nodeGatewaySource = readFileSync("server/voice-agent-gateway/index.js", "utf8");
+
+    expect(sessionSource).toContain('const PRIMARY_THINK_MODEL = "gpt-5.4-mini"');
+    expect(sessionSource).toContain('const FALLBACK_THINK_MODEL = "gemini-3.5-flash"');
+    expect(sessionSource).toContain('const LAST_RESORT_THINK_MODEL = "claude-haiku-4-5"');
+    expect(sessionSource).not.toContain("reasoning_mode:");
+    expect(sessionSource).toContain("stripUnsupportedSchemaKeywords");
+    expect(sessionSource).toContain('envFlag("SYNAPSE_VOICE_HISTORY", true)');
+    expect(edgeGatewaySource).toContain('"open_ai:gpt-5.4-mini"');
+    expect(edgeGatewaySource).toContain('thinkPrimary: "open_ai/gpt-5.4-mini"');
+    expect(edgeGatewaySource).toContain('"google:gemini-3.5-flash"');
+    expect(edgeGatewaySource).toContain('"anthropic:claude-haiku-4-5"');
+    expect(nodeGatewaySource).toContain('"open_ai:gpt-5.4-mini"');
+    expect(`${sessionSource}\n${edgeGatewaySource}\n${nodeGatewaySource}`).not.toContain("gpt-4.1-mini");
+  });
+
+  it("keeps the full safe ecosystem reachable through the bounded voice dispatcher", () => {
+    const promptSource = readFileSync("supabase/functions/_shared/synapse-voice-prompt.ts", "utf8");
+    const toolsetSource = readFileSync("supabase/functions/_shared/synapse-voice-toolset.ts", "utf8");
+    const voiceToolSource = readFileSync("supabase/functions/synapse-voice-tool/index.ts", "utf8");
+
+    expect(promptSource).toContain("use execute_synapse_tool");
+    expect(toolsetSource).toContain('SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool"');
+    expect(toolsetSource).toContain("buildDispatchTool(delegatedTools)");
+    expect(voiceToolSource).toContain("unwrapVoiceToolCall");
+    expect(voiceToolSource).toContain("validateVoiceToolCall(name)");
+  });
+
+  it("directs product-specific patient requests to the specialized tool without stopping at search", () => {
+    const promptSource = readFileSync("supabase/functions/_shared/synapse-voice-prompt.ts", "utf8");
+    const toolsSource = readFileSync("supabase/functions/synapse-text-fallback/tools.ts", "utf8");
+    const toolsV3Source = readFileSync("supabase/functions/synapse-text-fallback/tools-v3.ts", "utf8");
+
+    expect(promptSource).toContain("chame diretamente a ferramenta especializada com patient_name");
+    expect(promptSource).toContain("não pesquise o paciente antes e não pare depois de apenas localizá-lo");
+    expect(toolsSource).toContain("não interrompa um pedido de NeuroView, NeuroFlow ou NeuroPulse apenas para pesquisar primeiro");
+    expect(toolsSource).not.toContain("Sempre use antes de qualquer ação específica");
+    expect(toolsV3Source).toContain("A função resolve a pessoa, analisa dados reais e retorna a ação visual");
   });
 
   it("aborts an active function when the user asks to cancel", async () => {

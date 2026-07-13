@@ -5,8 +5,13 @@ import { useSynapseLiveVoice } from './use-synapse-live-voice';
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
-  executeAction: vi.fn().mockResolvedValue({ status: 'completed' }),
-  voiceOptions: null as null | { onClientAction?: (action: unknown) => void },
+  executeAction: vi.fn().mockResolvedValue({
+    success: true,
+    action: 'navigate',
+    message: 'Ação concluída.',
+    durationMs: 12,
+  }),
+  voiceOptions: null as null | { onClientAction?: (action: unknown) => Promise<unknown> },
   voice: {} as Record<string, unknown>,
 }));
 
@@ -34,7 +39,7 @@ vi.mock('@/hooks/use-voice-config', () => ({
 }));
 
 vi.mock('@/hooks/use-synapse-voice', () => ({
-  useSynapseVoice: (options: { onClientAction?: (action: unknown) => void }) => {
+  useSynapseVoice: (options: { onClientAction?: (action: unknown) => Promise<unknown> }) => {
     mocks.voiceOptions = options;
     return mocks.voice;
   },
@@ -80,10 +85,11 @@ describe('useSynapseLiveVoice navigation', () => {
     expect(mocks.executeAction).not.toHaveBeenCalled();
   });
 
-  it('executes navigation only after a definitive client action arrives', () => {
+  it('executes navigation only after a definitive client action arrives and returns its ACK', async () => {
     renderHook(() => useSynapseLiveVoice());
     const action = { type: 'navigate', payload: { path: '/notas' } };
-    mocks.voiceOptions?.onClientAction?.(action);
+    const result = await mocks.voiceOptions?.onClientAction?.(action);
     expect(mocks.executeAction).toHaveBeenCalledWith(action, expect.objectContaining({ channel: 'voice' }));
+    expect(result).toMatchObject({ success: true, action: 'navigate' });
   });
 });

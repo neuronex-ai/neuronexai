@@ -61,25 +61,36 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     systemInstruction: SYNAPSE_GLOBAL_VOICE_PROMPT,
     context: voiceContext,
     trackAudioIntensity: false,
-    onClientAction: (rawAction) => {
-      optionsRef.current?.onClientAction?.(rawAction);
+    onClientAction: async (rawAction) => {
+      try {
+        optionsRef.current?.onClientAction?.(rawAction);
+      } catch (error) {
+        console.warn("[Synapse Voice] client action observer failed", error);
+      }
       const action = normalizeSynapseClientAction(rawAction);
-      if (!action) return;
+      if (!action) {
+        return {
+          success: false,
+          action: "navigate",
+          message: "A interface recebeu uma acao invalida.",
+          durationMs: 0,
+        };
+      }
 
       // Navigation and speech can overlap; the gateway keeps the voice session active.
-      void executeSynapseInterfaceAction(action, {
+      const result = await executeSynapseInterfaceAction(action, {
         navigate,
         channel: "voice",
         onLifecycle: (event) => {
           activeLifecycleIdRef.current = event.id;
           optionsRef.current?.onActionLifecycle?.(event);
         },
-      }).then((result) => {
-        if (isCurrentCancelledSynapseAction(result, activeLifecycleIdRef.current)) {
-          activeLifecycleIdRef.current = null;
-          optionsRef.current?.onActionLifecycle?.(null);
-        }
       });
+      if (isCurrentCancelledSynapseAction(result, activeLifecycleIdRef.current)) {
+        activeLifecycleIdRef.current = null;
+        optionsRef.current?.onActionLifecycle?.(null);
+      }
+      return result;
     },
   });
 

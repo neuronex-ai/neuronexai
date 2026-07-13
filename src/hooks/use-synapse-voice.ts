@@ -3,6 +3,13 @@ import { useDeepgramAgentVoice } from "@/hooks/use-deepgram-agent-voice";
 import type { SynapseVoiceStartOverride } from "@/types/synapse-voice";
 
 type ClientAction = { type?: string; payload?: unknown; data?: unknown };
+type ClientActionExecutionResult = {
+  success: boolean;
+  action?: string;
+  message?: string;
+  durationMs?: number;
+  cancelled?: boolean;
+};
 type SynapseVoiceProvider = "deepgram-agent";
 
 const DEFAULT_PROVIDER: SynapseVoiceProvider = "deepgram-agent";
@@ -32,7 +39,9 @@ interface UseSynapseVoiceOptions {
   onTranscript?: (text: string, isFinal: boolean) => void;
   onResponseText?: (text: string) => void;
   onAudioIntensity?: (intensity: number) => void;
-  onClientAction?: (action: ClientAction) => void;
+  onClientAction?: (
+    action: ClientAction,
+  ) => ClientActionExecutionResult | Promise<ClientActionExecutionResult>;
   trackAudioIntensity?: boolean;
 }
 

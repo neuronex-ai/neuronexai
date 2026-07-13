@@ -27,8 +27,9 @@ const json = (payload: Record<string, unknown>, status = 200) =>
 const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const SUPABASE_EDGE_GATEWAY_PATH = "/functions/v1/synapse-voice-gateway";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const PRIMARY_THINK_MODEL = "gpt-4.1-mini";
-const FALLBACK_THINK_MODEL = "gemini-2.5-flash";
+const PRIMARY_THINK_MODEL = "gpt-5.4-mini";
+const FALLBACK_THINK_MODEL = "gemini-3.5-flash";
+const LAST_RESORT_THINK_MODEL = "claude-haiku-4-5";
 const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.25;
 const AZURE_TTS_ADAPTER_PATH = "/functions/v1/synapse-voice-azure-tts";
 const OPENAI_COMPATIBLE_TTS_MODEL = "tts-1";
@@ -181,10 +182,25 @@ function buildSpeakConfig() {
   };
 }
 
+function stripUnsupportedSchemaKeywords(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(stripUnsupportedSchemaKeywords);
+  if (!value || typeof value !== "object") return value;
+  const output: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (key === "additionalProperties") continue;
+    output[key] = stripUnsupportedSchemaKeywords(entry);
+  }
+  return output;
+}
+
 function buildThinkConfig(
   prompt: string,
   functions: Array<Record<string, unknown>>,
 ) {
+  const portableFunctions = functions.map((fn) => ({
+    ...fn,
+    parameters: stripUnsupportedSchemaKeywords(fn.parameters),
+  }));
   return [
     {
       provider: {
@@ -202,7 +218,16 @@ function buildThinkConfig(
         temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
       },
       prompt,
-      functions,
+      functions: portableFunctions,
+    },
+    {
+      provider: {
+        type: "anthropic",
+        model: LAST_RESORT_THINK_MODEL,
+        temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
+      },
+      prompt,
+      functions: portableFunctions,
     },
   ];
 }
@@ -242,7 +267,7 @@ function buildAgentSettings(
     settings: {
       type: "Settings",
       tags: ["neuronex", "synapse", "voice", "pt-BR"],
-      flags: { history: envFlag("SYNAPSE_VOICE_HISTORY", false) },
+      flags: { history: envFlag("SYNAPSE_VOICE_HISTORY", true) },
       audio: {
         input: {
           encoding: "linear16",
@@ -272,7 +297,8 @@ function buildAgentSettings(
       inputSampleRate,
       outputSampleRate,
       fallbackThinkModel: FALLBACK_THINK_MODEL,
-      historyEnabled: envFlag("SYNAPSE_VOICE_HISTORY", false),
+      lastResortThinkModel: LAST_RESORT_THINK_MODEL,
+      historyEnabled: envFlag("SYNAPSE_VOICE_HISTORY", true),
       functionsCount: functions.length,
     },
   };

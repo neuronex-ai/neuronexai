@@ -5,7 +5,11 @@ const CORS = {
 };
 
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const MANAGED_THINK_MODELS = new Set(["open_ai:gpt-4.1-mini", "google:gemini-2.5-flash"]);
+const MANAGED_THINK_MODELS = new Set([
+  "open_ai:gpt-5.4-mini",
+  "google:gemini-3.5-flash",
+  "anthropic:claude-haiku-4-5",
+]);
 const MAX_VOICE_FUNCTIONS = 16;
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
@@ -100,7 +104,7 @@ function validateAgentSettings(settings: Record<string, unknown>) {
     ? settings.flags as Record<string, unknown>
     : {};
   settings.flags = flags;
-  flags.history = envFlag("SYNAPSE_VOICE_HISTORY", false);
+  flags.history = envFlag("SYNAPSE_VOICE_HISTORY", true);
 
   const thinkChain = Array.isArray(agent.think) ? agent.think : [agent.think];
   if (!thinkChain.length || thinkChain.some((item) => !item || typeof item !== "object")) {
@@ -197,6 +201,9 @@ const FOLLOWUP_FUNCTION_MS = Number(Deno.env.get("SYNAPSE_VOICE_FOLLOWUP_FUNCTIO
 const MAX_PROGRESS_MESSAGES = Number(Deno.env.get("SYNAPSE_VOICE_MAX_PROGRESS_MESSAGES") || "2");
 const MAX_TOOL_RETRIES = Number(Deno.env.get("SYNAPSE_VOICE_MAX_TOOL_RETRIES") || "1");
 const TOOL_TIMEOUT_MS = Number(Deno.env.get("SYNAPSE_VOICE_TOOL_TIMEOUT_MS") || "18000");
+const CLIENT_ACTION_ACK_TIMEOUT_MS = Number(
+  Deno.env.get("SYNAPSE_VOICE_CLIENT_ACTION_ACK_TIMEOUT_MS") || "20000",
+);
 
 const TOOL_LABELS: Record<string, string> = {
   confirm_pending_action: "confirmacao pendente",
@@ -268,10 +275,19 @@ const patientFromArgs = (args: Record<string, unknown>) =>
   clean(args.patient_name || args.patientName || args.patient || args.nome_paciente, 120);
 
 const taskLabel = (name: string, args: Record<string, unknown> = {}) => {
-  const patient = patientFromArgs(args);
+  const delegatedName = name === "execute_synapse_tool"
+    ? clean(args.tool_name || args.toolName, 120)
+    : name;
+  const delegatedArgs = name === "execute_synapse_tool"
+    ? safeJsonParse(args.arguments || args.args || args.arguments_json)
+    : args;
+  const patient = patientFromArgs(delegatedArgs);
   const label =
-    clean(args.task_label || args.taskLabel || args.label || args.intent_label, 140) ||
-    titleizeTool(name) ||
+    clean(
+      delegatedArgs.task_label || delegatedArgs.taskLabel || delegatedArgs.label || delegatedArgs.intent_label,
+      140,
+    ) ||
+    titleizeTool(delegatedName) ||
     "consulta";
   return patient ? `${label} de ${patient}` : label;
 };
@@ -368,6 +384,54 @@ const failurePayload = (name: string, error: unknown, aborted: boolean) => {
   };
 };
 
+const applyClientActionResult = (
+  name: string,
+  payload: Record<string, any>,
+  result: Record<string, unknown>,
+) => {
+  const success = result?.success === true;
+  const message = clean(
+    result?.message ||
+      (success
+        ? "A interface confirmou a acao solicitada."
+        : "A acao foi processada, mas a interface nao conseguiu concluir a etapa visual."),
+    800,
+  );
+  const clientAction = {
+    success,
+    message,
+    cancelled: Boolean(result?.cancelled),
+    timed_out: Boolean(result?.timed_out),
+    duration_ms: Number.isFinite(Number(result?.durationMs))
+      ? Math.max(0, Math.round(Number(result.durationMs)))
+      : undefined,
+  };
+
+  if (success) return { ...payload, client_action: clientAction };
+  if (name === "request_interface_action") {
+    return {
+      ...payload,
+      ok: false,
+      spoken_summary: message,
+      message,
+      retryable: false,
+      needs_clarification: false,
+      error: message,
+      client_action: clientAction,
+    };
+  }
+
+  const warnings = Array.isArray(payload?.warnings)
+    ? [...payload.warnings, message]
+    : [message];
+  return {
+    ...payload,
+    warning: message,
+    warnings,
+    client_action: clientAction,
+  };
+};
+
 type VoiceTask = {
   id: string;
   name: string;
@@ -405,6 +469,10 @@ class EdgeVoiceFunctionRunner {
   }) => Promise<Record<string, unknown>>;
   private tasks = new Map<string, VoiceTask>();
   private handledCallIds = new Set<string>();
+  private pendingClientActions = new Map<
+    string,
+    { finish: (result: Record<string, unknown>) => void }
+  >();
   private lastInterruptionAt = 0;
   private queue: Promise<void> = Promise.resolve();
 
@@ -421,6 +489,60 @@ class EdgeVoiceFunctionRunner {
     this.sendDeepgram = options.sendDeepgram;
     this.sendClient = options.sendClient;
     this.invokeTool = options.invokeTool;
+  }
+
+  handleClientActionResult(event: Record<string, unknown>) {
+    const id = clean(event?.id || event?.callId || event?.call_id, 120);
+    if (!id) return false;
+    const pending = this.pendingClientActions.get(id);
+    if (!pending) return false;
+    pending.finish({
+      success: event?.success === true,
+      message: clean(event?.message, 800),
+      cancelled: Boolean(event?.cancelled),
+      timed_out: false,
+      durationMs: event?.durationMs ?? event?.duration_ms,
+    });
+    return true;
+  }
+
+  awaitClientAction(task: VoiceTask, action: unknown) {
+    return new Promise<Record<string, unknown>>((resolve) => {
+      let settled = false;
+      const finish = (result: Record<string, unknown>) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        task.controller.signal.removeEventListener("abort", onAbort);
+        if (this.pendingClientActions.get(task.id)?.finish === finish) {
+          this.pendingClientActions.delete(task.id);
+        }
+        resolve(result);
+      };
+      const onAbort = () => finish({
+        success: false,
+        cancelled: true,
+        message: "A acao visual foi cancelada antes de concluir.",
+      });
+      const timeoutMs = Number.isFinite(CLIENT_ACTION_ACK_TIMEOUT_MS)
+        ? Math.max(1000, CLIENT_ACTION_ACK_TIMEOUT_MS)
+        : 20000;
+      const timer = setTimeout(() => finish({
+        success: false,
+        timed_out: true,
+        message: "A interface nao confirmou a acao visual a tempo.",
+      }), timeoutMs);
+
+      this.pendingClientActions.set(task.id, { finish });
+      task.controller.signal.addEventListener("abort", onAbort, { once: true });
+      this.sendClient({
+        type: "client_action",
+        id: task.id,
+        callId: task.id,
+        name: task.name,
+        action,
+      });
+    });
   }
 
   claimCall(id: string, name: string, args: Record<string, unknown>) {
@@ -536,7 +658,11 @@ class EdgeVoiceFunctionRunner {
       const { result, payload } = await this.invokeWithRetry(task);
       if (controller.signal.aborted) throw makeAbortError();
 
-      if (result?.clientAction) this.sendClient({ type: "client_action", action: result.clientAction });
+      if (result?.clientAction) {
+        const clientActionResult = await this.awaitClientAction(task, result.clientAction);
+        if (controller.signal.aborted) throw makeAbortError();
+        Object.assign(payload, applyClientActionResult(name, payload, clientActionResult));
+      }
       if (task.interrupted && payload.ok) {
         payload.interrupted = true;
       }
@@ -1042,6 +1168,11 @@ class EdgeSynapseVoiceSession {
       return;
     }
 
+    if (payload.type === "client_action_result") {
+      this.runner.handleClientActionResult(payload as Record<string, unknown>);
+      return;
+    }
+
     if (payload.type === "update_speak" && payload.speak) {
       this.sendDeepgram({ type: "UpdateSpeak", speak: payload.speak });
       return;
@@ -1076,9 +1207,10 @@ Deno.serve((request) => {
       ok: true,
       service: "synapse-voice-gateway",
       runtime: "supabase-edge",
-      voicePath: "deepgram-managed-gpt41-azure-speech-cartesia-fallback",
-      thinkPrimary: "open_ai/gpt-4.1-mini",
-      thinkFallback: "google/gemini-2.5-flash",
+      voicePath: "deepgram-managed-gpt54mini-azure-speech-cartesia-fallback",
+      thinkPrimary: "open_ai/gpt-5.4-mini",
+      thinkFallback: "google/gemini-3.5-flash",
+      thinkLastResort: "anthropic/claude-haiku-4-5",
       speakPrimary: "azure-speech",
       speakFallback: "deepgram-managed-cartesia",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),

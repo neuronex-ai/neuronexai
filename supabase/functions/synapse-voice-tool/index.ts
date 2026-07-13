@@ -20,6 +20,7 @@ import {
   recordVoiceTurn,
   updateVoiceSession,
 } from "../_shared/synapse-voice-session.ts";
+import { SYNAPSE_VOICE_DISPATCH_TOOL_NAME } from "../_shared/synapse-voice-toolset.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -75,6 +76,20 @@ function parseArgs(value: unknown): Record<string, any> {
   } catch {
     return {};
   }
+}
+
+function unwrapVoiceToolCall(nameValue: unknown, argsValue: unknown) {
+  const requestedName = clean(nameValue, 120);
+  const requestedArgs = parseArgs(argsValue);
+  if (requestedName !== SYNAPSE_VOICE_DISPATCH_TOOL_NAME) {
+    return { requestedName, name: requestedName, args: requestedArgs };
+  }
+
+  const name = clean(requestedArgs.tool_name || requestedArgs.toolName, 120);
+  const args = parseArgs(
+    requestedArgs.arguments ?? requestedArgs.args ?? requestedArgs.arguments_json,
+  );
+  return { requestedName, name, args };
 }
 
 function findPending(rows: MessageRow[]): PendingReference | null {
@@ -483,9 +498,23 @@ serve(async (request): Promise<Response> => {
       });
     }
 
-    const name = clean(body.name || body.functionName, 120);
-    const args = parseArgs(body.arguments || body.args);
-    if (!name) return json({ error: "Ferramenta ausente." }, 400);
+    const call = unwrapVoiceToolCall(
+      body.name || body.functionName,
+      body.arguments || body.args,
+    );
+    const { requestedName, name, args } = call;
+    if (!name) {
+      return json({
+        ok: true,
+        content: functionContent({
+          ok: false,
+          tool: requestedName || SYNAPSE_VOICE_DISPATCH_TOOL_NAME,
+          message: "Nao consegui identificar qual capacidade do Synapse deve ser executada.",
+          needs_clarification: true,
+          retryable: false,
+        }),
+      });
+    }
     const startedAt = Date.now();
     let policy: ReturnType<typeof validateVoiceToolCall>;
 

@@ -27,7 +27,11 @@ loadLocalEnv();
 const PORT = Number(process.env.SYNAPSE_VOICE_GATEWAY_PORT || process.env.PORT || "8789");
 const PATHNAME = process.env.SYNAPSE_VOICE_GATEWAY_PATH || "/v1/synapse/voice";
 const DEFAULT_DEEPGRAM_URL = "wss://agent.deepgram.com/v1/agent/converse";
-const MANAGED_THINK_MODELS = new Set(["open_ai:gpt-4.1-mini", "google:gemini-2.5-flash"]);
+const MANAGED_THINK_MODELS = new Set([
+  "open_ai:gpt-5.4-mini",
+  "google:gemini-3.5-flash",
+  "anthropic:claude-haiku-4-5",
+]);
 const MAX_VOICE_FUNCTIONS = 16;
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
@@ -141,7 +145,7 @@ function normalizeAgentSettings(settings) {
 
   const flags = settings.flags && typeof settings.flags === "object" ? settings.flags : {};
   settings.flags = flags;
-  flags.history = envFlag("SYNAPSE_VOICE_HISTORY", false);
+  flags.history = envFlag("SYNAPSE_VOICE_HISTORY", true);
 
   const thinkChain = Array.isArray(agent.think) ? agent.think : [agent.think];
   if (!thinkChain.length || thinkChain.some((item) => !item || typeof item !== "object")) {
@@ -622,6 +626,11 @@ class SynapseVoiceSession {
       return;
     }
 
+    if (payload.type === "client_action_result") {
+      this.runner.handleClientActionResult(payload);
+      return;
+    }
+
     if (payload.type === "update_speak" && payload.speak) {
       this.sendDeepgram({ type: "UpdateSpeak", speak: payload.speak });
       return;
@@ -660,9 +669,10 @@ const server = http.createServer((req, res) => {
       ok: true,
       service: "synapse-voice-agent-gateway",
       path: PATHNAME,
-      voicePath: "deepgram-managed-gpt41-azure-speech-cartesia-fallback",
-      thinkPrimary: "open_ai/gpt-4.1-mini",
-      thinkFallback: "google/gemini-2.5-flash",
+      voicePath: "deepgram-managed-gpt54mini-azure-speech-cartesia-fallback",
+      thinkPrimary: "open_ai/gpt-5.4-mini",
+      thinkFallback: "google/gemini-3.5-flash",
+      thinkLastResort: "anthropic/claude-haiku-4-5",
       speakPrimary: "azure-speech",
       speakFallback: "deepgram-managed-cartesia",
       deepgramConfigured: Boolean(process.env.DEEPGRAM_API_KEY),

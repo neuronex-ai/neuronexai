@@ -49,8 +49,11 @@ const settings = {
       },
     },
     think: [
-      think({ type: "open_ai", model: "gpt-4.1-mini", temperature: 0.25 }),
-      think({ type: "google", model: "gemini-2.5-flash", temperature: 0.25 }),
+      // Deepgram currently sends managed tool calls through Chat Completions.
+      // GPT-5.4 Mini only supports function tools there with reasoning_effort=none.
+      think({ type: "open_ai", model: "gpt-5.4-mini" }),
+      think({ type: "google", model: "gemini-3.5-flash", temperature: 0.25 }),
+      think({ type: "anthropic", model: "claude-haiku-4-5", temperature: 0.25 }),
     ],
     speak: [
       {

@@ -144,7 +144,7 @@ const EXTRA_TOOLS = [
   ),
   fn(
     "analyze_neuroview_patient_patterns",
-    "Analisa padroes reais das notas, tags, fluxos e NeuroPulse entries de um paciente e abre o NeuroView com trace visual do raciocinio. Use somente para pedidos explicitamente ligados a NeuroView, grafo de notas, padroes, curiosidades ou conexoes de um paciente.",
+    "Execute diretamente com patient_name quando o pedido citar NeuroView, grafo de notas, padrões, curiosidades ou conexões de um paciente. A função resolve a pessoa, analisa dados reais e retorna a ação visual que abre o NeuroView com o subgrafo e os IDs exatos para continuar o raciocínio.",
     objectSchema({
       ...patientReference,
       focus: { type: "string", description: "Foco opcional da analise." },

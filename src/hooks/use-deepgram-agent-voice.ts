@@ -9,6 +9,13 @@ import type {
 } from "@/types/synapse-voice";
 
 type ClientAction = { type?: string; payload?: unknown; data?: unknown };
+type ClientActionExecutionResult = {
+  success: boolean;
+  action?: string;
+  message?: string;
+  durationMs?: number;
+  cancelled?: boolean;
+};
 type PendingStart = {
   resolve: () => void;
   reject: (error: Error) => void;
@@ -30,7 +37,9 @@ interface Options {
   onVoiceSessionIdChange?: (id: string) => void;
   onTranscript?: (text: string, isFinal: boolean) => void;
   onResponseText?: (text: string) => void;
-  onClientAction?: (action: ClientAction) => void;
+  onClientAction?: (
+    action: ClientAction,
+  ) => ClientActionExecutionResult | Promise<ClientActionExecutionResult>;
   onSpeakingStart?: () => void;
   onSpeakingEnd?: () => void;
   onAudioIntensity?: (intensity: number) => void;
@@ -595,6 +604,10 @@ export function useDeepgramAgentVoice({
       setIsProcessing(false);
       setVoicePhase("error");
       rejectPendingStart(new Error(message));
+      void closeEverything().finally(() => {
+        setError(message);
+        setVoicePhase("error");
+      });
       return;
     }
 
@@ -677,9 +690,47 @@ export function useDeepgramAgentVoice({
     }
 
     if (type === "client_action" && payload.action && typeof payload.action === "object") {
-      callbacksRef.current.onClientAction?.(payload.action as ClientAction);
+      const callId = clean(payload.callId || payload.id, 120);
+      const name = clean(payload.name, 120);
+      void (async () => {
+        const startedAt = performance.now();
+        let result: ClientActionExecutionResult;
+        try {
+          const callback = callbacksRef.current.onClientAction;
+          if (!callback) throw new Error("A interface nao possui um executor para esta acao.");
+          const execution = await callback(payload.action as ClientAction);
+          if (!execution || typeof execution !== "object") {
+            throw new Error("A interface nao confirmou o resultado da acao.");
+          }
+          result = execution;
+        } catch (caught) {
+          result = {
+            success: false,
+            message: caught instanceof Error
+              ? caught.message
+              : "A interface nao conseguiu concluir a acao.",
+            durationMs: Math.round(performance.now() - startedAt),
+          };
+        }
+
+        const socket = wsRef.current;
+        if (!callId || !socket || socket.readyState !== WebSocket.OPEN) return;
+        socket.send(JSON.stringify({
+          type: "client_action_result",
+          id: callId,
+          callId,
+          name,
+          success: result.success === true,
+          message: clean(result.message, 800),
+          cancelled: Boolean(result.cancelled),
+          durationMs: Number.isFinite(Number(result.durationMs))
+            ? Math.max(0, Math.round(Number(result.durationMs)))
+            : Math.round(performance.now() - startedAt),
+        }));
+      })();
+      return;
     }
-  }, [applyRestingPhase, buildToolState, handleDeepgramEvent, persistConversationId, persistVoiceSessionId, rejectPendingStart, resolvePendingStart, setActiveToolState, stopPlayback]);
+  }, [applyRestingPhase, buildToolState, closeEverything, handleDeepgramEvent, persistConversationId, persistVoiceSessionId, rejectPendingStart, resolvePendingStart, setActiveToolState, stopPlayback]);
 
   const handleBinaryAudio = useCallback(async (value: Blob | ArrayBuffer) => {
     const buffer = value instanceof Blob ? await value.arrayBuffer() : value;

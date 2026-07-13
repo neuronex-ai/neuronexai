@@ -163,6 +163,13 @@ const MODAL_ROUTES: Record<NonNullable<SynapseInterfaceAction["modal"]>, string>
   new_note: "/notas",
 };
 
+const MODAL_TARGETS: Partial<Record<NonNullable<SynapseInterfaceAction["modal"]>, string>> = {
+  new_appointment: "[data-synapse-target='new-appointment-modal']",
+  new_patient: "[data-synapse-target='new-patient-modal']",
+  new_transaction: "[data-synapse-target='new-transaction-modal']",
+  new_charge: "[data-synapse-target='new-charge-modal']",
+};
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{6,80}$/;
 const NOTES_VIEWS = new Set(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
@@ -182,13 +189,6 @@ const PAGE_ACTION_EVENT = "synapse:page-action";
 const SURFACE_READY_EVENT = "synapse:surface-ready";
 
 let activeController: AbortController | null = null;
-
-const sleep = (milliseconds: number, signal: AbortSignal) =>
-  new Promise<void>((resolve, reject) => {
-    if (signal.aborted) return reject(new DOMException("Cancelled", "AbortError"));
-    const timeout = window.setTimeout(resolve, milliseconds);
-    signal.addEventListener("abort", () => { window.clearTimeout(timeout); reject(new DOMException("Cancelled", "AbortError")); }, { once: true });
-  });
 
 const nextFrame = (signal: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
@@ -246,7 +246,7 @@ const waitForSurfaceReady = (selector: string, runId: string | undefined, signal
 
     let settled = false;
     const finish = (node: Element | null) => {
-      if (settled || !node) return;
+      if (settled) return;
       settled = true;
       observer.disconnect();
       window.clearTimeout(safetyTimeout);
@@ -267,7 +267,10 @@ const waitForSurfaceReady = (selector: string, runId: string | undefined, signal
       if (runId && detail?.runId && detail.runId !== runId) return;
       finish(document.querySelector(selector));
     };
-    const observer = new MutationObserver(() => finish(document.querySelector(selector)));
+    const observer = new MutationObserver(() => {
+      const node = document.querySelector(selector);
+      if (node) finish(node);
+    });
     const safetyTimeout = window.setTimeout(() => finish(document.querySelector(selector)), 15000);
     observer.observe(document.documentElement, {
       childList: true,
@@ -305,6 +308,22 @@ const safeGraphNodeIds = (value: unknown) => {
 const safeInterfaceElement = (value?: string): SynapseInterfaceElement | undefined =>
   value && INTERFACE_ELEMENTS.has(value as SynapseInterfaceElement) ? value as SynapseInterfaceElement : undefined;
 const emitPageAction = (action: SynapseInterfaceAction) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PAGE_ACTION_EVENT, { detail: action })); };
+
+const waitForPageActionTarget = async (
+  selector: string,
+  action: SynapseInterfaceAction,
+  signal: AbortSignal,
+  timeoutMs = 12000,
+) => {
+  const deadline = performance.now() + timeoutMs;
+  let node = document.querySelector(selector);
+  while (!node && performance.now() < deadline) {
+    emitPageAction(action);
+    const remaining = deadline - performance.now();
+    node = await waitForTarget(selector, signal, Math.max(50, Math.min(500, remaining)));
+  }
+  return node;
+};
 
 const ACTION_LABELS: Partial<Record<SynapseInterfaceActionName, string>> = {
   navigate: "Abrindo uma área do sistema",
@@ -362,7 +381,7 @@ const notesProduct = (action: SynapseInterfaceAction) => {
 
 const targetSelector = (action: SynapseInterfaceAction) => {
   const selectors: Record<SynapseInterfaceElement, string> = {
-    next_appointment: "[data-synapse-target='next-appointment']",
+    next_appointment: "[data-synapse-target='next-appointment'], [data-synapse-target='dashboard-agenda']",
     daily_schedule: "[data-synapse-target='daily-schedule']",
     dashboard_agenda: "[data-synapse-target='dashboard-agenda']",
     dashboard_pending: "[data-synapse-target='dashboard-pending']",
@@ -374,7 +393,7 @@ const targetSelector = (action: SynapseInterfaceAction) => {
     patient_sessions: "[data-synapse-target='patient-sessions']",
     patient_files: "[data-synapse-target='patient-files']",
     patient_finance: "[data-synapse-target='patient-finance']",
-    financial_balance: "[data-synapse-target='financial-balance']",
+    financial_balance: "[data-synapse-target='financial-balance'], [data-synapse-target='finance-overview'], [data-synapse-target='dashboard-finance']",
     finance_overview: "[data-synapse-target='finance-overview']",
     finance_entries: "[data-synapse-target='finance-entries']",
     finance_charges: "[data-synapse-target='finance-charges']",
@@ -460,7 +479,7 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
   if (envelope.type === "interface_action" || data.action) {
     const action = String(data.action || "") as SynapseInterfaceActionName;
     if (!ALLOWED_INTERFACE_ACTIONS.has(action)) return null;
-    return {
+    const normalized: SynapseInterfaceAction = {
       action,
       target: data.target,
       destination: safeSynapseDestination(data.destination),
@@ -495,6 +514,12 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
       modal: data.modal,
       reason: data.reason,
     };
+    if (normalized.action === "open_modal") {
+      if (normalized.modal === "new_note") return { ...normalized, action: "open_new_note", notesView: "notes" };
+      if (normalized.modal === "patient_details") return { ...normalized, action: "open_patient" };
+      if (normalized.modal === "patient_invite") return { ...normalized, action: "open_patient_invite_modal" };
+    }
+    return normalized;
   }
   if (envelope.type === "navigation_action" && typeof data.path === "string") {
     const path = data.path.replace(/\/$/, "") || "/";
@@ -580,9 +605,12 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
           focusPageAction(pageAction);
 
           if (destination.selector) {
-            const node = notesProduct(action)
-              ? await waitForSurfaceReady(destination.selector, action.runId, controller.signal)
-              : await waitForTarget(destination.selector, controller.signal);
+            const shouldReplayPageAction = pageAction.action === "open_modal";
+            const node = shouldReplayPageAction
+              ? await waitForPageActionTarget(destination.selector, pageAction, controller.signal)
+              : notesProduct(action)
+                ? await waitForSurfaceReady(destination.selector, action.runId, controller.signal)
+                : await waitForTarget(destination.selector, controller.signal);
             if (!node) throw new Error("A área foi aberta, mas o destino ainda não ficou disponível.");
             focusNode(node, destination.selector);
           }
@@ -599,6 +627,7 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         const selector = targetSelector(action);
         if (selector) {
           const node = await waitForTarget(selector, controller.signal);
+          if (!node) throw new Error("A área foi aberta, mas o destino ainda não ficou disponível.");
           focusNode(node, selector);
         }
         break;
@@ -622,10 +651,12 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
       case "open_daily_schedule": {
         navigate("/agenda");
         const shellSelector = targetSelector({ ...action, element: "daily_schedule" });
-        await waitForTarget(shellSelector, controller.signal);
+        const shellNode = await waitForTarget(shellSelector, controller.signal);
+        if (!shellNode) throw new Error("A agenda foi aberta, mas ainda não ficou disponível.");
         focusPageAction(action);
         const selector = targetSelector({ ...action, element: action.element || "agenda_calendar" });
         const node = await waitForTarget(selector, controller.signal);
+        if (!node) throw new Error("A agenda foi aberta, mas o período solicitado não ficou disponível.");
         focusNode(node, selector);
         break;
       }
@@ -633,39 +664,46 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         if (!validEntityId(action.appointmentId)) throw new Error("Agendamento inválido.");
         navigate("/agenda");
         const shellSelector = targetSelector({ ...action, appointmentId: undefined, element: "daily_schedule" });
-        await waitForTarget(shellSelector, controller.signal);
+        const shellNode = await waitForTarget(shellSelector, controller.signal);
+        if (!shellNode) throw new Error("A agenda foi aberta, mas ainda não ficou disponível.");
         focusPageAction({ ...action, action: "open_daily_schedule" });
         focusPageAction(action);
         const selector = targetSelector(action);
         const node = await waitForTarget(selector, controller.signal);
+        if (!node) throw new Error("A consulta não ficou disponível na agenda.");
         focusNode(node, selector);
         break;
       }
       case "open_teleconsultation_lobby": {
         if (!validEntityId(action.appointmentId)) throw new Error("Sessão inválida.");
         navigate("/teleconsulta", { state: { activeAppointmentId: action.appointmentId } });
-        await sleep(620, controller.signal);
+        await nextFrame(controller.signal);
         focusPageAction(action);
-        await sleep(180, controller.signal);
-        focusNode(document.querySelector(targetSelector({ ...action, element: action.element || "transcription_decision" })));
+        const selector = targetSelector({ ...action, element: action.element || "transcription_decision" });
+        const node = await waitForTarget(selector, controller.signal, 8000);
+        if (!node) throw new Error("A teleconsulta foi aberta, mas a sessão ainda não ficou disponível.");
+        focusNode(node, selector);
         break;
       }
       case "open_patient_invite_modal": {
         if (!validEntityId(action.appointmentId)) throw new Error("Sessão inválida.");
         navigate("/teleconsulta", { state: { activeAppointmentId: action.appointmentId, openInvite: true } });
-        await sleep(720, controller.signal);
+        await nextFrame(controller.signal);
         focusPageAction(action);
-        await sleep(180, controller.signal);
-        focusNode(document.querySelector(targetSelector({ ...action, element: "patient_invite" })));
+        const selector = targetSelector({ ...action, element: "patient_invite" });
+        const node = await waitForTarget(selector, controller.signal, 8000);
+        if (!node) throw new Error("A teleconsulta foi aberta, mas o convite ainda não ficou disponível.");
+        focusNode(node, selector);
         break;
       }
       case "filter_patients_directory": {
         navigate("/pacientes", { state: { synapseQuery: action.query || "" } });
         const selector = targetSelector({ ...action, element: "patients_search" });
-        await waitForTarget(selector, controller.signal);
+        const searchNode = await waitForTarget(selector, controller.signal);
+        if (!searchNode) throw new Error("A lista de pacientes foi aberta, mas a busca ainda não ficou disponível.");
         focusPageAction(action);
         const node = await waitForTarget(selector, controller.signal);
-        focusNode(node, selector);
+        if (!node || !focusNode(node, selector)) throw new Error("Não consegui aplicar o filtro na lista de pacientes.");
         break;
       }
       case "open_notes_desktop":
@@ -699,16 +737,21 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
       }
       case "highlight_element": {
         const selector = targetSelector(action);
-        if (!selector || !focusNode(document.querySelector(selector))) focusPageAction(action);
+        if (!selector) throw new Error("Elemento de interface não permitido.");
+        const node = await waitForTarget(selector, controller.signal);
+        if (!node || !focusNode(node, selector)) throw new Error("O elemento solicitado não ficou disponível.");
         break;
       }
       case "open_modal": {
         const route = action.modal ? MODAL_ROUTES[action.modal] : null;
-        if (!route) throw new Error("Modal nao permitido.");
+        const selector = action.modal ? MODAL_TARGETS[action.modal] : null;
+        if (!route || !selector) throw new Error("Modal não disponível por esta ação.");
         navigate(route, action.appointmentId ? { state: { activeAppointmentId: action.appointmentId } } : undefined);
-        await sleep(520, controller.signal);
-        if (!action.modal) throw new Error("Modal não permitido.");
+        await nextFrame(controller.signal);
         focusPageAction(action);
+        const node = await waitForPageActionTarget(selector, action, controller.signal);
+        if (!node) throw new Error("A área foi aberta, mas a janela solicitada não ficou disponível.");
+        focusNode(node, selector);
         break;
       }
     }

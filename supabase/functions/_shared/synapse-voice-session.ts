@@ -25,7 +25,7 @@ export async function ensureVoiceConversation(
       .maybeSingle();
     if (error) throw error;
     if (data?.id) return data.id as string;
-    throw new Error("Conversa de voz nao encontrada para este usuario.");
+    throw new Error("Conversa de voz não encontrada para este usuário.");
   }
 
   const { data, error } = await admin
@@ -33,7 +33,7 @@ export async function ensureVoiceConversation(
     .insert({ user_id: userId, title: "Conversa por voz" })
     .select("id")
     .single();
-  if (error || !data?.id) throw error || new Error("Nao foi possivel criar a conversa por voz.");
+  if (error || !data?.id) throw error || new Error("Não foi possível criar a conversa por voz.");
   return data.id as string;
 }
 
@@ -87,7 +87,7 @@ export async function ensureVoiceSessionRecord(
     })
     .select("id")
     .single();
-  if (error || !data?.id) throw error || new Error("Nao foi possivel criar a sessao de voz.");
+  if (error || !data?.id) throw error || new Error("Não foi possível criar a sessão de voz.");
   return data.id as string;
 }
 
@@ -152,7 +152,7 @@ export async function assertVoiceSessionOwnership(
     .eq("conversation_id", conversationId)
     .maybeSingle();
   if (error) throw error;
-  if (!data?.id) throw new Error("Sessao de voz nao encontrada para esta conversa.");
+  if (!data?.id) throw new Error("Sessão de voz não encontrada para esta conversa.");
   return data;
 }
 

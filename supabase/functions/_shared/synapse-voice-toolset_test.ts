@@ -2,6 +2,7 @@ import {
   buildSynapseVoiceFunctions,
   MAX_SYNAPSE_VOICE_FUNCTIONS,
   SYNAPSE_VOICE_CORE_TOOL_NAMES,
+  SYNAPSE_VOICE_DISPATCH_TOOL_NAME,
   SYNAPSE_VOICE_TOOLSET_VERSION,
 } from "./synapse-voice-toolset.ts";
 
@@ -15,10 +16,10 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
 
-  equal(functions.length, 15, "quantidade de funções de voz");
+  equal(functions.length, 16, "quantidade de funções de voz");
   equal(
     SYNAPSE_VOICE_TOOLSET_VERSION,
-    "neuronex.voice-core.v4",
+    "neuronex.voice-core.v5",
     "versão do payload de sessão",
   );
   equal(
@@ -32,6 +33,36 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
 
   for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) {
     equal(names.includes(required), true, `ferramenta ${required}`);
+  }
+  equal(
+    names.includes(SYNAPSE_VOICE_DISPATCH_TOOL_NAME),
+    true,
+    "ponte para o catalogo completo",
+  );
+});
+
+Deno.test("ponte de voz alcanca capacidades permitidas fora do nucleo sem liberar exclusoes", () => {
+  const functions = buildSynapseVoiceFunctions();
+  const dispatch = functions.find((tool) =>
+    tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME
+  );
+  const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
+
+  for (
+    const name of [
+      "create_appointment",
+      "reschedule_appointment",
+      "get_notes_desktop_overview",
+      "get_financial_summary",
+      "send_patient_email",
+      "get_teleconsultation_readiness",
+    ]
+  ) {
+    equal(delegatedNames.includes(name), true, `capacidade delegada ${name}`);
+  }
+
+  for (const name of ["delete_file", "delete_task", "neurofinance_refund"]) {
+    equal(delegatedNames.includes(name), false, `capacidade bloqueada ${name}`);
   }
 });
 

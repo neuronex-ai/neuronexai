@@ -5,6 +5,9 @@ const FOLLOWUP_FUNCTION_MS = Number(process.env.SYNAPSE_VOICE_FOLLOWUP_FUNCTION_
 const MAX_PROGRESS_MESSAGES = Number(process.env.SYNAPSE_VOICE_MAX_PROGRESS_MESSAGES || "2");
 const MAX_TOOL_RETRIES = Number(process.env.SYNAPSE_VOICE_MAX_TOOL_RETRIES || "1");
 const TOOL_TIMEOUT_MS = Number(process.env.SYNAPSE_VOICE_TOOL_TIMEOUT_MS || "18000");
+const CLIENT_ACTION_ACK_TIMEOUT_MS = Number(
+  process.env.SYNAPSE_VOICE_CLIENT_ACTION_ACK_TIMEOUT_MS || "20000",
+);
 
 const clean = (value, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -82,10 +85,16 @@ function patientFromArgs(args) {
 }
 
 function taskLabel(name, args = {}) {
-  const patient = patientFromArgs(args);
+  const delegatedName = name === "execute_synapse_tool"
+    ? clean(args.tool_name || args.toolName, 120)
+    : name;
+  const delegatedArgs = name === "execute_synapse_tool"
+    ? safeJsonParse(args.arguments || args.args || args.arguments_json)
+    : args;
+  const patient = patientFromArgs(delegatedArgs);
   const label =
-    clean(args.task_label || args.taskLabel || args.label || args.intent_label, 140) ||
-    titleize(name) ||
+    clean(delegatedArgs.task_label || delegatedArgs.taskLabel || delegatedArgs.label || delegatedArgs.intent_label, 140) ||
+    titleize(delegatedName) ||
     "consulta";
   return patient ? `${label} de ${patient}` : label;
 }
@@ -188,6 +197,51 @@ function failurePayload(name, error, aborted) {
   };
 }
 
+function applyClientActionResult(name, payload, result) {
+  const success = result?.success === true;
+  const message = clean(
+    result?.message ||
+      (success
+        ? "A interface confirmou a acao solicitada."
+        : "A acao foi processada, mas a interface nao conseguiu concluir a etapa visual."),
+    800,
+  );
+  const clientAction = {
+    success,
+    message,
+    cancelled: Boolean(result?.cancelled),
+    timed_out: Boolean(result?.timed_out),
+    duration_ms: Number.isFinite(Number(result?.durationMs))
+      ? Math.max(0, Math.round(Number(result.durationMs)))
+      : undefined,
+  };
+
+  if (success) return { ...payload, client_action: clientAction };
+
+  if (name === "request_interface_action") {
+    return {
+      ...payload,
+      ok: false,
+      spoken_summary: message,
+      message,
+      retryable: false,
+      needs_clarification: false,
+      error: message,
+      client_action: clientAction,
+    };
+  }
+
+  const warnings = Array.isArray(payload?.warnings)
+    ? [...payload.warnings, message]
+    : [message];
+  return {
+    ...payload,
+    warning: message,
+    warnings,
+    client_action: clientAction,
+  };
+}
+
 function clientTask(task) {
   if (!task) return null;
   return {
@@ -208,8 +262,63 @@ export class VoiceFunctionRunner {
     this.invokeTool = invokeTool;
     this.tasks = new Map();
     this.handledCallIds = new Set();
+    this.pendingClientActions = new Map();
     this.lastInterruptionAt = 0;
     this.queue = Promise.resolve();
+  }
+
+  handleClientActionResult(event) {
+    const id = clean(event?.id || event?.callId || event?.call_id, 120);
+    if (!id) return false;
+    const pending = this.pendingClientActions.get(id);
+    if (!pending) return false;
+    pending.finish({
+      success: event?.success === true,
+      message: clean(event?.message, 800),
+      cancelled: Boolean(event?.cancelled),
+      timed_out: false,
+      durationMs: event?.durationMs ?? event?.duration_ms,
+    });
+    return true;
+  }
+
+  awaitClientAction(task, action) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (result) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        task.controller.signal.removeEventListener("abort", onAbort);
+        if (this.pendingClientActions.get(task.id)?.finish === finish) {
+          this.pendingClientActions.delete(task.id);
+        }
+        resolve(result);
+      };
+      const onAbort = () => finish({
+        success: false,
+        cancelled: true,
+        message: "A acao visual foi cancelada antes de concluir.",
+      });
+      const timeoutMs = Number.isFinite(CLIENT_ACTION_ACK_TIMEOUT_MS)
+        ? Math.max(1000, CLIENT_ACTION_ACK_TIMEOUT_MS)
+        : 20000;
+      const timer = setTimeout(() => finish({
+        success: false,
+        timed_out: true,
+        message: "A interface nao confirmou a acao visual a tempo.",
+      }), timeoutMs);
+
+      this.pendingClientActions.set(task.id, { finish });
+      task.controller.signal.addEventListener("abort", onAbort, { once: true });
+      this.sendClient({
+        type: "client_action",
+        id: task.id,
+        callId: task.id,
+        name: task.name,
+        action,
+      });
+    });
   }
 
   claimCall(id, name, args) {
@@ -329,7 +438,9 @@ export class VoiceFunctionRunner {
       if (controller.signal.aborted) throw makeAbortError();
 
       if (result?.clientAction) {
-        this.sendClient({ type: "client_action", action: result.clientAction });
+        const clientActionResult = await this.awaitClientAction(task, result.clientAction);
+        if (controller.signal.aborted) throw makeAbortError();
+        Object.assign(payload, applyClientActionResult(name, payload, clientActionResult));
       }
 
       if (task.interrupted && payload.ok) {
