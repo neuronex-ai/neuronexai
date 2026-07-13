@@ -8,7 +8,6 @@ import {
   type NotificationSettings,
   useNotificationSettings,
 } from "@/hooks/use-notification-settings";
-import { getElectronAPI, isElectron } from "@/lib/electron";
 import {
   disablePushNotifications,
   enablePushNotifications,
@@ -19,7 +18,6 @@ import {
 } from "@/lib/push-notifications";
 import {
   BellRing,
-  Laptop,
   Loader2,
   Mail,
   Monitor,
@@ -107,9 +105,7 @@ export const PersistentNotificationSettings = () => {
   );
   const [pushBusy, setPushBusy] = useState(false);
   const [webPushActive, setWebPushActive] = useState(false);
-  const [desktopSupported, setDesktopSupported] = useState(false);
   const pushBusyRef = useRef(false);
-  const electronMode = isElectron();
   const webPush = useMemo(() => getWebPushAvailability(), []);
   const webPushPermission = getWebPushPermission();
 
@@ -126,17 +122,9 @@ export const PersistentNotificationSettings = () => {
   }, [settings]);
 
   useEffect(() => {
-    if (!user?.id || electronMode) return;
+    if (!user?.id) return;
     void hasActivePushSubscription(user.id).then(setWebPushActive);
-  }, [electronMode, user?.id]);
-
-  useEffect(() => {
-    if (!electronMode) return;
-    void getElectronAPI()
-      ?.notifications?.isSupported()
-      .then(setDesktopSupported)
-      .catch(() => setDesktopSupported(false));
-  }, [electronMode]);
+  }, [user?.id]);
 
   const persistPushPreference = async (enabled: boolean) => {
     const next = {
@@ -146,7 +134,7 @@ export const PersistentNotificationSettings = () => {
       sms_security_alerts: false,
       sms_appointments: false,
     };
-    logPushStep("push:settings-save", { enabled, electronMode });
+    logPushStep("push:settings-save", { enabled });
     setState(next);
     await saveSettingsAsync(next);
   };
@@ -183,35 +171,6 @@ export const PersistentNotificationSettings = () => {
     }
   };
 
-  const toggleDesktopPush = async (enabled: boolean) => {
-    if (pushBusyRef.current) return;
-    pushBusyRef.current = true;
-    setPushBusy(true);
-    try {
-      if (enabled) {
-        const notifications = getElectronAPI()?.notifications;
-        if (!notifications || !(await notifications.isSupported())) {
-          throw new Error("not-supported");
-        }
-        const permission = await notifications.requestPermission();
-        if (permission !== "granted") throw new Error("permission-denied");
-      }
-      await persistPushPreference(enabled);
-      toast.success(
-        enabled
-          ? "Alertas ativados neste computador."
-          : "Alertas desativados neste computador.",
-      );
-    } catch {
-      toast.error(
-        "Não foi possível ativar os alertas. Verifique as permissões do sistema e tente novamente.",
-      );
-    } finally {
-      pushBusyRef.current = false;
-      setPushBusy(false);
-    }
-  };
-
   const save = async () => {
     await saveSettingsAsync({
       ...state,
@@ -221,13 +180,11 @@ export const PersistentNotificationSettings = () => {
     });
   };
 
-  const browserStatusDescription = electronMode
-    ? "Para receber alertas no navegador, abra a NeuroNex pela web e ative esta opção por lá."
-    : webPushPermission === "denied"
-      ? "Os alertas estão bloqueados nas permissões deste navegador."
-      : webPush.supported
-        ? "Receba lembretes importantes mesmo quando esta aba não estiver aberta."
-        : "Este navegador não permite alertas em segundo plano.";
+  const browserStatusDescription = webPushPermission === "denied"
+    ? "Os alertas estão bloqueados nas permissões deste navegador."
+    : webPush.supported
+      ? "Receba lembretes importantes mesmo quando esta aba não estiver aberta."
+      : "Este navegador não permite alertas em segundo plano.";
 
   if (isLoading) {
     return (
@@ -337,19 +294,18 @@ export const PersistentNotificationSettings = () => {
         <div className="flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <Label>Alertas neste navegador</Label>
-            <StatusPill available={!electronMode && webPush.supported} />
+            <StatusPill available={webPush.supported} />
           </div>
           <p className="text-xs text-muted-foreground">
             {browserStatusDescription}
           </p>
         </div>
-        {pushBusy && !electronMode ? (
+        {pushBusy ? (
           <Loader2 className="h-5 w-5 animate-spin" />
         ) : (
           <Switch
-            disabled={electronMode || !webPush.supported}
+            disabled={!webPush.supported}
             checked={
-              !electronMode &&
               Boolean(state.push_enabled) &&
               webPushPermission === "granted" &&
               webPushActive
@@ -358,30 +314,6 @@ export const PersistentNotificationSettings = () => {
           />
         )}
       </section>
-
-      {electronMode ? (
-        <section className="flex items-center gap-4 rounded-xl border border-border/20 bg-card p-5">
-          <Laptop className="h-5 w-5" />
-          <div className="flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <Label>Alertas neste computador</Label>
-              <StatusPill available={desktopSupported} />
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Receba avisos enquanto a NeuroNex estiver aberta ou minimizada.
-            </p>
-          </div>
-          {pushBusy ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <Switch
-              disabled={!desktopSupported}
-              checked={Boolean(state.push_enabled) && desktopSupported}
-              onCheckedChange={(value) => void toggleDesktopPush(value)}
-            />
-          )}
-        </section>
-      ) : null}
 
       <section className="flex items-center gap-4 rounded-xl border border-border/10 bg-secondary/15 p-5 opacity-65">
         <Smartphone className="h-5 w-5" />

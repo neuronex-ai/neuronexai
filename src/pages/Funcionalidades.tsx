@@ -16,7 +16,7 @@ import {
     Heart,
     Layers,
     LayoutDashboard,
-    LayoutGrid, Monitor, PieChart, Search, Shield, Smartphone, Sparkles, Users, Zap, type LucideIcon
+    LayoutGrid, Monitor, PieChart, Search, Shield, Sparkles, Users, Zap, type LucideIcon
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -248,7 +248,7 @@ const sections = [
 
 const crossFeatures = [
     { icon: Search, title: "Busca Universal ⌘K", description: "Pressione ⌘K e encontre qualquer coisa instantaneamente." },
-    { icon: Smartphone, title: "App Desktop Nativo", description: "Versão nativa para Windows e Mac com performance superior." },
+    { icon: Monitor, title: "Na Microsoft Store", description: "Instale a NeuroNex AI no Windows pela Microsoft Store e acesse seus dados sincronizados." },
     { icon: Cloud, title: "Dark & Light Mode", description: "Temas Liquid Glass e Ceramic com transição suave." },
     { icon: Shield, title: "Criptografia & Segurança", description: "Dados criptografados e proteção de nível bancário." },
     { icon: Zap, title: "Tempo Real", description: "Atualizações instantâneas em todo o sistema sem recarregar." },

@@ -35,20 +35,9 @@ export function getDeviceType(): "mobile" | "tablet" | "desktop" {
  * Uses synchronous initialization to prevent layout flash.
  */
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState<boolean>(() => {
-    // Force desktop mode in Electron
-    if (typeof window !== "undefined" && (window as any).electronAPI?.isElectron) {
-      return false;
-    }
-    return getIsMobileSync();
-  });
+  const [isMobile, setIsMobile] = React.useState<boolean>(() => getIsMobileSync());
 
   React.useEffect(() => {
-    // If we're in Electron, don't set up the listener or change state
-    if (typeof window !== "undefined" && (window as any).electronAPI?.isElectron) {
-      return;
-    }
-
     const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`);
     const onChange = () => {
       setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);

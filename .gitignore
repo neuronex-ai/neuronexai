@@ -10,7 +10,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-dist-electron
 release
 *.local
 
@@ -27,14 +26,7 @@ release
 *.sw?
 
 # Build Output
-release-current/
-release-v2/
 release/
-
-# Large Files
-public/download/*.exe
-public/download/*.dmg
-public/download/*.zip
 
 # Environment & Secrets (AIOS)
 .env

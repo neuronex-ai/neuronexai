@@ -1,10 +1,9 @@
 {
-  "name": "neuronex-desktop",
+  "name": "neuronex",
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "main": "dist-electron/main.cjs",
-  "description": "NeuroNex Desktop — Gestão Inteligente para Psicólogos",
+  "description": "NeuroNex — Gestão Inteligente para Psicólogos",
   "author": "NeuroNex",
   "scripts": {
     "dev": "node scripts/start-dev.cjs",
@@ -19,11 +18,7 @@
     "test:coverage": "vitest run --coverage",
     "voice:gateway": "node scripts/start-voice-gateway-dev.cjs",
     "voice:gateway:raw": "node server/voice-agent-gateway/index.js",
-    "voice:gateway:local": "npm run voice:gateway",
-    "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:8080 && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron .\"",
-    "electron:preview": "vite build && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron .",
-    "electron:build": "vite build && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron-builder --win --config electron-builder.json5",
-    "electron:build:store": "vite build && npx tsc -p tsconfig.electron.json && node scripts/rename-cjs.cjs && electron-builder --win appx --config electron-builder.store.json5"
+    "voice:gateway:local": "npm run voice:gateway"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1075.0",
@@ -104,7 +99,6 @@
     "d3-array": "3.2.4",
     "d3-force": "^3.0.0",
     "date-fns": "^3.6.0",
-    "electron-updater": "^6.7.3",
     "embla-carousel": "^8.6.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",
@@ -164,9 +158,6 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.21",
-    "concurrently": "^9.1.2",
-    "electron": "^33.4.11",
-    "electron-builder": "^25.1.8",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
@@ -177,7 +168,6 @@
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
     "vite": "^5.4.19",
-    "vitest": "^2.1.9",
-    "wait-on": "^8.0.3"
+    "vitest": "^2.1.9"
   }
 }

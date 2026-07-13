@@ -275,13 +275,9 @@
         "npm:clsx@^2.1.1",
         "npm:cmdk@^1.1.1",
         "npm:cobe@~0.6.5",
-        "npm:concurrently@^9.1.2",
         "npm:d3-array@3.2.4",
         "npm:d3-force@3",
         "npm:date-fns@^3.6.0",
-        "npm:electron-builder@^25.1.8",
-        "npm:electron-updater@^6.7.3",
-        "npm:electron@^33.4.11",
         "npm:embla-carousel-autoplay@^8.6.0",
         "npm:embla-carousel-react@^8.6.0",
         "npm:embla-carousel@^8.6.0",
@@ -335,7 +331,6 @@
         "npm:vaul@~0.9.9",
         "npm:vite@^5.4.19",
         "npm:vitest@^2.1.9",
-        "npm:wait-on@^8.0.3",
         "npm:ws@^8.18.3",
         "npm:zod@^3.25.76"
       ]

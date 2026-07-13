@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, HashRouter, BrowserRouter, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, BrowserRouter, useLocation } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
@@ -16,10 +16,7 @@ import { TrialExpiredUpsell } from "@/components/subscription/TrialExpiredUpsell
 import { CookieConsent } from "@/components/landing/CookieConsent";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { NeuroFinancePostOnboardingGate } from "@/components/financeiro/NeuroFinancePostOnboardingGate";
-import { getElectronAPI, isElectron } from "@/lib/electron";
-import { ElectronTitleBar } from "@/components/electron/ElectronTitleBar";
-import { ElectronUpdateManager } from "@/components/electron/ElectronUpdateManager";
-import { useEffect, lazy, Suspense, ReactNode } from "react";
+import { lazy, Suspense, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
 import "@/styles/neurofinance-onboarding-overrides.css";
@@ -61,8 +58,6 @@ const NeuroZap = lazy(() => import("./pages/desktop/NeuroZap"));
 // Lazy Loaded Public Pages (web only - excluded from main bundle) - REMOVED FOR LEAN MVP
 const HelpCenter = lazy(() => import("@/pages/public/HelpCenter"));
 
-// Desktop Help (Electron only - Lazy loaded)
-const DesktopHelpCenter = lazy(() => import("./pages/desktop/DesktopHelpCenter"));
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
 const PublicProfessionalProfile = lazy(() => import("./pages/public/PublicProfessionalProfile"));
 const SynapseGlobalShell = lazy(() => import("@/components/synapse/SynapseGlobalShell").then(m => ({ default: m.SynapseGlobalShell })));
@@ -96,37 +91,8 @@ const SynapseShellGate = () => {
   return <SynapseGlobalShell />;
 };
 
-// ─── Electron body offset for custom title bar ────────────────────────
-const ElectronBodyOffset = () => {
-  useEffect(() => {
-    if (isElectron()) {
-      document.body.style.paddingTop = '32px';
-    }
-    return () => {
-      document.body.style.paddingTop = '';
-    };
-  }, []);
-  return null;
-};
-
-const ElectronNavigationBridge = () => {
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isElectron()) return;
-    const api = getElectronAPI();
-    if (!api) return;
-    api.onNavigate((path) => navigate(path || "/dashboard"));
-    return () => api.removeAllListeners("app:navigate");
-  }, [navigate]);
-
-  return null;
-};
-
-// ─── Shared Routes (available in both web and Electron) ───────────────
+// ─── Application routes ──────────────────────────────────────────────
 const SharedRoutes = () => {
-  const electronMode = isElectron();
-
   return (
     <RouteRecoveryBoundary>
       <Suspense fallback={<PageLoader />}>
@@ -151,17 +117,8 @@ const SharedRoutes = () => {
         <Route path="/anamnese-externa/:id" element={<AnamnesisPublic />} />
         <Route path="/id/:profileId" element={<PublicProfessionalProfile />} />
 
-        {/* ─── Public Pages (web only) ────────────────────── */}
-        {!electronMode && (
-          <>
-            <Route path="/help" element={<HelpCenter />} />
-          </>
-        )}
-
-        {/* ─── Desktop Help (Electron only) ───────────────── */}
-        {electronMode && (
-          <Route path="/help" element={<ProtectedRoute><DesktopHelpCenter /></ProtectedRoute>} />
-        )}
+        {/* ─── Public Pages ───────────────────────────────── */}
+        <Route path="/help" element={<HelpCenter />} />
 
         {/* ─── Protected Professional Routes ──────────────── */}
         <Route path="/synapse-ai" element={<PaidRoute><AIChat /></PaidRoute>} />
@@ -179,15 +136,11 @@ const SharedRoutes = () => {
         <Route path="/teleconsulta" element={<PaidRoute><Teleconsulta /></PaidRoute>} />
         <Route path="/neurozap" element={<PaidRoute><NeuroZap /></PaidRoute>} />
 
-        {/* ─── Patient Portal Routes (Web Only) ──────────────────────── */}
-        {!electronMode && (
-          <>
-            <Route path="/portal/convite" element={<PatientPortalInvite />} />
-            <Route path="/portal/convite/:token" element={<PatientPortalInvite />} />
-            <Route path="/portal/ativar" element={<PatientPortalActivate />} />
-            <Route path="/portal/*" element={<PatientProtectedRoute><PatientPortal /></PatientProtectedRoute>} />
-          </>
-        )}
+        {/* ─── Patient Portal Routes ───────────────────────── */}
+        <Route path="/portal/convite" element={<PatientPortalInvite />} />
+        <Route path="/portal/convite/:token" element={<PatientPortalInvite />} />
+        <Route path="/portal/ativar" element={<PatientPortalActivate />} />
+        <Route path="/portal/*" element={<PatientProtectedRoute><PatientPortal /></PatientProtectedRoute>} />
 
         {/* ─── Fallback ───────────────────────────────────── */}
         <Route path="/404" element={<NotFound />} />
@@ -199,29 +152,20 @@ const SharedRoutes = () => {
 };
 
 function App() {
-  const electronMode = isElectron();
-  const Router = electronMode ? HashRouter : BrowserRouter;
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
         <SessionContextProvider>
-          <Router>
+          <BrowserRouter>
             <ScrollToTop />
             <AIProvider>
               <SynapseProvider>
                 <SubscriptionProvider>
                   <TourProvider>
                     <TooltipProvider>
-                      {/* Electron-only components */}
-                      {electronMode && <ElectronTitleBar />}
-                      {electronMode && <ElectronBodyOffset />}
-                      {electronMode && <ElectronUpdateManager />}
-                      {electronMode && <ElectronNavigationBridge />}
-
                       <NeuroFinancePostOnboardingGate />
 
-                      {/* Synapse Global Shell — Desktop only (browser + Electron), gated by SynapseProvider.isVisible */}
+                      {/* Synapse Global Shell — gated by SynapseProvider.isVisible */}
                       <Suspense fallback={null}>
                         <SynapseShellGate />
                       </Suspense>
@@ -232,14 +176,13 @@ function App() {
 
                       <Toaster position="top-right" />
 
-                      {/* CookieConsent only on web */}
-                      {!electronMode && <CookieConsent />}
+                      <CookieConsent />
                     </TooltipProvider>
                   </TourProvider>
                 </SubscriptionProvider>
               </SynapseProvider>
             </AIProvider>
-          </Router>
+          </BrowserRouter>
         </SessionContextProvider>
       </ThemeProvider>
     </QueryClientProvider>

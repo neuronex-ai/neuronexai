@@ -79,7 +79,7 @@ export const SynapseGlobalShell = () => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 
-    // Don't render on mobile, unauthenticated, or non-Electron
+    // The provider hides the shell on unsupported or unauthenticated surfaces.
     if (!isVisible) return null;
 
     const isVoiceSessionActive = voiceStatus === 'connected' || voiceStatus === 'connecting' || voiceStatus === 'disconnecting';

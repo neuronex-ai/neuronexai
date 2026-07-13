@@ -1,6 +1,5 @@
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { supabase } from '@/integrations/supabase/client';
-import { getElectronAPI, isElectron } from '@/lib/electron';
 import { hasActivePushSubscription, listenForForegroundPush } from '@/lib/push-notifications';
 import { setPwaBadge } from '@/lib/pwa-integrations';
 import { useNotificationSettings } from '@/hooks/use-notification-settings';
@@ -47,33 +46,6 @@ const map = (row: Row): AppNotification => ({
   isRead: Boolean(row.read || row.read_at),
 });
 
-const nativeEligible = (item: AppNotification) => (
-  item.priority === 'urgent' ||
-  item.metadata.nativePushEligible === true ||
-  String(item.metadata.nativePushEligible || '').toLowerCase() === 'true'
-);
-
-const showDesktopNativeNotification = async (item: AppNotification) => {
-  if (!isElectron() || !nativeEligible(item)) return;
-  if (typeof document !== 'undefined' && document.visibilityState === 'visible' && document.hasFocus()) return;
-
-  const api = getElectronAPI();
-  if (!api?.notifications) return;
-
-  try {
-    const permission = await api.notifications.requestPermission();
-    if (permission !== 'granted') return;
-    await api.notifications.showNative({
-      title: item.title,
-      body: item.message,
-      actionUrl: item.actionUrl || undefined,
-      notificationId: item.id,
-    });
-  } catch (error) {
-    console.warn('[desktop-native-notification]', error);
-  }
-};
-
 export const useNotifications = ({ enableRealtime = false, syncBadge = false }: UseNotificationsOptions = {}) => {
   const { user } = useAuth();
   const { settings } = useNotificationSettings();
@@ -115,12 +87,11 @@ export const useNotifications = ({ enableRealtime = false, syncBadge = false }: 
 
       if (payload.eventType === 'INSERT') {
         const item = map(payload.new as Row);
-        if (settings?.push_enabled) void showDesktopNativeNotification(item);
         toast(item.title, { description: item.message, action: item.actionUrl ? { label: 'Abrir', onClick: () => { window.location.href = item.actionUrl!; } } : undefined });
       }
     }).subscribe();
     return () => { void supabase.removeChannel(channel); };
-  }, [enableRealtime, settings?.push_enabled, updateCachedNotifications, userId]);
+  }, [enableRealtime, updateCachedNotifications, userId]);
 
   useEffect(() => {
     if (!enableRealtime || !userId || !settings?.push_enabled || typeof Notification === 'undefined' || Notification.permission !== 'granted') return;

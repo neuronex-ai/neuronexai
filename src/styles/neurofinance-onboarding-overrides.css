@@ -1,6 +1,6 @@
 /* NeuroFinance onboarding — stable premium surfaces.
    Keeps the welcome screen visually aligned with the post-onboarding wizard while avoiding
-   Chromium/Electron tiling artifacts caused by heavy radial gradients + noise + blur stacks. */
+   Chromium tiling artifacts caused by heavy radial gradients + noise + blur stacks. */
 
 .relative.h-screen.w-screen.overflow-hidden {
   background: #020204 !important;

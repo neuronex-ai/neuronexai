@@ -23,7 +23,6 @@ import {
   CreditCard,
   FileCheck2,
   Fingerprint,
-  Layers,
   LockKeyhole,
   MessageCircle,
   ReceiptText,
@@ -303,7 +302,7 @@ const TrustFAQMobile = () => {
 
 const NativeExperienceMobile = () => (
   <section id="downloads" className="relative overflow-hidden bg-background px-5 py-16">
-    <div className="rounded-[38px] border border-border/40 bg-card/70 p-6 text-center shadow-premium dark:border-white/10 dark:bg-white/[0.035]"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground text-background"><Layers className="h-6 w-6" /></div><h2 className="mt-8 text-[2.35rem] font-black leading-[0.9] tracking-[-0.06em] text-foreground">Fluidez em qualquer tela.</h2><p className="mx-auto mt-5 max-w-xs text-sm font-medium leading-relaxed text-muted-foreground/66">Experiência web, desktop e mobile pensada para acompanhar a rotina da clínica onde ela acontecer.</p><div className="mt-7 grid grid-cols-2 gap-2">{["Windows/Mac", "iOS/Android"].map((item) => <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.035] px-4 py-3 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]">{item}</div>)}</div></div>
+    <div className="rounded-[38px] border border-border/40 bg-card/70 p-6 text-center shadow-premium dark:border-white/10 dark:bg-white/[0.035]"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground text-background"><BadgeCheck className="h-6 w-6" aria-hidden="true" /></div><h2 className="mt-8 text-[2.35rem] font-black leading-[0.9] tracking-[-0.06em] text-foreground">NeuroNex no Windows e na web.</h2><p className="mx-auto mt-5 max-w-xs text-sm font-medium leading-relaxed text-muted-foreground/66">No Windows, instale pela Microsoft Store. Em outros dispositivos compatíveis, acesse a NeuroNex com segurança pelo navegador.</p><div className="mt-7 grid grid-cols-2 gap-2">{["Microsoft Store", "Acesso pela web"].map((item) => <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.035] px-4 py-3 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]">{item}</div>)}</div></div>
   </section>
 );
 
