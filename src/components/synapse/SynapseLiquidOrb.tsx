@@ -122,7 +122,9 @@ void main() {
   vec3 keyLight = normalize(vec3(-0.55, 0.76, 0.62));
   vec3 rimLight = normalize(vec3(0.75, -0.48, 0.5));
   float specular = pow(max(dot(reflect(-keyLight, normal), viewDirection), 0.0), 92.0);
-  float rimSpecular = pow(max(dot(reflect(-rimLight, normal), viewDirection), 0.0), 38.0);
+  
+  // Removemos completamente o rimSpecular (brilho de contorno esbranquiçado) para limpar a borda
+  float rimSpecular = 0.0;
 
   vec3 darkCore = mix(vec3(0.16, 0.17, 0.19), vec3(0.018, 0.021, 0.026), u_dark);
   vec3 smoke = mix(vec3(0.31, 0.32, 0.35), vec3(0.37, 0.39, 0.43), u_dark);
@@ -132,10 +134,10 @@ void main() {
   vec3 color = mix(darkCore, smoke, clamp(density * 1.45, 0.0, 1.0));
   color += silver * filaments * (0.43 + vitality * 0.42 + mid * 0.26);
   color += pearl * luminous * (0.56 + high * 0.52);
-  color += pearl * (specular * 0.95 + rimSpecular * 0.28);
+  color += pearl * (specular * 0.95);
   
-  color = mix(color, silver, fresnel * (0.15 + voice * 0.05));
-  color += pearl * pow(fresnel, 5.0) * 0.1;
+  // Em vez de clarear as bordas com prata/fresnel, nós suavizamos e escurecemos levemente as bordas
+  color = mix(color, darkCore * 0.4, fresnel * 0.35);
 
   float glassAlpha = silhouette * mix(0.88, 0.99, fresnel);
   outColor = vec4(color, glassAlpha);
