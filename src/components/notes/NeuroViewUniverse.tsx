@@ -1,20 +1,21 @@
 "use client";
 
 import { useMemo, useRef, useState, useCallback, useEffect, type MouseEvent, type WheelEvent } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { ArrowLeft } from "lucide-react";
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
 import { usePatients } from "@/hooks/use-patients";
 import { cn } from "@/lib/utils";
 import { PersonalNote, Patient } from "@/types";
+import type { GraphLink, GraphNode } from "./graph/graph-types";
 
 interface UniverseNode {
   id: string;
   label: string;
-  type: "patient" | "note" | "tag";
+  type: "patient" | "note" | "tag" | "flow";
   color: string;
   size: number;
-  data?: PersonalNote | Patient;
+  data?: unknown;
 }
 
 interface UniverseLink {
@@ -27,12 +28,15 @@ interface NeuroViewUniverseProps {
   onSelectNote?: (note: PersonalNote) => void;
   onSelectPatient?: (patient: Patient) => void;
   searchQuery?: string;
+  graphData?: { nodes: GraphNode[]; links: GraphLink[] };
+  emphasizedNodeIds?: ReadonlySet<string>;
 }
 
 const NODE_COLORS = {
   patient: "#d9d9df",
   note: "#a9a9b2",
   tag: "#73737f",
+  flow: "#7dd3fc",
 };
 
 const normalize = (value?: string | null) =>
@@ -71,6 +75,8 @@ export const NeuroViewUniverse = ({
   onSelectNote,
   onSelectPatient,
   searchQuery = "",
+  graphData: sourceGraphData,
+  emphasizedNodeIds,
 }: NeuroViewUniverseProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number>(0);
@@ -81,14 +87,15 @@ export const NeuroViewUniverse = ({
   const lastMouse = useRef({ x: 0, y: 0 });
   const zoomRef = useRef(1);
   const rotationRef = useRef({ x: 0.32, y: 0.04 });
-  const [autoRotate, setAutoRotate] = useState(true);
+  const shouldReduceMotion = Boolean(useReducedMotion());
+  const [autoRotate, setAutoRotate] = useState(!shouldReduceMotion);
   const [hoverNodeId, setHoverNodeId] = useState<string | null>(null);
 
   const { notes } = usePersonalNotes();
   const { data: patients } = usePatients();
   const normalizedSearch = normalize(searchQuery);
 
-  const { nodes, links } = useMemo(() => {
+  const derivedGraphData = useMemo(() => {
     const patientList = patients || [];
     const noteList = notes || [];
     const nodeMap = new Map<string, UniverseNode>();
@@ -166,6 +173,25 @@ export const NeuroViewUniverse = ({
     return { nodes: Array.from(nodeMap.values()), links: linkList };
   }, [notes, patients, normalizedSearch]);
 
+  const { nodes, links } = useMemo(() => {
+    if (!sourceGraphData) return derivedGraphData;
+
+    const visibleNodes = sourceGraphData.nodes.map<UniverseNode>((node) => ({
+      id: node.id,
+      label: node.label || "Sem título",
+      type: node.type,
+      color: node.type === "patient" ? NODE_COLORS.patient : node.color || NODE_COLORS[node.type],
+      size: node.type === "patient" ? 12 : node.type === "flow" ? 9 : node.type === "note" ? 8 : 5.5,
+      data: node.data,
+    }));
+    const visibleLinks = sourceGraphData.links.flatMap<UniverseLink>((link) => {
+      const source = typeof link.source === "string" ? link.source : link.source?.id;
+      const target = typeof link.target === "string" ? link.target : link.target?.id;
+      return source && target ? [{ source, target }] : [];
+    });
+    return { nodes: visibleNodes, links: visibleLinks };
+  }, [derivedGraphData, sourceGraphData]);
+
   const nodePositions = useMemo(() => {
     const positions = new Map<string, { x: number; y: number; z: number }>();
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
@@ -205,14 +231,14 @@ export const NeuroViewUniverse = ({
   }, []);
 
   const connectedNodeIds = useMemo(() => {
-    if (!hoverNodeId) return new Set<string>();
+    if (!hoverNodeId) return emphasizedNodeIds?.size ? new Set(emphasizedNodeIds) : new Set<string>();
     const connected = new Set<string>([hoverNodeId]);
     links.forEach((link) => {
       if (link.source === hoverNodeId) connected.add(link.target);
       if (link.target === hoverNodeId) connected.add(link.source);
     });
     return connected;
-  }, [hoverNodeId, links]);
+  }, [emphasizedNodeIds, hoverNodeId, links]);
 
   const project = useCallback((pos: { x: number; y: number; z: number }, w: number, h: number) => {
     const rotation = rotationRef.current;
@@ -263,7 +289,7 @@ export const NeuroViewUniverse = ({
         if (proj.z <= -760) return;
 
         const time = performance.now() / 3400;
-        const twinkle = 0.45 + 0.55 * Math.sin(time + star.x * 6 + star.y * 3);
+        const twinkle = shouldReduceMotion ? 1 : 0.45 + 0.55 * Math.sin(time + star.x * 6 + star.y * 3);
         ctx.beginPath();
         ctx.arc(proj.x, proj.y, Math.max(0.16, star.size * proj.scale * 0.28), 0, Math.PI * 2);
         ctx.fillStyle = `rgba(225, 225, 232, ${star.brightness * twinkle * 0.28})`;
@@ -308,7 +334,7 @@ export const NeuroViewUniverse = ({
       sortedNodes.forEach(({ node, pos }) => {
         const previousAlpha = nodeAlphaRef.current[node.id] ?? 0;
         const targetAlpha = 1;
-        const alpha = previousAlpha + (targetAlpha - previousAlpha) * 0.075;
+        const alpha = shouldReduceMotion ? targetAlpha : previousAlpha + (targetAlpha - previousAlpha) * 0.075;
         nodeAlphaRef.current[node.id] = alpha;
 
         const proj = project(pos, sw, sh);
@@ -356,7 +382,7 @@ export const NeuroViewUniverse = ({
         });
       });
 
-      if (autoRotate && !isDragging.current) {
+      if (autoRotate && !shouldReduceMotion && !isDragging.current) {
         rotationRef.current = { ...rotationRef.current, y: rotationRef.current.y + 0.00145 };
       }
 
@@ -365,7 +391,7 @@ export const NeuroViewUniverse = ({
 
     animationRef.current = requestAnimationFrame(render);
     return () => cancelAnimationFrame(animationRef.current);
-  }, [nodes, links, nodePositions, stars, autoRotate, project, hoverNodeId, connectedNodeIds]);
+  }, [nodes, links, nodePositions, stars, autoRotate, project, hoverNodeId, connectedNodeIds, shouldReduceMotion]);
 
   useEffect(() => {
     const activeIds = new Set(nodes.map((node) => node.id));
@@ -416,13 +442,13 @@ export const NeuroViewUniverse = ({
   const handleMouseUp = (e: MouseEvent) => {
     isDragging.current = false;
     if (!didDrag.current) updateHoveredNode(e.clientX, e.clientY);
-    window.setTimeout(() => setAutoRotate(true), 3200);
+    if (!shouldReduceMotion) window.setTimeout(() => setAutoRotate(true), 3200);
   };
 
   const handleMouseLeave = () => {
     isDragging.current = false;
     setHoverNodeId(null);
-    window.setTimeout(() => setAutoRotate(true), 3200);
+    if (!shouldReduceMotion) window.setTimeout(() => setAutoRotate(true), 3200);
   };
 
   const handleClick = () => {
@@ -449,6 +475,8 @@ export const NeuroViewUniverse = ({
       <canvas
         ref={canvasRef}
         className={cn("block h-full w-full", hoverNodeId ? "cursor-pointer" : "cursor-grab active:cursor-grabbing")}
+        role="img"
+        aria-label={`NeuroView 3D com ${nodes.length} nós e ${links.length} conexões`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -459,9 +487,9 @@ export const NeuroViewUniverse = ({
 
       <div className="pointer-events-none absolute inset-0 z-50 flex items-start justify-between p-5">
         <motion.button
-          initial={{ opacity: 0, y: -10 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.15 }}
           onClick={onBack}
           className="pointer-events-auto flex items-center gap-2.5 rounded-[18px] border border-white/[0.09] bg-white/[0.075] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/70 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.12] hover:text-white"
         >
@@ -470,9 +498,9 @@ export const NeuroViewUniverse = ({
         </motion.button>
 
         <motion.div
-          initial={{ opacity: 0, y: -10 }}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.28 }}
+          transition={shouldReduceMotion ? { duration: 0 } : { delay: 0.28 }}
           className="pointer-events-auto rounded-[22px] border border-white/[0.09] bg-white/[0.065] p-4 shadow-[0_24px_70px_-44px_rgba(0,0,0,0.92),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-3xl"
         >
           <p className="mb-3 text-[8px] font-black uppercase tracking-[0.34em] text-white/38">Legenda</p>
@@ -480,6 +508,7 @@ export const NeuroViewUniverse = ({
             {[
               { label: "Pacientes", color: NODE_COLORS.patient },
               { label: "Notas", color: NODE_COLORS.note },
+              { label: "Fluxos", color: NODE_COLORS.flow },
               { label: "Tags", color: NODE_COLORS.tag },
             ].map((item) => (
               <div key={item.label} className="flex items-center gap-2.5">

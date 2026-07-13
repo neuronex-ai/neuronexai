@@ -52,6 +52,20 @@ const cleanId = (value: unknown) => {
   if (!/^[a-zA-Z0-9_-]{6,100}$/.test(result)) throw new Error("Identificador inválido.");
   return result;
 };
+const cleanGraphNodeId = (value: unknown) => {
+  const result = cleanText(value, 160);
+  const hasControlCharacter = Array.from(result).some((character) => {
+    const codePoint = character.codePointAt(0) || 0;
+    return codePoint <= 0x1f || codePoint === 0x7f;
+  });
+  if (!result || hasControlCharacter) throw new Error("Identificador de node inválido.");
+  return result;
+};
+const cleanGraphNodeIds = (value: unknown) => {
+  if (!Array.isArray(value)) return undefined;
+  const ids = Array.from(new Set(value.slice(0, 80).map(cleanGraphNodeId)));
+  return ids.length ? ids : undefined;
+};
 const dateOnly = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(date);
 const addDays = (date: Date, amount: number) => { const next = new Date(date); next.setDate(next.getDate() + amount); return next; };
 const localDate = (value: string) => dateOnly(new Date(value));
@@ -449,11 +463,24 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
       case "request_interface_action": {
         const allowedActions = new Set(["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"]);
         const allowedTargets = new Set(["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"]);
+        const allowedNeuroViewScopes = new Set(["all", "patient", "subgraph"]);
+        const allowedNeuroViewModes = new Set(["2d", "3d"]);
         const action = cleanText(args.action, 50);
         const target = args.target ? cleanText(args.target, 50) : undefined;
+        const neuroViewScope = args.neuroview_scope ? cleanText(args.neuroview_scope, 20) : undefined;
+        const neuroViewMode = args.neuroview_mode ? cleanText(args.neuroview_mode, 10) : undefined;
+        const neuroViewNodeIds = cleanGraphNodeIds(args.neuroview_node_ids);
+        const neuroViewFocusNodeId = args.neuroview_focus_node_id ? cleanGraphNodeId(args.neuroview_focus_node_id) : undefined;
         if (!allowedActions.has(action)) throw new Error("Ação visual inválida.");
         if (target && !allowedTargets.has(target)) throw new Error("Destino visual inválido.");
-        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
+        if (neuroViewScope && !allowedNeuroViewScopes.has(neuroViewScope)) throw new Error("Escopo do NeuroView inválido.");
+        if (neuroViewMode && !allowedNeuroViewModes.has(neuroViewMode)) throw new Error("Modo do NeuroView inválido.");
+        if ((neuroViewScope || neuroViewMode || neuroViewNodeIds || neuroViewFocusNodeId) && action !== "open_neuroview_reasoning") {
+          throw new Error("Diretiva do NeuroView usada fora do NeuroView.");
+        }
+        if (neuroViewScope === "subgraph" && !neuroViewNodeIds?.length) throw new Error("Subgrafo sem nodes válidos.");
+        if (neuroViewScope === "patient" && !args.patient_id) throw new Error("Paciente ausente para o grafo individual.");
+        const clientAction = { type: "interface_action", data: { action, target, patientId: args.patient_id ? cleanId(args.patient_id) : undefined, appointmentId: args.appointment_id ? cleanId(args.appointment_id) : undefined, noteId: args.note_id ? cleanId(args.note_id) : undefined, moduleId: args.module_id ? cleanId(args.module_id) : undefined, taskId: args.task_id ? cleanId(args.task_id) : undefined, fileId: args.file_id ? cleanId(args.file_id) : undefined, flowId: args.flow_id ? cleanId(args.flow_id) : undefined, runId: args.run_id ? cleanId(args.run_id) : undefined, pulseEntryId: args.pulse_entry_id ? cleanId(args.pulse_entry_id) : undefined, mermaid: args.mermaid ? cleanText(args.mermaid, 6000) : undefined, trace: args.trace && typeof args.trace === "object" ? args.trace : undefined, neuroViewScope, neuroViewMode, neuroViewNodeIds, neuroViewFocusNodeId, date: args.date ? cleanText(args.date, 40) : undefined, query: args.query ? cleanText(args.query, 120) : undefined, notesView: args.notes_view ? cleanText(args.notes_view, 30) : undefined, element: args.element ? cleanText(args.element, 60) : undefined, modal: args.modal ? cleanText(args.modal, 60) : undefined, reason: args.reason ? cleanText(args.reason, 180) : undefined } };
         return { ok: true, grounded: false, data: { action_requested: action }, clientAction };
       }
       default: return { ok: false, grounded: false, error: `Ferramenta não suportada: ${name}` };

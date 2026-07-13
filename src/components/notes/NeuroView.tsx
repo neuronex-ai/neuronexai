@@ -14,6 +14,7 @@ import { NeuroViewUniverse } from "./NeuroViewUniverse";
 import { useTheme } from "@/hooks/use-theme";
 import { useSynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/use-synapse-notes-agent-run";
 import { useReducedMotion } from "framer-motion";
+import type { SynapseNeuroViewDirective } from "@/lib/synapse-interface-actions";
 
 // --- DEFAULT CONFIG ---
 const DEFAULT_CONFIG: NeuroConfig = {
@@ -69,12 +70,13 @@ interface NeuroViewProps {
     synapseRunId?: string | null;
     synapsePatientId?: string | null;
     synapseTrace?: unknown;
+    synapseDirective?: SynapseNeuroViewDirective | null;
 }
 
 const asTrace = (value: unknown): SynapseNotesAgentTrace | null =>
     value && typeof value === "object" ? value as SynapseNotesAgentTrace : null;
 
-export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: NeuroViewProps) => {
+export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synapseDirective }: NeuroViewProps) => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark";
     const shouldReduceMotion = useReducedMotion();
@@ -94,8 +96,86 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
     const { updateNote, deleteNote } = usePersonalNotes();
     const [config, setConfig] = useState<NeuroConfig>(() => readStoredNeuroConfig());
     const [searchQuery, setSearchQuery] = useState("");
+    const graphConfig = useMemo<NeuroConfig>(() => (
+        synapseDirective || synapseRunId || synapsePatientId
+            ? { ...config, showPatients: true, showNotes: true, showTags: true }
+            : config
+    ), [config, synapseDirective, synapsePatientId, synapseRunId]);
 
-    const { graphData: targetGraphData, notes, patients, isLoading } = useGraphData({ config, searchQuery });
+    const { graphData: completeGraphData, notes, patients, isLoading } = useGraphData({ config: graphConfig, searchQuery });
+    const activeTrace = useMemo(() => run?.trace || asTrace(synapseTrace), [run?.trace, synapseTrace]);
+    const traceNodeIds = useMemo(() => (
+        (activeTrace?.nodes || [])
+            .map((node) => node.id)
+            .filter((id): id is string => typeof id === "string" && id.length > 0)
+    ), [activeTrace]);
+    const requestedNodeIds = useMemo(() => {
+        const ids = synapseDirective?.nodeIds?.length ? synapseDirective.nodeIds : traceNodeIds;
+        return Array.from(new Set(ids));
+    }, [synapseDirective?.nodeIds, traceNodeIds]);
+    const neuroViewScope = synapseDirective?.scope
+        || (traceNodeIds.length ? "subgraph" : synapsePatientId ? "patient" : "all");
+    const scopedNodeIds = useMemo(() => {
+        if (neuroViewScope === "all") return null;
+
+        if (neuroViewScope === "subgraph") {
+            const ids = new Set(requestedNodeIds);
+            if (synapseDirective?.focusNodeId) ids.add(synapseDirective.focusNodeId);
+            return ids;
+        }
+
+        const patientNodeId = synapsePatientId ? `pat-${synapsePatientId}` : "";
+        const nodeById = new Map(completeGraphData.nodes.map((node) => [node.id, node]));
+        if (!patientNodeId || !nodeById.has(patientNodeId)) return new Set<string>();
+
+        const ids = new Set<string>([patientNodeId]);
+        const clinicalArtifactIds = new Set<string>();
+        completeGraphData.links.forEach((link) => {
+            const sourceId = getEndpointId(link.source);
+            const targetId = getEndpointId(link.target);
+            if (!sourceId || !targetId) return;
+            const neighborId = sourceId === patientNodeId
+                ? targetId
+                : targetId === patientNodeId
+                    ? sourceId
+                    : "";
+            if (!neighborId) return;
+            ids.add(neighborId);
+            const neighbor = nodeById.get(neighborId);
+            if (neighbor?.type === "note" || neighbor?.type === "flow") clinicalArtifactIds.add(neighborId);
+        });
+        completeGraphData.links.forEach((link) => {
+            const sourceId = getEndpointId(link.source);
+            const targetId = getEndpointId(link.target);
+            if (!sourceId || !targetId) return;
+            const tagId = clinicalArtifactIds.has(sourceId) && nodeById.get(targetId)?.type === "tag"
+                ? targetId
+                : clinicalArtifactIds.has(targetId) && nodeById.get(sourceId)?.type === "tag"
+                    ? sourceId
+                    : "";
+            if (tagId) ids.add(tagId);
+        });
+        return ids;
+    }, [completeGraphData.links, completeGraphData.nodes, neuroViewScope, requestedNodeIds, synapseDirective?.focusNodeId, synapsePatientId]);
+    const targetGraphData = useMemo(() => {
+        if (!scopedNodeIds) return completeGraphData;
+        return {
+            nodes: completeGraphData.nodes.filter((node) => scopedNodeIds.has(node.id)),
+            links: completeGraphData.links.filter((link) => {
+                const sourceId = getEndpointId(link.source);
+                const targetId = getEndpointId(link.target);
+                return Boolean(sourceId && targetId && scopedNodeIds.has(sourceId) && scopedNodeIds.has(targetId));
+            }),
+        };
+    }, [completeGraphData, scopedNodeIds]);
+    const emphasizedNodeIds = useMemo(() => {
+        const visibleIds = new Set(targetGraphData.nodes.map((node) => node.id));
+        const emphasis = neuroViewScope === "patient" ? visibleIds : new Set(requestedNodeIds.filter((id) => visibleIds.has(id)));
+        if (synapseDirective?.focusNodeId && visibleIds.has(synapseDirective.focusNodeId)) {
+            emphasis.add(synapseDirective.focusNodeId);
+        }
+        return emphasis;
+    }, [neuroViewScope, requestedNodeIds, synapseDirective?.focusNodeId, targetGraphData.nodes]);
     const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({ nodes: [], links: [] });
 
     // 3. UI State
@@ -237,19 +317,14 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
         }, {});
     }, [graphData.nodes]);
 
-    const activeTrace = useMemo(() => run?.trace || asTrace(synapseTrace), [run?.trace, synapseTrace]);
-    const traceNodeIds = useMemo(() => (
-        (activeTrace?.nodes || [])
-            .map((node) => node.id)
-            .filter((id): id is string => typeof id === "string" && id.length > 0)
-    ), [activeTrace]);
     const activeFocusNodeId = useMemo(() => {
+        if (synapseDirective?.focusNodeId) return synapseDirective.focusNodeId;
         if (activeEvent?.event_type === "focus_node") return String(activeEvent.payload.nodeId || "");
         if (activeEvent?.event_type === "focus_link") {
             return String(activeEvent.payload.target || activeEvent.payload.source || "");
         }
         return eventsLoaded ? traceNodeIds[0] || "" : "";
-    }, [activeEvent, eventsLoaded, traceNodeIds]);
+    }, [activeEvent, eventsLoaded, synapseDirective?.focusNodeId, traceNodeIds]);
     const traceHoverNode = activeFocusNodeId ? nodeMap[activeFocusNodeId] || null : null;
     const effectiveHoverNode = hoverNode || traceHoverNode;
     useEffect(() => {
@@ -262,11 +337,29 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
     }, [shouldReduceMotion, traceHoverNode]);
 
     useEffect(() => {
+        if (!synapseDirective?.mode) return;
+        setIsUniverseMode(synapseDirective.mode === "3d");
+    }, [synapseDirective]);
+
+    useEffect(() => {
+        if (synapseDirective) setSearchQuery("");
+    }, [synapseDirective]);
+
+    useEffect(() => {
+        if (isUniverseMode || !graphRef.current || !targetGraphData.nodes.length) return;
+        const timeout = window.setTimeout(() => {
+            graphRef.current?.d3ReheatSimulation();
+            graphRef.current?.zoomToFit(shouldReduceMotion ? 0 : 520, 80);
+        }, shouldReduceMotion ? 0 : 90);
+        return () => window.clearTimeout(timeout);
+    }, [isUniverseMode, neuroViewScope, shouldReduceMotion, synapseDirective?.nodeIds, synapsePatientId, targetGraphData.nodes.length]);
+
+    useEffect(() => {
         if (isLoading || !graphSize.width || !graphSize.height) return;
         window.dispatchEvent(new CustomEvent("synapse:surface-ready", {
-            detail: { target: "neuroview-graph", runId: synapseRunId || null },
+            detail: { target: "neuroview-graph", runId: synapseRunId || null, scope: neuroViewScope, mode: isUniverseMode ? "3d" : "2d" },
         }));
-    }, [graphSize.height, graphSize.width, isLoading, synapseRunId]);
+    }, [graphSize.height, graphSize.width, isLoading, isUniverseMode, neuroViewScope, synapseRunId]);
 
     useEffect(() => {
         const element = containerRef.current;
@@ -565,12 +658,12 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
 
     // Canvas Objects Handlers
     const handleNodeCanvasObject = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        drawNode(node as GraphNode, ctx, globalScale, effectiveHoverNode, isDarkMode, timeRef.current, config.performanceMode);
-    }, [effectiveHoverNode, isDarkMode, config.performanceMode]);
+        drawNode(node as GraphNode, ctx, globalScale, effectiveHoverNode, isDarkMode, timeRef.current, config.performanceMode, emphasizedNodeIds);
+    }, [effectiveHoverNode, emphasizedNodeIds, isDarkMode, config.performanceMode]);
 
     const handleLinkCanvasObject = useCallback((link: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-        drawLink(link as GraphLink, ctx, globalScale, effectiveHoverNode, isDarkMode, timeRef.current, config.performanceMode);
-    }, [effectiveHoverNode, isDarkMode, config.performanceMode]);
+        drawLink(link as GraphLink, ctx, globalScale, effectiveHoverNode, isDarkMode, timeRef.current, config.performanceMode, emphasizedNodeIds);
+    }, [effectiveHoverNode, emphasizedNodeIds, isDarkMode, config.performanceMode]);
 
     return (
         <div
@@ -580,6 +673,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
             data-synapse-ready={isLoading ? undefined : "true"}
             data-synapse-run-id={synapseRunId || undefined}
             data-synapse-patient-id={synapsePatientId || undefined}
+            data-synapse-neuroview-scope={neuroViewScope}
+            data-synapse-neuroview-mode={isUniverseMode ? "3d" : "2d"}
         >
 
             {/* Cinematic Background */}
@@ -691,6 +786,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace }: Neur
                     <NeuroViewUniverse
                         onBack={() => setIsUniverseMode(false)}
                         searchQuery={searchQuery}
+                        graphData={targetGraphData}
+                        emphasizedNodeIds={emphasizedNodeIds}
                         onSelectNote={(note) => {
                             setSelectedNote(note);
                             setSelectedPatient(null);

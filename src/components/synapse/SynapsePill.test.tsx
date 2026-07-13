@@ -71,7 +71,7 @@ describe('Synapse voice presence', () => {
         };
         render(<SynapsePill />);
 
-        expect(document.querySelector('.synapse-presence-status')).toHaveTextContent('Abrindo NeuroView');
+        expect(document.querySelector('.synapse-presence-status')).toHaveTextContent('Conectando a análise ao mapa clínico');
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
         expect(document.querySelector('.synapse-presence-status svg')).not.toBeInTheDocument();
     });

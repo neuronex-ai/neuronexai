@@ -1,5 +1,6 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, useReducedMotion } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseProvider';
 import { SynapsePill } from './SynapsePill';
 
@@ -17,6 +18,22 @@ export const SynapseGlobalShell = () => {
         voicePhase,
         voiceStatus,
     } = useSynapse();
+    const shouldReduceMotion = Boolean(useReducedMotion());
+    const [dockedProduct, setDockedProduct] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (actionExperience?.product) {
+            setDockedProduct(actionExperience.product);
+            return;
+        }
+        if (actionExperience && !actionExperience.product) setDockedProduct(null);
+    }, [actionExperience]);
+
+    useEffect(() => {
+        if (voiceStatus === 'disconnected' || voiceStatus === 'error') {
+            if (!actionExperience?.product) setDockedProduct(null);
+        }
+    }, [actionExperience?.product, voiceStatus]);
 
     // ─── Keyboard Shortcut: Ctrl+J ─────────────────────────────────────
     const handleKeyDown = useCallback(
@@ -65,20 +82,30 @@ export const SynapseGlobalShell = () => {
     // Don't render on mobile, unauthenticated, or non-Electron
     if (!isVisible) return null;
 
+    const isVoiceSessionActive = voiceStatus === 'connected' || voiceStatus === 'connecting' || voiceStatus === 'disconnecting';
+    const isDockedToAssistedSurface = Boolean(actionExperience?.product || (dockedProduct && isVoiceSessionActive));
+
     const shell = (
         <>
             {shellState !== 'closed' ? (
-                <div
+                <motion.div
                     className="synapse-presence-layer fixed flex w-[min(280px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center"
                     data-synapse-shell="true"
-                    data-synapse-shell-placement="bottom-center"
+                    data-synapse-shell-placement={isDockedToAssistedSurface ? 'bottom-right' : 'bottom-center'}
+                    animate={{
+                        left: isDockedToAssistedSurface
+                            ? 'calc(100% - 140px - max(12px, env(safe-area-inset-right)))'
+                            : '50%',
+                    }}
+                    transition={shouldReduceMotion
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 360, damping: 38, mass: 0.78 }}
                     style={{
-                        left: '50%',
                         bottom: 'max(12px, env(safe-area-inset-bottom))',
                     }}
                 >
                     <SynapsePill />
-                </div>
+                </motion.div>
             ) : null}
         </>
     );

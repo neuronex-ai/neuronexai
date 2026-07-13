@@ -40,6 +40,29 @@ describe("synapse interface actions", () => {
     })).toBeNull();
   });
 
+  it("normalizes continuous NeuroView scope, focus and 3D directives", () => {
+    const action = normalizeSynapseClientAction({
+      type: "interface_action",
+      data: {
+        action: "open_neuroview_reasoning",
+        patient_id: "patient-123456",
+        neuroview_scope: "subgraph",
+        neuroview_mode: "3d",
+        neuroview_node_ids: ["pat-patient-123456", "note-note-123456", "note-note-123456", "bad\u0000node"],
+        neuroview_focus_node_id: "note-note-123456",
+      },
+    });
+
+    expect(action).toMatchObject({
+      action: "open_neuroview_reasoning",
+      patientId: "patient-123456",
+      neuroViewScope: "subgraph",
+      neuroViewMode: "3d",
+      neuroViewNodeIds: ["pat-patient-123456", "note-note-123456"],
+      neuroViewFocusNodeId: "note-note-123456",
+    });
+  });
+
   it("waits for the explicit NeuroFlow surface-ready handshake", async () => {
     Element.prototype.scrollIntoView = vi.fn();
     const navigate = vi.fn(() => {

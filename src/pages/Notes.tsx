@@ -12,6 +12,7 @@ import { Plus } from "lucide-react";
 import {
     SYNAPSE_PAGE_ACTION_EVENT,
     type SynapseInterfaceAction,
+    type SynapseNeuroViewDirective,
     type SynapseNotesView,
 } from "@/lib/synapse-interface-actions";
 
@@ -101,6 +102,7 @@ export default function Notes() {
     const [synapseNoteId, setSynapseNoteId] = useState<string | null>(null);
     const [synapseMermaid, setSynapseMermaid] = useState<string | null>(null);
     const [synapseTrace, setSynapseTrace] = useState<unknown>(null);
+    const [synapseNeuroViewDirective, setSynapseNeuroViewDirective] = useState<SynapseNeuroViewDirective | null>(null);
     const { run: synapseRun } = useSynapseNotesAgentRun(synapseRunId);
 
     useEffect(() => {
@@ -124,7 +126,20 @@ export default function Notes() {
             return;
         }
 
-        if (synapseRun.product === "neuroview") setViewMode("neuroview");
+        if (synapseRun.product === "neuroview") {
+            setViewMode("neuroview");
+            setSynapseNeuroViewDirective((current) => {
+                if (current) return current;
+                const nodeIds = (synapseRun.trace?.nodes || [])
+                    .map((node) => node.id)
+                    .filter((id): id is string => typeof id === "string" && id.length > 0);
+                return {
+                    scope: nodeIds.length ? "subgraph" : synapseRun.patient_id ? "patient" : "all",
+                    mode: "2d",
+                    nodeIds: nodeIds.length ? nodeIds : undefined,
+                };
+            });
+        }
     }, [synapseRun]);
 
     const {
@@ -192,6 +207,34 @@ export default function Notes() {
         if (action.noteId) setSynapseNoteId(action.noteId);
         if (typeof action.mermaid === "string") setSynapseMermaid(action.mermaid);
         if (action.trace) setSynapseTrace(action.trace);
+        if (actionName === "open_neuroview_reasoning") {
+            const trace = action.trace && typeof action.trace === "object"
+                ? action.trace as { nodes?: Array<{ id?: unknown }> }
+                : null;
+            const traceNodeIds = (trace?.nodes || [])
+                .map((node) => node.id)
+                .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+            setSynapseNeuroViewDirective((current) => {
+                const fallbackScope = traceNodeIds.length
+                    ? "subgraph"
+                    : action.patientId
+                        ? "patient"
+                        : current?.scope || "all";
+                const scope = action.neuroViewScope || fallbackScope;
+                const scopeChanged = Boolean(action.neuroViewScope && action.neuroViewScope !== current?.scope);
+                const nodeIds = action.neuroViewNodeIds
+                    || (traceNodeIds.length ? traceNodeIds : undefined)
+                    || (scopeChanged ? undefined : current?.nodeIds);
+                return {
+                    scope,
+                    mode: action.neuroViewMode,
+                    nodeIds,
+                    focusNodeId: action.neuroViewFocusNodeId
+                        || (scopeChanged ? undefined : current?.focusNodeId),
+                };
+            });
+        }
         if (action.flowId) {
             setSelectedFlowId(action.flowId);
             setViewMode("neuroflow");
@@ -246,6 +289,10 @@ export default function Notes() {
             pulseEntryId: state.synapsePulseEntryId,
             mermaid: state.synapseMermaid,
             trace: state.synapseTrace,
+            neuroViewScope: state.synapseNeuroViewScope,
+            neuroViewMode: state.synapseNeuroViewMode,
+            neuroViewNodeIds: state.synapseNeuroViewNodeIds,
+            neuroViewFocusNodeId: state.synapseNeuroViewFocusNodeId,
         });
         clearSynapseNotesNavigationState(navigate, location.pathname, location.search);
     }, [applySynapseNotesAction, location.pathname, location.search, location.state, navigate]);
@@ -349,7 +396,7 @@ export default function Notes() {
             case "neuroview":
                 return (
                     <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroview-graph" data-synapse-product="neuroview" data-synapse-run-id={synapseRunId || undefined}>
-                        <NeuroView synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapseTrace={synapseTrace} />
+                        <NeuroView synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapseTrace={synapseTrace} synapseDirective={synapseNeuroViewDirective} />
                     </motion.div>
                 );
             case "neuroflow":

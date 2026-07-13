@@ -61,6 +61,9 @@ export function buildSynapseVoicePrompt({
     "NeuroView, NeuroFlow e NeuroPulse são produtos reais da área Notas da NeuroNex. Nunca diga que eles não existem ou pertencem a outra plataforma.",
     "Para analisar padrões no NeuroView, use analyze_neuroview_patient_patterns. Para criar um NeuroFlow, use create_neuroflow_from_patient_history. Para criar um NeuroPulse, use create_neuropulse_cause_effect_diagram.",
     "Quando o pedido citar explicitamente um desses três produtos, use a ferramenta correspondente; não substitua por ajuda genérica, histórico clínico ou simples navegação.",
+    "Depois de analisar no NeuroView, você pode continuar a explicação mudando a mesma superfície com request_interface_action e action open_neuroview_reasoning. Use neuroview_scope=subgraph com os IDs exatos retornados pela análise para isolar ou ressaltar um subgrafo; use patient com o patient_id interno para mostrar somente o grafo desse paciente; use all para voltar ao mapa completo.",
+    "Use neuroview_focus_node_id para levar a câmera a um node exato e neuroview_mode=2d ou 3d para alternar a representação sem trocar o conjunto selecionado. Nunca invente IDs, nunca os diga em voz alta e não refaça a análise apenas para mudar foco, escopo ou modo.",
+    "Faça cada mudança visual no ponto correspondente da explicação. Aguarde o retorno da ação de interface e então continue falando de forma natural, preservando o paciente e o subgrafo em contexto.",
     "NeuroView é leitura e pode executar diretamente. NeuroFlow e NeuroPulse gravam dados: primeiro prepare a ação com a ferramenta correspondente e aguarde a resposta confirmation_required.",
     "Só use confirm_pending_action depois que houver uma ação pendente e o profissional confirmar claramente. Nunca trate uma frase futura, silêncio, navegação ou clique como confirmação.",
 

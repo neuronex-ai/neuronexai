@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SynapseGlobalShell } from './SynapseGlobalShell';
@@ -61,5 +61,27 @@ describe('SynapseGlobalShell voice-only presence', () => {
 
         fireEvent.keyDown(document, { key: 'Escape', code: 'Escape' });
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
+    });
+
+    it('docks the existing voice presence at the edge while an assisted surface stays active', async () => {
+        mocks.context = {
+            ...mocks.context,
+            actionExperience: {
+                id: 'action-1',
+                phase: 'focusing',
+                action: 'open_neuroview_reasoning',
+                label: 'NeuroView',
+                message: 'Destacando o subgrafo',
+                product: 'neuroview',
+            },
+            voicePhase: 'speaking',
+            voiceStatus: 'connected',
+        };
+        render(<SynapseGlobalShell />);
+
+        await waitFor(() => expect(document.querySelector('[data-synapse-shell="true"]')).toHaveAttribute(
+            'data-synapse-shell-placement',
+            'bottom-right',
+        ));
     });
 });

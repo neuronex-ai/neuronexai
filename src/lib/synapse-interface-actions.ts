@@ -36,6 +36,16 @@ export type SynapseNavigationTarget =
 
 export type SynapseNotesView = "notes" | "tasks" | "files" | "notion" | "neuroview" | "neuroflow" | "neuropulse";
 
+export type SynapseNeuroViewScope = "all" | "patient" | "subgraph";
+export type SynapseNeuroViewMode = "2d" | "3d";
+
+export interface SynapseNeuroViewDirective {
+  scope?: SynapseNeuroViewScope;
+  mode?: SynapseNeuroViewMode;
+  nodeIds?: string[];
+  focusNodeId?: string;
+}
+
 export type SynapseInterfaceElement =
   | "next_appointment"
   | "daily_schedule"
@@ -83,6 +93,10 @@ export interface SynapseInterfaceAction {
   pulseEntryId?: string;
   mermaid?: string;
   trace?: unknown;
+  neuroViewScope?: SynapseNeuroViewScope;
+  neuroViewMode?: SynapseNeuroViewMode;
+  neuroViewNodeIds?: string[];
+  neuroViewFocusNodeId?: string;
   date?: string;
   query?: string;
   notesView?: SynapseNotesView;
@@ -142,6 +156,8 @@ const MODAL_ROUTES: Record<NonNullable<SynapseInterfaceAction["modal"]>, string>
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const SAFE_ID_PATTERN = /^[a-zA-Z0-9_-]{6,80}$/;
 const NOTES_VIEWS = new Set(["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"]);
+const NEUROVIEW_SCOPES = new Set<SynapseNeuroViewScope>(["all", "patient", "subgraph"]);
+const NEUROVIEW_MODES = new Set<SynapseNeuroViewMode>(["2d", "3d"]);
 const INTERFACE_ELEMENTS = new Set<SynapseInterfaceElement>([
   "next_appointment", "daily_schedule", "dashboard_agenda", "dashboard_pending", "dashboard_finance",
   "agenda_calendar", "agenda_appointments", "patient_header", "patient_summary", "patient_sessions",
@@ -255,6 +271,27 @@ const waitForSurfaceReady = (selector: string, runId: string | undefined, signal
 
 const validEntityId = (value?: string) => Boolean(value && (UUID_PATTERN.test(value) || SAFE_ID_PATTERN.test(value)));
 const safeNotesView = (value?: string): SynapseNotesView | undefined => value && NOTES_VIEWS.has(value) ? value as SynapseNotesView : undefined;
+const safeNeuroViewScope = (value?: string): SynapseNeuroViewScope | undefined =>
+  value && NEUROVIEW_SCOPES.has(value as SynapseNeuroViewScope) ? value as SynapseNeuroViewScope : undefined;
+const safeNeuroViewMode = (value?: string): SynapseNeuroViewMode | undefined =>
+  value && NEUROVIEW_MODES.has(value as SynapseNeuroViewMode) ? value as SynapseNeuroViewMode : undefined;
+const safeGraphNodeId = (value: unknown) => {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  const hasControlCharacter = Array.from(normalized).some((character) => {
+    const codePoint = character.codePointAt(0) || 0;
+    return codePoint <= 0x1f || codePoint === 0x7f;
+  });
+  if (!normalized || normalized.length > 160 || hasControlCharacter) return undefined;
+  return normalized;
+};
+const safeGraphNodeIds = (value: unknown) => {
+  if (!Array.isArray(value)) return undefined;
+  const normalized = Array.from(new Set(
+    value.slice(0, 80).map(safeGraphNodeId).filter((id): id is string => Boolean(id)),
+  ));
+  return normalized.length ? normalized : undefined;
+};
 const safeInterfaceElement = (value?: string): SynapseInterfaceElement | undefined =>
   value && INTERFACE_ELEMENTS.has(value as SynapseInterfaceElement) ? value as SynapseInterfaceElement : undefined;
 const emitPageAction = (action: SynapseInterfaceAction) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(PAGE_ACTION_EVENT, { detail: action })); };
@@ -371,7 +408,23 @@ const financeView = (element?: SynapseInterfaceElement) => {
 };
 
 async function recordTelemetry(action: SynapseInterfaceAction, channel: "text" | "voice", result: SynapseActionExecutionResult, error?: unknown) {
-  const safePayload = { action: action.action, target: action.target || null, has_patient_id: Boolean(action.patientId), has_appointment_id: Boolean(action.appointmentId), has_note_id: Boolean(action.noteId), has_file_id: Boolean(action.fileId), has_flow_id: Boolean(action.flowId), has_run_id: Boolean(action.runId), has_pulse_entry_id: Boolean(action.pulseEntryId), element: action.element || null, modal: action.modal || null };
+  const safePayload = {
+    action: action.action,
+    target: action.target || null,
+    has_patient_id: Boolean(action.patientId),
+    has_appointment_id: Boolean(action.appointmentId),
+    has_note_id: Boolean(action.noteId),
+    has_file_id: Boolean(action.fileId),
+    has_flow_id: Boolean(action.flowId),
+    has_run_id: Boolean(action.runId),
+    has_pulse_entry_id: Boolean(action.pulseEntryId),
+    neuroview_scope: action.neuroViewScope || null,
+    neuroview_mode: action.neuroViewMode || null,
+    neuroview_node_count: action.neuroViewNodeIds?.length || 0,
+    has_neuroview_focus: Boolean(action.neuroViewFocusNodeId),
+    element: action.element || null,
+    modal: action.modal || null,
+  };
   try {
     await supabase.from("synapse_action_logs").insert({ channel, action_type: action.action, status: result.cancelled ? "cancelled" : result.success ? "success" : "error", duration_ms: result.durationMs, payload: safePayload, error_message: error instanceof Error ? error.message.slice(0, 500) : null });
   } catch {
@@ -393,7 +446,31 @@ export function normalizeSynapseClientAction(value: unknown): SynapseInterfaceAc
   if (envelope.type === "interface_action" || data.action) {
     const action = String(data.action || "") as SynapseInterfaceActionName;
     if (!ALLOWED_INTERFACE_ACTIONS.has(action)) return null;
-    return { action, target: data.target, patientId: data.patientId || data.patient_id, appointmentId: data.appointmentId || data.appointment_id, noteId: data.noteId || data.note_id, moduleId: data.moduleId || data.module_id, taskId: data.taskId || data.task_id, fileId: data.fileId || data.file_id, flowId: data.flowId || data.flow_id, runId: data.runId || data.run_id, pulseEntryId: data.pulseEntryId || data.pulse_entry_id, mermaid: data.mermaid, trace: data.trace, date: data.date, query: data.query, notesView: safeNotesView(data.notesView || data.notes_view), element: safeInterfaceElement(data.element), modal: data.modal, reason: data.reason };
+    return {
+      action,
+      target: data.target,
+      patientId: data.patientId || data.patient_id,
+      appointmentId: data.appointmentId || data.appointment_id,
+      noteId: data.noteId || data.note_id,
+      moduleId: data.moduleId || data.module_id,
+      taskId: data.taskId || data.task_id,
+      fileId: data.fileId || data.file_id,
+      flowId: data.flowId || data.flow_id,
+      runId: data.runId || data.run_id,
+      pulseEntryId: data.pulseEntryId || data.pulse_entry_id,
+      mermaid: data.mermaid,
+      trace: data.trace,
+      neuroViewScope: safeNeuroViewScope(data.neuroViewScope || data.neuroview_scope),
+      neuroViewMode: safeNeuroViewMode(data.neuroViewMode || data.neuroview_mode),
+      neuroViewNodeIds: safeGraphNodeIds(data.neuroViewNodeIds || data.neuroview_node_ids),
+      neuroViewFocusNodeId: safeGraphNodeId(data.neuroViewFocusNodeId || data.neuroview_focus_node_id),
+      date: data.date,
+      query: data.query,
+      notesView: safeNotesView(data.notesView || data.notes_view),
+      element: safeInterfaceElement(data.element),
+      modal: data.modal,
+      reason: data.reason,
+    };
   }
   if (envelope.type === "navigation_action" && typeof data.path === "string") {
     const path = data.path.replace(/\/$/, "") || "/";
@@ -553,7 +630,7 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
         const query = new URLSearchParams();
         if (action.noteId && validEntityId(action.noteId)) query.set("noteId", action.noteId);
         const path = query.toString() ? `/notas?${query.toString()}` : "/notas";
-        navigate(path, { state: { synapseNotesView: notesView, synapseQuery: action.query || "", synapseNoteId: action.noteId, synapseModuleId: action.moduleId, synapseTaskId: action.taskId, synapseFileId: action.fileId, synapseFlowId: action.flowId, synapseRunId: action.runId, synapsePatientId: action.patientId, synapsePulseEntryId: action.pulseEntryId, synapseMermaid: action.mermaid, synapseTrace: action.trace, synapseAction: action.action } });
+        navigate(path, { state: { synapseNotesView: notesView, synapseQuery: action.query || "", synapseNoteId: action.noteId, synapseModuleId: action.moduleId, synapseTaskId: action.taskId, synapseFileId: action.fileId, synapseFlowId: action.flowId, synapseRunId: action.runId, synapsePatientId: action.patientId, synapsePulseEntryId: action.pulseEntryId, synapseMermaid: action.mermaid, synapseTrace: action.trace, synapseNeuroViewScope: action.neuroViewScope, synapseNeuroViewMode: action.neuroViewMode, synapseNeuroViewNodeIds: action.neuroViewNodeIds, synapseNeuroViewFocusNodeId: action.neuroViewFocusNodeId, synapseAction: action.action } });
         await nextFrame(controller.signal);
         focusPageAction({ ...action, notesView });
         const element = action.element || (notesView === "tasks" ? "tasks_board" : notesView === "files" ? "files_manager" : notesView === "notion" ? "notion_panel" : notesView === "neuroview" ? "neuroview_graph" : notesView === "neuroflow" ? "neuroflow_canvas" : notesView === "neuropulse" ? "neuropulse_panel" : action.query ? "notes_search" : "notes_editor");

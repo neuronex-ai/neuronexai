@@ -58,7 +58,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     void fetchFlows();
 
     const channel = supabase
-      .channel(`public:neuro_flows_graph_${user.id}`)
+      .channel(`public:neuro_flows_graph_${user.id}:${Date.now()}:${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "neuro_flows", filter: `user_id=eq.${user.id}` },

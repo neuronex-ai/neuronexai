@@ -59,7 +59,7 @@ export const SynapsePill = () => {
 
     const isVoiceSessionActive = voiceStatus === "connected" || voiceStatus === "connecting" || voiceStatus === "disconnecting";
     const showStatus = !["idle", "listening"].includes(presenceState);
-    const statusText = actionExperience?.label || voiceActivityLabel || PRESENCE_COPY[presenceState];
+    const statusText = actionExperience?.message || actionExperience?.label || voiceActivityLabel || PRESENCE_COPY[presenceState];
 
     return (
         <div className="relative flex w-full flex-col items-center gap-2.5" data-synapse-presence-state={presenceState}>

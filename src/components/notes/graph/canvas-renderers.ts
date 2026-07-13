@@ -60,7 +60,8 @@ export const drawNode = (
   hoverNode: GraphNode | null,
   isDarkMode: boolean = true,
   time: number = 0,
-  performanceMode: boolean = false
+  performanceMode: boolean = false,
+  emphasizedNodeIds?: ReadonlySet<string>,
 ) => {
   const x = node.x;
   const y = node.y;
@@ -69,8 +70,10 @@ export const drawNode = (
 
   const isHovered = hoverNode?.id === node.id;
   const isNeighbor = hoverNode && hoverNode.neighbors?.some((neighbor) => neighbor.id === node.id);
-  const isConnectedChain = isHovered || isNeighbor;
-  const dimmed = hoverNode && !isConnectedChain;
+  const isEmphasized = Boolean(emphasizedNodeIds?.has(node.id));
+  const hasEmphasis = Boolean(emphasizedNodeIds?.size);
+  const isConnectedChain = Boolean(isHovered || isNeighbor || isEmphasized);
+  const dimmed = Boolean((hoverNode || hasEmphasis) && !isConnectedChain);
 
   const { radius: baseRadius, glow: baseGlow } = getNodeBase(node);
   const reveal = clamp(node.revealProgress ?? 1, 0, 1);
@@ -250,7 +253,8 @@ export const drawLink = (
   hoverNode: GraphNode | null,
   isDarkMode: boolean = true,
   time: number = 0,
-  performanceMode: boolean = false
+  performanceMode: boolean = false,
+  emphasizedNodeIds?: ReadonlySet<string>,
 ) => {
   const source = link.source as GraphNode;
   const target = link.target as GraphNode;
@@ -265,11 +269,14 @@ export const drawLink = (
   if (!Number.isFinite(sx) || !Number.isFinite(sy) || !Number.isFinite(tx) || !Number.isFinite(ty)) return;
 
   const reveal = clamp(link.revealProgress ?? 1, 0, 1);
-  const isConnectedToHover = hoverNode && (source.id === hoverNode.id || target.id === hoverNode.id);
-  const dimmed = hoverNode && !isConnectedToHover;
+  const isConnectedToHover = Boolean(hoverNode && (source.id === hoverNode.id || target.id === hoverNode.id));
+  const isEmphasized = Boolean(emphasizedNodeIds?.has(source.id) && emphasizedNodeIds?.has(target.id));
+  const hasEmphasis = Boolean(emphasizedNodeIds?.size);
+  const isActive = isConnectedToHover || isEmphasized;
+  const dimmed = Boolean((hoverNode || hasEmphasis) && !isActive);
   const baseOpacity = isDarkMode ? 0.18 : 0.22;
-  const targetOpacity = (dimmed ? 0.04 : (isConnectedToHover ? 0.78 : baseOpacity)) * reveal;
-  const targetWidth = ((isConnectedToHover ? 1.65 : 0.58) + (link.value || 1) * 0.08) / globalScale;
+  const targetOpacity = (dimmed ? 0.04 : (isActive ? 0.78 : baseOpacity)) * reveal;
+  const targetWidth = ((isActive ? 1.65 : 0.58) + (link.value || 1) * 0.08) / globalScale;
 
   link.currentOpacity = link.currentOpacity ?? targetOpacity;
   link.currentWidth = link.currentWidth ?? targetWidth;
@@ -297,7 +304,7 @@ export const drawLink = (
   ctx.moveTo(sx!, sy!);
   ctx.quadraticCurveTo(cx, cy, tx!, ty!);
 
-  if (isConnectedToHover) {
+  if (isActive) {
     const grad = ctx.createLinearGradient(sx!, sy!, tx!, ty!);
     grad.addColorStop(0, colorWithAlpha(source.color || "#ffffff", 0.92));
     grad.addColorStop(0.52, isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.36)");
@@ -316,11 +323,11 @@ export const drawLink = (
   if (!performanceMode && !dimmed && reveal > 0.45) {
     const pulseT = (time * 0.17 + seed) % 1;
     const pulse = quadraticPoint(sx!, sy!, cx, cy, tx!, ty!, pulseT);
-    const pulseAlpha = (isConnectedToHover ? 0.54 : 0.16) * (link.currentOpacity || 1);
-    const pulseRadius = (isConnectedToHover ? 3.1 : 1.8) / Math.max(globalScale, 0.6);
+    const pulseAlpha = (isActive ? 0.54 : 0.16) * (link.currentOpacity || 1);
+    const pulseRadius = (isActive ? 3.1 : 1.8) / Math.max(globalScale, 0.6);
 
     ctx.globalAlpha = pulseAlpha;
-    ctx.shadowBlur = isConnectedToHover ? 14 / Math.max(globalScale, 0.7) : 6 / Math.max(globalScale, 0.7);
+    ctx.shadowBlur = isActive ? 14 / Math.max(globalScale, 0.7) : 6 / Math.max(globalScale, 0.7);
     ctx.shadowColor = isDarkMode ? "rgba(255,255,255,0.48)" : "rgba(24,24,27,0.2)";
     const pulseGradient = ctx.createRadialGradient(pulse.x, pulse.y, 0, pulse.x, pulse.y, pulseRadius * 2.4);
     pulseGradient.addColorStop(0, isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.36)");

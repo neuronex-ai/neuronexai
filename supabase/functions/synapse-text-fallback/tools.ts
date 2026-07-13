@@ -101,8 +101,8 @@ export const AGENT_TOOLS = [
   fn("list_financial_entries", "Lista lançamentos financeiros gerenciais reais.", objectSchema({ start_date: { type: "string" }, end_date: { type: "string" }, entry_type: { type: "string", enum: ["income", "expense", "all"] }, status: { type: "string" }, ...patientReference, limit: { type: "integer", minimum: 1, maximum: 50 } })),
   fn("list_personal_notes", "Lista notas reais do NeuroNotes pertencentes ao profissional. Preferir as ferramentas novas de Notes Desktop quando o pedido for sobre a aba Notas.", objectSchema({ query: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 20 } })),
   fn("list_documents", "Lista documentos privados. Para documentos de uma pessoa, envie patient_name.", objectSchema({ ...patientReference, category: { type: "string" }, limit: { type: "integer", minimum: 1, maximum: 30 } })),
-  fn("request_interface_action", "Solicita uma ação visual estruturada. Use para abrir abas, fichas, modais, lobby da teleconsulta, Notas Desktop, Tarefas, Arquivos, Notion ou destacar elementos sem expor rotas/URLs internas.", objectSchema({
-    action: { type: "string", enum: ["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview"] },
+  fn("request_interface_action", "Solicita uma ação visual estruturada. Use para abrir áreas, fichas, modais e superfícies assistidas ou para mudar o foco, escopo e modo do NeuroView sem expor rotas/URLs internas.", objectSchema({
+    action: { type: "string", enum: ["navigate", "open_patient", "open_patient_record", "open_daily_schedule", "scroll_to_appointment", "highlight_element", "open_modal", "open_teleconsultation_lobby", "open_patient_invite_modal", "filter_patients_directory", "open_notes_desktop", "switch_notes_view", "open_note", "filter_notes", "open_new_note", "open_note_module", "open_tasks_board", "open_files_manager", "open_notion_panel", "open_file_preview", "open_neuroview_reasoning", "open_neuroflow_generation", "open_neuropulse_diagram"] },
     target: { type: "string", enum: ["dashboard", "agenda", "patients", "finance", "notes", "teleconsultation", "synapse"] },
     ...patientReference,
     ...noteReference,
@@ -112,7 +112,11 @@ export const AGENT_TOOLS = [
     appointment_id: { type: "string", description: "Interno. Nunca peça ao usuário." },
     date: { type: "string" },
     query: { type: "string", description: "Texto de busca/filtro." },
-    notes_view: { type: "string", enum: ["notes", "tasks", "files", "notion"] },
+    notes_view: { type: "string", enum: ["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"] },
+    neuroview_scope: { type: "string", enum: ["all", "patient", "subgraph"], description: "Escopo visual: grafo completo, grafo isolado do paciente ou subgrafo pelos IDs retornados anteriormente." },
+    neuroview_mode: { type: "string", enum: ["2d", "3d"], description: "Modo de visualização do mesmo grafo selecionado." },
+    neuroview_node_ids: { type: "array", items: { type: "string" }, maxItems: 80, description: "IDs internos exatos de nodes retornados por analyze_neuroview_patient_patterns. Nunca invente nem leia estes IDs em voz alta." },
+    neuroview_focus_node_id: { type: "string", description: "ID interno exato do node que deve receber o foco da câmera." },
     element: { type: "string", enum: [
       "next_appointment", "daily_schedule", "dashboard_agenda", "dashboard_pending", "dashboard_finance",
       "agenda_calendar", "agenda_appointments", "patient_header", "patient_summary", "patient_sessions",
