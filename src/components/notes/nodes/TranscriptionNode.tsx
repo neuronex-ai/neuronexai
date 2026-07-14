@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Handle, Position, NodeResizer } from 'reactflow';
 import { Mic, MicOff, Type, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,18 @@ export const TranscriptionNode = ({ id, data, selected }: any) => {
     const [isRecording, setIsRecording] = useState(false);
     const [transcript, setTranscript] = useState<string>(data.transcript || "");
     const recognitionRef = useRef<any>(null);
+    const onUpdateNodeDataRef = useRef(data.onUpdateNodeData);
 
-    const updateData = (patch: Record<string, unknown>) => {
-        if (typeof data.onUpdateNodeData === 'function') {
-            data.onUpdateNodeData(id, patch);
+    useEffect(() => {
+        onUpdateNodeDataRef.current = data.onUpdateNodeData;
+    }, [data.onUpdateNodeData]);
+
+    const updateData = useCallback((patch: Record<string, unknown>) => {
+        const onUpdateNodeData = onUpdateNodeDataRef.current;
+        if (typeof onUpdateNodeData === 'function') {
+            onUpdateNodeData(id, patch);
         }
-    };
+    }, [id]);
 
     useEffect(() => {
         if ('webkitSpeechRecognition' in window) {
@@ -52,7 +58,7 @@ export const TranscriptionNode = ({ id, data, selected }: any) => {
                 recognitionRef.current.stop();
             }
         };
-    }, []);
+    }, [updateData]);
 
     const toggleRecording = () => {
         if (isRecording) {

@@ -12,7 +12,7 @@ export function SalesSimulator() {
   const [passFees, setPassFees] = useState(false);
   const { simulate } = useNeurofinanceSimulator();
   const cents = Math.round(Number(amount.replace(/\./g, "").replace(",", ".")) * 100) || 0;
-  const result = useMemo(() => simulate({ amount: cents, method, installments, passFeesToClient: passFees }), [amount, method, installments, passFees, simulate]);
+  const result = useMemo(() => simulate({ amount: cents, method, installments, passFeesToClient: passFees }), [cents, method, installments, passFees, simulate]);
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">

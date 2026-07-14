@@ -1,4 +1,4 @@
-import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi, type Mock } from "vitest";
 import { readFileSync } from "node:fs";
 
 import { VoiceFunctionRunner } from "../../server/voice-agent-gateway/function-runner.js";
@@ -13,7 +13,7 @@ const tick = async () => {
   await Promise.resolve();
 };
 
-function createHarness(invokeTool = vi.fn(async () => toolResponse({ ok: true, spoken_summary: "Concluido." }))) {
+function createHarness(invokeTool: Mock = vi.fn(async () => toolResponse({ ok: true, spoken_summary: "Concluido." }))) {
   const deepgram: Array<Record<string, unknown>> = [];
   const client: Array<Record<string, unknown>> = [];
   const runner = new VoiceFunctionRunner({

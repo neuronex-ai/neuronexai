@@ -10,7 +10,14 @@ import {
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
 
-import bcrypt from "https://esm.sh/bcryptjs@2.4.3";
+import * as bcryptModule from "https://esm.sh/bcryptjs@2.4.3";
+
+interface BcryptRuntime {
+    compare(value: string, hash: string): Promise<boolean>;
+    hash(value: string, saltRounds: number): Promise<string>;
+}
+
+const bcrypt = (bcryptModule as unknown as { default: BcryptRuntime }).default;
 
 function isValidPin(pin?: string) {
     return typeof pin === "string" && /^\d{6}$/.test(pin);

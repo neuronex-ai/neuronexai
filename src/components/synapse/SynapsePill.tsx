@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-import { useSynapse } from "@/context/SynapseProvider";
+import { useSynapse } from "@/context/SynapseContext";
 import { SynapseLiquidOrb } from "./SynapseLiquidOrb";
 
 type PresenceVisualState =

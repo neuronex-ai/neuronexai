@@ -1,7 +1,7 @@
 import { useEffect, useCallback, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, useReducedMotion } from 'framer-motion';
-import { useSynapse } from '@/context/SynapseProvider';
+import { useSynapse } from '@/context/SynapseContext';
 import { SynapsePill } from './SynapsePill';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────

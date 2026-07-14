@@ -4,6 +4,7 @@ import {
   requireEntitlementForUser,
   subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+import { getErrorMessage } from "../_shared/error-message.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -161,7 +162,7 @@ serve(async (req) => {
     if (accessResponse) return accessResponse;
 
     console.error("Unhandled error in generate-summary:", e);
-    return new Response(JSON.stringify({ error: 'Erro interno do servidor.', details: e.message }), {
+    return new Response(JSON.stringify({ error: 'Erro interno do servidor.', details: getErrorMessage(e, 'Erro interno do servidor.') }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

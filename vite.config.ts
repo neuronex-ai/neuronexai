@@ -91,18 +91,43 @@ export default defineConfig(({ mode, command }) => {
       ],
     },
     build: {
+      // Mermaid ships one generated parser module around 663 kB that cannot be
+      // divided below its own module boundary. It is only reached from lazy
+      // Notes tools, so keep a narrow 700 kB ceiling instead of the former
+      // multi-megabyte eager vendor chunks.
+      chunkSizeWarningLimit: 700,
+      rolldownOptions: {
+        output: {
+          strictExecutionOrder: true,
+          codeSplitting: {
+            groups: [
+              {
+                name: "react-pdf-fontkit",
+                test: /node_modules[\\/]fontkit[\\/]/,
+                includeDependenciesRecursively: false,
+              },
+              {
+                name: "react-pdf-pdfkit",
+                test: /node_modules[\\/]@react-pdf[\\/]pdfkit[\\/]/,
+                includeDependenciesRecursively: false,
+              },
+              {
+                name: "react-pdf-reconciler",
+                test: /node_modules[\\/]@react-pdf[\\/]reconciler[\\/]/,
+                includeDependenciesRecursively: false,
+              },
+              {
+                name: "react-pdf-yoga",
+                test: /node_modules[\\/]yoga-layout[\\/]/,
+                includeDependenciesRecursively: false,
+              },
+            ],
+          },
+        },
+      },
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, "index.html"),
-        },
-        output: {
-          manualChunks(id) {
-            if (!id.includes("node_modules")) return undefined;
-            if (id.includes("@react-pdf") || id.includes("pdfjs-dist") || id.includes("html2canvas")) return "documents";
-            if (id.includes("mermaid") || id.includes("cytoscape") || id.includes("dagre")) return "diagrams";
-            if (id.includes("@supabase")) return "supabase";
-            return undefined;
-          },
         },
       },
     },

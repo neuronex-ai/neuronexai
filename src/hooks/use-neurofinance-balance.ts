@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
@@ -104,7 +104,7 @@ export const useNeuroFinanceBalanceSnapshot = (enabled=true) => {
 export const useNeuroFinanceBalance = () => {
     const { user } = useAuth();
     const queryClient = useQueryClient();
-    const queryKey = ["neurofinance-overview", user?.id];
+    const queryKey = useMemo(() => ["neurofinance-overview", user?.id] as const, [user?.id]);
     const query = useNeuroFinanceBalanceSnapshot();
 
     const sync = useMutation<unknown, Error, boolean>({
@@ -121,6 +121,12 @@ export const useNeuroFinanceBalance = () => {
             queryClient.invalidateQueries({ queryKey: ["neurofinance-statement"] });
         },
     });
+    const {
+        mutate: triggerSync,
+        mutateAsync: syncNow,
+        isPending: isSyncing,
+        error: syncError,
+    } = sync;
 
     useEffect(() => {
         if (!user?.id) return;
@@ -146,10 +152,10 @@ export const useNeuroFinanceBalance = () => {
         return () => {
             supabase.removeChannel(channel);
         };
-    }, [queryClient, user?.id]);
+    }, [queryClient, queryKey, user?.id]);
 
     useEffect(() => {
-        if (!user?.id || sync.isPending || !query.data) return;
+        if (!user?.id || isSyncing || !query.data) return;
         const updatedAt = query.data.lastUpdatedAt
             ? new Date(query.data.lastUpdatedAt).getTime()
             : 0;
@@ -158,14 +164,14 @@ export const useNeuroFinanceBalance = () => {
             query.data.isStale ||
             Date.now() - updatedAt > 10 * 60 * 1000;
 
-        if (shouldRefresh) sync.mutate(false);
-    }, [query.data?.lastUpdatedAt, query.data?.isStale, query.data, sync.isPending, user?.id]);
+        if (shouldRefresh) triggerSync(false);
+    }, [isSyncing, query.data, triggerSync, user?.id]);
 
     return {
         ...query,
         data: query.data || EMPTY_BALANCE,
-        syncNow: () => sync.mutateAsync(false),
-        isSyncing: sync.isPending,
-        syncError: sync.error,
+        syncNow: () => syncNow(false),
+        isSyncing,
+        syncError,
     };
 };

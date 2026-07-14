@@ -1,7 +1,7 @@
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 
-type TourPlatform = "mobile" | "desktop";
+import { TourContext, type TourPlatform } from "./TourContext";
 
 const LEGACY_TOUR_COMPLETED_KEY = "neuro_nex_tour_completed";
 const TOUR_VERSION = "v2";
@@ -11,24 +11,6 @@ const completionKeyFor = (platform: TourPlatform) => `neuro_nex_tour_${TOUR_VERS
 const readCompletion = (platform: TourPlatform) => {
   if (typeof window === "undefined") return false;
   return window.localStorage.getItem(completionKeyFor(platform)) === "true";
-};
-
-interface TourContextType {
-  startTour: () => void;
-  isTourOpen: boolean;
-  closeTour: () => void;
-  completeTour: () => void;
-  isTourCompleted: boolean;
-  resetTourCompleted: () => void;
-  platform: TourPlatform;
-}
-
-const TourContext = createContext<TourContextType | undefined>(undefined);
-
-export const useTour = () => {
-  const context = useContext(TourContext);
-  if (!context) throw new Error("useTour must be used within a TourProvider");
-  return context;
 };
 
 export const TourProvider = ({ children }: { children: ReactNode }) => {

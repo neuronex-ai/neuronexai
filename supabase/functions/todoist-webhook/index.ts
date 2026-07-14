@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
+import { getErrorMessage } from "../_shared/error-message.ts";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -28,7 +29,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
     } catch (error) {
-        return new Response(JSON.stringify({ error: error.message }), {
+        return new Response(JSON.stringify({ error: getErrorMessage(error, "Invalid Todoist webhook request") }), {
             status: 400,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

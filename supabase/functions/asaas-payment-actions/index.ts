@@ -14,6 +14,24 @@ import {
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
 
+type AsaasPaymentResponse = Record<string, unknown> & {
+    status?: string;
+    invoiceUrl?: string;
+    bankSlipUrl?: string;
+    transactionReceiptUrl?: string;
+    value?: number | string;
+    netValue?: number | string;
+    billingType?: string;
+    paymentDate?: string;
+    confirmedDate?: string;
+    dueDate?: string;
+};
+
+function normalizeProviderPayment(value: unknown): AsaasPaymentResponse {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return {};
+    return value as AsaasPaymentResponse;
+}
+
 function cents(value: unknown) {
     return Math.round(Number(value || 0) * 100);
 }
@@ -41,7 +59,7 @@ async function findPayment(userId: string, id: string) {
     return data;
 }
 
-async function updatePaymentFromProvider(localPayment: any, providerPayment: any) {
+async function updatePaymentFromProvider(localPayment: any, providerPayment: AsaasPaymentResponse) {
     const normalized = normalizePaymentStatus(providerPayment.status);
     const metadata = {
         ...(localPayment.metadata || {}),
@@ -109,7 +127,9 @@ Deno.serve(async (req: Request) => {
         if (!apiKey) return errorResponse("Sua conta financeira ainda não está pronta para esta ação.", 403, { code: "ACCOUNT_NOT_READY" });
 
         if (action === "sync") {
-            const providerPayment = await asaasRequest(`/payments/${encodeURIComponent(localPayment.provider_payment_id)}`, "GET", undefined, apiKey);
+            const providerPayment = normalizeProviderPayment(
+                await asaasRequest(`/payments/${encodeURIComponent(localPayment.provider_payment_id)}`, "GET", undefined, apiKey),
+            );
             const updated = await updatePaymentFromProvider(localPayment, providerPayment);
             await syncFinancialEntryForPayment(updated, {
                 matchedBy: "automatic",
@@ -124,7 +144,9 @@ Deno.serve(async (req: Request) => {
                 return errorResponse("Só cobranças pendentes podem ser canceladas por aqui.", 400, { code: "PAYMENT_NOT_CANCELABLE" });
             }
 
-            const providerPayment = await asaasRequest(`/payments/${encodeURIComponent(localPayment.provider_payment_id)}`, "DELETE", undefined, apiKey);
+            const providerPayment = normalizeProviderPayment(
+                await asaasRequest(`/payments/${encodeURIComponent(localPayment.provider_payment_id)}`, "DELETE", undefined, apiKey),
+            );
             const updated = await updatePaymentFromProvider(localPayment, {
                 ...providerPayment,
                 status: providerPayment?.status || "DELETED",

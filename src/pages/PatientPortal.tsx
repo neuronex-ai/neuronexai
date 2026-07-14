@@ -754,11 +754,14 @@ const SessionsView = ({
 type NeuroDriveTab = "documentos" | "anamneses" | "notas" | "tarefas";
 
 const PatientNotesView = ({ notesState }: { notesState: ReturnType<typeof usePatientPortalNotes> }) => {
-  const notes = notesState.data?.notes || [];
+  const notes = useMemo(() => notesState.data?.notes || [], [notesState.data?.notes]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const selectedNote = notes.find((note) => note.id === selectedId) || null;
+  const selectedNoteContent = selectedNote?.content;
+  const selectedNoteId = selectedNote?.id;
+  const selectedNoteTitle = selectedNote?.title;
 
   useEffect(() => {
     if (!selectedId && notes.length) {
@@ -767,11 +770,11 @@ const PatientNotesView = ({ notesState }: { notesState: ReturnType<typeof usePat
   }, [notes, selectedId]);
 
   useEffect(() => {
-    if (selectedNote) {
-      setTitle(selectedNote.title || "");
-      setContent(selectedNote.content || "");
+    if (selectedNoteId) {
+      setTitle(selectedNoteTitle || "");
+      setContent(selectedNoteContent || "");
     }
-  }, [selectedNote?.id]);
+  }, [selectedNoteContent, selectedNoteId, selectedNoteTitle]);
 
   const startNewNote = () => {
     setSelectedId(null);
@@ -917,12 +920,16 @@ const PatientNotesView = ({ notesState }: { notesState: ReturnType<typeof usePat
 };
 
 const PatientTasksView = ({ tasksState }: { tasksState: ReturnType<typeof usePatientPortalTasks> }) => {
-  const tasks = tasksState.data?.tasks || [];
+  const tasks = useMemo(() => tasksState.data?.tasks || [], [tasksState.data?.tasks]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [dueDate, setDueDate] = useState("");
   const selectedTask = tasks.find((task) => task.id === selectedId) || null;
+  const selectedTaskContent = selectedTask?.content;
+  const selectedTaskDueDate = selectedTask?.dueDate;
+  const selectedTaskId = selectedTask?.id;
+  const selectedTaskTitle = selectedTask?.title;
 
   useEffect(() => {
     if (!selectedId && tasks.length) {
@@ -931,12 +938,12 @@ const PatientTasksView = ({ tasksState }: { tasksState: ReturnType<typeof usePat
   }, [tasks, selectedId]);
 
   useEffect(() => {
-    if (selectedTask) {
-      setTitle(selectedTask.title || "");
-      setContent(selectedTask.content || "");
-      setDueDate(selectedTask.dueDate ? selectedTask.dueDate.slice(0, 10) : "");
+    if (selectedTaskId) {
+      setTitle(selectedTaskTitle || "");
+      setContent(selectedTaskContent || "");
+      setDueDate(selectedTaskDueDate ? selectedTaskDueDate.slice(0, 10) : "");
     }
-  }, [selectedTask?.id]);
+  }, [selectedTaskContent, selectedTaskDueDate, selectedTaskId, selectedTaskTitle]);
 
   const startNewTask = () => {
     setSelectedId(null);
@@ -2167,8 +2174,8 @@ const PatientPortal = () => {
   const setNeuroDriveTab = (tab: NeuroDriveTab) => navigate(tab === "documentos" ? "/portal/documentos" : `/portal/documentos?tab=${tab}`);
   const setProgressTab = (tab: ProgressTab) => navigate(tab === "visao" ? "/portal/progresso" : `/portal/progresso?tab=${tab}`);
 
-  const appointmentRows = appointments.data?.appointments || [];
-  const billingEntries = billing.data?.entries || [];
+  const appointmentRows = useMemo(() => appointments.data?.appointments || [], [appointments.data?.appointments]);
+  const billingEntries = useMemo(() => billing.data?.entries || [], [billing.data?.entries]);
   const goalRows = goals.data?.goals || [];
   const packageRows = packages.data?.packages || [];
   const anamnesisRows = anamnesis.data?.anamneses || [];

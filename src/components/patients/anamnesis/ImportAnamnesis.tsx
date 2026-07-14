@@ -9,7 +9,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { ScanningEffect } from "./ScanningEffect";
 import { useParams } from "react-router-dom";
-import mammoth from "mammoth";
 
 interface ExtractedItem {
     question: string;
@@ -118,6 +117,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
 
     const extractTextFromDocx = async (f: File): Promise<string> => {
         const arrayBuffer = await f.arrayBuffer();
+        const { default: mammoth } = await import("mammoth");
         const result = await mammoth.extractRawText({ arrayBuffer });
         return result.value;
     };

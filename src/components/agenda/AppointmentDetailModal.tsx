@@ -62,7 +62,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -120,6 +120,7 @@ export const AppointmentDetailModal = ({
   const [eventLocation, setEventLocation] = useState("");
   const [sessionType, setSessionType] = useState("follow_up");
   const [modality, setModality] = useState<"presencial" | "online">("presencial");
+  const loadedAppointmentIdRef = useRef<string | null>(null);
 
   const navigate = useNavigate();
   const sendEmail = useSendEmail();
@@ -135,12 +136,7 @@ export const AppointmentDetailModal = ({
   const statusMeta = getAppointmentStatusMeta(status, appointment.notes);
   const recurrence = metadata.recurrence;
 
-  useEffect(() => {
-    if (!open) return;
-    loadData();
-  }, [open, appointment.id]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setStep(1);
     const currentMetadata = getAppointmentMetadata(appointment);
 
@@ -187,7 +183,18 @@ export const AppointmentDetailModal = ({
     } else {
       setPackageData(null);
     }
-  };
+  }, [appointment, displayTitle]);
+
+  useEffect(() => {
+    if (!open) {
+      loadedAppointmentIdRef.current = null;
+      return;
+    }
+
+    if (loadedAppointmentIdRef.current === appointment.id) return;
+    loadedAppointmentIdRef.current = appointment.id;
+    void loadData();
+  }, [appointment.id, loadData, open]);
 
   const buildTimeUpdates = () => {
     const datePart = format(new Date(appointment.start_time), "yyyy-MM-dd");

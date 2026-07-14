@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ElementType, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ElementType, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, Building2, Camera, CheckCircle2, FileUp, KeyRound, Loader2, MapPin, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -410,7 +410,7 @@ export function MobileNeuroFinanceOnboardingSheet({
     setForm((current) => ({ ...current, [field]: nextValue }));
   };
 
-  const selectAddress = async (suggestion: AddressSuggestion) => {
+  const selectAddress = useCallback(async (suggestion: AddressSuggestion) => {
     try {
       const validatedAddress = await validateSuggestion(suggestion);
       setForm((current) => applyValidatedAddressToForm(current, validatedAddress));
@@ -420,7 +420,7 @@ export function MobileNeuroFinanceOnboardingSheet({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não conseguimos validar este endereço.");
     }
-  };
+  }, [clearSuggestions, validateSuggestion]);
 
   useEffect(() => {
     const cepDigits = onlyDigits(form.cep);
@@ -432,7 +432,7 @@ export function MobileNeuroFinanceOnboardingSheet({
 
     setAutoAppliedCep(cepDigits);
     void selectAddress(viaCepSuggestion);
-  }, [addressSuggestions, addressValidating, autoAppliedCep, form.cep]);
+  }, [addressSuggestions, addressValidating, autoAppliedCep, form.cep, selectAddress]);
 
   const setPixKeyType = (value: PixKeyInputType) => {
     setForm((current) => ({

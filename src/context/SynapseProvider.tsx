@@ -1,93 +1,27 @@
-import { createContext, ReactNode, useCallback, useContext, useRef, useState, useEffect } from 'react';
+import { ReactNode, useCallback, useRef, useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useSynapseLiveVoice } from '@/hooks/use-synapse-live-voice';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { getToolsForRoute, getQuickActionsForRoute, SynapseTool } from '@/lib/synapse-tool-catalog';
+import { getToolsForRoute, getQuickActionsForRoute } from '@/lib/synapse-tool-catalog';
 import {
     cancelSynapseInterfaceAction,
     type SynapseActionLifecycleEvent,
 } from '@/lib/synapse-interface-actions';
-import type { PcmAudioSignal } from '@/lib/pcm-audio-player';
+import {
+    SynapseContext,
+    type SynapseActiveTab,
+    type SynapseExecState,
+    type SynapseShellState,
+    type SynapseTimelineEntry,
+} from './SynapseContext';
 
-// ─── Types ────────────────────────────────────────────────────────────
-
-export type SynapseShellState = 'closed' | 'pill' | 'compact';
-
-export type SynapseExecState =
-    | 'idle'
-    | 'listening'
-    | 'thinking'
-    | 'executing'
-    | 'success'
-    | 'error';
-
-export type SynapseActiveTab = 'chat' | 'voice' | 'history' | 'timeline';
-
-export interface SynapseTimelineEntry {
-    id: string;
-    timestamp: Date;
-    label: string;
-    state: SynapseExecState;
-    toolId?: string;
-    detail?: string;
-    actionPath?: string;
-}
-
-interface SynapseContextType {
-    // Shell visual state
-    shellState: SynapseShellState;
-    setShellState: (state: SynapseShellState) => void;
-    toggleCompact: () => void;
-    activeTab: SynapseActiveTab;
-    setActiveTab: (tab: SynapseActiveTab) => void;
-
-    // Execution state
-    execState: SynapseExecState;
-    setExecState: (state: SynapseExecState) => void;
-
-    // Tool catalog
-    availableTools: SynapseTool[];
-    quickActions: SynapseTool[];
-
-    // Timeline
-    timeline: SynapseTimelineEntry[];
-    addTimelineEntry: (entry: Omit<SynapseTimelineEntry, 'id' | 'timestamp'>) => void;
-    clearTimeline: () => void;
-
-    // Assisted interface action
-    actionExperience: SynapseActionLifecycleEvent | null;
-    setActionExperience: (event: SynapseActionLifecycleEvent | null) => void;
-    cancelActionExperience: () => void;
-
-    // Chat session persistence
-    activeSessionId: string | null;
-    setActiveSessionId: (id: string | null) => void;
-    inputDraft: string;
-    setInputDraft: (text: string) => void;
-
-    // Visibility
-    isVisible: boolean;
-
-    // Voice Integration
-    voiceStatus: 'disconnected' | 'connecting' | 'connected' | 'disconnecting' | 'error';
-    isVoiceSpeaking: boolean;
-    voicePhase: string;
-    isVoiceToolActive: boolean;
-    voiceActivityToolName: string;
-    voiceActivityLabel: string;
-    voiceActivityMessage: string;
-    voiceActivityElapsedMs: number;
-    getVoiceInputVolume: () => number;
-    getVoiceInputSignal: () => PcmAudioSignal;
-    getVoiceOutputSignal: () => PcmAudioSignal;
-    toggleVoiceMode: () => Promise<void>;
-    isVoiceExpanded: boolean;
-    setIsVoiceExpanded: (expanded: boolean) => void;
-
-}
-
-const SynapseContext = createContext<SynapseContextType | undefined>(undefined);
+export type {
+    SynapseActiveTab,
+    SynapseExecState,
+    SynapseShellState,
+    SynapseTimelineEntry,
+} from './SynapseContext';
 
 const VOICE_TOOL_LABELS: Record<string, string> = {
     navigate_system: 'Navegação',
@@ -324,12 +258,4 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
             {children}
         </SynapseContext.Provider>
     );
-};
-
-// ─── Hook ─────────────────────────────────────────────────────────────
-
-export const useSynapse = () => {
-    const ctx = useContext(SynapseContext);
-    if (!ctx) throw new Error('useSynapse must be used within SynapseProvider');
-    return ctx;
 };

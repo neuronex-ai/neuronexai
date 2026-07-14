@@ -19,18 +19,35 @@ import {
 // Sub-components
 import { NotesSidebar } from "@/components/notes/NotesSidebar";
 import { NotesListPanel } from "@/components/notes/NotesListPanel";
-import { TaskBoard } from "@/components/notes/TaskBoard";
-import { NeuroView } from "@/components/notes/NeuroView";
-import { NeuroFlow } from "@/components/notes/NeuroFlow";
-import { NeuroFlowVault } from "@/components/notes/NeuroFlowVault";
-import { NeuroPulse } from "@/components/notes/NeuroPulse";
-import { FilesManager } from "@/components/notes/FilesManager";
-import { NotionPagesPanel } from "@/components/notes/NotionPagesPanel";
 
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useSynapseNotesAgentRun } from "@/hooks/use-synapse-notes-agent-run";
 import { clearSynapseNotesNavigationState } from "@/lib/synapse-navigation";
-import { MobileNotes } from "@/mobile/pages/MobileNotes";
+
+const TaskBoard = lazy(() =>
+    import("@/components/notes/TaskBoard").then((module) => ({ default: module.TaskBoard }))
+);
+const NeuroView = lazy(() =>
+    import("@/components/notes/NeuroView").then((module) => ({ default: module.NeuroView }))
+);
+const NeuroFlow = lazy(() =>
+    import("@/components/notes/NeuroFlow").then((module) => ({ default: module.NeuroFlow }))
+);
+const NeuroFlowVault = lazy(() =>
+    import("@/components/notes/NeuroFlowVault").then((module) => ({ default: module.NeuroFlowVault }))
+);
+const NeuroPulse = lazy(() =>
+    import("@/components/notes/NeuroPulse").then((module) => ({ default: module.NeuroPulse }))
+);
+const FilesManager = lazy(() =>
+    import("@/components/notes/FilesManager").then((module) => ({ default: module.FilesManager }))
+);
+const NotionPagesPanel = lazy(() =>
+    import("@/components/notes/NotionPagesPanel").then((module) => ({ default: module.NotionPagesPanel }))
+);
+const MobileNotes = lazy(() =>
+    import("@/mobile/pages/MobileNotes").then((module) => ({ default: module.MobileNotes }))
+);
 
 const NoteEditor = lazy(() =>
     import("@/components/notes/NoteEditor").then((module) => ({ default: module.NoteEditor }))
@@ -344,7 +361,13 @@ export default function Notes() {
         });
     }, [notes, selectedModuleId, searchQuery]);
 
-    if (isMobile) return <MobileNotes />;
+    if (isMobile) {
+        return (
+            <Suspense fallback={<NoteEditorSkeleton />}>
+                <MobileNotes />
+            </Suspense>
+        );
+    }
 
     const activeNote = notes?.find((note) => note.id === selectedNoteId);
 
@@ -509,7 +532,9 @@ export default function Notes() {
                             </motion.div>
                         )}
                         <div className="relative z-30 flex min-h-0 min-w-0 flex-1 overflow-hidden bg-transparent">
-                            <AnimatePresence mode="wait">{renderMainContent()}</AnimatePresence>
+                            <Suspense fallback={<NoteEditorSkeleton />}>
+                                <AnimatePresence mode="wait">{renderMainContent()}</AnimatePresence>
+                            </Suspense>
                         </div>
                     </motion.div>
                 </div>

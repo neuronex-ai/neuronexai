@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -28,15 +28,7 @@ const PaymentCallback = () => {
     const sessionId = searchParams.get('session_id');
     const paymentStatus = searchParams.get('status');
 
-    useEffect(() => {
-        if (paymentStatus === 'success' && sessionId) {
-            verifySession();
-        } else if (paymentStatus !== 'success') {
-            setStatus('error');
-        }
-    }, [sessionId, paymentStatus]);
-
-    const showSuccess = () => {
+    const showSuccess = useCallback(() => {
         setStatus('success');
 
         setTimeout(() => {
@@ -47,9 +39,9 @@ const PaymentCallback = () => {
                 colors: ['#ffffff', '#d4d4d4', '#a3a3a3', '#737373', '#525252']
             });
         }, 500);
-    };
+    }, []);
 
-    const waitForEntitlementActivation = async () => {
+    const waitForEntitlementActivation = useCallback(async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return false;
 
@@ -76,9 +68,9 @@ const PaymentCallback = () => {
         }
 
         return false;
-    };
+    }, []);
 
-    const verifySession = async () => {
+    const verifySession = useCallback(async () => {
         try {
             // Verify the payment session
             const { data, error } = await supabase.functions.invoke('verify-checkout-session', {
@@ -105,7 +97,15 @@ const PaymentCallback = () => {
             console.error('Session verification error:', error);
             setStatus('error');
         }
-    };
+    }, [sessionId, showSuccess, waitForEntitlementActivation]);
+
+    useEffect(() => {
+        if (paymentStatus === 'success' && sessionId) {
+            void verifySession();
+        } else if (paymentStatus !== 'success') {
+            setStatus('error');
+        }
+    }, [paymentStatus, sessionId, verifySession]);
 
     const handleContinue = async () => {
         // Check if user is already logged in

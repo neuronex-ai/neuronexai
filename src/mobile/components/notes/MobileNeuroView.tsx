@@ -151,27 +151,8 @@ export const MobileNeuroView = ({ onBack }: MobileNeuroViewProps) => {
   }, [graphData.nodes, hoverNode]);
 
   // Node click — open note in sheet
-  const handleNodeClick = useCallback((node: GraphNode) => {
-    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
-    graphRef.current?.centerAt(node.x!, node.y!, 600);
-    graphRef.current?.zoom(3, 800);
-
-    if (node.type === "note" && node.data) {
-      openNoteEditor(node.data);
-    } else if (node.type === "patient" && node.data) {
-      // Find notes linked to this patient and show first one, or just show patient name
-      const patientNotes = notes?.filter(n => n.patient_id === node.data.id) || [];
-      if (patientNotes.length > 0) {
-        openNoteEditor(patientNotes[0]);
-      } else {
-        // Open create mode linked to this patient
-        openCreateNote(node.data.id);
-      }
-    }
-  }, [notes]);
-
   // Open note editor
-  const openNoteEditor = (note: PersonalNote) => {
+  const openNoteEditor = useCallback((note: PersonalNote) => {
     setEditingNote(note);
     setEditTitle(note.title || "");
     setEditContent(note.content?.replace(/<[^>]*>/g, "") || "");
@@ -182,10 +163,10 @@ export const MobileNeuroView = ({ onBack }: MobileNeuroViewProps) => {
     setSheetOpen(true);
     sheetY.set(0);
     setShowPatientPicker(false);
-  };
+  }, [sheetY]);
 
   // Open create note
-  const openCreateNote = (preselectedPatientId?: string) => {
+  const openCreateNote = useCallback((preselectedPatientId?: string) => {
     setEditingNote(null);
     setEditTitle("");
     setEditContent("");
@@ -196,7 +177,24 @@ export const MobileNeuroView = ({ onBack }: MobileNeuroViewProps) => {
     setSheetOpen(true);
     sheetY.set(0);
     setShowPatientPicker(false);
-  };
+  }, [sheetY]);
+
+  const handleNodeClick = useCallback((node: GraphNode) => {
+    if (!Number.isFinite(node.x) || !Number.isFinite(node.y)) return;
+    graphRef.current?.centerAt(node.x!, node.y!, 600);
+    graphRef.current?.zoom(3, 800);
+
+    if (node.type === "note" && node.data) {
+      openNoteEditor(node.data);
+    } else if (node.type === "patient" && node.data) {
+      const patientNotes = notes?.filter(n => n.patient_id === node.data.id) || [];
+      if (patientNotes.length > 0) {
+        openNoteEditor(patientNotes[0]);
+      } else {
+        openCreateNote(node.data.id);
+      }
+    }
+  }, [notes, openCreateNote, openNoteEditor]);
 
   // Save note
   const handleSave = async () => {

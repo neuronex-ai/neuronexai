@@ -1,15 +1,7 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 
-interface AIContextType {
-  currentContext: string; // Ex: 'dashboard', 'patient-profile', 'session'
-  activePatientId: string | null;
-  isFocusMode: boolean;
-  toggleFocusMode: () => void;
-  contextSummary: string; // Descrição textual do contexto para a IA
-}
-
-const AIContext = createContext<AIContextType | undefined>(undefined);
+import { AIContext } from './AIContext';
 
 export const AIProvider = ({ children }: { children: ReactNode }) => {
   const [currentContext, setCurrentContext] = useState<string>('dashboard');
@@ -85,28 +77,19 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     setCurrentContext('dashboard');
     setActivePatientId(null);
     setContextSummary('O usuário está no Dashboard principal (Visão Geral). Foco em resumo do dia, alertas e métricas globais.');
-
   }, [location]);
 
-  const toggleFocusMode = () => setIsFocusMode(prev => !prev);
+  const toggleFocusMode = () => setIsFocusMode((previous) => !previous);
 
   return (
     <AIContext.Provider value={{
       currentContext,
-      activePatientId, // Agora é readonly, gerido pela URL
+      activePatientId,
       isFocusMode,
       toggleFocusMode,
-      contextSummary
+      contextSummary,
     }}>
       {children}
     </AIContext.Provider>
   );
-};
-
-export const useAI = () => {
-  const context = useContext(AIContext);
-  if (context === undefined) {
-    throw new Error('useAI must be used within an AIProvider');
-  }
-  return context;
 };

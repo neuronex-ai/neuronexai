@@ -1,6 +1,5 @@
 "use client";
 
-import { useAuth } from "@/components/auth/SessionContextProvider";
 import { useChatSessions, useCreateChatSession, useDeleteChatSession, useSendChatMessage, useSessionMessages } from "@/hooks/use-ai-chat";
 import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useSpeechRecognition } from "@/hooks/use-speech-recognition";
@@ -85,7 +84,6 @@ const toSynapseResponse = (value: unknown): SynapseResponse => {
 
 export const MobileAIChat = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [mode, setMode] = useState<SynapseMode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -255,7 +253,7 @@ export const MobileAIChat = () => {
         setRichMessages((previous) => ({ ...previous, latest: data.clientAction }));
       },
     });
-  }, [inputValue, resetTranscript, sendMessage, sessionId, stopListening, user?.id]);
+  }, [inputValue, resetTranscript, sendMessage, sessionId, stopListening]);
 
   const handleVoiceToggle = useCallback(async () => {
     if (isVoiceConnected) {

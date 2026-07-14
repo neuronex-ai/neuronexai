@@ -130,6 +130,7 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (accountError) throw accountError;
+    if (!financialAccount) return errorResponse("Conta financeira Asaas não configurada.", 403);
 
     const apiKey = await getFinancialAccountAsaasApiKey(financialAccount);
     if (!apiKey) return errorResponse("Conta financeira Asaas não configurada.", 403);

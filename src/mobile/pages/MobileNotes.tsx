@@ -5,7 +5,7 @@ import { usePersonalNotes } from "@/hooks/use-personal-notes";
 import { PersonalNote } from "@/types";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, Search, X } from "lucide-react";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { MobileLayout } from "../components/MobileLayout";
 import { MobileNoteEditor } from "../components/notes/MobileNoteEditor";
 import { MobileNotesListView } from "../components/notes/MobileNotesListView";
@@ -17,14 +17,14 @@ export const MobileNotes = () => {
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const selectedNote = (notes ?? []).find((note) => note.id === selectedNoteId);
 
-    const handleUpdateNote = (id: string, updates: Partial<PersonalNote>) => {
+    const handleUpdateNote = useCallback((id: string, updates: Partial<PersonalNote>) => {
         updateNote({ id, updates });
-    };
+    }, [updateNote]);
 
-    const handleDeleteNote = (id: string) => {
+    const handleDeleteNote = useCallback((id: string) => {
         deleteNote(id);
         setSelectedNoteId(null);
-    };
+    }, [deleteNote]);
 
     const handleCreateNote = async () => {
         try {

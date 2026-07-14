@@ -23,17 +23,18 @@ const categoryIcons = {
 
 export function NeuroFinanceTariffs() {
   const { data, isLoading } = useNeuroFinanceTariffs();
-  const tariffsData: TariffRule[] = Array.isArray(data) ? data : [];
 
   const groups = useMemo(
-    () =>
-      Object.entries(
+    () => {
+      const tariffsData: TariffRule[] = Array.isArray(data) ? data : [];
+      return Object.entries(
         tariffsData.reduce<Record<string, TariffRule[]>>((result, tariff) => {
           (result[tariff.category] ||= []).push(tariff);
           return result;
         }, {}),
-      ),
-    [tariffsData],
+      );
+    },
+    [data],
   );
 
   if (isLoading) {

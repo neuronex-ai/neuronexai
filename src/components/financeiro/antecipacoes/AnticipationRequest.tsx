@@ -7,7 +7,7 @@ import { NEUROFINANCE_ANTICIPATION_ENABLED, useNeurofinanceAnticipations } from 
 export function AnticipationRequest() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const { eligible, simulate, request } = useNeurofinanceAnticipations();
-  const payments = eligible.data || [];
+  const payments = useMemo(() => eligible.data || [], [eligible.data]);
   const selected = useMemo(() => payments.find((item) => item.provider_payment_id === selectedId), [payments, selectedId]);
   const simulation = simulate.data?.simulation;
 

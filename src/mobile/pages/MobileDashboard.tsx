@@ -3,7 +3,7 @@
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
 import { Button } from "@/components/ui/button";
-import { useSynapse } from "@/context/SynapseProvider";
+import { useSynapse } from "@/context/SynapseContext";
 import { useAppointmentsByDateRange } from "@/hooks/use-appointments-by-date-range";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
 import { usePendingPatientsCount } from "@/hooks/use-pending-patients-count";

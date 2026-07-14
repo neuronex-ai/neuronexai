@@ -5,6 +5,14 @@
   "type": "module",
   "description": "NeuroNex — Gestão Inteligente para Psicólogos",
   "author": "NeuroNex",
+  "packageManager": "npm@11.16.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "allowScripts": {
+    "@firebase/util": false,
+    "protobufjs": false
+  },
   "scripts": {
     "dev": "node scripts/start-dev.cjs",
     "dev:web": "vite",
@@ -12,6 +20,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -71,8 +80,8 @@
     "@tiptap/react": "^2.4.0",
     "@tiptap/starter-kit": "^2.4.0",
     "@tiptap/suggestion": "^2.27.1",
-    "@zxing/browser": "^0.2.0",
-    "@zxing/library": "^0.22.0",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -80,7 +89,7 @@
     "d3-force": "^3.0.0",
     "date-fns": "^3.6.0",
     "firebase": "^12.14.0",
-    "framer-motion": "12.23.25",
+    "framer-motion": "12.42.2",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
     "lucide-react": "^0.462.0",
@@ -97,7 +106,7 @@
     "react-router-dom": "^6.30.1",
     "react-zoom-pan-pinch": "^3.7.0",
     "reactflow": "^11.11.4",
-    "recharts": "^2.15.4",
+    "recharts": "^3.9.2",
     "remark-gfm": "^4.0.1",
     "sonner": "^1.7.4",
     "tailwind-merge": "^2.6.0",
@@ -107,7 +116,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@dyad-sh/react-vite-component-tagger": "^0.8.0",
+    "@dyad-sh/react-vite-component-tagger": "^0.9.0",
     "@eslint/js": "^9.32.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/dom": "^10.4.1",
@@ -116,10 +125,11 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/canvas-confetti": "^1.9.0",
     "@types/d3-force": "^3.0.10",
-    "@types/node": "^22.16.5",
+    "@types/node": "^24.13.3",
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
-    "@vitejs/plugin-react": "^4.7.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "@vitest/coverage-v8": "4.1.10",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -131,7 +141,7 @@
     "tailwindcss-animate": "^1.0.7",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.38.0",
-    "vite": "^5.4.19",
-    "vitest": "^2.1.9"
+    "vite": "^8.1.4",
+    "vitest": "4.1.10"
   }
 }

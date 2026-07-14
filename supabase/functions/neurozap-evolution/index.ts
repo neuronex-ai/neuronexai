@@ -1084,7 +1084,7 @@ const loadPrivateCredential = async (
     if (!rpcError) return safeString(data) || null;
     if (isMissingCredentialRpc(rpcError) || isMissingPrivateCredentialStore(rpcError)) {
       console.warn("[neurozap-evolution] private credential RPC unavailable; using server-side manager key fallback until migration is applied.");
-      return;
+      return null;
     }
     throw rpcError;
   }
@@ -1887,7 +1887,7 @@ serve(async (req) => {
             safeString(chat?.jid);
           return mapChat(chat, syncConfig, findContactFor(contactIndex, remoteJid), labelIndex);
         })
-        .filter(Boolean);
+        .filter((chat): chat is NonNullable<ReturnType<typeof mapChat>> => chat !== null);
       const activeRemoteJids = chats.flatMap((chat) =>
         [chat.remote_jid, chat.canonical_remote_jid, ...(Array.isArray(chat.remote_jid_aliases) ? chat.remote_jid_aliases : [])]
           .map((value) => safeString(value))

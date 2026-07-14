@@ -79,6 +79,10 @@ private-evidencias/
 api/
 
 # Temporary build artifacts
+coverage/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.d.ts.map
 vite.config.ts.timestamp-*
 build_log*.txt
 lint_output.txt

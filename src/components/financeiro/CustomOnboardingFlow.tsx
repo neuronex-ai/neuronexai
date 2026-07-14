@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
     AlertCircle,
@@ -708,7 +708,7 @@ export const CustomOnboardingFlow = ({
         setFormData((prev) => ({ ...prev, [field]: nextValue }));
     };
 
-    async function handleAddressSelect(suggestion: AddressSuggestion) {
+    const handleAddressSelect = useCallback(async (suggestion: AddressSuggestion) => {
         try {
             const validatedAddress = await validateSuggestion(suggestion);
             setFormData((prev) => applyValidatedAddressToForm(prev, validatedAddress));
@@ -718,7 +718,7 @@ export const CustomOnboardingFlow = ({
         } catch (error) {
             toast.error(error instanceof Error ? error.message : "Não conseguimos validar este endereço.");
         }
-    }
+    }, [clearSuggestions, validateSuggestion]);
 
     useEffect(() => {
         const cepDigits = onlyDigits(formData.cep);
@@ -730,7 +730,7 @@ export const CustomOnboardingFlow = ({
 
         setAutoAppliedCep(cepDigits);
         void handleAddressSelect(viaCepSuggestion);
-    }, [addressSuggestions, addressValidating, autoAppliedCep, formData.cep]);
+    }, [addressSuggestions, addressValidating, autoAppliedCep, formData.cep, handleAddressSelect]);
 
     function setPixKeyType(value: PixKeyInputType) {
         setFormData((prev) => ({

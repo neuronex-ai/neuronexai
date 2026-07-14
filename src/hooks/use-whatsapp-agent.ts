@@ -333,8 +333,6 @@ export function useWhatsAppAgent() {
         stopFallbackPolling();
         if (channel) supabase.removeChannel(channel);
       };
-      // queryClient is stable; the invalidate helpers intentionally reuse the latest query keys.
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [activeConversationId, enabled]);
   };
 

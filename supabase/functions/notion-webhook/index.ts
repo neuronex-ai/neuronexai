@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { getErrorMessage } from "../_shared/error-message.ts";
 
 const corsHeaders = {
     "Access-Control-Allow-Origin": "*",
@@ -44,8 +45,9 @@ serve(async (req) => {
         });
 
     } catch (error) {
-        console.error("❌ Error processing webhook:", error.message);
-        return new Response(JSON.stringify({ error: error.message }), {
+        const message = getErrorMessage(error, "Invalid Notion webhook request");
+        console.error("❌ Error processing webhook:", message);
+        return new Response(JSON.stringify({ error: message }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 400,
         });

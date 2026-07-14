@@ -103,9 +103,12 @@ export const useUserPreferences = () => {
     },
   });
 
-  const preferences: UserPreferences | null = userId
-    ? query.data || { user_id: userId, ...DEFAULT_USER_PREFERENCES }
-    : null;
+  const preferences = useMemo<UserPreferences | null>(
+    () => userId
+      ? query.data || { user_id: userId, ...DEFAULT_USER_PREFERENCES }
+      : null,
+    [query.data, userId],
+  );
 
   useEffect(() => {
     if (!preferences) return;

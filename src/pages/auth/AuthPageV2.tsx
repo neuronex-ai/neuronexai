@@ -28,7 +28,7 @@ import { readSupabaseFunctionError } from '@/lib/read-supabase-function-error';
 import { cn } from '@/lib/utils';
 import type { Session } from '@supabase/supabase-js';
 import { ArrowRight, Eye, EyeOff, Fingerprint, Loader2, ShieldCheck, Stethoscope, UserRound } from 'lucide-react';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -163,7 +163,7 @@ const AuthPageV2 = () => {
   const [mfaOpen, setMfaOpen] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
 
-  const redirectPatientSession = async () => {
+  const redirectPatientSession = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke<PatientPortalContext>('patient-portal-current', {
       body: { action: 'current' },
     });
@@ -184,9 +184,9 @@ const AuthPageV2 = () => {
     }
 
     navigate('/portal', { replace: true });
-  };
+  }, [navigate]);
 
-  const redirect = async (sessionOverride?: Session | null) => {
+  const redirect = useCallback(async (sessionOverride?: Session | null) => {
     const currentSession = sessionOverride ?? (await supabase.auth.getSession()).data.session;
     const user = currentSession?.user;
     if (!user) return;
@@ -195,20 +195,20 @@ const AuthPageV2 = () => {
     const profile = await supabase.from('profiles').select('setup_completed').eq('id', user.id).maybeSingle();
     if (role === 'patient') toast.error('Esta conta pertence ao acesso profissional.');
     navigate(profile.data?.setup_completed ? '/dashboard' : '/initial-settings', { replace: true });
-  };
+  }, [navigate, redirectPatientSession, role]);
 
-  const refreshBiometricState = async () => {
+  const refreshBiometricState = useCallback(async () => {
     const [status, account] = await Promise.all([
       getBiometricStatus(),
       Promise.resolve(getStoredBiometricAccount()),
     ]);
     setBiometricStatus(status);
     setBiometricAccount(account);
-  };
+  }, []);
 
-  const shouldOfferBiometric = async (session: Session | null) => {
+  const shouldOfferBiometric = useCallback(async (session: Session | null) => {
     if (!session?.user || role === 'patient' || isPatientAccount(session.user)) return false;
-    const status = biometricStatus || await getBiometricStatus();
+    const status = await getBiometricStatus();
     const account = getStoredBiometricAccount();
     const preference = getBiometricPreferenceForUser(session.user.id);
     if (!isBiometricStatusUsable(status)) return false;
@@ -217,15 +217,15 @@ const AuthPageV2 = () => {
     setPendingBiometricSession(session);
     setBiometricPromptOpen(true);
     return true;
-  };
+  }, [role]);
 
-  const finishAuthenticatedSession = async () => {
+  const finishAuthenticatedSession = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (await shouldOfferBiometric(session)) return;
     await redirect();
-  };
+  }, [redirect, shouldOfferBiometric]);
 
-  const evaluateSession = async () => {
+  const evaluateSession = useCallback(async () => {
     const session = await supabase.auth.getSession();
     if (!session.data.session) return;
     if (isPatientAccount(session.data.session.user)) {
@@ -236,12 +236,12 @@ const AuthPageV2 = () => {
     if (assurance.error) throw assurance.error;
     if (assurance.data.nextLevel === 'aal2' && assurance.data.currentLevel !== 'aal2') setMfaOpen(true);
     else await finishAuthenticatedSession();
-  };
+  }, [finishAuthenticatedSession, redirect]);
 
   useEffect(() => {
     void refreshBiometricState().catch(() => undefined);
     void evaluateSession().catch(() => undefined);
-  }, []);
+  }, [evaluateSession, refreshBiometricState]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
@@ -269,7 +269,7 @@ const AuthPageV2 = () => {
     }
   };
 
-  const unlockWithBiometrics = async () => {
+  const unlockWithBiometrics = useCallback(async () => {
     setBiometricLoading(true);
     try {
       const restored = await restoreBiometricSession();
@@ -289,7 +289,7 @@ const AuthPageV2 = () => {
     } finally {
       setBiometricLoading(false);
     }
-  };
+  }, [evaluateSession]);
 
   const enableBiometrics = async () => {
     if (!pendingBiometricSession?.user) return;
@@ -340,7 +340,7 @@ const AuthPageV2 = () => {
     if (!canUseBiometrics || autoBiometricAttempted || biometricLoading || loading) return;
     setAutoBiometricAttempted(true);
     void unlockWithBiometrics();
-  }, [autoBiometricAttempted, biometricLoading, canUseBiometrics, loading]);
+  }, [autoBiometricAttempted, biometricLoading, canUseBiometrics, loading, unlockWithBiometrics]);
 
   const isDarkTheme = theme === 'dark';
   const authShellClass = isDarkTheme ? 'bg-[#020202] text-white' : 'bg-[#f8f8f6] text-[#171514]';

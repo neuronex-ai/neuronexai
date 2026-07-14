@@ -74,10 +74,12 @@ export const CashFlowScenarios = () => {
     toast.success("CSV de projecao gerado.");
   };
 
-  const handleChartClick = (state: any) => {
-    if (state && state.activePayload) {
-      setSelectedPoint(state.activePayload[0].payload as ChartPoint);
-    }
+  const handleChartClick = (state: { activeTooltipIndex?: number | string | null; activeIndex?: number | string | null }) => {
+    const rawIndex = state.activeTooltipIndex ?? state.activeIndex;
+    const index = typeof rawIndex === "number" ? rawIndex : Number.parseInt(String(rawIndex), 10);
+    const point = Number.isInteger(index) ? chartData?.[index] : undefined;
+
+    if (point) setSelectedPoint(point);
   };
 
   const incomeItems = selectedPoint?.details.filter(d => d.type === 'income') || [];

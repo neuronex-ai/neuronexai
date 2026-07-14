@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
     Dialog,
     DialogContent,
@@ -321,14 +321,7 @@ export const SegundoCerebro = ({ isOpen, onClose, onAddNode }: SegundoCerebroPro
 
     const { data: patients } = usePatientsList();
 
-    useEffect(() => {
-        if (isOpen) {
-            fetchMyNotes();
-            fetchFiles();
-        }
-    }, [isOpen]);
-
-    const fetchMyNotes = async () => {
+    const fetchMyNotes = useCallback(async () => {
         setIsLoadingNotes(true);
         try {
             const { data, error } = await supabase
@@ -344,9 +337,9 @@ export const SegundoCerebro = ({ isOpen, onClose, onAddNode }: SegundoCerebroPro
         } finally {
             setIsLoadingNotes(false);
         }
-    };
+    }, []);
 
-    const fetchFiles = async () => {
+    const fetchFiles = useCallback(async () => {
         if (!userId) return;
         setIsLoadingFiles(true);
         try {
@@ -406,7 +399,7 @@ export const SegundoCerebro = ({ isOpen, onClose, onAddNode }: SegundoCerebroPro
         } finally {
             setIsLoadingFiles(false);
         }
-    };
+    }, [patients, userId]);
 
     const onDragStart = (event: any, nodeType: NodeType, data?: any) => {
         if (!event.dataTransfer) return;
@@ -430,6 +423,13 @@ export const SegundoCerebro = ({ isOpen, onClose, onAddNode }: SegundoCerebroPro
             onClose();
         }
     };
+
+    useEffect(() => {
+        if (isOpen) {
+            void fetchMyNotes();
+            void fetchFiles();
+        }
+    }, [fetchFiles, fetchMyNotes, isOpen]);
 
     const getFilePublicUrl = (path: string) => {
         const allFiles = [...personalFiles, ...Object.values(patientFilesMap).flat()];

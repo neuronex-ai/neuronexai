@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -108,7 +108,7 @@ export function useAddressAutocomplete(query: string, selectedLabel?: string) {
     };
   }, [query, selectedLabel]);
 
-  const validateSuggestion = async (suggestion: AddressSuggestion) => {
+  const validateSuggestion = useCallback(async (suggestion: AddressSuggestion) => {
     setIsValidating(true);
     setError(null);
     try {
@@ -136,9 +136,9 @@ export function useAddressAutocomplete(query: string, selectedLabel?: string) {
     } finally {
       setIsValidating(false);
     }
-  };
+  }, []);
 
-  const clearSuggestions = () => setSuggestions([]);
+  const clearSuggestions = useCallback(() => setSuggestions([]), []);
 
   return {
     suggestions,

@@ -41,7 +41,7 @@ import { ReflectionCarousel } from "@/components/ui/reflection-carousel";
 import { useDailyRotationItem } from "@/components/ui/reflection-carousel-rotation";
 import { StableTabViewport } from "@/components/ui/stable-tab-viewport";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSynapse } from "@/context/SynapseProvider";
+import { useSynapse } from "@/context/SynapseContext";
 import { useAppointmentsByDateRange } from "@/hooks/use-appointments-by-date-range";
 import { useDashboardManagerialMetrics } from "@/hooks/use-dashboard-managerial-metrics";
 import { useFinancialAccount } from "@/hooks/use-financial-account";

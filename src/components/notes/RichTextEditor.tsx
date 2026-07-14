@@ -30,7 +30,8 @@ import {
 import { useEffect, useRef } from "react";
 import { toast } from 'sonner';
 import tippy from 'tippy.js';
-import { createSlashSuggestion, MentionList, SlashCommands } from './editor-extensions';
+import { createSlashSuggestion, SlashCommands } from './editor-extensions';
+import { MentionList } from './editor-suggestion-lists';
 import {
   ClinicalChartNode,
   EmbeddedDocNode,

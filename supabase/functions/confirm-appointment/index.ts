@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { getErrorMessage } from "../_shared/error-message.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -76,7 +77,7 @@ serve(async (req) => {
 
   } catch (e) {
     console.error("Unhandled error in confirm-appointment:", e);
-    return new Response(JSON.stringify({ error: 'Internal server error', details: e.message }), {
+    return new Response(JSON.stringify({ error: 'Internal server error', details: getErrorMessage(e, 'Internal server error') }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 500,
     });

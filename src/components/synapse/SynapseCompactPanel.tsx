@@ -12,7 +12,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useSynapse, type SynapseActiveTab } from '@/context/SynapseProvider';
+import { useSynapse, type SynapseActiveTab } from '@/context/SynapseContext';
 import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
 import { useChatSessionHistory, type ChatSession } from '@/hooks/use-ai-chat';

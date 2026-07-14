@@ -1,5 +1,5 @@
 import { ChevronLeft, MoreHorizontal, Share2, Trash2, Check } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PersonalNote } from "@/types";
@@ -26,6 +26,7 @@ export const MobileNoteEditor = ({ note, onBack, onUpdate, onDelete }: MobileNot
     const [content, setContent] = useState(note.content || "");
     const [isSaving, setIsSaving] = useState(false);
     const [hasSaved, setHasSaved] = useState(false);
+    const activeNoteIdRef = useRef(note.id);
 
     // Fetch patients for mentions in editor
     const { data: patients } = usePatients();
@@ -45,13 +46,16 @@ export const MobileNoteEditor = ({ note, onBack, onUpdate, onDelete }: MobileNot
         }, 1000);
 
         return () => clearTimeout(timer);
-    }, [title, content]);
+    }, [content, note.content, note.id, note.title, onUpdate, title]);
 
     // Sync initial state if note prop changes
     useEffect(() => {
+        if (activeNoteIdRef.current === note.id) return;
+
+        activeNoteIdRef.current = note.id;
         setTitle(note.title);
         setContent(note.content || "");
-    }, [note.id]);
+    }, [note.content, note.id, note.title]);
 
     return (
         <div className="flex flex-col h-full bg-background text-foreground overflow-hidden relative z-50">

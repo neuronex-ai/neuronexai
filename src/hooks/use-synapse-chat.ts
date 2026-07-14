@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSynapse } from '@/context/SynapseProvider';
+import { useSynapse } from '@/context/SynapseContext';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useAI } from '@/context/AIContext';
 import {

@@ -1,13 +1,28 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { RouteSelection } from "./RouteSelection";
-import { ImportAnamnesis } from "./ImportAnamnesis";
-import { TemplateAnamnesis } from "./TemplateAnamnesis";
-import { ViewAnamnesis } from "./ViewAnamnesis";
-import { DocumentUploadPanel } from "@/components/documents/DocumentUploadPanel";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+
+const ImportAnamnesis = lazy(() =>
+    import("./ImportAnamnesis").then((module) => ({ default: module.ImportAnamnesis }))
+);
+const TemplateAnamnesis = lazy(() =>
+    import("./TemplateAnamnesis").then((module) => ({ default: module.TemplateAnamnesis }))
+);
+const ViewAnamnesis = lazy(() =>
+    import("./ViewAnamnesis").then((module) => ({ default: module.ViewAnamnesis }))
+);
+const DocumentUploadPanel = lazy(() =>
+    import("@/components/documents/DocumentUploadPanel").then((module) => ({ default: module.DocumentUploadPanel }))
+);
+
+const AnamnesisLoadingState = () => (
+    <div className="w-full min-h-[400px] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-zinc-300 dark:text-zinc-600 animate-spin" />
+    </div>
+);
 
 const hasValidAnamnesisContent = (content: unknown) => {
     if (Array.isArray(content)) return content.length > 0;
@@ -69,16 +84,13 @@ export function AnamnesisTab() {
     };
 
     if (currentStep === 'loading') {
-        return (
-            <div className="w-full min-h-[400px] flex items-center justify-center">
-                <Loader2 className="w-8 h-8 text-zinc-300 dark:text-zinc-600 animate-spin" />
-            </div>
-        );
+        return <AnamnesisLoadingState />;
     }
 
     return (
         <div className="relative min-h-[600px] min-w-0 w-full pb-10">
-            <AnimatePresence mode="wait">
+            <Suspense fallback={<AnamnesisLoadingState />}>
+                <AnimatePresence mode="wait">
 
                 {currentStep === 'selection' && (
                     <motion.div
@@ -138,7 +150,8 @@ export function AnamnesisTab() {
                     </motion.div>
                 )}
 
-            </AnimatePresence>
+                </AnimatePresence>
+            </Suspense>
         </div>
     );
 }

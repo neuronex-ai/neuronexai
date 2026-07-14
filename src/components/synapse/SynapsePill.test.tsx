@@ -8,7 +8,7 @@ const mocks = vi.hoisted(() => ({
     context: {} as Record<string, unknown>,
 }));
 
-vi.mock('@/context/SynapseProvider', () => ({
+vi.mock('@/context/SynapseContext', () => ({
     useSynapse: () => mocks.context,
 }));
 

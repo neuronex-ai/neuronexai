@@ -156,7 +156,7 @@ Deno.serve(async (req: Request) => {
         );
         const body = await req.json().catch(() => ({}));
 
-        const { data: snapshot, error: snapshotError } = await supabaseAdmin
+        let { data: snapshot, error: snapshotError } = await supabaseAdmin
             .from("neurofinance_overview_snapshot_v")
             .select("*")
             .eq("user_id", user.id)
