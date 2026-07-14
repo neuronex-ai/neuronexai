@@ -437,9 +437,9 @@ function IdentityStep({ draft, inputClass, mutedPanelClass, selectContentClass, 
           </span>
           <span>
             Ao informar meus dados, eu concordo com a{" "}
-            <Link to="/help?view=privacy" className="font-black underline underline-offset-4 hover:opacity-75" onClick={(event) => event.stopPropagation()}>Política de Privacidade</Link>{" "}
+            <Link to="/politica-de-privacidade" className="font-black underline underline-offset-4 hover:opacity-75" onClick={(event) => event.stopPropagation()}>Política de Privacidade</Link>{" "}
             e os{" "}
-            <Link to="/help?view=terms" className="font-black underline underline-offset-4 hover:opacity-75" onClick={(event) => event.stopPropagation()}>Termos de Uso</Link>{" "}
+            <Link to="/termos-de-uso" className="font-black underline underline-offset-4 hover:opacity-75" onClick={(event) => event.stopPropagation()}>Termos de Uso</Link>{" "}
             da NeuroNex AI.
           </span>
         </button>

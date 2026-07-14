@@ -569,7 +569,7 @@ export const LandingFinalCTASection = () => (
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
           <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 px-8 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">
-            <Link to="/help">Falar com suporte</Link>
+            <Link to="/ajuda">Falar com suporte</Link>
           </Button>
         </div>
       </div>

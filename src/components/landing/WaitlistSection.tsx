@@ -55,7 +55,7 @@ const plans = [
         description: "Para clínicas, equipes e operações que precisam de estrutura personalizada e suporte dedicado.",
         icon: Building2,
         cta: "Contatar suporte",
-        href: "/help",
+        href: "/ajuda",
         featured: false,
         highlights: [
             "Implantação personalizada para clínicas e equipes",

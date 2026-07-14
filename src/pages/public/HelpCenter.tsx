@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, ChevronDown, LifeBuoy, Search } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
@@ -10,13 +10,6 @@ import { Navbar } from "@/components/landing/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import FinanceLanding from "@/pages/FinanceLanding";
-import SynapseLanding from "@/pages/SynapseLanding";
-import Contact from "@/pages/public/Contact";
-import Legal from "@/pages/legal/Legal";
-import TermosDeUso from "@/pages/legal/TermosDeUso";
-import PoliticaDePrivacidade from "@/pages/legal/PoliticaDePrivacidade";
-import ConfiguracoesDeCookies from "@/pages/legal/ConfiguracoesDeCookies";
 
 const articles = [
   { category: "Início", title: "Como começar no NeuroNex", summary: "Configure seu perfil, cadastre pacientes e organize a agenda.", steps: ["Revise seus dados em Ajustes.", "Cadastre os primeiros pacientes.", "Configure sua disponibilidade."] },
@@ -28,23 +21,13 @@ const articles = [
 ];
 
 const HelpCenter = () => {
-  const location = useLocation();
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState<string | null>(null);
-  const view = new URLSearchParams(location.search).get("view");
 
   const results = useMemo(() => {
     const term = query.trim().toLowerCase();
     return articles.filter((article) => !term || `${article.category} ${article.title} ${article.summary}`.toLowerCase().includes(term));
   }, [query]);
-
-  if (view === "neurofinance") return <FinanceLanding />;
-  if (view === "synapse") return <SynapseLanding />;
-  if (view === "contact") return <Contact />;
-  if (view === "legal") return <Legal />;
-  if (view === "terms") return <TermosDeUso />;
-  if (view === "privacy") return <PoliticaDePrivacidade />;
-  if (view === "cookies") return <ConfiguracoesDeCookies />;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -78,7 +61,7 @@ const HelpCenter = () => {
           {!results.length ? <div className="rounded-[26px] border border-dashed border-border/50 p-10 text-center text-sm text-muted-foreground">Nenhum artigo encontrado.</div> : null}
         </section>
 
-        <section className="mx-auto mt-8 flex max-w-4xl flex-col items-center justify-between gap-5 rounded-[28px] bg-foreground p-6 text-background dark:bg-white dark:text-zinc-950 md:flex-row"><div><h2 className="text-xl font-black">Ainda precisa de ajuda?</h2><p className="mt-2 text-sm font-medium opacity-60">Utilize o canal oficial da NeuroNex.</p></div><Button asChild className="h-12 rounded-2xl bg-background px-6 text-[9px] font-black uppercase tracking-[0.18em] text-foreground dark:bg-zinc-950 dark:text-white"><Link to="/help?view=contact">Abrir contato <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></section>
+        <section className="mx-auto mt-8 flex max-w-4xl flex-col items-center justify-between gap-5 rounded-[28px] bg-foreground p-6 text-background dark:bg-white dark:text-zinc-950 md:flex-row"><div><h2 className="text-xl font-black">Ainda precisa de ajuda?</h2><p className="mt-2 text-sm font-medium opacity-60">Utilize o canal oficial da NeuroNex.</p></div><Button asChild className="h-12 rounded-2xl bg-background px-6 text-[9px] font-black uppercase tracking-[0.18em] text-foreground dark:bg-zinc-950 dark:text-white"><Link to="/contato">Abrir contato <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></section>
       </main>
       <Footer />
     </div>

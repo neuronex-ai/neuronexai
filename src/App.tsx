@@ -20,6 +20,7 @@ import { lazy, Suspense, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
 import { MotionConfig } from "framer-motion";
+import { PublicSeoManager } from "@/components/public/PublicSeoManager";
 import "@/styles/neurofinance-onboarding-overrides.css";
 import "@/styles/neurofinance-onboarding-mobile.css";
 
@@ -58,6 +59,13 @@ const NeuroZap = lazy(() => import("./pages/desktop/NeuroZap"));
 
 // Lazy Loaded Public Pages (web only - excluded from main bundle) - REMOVED FOR LEAN MVP
 const HelpCenter = lazy(() => import("@/pages/public/HelpCenter"));
+const Contact = lazy(() => import("@/pages/public/Contact"));
+const Legal = lazy(() => import("@/pages/legal/Legal"));
+const TermosDeUso = lazy(() => import("@/pages/legal/TermosDeUso"));
+const PoliticaDePrivacidade = lazy(() => import("@/pages/legal/PoliticaDePrivacidade"));
+const ConfiguracoesDeCookies = lazy(() => import("@/pages/legal/ConfiguracoesDeCookies"));
+const FinanceLanding = lazy(() => import("@/pages/FinanceLanding"));
+const SynapseLanding = lazy(() => import("@/pages/SynapseLanding"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
 const PublicProfessionalProfile = lazy(() => import("./pages/public/PublicProfessionalProfile"));
@@ -92,6 +100,22 @@ const SynapseShellGate = () => {
   return <SynapseGlobalShell />;
 };
 
+const legacyHelpDestinations: Record<string, string> = {
+  neurofinance: "/neurofinance",
+  synapse: "/synapse",
+  contact: "/contato",
+  legal: "/documentos-legais",
+  terms: "/termos-de-uso",
+  privacy: "/politica-de-privacidade",
+  cookies: "/configuracoes-de-cookies",
+};
+
+const LegacyHelpRedirect = () => {
+  const location = useLocation();
+  const view = new URLSearchParams(location.search).get("view") || "";
+  return <Navigate to={legacyHelpDestinations[view] || "/ajuda"} replace />;
+};
+
 // ─── Application routes ──────────────────────────────────────────────
 const SharedRoutes = () => {
   return (
@@ -119,7 +143,19 @@ const SharedRoutes = () => {
         <Route path="/id/:profileId" element={<PublicProfessionalProfile />} />
 
         {/* ─── Public Pages ───────────────────────────────── */}
-        <Route path="/help" element={<HelpCenter />} />
+        <Route path="/ajuda" element={<HelpCenter />} />
+        <Route path="/contato" element={<Contact />} />
+        <Route path="/documentos-legais" element={<Legal />} />
+        <Route path="/termos-de-uso" element={<TermosDeUso />} />
+        <Route path="/politica-de-privacidade" element={<PoliticaDePrivacidade />} />
+        <Route path="/configuracoes-de-cookies" element={<ConfiguracoesDeCookies />} />
+        <Route path="/neurofinance" element={<FinanceLanding />} />
+        <Route path="/synapse" element={<SynapseLanding />} />
+
+        {/* Compatibilidade: URLs antigas migram para páginas públicas canônicas. */}
+        <Route path="/help" element={<LegacyHelpRedirect />} />
+        <Route path="/contact" element={<Navigate to="/contato" replace />} />
+        <Route path="/legal" element={<Navigate to="/documentos-legais" replace />} />
 
         {/* ─── Protected Professional Routes ──────────────── */}
         <Route path="/synapse-ai" element={<PaidRoute><AIChat /></PaidRoute>} />
@@ -164,6 +200,7 @@ function App() {
                 v7_relativeSplatPath: true,
               }}
             >
+              <PublicSeoManager />
               <ScrollToTop />
               <AIProvider>
                 <SynapseProvider>

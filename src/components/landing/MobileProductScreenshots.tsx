@@ -271,7 +271,7 @@ export const MobileRealSynapseSection = () => (
         ))}
       </div>
       <Button asChild className="mt-6 h-14 w-full rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.2em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
-        <Link to="/help?view=synapse">
+        <Link to="/synapse">
           Conhecer o Synapse <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
       </Button>
@@ -319,7 +319,7 @@ export const MobileRealFinanceSection = () => (
     </FadeIn>
     <div className="mt-6 grid gap-3">
       <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.2em] text-background">
-        <Link to="/help?view=neurofinance">
+        <Link to="/neurofinance">
           Conhecer o NeuroFinance <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
       </Button>

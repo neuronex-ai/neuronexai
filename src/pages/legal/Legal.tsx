@@ -14,21 +14,21 @@ const legalDocuments = [
     eyebrow: "Condições de uso",
     title: "Termos de Uso",
     description: "Regras de acesso, responsabilidades, planos, pagamentos, recursos clínicos e serviços financeiros.",
-    href: "/help?view=terms",
+    href: "/termos-de-uso",
   },
   {
     icon: ShieldCheck,
     eyebrow: "Proteção de dados",
     title: "Política de Privacidade",
     description: "Como a NeuroNex coleta, utiliza, armazena e protege dados pessoais e informações de integrações.",
-    href: "/help?view=privacy",
+    href: "/politica-de-privacidade",
   },
   {
     icon: Cookie,
     eyebrow: "Preferências digitais",
     title: "Política de Cookies",
     description: "Quais categorias de cookies podem ser utilizadas e como gerenciar as preferências no navegador.",
-    href: "/help?view=cookies",
+    href: "/configuracoes-de-cookies",
   },
 ];
 
@@ -94,7 +94,7 @@ const Legal = () => (
             <h2 className="mt-7 text-3xl font-black tracking-[-0.05em]">Solicitação de privacidade ou LGPD?</h2>
             <p className="mt-3 max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground/70">Utilize o canal oficial e identifique o assunto para que a solicitação seja direcionada corretamente.</p>
           </div>
-          <Button asChild className="h-14 shrink-0 rounded-2xl bg-foreground px-7 text-[9px] font-black uppercase tracking-[0.18em] text-background"><Link to="/help?view=contact">Entrar em contato <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
+          <Button asChild className="h-14 shrink-0 rounded-2xl bg-foreground px-7 text-[9px] font-black uppercase tracking-[0.18em] text-background"><Link to="/contato">Entrar em contato <ArrowRight className="ml-2 h-4 w-4" /></Link></Button>
         </div>
       </section>
     </main>

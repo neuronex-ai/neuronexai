@@ -10,17 +10,17 @@ export const Footer = () => {
   const footerLinks = {
     produto: [
       { label: "Plataforma", path: "/#produto" },
-      { label: "NeuroFinance", path: "/help?view=neurofinance" },
-      { label: "Synapse AI", path: "/help?view=synapse" },
+      { label: "NeuroFinance", path: "/neurofinance" },
+      { label: "Synapse AI", path: "/synapse" },
     ],
     recursos: [
-      { label: "Central de Ajuda", path: "/help" },
-      { label: "Contato", path: "/help?view=contact" },
+      { label: "Central de Ajuda", path: "/ajuda" },
+      { label: "Contato", path: "/contato" },
     ],
     legal: [
-      { label: "Termos de Uso", path: "/help?view=terms" },
-      { label: "Privacidade", path: "/help?view=privacy" },
-      { label: "Cookies", path: "/help?view=cookies" },
+      { label: "Termos de Uso", path: "/termos-de-uso" },
+      { label: "Privacidade", path: "/politica-de-privacidade" },
+      { label: "Cookies", path: "/configuracoes-de-cookies" },
     ],
   };
 
