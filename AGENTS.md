@@ -55,9 +55,8 @@ Rules for agents:
 3. Surfaces may share non-visual behavior: domain rules, data hooks, services, validation, types, authentication, Supabase access, and deliberately neutral primitives from `src/components/ui`.
 4. A file under `src/components` is not automatically safe to share. Evaluate whether it contains platform-specific layout or interaction.
 5. Below 768px currently selects mobile; 768px and above selects desktop/tablet. Do not create different business rules based on screen size.
-6. The removed `Funcionalidades` page was obsolete. Never restore it or use old landing content as the map of the current product.
-7. The current mobile version is not a mandatory visual or structural reference. Rebuild mobile-first later without copying the desktop UI.
-8. **NeuroZap is planned for the Desktop Beta. Preserve its route, page, hooks, Edge Functions, database references, realtime behavior, and Synapse links; never classify it as legacy without a new explicit product decision.**
-9. Do not move large groups of files for aesthetics. Reorganize one functional area at a time and keep every active surface working.
+6. The current mobile version is not a mandatory visual or structural reference. Rebuild mobile-first later without copying the desktop UI.
+7. **NeuroZap is a planned Desktop Beta surface composed of its route, page, hooks, Edge Functions, database references, realtime behavior, and Synapse links.**
+8. Reorganize one functional area at a time and keep every active surface working.
 
 See `docs/FRONTEND_SURFACES.md` for the current map and migration direction.

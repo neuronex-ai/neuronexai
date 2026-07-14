@@ -33,10 +33,9 @@ Um **adaptador de rota** é um arquivo pequeno que recebe o endereço aberto pel
 4. É permitido compartilhar a camada invisível: leitura e gravação de dados, regras de validação, tipos, serviços, autenticação e acesso ao Supabase.
 5. Componentes visuais só podem ser compartilhados quando forem deliberadamente neutros, como botões básicos, campos e diálogos de `src/components/ui`.
 6. Estar em `src/components` não transforma automaticamente um componente em compartilhável.
-7. Páginas públicas não são uma lista confiável de tudo que o produto oferece. A antiga página `Funcionalidades` foi removida por estar desatualizada e não deve ser restaurada nem usada como referência.
-8. A versão mobile existente não é referência visual obrigatória. A reconstrução futura será mobile-first em `src/apps/professional-mobile`.
-9. NeuroZap está planejado para o Beta Desktop. Sua rota `/neurozap`, página, hooks, funções, dados e ligações com o Synapse devem ser preservados.
-10. Nenhuma reorganização deve mover centenas de arquivos de uma vez. Cada área precisa continuar abrindo durante a transição.
+7. A versão mobile existente não é referência visual obrigatória. A reconstrução futura será mobile-first em `src/apps/professional-mobile`.
+8. NeuroZap está planejado para o Beta Desktop e é composto por sua rota `/neurozap`, página, hooks, funções, dados e ligações com o Synapse.
+9. A reorganização ocorre por área funcional, mantendo cada superfície ativa durante a transição.
 
 ## Estrutura futura conceitual
 
@@ -57,10 +56,8 @@ src/
 
 Essa árvore é uma direção, não uma tarefa imediata. Primeiro será feito o inventário de cada área; depois, pequenos grupos aprovados poderão ser movidos com verificação de lint, tipos, testes e build.
 
-## Itens preservados e itens encerrados
+## Decisões atuais
 
-- **Preservar:** NeuroZap, como funcionalidade planejada para o Beta Desktop.
-- **Preservar separadamente:** portal do paciente, que não pertence ao aplicativo profissional mobile.
-- **Encerrado:** antiga página pública `Funcionalidades` e seu atalho mobile sem destino.
-- **Encerrado localmente:** Microsoft To Do e Todoist. Estruturas históricas no banco só poderão ser avaliadas na etapa específica de Supabase.
-- **Incerto até revisão própria:** rotas antigas de teleconsulta e notas mobile, além das importações visuais compartilhadas pelo mobile atual.
+- **NeuroZap:** funcionalidade planejada para o Beta Desktop.
+- **Portal do paciente:** superfície própria, separada do aplicativo profissional mobile.
+- **Em avaliação:** rotas de avaliação de teleconsulta e notas mobile, além das importações visuais compartilhadas pelo mobile atual.
