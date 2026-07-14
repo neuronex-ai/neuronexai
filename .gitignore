@@ -84,6 +84,7 @@ coverage/
 vite.config.d.ts
 vite.config.d.ts.map
 vite.config.ts.timestamp-*
+supabase/.temp/
 build_log*.txt
 lint_output.txt
 tsc_errors.txt

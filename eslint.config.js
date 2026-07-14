@@ -8,6 +8,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      "coverage/**",
       "backups/**",
       "src/integrations/supabase/database.types.ts",
     ],
