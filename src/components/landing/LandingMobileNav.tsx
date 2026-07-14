@@ -21,7 +21,6 @@ export const LandingMobileNav = () => {
         const prefetchPages = () => {
             const prefetchQueue = [
                 () => import("@/pages/Index"),
-                () => import("@/pages/Funcionalidades"),
                 () => import("@/pages/FinanceLanding"),
             ];
             if ('requestIdleCallback' in window) {
