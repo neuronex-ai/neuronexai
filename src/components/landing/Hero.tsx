@@ -52,7 +52,7 @@ export const Hero = () => {
 
                 <FadeIn delay={0.6}>
                     <p className="text-base md:text-xl lg:text-2xl text-muted-foreground/70 font-medium max-w-4xl mx-auto leading-relaxed md:leading-[1.5] tracking-tight mb-8 md:mb-10 lg:mb-12 px-2">
-                        Prontuário, agenda, teleconsulta, financeiro, NFS-e, portal do paciente e Synapse em uma única experiência para psicólogos.
+                        Prontuário, agenda, teleconsulta, financeiro, preparação fiscal, portal do paciente e Synapse em uma única experiência para psicólogos.
                     </p>
                 </FadeIn>
 

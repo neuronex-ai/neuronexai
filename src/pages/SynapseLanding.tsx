@@ -1,7 +1,24 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, CalendarDays, Check, ChevronDown, ClipboardList, LockKeyhole, MessageSquare, Mic, Sparkles, WalletCards } from "lucide-react";
+import {
+  Activity,
+  ArrowRight,
+  Bot,
+  BrainCircuit,
+  CalendarDays,
+  Check,
+  ChevronDown,
+  ClipboardList,
+  LockKeyhole,
+  MessageCircle,
+  MessageSquare,
+  Mic,
+  Network,
+  Sparkles,
+  WalletCards,
+  Workflow,
+} from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
@@ -9,6 +26,7 @@ import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const modes = [
@@ -17,13 +35,59 @@ const modes = [
 ];
 
 const questions = [
-  ["O que o Synapse faz?", "Ele ajuda a consultar agenda, informações operacionais e recursos disponíveis no NeuroNex."],
-  ["Texto e voz funcionam juntos?", "Os dois canais foram desenhados para reduzir navegação e facilitar consultas rápidas."],
+  ["O que o Synapse faz?", "Ele consulta contexto permitido, ajuda a navegar pelo sistema e prepara ações operacionais. Ações que gravam, enviam ou alteram informações exigem a confirmação prevista para aquele fluxo."],
+  ["Texto, voz e WhatsApp usam o mesmo cérebro?", "Sim. Os canais compartilham a mesma lógica contextual. O WhatsApp chega ao Desktop pelo NeuroZap, que está sendo preparado para o Beta."],
+  ["O que significa modo agêntico?", "Significa que o Synapse pode combinar etapas: localizar o contexto, escolher a ferramenta adequada, preparar a ação e levar você à tela certa. Ele não recebe liberdade para ultrapassar permissões ou confirmações."],
+  ["O que é o NeuroBox?", "É o conjunto de inteligências especializadas da NeuroNex, como NeuroView, NeuroFlow e NeuroPulse, cada uma voltada a uma forma específica de leitura ou organização."],
   ["Ele acessa qualquer informação?", "Não. O acesso respeita as permissões e o contexto disponível ao usuário."],
 ];
 
+const channels = [
+  {
+    icon: MessageSquare,
+    title: "Texto",
+    eyebrow: "Precisão",
+    text: "Pergunte, revise a resposta e acompanhe cada ação preparada antes de confirmar.",
+  },
+  {
+    icon: Mic,
+    title: "Voz",
+    eyebrow: "Continuidade",
+    text: "Consulte e navegue sem interromper a rotina, mantendo as mesmas regras de segurança do texto.",
+  },
+  {
+    icon: MessageCircle,
+    title: "WhatsApp",
+    eyebrow: "NeuroZap · Beta Desktop",
+    text: "Leve o mesmo cérebro contextual ao WhatsApp Business e mantenha a possibilidade de intervir, assumir ou pausar conversas.",
+  },
+];
+
+const neuroBoxTools = [
+  {
+    icon: Network,
+    name: "NeuroView",
+    text: "Ajuda a visualizar conexões e padrões do histórico disponível, mantendo a leitura clínica sob responsabilidade profissional.",
+  },
+  {
+    icon: Workflow,
+    name: "NeuroFlow",
+    text: "Organiza processos e percursos em fluxos visuais que podem ser revisados antes de serem salvos.",
+  },
+  {
+    icon: Activity,
+    name: "NeuroPulse",
+    text: "Estrutura relações de causa e efeito a partir do contexto selecionado, com confirmação para persistir resultados.",
+  },
+];
+
+const scrollToSection = (id: string) => {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById(id)?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+};
+
 const SynapseLanding = () => {
-  const [mode, setMode] = useState(modes[0]);
+  const [mode, setMode] = useState(modes[0].key);
   const [open, setOpen] = useState(0);
 
   return (
@@ -37,8 +101,8 @@ const SynapseLanding = () => {
             <div className="mx-auto max-w-5xl text-center">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-foreground/[0.035] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]"><Sparkles className="h-3.5 w-3.5" />Synapse AI</motion.div>
               <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-8 text-[clamp(3.4rem,7.5vw,7.8rem)] font-black leading-[0.84] tracking-[-0.075em]">A inteligência operacional <span className="text-muted-foreground/35">da sua rotina.</span></motion.h1>
-              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Use texto ou voz para localizar informações, revisar o dia e reduzir tarefas repetitivas.</motion.p>
-              <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background"><Link to="/create-account">Experimentar <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]" onClick={() => document.getElementById("synapse-demo")?.scrollIntoView({ behavior: "smooth" })}>Ver como funciona</Button></div>
+              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Converse por texto, voz ou WhatsApp. O Synapse consulta contexto permitido, navega pela plataforma e prepara ações com as confirmações exigidas pelo fluxo.</motion.p>
+              <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background"><Link to="/create-account">Experimentar <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]" onClick={() => scrollToSection("synapse-demo")}>Ver como funciona</Button></div>
             </div>
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="mt-16 overflow-hidden rounded-[34px] border border-border/45 bg-card shadow-[0_36px_120px_-76px_rgba(0,0,0,0.8)] dark:border-white/10 dark:bg-[#08090b]"><img src="/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp" alt="Synapse AI no NeuroNex" width={1280} height={720} className="block aspect-video w-full object-cover" /></motion.div>
           </div>
@@ -47,10 +111,79 @@ const SynapseLanding = () => {
         <section id="synapse-demo" className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
             <div className="max-w-5xl"><p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Texto e voz</p><h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">Pergunte. <span className="opacity-35">O Synapse organiza a resposta.</span></h2></div>
-            <div className="mt-12 grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
-              <div className="grid content-start gap-2 rounded-[28px] border border-background/10 bg-background/[0.07] p-3 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">{modes.map((item) => <button key={item.key} type="button" onClick={() => setMode(item)} className={cn("flex items-center gap-3 rounded-[18px] px-4 py-4 text-left", mode.key === item.key ? "bg-background text-foreground dark:bg-zinc-950 dark:text-white" : "opacity-55")}><item.icon className="h-4 w-4" /><span className="text-[9px] font-black uppercase tracking-[0.16em]">{item.label}</span></button>)}</div>
-              <div className="rounded-[38px] border border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]"><div className="overflow-hidden rounded-[28px] bg-black"><AnimatePresence mode="wait"><motion.img key={mode.key} src={mode.image} alt={`Synapse por ${mode.label}`} width={1280} height={720} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="block aspect-video w-full object-cover" /></AnimatePresence></div><div className="p-5"><h3 className="text-3xl font-black tracking-[-0.05em]">{mode.title}</h3><p className="mt-3 text-sm font-medium opacity-62">{mode.text}</p></div></div>
+            <Tabs value={mode} onValueChange={setMode} orientation="vertical" className="mt-12 grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
+              <TabsList aria-label="Formas de conversar com o Synapse" className="grid h-auto content-start gap-2 rounded-[28px] border-background/10 bg-background/[0.07] p-3 text-background/60 shadow-none dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] dark:text-zinc-950/60">
+                {modes.map((item) => (
+                  <TabsTrigger key={item.key} value={item.key} className="min-h-12 justify-start gap-3 rounded-[18px] px-4 py-4 text-left text-current data-[state=active]:border-transparent data-[state=active]:bg-background data-[state=active]:text-foreground dark:data-[state=active]:bg-zinc-950 dark:data-[state=active]:text-white">
+                    <item.icon aria-hidden="true" className="h-4 w-4" />
+                    <span className="text-[9px] font-black uppercase tracking-[0.16em]">{item.label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              <div>
+                {modes.map((item) => (
+                  <TabsContent key={item.key} value={item.key} className="mt-0 rounded-[38px] border border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
+                    <div className="overflow-hidden rounded-[28px] bg-black">
+                      <motion.img src={item.image} alt={`Interface do Synapse por ${item.label.toLowerCase()}`} width={1280} height={720} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="block aspect-video w-full object-cover" />
+                    </div>
+                    <div className="p-5"><h3 className="text-3xl font-black tracking-[-0.05em]">{item.title}</h3><p className="mt-3 text-sm font-medium opacity-62">{item.text}</p></div>
+                  </TabsContent>
+                ))}
+              </div>
+            </Tabs>
+          </div>
+        </section>
+
+        <section className="px-5 py-20 md:px-8 md:py-28">
+          <div className="mx-auto max-w-[1380px]">
+            <div className="mx-auto max-w-5xl text-center">
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Um cérebro, três canais</p>
+              <h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">O contexto acompanha <span className="text-muted-foreground/35">a conversa.</span></h2>
+              <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Mude de texto para voz ou WhatsApp sem transformar cada canal em um assistente desconectado.</p>
             </div>
+            <div className="mt-12 grid gap-4 lg:grid-cols-3">
+              {channels.map((channel) => (
+                <article key={channel.title} className="rounded-[32px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03]">
+                  <channel.icon aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
+                  <p className="mt-9 text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">{channel.eyebrow}</p>
+                  <h3 className="mt-3 text-3xl font-black tracking-[-0.05em]">{channel.title}</h3>
+                  <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">{channel.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
+          <div className="mx-auto grid max-w-[1380px] gap-6 lg:grid-cols-[0.82fr_1.18fr]">
+            <article className="rounded-[38px] border border-background/10 bg-background/[0.07] p-8 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] md:p-10">
+              <Bot aria-hidden="true" className="h-7 w-7 opacity-55" />
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Modo agêntico</p>
+              <h2 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-6xl">Não apenas responde. <span className="opacity-35">Prepara o próximo passo.</span></h2>
+              <p className="mt-6 text-sm font-medium leading-relaxed opacity-65 md:text-base">O Synapse pode localizar contexto, selecionar a ferramenta adequada, navegar até a área correta e preparar uma ação. Permissões, limites do plano e confirmações continuam valendo em cada etapa.</p>
+              <div className="mt-8 grid gap-2">
+                {["Entende a intenção", "Localiza o contexto permitido", "Prepara ou abre a ação", "Solicita confirmação quando há efeito real"].map((step, index) => (
+                  <div key={step} className="flex items-center gap-4 rounded-2xl border border-background/10 bg-background/[0.06] px-4 py-3 dark:border-zinc-950/10 dark:bg-zinc-950/[0.04]">
+                    <span className="font-mono text-xs opacity-40">0{index + 1}</span>
+                    <span className="text-sm font-semibold">{step}</span>
+                  </div>
+                ))}
+              </div>
+            </article>
+
+            <article className="rounded-[38px] border border-background/10 bg-background/[0.07] p-8 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] md:p-10">
+              <BrainCircuit aria-hidden="true" className="h-7 w-7 opacity-55" />
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroBox</p>
+              <h2 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-6xl">Inteligências especializadas, <span className="opacity-35">uma linguagem comum.</span></h2>
+              <div className="mt-8 grid gap-3">
+                {neuroBoxTools.map((tool) => (
+                  <div key={tool.name} className="rounded-[24px] border border-background/10 bg-background/[0.06] p-5 dark:border-zinc-950/10 dark:bg-zinc-950/[0.04]">
+                    <div className="flex items-center gap-3"><tool.icon aria-hidden="true" className="h-5 w-5 opacity-55" /><h3 className="text-lg font-black">{tool.name}</h3></div>
+                    <p className="mt-3 text-sm font-medium leading-relaxed opacity-62">{tool.text}</p>
+                  </div>
+                ))}
+              </div>
+            </article>
           </div>
         </section>
 
@@ -61,7 +194,7 @@ const SynapseLanding = () => {
           { icon: WalletCards, title: "Financeiro", text: "Consulte indicadores conforme permissões." },
         ].map((item) => <article key={item.title} className="rounded-[28px] border border-border/40 bg-card/72 p-6 dark:border-white/10 dark:bg-white/[0.03]"><item.icon className="h-5 w-5 text-muted-foreground" /><h3 className="mt-8 text-xl font-black">{item.title}</h3><p className="mt-3 text-sm font-medium text-muted-foreground/68">{item.text}</p></article>)}</div></div></section>
 
-        <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto grid max-w-[1200px] gap-5 lg:grid-cols-2"><article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950"><LockKeyhole className="h-7 w-7 opacity-55" /><h2 className="mt-9 text-4xl font-black leading-[0.9] tracking-[-0.06em]">Contexto dentro das permissões.</h2><div className="mt-7 grid gap-2">{["Acesso condicionado ao usuário", "Informações dentro do escopo disponível", "Controle e rastreabilidade", "Uso responsável da inteligência"].map((item) => <div key={item} className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-sm font-semibold dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]"><Check className="h-4 w-4" />{item}</div>)}</div></article><article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03]"><p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Dúvidas frequentes</p><div className="mt-4 divide-y divide-border/40 dark:divide-white/10">{questions.map(([question, answer], index) => <button key={question} type="button" onClick={() => setOpen(open === index ? -1 : index)} className="block w-full py-5 text-left"><div className="flex items-center justify-between gap-4"><span className="text-sm font-black">{question}</span><ChevronDown className={cn("h-4 w-4 transition-transform", open === index && "rotate-180")} /></div><AnimatePresence initial={false}>{open === index ? <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pt-4 text-sm font-medium leading-relaxed text-muted-foreground/72">{answer}</motion.p> : null}</AnimatePresence></button>)}</div></article></div></section>
+        <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto grid max-w-[1200px] gap-5 lg:grid-cols-2"><article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950"><LockKeyhole aria-hidden="true" className="h-7 w-7 opacity-55" /><h2 className="mt-9 text-4xl font-black leading-[0.9] tracking-[-0.06em]">Contexto dentro das permissões.</h2><div className="mt-7 grid gap-2">{["Acesso condicionado ao usuário", "Informações dentro do escopo disponível", "Controle e rastreabilidade", "Uso responsável da inteligência"].map((item) => <div key={item} className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-sm font-semibold dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]"><Check aria-hidden="true" className="h-4 w-4" />{item}</div>)}</div></article><article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03]"><p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Dúvidas frequentes</p><div className="mt-4 divide-y divide-border/40 dark:divide-white/10">{questions.map(([question, answer], index) => { const isOpen = open === index; return <div key={question}><button id={`synapse-faq-trigger-${index}`} type="button" aria-expanded={isOpen} aria-controls={`synapse-faq-panel-${index}`} onClick={() => setOpen(isOpen ? -1 : index)} className="block min-h-12 w-full py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><div className="flex items-center justify-between gap-4"><span className="text-sm font-black">{question}</span><ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} /></div></button><AnimatePresence initial={false}>{isOpen ? <motion.p id={`synapse-faq-panel-${index}`} role="region" aria-labelledby={`synapse-faq-trigger-${index}`} initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pb-5 text-sm font-medium leading-relaxed text-muted-foreground/72">{answer}</motion.p> : null}</AnimatePresence></div>; })}</div></article></div></section>
 
         <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto max-w-[1200px] rounded-[42px] bg-foreground p-8 text-center text-background dark:bg-white dark:text-zinc-950 md:p-12"><h2 className="mx-auto max-w-4xl text-4xl font-black leading-[0.88] tracking-[-0.065em] md:text-6xl">Sua rotina já tem contexto. Agora ela pode responder.</h2><div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white"><Link to="/create-account">Começar agora <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-transparent px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background dark:border-zinc-950/20 dark:text-zinc-950"><Link to="/contato">Falar com a equipe</Link></Button></div></div></section>
       </main>

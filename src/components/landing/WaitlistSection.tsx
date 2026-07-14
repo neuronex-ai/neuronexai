@@ -43,7 +43,7 @@ const plans = [
             "Synapse no WhatsApp incluso",
             "NeuroBox com biblioteca de IAs NeuroNex",
             "Gestão Financeira + NeuroFinance",
-            "NFS-e no automático e rotinas de cobrança",
+            "Dados fiscais organizados; automação NFS-e em evolução",
             "Tudo do Essential, com mais automação",
         ],
     },

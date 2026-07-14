@@ -13,19 +13,27 @@
   </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style id="neuronex-entry-visibility-style">
+    html[data-neuronex-hide-home-entry="true"] #static-public-shell { display: none; }
+  </style>
+  <script id="neuronex-entry-visibility-script">
+    if ((window.location.pathname.replace(/\/+$/, "") || "/") !== "/") {
+      document.documentElement.dataset.neuronexHideHomeEntry = "true";
+    }
+  </script>
 
   <!-- Primary Meta Tags -->
-  <title>NeuroNex AI - Gestão Inteligente para Psicólogos</title>
-  <meta name="title" content="NeuroNex AI - Gestão Inteligente para Psicólogos" />
+  <title>NeuroNex AI | Gestão, Synapse e NeuroFinance para psicólogos</title>
+  <meta name="title" content="NeuroNex AI | Gestão, Synapse e NeuroFinance para psicólogos" />
   <meta name="description"
-    content="Sistema de gestão com IA para consultórios de psicologia. Gerencie consultas, prontuários, finanças e análises comportamentais com tecnologia de ponta." />
+    content="Plataforma para psicólogos com agenda, prontuário, teleconsulta, NeuroFinance e Synapse por texto, voz e WhatsApp." />
   <meta name="author" content="NeuroNex" />
   <meta name="application-name" content="NeuroNex AI" />
   <meta name="keywords"
     content="psicologia, gestão, consultório, psicólogo, prontuário eletrônico, agendamento, IA, inteligência artificial, saúde mental" />
   <meta name="robots" content="index, follow" />
   <meta name="language" content="Portuguese" />
-  <link rel="canonical" href="https://neuronexai.com.br/" />
+  <link rel="canonical" href="https://www.neuronexai.com.br/" />
 
   <!-- Theme Colors -->
   <meta name="theme-color" content="#0A0A0B" />
@@ -37,20 +45,20 @@
 
   <!-- Open Graph / Facebook -->
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://neuronexai.com.br/" />
-  <meta property="og:title" content="NeuroNex AI - Gestão Inteligente para Psicólogos" />
+  <meta property="og:url" content="https://www.neuronexai.com.br/" />
+  <meta property="og:title" content="NeuroNex AI | Gestão, Synapse e NeuroFinance para psicólogos" />
   <meta property="og:description"
-    content="Sistema de gestão com IA para consultórios de psicologia. Prontuário eletrônico, agenda inteligente e assistente de IA." />
-  <meta property="og:image" content="https://neuronexai.com.br/neuro-logo.png" />
+    content="Agenda, prontuário, teleconsulta, NeuroFinance e Synapse por texto, voz e WhatsApp em uma plataforma para psicólogos." />
+  <meta property="og:image" content="https://www.neuronexai.com.br/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp" />
   <meta property="og:locale" content="pt_BR" />
   <meta property="og:site_name" content="NeuroNex AI" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:url" content="https://neuronexai.com.br/" />
-  <meta name="twitter:title" content="NeuroNex AI - Gestão Inteligente para Psicólogos" />
-  <meta name="twitter:description" content="Sistema de gestão com IA para consultórios de psicologia." />
-  <meta name="twitter:image" content="https://neuronexai.com.br/neuro-logo.png" />
+  <meta name="twitter:url" content="https://www.neuronexai.com.br/" />
+  <meta name="twitter:title" content="NeuroNex AI | Gestão, Synapse e NeuroFinance para psicólogos" />
+  <meta name="twitter:description" content="Gestão clínica, NeuroFinance e Synapse por texto, voz e WhatsApp." />
+  <meta name="twitter:image" content="https://www.neuronexai.com.br/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp" />
 
   <!-- Browser identity stays white on black in every browser theme. -->
   <link rel="icon" type="image/png" sizes="192x192" href="/pwa-192.png" />
@@ -73,15 +81,16 @@
   {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": "https://www.neuronexai.com.br/#organization",
     "name": "NeuroNex AI",
-    "url": "https://neuronexai.com.br",
-    "logo": "https://neuronexai.com.br/neuro-logo.png",
-    "description": "Sistema de gestão com IA para consultórios de psicologia.",
+    "url": "https://www.neuronexai.com.br/",
+    "logo": "https://www.neuronexai.com.br/pwa-512.png",
+    "description": "Plataforma de gestão, inteligência contextual e serviços financeiros para psicólogos.",
     "sameAs": [],
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer service",
-      "url": "https://neuronexai.com.br/contact"
+      "url": "https://www.neuronexai.com.br/contato"
     }
   }
   </script>
@@ -91,22 +100,67 @@
   {
     "@context": "https://schema.org",
     "@type": "WebSite",
+    "@id": "https://www.neuronexai.com.br/#website",
     "name": "NeuroNex AI",
-    "url": "https://neuronexai.com.br"
+    "url": "https://www.neuronexai.com.br/",
+    "publisher": { "@id": "https://www.neuronexai.com.br/#organization" },
+    "inLanguage": "pt-BR"
   }
   </script>
 
-  <!-- Jitsi Meet External API -->
-  <script src='https://8x8.vc/vpaas-magic-cookie-dc267e44c7014498a3a128625367fc67/external_api.js' async></script>
+  <script id="neuronex-route-structured-data" type="application/ld+json">
+  [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "NeuroNex AI",
+      "url": "https://www.neuronexai.com.br/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, Windows",
+      "audience": {
+        "@type": "Audience",
+        "audienceType": "Psicólogos e clínicas de psicologia"
+      },
+      "description": "Plataforma para psicólogos com agenda, prontuário, teleconsulta, NeuroFinance e Synapse por texto, voz e WhatsApp."
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "WebPage",
+      "@id": "https://www.neuronexai.com.br/#webpage",
+      "url": "https://www.neuronexai.com.br/",
+      "name": "NeuroNex AI | Gestão, Synapse e NeuroFinance para psicólogos",
+      "description": "Plataforma para psicólogos com agenda, prontuário, teleconsulta, NeuroFinance e Synapse por texto, voz e WhatsApp.",
+      "inLanguage": "pt-BR",
+      "isPartOf": { "@id": "https://www.neuronexai.com.br/#website" },
+      "primaryImageOfPage": "https://www.neuronexai.com.br/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp"
+    }
+  ]
+  </script>
+
 </head>
 
 <body>
-  <noscript>
-    <div style="padding: 40px; text-align: center; background: #0A0A0B; color: white; font-family: Inter, sans-serif;">
-      <h1>JavaScript Necessário</h1>
-      <p>O NeuroNex requer JavaScript habilitado para funcionar corretamente.</p>
+  <main id="static-public-shell" style="min-height:100vh;padding:64px 24px;background:#050506;color:#f7f7f8;font-family:Inter,Arial,sans-serif;">
+    <div style="max-width:900px;margin:0 auto;">
+      <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;">NeuroNex AI</p>
+      <h1 style="max-width:800px;font-size:clamp(42px,8vw,76px);line-height:.94;letter-spacing:-.055em;">Gestão clínica, inteligência contextual e financeiro conectado para psicólogos.</h1>
+      <p style="max-width:740px;font-size:19px;line-height:1.65;color:#d4d4d8;">Agenda, pacientes, prontuário, teleconsulta, Portal do Paciente, NeuroFinance e Synapse por texto, voz e WhatsApp em uma única plataforma.</p>
+      <ul style="max-width:740px;display:grid;gap:10px;margin:30px 0 0;padding:0;list-style:none;">
+        <li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">Operação clínica conectada</li>
+        <li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">Synapse e NeuroBox</li>
+        <li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">NeuroFinance dentro da rotina</li>
+      </ul>
+      <nav aria-label="Páginas públicas" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;">
+        <a href="/" style="color:#fff;">Início</a>
+        <a href="/synapse" style="color:#fff;">Synapse</a>
+        <a href="/neurofinance" style="color:#fff;">NeuroFinance</a>
+        <a href="/ajuda" style="color:#fff;">Ajuda</a>
+        <a href="/contato" style="color:#fff;">Contato</a>
+        <a href="/politica-de-privacidade" style="color:#fff;">Privacidade</a>
+      </nav>
+      <p style="margin-top:40px;color:#a1a1aa;">A interface completa e os recursos interativos ficam disponíveis com JavaScript habilitado.</p>
     </div>
-  </noscript>
+  </main>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

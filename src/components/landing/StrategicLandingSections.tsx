@@ -124,10 +124,10 @@ const comparisonRows = [
     bold: "Financeiro nativo",
   },
   {
-    title: "Emitir notas e rotinas fiscais",
+    title: "Preparar dados e rotinas fiscais",
     old: "NFS-e, recibos e obrigações fiscais ficam separados da rotina clínica e financeira.",
-    neo: "Automações fiscais conectadas à cobrança, ao paciente e ao fluxo financeiro.",
-    bold: "Fiscal no fluxo",
+    neo: "Dados fiscais organizados junto da cobrança, enquanto as automações de emissão evoluem.",
+    bold: "Preparação fiscal",
   },
   {
     title: "Usar inteligência artificial",
@@ -222,9 +222,9 @@ const productModules = [
   {
     key: "fiscal",
     label: "Fiscal",
-    title: "NFS-e e Receita Saúde",
+    title: "Dados fiscais e evolução da NFS-e",
     icon: FileCheck2,
-    subtitle: "Rotinas fiscais pensadas para acompanhar o fluxo real da clínica.",
+    subtitle: "A base fiscal acompanha a clínica; emissão e automações ainda estão em evolução.",
     bullets: ["Emissão no fluxo", "Dados conectados", "Menos tarefas repetitivas"],
   },
 ];
@@ -347,7 +347,7 @@ const systemCards = [
   { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
   { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, WhatsApp, lembretes e continuidade entre sessões." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
-  { icon: FileCheck2, title: "Fiscal", text: "NFS-e, Receita Saúde e rotinas fiscais conectadas ao fluxo financeiro." },
+  { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
 ];
 
@@ -444,10 +444,10 @@ export const LandingFinanceFiscalSection = () => (
         <FadeIn delay={0.1}>
           <article className="relative h-full overflow-hidden rounded-[42px] border border-border/40 bg-foreground p-8 text-background shadow-[0_34px_120px_-80px_rgba(0,0,0,0.86)] dark:bg-white dark:text-zinc-950 md:p-10">
             <FileCheck2 className="h-8 w-8 opacity-60" />
-            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em]">Fiscal no automático, sem sair da operação.</h2>
-            <p className="mt-6 text-base font-medium leading-relaxed opacity-62">A proposta é que NFS-e, Receita Saúde, recibos e cobranças conversem com paciente, agenda e financeiro.</p>
+            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em]">Dados fiscais no fluxo. Automação em evolução.</h2>
+            <p className="mt-6 text-base font-medium leading-relaxed opacity-62">A NeuroNex já organiza a base fiscal perto da cobrança. Emissão de NFS-e e automações fiscais serão liberadas conforme cada fluxo for validado.</p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {["NFS-e", "Receita Saúde", "Recibos", "Dados conectados"].map((item) => <div key={item} className="rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">{item}</div>)}
+              {["Dados fiscais", "Recibos", "Base para NFS-e", "Automação em evolução"].map((item) => <div key={item} className="rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">{item}</div>)}
             </div>
           </article>
         </FadeIn>
@@ -467,7 +467,7 @@ const comparisonFeatures = [
   ["Synapse no WhatsApp", "—", "Incluído", "Sob medida"],
   ["NeuroBox", "—", "Incluído", "Personalizado"],
   ["NeuroFinance", "Básico", "Completo", "Completo + operação"],
-  ["NFS-e e automações fiscais", "—", "Incluído", "Sob medida"],
+  ["Preparação fiscal e NFS-e", "—", "Em evolução", "Em evolução"],
   ["Multi-profissionais", "—", "—", "Incluído"],
   ["Suporte", "Comunidade", "Prioritário", "Dedicado"],
 ];

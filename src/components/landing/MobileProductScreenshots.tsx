@@ -286,15 +286,15 @@ const mobileFinance: MobileScreenshotSource = {
 
 const fiscalDesktop: MobileScreenshotSource = {
   dark: `${ROOT}/desktop/dark/13-fiscal-dados-nfse-dark.webp`,
-  alt: "Dados fiscais e NFS-e no NeuroNex",
+  alt: "Dados fiscais e preparação para NFS-e no NeuroNex",
 };
 
 export const MobileRealFinanceSection = () => (
   <section id="financeiro" className="relative overflow-hidden bg-background px-5 py-16">
     <Heading
       eyebrow="Financeiro conectado"
-      title={<>Gestão, conta e fiscal com papéis claros.</>}
-      description="A Gestão Financeira ajuda a decidir. O NeuroFinance movimenta dinheiro real. O fiscal acompanha o fluxo sem virar uma tarefa isolada."
+      title={<>Gestão, conta e preparação fiscal com papéis claros.</>}
+      description="A Gestão Financeira ajuda a decidir. O NeuroFinance movimenta dinheiro real. A base fiscal fica organizada enquanto emissão e automações evoluem."
     />
     <FadeIn delay={0.12}>
       <div className="mt-10"><DeviceFrame source={mobileFinance} label="Gestão Financeira" /></div>
@@ -303,7 +303,7 @@ export const MobileRealFinanceSection = () => (
       {[
         { title: "Gestão Financeira", text: "Resultado, receitas, despesas, fluxo e planejamento." },
         { title: "NeuroFinance", text: "Pix, boletos, pagamentos, transferências e saldo real." },
-        { title: "Fiscal", text: "NFS-e e dados fiscais conectados à operação." },
+        { title: "Preparação fiscal", text: "Dados fiscais organizados; emissão de NFS-e ainda em evolução." },
       ].map((item, index) => (
         <FadeIn key={item.title} delay={0.04 * index}>
           <article className="rounded-[26px] border border-border/40 bg-card/76 p-5 dark:border-white/10 dark:bg-white/[0.035]">
@@ -315,7 +315,7 @@ export const MobileRealFinanceSection = () => (
       ))}
     </div>
     <FadeIn delay={0.2}>
-      <div className="mt-5"><LandscapeFrame source={fiscalDesktop} label="Fiscal · NFS-e" /></div>
+      <div className="mt-5"><LandscapeFrame source={fiscalDesktop} label="Dados fiscais · preparação para NFS-e" /></div>
     </FadeIn>
     <div className="mt-6 grid gap-3">
       <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.2em] text-background">

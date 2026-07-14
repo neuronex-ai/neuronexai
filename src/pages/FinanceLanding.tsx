@@ -23,7 +23,7 @@ const capabilities = [
   { icon: ReceiptText, title: "Boletos", text: "Crie cobranças e pague contas dentro do fluxo financeiro." },
   { icon: CreditCard, title: "Cobranças", text: "Organize recebimentos avulsos, parcelados e recorrentes." },
   { icon: Send, title: "Transferências", text: "Movimente recursos para contas cadastradas com segurança." },
-  { icon: FileCheck2, title: "NFS-e", text: "Mantenha dados fiscais e emissões próximos dos recebimentos." },
+  { icon: FileCheck2, title: "Preparação fiscal", text: "Organize os dados necessários; emissão de NFS-e e automações ainda estão em evolução." },
   { icon: ShieldCheck, title: "Saúde da conta", text: "Acompanhe análise cadastral, documentos, limites e requisitos." },
 ];
 

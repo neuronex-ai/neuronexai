@@ -1,63 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://neuronex.site/</loc>
-    <changefreq>weekly</changefreq>
-    <priority>1.0</priority>
+    <loc>https://www.neuronexai.com.br/</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/auth</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <loc>https://www.neuronexai.com.br/synapse</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/about</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://www.neuronexai.com.br/neurofinance</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/blog</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://www.neuronexai.com.br/ajuda</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/contact</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://www.neuronexai.com.br/contato</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/help</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
+    <loc>https://www.neuronexai.com.br/documentos-legais</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/careers</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.5</priority>
+    <loc>https://www.neuronexai.com.br/termos-de-uso</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/legal</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
+    <loc>https://www.neuronexai.com.br/politica-de-privacidade</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
   <url>
-    <loc>https://neuronex.site/politica-de-privacidade</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>https://neuronex.site/termos-de-uso</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
-    <loc>https://neuronex.site/neurobank</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://neuronex.site/create-account</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <loc>https://www.neuronexai.com.br/configuracoes-de-cookies</loc>
+    <lastmod>2026-07-14</lastmod>
   </url>
 </urlset>

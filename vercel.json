@@ -1,11 +1,107 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "redirects": [
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "neurofinance" }],
+      "destination": "/neurofinance",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "synapse" }],
+      "destination": "/synapse",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "contact" }],
+      "destination": "/contato",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "legal" }],
+      "destination": "/documentos-legais",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "terms" }],
+      "destination": "/termos-de-uso",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "privacy" }],
+      "destination": "/politica-de-privacidade",
+      "permanent": true
+    },
+    {
+      "source": "/help",
+      "has": [{ "type": "query", "key": "view", "value": "cookies" }],
+      "destination": "/configuracoes-de-cookies",
+      "permanent": true
+    },
+    { "source": "/help", "destination": "/ajuda", "permanent": true },
+    { "source": "/contact", "destination": "/contato", "permanent": true },
+    { "source": "/legal", "destination": "/documentos-legais", "permanent": true },
+    { "source": "/neurobank", "destination": "/neurofinance", "permanent": true }
+  ],
   "rewrites": [
+    { "source": "/synapse", "destination": "/public-pages/synapse.html" },
+    { "source": "/neurofinance", "destination": "/public-pages/neurofinance.html" },
+    { "source": "/ajuda", "destination": "/public-pages/ajuda.html" },
+    { "source": "/contato", "destination": "/public-pages/contato.html" },
+    {
+      "source": "/documentos-legais",
+      "destination": "/public-pages/documentos-legais.html"
+    },
+    {
+      "source": "/termos-de-uso",
+      "destination": "/public-pages/termos-de-uso.html"
+    },
+    {
+      "source": "/politica-de-privacidade",
+      "destination": "/public-pages/politica-de-privacidade.html"
+    },
+    {
+      "source": "/configuracoes-de-cookies",
+      "destination": "/public-pages/configuracoes-de-cookies.html"
+    },
     {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
   "headers": [
+    {
+      "source": "/assets/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    },
+    {
+      "source": "/public-pages/(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(auth|email-confirmed|reset-password|create-account|account-created|google-connection-success|initial-settings|pwa-intent|dashboard|agenda|pacientes|notas|financeiro|ajustes|teleconsulta|neurozap|synapse-ai|portal|join|confirmar-agendamento|anamnese-externa|payment|404)(.*)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
     {
       "source": "/firebase-messaging-sw.js",
       "headers": [

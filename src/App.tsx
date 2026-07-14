@@ -24,8 +24,6 @@ import { PublicSeoManager } from "@/components/public/PublicSeoManager";
 import "@/styles/neurofinance-onboarding-overrides.css";
 import "@/styles/neurofinance-onboarding-mobile.css";
 
-// [SWARM] Auditado pelo Agente 2 — Todos os imports estão em uso.
-
 // Pages
 const Index = lazy(() => import("@/pages/Index"));
 const AuthPage = lazy(() => import("./pages/auth/AuthPage"));
@@ -57,7 +55,7 @@ const PatientPortalActivate = lazy(() => import("./pages/PatientPortalActivate")
 const PwaIntent = lazy(() => import("./pages/PwaIntent"));
 const NeuroZap = lazy(() => import("./pages/desktop/NeuroZap"));
 
-// Lazy Loaded Public Pages (web only - excluded from main bundle) - REMOVED FOR LEAN MVP
+// Public pages are loaded only when their route opens.
 const HelpCenter = lazy(() => import("@/pages/public/HelpCenter"));
 const Contact = lazy(() => import("@/pages/public/Contact"));
 const Legal = lazy(() => import("@/pages/legal/Legal"));
@@ -181,7 +179,7 @@ const SharedRoutes = () => {
 
         {/* ─── Fallback ───────────────────────────────────── */}
         <Route path="/404" element={<NotFound />} />
-        <Route path="*" element={<Navigate to="/auth" replace />} />
+        <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
     </RouteRecoveryBoundary>

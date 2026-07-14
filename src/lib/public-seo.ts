@@ -135,24 +135,6 @@ export function buildPublicStructuredData(config: PublicSeoConfig) {
   return [
     {
       "@context": "https://schema.org",
-      "@type": "Organization",
-      "@id": `${PUBLIC_SITE_URL}/#organization`,
-      name: "NeuroNex AI",
-      url: `${PUBLIC_SITE_URL}/`,
-      logo: absolutePublicUrl("/pwa-512.png"),
-      email: "contato@neuronexai.com.br",
-    },
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "@id": `${PUBLIC_SITE_URL}/#website`,
-      name: "NeuroNex AI",
-      url: `${PUBLIC_SITE_URL}/`,
-      inLanguage: "pt-BR",
-      publisher: { "@id": `${PUBLIC_SITE_URL}/#organization` },
-    },
-    {
-      "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       name: "NeuroNex AI",
       url: `${PUBLIC_SITE_URL}/`,

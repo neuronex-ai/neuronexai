@@ -76,7 +76,7 @@ const diffRows = [
   { title: "Paciente", old: "Acompanhamento para na sessão.", neo: "Portal com diário, rastreio de humor e continuidade." },
   { title: "Teleconsulta", old: "Vídeo sem documentação estruturada.", neo: "Sala HD com transcrição e resumo por IA." },
   { title: "Financeiro", old: "Pix, boleto e planilha separados.", neo: "Gestão Financeira e NeuroFinance com papéis claros." },
-  { title: "Fiscal", old: "NFS-e e recibos fora do fluxo.", neo: "Rotinas fiscais conectadas à cobrança." },
+  { title: "Fiscal", old: "NFS-e e recibos fora do fluxo.", neo: "Dados fiscais organizados perto da cobrança." },
   { title: "IA", old: "Chat genérico, sem contexto.", neo: "Synapse com texto, voz, WhatsApp e NeuroBox." },
 ];
 
@@ -85,7 +85,7 @@ const operatingCards = [
   { icon: BrainCircuit, title: "IA contextual", text: "Synapse, voz, texto, NeuroBox e apoio operacional." },
   { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, WhatsApp, lembretes e continuidade." },
   { icon: CreditCard, title: "Financeiro", text: "Gestão, cobranças, Pix, boletos, extrato e saques." },
-  { icon: FileCheck2, title: "Fiscal", text: "NFS-e, Receita Saúde e rotinas fiscais conectadas." },
+  { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais organizados; emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional para decisão." },
 ];
 
@@ -121,7 +121,7 @@ const plans = [
       "Synapse no WhatsApp incluso",
       "NeuroBox com IAs NeuroNex",
       "Gestão Financeira + NeuroFinance",
-      "NFS-e no automático e cobranças",
+      "Preparação fiscal; automação NFS-e em evolução",
     ],
   },
   {
@@ -130,7 +130,7 @@ const plans = [
     price: "Personalizado",
     period: "",
     featured: false,
-    href: "/help",
+    href: "/contato",
     cta: "Contatar suporte",
     features: [
       "Implantação personalizada",
@@ -151,7 +151,7 @@ const comparisonFeatures = [
   ["Synapse voz", "—", "Incluído", "Dedicado"],
   ["WhatsApp", "—", "Incluído", "Sob medida"],
   ["NeuroFinance", "—", "Completo", "Operação"],
-  ["NFS-e", "—", "Incluído", "Sob medida"],
+  ["NFS-e", "—", "Em evolução", "Em evolução"],
   ["Suporte", "Comunidade", "Prioritário", "Dedicado"],
 ];
 
@@ -175,7 +175,7 @@ const HeroMobile = () => (
         <h1 className="mt-7 text-[3.65rem] font-black leading-[0.86] tracking-[-0.075em] text-foreground">Sua clínica inteira, organizada por IA.</h1>
       </FadeIn>
       <FadeIn delay={0.2}>
-        <p className="mt-6 max-w-[21rem] text-base font-medium leading-relaxed text-muted-foreground/72">Prontuário, agenda, teleconsulta, financeiro, NFS-e, portal do paciente e Synapse em uma única experiência.</p>
+        <p className="mt-6 max-w-[21rem] text-base font-medium leading-relaxed text-muted-foreground/72">Prontuário, agenda, teleconsulta, financeiro, preparação fiscal, portal do paciente e Synapse em uma única experiência.</p>
       </FadeIn>
       <FadeIn delay={0.3} className="mt-9 w-full">
         <div className="grid gap-3">

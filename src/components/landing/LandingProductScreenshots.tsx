@@ -464,14 +464,14 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
     alt: "Conta e saldo do NeuroFinance",
   },
   {
-    title: "Fiscal conectado",
-    eyebrow: "NFS-e e dados fiscais",
-    description: "Dados fiscais, notas e rotinas de emissão preparados para conversar com paciente, cobrança e financeiro.",
+    title: "Preparação fiscal",
+    eyebrow: "Dados fiscais e evolução da NFS-e",
+    description: "A base fiscal fica próxima do paciente, da cobrança e do financeiro; emissão e automações ainda estão em evolução.",
     icon: FileCheck2,
-    items: ["NFS-e", "Dados fiscais", "Menos retrabalho"],
+    items: ["Dados fiscais", "Base para NFS-e", "Em evolução"],
     dark: `${SCREENSHOT_ROOT}/desktop/dark/13-fiscal-dados-nfse-dark.webp`,
     light: `${LIGHT_NEW_BATCH}/13-fiscal-dados-nfse-white.webp`,
-    alt: "Dados fiscais para emissão de NFS-e no NeuroNex",
+    alt: "Tela de dados fiscais e preparação para NFS-e no NeuroNex",
   },
 ];
 
@@ -506,7 +506,7 @@ export const LandingRealFinanceFiscalSection = () => (
         <div className="mt-8 flex flex-col items-center justify-between gap-5 rounded-[30px] border border-border/45 bg-foreground p-6 text-background dark:bg-white dark:text-zinc-950 md:flex-row md:px-8">
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Uma operação conectada</p>
-            <p className="mt-2 text-lg font-black tracking-[-0.035em]">A sessão pode alimentar gestão, cobrança e fiscal sem transformar o psicólogo em operador financeiro.</p>
+            <p className="mt-2 text-lg font-black tracking-[-0.035em]">A sessão conecta gestão e cobrança e prepara a base fiscal sem transformar o psicólogo em operador financeiro.</p>
           </div>
           <Button asChild className="h-12 shrink-0 rounded-2xl bg-background px-6 text-[9px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">
