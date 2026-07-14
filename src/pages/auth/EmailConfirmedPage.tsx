@@ -9,7 +9,7 @@ const EmailConfirmedPage = () => {
     return (
         <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
             {/* Background Effects */}
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none" />
+            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none" />
             <div className="absolute top-1/2 left-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
 
             <motion.div

@@ -106,7 +106,7 @@ export const DocumentPreviewModal = ({ isOpen, onClose, file }: DocumentPreviewM
                 {/* Content */}
                 <div className="flex-1 bg-secondary/30 relative overflow-hidden flex items-center justify-center p-4 md:p-8">
                     {/* Background Pattern */}
-                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('/noise.png')] mix-blend-overlay" />
 
                     {!signedUrl || isLoading ? (
                         <div className="animate-pulse flex flex-col items-center gap-4">

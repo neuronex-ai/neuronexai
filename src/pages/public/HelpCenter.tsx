@@ -59,13 +59,20 @@ const HelpCenter = () => {
         </section>
 
         <section className="mx-auto mt-12 max-w-4xl space-y-3">
-          {results.map((article) => (
+          {results.map((article, index) => (
             <article key={article.title} className="overflow-hidden rounded-[26px] border border-border/40 bg-card/75 dark:border-white/10 dark:bg-white/[0.03]">
-              <button type="button" onClick={() => setOpen(open === article.title ? null : article.title)} className="flex w-full items-start gap-4 p-6 text-left">
+              <button
+                id={`help-article-trigger-${index}`}
+                type="button"
+                aria-expanded={open === article.title}
+                aria-controls={`help-article-panel-${index}`}
+                onClick={() => setOpen(open === article.title ? null : article.title)}
+                className="flex w-full items-start gap-4 p-6 text-left"
+              >
                 <div className="min-w-0 flex-1"><p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{article.category}</p><h2 className="mt-2 text-lg font-black">{article.title}</h2><p className="mt-2 text-sm font-medium text-muted-foreground/70">{article.summary}</p></div>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", open === article.title && "rotate-180")} />
+                <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", open === article.title && "rotate-180")} />
               </button>
-              {open === article.title ? <ol className="space-y-3 border-t border-border/40 px-6 py-6 dark:border-white/10">{article.steps.map((step, index) => <li key={step} className="flex gap-4 text-sm font-medium text-muted-foreground/75"><span className="font-mono text-xs opacity-50">0{index + 1}</span>{step}</li>)}</ol> : null}
+              {open === article.title ? <ol id={`help-article-panel-${index}`} role="region" aria-labelledby={`help-article-trigger-${index}`} className="space-y-3 border-t border-border/40 px-6 py-6 dark:border-white/10">{article.steps.map((step, stepIndex) => <li key={step} className="flex gap-4 text-sm font-medium text-muted-foreground/75"><span className="font-mono text-xs opacity-50">0{stepIndex + 1}</span>{step}</li>)}</ol> : null}
             </article>
           ))}
           {!results.length ? <div className="rounded-[26px] border border-dashed border-border/50 p-10 text-center text-sm text-muted-foreground">Nenhum artigo encontrado.</div> : null}

@@ -127,7 +127,7 @@ export const MobilePatientDetail = () => {
     return (
         <div className="flex flex-col min-h-screen bg-background overflow-hidden font-sans relative">
             {/* Texture */}
-            <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+            <div className="absolute inset-0 pointer-events-none z-0 opacity-[0.03] bg-[url('/noise.png')]" />
 
             {/* --- GLOBAL TOP BAR --- */}
             <motion.div

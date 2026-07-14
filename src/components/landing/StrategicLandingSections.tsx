@@ -526,19 +526,28 @@ export const LandingTrustAndFAQSection = () => {
         <FadeIn delay={0.1}>
           <div className="rounded-[42px] border border-border/40 bg-card/80 p-5 dark:border-white/10 dark:bg-white/[0.035] md:p-6">
             {faqs.map((faq, index) => (
-              <button key={faq.q} type="button" onClick={() => setOpen(open === index ? -1 : index)} className="block w-full border-b border-border/35 px-3 py-5 text-left last:border-b-0 dark:border-white/10">
-                <div className="flex items-center justify-between gap-4">
-                  <h3 className="text-base font-black tracking-[-0.025em] text-foreground">{faq.q}</h3>
-                  <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open === index && "rotate-180")} />
-                </div>
+              <div key={faq.q} className="border-b border-border/35 last:border-b-0 dark:border-white/10">
+                <button
+                  id={`landing-faq-trigger-${index}`}
+                  type="button"
+                  aria-expanded={open === index}
+                  aria-controls={`landing-faq-panel-${index}`}
+                  onClick={() => setOpen(open === index ? -1 : index)}
+                  className="block w-full px-3 py-5 text-left"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <h3 className="text-base font-black tracking-[-0.025em] text-foreground">{faq.q}</h3>
+                    <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open === index && "rotate-180")} />
+                  </div>
+                </button>
                 <AnimatePresence initial={false}>
                   {open === index && (
-                    <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden pt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">
+                    <motion.p id={`landing-faq-panel-${index}`} role="region" aria-labelledby={`landing-faq-trigger-${index}`} initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden px-3 pb-5 text-sm font-medium leading-relaxed text-muted-foreground/70">
                       {faq.a}
                     </motion.p>
                   )}
                 </AnimatePresence>
-              </button>
+              </div>
             ))}
           </div>
         </FadeIn>

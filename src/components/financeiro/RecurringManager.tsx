@@ -26,7 +26,7 @@ export const RecurringManager = () => {
                 <div className="rounded-[44px] bg-white dark:bg-[#050505] border border-zinc-200 dark:border-white/[0.08] shadow-[0_40px_100px_-30px_rgba(0,0,0,0.04)] dark:shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)] overflow-hidden relative group min-h-[550px] transition-all duration-500 hover:-translate-y-1">
                     {/* Neutral Accent Glow */}
                     <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-zinc-900/5 dark:bg-white/[0.03] blur-[120px] rounded-full pointer-events-none opacity-60" />
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] dark:opacity-[0.04] mix-blend-overlay pointer-events-none" />
+                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] dark:opacity-[0.04] mix-blend-overlay pointer-events-none" />
                     <RecurringInvoicesList />
                 </div>
 
@@ -34,7 +34,7 @@ export const RecurringManager = () => {
                 <div className="rounded-[44px] bg-white dark:bg-[#050505] border border-zinc-200 dark:border-white/[0.08] shadow-[0_40px_100px_-30px_rgba(0,0,0,0.04)] dark:shadow-[0_20px_60px_-10px_rgba(0,0,0,0.8)] overflow-hidden relative group min-h-[550px] transition-all duration-500 hover:-translate-y-1">
                     {/* Neutral Accent Glow */}
                     <div className="absolute top-[-5%] right-[-5%] w-[400px] h-[400px] bg-zinc-900/5 dark:bg-white/[0.03] blur-[120px] rounded-full pointer-events-none opacity-60" />
-                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.02] dark:opacity-[0.04] mix-blend-overlay pointer-events-none" />
+                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.02] dark:opacity-[0.04] mix-blend-overlay pointer-events-none" />
                     <RecurringExpensesPanel />
                 </div>
             </div>

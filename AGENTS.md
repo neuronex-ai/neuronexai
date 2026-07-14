@@ -60,3 +60,7 @@ Rules for agents:
 8. Reorganize one functional area at a time and keep every active surface working.
 
 See `docs/FRONTEND_SURFACES.md` for the current map and migration direction.
+
+## NeuroNex quality bar
+
+An area is not complete merely because its primary path renders. Apply the full completion criteria in `docs/QUALITY_BAR.md`, including interaction states, light/dark visual review, keyboard and focus behavior, reduced motion, stable textures, loading fluency, lint, typecheck, tests, build, and relevant public-page SEO checks.

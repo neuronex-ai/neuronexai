@@ -14,6 +14,56 @@ export default tseslint.config(
     ],
   },
   {
+    files: ["**/*.{js,cjs,mjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+    },
+    rules: {
+      ...js.configs.recommended.rules,
+      "no-unused-vars": ["error", { ignoreRestSiblings: true }],
+    },
+  },
+  {
+    files: [
+      "eslint.config.js",
+      "postcss.config.js",
+      "scripts/**/*.{js,mjs}",
+      "server/**/*.js",
+    ],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: "module",
+    },
+  },
+  {
+    files: ["scripts/**/*.cjs"],
+    languageOptions: {
+      globals: globals.node,
+      sourceType: "commonjs",
+    },
+  },
+  {
+    files: ["public/sw.js", "public/firebase-messaging-sw.js"],
+    languageOptions: {
+      globals: globals.serviceworker,
+      sourceType: "script",
+    },
+  },
+  {
+    files: [
+      "public/worklets/**/*.js",
+      "docs/archive/legacy-integrations/gemini-voice/**/*.js",
+    ],
+    languageOptions: {
+      globals: {
+        AudioWorkletProcessor: "readonly",
+        registerProcessor: "readonly",
+        sampleRate: "readonly",
+      },
+      sourceType: "script",
+    },
+  },
+  {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {

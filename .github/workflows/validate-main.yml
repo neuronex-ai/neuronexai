@@ -28,14 +28,38 @@ jobs:
           node-version: 24.18.0
           cache: npm
 
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: 2.9.2
+          cache: true
+
+      - name: Use the project npm version
+        run: npm install --global npm@11.16.0
+
+      - name: Verify runtime versions
+        run: |
+          node --version
+          npm --version
+          deno --version
+
       - name: Install dependencies
         run: npm ci
+
+      - name: Lint without warnings
+        run: npm run lint
 
       - name: Typecheck
         run: npm run typecheck
 
+      - name: Validate frontend boundaries
+        run: npm run check:frontend-boundaries
+
       - name: Run tests
         run: npm test -- --reporter=dot
+
+      - name: Test Supabase Edge Functions
+        run: npm run test:deno
 
       - name: Build application
         run: npm run build

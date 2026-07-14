@@ -294,7 +294,39 @@ const TrustFAQMobile = () => {
         <article className="rounded-[36px] border border-border/40 bg-card/80 p-6 dark:border-white/10 dark:bg-white/[0.035]"><ShieldCheck className="h-7 w-7 text-muted-foreground" /><h2 className="mt-8 text-[2.45rem] font-black leading-[0.88] tracking-[-0.065em] text-foreground">Construído para uma rotina sensível.</h2><p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/70">Psicologia exige responsabilidade. Segurança, controle de acesso, rastreabilidade e uso cuidadoso de IA precisam estar no centro.</p><div className="mt-7 space-y-2">{["LGPD e controle de acesso", "IA como apoio, não substituição", "Rastreabilidade de dados sensíveis"].map((item) => <div key={item} className="flex items-center gap-3 rounded-2xl border border-border/40 bg-foreground/[0.035] px-4 py-3 text-xs font-bold text-foreground/75 dark:border-white/10 dark:bg-white/[0.04]"><LockKeyhole className="h-4 w-4" />{item}</div>)}</div></article>
       </FadeIn>
       <div className="mt-4 overflow-hidden rounded-[30px] border border-border/40 bg-card/80 dark:border-white/10 dark:bg-white/[0.035]">
-        {faqs.map((faq, index) => <button key={faq.q} type="button" onClick={() => setOpen(open === index ? -1 : index)} className="block w-full border-b border-border/35 px-5 py-5 text-left last:border-b-0 dark:border-white/10"><div className="flex items-center justify-between gap-4"><h3 className="text-sm font-black tracking-[-0.02em] text-foreground">{faq.q}</h3><ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open === index && "rotate-180")} /></div><AnimatePresence initial={false}>{open === index && <motion.p initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden pt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">{faq.a}</motion.p>}</AnimatePresence></button>)}
+        {faqs.map((faq, index) => (
+          <div key={faq.q} className="border-b border-border/35 last:border-b-0 dark:border-white/10">
+            <button
+              id={`mobile-landing-faq-trigger-${index}`}
+              type="button"
+              aria-expanded={open === index}
+              aria-controls={`mobile-landing-faq-panel-${index}`}
+              onClick={() => setOpen(open === index ? -1 : index)}
+              className="block w-full px-5 py-5 text-left"
+            >
+              <div className="flex items-center justify-between gap-4">
+                <h3 className="text-sm font-black tracking-[-0.02em] text-foreground">{faq.q}</h3>
+                <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open === index && "rotate-180")} />
+              </div>
+            </button>
+            <AnimatePresence initial={false}>
+              {open === index && (
+                <motion.p
+                  id={`mobile-landing-faq-panel-${index}`}
+                  role="region"
+                  aria-labelledby={`mobile-landing-faq-trigger-${index}`}
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden px-5 pb-5 text-sm font-medium leading-relaxed text-muted-foreground/70"
+                >
+                  {faq.a}
+                </motion.p>
+              )}
+            </AnimatePresence>
+          </div>
+        ))}
       </div>
     </section>
   );

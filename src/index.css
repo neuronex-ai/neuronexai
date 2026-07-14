@@ -339,7 +339,7 @@
 
   .premium-noise {
     @apply absolute inset-0 pointer-events-none z-0;
-    background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+    background-image: url("/noise.png");
     opacity: 0.02;
     mix-blend-mode: overlay;
     /* Removed animation to prevent rendering jitter/breaking on high-res displays */
@@ -2774,7 +2774,7 @@
     z-index: -2;
     pointer-events: none;
     opacity: 0.24;
-    background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+    background-image: url("/noise.png");
     background-size: 220px 220px;
     mix-blend-mode: soft-light;
   }

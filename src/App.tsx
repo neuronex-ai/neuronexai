@@ -19,6 +19,7 @@ import { NeuroFinancePostOnboardingGate } from "@/components/financeiro/NeuroFin
 import { lazy, Suspense, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
+import { MotionConfig } from "framer-motion";
 import "@/styles/neurofinance-onboarding-overrides.css";
 import "@/styles/neurofinance-onboarding-mobile.css";
 
@@ -153,39 +154,46 @@ const SharedRoutes = () => {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-        <SessionContextProvider>
-          <BrowserRouter>
-            <ScrollToTop />
-            <AIProvider>
-              <SynapseProvider>
-                <SubscriptionProvider>
-                  <TourProvider>
-                    <TooltipProvider>
-                      <NeuroFinancePostOnboardingGate />
+    <MotionConfig reducedMotion="user">
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+          <SessionContextProvider>
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true,
+              }}
+            >
+              <ScrollToTop />
+              <AIProvider>
+                <SynapseProvider>
+                  <SubscriptionProvider>
+                    <TourProvider>
+                      <TooltipProvider>
+                        <NeuroFinancePostOnboardingGate />
 
-                      {/* Synapse Global Shell — gated by SynapseProvider.isVisible */}
-                      <Suspense fallback={null}>
-                        <SynapseShellGate />
-                      </Suspense>
+                        {/* Synapse Global Shell — gated by SynapseProvider.isVisible */}
+                        <Suspense fallback={null}>
+                          <SynapseShellGate />
+                        </Suspense>
 
-                      <SharedRoutes />
-                      <GlobalTourOverlay />
-                      <TrialExpiredUpsell />
+                        <SharedRoutes />
+                        <GlobalTourOverlay />
+                        <TrialExpiredUpsell />
 
-                      <Toaster position="top-right" />
+                        <Toaster position="top-right" />
 
-                      <CookieConsent />
-                    </TooltipProvider>
-                  </TourProvider>
-                </SubscriptionProvider>
-              </SynapseProvider>
-            </AIProvider>
-          </BrowserRouter>
-        </SessionContextProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+                        <CookieConsent />
+                      </TooltipProvider>
+                    </TourProvider>
+                  </SubscriptionProvider>
+                </SynapseProvider>
+              </AIProvider>
+            </BrowserRouter>
+          </SessionContextProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </MotionConfig>
   );
 }
 
