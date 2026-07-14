@@ -156,11 +156,12 @@ Deno.serve(async (req: Request) => {
         );
         const body = await req.json().catch(() => ({}));
 
-        let { data: snapshot, error: snapshotError } = await supabaseAdmin
+        const { data: initialSnapshot, error: snapshotError } = await supabaseAdmin
             .from("neurofinance_overview_snapshot_v")
             .select("*")
             .eq("user_id", user.id)
             .maybeSingle();
+        let snapshot = initialSnapshot;
         if (snapshotError) throw snapshotError;
 
         if (shouldSyncSnapshot(snapshot, body)) {
