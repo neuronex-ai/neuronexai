@@ -36,7 +36,7 @@ export const NeuroNexIDCard = ({ profile }: NeuroNexIDCardProps) => {
   const { updateProfile, isUpdating } = useProfile();
   const [specialty, setSpecialty] = useState(profile?.specialty || "");
   const plan = getPlanLabel(profile?.subscription_plan);
-  const isVerified = Boolean(profile?.crp?.trim());
+  const hasCrp = Boolean(profile?.crp?.trim());
 
   useEffect(() => {
     setSpecialty(profile?.specialty || "");
@@ -109,7 +109,7 @@ export const NeuroNexIDCard = ({ profile }: NeuroNexIDCardProps) => {
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-700 dark:text-white/75">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
-                {isVerified ? "Identidade verificada" : "Perfil profissional"}
+                {hasCrp ? "CRP informado" : "Perfil profissional"}
               </div>
               <motion.div
                 animate={
@@ -145,11 +145,11 @@ export const NeuroNexIDCard = ({ profile }: NeuroNexIDCardProps) => {
                     </AvatarFallback>
                   </Avatar>
                 </div>
-                {isVerified ? (
+                {hasCrp ? (
                   <div className="absolute -bottom-2 -right-2 flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[radial-gradient(circle_at_32%_20%,rgba(255,255,255,0.85),transparent_28%),linear-gradient(145deg,#3f3f46,#09090b)] shadow-2xl transition-transform group-hover/avatar:scale-110 dark:border-black">
                     <BadgeCheck
                       className="h-5 w-5 text-white drop-shadow-md"
-                      aria-label="Perfil verificado"
+                      aria-label="CRP informado no perfil"
                     />
                   </div>
                 ) : null}
@@ -236,7 +236,7 @@ export const NeuroNexIDCard = ({ profile }: NeuroNexIDCardProps) => {
                         {profile?.first_name} {profile?.last_name}
                       </p>
                       <p className="text-[10px] uppercase tracking-[0.18em] text-white/45">
-                        {specialty || "Profissional verificado"}
+                        {specialty || "Perfil profissional"}
                       </p>
                     </div>
 

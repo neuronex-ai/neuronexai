@@ -5,6 +5,7 @@ This folder is intentionally small. Treat the repository as if it may be public.
 ## Current documents
 
 - `ARCHITECTURE.md` - current product and provider contract.
+- `FRONTEND_SURFACES.md` - current and intended separation between public, desktop, and mobile interfaces.
 - `NEURONEX_DESIGN_SYSTEM.md` - active desktop visual direction, brand system, components, light/dark modes, accessibility, and agent rules.
 - `SECURITY.md` - open-source security rules for agents and maintainers.
 

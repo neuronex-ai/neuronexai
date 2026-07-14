@@ -33,6 +33,8 @@ type PublicProfessionalProfile = {
   address_city: string | null;
   address_state: string | null;
   founder: boolean;
+  // The current database projection means only that a CRP was provided.
+  // It is not evidence of an official registry verification.
   verified: boolean;
 };
 
@@ -122,7 +124,7 @@ export default function PublicProfessionalProfile() {
       if (navigator.share && profile) {
         await navigator.share({
           title: `${profile.display_name} · NEUROID`,
-          text: profile.specialty || "Perfil profissional verificado",
+          text: profile.specialty || "Perfil profissional NeuroNex",
           url: window.location.href,
         });
         return;
@@ -190,8 +192,8 @@ export default function PublicProfessionalProfile() {
                   </Avatar>
                 </div>
                 {profile.verified ? (
-                  <span className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-zinc-500 via-zinc-800 to-black text-white shadow-xl" title="Identidade profissional verificada">
-                    <BadgeCheck className="h-6 w-6" aria-label="Identidade profissional verificada" />
+                  <span className="absolute -bottom-2 -right-2 flex h-11 w-11 items-center justify-center rounded-full border-2 border-background bg-gradient-to-br from-zinc-500 via-zinc-800 to-black text-white shadow-xl" title="CRP informado no perfil">
+                    <BadgeCheck className="h-6 w-6" aria-label="CRP informado no perfil" />
                   </span>
                 ) : null}
               </div>

@@ -489,7 +489,8 @@ Estes itens não foram alterados ao criar este guia; são pontos para futuras et
 5. Superfícies translúcidas precisam de verificação de contraste sobre conteúdo real.
 6. As capturas de tela atuais cobrem muito mais o modo escuro do que o claro.
 7. Não existe ainda uma verificação visual automática completa entre versões.
-8. A experiência mobile será reconstruída depois e não deve limitar a organização do desktop atual.
+8. A experiência mobile será reconstruída depois e não deve limitar a organização do desktop atual. Ela deve ser mobile-first e não deve reutilizar páginas, shell ou espaços de trabalho visuais do desktop; apenas comportamento e primitivas realmente neutras podem ser compartilhados.
+9. NeuroZap é uma superfície planejada para o Beta Desktop e deve ser preservada mesmo enquanto não estiver disponível na navegação principal.
 9. `src/styles/design-tokens.css` mantém tokens “Deep Space” violetas e outra definição de `.glass-panel`, divergentes da direção monocromática atual.
 10. O `AlertDialog` usa uma camada abaixo da barra global; uma confirmação importante pode aparecer atrás da navegação.
 11. Existem rótulos operacionais de 8–10 px e controles de 40 px na barra global, abaixo do padrão de 44 px adotado pelos componentes compartilhados.

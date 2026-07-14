@@ -200,8 +200,6 @@ const CATALOG: HelpEntry[] = [
       "google",
       "whatsapp",
       "notion",
-      "todoist",
-      "microsoft",
     ],
     summary:
       "Concentra preferências, segurança, notificações e integrações externas.",

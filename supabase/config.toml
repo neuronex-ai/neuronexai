@@ -393,11 +393,6 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/delete-user-account/index.ts"
 
-[functions.validate-crp]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/validate-crp/index.ts"
-
 [functions.google-drive-files]
 enabled = true
 verify_jwt = true

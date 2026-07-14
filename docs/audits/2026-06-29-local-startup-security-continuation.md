@@ -29,7 +29,7 @@ Classificacao local pelo `supabase/config.toml`:
 | `address-autocomplete`, `address-validate` | Endpoint publico legitimo | Baixo risco relativo; aplicar rate limit/cotas se exposto a abuso. |
 | `notion-auth-callback`, `notion-webhook` | OAuth callback/webhook | Publicos por desenho; callback deve validar `state`. |
 
-Observacao: o Cloud ainda tem funcoes historicas ativas que nao aparecem no `config.toml` atual, como callbacks Google/Microsoft/Todoist e rotas publicas de agendamento. Elas precisam ser reconciliadas em uma rodada propria: ou registrar no config como intencionais, ou apagar/desativar no Cloud quando confirmado que nao sao mais usadas.
+Observacao atualizada em 2026-07-14: as implementacoes locais de Microsoft To Do e Todoist foram removidas por decisao de produto. O Cloud ainda pode conter funcoes historicas que nao aparecem no `config.toml` atual, incluindo callbacks dessas integracoes, alem de rotas publicas de agendamento. Nada remoto foi desativado nesta limpeza. A reconciliacao do Cloud e das tabelas historicas precisa ocorrer em uma rodada propria, com inventario e forma de restauracao antes de qualquer exclusao.
 
 ## Security Advisor - pendencias principais
 

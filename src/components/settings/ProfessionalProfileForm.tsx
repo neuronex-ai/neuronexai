@@ -18,7 +18,7 @@ import { useUploadAvatar } from "@/hooks/use-upload-avatar";
 import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { isValidCRPFormat, getStateFromCRP, formatCRP } from "@/hooks/use-validate-crp";
+import { formatCRP, getRegionFromCRP, isValidCRPFormat } from "@/lib/crp";
 import { cn } from "@/lib/utils";
 
 const ProfileSchema = z.object({
@@ -61,7 +61,7 @@ export const ProfessionalProfileForm = () => {
       const isValid = isValidCRPFormat(crpValue);
       setCrpValid(isValid);
       if (isValid) {
-        setCrpState(getStateFromCRP(crpValue));
+        setCrpState(getRegionFromCRP(crpValue));
       } else {
         setCrpState(null);
       }
@@ -229,7 +229,7 @@ export const ProfessionalProfileForm = () => {
                   {/* CRP State Feedback */}
                   {crpState && crpValid && (
                     <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium">
-                      CRP válido • {crpState}
+                      Formato de CRP válido • {crpState}
                     </p>
                   )}
                   {crpValid === false && crpValue && crpValue.length >= 8 && (

@@ -5,14 +5,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { User, MessageSquare, Building, CreditCard, LogOut, Bell, ChevronRight, Monitor, Moon, Sun, Shield, Wallet, ArrowLeft, Sparkles, Link2, Archive } from "lucide-react";
 import { GoogleIcon } from "@/components/icons/GoogleIcon";
-import { TodoistIcon } from "@/components/icons/TodoistIcon";
 import { NotionIcon } from "@/components/icons/NotionIcon";
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 // Hooks
 import { useGoogleAuth } from "@/hooks/use-google-auth";
-import { useTodoistAuth } from "@/hooks/use-todoist-auth";
 import { useNotionAuth } from "@/hooks/use-notion-auth";
 import { useTheme } from "@/hooks/use-theme";
 import { useProfile } from "@/hooks/use-profile";
@@ -56,7 +54,6 @@ const Ajustes = () => {
     const shouldReduceMotion = useReducedMotion();
     const { startTour } = useTour();
     const { isConnected: isGoogleConnected, isLoading: isLoadingGoogleAuth, connectGoogle, disconnectGoogle } = useGoogleAuth();
-    const { isConnected: isTodoistConnected, isLoading: isLoadingTodoistAuth, connectTodoist, disconnectTodoist } = useTodoistAuth();
     const { isConnected: isNotionConnected, isLoading: isLoadingNotionAuth, connectNotion, disconnectNotion } = useNotionAuth();
     const { theme, toggleTheme } = useTheme();
     const { user } = useAuth();
@@ -403,42 +400,6 @@ const Ajustes = () => {
                                                             )}
                                                         >
                                                             {isGoogleConnected ? "Desconectar" : "Conectar"}
-                                                        </Button>
-                                                    </div>
-
-                                                    {/* Todoist */}
-                                                    <div className="desktop-retina-panel desktop-retina-interactive p-7 rounded-[30px] bg-zinc-50/50 border border-zinc-200 flex flex-col md:flex-row items-center justify-between gap-8 group relative overflow-hidden backdrop-blur-lg">
-                                                        <div className="flex items-center gap-6 relative z-10 w-full md:w-auto">
-                                                            <div className={cn(
-                                                                "w-16 h-16 rounded-[24px] flex items-center justify-center border transition-all duration-700 shadow-2xl shrink-0 ring-1 ring-inset",
-                                                                isTodoistConnected
-                                                                    ? "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-white/30 ring-red-500/15"
-                                                                    : "bg-zinc-100 dark:bg-zinc-900/50 border-zinc-200 dark:border-white/10 grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 ring-transparent"
-                                                            )}>
-                                                                <TodoistIcon className="h-8 w-8" />
-                                                            </div>
-                                                            <div>
-                                                                <div className="flex items-center gap-3">
-                                                                    <h4 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Todoist</h4>
-                                                                    {isTodoistConnected && <span className="text-[10px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider border border-emerald-500/30">Ativo</span>}
-                                                                </div>
-                                                                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 font-medium max-w-[200px]">
-                                                                    Tarefas clínicas, lembretes e acompanhamentos no mesmo lugar.
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <Button
-                                                            onClick={isTodoistConnected ? disconnectTodoist : connectTodoist}
-                                                            disabled={isLoadingTodoistAuth}
-                                                            variant={isTodoistConnected ? "outline" : "default"}
-                                                            className={cn(
-                                                                "h-10 px-6 rounded-xl text-[10px] font-bold uppercase tracking-wider w-full md:w-auto transition-all",
-                                                                isTodoistConnected
-                                                                    ? "bg-transparent border-white/20 hover:bg-destructive/15 hover:text-destructive hover:border-destructive/40 shadow-xl"
-                                                                    : "bg-zinc-100 hover:bg-white text-zinc-950 shadow-2xl hover:-translate-y-0.5"
-                                                            )}
-                                                        >
-                                                            {isTodoistConnected ? "Desconectar" : "Conectar"}
                                                         </Button>
                                                     </div>
 

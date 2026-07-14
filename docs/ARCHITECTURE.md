@@ -1,6 +1,6 @@
 # NeuroNex Architecture
 
-Last updated: 2026-06-29
+Last updated: 2026-07-14
 
 This document is the current source of truth for agents and maintainers. Older provider experiments are legacy and must not be reintroduced unless the product direction changes explicitly.
 
@@ -20,7 +20,7 @@ This document is the current source of truth for agents and maintainers. Older p
 | AI | Gemini/Synapse Edge Functions |
 | Calendar/document integrations | Google Calendar/Drive/Docs where still connected |
 | Teleconsulta | Current Jitsi/JaaS flow plus hidden legacy evaluation route |
-| WhatsApp/NeuroZap | Hidden route `/neurozap`, not in navbar |
+| WhatsApp/NeuroZap | Planned Desktop Beta surface at `/neurozap`; preserve even while it is hidden from the navbar |
 
 ## Architecture Rules
 
@@ -41,7 +41,8 @@ This document is the current source of truth for agents and maintainers. Older p
 | Professional app | `/dashboard`, `/agenda`, `/pacientes`, `/notas`, `/financeiro/*`, `/ajustes`, `/teleconsulta` | Active |
 | Patient portal | `/portal/*`, `/portal/convite/:token`, `/portal/ativar` | Active |
 | Public/semi-public workflows | `/confirmar-agendamento/:token`, `/join/:appointmentId`, `/payment/callback`, `/anamnese-externa/:id`, `/help` | Active |
-| Hidden evaluation | `/neurozap`, `/teleconsulta-antiga`, `/notas-mobile-antiga` | Kept intentionally, no navbar entry |
+| Planned Desktop Beta | `/neurozap` | Preserve; not legacy even while hidden from the navbar |
+| Hidden evaluation | `/teleconsulta-antiga`, `/notas-mobile-antiga` | Kept intentionally pending a dedicated product review |
 
 ## Legacy To Remove Or Keep Removed
 
@@ -54,6 +55,7 @@ These are definitive legacy surfaces in this project:
 - ElevenLabs.
 - MoltBook and Synapse Heartbeat.
 - Google Sheets export/sync. Google Calendar/Drive/Docs may remain when used by current integrations.
+- Microsoft To Do and Todoist integrations. Their local UI, hooks, assets, and Edge Function sources were removed after the product decision on 2026-07-14. Historical database structures remain until a dedicated, reversible Supabase audit.
 - Public institutional pages/routes: `/about`, `/blog`, `/careers`, `/neurobank`.
 - Clinic plan routes and modules: `/clinic-dashboard`, `/relatorios`, `reports/`, organization/team management, clinic performance reports, monthly clinical report automation.
 
@@ -82,3 +84,4 @@ Historical migrations may still mention old providers because migration history 
 - Clinic/team UI has been removed from active settings. Any future clinic product should be rebuilt from a new design/schema.
 - Monthly clinical report automation has been removed from active UI/functions. Patient clinical notes, prontuario, summaries, and documents remain core product.
 - Some financial tables may still keep dormant `clinic_id` scope columns while RLS and reconciliation are simplified in a dedicated future migration. Do not use those fields for new features.
+- CRP handling currently validates and formats the text locally; it does not confirm an active registration with the CFP. UI and generated copy must say "CRP informado" or "formato válido", never "identidade verificada", until a trustworthy verification flow is rebuilt. A historical `validate-crp` function may still exist remotely and must be reconciled during the Supabase audit.

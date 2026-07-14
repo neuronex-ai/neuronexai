@@ -26,6 +26,7 @@ Links for Search:
 - https://developer.apple.com/design/human-interface-guidelines/
 
 <!-- context7 -->
+
 Use Context7 MCP to fetch current documentation whenever the user asks about a library, framework, SDK, API, CLI tool, or cloud service — even well-known ones like React, Next.js, Prisma, Express, Tailwind, Django, or Spring Boot. This includes API syntax, configuration, version migration, library-specific debugging, setup instructions, and CLI tool usage. Use even when you think you know the answer — your training data may not reflect recent changes. Prefer this over web search for library docs.
 
 Do not use for: refactoring, writing scripts from scratch, debugging business logic, code review, or general programming concepts.
@@ -37,3 +38,26 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 3. `query-docs` with the selected library ID and the user's full question (not single words), scoped to a single concept. If the question spans multiple distinct concepts (e.g. routing and auth and caching), make a separate `query-docs` call per concept with the same library ID, unless the question is about how the concepts interact — combined queries dilute ranking and return shallow results for each topic
 4. Answer using the fetched docs
 <!-- context7 -->
+
+## NeuroNex surface boundaries
+
+Keep four frontend surfaces explicit in every change:
+
+- **Public:** landing, help, pricing, contact, legal, authentication, and workflows opened through external links. It may have separate desktop/tablet and mobile presentations.
+- **Professional desktop:** the current product for psychologists on desktop and tablet. `src/pages/desktop` contains part of it.
+- **Professional mobile:** the future mobile-first product. New mobile work belongs in `src/apps/professional-mobile`; `src/mobile` is transitional code currently in use, not the future product specification.
+- **Patient portal:** the patient-facing application under `/portal`. It is not part of the professional mobile product.
+
+Rules for agents:
+
+1. Files directly under `src/pages` may act as route adapters: they can select and lazy-load a surface, but should not contain a complete shared desktop/mobile workspace.
+2. Desktop must not import mobile views. Mobile must not import desktop pages, shells, layouts, forms, modals, or operational view components. Public and patient-portal screens must not import professional interfaces.
+3. Surfaces may share non-visual behavior: domain rules, data hooks, services, validation, types, authentication, Supabase access, and deliberately neutral primitives from `src/components/ui`.
+4. A file under `src/components` is not automatically safe to share. Evaluate whether it contains platform-specific layout or interaction.
+5. Below 768px currently selects mobile; 768px and above selects desktop/tablet. Do not create different business rules based on screen size.
+6. The removed `Funcionalidades` page was obsolete. Never restore it or use old landing content as the map of the current product.
+7. The current mobile version is not a mandatory visual or structural reference. Rebuild mobile-first later without copying the desktop UI.
+8. **NeuroZap is planned for the Desktop Beta. Preserve its route, page, hooks, Edge Functions, database references, realtime behavior, and Synapse links; never classify it as legacy without a new explicit product decision.**
+9. Do not move large groups of files for aesthetics. Reorganize one functional area at a time and keep every active surface working.
+
+See `docs/FRONTEND_SURFACES.md` for the current map and migration direction.
