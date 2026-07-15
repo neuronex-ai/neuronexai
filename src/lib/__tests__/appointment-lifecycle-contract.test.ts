@@ -59,10 +59,11 @@ describe("appointment lifecycle contract", () => {
     const hook = source("src/hooks/use-appointment-lifecycle.ts");
     const review = source("supabase/functions/review-appointment-reschedule/index.ts");
 
-    expect(detail).toContain("AppointmentTimelineDialog");
+    expect(detail).toContain("AppointmentTimelinePanel");
     expect(detail).toContain("AppointmentRescheduleReview");
     expect(hook).toContain('table: "appointment_events"');
     expect(hook).toContain('table: "appointment_reschedule_requests"');
+    expect(hook).toContain('.order("created_at", { ascending: false })');
     expect(review).toContain('db.rpc("review_appointment_reschedule"');
     expect(review).toContain("deliverPatientEmail");
     expect(review).toContain("notificationSent: true");

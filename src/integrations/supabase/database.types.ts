@@ -42,23 +42,47 @@ export type Database = {
         Row: {
           appointment_id: string
           created_at: string | null
+          created_by: string | null
           expires_at: string
           id: string
-          token: string
+          metadata: Json
+          opened_at: string | null
+          revoked_at: string | null
+          sent_at: string | null
+          status: string
+          token: string | null
+          token_hash: string | null
+          used_at: string | null
         }
         Insert: {
           appointment_id: string
           created_at?: string | null
+          created_by?: string | null
           expires_at: string
           id?: string
-          token: string
+          metadata?: Json
+          opened_at?: string | null
+          revoked_at?: string | null
+          sent_at?: string | null
+          status?: string
+          token?: string | null
+          token_hash?: string | null
+          used_at?: string | null
         }
         Update: {
           appointment_id?: string
           created_at?: string | null
+          created_by?: string | null
           expires_at?: string
           id?: string
-          token?: string
+          metadata?: Json
+          opened_at?: string | null
+          revoked_at?: string | null
+          sent_at?: string | null
+          status?: string
+          token?: string | null
+          token_hash?: string | null
+          used_at?: string | null
         }
         Relationships: [
           {
@@ -66,6 +90,69 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_events: {
+        Row: {
+          action_origin: string
+          actor_type: string
+          actor_user_id: string | null
+          appointment_id: string
+          created_at: string
+          event_type: string
+          from_status: string | null
+          id: string
+          idempotency_key: string | null
+          metadata: Json
+          patient_id: string | null
+          psychologist_id: string
+          to_status: string | null
+        }
+        Insert: {
+          action_origin?: string
+          actor_type?: string
+          actor_user_id?: string | null
+          appointment_id: string
+          created_at?: string
+          event_type: string
+          from_status?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          patient_id?: string | null
+          psychologist_id: string
+          to_status?: string | null
+        }
+        Update: {
+          action_origin?: string
+          actor_type?: string
+          actor_user_id?: string | null
+          appointment_id?: string
+          created_at?: string
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json
+          patient_id?: string | null
+          psychologist_id?: string
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_events_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
             referencedColumns: ["id"]
           },
         ]
@@ -112,68 +199,252 @@ export type Database = {
           },
         ]
       }
+      appointment_reschedule_requests: {
+        Row: {
+          appointment_id: string
+          created_at: string
+          id: string
+          metadata: Json
+          original_end_time: string
+          original_start_time: string
+          patient_id: string | null
+          psychologist_id: string
+          reason: string | null
+          requested_by_user_id: string | null
+          requested_end_time: string
+          requested_start_time: string
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          original_end_time: string
+          original_start_time: string
+          patient_id?: string | null
+          psychologist_id: string
+          reason?: string | null
+          requested_by_user_id?: string | null
+          requested_end_time: string
+          requested_start_time: string
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          metadata?: Json
+          original_end_time?: string
+          original_start_time?: string
+          patient_id?: string | null
+          psychologist_id?: string
+          reason?: string | null
+          requested_by_user_id?: string | null
+          requested_end_time?: string
+          requested_start_time?: string
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_reschedule_requests_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_requests_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
+          action_origin: string
+          audit_metadata: Json
           auth_code: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          charge_id: string | null
+          confirmed_at: string | null
           created_at: string | null
+          created_by: string | null
           end_time: string | null
+          financial_entry_id: string | null
+          financial_launch_id: string | null
           google_event_id: string | null
           google_meet_link: string | null
           id: string
+          invitation_opened_at: string | null
+          invitation_sent_at: string | null
+          last_actor_type: string
+          lifecycle_status: string
           location: string | null
           metadata: Json | null
           notes: string | null
+          package_id: string | null
           patient_id: string | null
           payment_config: Json | null
+          payment_status: string
+          previous_status: string | null
           price: number | null
+          reschedule_approved_at: string | null
+          reschedule_rejected_at: string | null
+          reschedule_requested_at: string | null
           start_time: string | null
           status: string | null
           token: string | null
           type: string
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
+          action_origin?: string
+          audit_metadata?: Json
           auth_code?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          charge_id?: string | null
+          confirmed_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           end_time?: string | null
+          financial_entry_id?: string | null
+          financial_launch_id?: string | null
           google_event_id?: string | null
           google_meet_link?: string | null
           id?: string
+          invitation_opened_at?: string | null
+          invitation_sent_at?: string | null
+          last_actor_type?: string
+          lifecycle_status?: string
           location?: string | null
           metadata?: Json | null
           notes?: string | null
+          package_id?: string | null
           patient_id?: string | null
           payment_config?: Json | null
+          payment_status?: string
+          previous_status?: string | null
           price?: number | null
+          reschedule_approved_at?: string | null
+          reschedule_rejected_at?: string | null
+          reschedule_requested_at?: string | null
           start_time?: string | null
           status?: string | null
           token?: string | null
           type: string
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
+          action_origin?: string
+          audit_metadata?: Json
           auth_code?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          charge_id?: string | null
+          confirmed_at?: string | null
           created_at?: string | null
+          created_by?: string | null
           end_time?: string | null
+          financial_entry_id?: string | null
+          financial_launch_id?: string | null
           google_event_id?: string | null
           google_meet_link?: string | null
           id?: string
+          invitation_opened_at?: string | null
+          invitation_sent_at?: string | null
+          last_actor_type?: string
+          lifecycle_status?: string
           location?: string | null
           metadata?: Json | null
           notes?: string | null
+          package_id?: string | null
           patient_id?: string | null
           payment_config?: Json | null
+          payment_status?: string
+          previous_status?: string | null
           price?: number | null
+          reschedule_approved_at?: string | null
+          reschedule_rejected_at?: string | null
+          reschedule_requested_at?: string | null
           start_time?: string | null
           status?: string | null
           token?: string | null
           type?: string
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "nb_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "nb_payments_safe_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_chargebacks_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_charges_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_charge_id_fkey"
+            columns: ["charge_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_eligible_anticipation_payments_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointments_patient_id_fkey"
             columns: ["patient_id"]
@@ -283,89 +554,33 @@ export type Database = {
         }
         Relationships: []
       }
-      backups: {
-        Row: {
-          created_at: string | null
-          expires_at: string | null
-          file_name: string
-          file_size_bytes: number | null
-          id: string
-          record_count: Json | null
-          status: string | null
-          storage_path: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          expires_at?: string | null
-          file_name: string
-          file_size_bytes?: number | null
-          id?: string
-          record_count?: Json | null
-          status?: string | null
-          storage_path?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          expires_at?: string | null
-          file_name?: string
-          file_size_bytes?: number | null
-          id?: string
-          record_count?: Json | null
-          status?: string | null
-          storage_path?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "backups_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       chat_sessions: {
         Row: {
-          channel_state: Json
           context_state: Json
           created_at: string
           id: string
-          last_channel: string
-          last_message_at: string | null
           memory_summary: string | null
           memory_updated_at: string | null
-          origin_channel: string
           title: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          channel_state?: Json
           context_state?: Json
           created_at?: string
           id?: string
-          last_channel?: string
-          last_message_at?: string | null
           memory_summary?: string | null
           memory_updated_at?: string | null
-          origin_channel?: string
           title?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          channel_state?: Json
           context_state?: Json
           created_at?: string
           id?: string
-          last_channel?: string
-          last_message_at?: string | null
           memory_summary?: string | null
           memory_updated_at?: string | null
-          origin_channel?: string
           title?: string | null
           updated_at?: string
           user_id?: string
@@ -982,6 +1197,59 @@ export type Database = {
           },
         ]
       }
+      financial_entry_settlements: {
+        Row: {
+          amount: number
+          created_at: string
+          financial_entry_id: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          payment_method: string
+          professional_id: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          settled_at: string
+          status: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          financial_entry_id: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          payment_method?: string
+          professional_id: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          settled_at: string
+          status?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          financial_entry_id?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          payment_method?: string
+          professional_id?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          settled_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entry_settlements_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_planning_goals: {
         Row: {
           created_at: string
@@ -1308,51 +1576,36 @@ export type Database = {
       }
       messages: {
         Row: {
-          actor_kind: string | null
           attachments: Json | null
           content: string
           created_at: string
           embedding: string | null
           id: string
-          idempotency_key: string | null
-          metadata: Json
           remoteJid: string | null
           role: string
           session_id: string
-          source_channel: string
-          source_event_id: string | null
           user_id: string | null
         }
         Insert: {
-          actor_kind?: string | null
           attachments?: Json | null
           content: string
           created_at?: string
           embedding?: string | null
           id?: string
-          idempotency_key?: string | null
-          metadata?: Json
           remoteJid?: string | null
           role: string
           session_id: string
-          source_channel?: string
-          source_event_id?: string | null
           user_id?: string | null
         }
         Update: {
-          actor_kind?: string | null
           attachments?: Json | null
           content?: string
           created_at?: string
           embedding?: string | null
           id?: string
-          idempotency_key?: string | null
-          metadata?: Json
           remoteJid?: string | null
           role?: string
           session_id?: string
-          source_channel?: string
-          source_event_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -3107,15 +3360,88 @@ export type Database = {
           },
         ]
       }
+      patient_package_session_usages: {
+        Row: {
+          action: string
+          appointment_id: string | null
+          created_at: string
+          id: string
+          idempotency_key: string
+          metadata: Json
+          package_id: string
+          patient_id: string
+          professional_id: string
+          reason: string | null
+          reverses_usage_id: string | null
+        }
+        Insert: {
+          action?: string
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          metadata?: Json
+          package_id: string
+          patient_id: string
+          professional_id: string
+          reason?: string | null
+          reverses_usage_id?: string | null
+        }
+        Update: {
+          action?: string
+          appointment_id?: string | null
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          metadata?: Json
+          package_id?: string
+          patient_id?: string
+          professional_id?: string
+          reason?: string | null
+          reverses_usage_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "patient_package_session_usages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_package_session_usages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_package_session_usages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_package_session_usages_reverses_usage_id_fkey"
+            columns: ["reverses_usage_id"]
+            isOneToOne: false
+            referencedRelation: "patient_package_session_usages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_packages: {
         Row: {
           active: string | null
           balance: number | null
+          billing_mode: string
           created_at: string | null
           description: string
           due_day: number | null
           end_date: string | null
           id: string
+          package_status: string
           patient_id: string
           price: number | null
           sessions_used: number
@@ -3126,11 +3452,13 @@ export type Database = {
         Insert: {
           active?: string | null
           balance?: number | null
+          billing_mode?: string
           created_at?: string | null
           description: string
           due_day?: number | null
           end_date?: string | null
           id?: string
+          package_status?: string
           patient_id: string
           price?: number | null
           sessions_used?: number
@@ -3141,11 +3469,13 @@ export type Database = {
         Update: {
           active?: string | null
           balance?: number | null
+          billing_mode?: string
           created_at?: string | null
           description?: string
           due_day?: number | null
           end_date?: string | null
           id?: string
+          package_status?: string
           patient_id?: string
           price?: number | null
           sessions_used?: number
@@ -5023,6 +5353,140 @@ export type Database = {
         }
         Relationships: []
       }
+      synapse_notes_agent_run_events: {
+        Row: {
+          created_at: string
+          event_type: string
+          id: string
+          payload: Json
+          run_id: string
+          sequence: number
+        }
+        Insert: {
+          created_at?: string
+          event_type: string
+          id?: string
+          payload?: Json
+          run_id: string
+          sequence: number
+        }
+        Update: {
+          created_at?: string
+          event_type?: string
+          id?: string
+          payload?: Json
+          run_id?: string
+          sequence?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "synapse_notes_agent_run_events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "synapse_notes_agent_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      synapse_notes_agent_runs: {
+        Row: {
+          chat_session_id: string | null
+          completed_at: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          intent: string | null
+          note_id: string | null
+          patient_id: string | null
+          product: string
+          progress: number
+          pulse_entry_id: string | null
+          result: Json
+          status: string
+          steps: Json
+          target_flow_id: string | null
+          trace: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chat_session_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          intent?: string | null
+          note_id?: string | null
+          patient_id?: string | null
+          product: string
+          progress?: number
+          pulse_entry_id?: string | null
+          result?: Json
+          status?: string
+          steps?: Json
+          target_flow_id?: string | null
+          trace?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chat_session_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          intent?: string | null
+          note_id?: string | null
+          patient_id?: string | null
+          product?: string
+          progress?: number
+          pulse_entry_id?: string | null
+          result?: Json
+          status?: string
+          steps?: Json
+          target_flow_id?: string | null
+          trace?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "synapse_notes_agent_runs_chat_session_id_fkey"
+            columns: ["chat_session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "synapse_notes_agent_runs_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "personal_notes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "synapse_notes_agent_runs_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "synapse_notes_agent_runs_pulse_entry_id_fkey"
+            columns: ["pulse_entry_id"]
+            isOneToOne: false
+            referencedRelation: "neuro_pulse_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "synapse_notes_agent_runs_target_flow_id_fkey"
+            columns: ["target_flow_id"]
+            isOneToOne: false
+            referencedRelation: "neuro_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       synapse_usage_quota: {
         Row: {
           created_at: string
@@ -6260,22 +6724,6 @@ export type Database = {
         }
         Relationships: []
       }
-      dashboard_patient_activity_v: {
-        Row: {
-          amount: number | null
-          created_at: string | null
-          metadata: Json | null
-          occurred_at: string | null
-          patient_id: string | null
-          patient_name: string | null
-          reference_at: string | null
-          source_id: string | null
-          source_type: string | null
-          status: string | null
-          user_id: string | null
-        }
-        Relationships: []
-      }
       financial_accounts_safe_v: {
         Row: {
           account_status: Json | null
@@ -6474,17 +6922,6 @@ export type Database = {
           income_unpaid: number | null
           month: string | null
           professional_id: string | null
-        }
-        Relationships: []
-      }
-      manual_finance_summary_v: {
-        Row: {
-          manual_expense: number | null
-          manual_income: number | null
-          manual_net: number | null
-          month: string | null
-          transaction_count: number | null
-          user_id: string | null
         }
         Relationships: []
       }
@@ -7191,6 +7628,53 @@ export type Database = {
         Returns: boolean
       }
       cleanup_old_notifications: { Args: never; Returns: number }
+      commit_synapse_neuroflow_run: {
+        Args: {
+          p_description: string
+          p_events: Json
+          p_run_id: string
+          p_steps: Json
+          p_title: string
+          p_trace: Json
+          p_user_id: string
+          p_workflow: Json
+        }
+        Returns: Json
+      }
+      commit_synapse_neuropulse_run: {
+        Args: {
+          p_entry_data: Json
+          p_events: Json
+          p_note_content: string
+          p_run_id: string
+          p_steps: Json
+          p_title: string
+          p_trace: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      complete_synapse_neuroview_run: {
+        Args: {
+          p_events: Json
+          p_result: Json
+          p_run_id: string
+          p_steps: Json
+          p_trace: Json
+          p_user_id: string
+        }
+        Returns: Json
+      }
+      consume_patient_package_session: {
+        Args: {
+          p_appointment_id?: string
+          p_idempotency_key?: string
+          p_package_id: string
+          p_patient_id: string
+          p_reason?: string
+        }
+        Returns: Json
+      }
       consume_synapse_quota: {
         Args: { p_limit_count?: number; p_user_id: string }
         Returns: {
@@ -7231,12 +7715,20 @@ export type Database = {
         Returns: string
       }
       export_user_data: { Args: never; Returns: Json }
+      get_asaas_account_api_key_for_edge: {
+        Args: { p_financial_account_id: string }
+        Returns: string
+      }
       get_document_storage_usage: {
         Args: never
         Returns: {
           file_count: number
           total_bytes: number
         }[]
+      }
+      get_financial_management_snapshot: {
+        Args: { p_basis?: string; p_month?: string }
+        Returns: Json
       }
       get_financial_metrics: {
         Args: { p_end_date: string; p_start_date: string; p_user_id: string }
@@ -7257,6 +7749,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       mark_all_notifications_as_read: { Args: never; Returns: undefined }
       mark_all_notifications_read: { Args: never; Returns: number }
+      mark_appointment_invitation_opened: {
+        Args: { p_metadata?: Json; p_token_hash: string }
+        Returns: string
+      }
       mark_notification_as_read: {
         Args: { notification_id: string }
         Returns: undefined
@@ -7382,6 +7878,36 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      process_appointment_public_action: {
+        Args: {
+          p_action: string
+          p_metadata?: Json
+          p_reason?: string
+          p_requested_end_time?: string
+          p_requested_start_time?: string
+          p_token_hash: string
+        }
+        Returns: Json
+      }
+      record_appointment_communication_event: {
+        Args: {
+          p_action_origin: string
+          p_appointment_id: string
+          p_event_type: string
+          p_idempotency_key?: string
+          p_metadata?: Json
+        }
+        Returns: string
+      }
+      record_appointment_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_appointment_id: string
+          p_delivery?: Json
+          p_token_id: string
+        }
+        Returns: Json
+      }
       refresh_neurofinance_overview_snapshot: {
         Args: { target_financial_account_id: string }
         Returns: undefined
@@ -7393,6 +7919,16 @@ export type Database = {
       restore_notification: {
         Args: { p_notification_id: string }
         Returns: boolean
+      }
+      review_appointment_reschedule: {
+        Args: {
+          p_actor_user_id: string
+          p_decision: string
+          p_metadata?: Json
+          p_reason?: string
+          p_request_id: string
+        }
+        Returns: Json
       }
       save_neuroflow_workflow: {
         Args: {
@@ -7406,6 +7942,42 @@ export type Database = {
           save_revision: number
           workflow: Json
         }[]
+      }
+      search_synapse_workspace: {
+        Args: { p_entity_types?: string[]; p_limit?: number; p_query: string }
+        Returns: {
+          entity_id: string
+          entity_type: string
+          excerpt: string
+          match_reason: string
+          occurred_at: string
+          patient_id: string
+          score: number
+          subtitle: string
+          title: string
+        }[]
+      }
+      store_asaas_account_api_key_for_edge: {
+        Args: {
+          p_api_key: string
+          p_asaas_account_id: string
+          p_financial_account_id: string
+          p_source?: string
+          p_user_id: string
+        }
+        Returns: undefined
+      }
+      transition_financial_entry: {
+        Args: {
+          p_action: string
+          p_amount?: number
+          p_effective_at?: string
+          p_entry_id: string
+          p_idempotency_key?: string
+          p_payment_method?: string
+          p_reason?: string
+        }
+        Returns: Json
       }
       trigger_webhook: {
         Args: { event_type_param: string; payload_param: Json }

@@ -1511,12 +1511,8 @@ export function calculateFees(
 
 export function validateAsaasWebhookToken(req: Request): boolean {
     if (!ASAAS_WEBHOOK_TOKEN) {
-        if (ASAAS_ENV === "production") {
-            console.error("[asaas-client] Missing ASAAS_WEBHOOK_TOKEN in production");
-            return false;
-        }
-        console.warn("[asaas-client] No ASAAS_WEBHOOK_TOKEN configured, skipping validation in sandbox");
-        return true;
+        console.error("[asaas-client] Missing ASAAS_WEBHOOK_TOKEN");
+        return false;
     }
     const token = req.headers.get("asaas-access-token");
     return token === ASAAS_WEBHOOK_TOKEN;

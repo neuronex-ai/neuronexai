@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AppointmentRescheduleReview } from "@/components/agenda/AppointmentRescheduleReview";
-import { AppointmentTimelineDialog } from "@/components/agenda/AppointmentTimelineDialog";
+import { AppointmentTimelinePanel } from "@/components/agenda/AppointmentTimelineDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +46,7 @@ import { format, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  ArrowLeft,
   Banknote,
   Briefcase,
   CalendarDays,
@@ -53,6 +54,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Clock3,
   CreditCard,
   FileText,
   Loader2,
@@ -126,6 +128,7 @@ export const AppointmentDetailModal = ({
 }) => {
   const [internalOpen, setInternalOpen] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
+  const [activeView, setActiveView] = useState<"details" | "history">("details");
   const [patientData, setPatientData] = useState<any>(null);
   const [transactionData, setTransactionData] = useState<any>(null);
   const [packageData, setPackageData] = useState<any>(null);
@@ -139,6 +142,9 @@ export const AppointmentDetailModal = ({
   const [sessionType, setSessionType] = useState("follow_up");
   const [modality, setModality] = useState<"presencial" | "online">("presencial");
   const loadedAppointmentKeyRef = useRef<string | null>(null);
+  const historyButtonRef = useRef<HTMLButtonElement>(null);
+  const historyBackButtonRef = useRef<HTMLButtonElement>(null);
+  const shouldRestoreHistoryFocusRef = useRef(false);
 
   const navigate = useNavigate();
   const sendEmail = useSendEmail();
@@ -208,6 +214,7 @@ export const AppointmentDetailModal = ({
   useEffect(() => {
     if (!open) {
       loadedAppointmentKeyRef.current = null;
+      setActiveView("details");
       return;
     }
 
@@ -216,6 +223,22 @@ export const AppointmentDetailModal = ({
     loadedAppointmentKeyRef.current = appointmentKey;
     void loadData();
   }, [appointment.id, appointment.start_time, appointment.updated_at, loadData, open]);
+
+  const openHistory = () => {
+    shouldRestoreHistoryFocusRef.current = false;
+    setActiveView("history");
+  };
+
+  const returnToDetails = () => {
+    shouldRestoreHistoryFocusRef.current = true;
+    setActiveView("details");
+  };
+
+  const restoreHistoryButtonFocus = () => {
+    if (!shouldRestoreHistoryFocusRef.current) return;
+    shouldRestoreHistoryFocusRef.current = false;
+    historyButtonRef.current?.focus();
+  };
 
   const buildTimeUpdates = () => {
     const datePart = format(new Date(appointment.start_time), "yyyy-MM-dd");
@@ -337,7 +360,17 @@ export const AppointmentDetailModal = ({
       drawerClassName="max-h-[92dvh]"
       contentStyle={{ maxHeight: "min(700px, calc(100dvh - 1rem))" }}
     >
-      <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <AnimatePresence initial={false} mode="wait">
+        {activeView === "details" ? (
+          <motion.div
+            key="appointment-details"
+            initial={shouldReduceMotion ? false : { opacity: 0, x: -48 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -48 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+            onAnimationComplete={restoreHistoryButtonFocus}
+            className="flex min-h-0 flex-1 flex-col bg-background"
+          >
         <div className="px-5 pt-5 pb-3 sm:px-6 flex items-center justify-between shrink-0">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
@@ -365,12 +398,25 @@ export const AppointmentDetailModal = ({
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
-            <AppointmentTimelineDialog
-              appointmentId={appointment.id}
-              events={lifecycle.events}
-              isLoading={lifecycle.isLoading}
-              error={lifecycle.error instanceof Error ? lifecycle.error : null}
-            />
+            <Button
+              ref={historyButtonRef}
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={openHistory}
+              className="relative h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Abrir histórico do agendamento"
+            >
+              <Clock3 className="h-5 w-5" aria-hidden="true" />
+              {lifecycle.events.length ? (
+                <span
+                  className="absolute -right-1 -top-1 min-w-5 rounded-full bg-primary px-1 text-[10px] font-black leading-5 text-primary-foreground"
+                  aria-hidden="true"
+                >
+                  {lifecycle.events.length > 99 ? "99+" : lifecycle.events.length}
+                </span>
+              ) : null}
+            </Button>
             <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]" aria-label="Fechar ficha da sessão">
               <X className="h-5 w-5" aria-hidden="true" />
             </Button>
@@ -651,7 +697,59 @@ export const AppointmentDetailModal = ({
             </Button>
           </div>
         )}
-      </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="appointment-history"
+            initial={shouldReduceMotion ? false : { opacity: 0, x: 48 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 48 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+            onAnimationComplete={() => historyBackButtonRef.current?.focus()}
+            className="flex min-h-0 flex-1 flex-col bg-background"
+          >
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-5 py-4 sm:px-6">
+              <div className="flex min-w-0 items-start gap-3">
+                <Button
+                  ref={historyBackButtonRef}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={returnToDetails}
+                  className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  aria-label="Voltar aos detalhes do agendamento"
+                >
+                  <ArrowLeft className="h-5 w-5" aria-hidden="true" />
+                </Button>
+                <div className="min-w-0 pt-0.5">
+                  <h2 className="text-xl font-bold tracking-tight text-foreground">
+                    Histórico do agendamento
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Eventos mais recentes primeiro.
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setOpen(false)}
+                className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                aria-label="Fechar ficha da sessão"
+              >
+                <X className="h-5 w-5" aria-hidden="true" />
+              </Button>
+            </header>
+            <AppointmentTimelinePanel
+              appointmentId={appointment.id}
+              events={lifecycle.events}
+              isLoading={lifecycle.isLoading}
+              error={lifecycle.error instanceof Error ? lifecycle.error : null}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </ResponsiveModal>
   );
 };

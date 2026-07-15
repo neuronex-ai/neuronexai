@@ -70,7 +70,7 @@ export function useAppointmentLifecycle(appointmentId: string, enabled = true) {
           .from("appointment_events")
           .select("id,appointment_id,psychologist_id,patient_id,event_type,from_status,to_status,actor_type,actor_user_id,action_origin,metadata,created_at")
           .eq("appointment_id", appointmentId)
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: false }),
         database
           .from("appointment_reschedule_requests")
           .select("id,appointment_id,psychologist_id,patient_id,original_start_time,original_end_time,requested_start_time,requested_end_time,reason,status,reviewed_by,review_reason,reviewed_at,created_at,updated_at,metadata")
