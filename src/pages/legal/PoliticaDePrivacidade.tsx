@@ -1,4 +1,5 @@
 import { Navbar } from "@/components/landing/Navbar";
+import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Footer } from "@/components/landing/Footer";
 import { Starfield } from "@/components/ui/starfield";
 import { FadeIn } from "@/components/animations/FadeIn";
@@ -8,6 +9,7 @@ const PoliticaDePrivacidade = () => {
     return (
         <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden font-sans selection:bg-foreground/10">
             <Navbar />
+            <LandingMobileNav />
 
             <div className="fixed inset-0 pointer-events-none opacity-20 dark:opacity-10">
                 <Starfield />
@@ -34,7 +36,7 @@ const PoliticaDePrivacidade = () => {
                         <p className="text-lg md:text-xl text-foreground/50 font-normal max-w-2xl mx-auto leading-relaxed">
                             Este documento detalha como a NeuroNex acessa, usa, armazena e protege seus dados, incluindo informações obtidas através de serviços e APIs do Google.
                             <br />
-                            <span className="text-foreground/30 text-sm mt-4 block font-medium">Última atualização: 13 de Fevereiro de 2026</span>
+                            <span className="text-foreground/30 text-sm mt-4 block font-medium">Última atualização: 14 de julho de 2026</span>
                         </p>
                     </FadeIn>
                 </div>
@@ -70,13 +72,15 @@ const PoliticaDePrivacidade = () => {
                             </h3>
                             <div className="space-y-6">
                                 <p className="text-foreground/60 leading-relaxed">
-                                    A NeuroNex acessa os seguintes tipos específicos de dados de usuários do Google, exclusivamente mediante autorização explícita do usuário durante o fluxo de consentimento OAuth:
+                                    As categorias abaixo podem ser acessadas conforme a funcionalidade escolhida e os escopos efetivamente autorizados pelo usuário no fluxo de consentimento OAuth. Conectar uma conta Google não concede automaticamente todas as permissões:
                                 </p>
                                 <ul className="grid sm:grid-cols-2 gap-4">
                                     {[
                                         { label: "Perfil Básico (openid, profile)", detail: "Nome completo e foto de perfil da conta Google, utilizados para personalizar a interface e identificar o profissional dentro da plataforma." },
                                         { label: "Endereço de E-mail (email)", detail: "Endereço de e-mail principal da conta Google, utilizado como identificador único para autenticação, login e envio de notificações relacionadas ao serviço." },
-                                        { label: "Google Calendar (calendar.events)", detail: "Permissão de leitura e escrita em eventos do Google Calendar para sincronização bidirecional de sessões clínicas agendadas na NeuroNex." },
+                                        { label: "Google Calendar", detail: "Eventos necessários à sincronização de agenda, quando esse recurso estiver conectado e autorizado." },
+                                        { label: "Gmail", detail: "Permissão de envio para comunicações solicitadas pela plataforma, quando esse recurso estiver conectado e autorizado." },
+                                        { label: "Google Drive", detail: "Arquivos ou metadados necessários ao fluxo escolhido, somente quando houver integração ativa e permissão correspondente." },
                                         { label: "Identificador Único do Google (sub)", detail: "ID interno do Google utilizado exclusivamente para vincular de forma segura a conta Google ao perfil do profissional na NeuroNex." }
                                     ].map((item, i) => (
                                         <li key={i} className="flex flex-col gap-2 p-5 rounded-2xl bg-white dark:bg-foreground/[0.03] border border-foreground/[0.05]">
@@ -89,7 +93,7 @@ const PoliticaDePrivacidade = () => {
                                     <div className="flex gap-3 items-start">
                                         <Info className="w-5 h-5 text-foreground/40 mt-0.5 shrink-0" />
                                         <p className="text-xs text-foreground/50 leading-relaxed">
-                                            <strong className="text-foreground/70">Importante:</strong> A NeuroNex solicita apenas os escopos de permissão estritamente necessários para o funcionamento do aplicativo. Nenhum dado adicional além dos listados acima é coletado ou acessado. O usuário pode revisar e revogar permissões a qualquer momento nas <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="underline text-foreground/70 hover:text-foreground transition-colors">configurações de segurança da conta Google</a>.
+                                            <strong className="text-foreground/70">Importante:</strong> a permissão efetiva é a que aparece na tela de consentimento do Google para o recurso conectado. A NeuroNex somente pode executar operações abrangidas pelos escopos concedidos. O usuário pode revisar e revogar permissões a qualquer momento nas <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="underline text-foreground/70 hover:text-foreground transition-colors">configurações de segurança da conta Google</a>.
                                         </p>
                                     </div>
                                 </div>
@@ -118,11 +122,15 @@ const PoliticaDePrivacidade = () => {
                                         },
                                         {
                                             title: "Sincronização de Agenda Clínica",
-                                            desc: "Eventos do Google Calendar são lidos e criados para permitir que sessões clínicas agendadas na NeuroNex sejam automaticamente refletidas no calendário do Google do profissional, e vice-versa. Isso evita conflitos de horário e facilita o gerenciamento da agenda."
+                                            desc: "Eventos do Google Calendar podem ser lidos e criados quando o profissional ativa a sincronização de agenda e autoriza o escopo correspondente."
                                         },
                                         {
                                             title: "Comunicações Relacionadas ao Serviço",
-                                            desc: "O endereço de e-mail é utilizado para envio de notificações transacionais (confirmações de agendamento, alertas de sessão, atualizações de segurança) que são essenciais para o funcionamento do serviço."
+                                            desc: "O endereço de e-mail pode ser utilizado para comunicações relacionadas ao serviço. Quando o usuário autoriza o Gmail, a plataforma pode enviar mensagens solicitadas pelo fluxo conectado."
+                                        },
+                                        {
+                                            title: "Arquivos Conectados",
+                                            desc: "Arquivos ou metadados do Google Drive podem ser processados apenas nos fluxos em que o usuário ativa e autoriza essa integração."
                                         }
                                     ].map((item, i) => (
                                         <div key={i} className="flex gap-4 p-5 rounded-2xl bg-foreground/[0.02]">
@@ -142,9 +150,9 @@ const PoliticaDePrivacidade = () => {
                                     </div>
                                     <h4 className="text-xl font-medium mb-3 relative z-10">Política de IA e Machine Learning</h4>
                                     <p className="text-white/60 leading-relaxed relative z-10 text-sm">
-                                        Garantimos de forma absoluta que os dados provenientes das APIs do Google
-                                        <strong className="text-white underline decoration-white/30 mx-1">NÃO são utilizados para treinar, melhorar ou ajustar modelos de Inteligência Artificial</strong>
-                                        ou algoritmos de aprendizado de máquina. A NeuroNex possui funcionalidades de IA (assistente Synapse), porém estas operam em contextos completamente isolados e efêmeros, sem acesso aos dados do Google do usuário. Os dados do Google são usados exclusivamente para as finalidades descritas acima.
+                                        Os dados provenientes das APIs do Google
+                                        <strong className="text-white underline decoration-white/30 mx-1">não são destinados ao treinamento, melhoria ou ajuste de modelos de Inteligência Artificial</strong>.
+                                        Quando o usuário pede ao Synapse ou a outra automação uma ação conectada ao Google, o conteúdo necessário pode ser processado para cumprir aquela solicitação, dentro das permissões efetivamente concedidas. Esse processamento operacional não transforma os dados em material de treinamento do modelo.
                                     </p>
                                 </div>
                             </div>
@@ -172,7 +180,7 @@ const PoliticaDePrivacidade = () => {
                                     <div className="p-5 rounded-2xl bg-white dark:bg-foreground/[0.03] border border-foreground/[0.05] space-y-2">
                                         <h4 className="font-semibold text-foreground text-sm">Serviços do Google</h4>
                                         <p className="text-xs text-foreground/50 leading-relaxed">
-                                            Os dados são transmitidos de volta ao Google exclusivamente quando o usuário realiza ações que envolvem o Google Calendar (criação/atualização de eventos de sessão clínica). Essa comunicação ocorre via APIs oficiais do Google com criptografia TLS em trnsito.
+                                            As operações autorizadas de Calendar, Gmail ou Drive são enviadas às APIs correspondentes do Google somente quando necessárias ao recurso solicitado. Essa comunicação ocorre pelas APIs oficiais do fornecedor.
                                         </p>
                                     </div>
 
@@ -266,14 +274,14 @@ const PoliticaDePrivacidade = () => {
                                             <CheckCircle2 className="w-5 h-5 text-foreground/40 shrink-0 mt-0.5" />
                                             <div>
                                                 <p className="text-sm font-semibold text-foreground mb-1">Tokens de Acesso ao Google</p>
-                                                <p className="text-xs text-foreground/50 leading-relaxed">Retidos enquanto a integração com o Google Calendar estiver ativa. Os tokens são automaticamente invalidados pelo Google quando o usuário revoga o acesso.</p>
+                                                <p className="text-xs text-foreground/50 leading-relaxed">Mantidos enquanto a integração correspondente estiver ativa e forem necessários para prestar o recurso autorizado. O usuário pode revogar as permissões pela conta Google.</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-4 p-5 rounded-2xl bg-foreground/[0.02]">
                                             <CheckCircle2 className="w-5 h-5 text-foreground/40 shrink-0 mt-0.5" />
                                             <div>
-                                                <p className="text-sm font-semibold text-foreground mb-1">Dados de Sincronização do Calendar</p>
-                                                <p className="text-xs text-foreground/50 leading-relaxed">Os eventos sincronizados são retidos enquanto o agendamento existir na plataforma. Dados de sincronização temporários são eliminados após o processamento.</p>
+                                                <p className="text-sm font-semibold text-foreground mb-1">Dados vinculados às integrações Google</p>
+                                                <p className="text-xs text-foreground/50 leading-relaxed">Mantidos conforme a finalidade do registro relacionado e as obrigações técnicas, contratuais ou legais aplicáveis.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -282,28 +290,28 @@ const PoliticaDePrivacidade = () => {
                                 <div className="space-y-4">
                                     <h4 className="text-xl font-medium text-foreground">Como Solicitar a Exclusão dos Seus Dados</h4>
                                     <p className="text-foreground/60 leading-relaxed text-sm">
-                                        O usuário tem o direito de solicitar a exclusão de todos os seus dados a qualquer momento. Oferecemos os seguintes mecanismos:
+                                        O usuário pode solicitar a eliminação de seus dados pessoais, observadas as hipóteses de conservação permitidas ou exigidas pela legislação aplicável:
                                     </p>
                                     <div className="space-y-3">
                                         <div className="flex gap-4 p-5 rounded-2xl bg-white dark:bg-foreground/[0.03] border border-foreground/[0.05]">
                                             <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0">1</div>
                                             <div>
-                                                <p className="text-sm font-semibold text-foreground mb-1">Exclusão pela Plataforma</p>
-                                                <p className="text-xs text-foreground/50 leading-relaxed">Acesse as configurações da sua conta na NeuroNex e selecione "Excluir Conta". Todos os seus dados, incluindo dados obtidos do Google, serão permanentemente apagados em até 30 dias.</p>
+                                                <p className="text-sm font-semibold text-foreground mb-1">Solicitação pelo canal de contato</p>
+                                                <p className="text-xs text-foreground/50 leading-relaxed">Abra uma solicitação em <strong className="text-foreground">/contato</strong> e informe que deseja excluir a conta ou dados associados.</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-4 p-5 rounded-2xl bg-white dark:bg-foreground/[0.03] border border-foreground/[0.05]">
                                             <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0">2</div>
                                             <div>
-                                                <p className="text-sm font-semibold text-foreground mb-1">Solicitação por E-mail</p>
-                                                <p className="text-xs text-foreground/50 leading-relaxed">Envie um e-mail para <strong className="text-foreground">suporte@neuronexai.com.br</strong> com o assunto "Solicitação de Exclusão de Dados". Responderemos em até 5 dias úteis e a exclusão completa será realizada em até 30 dias.</p>
+                                                <p className="text-sm font-semibold text-foreground mb-1">Validação de identidade</p>
+                                                <p className="text-xs text-foreground/50 leading-relaxed">Antes de executar a solicitação, a NeuroNex poderá pedir informações adicionais para confirmar a identidade do titular e proteger a conta contra exclusões indevidas.</p>
                                             </div>
                                         </div>
                                         <div className="flex gap-4 p-5 rounded-2xl bg-white dark:bg-foreground/[0.03] border border-foreground/[0.05]">
                                             <div className="w-8 h-8 rounded-full bg-foreground text-background flex items-center justify-center text-xs font-bold shrink-0">3</div>
                                             <div>
                                                 <p className="text-sm font-semibold text-foreground mb-1">Revogação de Acesso pelo Google</p>
-                                                <p className="text-xs text-foreground/50 leading-relaxed">Você pode revogar o acesso da NeuroNex aos seus dados do Google a qualquer momento acessando <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="underline text-foreground/70 hover:text-foreground transition-colors">myaccount.google.com/permissions</a>. Ao revogar, os tokens serão invalidados imediatamente e os dados sincronizados serão excluídos dos nossos servidores em até 30 dias.</p>
+                                                <p className="text-xs text-foreground/50 leading-relaxed">Você pode revogar o acesso da NeuroNex nas <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="underline text-foreground/70 hover:text-foreground transition-colors">configurações da conta Google</a>. Isso interrompe novos acessos autorizados, mas não substitui o pedido em <strong className="text-foreground">/contato</strong> para avaliar dados já registrados na NeuroNex.</p>
                                             </div>
                                         </div>
                                     </div>
@@ -313,7 +321,7 @@ const PoliticaDePrivacidade = () => {
                                     <div className="flex gap-3 items-start">
                                         <Info className="w-5 h-5 text-foreground/40 mt-0.5 shrink-0" />
                                         <p className="text-xs text-foreground/50 leading-relaxed">
-                                            <strong className="text-foreground/70">Nota:</strong> Após a exclusão, os dados não poderão ser recuperados. Dados anonimizados e agregados para fins estatísticos podem ser retidos, pois não permitem a identificação individual do usuário. Dados que precisam ser retidos por obrigação legal (ex: registros fiscais) serão mantidos pelo período exigido por lei e então excluídos.
+                                            <strong className="text-foreground/70">Nota:</strong> dados efetivamente eliminados deixam de ficar disponíveis na conta. Informações anonimizadas ou registros cuja conservação seja necessária para cumprir obrigação legal, exercer direitos ou prevenir fraude podem ser mantidos conforme a base aplicável.
                                         </p>
                                     </div>
                                 </div>
@@ -333,7 +341,7 @@ const PoliticaDePrivacidade = () => {
                                 <h4 className="text-xl font-medium mb-4 relative z-10">Uso Limitado (Limited Use)</h4>
                                 <div className="space-y-4 relative z-10">
                                     <p className="text-white/60 leading-relaxed text-sm">
-                                        O uso de informações recebidas das APIs do Google pela NeuroNex está em total conformidade com a
+                                        O tratamento de informações recebidas das APIs do Google deve observar a
                                         <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="mx-1 underline text-white/80 hover:text-white transition-colors">Política de Dados do Usuário dos Serviços de API do Google</a>,
                                         incluindo os requisitos de Uso Limitado. Especificamente:
                                     </p>

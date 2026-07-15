@@ -255,7 +255,7 @@ export const Navbar = () => {
                   {theme === 'dark' ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
                 </Button>
               </div>
-              <DropdownMenuItem className="cursor-pointer rounded-2xl focus:bg-zinc-100 dark:focus:bg-white/[0.04] my-1 py-3 px-4 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all text-[11px] font-black uppercase tracking-widest" onClick={() => navigate('/help')}>
+              <DropdownMenuItem className="cursor-pointer rounded-2xl focus:bg-zinc-100 dark:focus:bg-white/[0.04] my-1 py-3 px-4 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all text-[11px] font-black uppercase tracking-widest" onClick={() => navigate('/ajuda')}>
                 <HelpCircle className="mr-3 h-4 w-4" /><span>Suporte</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-zinc-100 dark:bg-white/5 mx-2 my-2" />

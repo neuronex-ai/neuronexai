@@ -46,7 +46,8 @@
     { "source": "/help", "destination": "/ajuda", "permanent": true },
     { "source": "/contact", "destination": "/contato", "permanent": true },
     { "source": "/legal", "destination": "/documentos-legais", "permanent": true },
-    { "source": "/neurobank", "destination": "/neurofinance", "permanent": true }
+    { "source": "/neurobank", "destination": "/neurofinance", "permanent": true },
+    { "source": "/funcionalidades", "destination": "/", "permanent": true }
   ],
   "rewrites": [
     { "source": "/synapse", "destination": "/public-pages/synapse.html" },
@@ -94,7 +95,7 @@
       ]
     },
     {
-      "source": "/(auth|email-confirmed|reset-password|create-account|account-created|google-connection-success|initial-settings|pwa-intent|dashboard|agenda|pacientes|notas|financeiro|ajustes|teleconsulta|neurozap|synapse-ai|portal|join|confirmar-agendamento|anamnese-externa|payment|404)(.*)",
+      "source": "/(auth|email-confirmed|reset-password|create-account|account-created|google-connection-success|initial-settings|pwa-intent|dashboard|agenda|pacientes|notas|financeiro|ajustes|teleconsulta|neurozap|synapse-ai|portal|join|confirmar-agendamento|anamnese-externa|payment|id|404)(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",

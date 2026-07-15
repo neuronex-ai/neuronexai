@@ -10,7 +10,7 @@ import {
 export const TRIAL_DAYS = 7;
 export const PROFESSIONAL_PLAN_CODE = "professional";
 export const PROFESSIONAL_PLAN_NAME = "Professional";
-export const PROFESSIONAL_AMOUNT_CENTS = 14000;
+export const PROFESSIONAL_AMOUNT_CENTS = 22_990;
 export const CHECKOUT_EXPIRATION_MINUTES = 120;
 
 export const PLAN_BY_CODE: Record<string, "Essential" | "Professional" | "Enterprise"> = {
@@ -49,32 +49,89 @@ const UPSELL_STATUSES = new Set([
   "internal_error",
 ]);
 
-const ESSENTIAL_FEATURES: Record<string, unknown> = {
-  ai_copilot: false,
-  telemedicine: false,
+export const ESSENTIAL_FEATURES: Record<string, unknown> = {
+  ai_copilot: true,
+  telemedicine: true,
+  teleconsultation_transcription: false,
+  manual_finance: true,
   advanced_finance: false,
-  patient_portal: false,
+  neurofinance: false,
+  fiscal: false,
+  patient_portal: true,
+  neurodrive: true,
+  neurobox: false,
+  neuroview: false,
+  neuroflow: false,
+  neuropulse: false,
+  neuroscan: false,
+  synapse_whatsapp: false,
+  neurozap: false,
+  external_integrations: false,
+  multiple_professionals: false,
   admin_dashboard: false,
+  performance_reports: false,
   api_access: false,
 };
 
-const ESSENTIAL_LIMITS: Record<string, unknown> = {
+export const ESSENTIAL_LIMITS: Record<string, unknown> = {
   patients: 5,
+  patient_portal_active_links: 5,
   session_records_monthly: null,
-  ai_monthly_actions: 0,
-  neurodrive_documents: 0,
-  neurodrive_storage_mb: 0,
-  teleconsultations_monthly: 0,
-  synapse_text_messages: 0,
-  synapse_voice_minutes: 0,
+  ai_monthly_actions: 30,
+  neurodrive_documents: 100,
+  neurodrive_storage_mb: 250,
+  teleconsultations_monthly: 5,
+  teleconsultation_minutes_monthly: 150,
+  teleconsultation_distinct_patients_monthly: 5,
+  teleconsultation_transcription_minutes: 0,
+  synapse_text_messages: 30,
+  synapse_voice_minutes: 5,
+  whatsapp_business_numbers: 0,
+  whatsapp_utility_messages: 0,
   integrations: 0,
+  reports_monthly: 0,
 };
 
-const ESSENTIAL_INTERNAL_FLAGS: Record<string, unknown> = {
+export const ESSENTIAL_INTERNAL_FLAGS: Record<string, unknown> = {
   can_use_neurofinance: false,
-  can_use_synapse: false,
-  can_use_neurodrive: false,
+  can_use_synapse: true,
+  can_use_neurodrive: true,
+  can_use_neurobox: false,
+  can_use_whatsapp: false,
+  public_visible: true,
   overage_policy: "block",
+};
+
+export const PROFESSIONAL_LIMITS: Record<string, unknown> = {
+  patients: 250,
+  patient_portal_active_links: 250,
+  session_records_monthly: null,
+  ai_monthly_actions: 500,
+  neurodrive_documents: 2_000,
+  neurodrive_storage_mb: 5_120,
+  teleconsultations_monthly: 80,
+  teleconsultation_minutes_monthly: null,
+  teleconsultation_distinct_patients_monthly: 20,
+  teleconsultation_transcription_minutes: 300,
+  synapse_text_messages: 500,
+  synapse_voice_minutes: 60,
+  whatsapp_business_numbers: 1,
+  whatsapp_utility_messages: 250,
+  integrations: null,
+  reports_monthly: null,
+};
+
+export const PROFESSIONAL_TRIAL_LIMITS: Record<string, unknown> = {
+  ...PROFESSIONAL_LIMITS,
+  ai_monthly_actions: 50,
+  teleconsultations_monthly: 3,
+  teleconsultation_distinct_patients_monthly: 3,
+  teleconsultation_transcription_minutes: 60,
+  synapse_text_messages: 50,
+  synapse_voice_minutes: 15,
+  whatsapp_business_numbers: 0,
+  whatsapp_utility_messages: 0,
+  integrations: 0,
 };
 
 type SupabaseUser = {
@@ -107,6 +164,82 @@ export function addDaysIso(date: Date, days: number) {
 
 export function todayIsoDate() {
   return new Date().toISOString().slice(0, 10);
+}
+
+type CheckoutAccessSnapshot = {
+  plan: "Essential" | "Professional" | "Enterprise";
+  plan_code: "essential" | "professional" | "enterprise";
+  status: string;
+  access_state: string;
+};
+
+/**
+ * Checkout is a billing intent, not proof of payment. Keep any valid access the
+ * user already has (especially an active trial) until Asaas confirms payment.
+ */
+export function checkoutAccessSnapshot(subscription?: any): CheckoutAccessSnapshot {
+  const status = String(subscription?.status || "");
+  const accessState = String(subscription?.access_state || "");
+  const planCode = String(subscription?.plan_code || "").toLowerCase();
+  const plan = publicPlanName(planCode);
+  const trialEndsAt = subscription?.trial_ends_at
+    ? new Date(subscription.trial_ends_at).getTime()
+    : Number.NaN;
+  const activeTrial = status === "trialing" &&
+    accessState === "trial_access" &&
+    Number.isFinite(trialEndsAt) &&
+    trialEndsAt > Date.now();
+  const currentlyUsable =
+    activeTrial ||
+    status === "admin_override" ||
+    (status === "active" && ["limited_access", "paid_access"].includes(accessState));
+
+  if (subscription && currentlyUsable && PLAN_BY_CODE[planCode]) {
+    return {
+      plan,
+      plan_code: planCode as CheckoutAccessSnapshot["plan_code"],
+      status,
+      access_state: accessState,
+    };
+  }
+
+  return {
+    plan: "Essential",
+    plan_code: "essential",
+    status: "active",
+    access_state: "limited_access",
+  };
+}
+
+/** First paid due date starts after the remaining trial instead of consuming it. */
+export function checkoutNextDueDate(subscription?: any, now = new Date()) {
+  const trialEndsAt = subscription?.status === "trialing" && subscription?.trial_ends_at
+    ? new Date(subscription.trial_ends_at)
+    : null;
+
+  if (trialEndsAt && Number.isFinite(trialEndsAt.getTime()) && trialEndsAt.getTime() > now.getTime()) {
+    return trialEndsAt.toISOString().slice(0, 10);
+  }
+
+  return now.toISOString().slice(0, 10);
+}
+
+/** Keep every remaining trial day when an early payment is confirmed. */
+export function paidPeriodEndPreservingTrial(
+  providerPeriodEnd: Date,
+  trialEndsAt?: string | null,
+  now = new Date(),
+) {
+  const trialEnd = trialEndsAt ? new Date(trialEndsAt) : null;
+  if (!trialEnd || !Number.isFinite(trialEnd.getTime()) || trialEnd.getTime() <= now.getTime()) {
+    return providerPeriodEnd;
+  }
+
+  const trialBackedPeriodEnd = new Date(trialEnd.getTime());
+  trialBackedPeriodEnd.setUTCMonth(trialBackedPeriodEnd.getUTCMonth() + 1);
+  return trialBackedPeriodEnd.getTime() > providerPeriodEnd.getTime()
+    ? trialBackedPeriodEnd
+    : providerPeriodEnd;
 }
 
 export function isTrialExpired(subscription: any) {
@@ -246,6 +379,13 @@ export function buildEntitlementResponse(row: any, user?: SupabaseUser, checkout
     checkoutUrl: checkout?.checkout_url || undefined,
     currentPeriodEnd: currentPeriodEnd?.toISOString(),
     trialEndsAt: trialEndsAt?.toISOString(),
+    cancelAtPeriodEnd: Boolean(row?.cancel_at_period_end),
+    scheduledPlanCode: row?.scheduled_plan_code || undefined,
+    scheduledChangeAt: row?.scheduled_change_at || undefined,
+    accessEndsAt: row?.access_ends_at || undefined,
+    transitionEndsAt: row?.transition_ends_at || undefined,
+    dataCustodyState: row?.data_custody_state || "active",
+    exportAvailableUntil: row?.export_available_until || undefined,
     isTrial,
     isTrialExpired: status === "trial_expired",
     daysUntilTrialEnds,
@@ -542,13 +682,24 @@ const INTERNAL_FLAG_BY_FEATURE: Record<string, string> = {
   neurodrive: "can_use_neurodrive",
   synapse: "can_use_synapse",
   neurofinance: "can_use_neurofinance",
+  neurobox: "can_use_neurobox",
+  synapse_whatsapp: "can_use_whatsapp",
+  neurozap: "can_use_whatsapp",
 };
+
+const PAID_ONLY_FEATURES = new Set([
+  "advanced_finance",
+  "neurofinance",
+  "fiscal",
+  "synapse_whatsapp",
+  "neurozap",
+]);
 
 export function hasEntitlementFeature(entitlement: any, featureKey: string) {
   if (!entitlement?.canUseCurrentAccess && !entitlement?.isDevAccount) return false;
   if (entitlement?.isDevAccount) return true;
   if (featureKey === "basic_access" || featureKey === "patients") return true;
-  if (featureKey === "neurofinance") {
+  if (PAID_ONLY_FEATURES.has(featureKey)) {
     if (entitlement?.accessState !== "paid_access" && entitlement?.status !== "admin_override") {
       return false;
     }

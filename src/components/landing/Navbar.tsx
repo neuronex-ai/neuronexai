@@ -1,16 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-import { LandingMobileNav } from "./LandingMobileNav";
 import { Logo } from "@/components/ui/Logo";
 
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -30,7 +30,7 @@ export const Navbar = () => {
     } else {
       const element = document.getElementById(target);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        element.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth' });
       }
     }
   };
@@ -42,13 +42,12 @@ export const Navbar = () => {
   ];
 
   return (
-    <>
       <motion.nav
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-[100] flex justify-center transition-all duration-700 ease-out-expo pointer-events-none",
+          "fixed top-0 left-0 right-0 z-[100] hidden justify-center transition-all duration-700 ease-out-expo pointer-events-none md:flex",
           scrolled ? "py-4" : "py-8"
         )}
       >
@@ -79,14 +78,19 @@ export const Navbar = () => {
           <motion.div
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            className="flex items-center cursor-pointer group/logo"
-            onClick={() => navigate('/')}
+            className="group/logo"
           >
-            <div className="relative w-7 h-7 flex items-center justify-center">
-              <Logo className="w-full h-full" />
-              <div className="absolute inset-0 border border-primary/20 rounded-full animate-[spin_8s_linear_infinite] opacity-0 group-hover/logo:opacity-100 transition-opacity" />
-            </div>
-            <span className="ml-2.5 text-[12px] font-black text-foreground tracking-[0.35em] uppercase transition-all whitespace-nowrap">NeuroNex</span>
+            <Link
+              to="/"
+              aria-label="Ir para a página inicial da NeuroNex"
+              className="flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            >
+              <div className="relative w-7 h-7 flex items-center justify-center">
+                <Logo className="w-full h-full" />
+                <div className="absolute inset-0 border border-primary/20 rounded-full animate-[spin_8s_linear_infinite] opacity-0 group-hover/logo:opacity-100 transition-opacity motion-reduce:animate-none" />
+              </div>
+              <span className="ml-2.5 text-[12px] font-black text-foreground tracking-[0.35em] uppercase transition-all whitespace-nowrap">NeuroNex</span>
+            </Link>
           </motion.div>
 
           {/* Nav Links */}
@@ -129,7 +133,5 @@ export const Navbar = () => {
           </div>
         </motion.div>
       </motion.nav>
-      <LandingMobileNav />
-    </>
   );
 };

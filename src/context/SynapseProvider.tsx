@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useSynapseLiveVoice } from '@/hooks/use-synapse-live-voice';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { routeSupportsDesktopSynapseShell } from '@/lib/synapse-surface';
 import { getToolsForRoute, getQuickActionsForRoute } from '@/lib/synapse-tool-catalog';
 import {
     cancelSynapseInterfaceAction,
@@ -106,7 +107,10 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const isMobile = useIsMobile();
 
     // Visibility
-    const isVisible = !isMobile && !!user;
+    const isVisible =
+        !isMobile &&
+        !!user &&
+        routeSupportsDesktopSynapseShell(location.pathname);
 
     // Derived: tools for current route
     const baseTools = getToolsForRoute(location.pathname);

@@ -1,7 +1,8 @@
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseContext';
+import { SynapseCompactPanel } from './SynapseCompactPanel';
 import { SynapsePill } from './SynapsePill';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
@@ -9,9 +10,11 @@ import { SynapsePill } from './SynapsePill';
 
 export const SynapseGlobalShell = () => {
     const {
+        activeTab,
         actionExperience,
         cancelActionExperience,
         isVisible,
+        setActiveTab,
         setShellState,
         shellState,
         toggleVoiceMode,
@@ -19,42 +22,59 @@ export const SynapseGlobalShell = () => {
         voiceStatus,
     } = useSynapse();
     const shouldReduceMotion = Boolean(useReducedMotion());
-    const [dockedProduct, setDockedProduct] = useState<string | null>(null);
+    const isVoiceConnectionActive =
+        voiceStatus === 'connected' ||
+        voiceStatus === 'connecting' ||
+        voiceStatus === 'disconnecting';
+    const isVoiceExperienceActive = activeTab === 'voice' || isVoiceConnectionActive;
+    const wasVoiceExperienceActive = useRef(isVoiceExperienceActive);
+    const wasVisible = useRef(isVisible);
 
     useEffect(() => {
-        if (actionExperience?.product) {
-            setDockedProduct(actionExperience.product);
-            return;
+        const shellJustBecameHidden = wasVisible.current && !isVisible;
+        wasVisible.current = isVisible;
+        if (!shellJustBecameHidden) return;
+
+        setShellState('pill');
+        setActiveTab('chat');
+        if (voiceStatus === 'connected' || voiceStatus === 'connecting') {
+            void toggleVoiceMode();
         }
-        if (actionExperience && !actionExperience.product) setDockedProduct(null);
-    }, [actionExperience]);
+    }, [isVisible, setActiveTab, setShellState, toggleVoiceMode, voiceStatus]);
 
     useEffect(() => {
-        if (voiceStatus === 'disconnected' || voiceStatus === 'error') {
-            if (!actionExperience?.product) setDockedProduct(null);
-        }
-    }, [actionExperience?.product, voiceStatus]);
+        const voiceJustEnded = wasVoiceExperienceActive.current && !isVoiceExperienceActive;
+        wasVoiceExperienceActive.current = isVoiceExperienceActive;
 
-    // ─── Keyboard Shortcut: Ctrl+J ─────────────────────────────────────
+        if (voiceJustEnded && shellState !== 'closed') setShellState('pill');
+    }, [isVoiceExperienceActive, setShellState, shellState]);
+
+    // ─── Keyboard shortcut: Ctrl/Cmd + Shift + Space ──────────────────
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             if (e.repeat) return;
 
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'Space') {
                 e.preventDefault();
-                if (shellState === 'closed') setShellState('pill');
+                setShellState('pill');
                 void toggleVoiceMode();
                 return;
             }
 
             if (e.key === 'Escape') {
-                if (voicePhase === 'awaiting_confirmation') {
-                    if (actionExperience) cancelActionExperience();
-                    if (voiceStatus === 'connected' || voiceStatus === 'connecting') void toggleVoiceMode();
+                if (isVoiceExperienceActive) {
+                    setShellState('pill');
+                    setActiveTab('chat');
+                    if (voicePhase === 'awaiting_confirmation' && actionExperience) {
+                        cancelActionExperience();
+                    }
+                    if (voiceStatus === 'connected' || voiceStatus === 'connecting') {
+                        void toggleVoiceMode();
+                    }
                     return;
                 }
-                if (voiceStatus === 'connected' || voiceStatus === 'connecting') {
-                    void toggleVoiceMode();
+                if (voicePhase === 'awaiting_confirmation') {
+                    if (actionExperience) cancelActionExperience();
                     return;
                 }
                 if (actionExperience) {
@@ -66,8 +86,9 @@ export const SynapseGlobalShell = () => {
         [
             actionExperience,
             cancelActionExperience,
+            isVoiceExperienceActive,
+            setActiveTab,
             setShellState,
-            shellState,
             toggleVoiceMode,
             voicePhase,
             voiceStatus,
@@ -82,21 +103,21 @@ export const SynapseGlobalShell = () => {
     // The provider hides the shell on unsupported or unauthenticated surfaces.
     if (!isVisible) return null;
 
-    const isVoiceSessionActive = voiceStatus === 'connected' || voiceStatus === 'connecting' || voiceStatus === 'disconnecting';
-    const isDockedToAssistedSurface = Boolean(actionExperience?.product || (dockedProduct && isVoiceSessionActive));
+    const isRestoringPillAfterVoice =
+        !isVoiceExperienceActive && wasVoiceExperienceActive.current;
+    const visibleShellState = isRestoringPillAfterVoice ? 'pill' : shellState;
 
     const shell = (
-        <>
-            {shellState !== 'closed' ? (
+        <AnimatePresence initial={false} mode="sync">
+            {isVoiceExperienceActive ? (
                 <motion.div
+                    key="synapse-voice-presence"
                     className="synapse-presence-layer fixed flex w-[min(280px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center"
                     data-synapse-shell="true"
-                    data-synapse-shell-placement={isDockedToAssistedSurface ? 'bottom-right' : 'bottom-center'}
-                    animate={{
-                        left: isDockedToAssistedSurface
-                            ? 'calc(100% - 140px - max(12px, env(safe-area-inset-right)))'
-                            : '50%',
-                    }}
+                    data-synapse-shell-placement="bottom-center"
+                    initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1, left: '50%' }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.97 }}
                     transition={shouldReduceMotion
                         ? { duration: 0 }
                         : { type: 'spring', stiffness: 360, damping: 38, mass: 0.78 }}
@@ -104,10 +125,31 @@ export const SynapseGlobalShell = () => {
                         bottom: 'max(12px, env(safe-area-inset-bottom))',
                     }}
                 >
-                    <SynapsePill />
+                    <SynapsePill mode="voice-presence" />
+                </motion.div>
+            ) : visibleShellState === 'compact' ? (
+                <SynapseCompactPanel key="synapse-compact-panel" />
+            ) : visibleShellState === 'pill' ? (
+                <motion.div
+                    key="synapse-launcher"
+                    className="synapse-presence-layer fixed"
+                    data-synapse-shell="true"
+                    data-synapse-shell-placement="bottom-right"
+                    initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.98 }}
+                    transition={shouldReduceMotion
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 390, damping: 36, mass: 0.74 }}
+                    style={{
+                        right: 'max(12px, env(safe-area-inset-right))',
+                        bottom: 'max(12px, env(safe-area-inset-bottom))',
+                    }}
+                >
+                    <SynapsePill mode="launcher" />
                 </motion.div>
             ) : null}
-        </>
+        </AnimatePresence>
     );
 
     return typeof document === 'undefined' ? shell : createPortal(shell, document.body);

@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Mic,
   Network,
+  ScanLine,
   Sparkles,
   WalletCards,
   Workflow,
@@ -25,6 +26,7 @@ import { Link } from "react-router-dom";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
+import { PublicFlowComparison } from "@/components/landing/PublicFlowComparison";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
@@ -36,9 +38,9 @@ const modes = [
 
 const questions = [
   ["O que o Synapse faz?", "Ele consulta contexto permitido, ajuda a navegar pelo sistema e prepara ações operacionais. Ações que gravam, enviam ou alteram informações exigem a confirmação prevista para aquele fluxo."],
-  ["Texto, voz e WhatsApp usam o mesmo cérebro?", "Sim. Os canais compartilham a mesma lógica contextual. O WhatsApp chega ao Desktop pelo NeuroZap, que está sendo preparado para o Beta."],
+  ["Texto, voz e WhatsApp usam o mesmo cérebro?", "Sim. O Synapse mantém uma linha de contexto autorizada entre os canais. O NeuroZap não é outro assistente: ele é a infraestrutura que conecta e permite supervisionar o WhatsApp Business."],
   ["O que significa modo agêntico?", "Significa que o Synapse pode combinar etapas: localizar o contexto, escolher a ferramenta adequada, preparar a ação e levar você à tela certa. Ele não recebe liberdade para ultrapassar permissões ou confirmações."],
-  ["O que é o NeuroBox?", "É o conjunto de inteligências especializadas da NeuroNex, como NeuroView, NeuroFlow e NeuroPulse, cada uma voltada a uma forma específica de leitura ou organização."],
+  ["O que é o NeuroBox?", "É o conjunto formado por NeuroView, NeuroFlow, NeuroPulse e NeuroScan. Cada produto terá suas capacidades detalhadas em uma área própria; hoje, o NeuroScan já auxilia a transcrever fichas de anamnese no prontuário."],
   ["Ele acessa qualquer informação?", "Não. O acesso respeita as permissões e o contexto disponível ao usuário."],
 ];
 
@@ -58,8 +60,8 @@ const channels = [
   {
     icon: MessageCircle,
     title: "WhatsApp",
-    eyebrow: "NeuroZap · Beta Desktop",
-    text: "Leve o mesmo cérebro contextual ao WhatsApp Business e mantenha a possibilidade de intervir, assumir ou pausar conversas.",
+    eyebrow: "Mesmo cérebro",
+    text: "O psicólogo continua a conversa com o Synapse por texto ou áudio. O histórico alimenta a mesma linha contextual disponível no painel.",
   },
 ];
 
@@ -78,6 +80,11 @@ const neuroBoxTools = [
     icon: Activity,
     name: "NeuroPulse",
     text: "Estrutura relações de causa e efeito a partir do contexto selecionado, com confirmação para persistir resultados.",
+  },
+  {
+    icon: ScanLine,
+    name: "NeuroScan",
+    text: "Auxilia a transcrever fichas de anamnese para o prontuário. Outras aplicações serão apresentadas somente depois de definidas.",
   },
 ];
 
@@ -100,8 +107,8 @@ const SynapseLanding = () => {
           <div className="relative z-10 mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-foreground/[0.035] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]"><Sparkles className="h-3.5 w-3.5" />Synapse AI</motion.div>
-              <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-8 text-[clamp(3.4rem,7.5vw,7.8rem)] font-black leading-[0.84] tracking-[-0.075em]">A inteligência operacional <span className="text-muted-foreground/35">da sua rotina.</span></motion.h1>
-              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Converse por texto, voz ou WhatsApp. O Synapse consulta contexto permitido, navega pela plataforma e prepara ações com as confirmações exigidas pelo fluxo.</motion.p>
+              <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-8 text-[clamp(3.4rem,7.5vw,7.8rem)] font-black leading-[0.84] tracking-[-0.075em]">Uma mente. <span className="text-muted-foreground/35">Todo o contexto autorizado. A operação inteira.</span></motion.h1>
+              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Converse pelo painel, por voz ou pelo WhatsApp. O Synapse preserva a continuidade permitida, encontra informações e prepara ações com confirmação quando existe efeito real.</motion.p>
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background"><Link to="/create-account">Experimentar <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]" onClick={() => scrollToSection("synapse-demo")}>Ver como funciona</Button></div>
             </div>
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="mt-16 overflow-hidden rounded-[34px] border border-border/45 bg-card shadow-[0_36px_120px_-76px_rgba(0,0,0,0.8)] dark:border-white/10 dark:bg-[#08090b]"><img src="/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp" alt="Synapse AI no NeuroNex" width={1280} height={720} className="block aspect-video w-full object-cover" /></motion.div>
@@ -139,7 +146,7 @@ const SynapseLanding = () => {
             <div className="mx-auto max-w-5xl text-center">
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Um cérebro, três canais</p>
               <h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">O contexto acompanha <span className="text-muted-foreground/35">a conversa.</span></h2>
-              <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Mude de texto para voz ou WhatsApp sem transformar cada canal em um assistente desconectado.</p>
+              <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">O canal muda; a identidade, o histórico autorizado e as regras permanecem. O NeuroZap cuida da conexão e da supervisão do WhatsApp Business — não substitui o Synapse.</p>
             </div>
             <div className="mt-12 grid gap-4 lg:grid-cols-3">
               {channels.map((channel) => (
@@ -153,6 +160,8 @@ const SynapseLanding = () => {
             </div>
           </div>
         </section>
+
+        <PublicFlowComparison variant="synapse" />
 
         <section className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-[1380px] gap-6 lg:grid-cols-[0.82fr_1.18fr]">

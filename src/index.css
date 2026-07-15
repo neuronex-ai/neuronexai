@@ -1801,6 +1801,50 @@
     pointer-events: auto;
   }
 
+  .synapse-launcher {
+    border-color: hsl(var(--border) / 0.62);
+    background:
+      linear-gradient(155deg, hsl(var(--background) / 0.94), hsl(var(--card) / 0.88)),
+      hsl(var(--card));
+    box-shadow:
+      0 24px 64px -42px hsl(var(--foreground) / 0.62),
+      inset 0 1px 0 hsl(var(--background) / 0.76);
+    backdrop-filter: blur(24px) saturate(1.08);
+    -webkit-backdrop-filter: blur(24px) saturate(1.08);
+  }
+
+  .dark .synapse-launcher {
+    border-color: rgba(255, 255, 255, 0.075);
+    background:
+      linear-gradient(155deg, rgba(24, 24, 25, 0.94), rgba(7, 7, 8, 0.95)),
+      #09090a;
+    box-shadow:
+      0 28px 72px -42px rgba(0, 0, 0, 0.98),
+      inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  }
+
+  .synapse-launcher-divider {
+    background: hsl(var(--border) / 0.7);
+  }
+
+  .dark .synapse-launcher-divider {
+    background: rgba(255, 255, 255, 0.085);
+  }
+
+  .synapse-launcher-action {
+    color: hsl(var(--muted-foreground));
+    transition: color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+  }
+
+  .synapse-launcher-action:hover:not(:disabled) {
+    color: hsl(var(--foreground));
+    background: hsl(var(--foreground) / 0.055);
+  }
+
+  .dark .synapse-launcher-action:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.055);
+  }
+
   .synapse-presence-orb {
     isolation: isolate;
     border: 0;
@@ -1931,6 +1975,7 @@
   }
 
   @media (prefers-reduced-transparency: reduce) {
+    .synapse-launcher,
     .synapse-presence-status {
       background: hsl(var(--background));
       backdrop-filter: none;
@@ -1939,6 +1984,7 @@
   }
 
   @media (forced-colors: active) {
+    .synapse-launcher,
     .synapse-presence-status,
     .synapse-presence-orb {
       border: 1px solid CanvasText;
@@ -1970,11 +2016,12 @@
   .synapse-desktop-shell.synapse-chat-panel {
     position: fixed;
     z-index: 90;
-    left: 50%;
-    bottom: max(5.8rem, calc(env(safe-area-inset-bottom) + 5.4rem));
-    translate: -50% 0;
+    right: max(12px, env(safe-area-inset-right));
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: auto;
+    translate: none;
     height: clamp(390px, 56dvh, 570px);
-    max-height: calc(100dvh - var(--desktop-navbar-clearance) - 7.25rem);
+    max-height: calc(100dvh - var(--desktop-navbar-clearance) - 1.5rem);
     min-height: 0;
     box-shadow:
       0 32px 92px -46px hsl(var(--foreground) / 0.62),
@@ -1993,8 +2040,8 @@
 
   @media (max-height: 620px) {
     .synapse-desktop-shell.synapse-chat-panel {
-      bottom: max(5.1rem, calc(env(safe-area-inset-bottom) + 4.8rem));
-      height: calc(100dvh - var(--desktop-navbar-clearance) - 6rem);
+      bottom: max(12px, env(safe-area-inset-bottom));
+      height: calc(100dvh - var(--desktop-navbar-clearance) - 1.5rem);
       border-radius: 24px;
     }
   }

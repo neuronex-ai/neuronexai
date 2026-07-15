@@ -14,13 +14,14 @@ import {
   PROFESSIONAL_PLAN_NAME,
   asaasBillingTypesForCheckout,
   asaasCheckoutUrl,
+  checkoutAccessSnapshot,
+  checkoutNextDueDate,
   findOrCreateAsaasCustomer,
   getOpenCheckoutSession,
   getUserSubscription,
   normalizePlanCode,
   publicPlanName,
   subscriptionMetadata,
-  todayIsoDate,
 } from "../_shared/subscription-access.ts";
 
 type CheckoutRequest = {
@@ -188,16 +189,7 @@ function assertCheckoutAllowed(subscription: any) {
     throw err;
   }
 
-  if (
-    subscription.status === "trialing" &&
-    subscription.trial_ends_at &&
-    new Date(subscription.trial_ends_at).getTime() > Date.now()
-  ) {
-    const err: any = new Error("Seu teste grátis ainda está ativo.");
-    err.status = 409;
-    err.trial_ends_at = subscription.trial_ends_at;
-    throw err;
-  }
+  // Active trials are intentionally allowed to buy without ending their access.
 }
 
 Deno.serve(async (req: Request) => {
@@ -220,6 +212,8 @@ Deno.serve(async (req: Request) => {
 
     const subscription = await getUserSubscription(user.id);
     assertCheckoutAllowed(subscription);
+    const preservedAccess = checkoutAccessSnapshot(subscription);
+    const nextDueDate = checkoutNextDueDate(subscription);
 
     const now = new Date();
     const expiresAt = new Date(now.getTime() + CHECKOUT_EXPIRATION_MINUTES * 60 * 1000);
@@ -314,19 +308,12 @@ Deno.serve(async (req: Request) => {
 
     await assertCustomerAvailableForUser(customerId, user.id);
 
-    const essentialFallback = {
-      plan: "Essential",
-      plan_code: "essential",
-      status: "active",
-      access_state: "limited_access",
-    };
-
     const existingCheckout = await getOpenCheckoutSession(user.id, planCode);
     if (existingCheckout?.checkout_url) {
       await supabaseAdmin
         .from("user_subscriptions")
         .update({
-          ...essentialFallback,
+          ...preservedAccess,
           asaas_customer_id: customerId,
           asaas_checkout_id: existingCheckout.provider_checkout_id || null,
           external_reference: existingCheckout.external_reference,
@@ -336,7 +323,9 @@ Deno.serve(async (req: Request) => {
             checkout_external_reference: existingCheckout.external_reference,
             checkout_session_id: existingCheckout.id,
             checkout_reused_at: new Date().toISOString(),
-            checkout_access_policy: "essential_until_payment_confirmation",
+            checkout_access_policy: "preserve_existing_until_payment_confirmation",
+            checkout_next_due_date: nextDueDate,
+            checkout_trial_ends_at: subscription?.trial_ends_at || null,
             checkout_customer_address_present: true,
             checkout_customer_phone_present: true,
           },
@@ -352,10 +341,10 @@ Deno.serve(async (req: Request) => {
         actor_type: "edge_function",
         action: "checkout_reused",
         from_status: subscription?.status || null,
-        to_status: "active",
+        to_status: preservedAccess.status,
         from_access_state: subscription?.access_state || null,
-        to_access_state: "limited_access",
-        reason: "user_resumed_open_checkout_essential_preserved",
+        to_access_state: preservedAccess.access_state,
+        reason: "user_resumed_open_checkout_access_preserved",
         metadata: {
           external_reference: existingCheckout.external_reference,
           provider_checkout_id: existingCheckout.provider_checkout_id,
@@ -392,6 +381,10 @@ Deno.serve(async (req: Request) => {
         source: "create-checkout-session",
         previous_status: subscription?.status || null,
         previous_access_state: subscription?.access_state || null,
+        preserved_status: preservedAccess.status,
+        preserved_access_state: preservedAccess.access_state,
+        trial_ends_at: subscription?.trial_ends_at || null,
+        next_due_date: nextDueDate,
         has_customer_id: Boolean(customerId),
         has_customer_phone: Boolean(phone),
         has_customer_address: true,
@@ -443,7 +436,7 @@ Deno.serve(async (req: Request) => {
       ],
       subscription: {
         cycle: "MONTHLY",
-        nextDueDate: todayIsoDate(),
+        nextDueDate,
       },
     };
 
@@ -466,6 +459,10 @@ Deno.serve(async (req: Request) => {
         metadata: subscriptionMetadata({
           source: "create-checkout-session",
           asaas_checkout: checkout,
+          preserved_status: preservedAccess.status,
+          preserved_access_state: preservedAccess.access_state,
+          trial_ends_at: subscription?.trial_ends_at || null,
+          next_due_date: nextDueDate,
           has_customer_id: Boolean(customerId),
           has_customer_phone: Boolean(phone),
           has_customer_address: true,
@@ -481,7 +478,7 @@ Deno.serve(async (req: Request) => {
       .upsert(
         {
           user_id: user.id,
-          ...essentialFallback,
+          ...preservedAccess,
           asaas_customer_id: customerId,
           asaas_checkout_id: checkoutId,
           external_reference: externalReference,
@@ -491,7 +488,9 @@ Deno.serve(async (req: Request) => {
             checkout_external_reference: externalReference,
             checkout_session_id: sessionId,
             checkout_started_at: new Date().toISOString(),
-            checkout_access_policy: "essential_until_payment_confirmation",
+            checkout_access_policy: "preserve_existing_until_payment_confirmation",
+            checkout_next_due_date: nextDueDate,
+            checkout_trial_ends_at: subscription?.trial_ends_at || null,
             checkout_customer_phone_present: Boolean(phone),
             checkout_customer_address_present: true,
           },
@@ -510,10 +509,10 @@ Deno.serve(async (req: Request) => {
       actor_type: "edge_function",
       action: "checkout_created",
       from_status: subscription?.status || null,
-      to_status: "active",
+      to_status: preservedAccess.status,
       from_access_state: subscription?.access_state || null,
-      to_access_state: "limited_access",
-      reason: "user_started_checkout_essential_preserved",
+      to_access_state: preservedAccess.access_state,
+      reason: "user_started_checkout_access_preserved",
       metadata: {
         external_reference: externalReference,
         provider_checkout_id: checkoutId,

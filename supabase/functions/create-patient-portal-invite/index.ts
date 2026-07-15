@@ -137,6 +137,24 @@ Deno.serve(async (req: Request) => {
       });
     }
 
+    const portalLinkLimit = access.entitlement.portalLinkLimit;
+    if (typeof portalLinkLimit === "number") {
+      const { count, error: countError } = await supabaseAdmin
+        .from("patient_portal_links")
+        .select("id", { count: "exact", head: true })
+        .eq("psychologist_user_id", user.id)
+        .eq("status", "active")
+        .neq("patient_id", patient.id);
+      if (countError) throw countError;
+      if (Number(count || 0) >= portalLinkLimit) {
+        return errorResponse("Limite de vinculos ativos do Portal do Paciente atingido.", 409, {
+          code: "patient_portal_link_limit_reached",
+          limit: portalLinkLimit,
+          used: Number(count || 0),
+        });
+      }
+    }
+
     const profileResult = await supabaseAdmin
       .from("profiles")
       .select("id,first_name,last_name,full_name,name,clinic_name,avatar_url")

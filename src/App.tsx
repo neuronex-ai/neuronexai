@@ -21,6 +21,7 @@ import { Loader2 } from "lucide-react";
 import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
 import { MotionConfig } from "framer-motion";
 import { PublicSeoManager } from "@/components/public/PublicSeoManager";
+import { routeUsesOperationalProviders } from "@/lib/application-surface";
 import "@/styles/neurofinance-onboarding-overrides.css";
 import "@/styles/neurofinance-onboarding-mobile.css";
 
@@ -64,6 +65,7 @@ const PoliticaDePrivacidade = lazy(() => import("@/pages/legal/PoliticaDePrivaci
 const ConfiguracoesDeCookies = lazy(() => import("@/pages/legal/ConfiguracoesDeCookies"));
 const FinanceLanding = lazy(() => import("@/pages/FinanceLanding"));
 const SynapseLanding = lazy(() => import("@/pages/SynapseLanding"));
+const ProductLanding = lazy(() => import("@/pages/public/ProductLanding"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
 const PublicProfessionalProfile = lazy(() => import("./pages/public/PublicProfessionalProfile"));
@@ -149,11 +151,18 @@ const SharedRoutes = () => {
         <Route path="/configuracoes-de-cookies" element={<ConfiguracoesDeCookies />} />
         <Route path="/neurofinance" element={<FinanceLanding />} />
         <Route path="/synapse" element={<SynapseLanding />} />
+        <Route path="/neurobox" element={<ProductLanding route="/neurobox" />} />
+        <Route path="/portal-do-paciente" element={<ProductLanding route="/portal-do-paciente" />} />
+        <Route path="/teleconsulta-para-psicologos" element={<ProductLanding route="/teleconsulta-para-psicologos" />} />
+        <Route path="/prontuario-para-psicologos" element={<ProductLanding route="/prontuario-para-psicologos" />} />
+        <Route path="/agenda-para-psicologos" element={<ProductLanding route="/agenda-para-psicologos" />} />
 
         {/* Compatibilidade: URLs antigas migram para páginas públicas canônicas. */}
         <Route path="/help" element={<LegacyHelpRedirect />} />
         <Route path="/contact" element={<Navigate to="/contato" replace />} />
         <Route path="/legal" element={<Navigate to="/documentos-legais" replace />} />
+        <Route path="/neurobank" element={<Navigate to="/neurofinance" replace />} />
+        <Route path="/funcionalidades" element={<Navigate to="/" replace />} />
 
         {/* ─── Protected Professional Routes ──────────────── */}
         <Route path="/synapse-ai" element={<PaidRoute><AIChat /></PaidRoute>} />
@@ -186,46 +195,51 @@ const SharedRoutes = () => {
   );
 };
 
+const OperationalApplication = () => (
+  <SessionContextProvider>
+    <AIProvider>
+      <SynapseProvider>
+        <SubscriptionProvider>
+          <TourProvider>
+            <NeuroFinancePostOnboardingGate />
+            <Suspense fallback={null}>
+              <SynapseShellGate />
+            </Suspense>
+            <SharedRoutes />
+            <GlobalTourOverlay />
+            <TrialExpiredUpsell />
+          </TourProvider>
+        </SubscriptionProvider>
+      </SynapseProvider>
+    </AIProvider>
+  </SessionContextProvider>
+);
+
+const ApplicationSurfaceGate = () => {
+  const { pathname } = useLocation();
+
+  return routeUsesOperationalProviders(pathname) ? <OperationalApplication /> : <SharedRoutes />;
+};
+
 function App() {
   return (
     <MotionConfig reducedMotion="user">
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <SessionContextProvider>
-            <BrowserRouter
-              future={{
-                v7_startTransition: true,
-                v7_relativeSplatPath: true,
-              }}
-            >
-              <PublicSeoManager />
-              <ScrollToTop />
-              <AIProvider>
-                <SynapseProvider>
-                  <SubscriptionProvider>
-                    <TourProvider>
-                      <TooltipProvider>
-                        <NeuroFinancePostOnboardingGate />
-
-                        {/* Synapse Global Shell — gated by SynapseProvider.isVisible */}
-                        <Suspense fallback={null}>
-                          <SynapseShellGate />
-                        </Suspense>
-
-                        <SharedRoutes />
-                        <GlobalTourOverlay />
-                        <TrialExpiredUpsell />
-
-                        <Toaster position="top-right" />
-
-                        <CookieConsent />
-                      </TooltipProvider>
-                    </TourProvider>
-                  </SubscriptionProvider>
-                </SynapseProvider>
-              </AIProvider>
-            </BrowserRouter>
-          </SessionContextProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true,
+            }}
+          >
+            <PublicSeoManager />
+            <ScrollToTop />
+            <TooltipProvider>
+              <ApplicationSurfaceGate />
+              <Toaster position="top-right" />
+              <CookieConsent />
+            </TooltipProvider>
+          </BrowserRouter>
         </ThemeProvider>
       </QueryClientProvider>
     </MotionConfig>

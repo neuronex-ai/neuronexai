@@ -56,7 +56,6 @@ const root = createRoot(rootElement);
 async function bootstrap() {
   try {
     const { default: App } = await import("./App.tsx");
-    document.getElementById("static-public-shell")?.remove();
     root.render(<App />);
   } catch (error) {
     console.error("[NeuroNex] Falha durante a inicialização do aplicativo.", error);

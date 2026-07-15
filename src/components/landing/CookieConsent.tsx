@@ -2,16 +2,17 @@
 
 import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
-import { Cookie, ShieldCheck, X } from "lucide-react";
+import { Cookie, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-// Cookie categories for granular control
+// Preferences recorded by the current banner. They do not yet provide
+// category-by-category technical control over third-party scripts.
 interface CookiePreferences {
-    essential: boolean;  // Always true, cannot be disabled €” includes Google OAuth auth cookies
+    essential: boolean;  // Always true because the choice itself must be stored
     analytics: boolean;
     marketing: boolean;
-    functional: boolean; // Includes Google Calendar sync functionality
+    functional: boolean;
 }
 
 const DEFAULT_PREFERENCES: CookiePreferences = {
@@ -36,24 +37,19 @@ const getCookie = (name: string): string | null => {
     return null;
 };
 
-// Initialize tracking scripts based on preferences
-const initializeTracking = (preferences: CookiePreferences) => {
-    // Google Analytics (if analytics allowed)
+// Technical enforcement for third-party tags is a separate integration that
+// is still under review. This helper only reports the saved preference.
+const reportRecordedPreferences = (preferences: CookiePreferences) => {
     if (preferences.analytics && typeof window !== 'undefined') {
-        // GA4 initialization would go here
-        // gtag('consent', 'update', { analytics_storage: 'granted' });
-        console.log('[Cookies] Analytics enabled');
+        console.log('[Cookies] Analytics preference recorded');
     }
 
-    // Marketing cookies (Facebook Pixel, etc.)
     if (preferences.marketing && typeof window !== 'undefined') {
-        // fbq('consent', 'grant');
-        console.log('[Cookies] Marketing enabled');
+        console.log('[Cookies] Marketing preference recorded');
     }
 
-    // Functional cookies (Google Calendar sync, preferences, etc.)
     if (preferences.functional && typeof window !== 'undefined') {
-        console.log('[Cookies] Functional enabled (includes Google Calendar sync)');
+        console.log('[Cookies] Functional preference recorded');
     }
 };
 
@@ -79,7 +75,7 @@ export const CookieConsent = () => {
                 try {
                     const parsed = JSON.parse(decodeURIComponent(savedPrefs));
                     setPreferences(parsed);
-                    initializeTracking(parsed);
+                    reportRecordedPreferences(parsed);
                 } catch (e) {
                     console.error('[Cookies] Failed to parse preferences');
                 }
@@ -87,7 +83,7 @@ export const CookieConsent = () => {
                 // Legacy: full acceptance
                 const fullPrefs = { essential: true, analytics: true, marketing: true, functional: true };
                 setPreferences(fullPrefs);
-                initializeTracking(fullPrefs);
+                reportRecordedPreferences(fullPrefs);
             }
         }
     }, []);
@@ -104,8 +100,7 @@ export const CookieConsent = () => {
         setCookie("neuronex-cookie-consent", "accepted", 365);
         setCookie("neuronex-cookie-preferences", encodeURIComponent(JSON.stringify(fullPrefs)), 365);
 
-        // Initialize tracking
-        initializeTracking(fullPrefs);
+        reportRecordedPreferences(fullPrefs);
 
         setPreferences(fullPrefs);
         setIsVisible(false);
@@ -150,14 +145,13 @@ export const CookieConsent = () => {
                                 </div>
                                 <div>
                                     <h4 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-widest">Proteção & Dados</h4>
-                                    <p className="text-[10px] text-zinc-400 dark:text-zinc-600 font-black uppercase tracking-[0.3em]">Compliance Digital</p>
+                                    <p className="text-[10px] text-zinc-400 dark:text-zinc-600 font-black uppercase tracking-[0.3em]">Preferências do navegador</p>
                                 </div>
                             </div>
 
                             <div className="space-y-4">
                                 <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed font-medium">
-                                    Utilizamos cookies essenciais para autenticação Google, sincronização de agenda e segurança.
-                                    Seus dados <strong className="text-zinc-900 dark:text-zinc-200">não são vendidos nem usados para treinar IAs públicas.</strong>
+                                    Este aviso registra sua escolha sobre recursos opcionais no navegador. Ele ainda não controla individualmente integrações Google nem garante, por si só, o bloqueio técnico de tags de terceiros; essa gestão está em revisão.
                                 </p>
 
                                 <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-zinc-400">
@@ -180,25 +174,25 @@ export const CookieConsent = () => {
                                                 <div className="flex items-start gap-3">
                                                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-zinc-500 leading-relaxed">
-                                                        <strong className="text-zinc-900 dark:text-zinc-300">Essenciais:</strong> Sessão NeuroNex e OAuth Google Workspace.
+                                                        <strong className="text-zinc-900 dark:text-zinc-300">Registro da escolha:</strong> dois cookies da NeuroNex guardam se você aceitou ou recusou e o conjunto de preferências correspondente.
                                                     </p>
                                                 </div>
                                                 <div className="flex items-start gap-3">
                                                     <ShieldCheck className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-zinc-500 leading-relaxed">
-                                                        <strong className="text-zinc-900 dark:text-zinc-300">Funcionais:</strong> Sincronização em tempo real de Google Calendar.
+                                                        <strong className="text-zinc-900 dark:text-zinc-300">Preferências:</strong> o app também usa armazenamento local para tema e outras escolhas de interface, independentemente deste aviso.
                                                     </p>
                                                 </div>
                                                 <div className="flex items-start gap-3">
                                                     <ShieldCheck className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-zinc-500 leading-relaxed">
-                                                        <strong className="text-zinc-900 dark:text-zinc-300">Analíticos:</strong> Métricas anônimas internas de performance (opcional).
+                                                        <strong className="text-zinc-900 dark:text-zinc-300">Categorias opcionais:</strong> aceitar ou recusar grava a preferência, mas a aplicação técnica por categoria ainda não é feita por este componente.
                                                     </p>
                                                 </div>
                                                 <div className="flex items-start gap-3">
                                                     <ShieldCheck className="w-3.5 h-3.5 text-zinc-400 shrink-0 mt-0.5" />
                                                     <p className="text-[10px] text-zinc-500 leading-relaxed">
-                                                        <strong className="text-zinc-900 dark:text-zinc-300">Financeiro:</strong> O processamento e infraestrutura de pagamentos são providos pela Asaas IP S.A.
+                                                        <strong className="text-zinc-900 dark:text-zinc-300">Tags de terceiros:</strong> configurações como Google Ads dependem de consentimento e de integração técnica própria, atualmente em revisão.
                                                     </p>
                                                 </div>
                                             </div>
@@ -206,31 +200,31 @@ export const CookieConsent = () => {
                                     )}
                                 </AnimatePresence>
 
-                                <div className="flex items-center gap-3 pt-2">
+                                <div className="grid gap-2 pt-2 sm:grid-cols-2">
                                     <Button
                                         onClick={handleAcceptAll}
-                                        className="h-12 flex-1 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:scale-[1.02] active:scale-95 font-black text-[10px] uppercase tracking-widest transition-all shadow-xl"
+                                        className="h-12 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 hover:scale-[1.02] active:scale-95 font-black text-[10px] uppercase tracking-widest transition-all shadow-xl"
                                     >
                                         Aceitar Tudo
                                     </Button>
                                     <Button
+                                        variant="outline"
+                                        onClick={handleDecline}
+                                        className="h-12 rounded-2xl border-zinc-200/70 bg-transparent text-zinc-600 dark:border-white/10 dark:text-zinc-300 font-black text-[10px] uppercase tracking-widest"
+                                    >
+                                        Recusar opcionais
+                                    </Button>
+                                    <Button
                                         variant="ghost"
                                         onClick={() => setShowDetails(!showDetails)}
-                                        className="h-12 px-6 rounded-2xl bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-black text-[10px] uppercase tracking-widest transition-all border border-zinc-200/50 dark:border-white/5"
+                                        className="h-11 rounded-2xl bg-zinc-100 dark:bg-white/[0.04] text-zinc-500 hover:text-zinc-900 dark:hover:text-white font-black text-[10px] uppercase tracking-widest transition-all border border-zinc-200/50 dark:border-white/5 sm:col-span-2"
+                                        aria-expanded={showDetails}
                                     >
                                         {showDetails ? "Ocultar" : "Detalhes"}
                                     </Button>
                                 </div>
                             </div>
                         </div>
-
-                        <button
-                            onClick={handleDecline}
-                            className="absolute top-6 right-6 p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-all rounded-xl hover:bg-zinc-100 dark:hover:bg-white/10"
-                            aria-label="Recusar cookies"
-                        >
-                            <X className="w-5 h-5" />
-                        </button>
                     </div>
                 </motion.div>
             )}

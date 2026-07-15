@@ -131,7 +131,7 @@ Deno.serve(async(request)=>{
     const key=Deno.env.get("GROQ_API_KEY");
     if(!key)return reply({error:"Provedor alternativo indisponível."},503);
     const primary=Deno.env.get("GROQ_AGENT_MODEL")||"openai/gpt-oss-120b";
-    const secondary=Deno.env.get("GROQ_AGENT_FALLBACK_MODEL")||Deno.env.get("GROQ_FALLBACK_MODEL")||"llama-3.3-70b-versatile";
+    const secondary=Deno.env.get("GROQ_AGENT_FALLBACK_MODEL")||Deno.env.get("GROQ_FALLBACK_MODEL")||"openai/gpt-oss-120b";
     const chronological=[...rows].reverse();
     const messages:any[]=[{role:"system",content:prompt(context,pending?.action||null)},...chronological.slice(-12).map(row=>({role:row.role==="assistant"?"assistant":"user",content:clean(row.content)})),{role:"user",content:message}];
     const mustGround=groundingRequired(message,context);

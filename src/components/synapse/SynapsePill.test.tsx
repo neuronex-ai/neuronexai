@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { SynapsePill } from './SynapsePill';
 
 const mocks = vi.hoisted(() => ({
+    setActiveTab: vi.fn(),
+    setShellState: vi.fn(),
     toggleVoiceMode: vi.fn().mockResolvedValue(undefined),
     context: {} as Record<string, unknown>,
 }));
@@ -26,6 +28,8 @@ describe('Synapse voice presence', () => {
             getVoiceOutputSignal: () => ({ rms: 0, low: 0, mid: 0, high: 0 }),
             isVoiceSpeaking: false,
             isVoiceToolActive: false,
+            setActiveTab: mocks.setActiveTab,
+            setShellState: mocks.setShellState,
             toggleVoiceMode: mocks.toggleVoiceMode,
             voiceActivityLabel: '',
             voicePhase: 'idle',
@@ -33,24 +37,30 @@ describe('Synapse voice presence', () => {
         };
     });
 
-    it('renders only the voice orb as the persistent control', () => {
+    it('offers separate text and voice actions in the persistent launcher', () => {
         render(<SynapsePill />);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversa por voz' }));
+        const launcher = screen.getByRole('toolbar', { name: 'Conversar com o Synapse' });
+        expect(launcher).toBeInTheDocument();
+
+        fireEvent.click(screen.getByRole('button', { name: 'Abrir conversa por texto com o Synapse' }));
+        expect(mocks.setActiveTab).toHaveBeenCalledWith('chat');
+        expect(mocks.setShellState).toHaveBeenCalledWith('compact');
+
+        fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversa por voz com o Synapse' }));
+        expect(mocks.setShellState).toHaveBeenCalledWith('pill');
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
-        expect(screen.getByTestId('liquid-orb')).toBeInTheDocument();
-        expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: /conversa por texto/i })).not.toBeInTheDocument();
+        expect(screen.queryByTestId('liquid-orb')).not.toBeInTheDocument();
     });
 
-    it('uses the same orb click to end a continuous voice session', () => {
+    it('uses the centered voice presence to end a continuous voice session', () => {
         mocks.context = {
             ...mocks.context,
             execState: 'listening',
             voicePhase: 'listening',
             voiceStatus: 'connected',
         };
-        render(<SynapsePill />);
+        render(<SynapsePill mode="voice-presence" />);
 
         const orb = screen.getByRole('button', { name: 'Encerrar conversa por voz' });
         expect(orb).toHaveAttribute('aria-pressed', 'true');
@@ -69,7 +79,7 @@ describe('Synapse voice presence', () => {
             },
             execState: 'executing',
         };
-        render(<SynapsePill />);
+        render(<SynapsePill mode="voice-presence" />);
 
         expect(document.querySelector('.synapse-presence-status')).toHaveTextContent('Conectando a análise ao mapa clínico');
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();

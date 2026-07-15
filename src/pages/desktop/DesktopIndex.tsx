@@ -8,13 +8,13 @@ import { Footer } from "@/components/landing/Footer";
 import { Hero } from "@/components/landing/Hero";
 import { LandingSynapseSDR } from "@/components/landing/LandingSynapseSDR";
 import { Navbar } from "@/components/landing/Navbar";
+import { PublicFlowComparison } from "@/components/landing/PublicFlowComparison";
 import {
     LandingRealFinanceFiscalSection,
     LandingRealProductShowcase,
     LandingRealSynapseSection,
 } from "@/components/landing/LandingProductScreenshots";
 import {
-    LandingDifferentiatorTable,
     LandingFinalCTASection,
     LandingOperatingSystemSection,
     LandingPlanComparisonSection,
@@ -33,7 +33,7 @@ const DesktopIndex = () => {
             <main>
                 <Hero />
                 <LandingProblemSection />
-                <LandingDifferentiatorTable />
+                <PublicFlowComparison />
                 <LandingRealProductShowcase />
                 <section className="bg-transparent px-6 pb-12">
                     <div className="mx-auto flex max-w-[1320px] flex-col justify-center gap-3 rounded-[28px] border border-border/40 bg-card/70 p-5 sm:flex-row dark:border-white/10 dark:bg-white/[0.03]">

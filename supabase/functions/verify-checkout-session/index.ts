@@ -5,39 +5,69 @@ import {
   jsonResponse,
   supabaseAdmin,
 } from "../_shared/asaas-client.ts";
+import { paidPeriodEndPreservingTrial } from "../_shared/subscription-access.ts";
 
 const PAID_CHECKOUT_STATUSES = new Set(["paid"]);
 const PENDING_STATUSES = new Set(["created", "checkout_pending", "payment_pending", "pending", "updated"]);
 const PAID_ASAAS_PAYMENT_STATUSES = new Set(["CONFIRMED", "RECEIVED", "RECEIVED_IN_CASH"]);
 const PENDING_ASAAS_PAYMENT_STATUSES = new Set(["PENDING", "AWAITING_RISK_ANALYSIS", "AUTHORIZED"]);
 
-async function preserveEssentialAccess(checkout: any, metadata?: Record<string, unknown>) {
+async function preserveCurrentAccess(checkout: any, metadata?: Record<string, unknown>) {
   const now = new Date().toISOString();
 
-  const { data: subscription } = await supabaseAdmin
+  const { data: current, error: currentError } = await supabaseAdmin
     .from("user_subscriptions")
-    .update({
-      plan: "Essential",
-      plan_code: "essential",
-      status: "active",
-      access_state: "limited_access",
-      blocked_at: null,
-      updated_at: now,
-    })
+    .select("id,plan,plan_code,status,access_state,metadata")
     .eq("user_id", checkout.user_id)
-    .neq("access_state", "paid_access")
-    .select("id,status,access_state")
     .maybeSingle();
+  if (currentError) throw currentError;
+
+  let subscription = current;
+  if (!subscription) {
+    const { data, error } = await supabaseAdmin
+      .from("user_subscriptions")
+      .insert({
+        user_id: checkout.user_id,
+        plan: "Essential",
+        plan_code: "essential",
+        status: "active",
+        access_state: "limited_access",
+        metadata: {
+          checkout_access_policy: "preserve_existing_until_payment_confirmation",
+          ...(metadata || {}),
+        },
+        updated_at: now,
+      })
+      .select("id,plan,plan_code,status,access_state,metadata")
+      .single();
+    if (error) throw error;
+    subscription = data;
+  } else {
+    const { error } = await supabaseAdmin
+      .from("user_subscriptions")
+      .update({
+        metadata: {
+          ...((subscription.metadata || {}) as Record<string, unknown>),
+          checkout_access_policy: "preserve_existing_until_payment_confirmation",
+          ...(metadata || {}),
+        },
+        updated_at: now,
+      })
+      .eq("user_id", checkout.user_id);
+    if (error) throw error;
+  }
 
   await supabaseAdmin.from("subscription_audit_logs").insert({
     user_id: checkout.user_id,
     subscription_record_id: subscription?.id || checkout.subscription_record_id || null,
     checkout_session_id: checkout.id,
     actor_type: "edge_function",
-    action: "checkout_not_paid_essential_preserved",
-    to_status: "active",
-    to_access_state: "limited_access",
-    reason: "checkout_returned_without_payment_confirmation",
+    action: "checkout_not_paid_access_preserved",
+    from_status: current?.status || null,
+    to_status: subscription?.status || "active",
+    from_access_state: current?.access_state || null,
+    to_access_state: subscription?.access_state || "limited_access",
+    reason: "checkout_returned_without_payment_confirmation_access_unchanged",
     metadata: {
       external_reference: checkout.external_reference,
       paid_access_requires_webhook: true,
@@ -69,10 +99,21 @@ async function syncFromAsaasCheckout(checkout: any) {
   const paymentStatus = String(payment.status || "").toUpperCase();
   const providerSubscriptionId = String(payment.subscription || checkout.provider_subscription_id || "");
   const periodEndBase = payment.dueDate ? new Date(`${payment.dueDate}T12:00:00Z`) : new Date();
-  const currentPeriodEnd = new Date(periodEndBase.getTime());
-  currentPeriodEnd.setUTCMonth(currentPeriodEnd.getUTCMonth() + 1);
+  const providerPeriodEnd = new Date(periodEndBase.getTime());
+  providerPeriodEnd.setUTCMonth(providerPeriodEnd.getUTCMonth() + 1);
 
   if (paidPayment) {
+    const { data: currentSubscription, error: currentSubscriptionError } = await supabaseAdmin
+      .from("user_subscriptions")
+      .select("trial_ends_at")
+      .eq("user_id", checkout.user_id)
+      .maybeSingle();
+    if (currentSubscriptionError) throw currentSubscriptionError;
+    const currentPeriodEnd = paidPeriodEndPreservingTrial(
+      providerPeriodEnd,
+      currentSubscription?.trial_ends_at || checkout.metadata?.trial_ends_at || null,
+    );
+
     await supabaseAdmin
       .from("subscription_checkout_sessions")
       .update({
@@ -151,19 +192,13 @@ async function syncFromAsaasCheckout(checkout: any) {
     await supabaseAdmin
       .from("user_subscriptions")
       .update({
-        plan: "Essential",
-        plan_code: "essential",
-        status: "active",
-        access_state: "limited_access",
-        blocked_at: null,
         asaas_subscription_id: providerSubscriptionId || null,
         last_payment_id: String(payment.id || ""),
         last_payment_status: paymentStatus,
         last_payment_event_at: now,
         updated_at: now,
       })
-      .eq("user_id", checkout.user_id)
-      .neq("access_state", "paid_access");
+      .eq("user_id", checkout.user_id);
 
     return { paid: false, pending: true, payment };
   }
@@ -226,7 +261,7 @@ Deno.serve(async (req: Request) => {
     const isPending = !isPaid && (asaasSync.pending || PENDING_STATUSES.has(checkoutStatus));
 
     if (!isPaid) {
-      await preserveEssentialAccess(checkout, {
+      await preserveCurrentAccess(checkout, {
         checkout_status: checkoutStatus,
         asaas_sync_pending: asaasSync.pending,
       });

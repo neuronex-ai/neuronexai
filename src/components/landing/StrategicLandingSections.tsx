@@ -31,6 +31,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/animations/FadeIn";
+import { PUBLIC_PLAN_COMPARISON } from "@/content/public-plan-catalog";
 import { cn } from "@/lib/utils";
 
 const SectionBadge = ({ children, icon: Icon = Sparkles }: { children: React.ReactNode; icon?: any }) => (
@@ -132,7 +133,7 @@ const comparisonRows = [
   {
     title: "Usar inteligência artificial",
     old: "IA genérica, sem memória operacional e sem conexão com a rotina do consultório.",
-    neo: "Synapse com texto, voz, WhatsApp, NeuroBox e contexto real da clínica.",
+    neo: "Synapse por texto, voz e WhatsApp com continuidade de contexto entre os canais.",
     bold: "IA operacional",
   },
 ];
@@ -345,7 +346,7 @@ export const LandingProductShowcase = () => {
 const systemCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos, teleconsulta e evolução clínica." },
   { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, WhatsApp, lembretes e continuidade entre sessões." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, lembretes e o mesmo Synapse no WhatsApp do psicólogo." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
@@ -358,7 +359,7 @@ export const LandingOperatingSystemSection = () => (
       <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
         <div>
           <SectionBadge icon={BadgeCheck}>Sistema operacional</SectionBadge>
-          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">Um único sistema para operar a clínica inteira.</h2>
+          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">Um único sistema para operar a prática inteira.</h2>
           <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-62 md:text-xl">O NeuroNex não é só uma agenda, um prontuário ou um financeiro. É uma camada operacional que conecta cada parte da rotina.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
@@ -378,8 +379,8 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "Uma camada conversacional para comunicação e automações com limites profissionais." },
-  { icon: BrainCircuit, title: "NeuroBox", text: "Biblioteca de IAs especializadas para tarefas clínicas, administrativas e financeiras." },
+  { icon: MessageCircle, title: "WhatsApp", text: "O mesmo Synapse acompanha o psicólogo no WhatsApp. O NeuroZap é a infraestrutura de conexão e supervisão do WhatsApp Business." },
+  { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroFlow, NeuroPulse e NeuroScan. O NeuroScan já auxilia a transcrever fichas de anamnese no prontuário." },
 ];
 
 export const LandingSynapseSection = () => (
@@ -456,36 +457,19 @@ export const LandingFinanceFiscalSection = () => (
   </section>
 );
 
-const comparisonFeatures = [
-  ["Agenda e pacientes", "Essencial", "Completo", "Completo"],
-  ["Prontuário e documentos", "Completo", "Completo", "Completo"],
-  ["Portal do Paciente", "Incluído", "Incluído", "Incluído"],
-  ["Teleconsulta HD", "Limite inicial", "Limites maiores", "Sob medida"],
-  ["Transcrição e resumo por IA", "Limitado", "Avançado", "Sob medida"],
-  ["Synapse texto", "Limitado", "Limites maiores", "Dedicado"],
-  ["Synapse voz", "—", "Incluído", "Dedicado"],
-  ["Synapse no WhatsApp", "—", "Incluído", "Sob medida"],
-  ["NeuroBox", "—", "Incluído", "Personalizado"],
-  ["NeuroFinance", "Básico", "Completo", "Completo + operação"],
-  ["Preparação fiscal e NFS-e", "—", "Em evolução", "Em evolução"],
-  ["Multi-profissionais", "—", "—", "Incluído"],
-  ["Suporte", "Comunidade", "Prioritário", "Dedicado"],
-];
-
 export const LandingPlanComparisonSection = () => (
   <section id="comparativo" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px]">
-      <SectionHeader eyebrow="Comparativo" title={<>Veja o que muda <span className="text-muted-foreground/35">em cada plano.</span></>} description="A tabela abaixo ajuda a posicionar o Essential como entrada generosa, o Profissional como plano principal e o Enterprise como estrutura dedicada." />
+      <SectionHeader eyebrow="Comparativo" title={<>Veja o que muda <span className="text-muted-foreground/35">em cada plano.</span></>} description="O Essential organiza o começo da prática. O Profissional amplia escala, contexto, automação e operação financeira." />
       <FadeIn delay={0.2}>
-        <div className="mt-14 overflow-hidden rounded-[34px] border border-border/45 bg-card shadow-premium dark:border-white/10 dark:bg-[#0b0b0d]">
-          <div className="grid grid-cols-[1.2fr_repeat(3,0.9fr)] border-b border-border/45 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground dark:border-white/10">
+        <div className="mt-14 overflow-x-auto rounded-[34px] border border-border/45 bg-card shadow-premium dark:border-white/10 dark:bg-[#0b0b0d]">
+          <div className="grid min-w-[760px] grid-cols-[1.25fr_repeat(2,0.9fr)] border-b border-border/45 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground dark:border-white/10">
             <div className="p-5">Recurso</div>
             <div className="p-5 text-center">Essential</div>
             <div className="bg-foreground p-5 text-center text-background dark:bg-white dark:text-zinc-950">Profissional</div>
-            <div className="p-5 text-center">Enterprise</div>
           </div>
-          {comparisonFeatures.map((row) => (
-            <div key={row[0]} className="grid grid-cols-[1.2fr_repeat(3,0.9fr)] border-b border-border/40 last:border-b-0 dark:border-white/10">
+          {PUBLIC_PLAN_COMPARISON.map((row) => (
+            <div key={row[0]} className="grid min-w-[760px] grid-cols-[1.25fr_repeat(2,0.9fr)] border-b border-border/40 last:border-b-0 dark:border-white/10">
               <div className="p-5 text-sm font-bold text-foreground">{row[0]}</div>
               {row.slice(1).map((cell, index) => (
                 <div key={`${row[0]}-${index}`} className={cn("p-5 text-center text-sm font-semibold text-muted-foreground/76", index === 1 && "bg-foreground text-background dark:bg-white dark:text-zinc-950")}>{cell}</div>
@@ -562,14 +546,14 @@ export const LandingFinalCTASection = () => (
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_42%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.055),transparent_42%,rgba(0,0,0,0.02))]" />
       <div className="relative z-10 mx-auto max-w-4xl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div>
-        <h2 className="mt-9 text-5xl font-black leading-[0.88] tracking-[-0.065em] md:text-7xl">A próxima versão da sua clínica começa aqui.</h2>
-        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Entre agora, garanta benefícios Founder e evolua sua operação clínica com IA, financeiro e gestão em um único lugar.</p>
+        <h2 className="mt-9 text-5xl font-black leading-[0.88] tracking-[-0.065em] md:text-7xl">A próxima versão da sua prática começa aqui.</h2>
+        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Entre agora e conecte inteligência contextual, financeiro e gestão em um único lugar.</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button asChild className="h-14 rounded-2xl bg-background px-8 text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
           <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 px-8 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">
-            <Link to="/ajuda">Falar com suporte</Link>
+            <Link to="/contato">Falar com suporte</Link>
           </Button>
         </div>
       </div>

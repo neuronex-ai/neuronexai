@@ -562,8 +562,8 @@ export const HeroVisual = () => {
             action: "Gerar Sumário"
         },
         {
-            text: "O Rodrigo não aparece há 2 semanas. Mando um lembrete gentil por WhatsApp?",
-            action: "Enviar Lembrete"
+            text: "Posso preparar um lembrete gentil para o Rodrigo no WhatsApp e mostrar a mensagem antes do envio.",
+            action: "Ver fluxo Beta"
         },
         {
             text: "Ficou clara a relação da Mariana com o trabalho no grafo. Quer ver o mapa?",

@@ -38,7 +38,7 @@ const HelpCenter = () => {
           <div className="inline-flex items-center gap-2 rounded-full border border-border/45 px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground"><LifeBuoy className="h-4 w-4" />Central de Ajuda</div>
           <h1 className="mt-8 text-[clamp(3.2rem,7vw,7rem)] font-black leading-[0.86] tracking-[-0.075em]">Encontre a resposta <span className="text-muted-foreground/35">sem perder tempo.</span></h1>
           <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">Pesquise orientações sobre as principais áreas do produto.</p>
-          <div className="relative mx-auto mt-9 max-w-2xl"><Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" /><Input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar assunto..." className="h-16 rounded-[22px] pl-14 text-base" /></div>
+          <div className="relative mx-auto mt-9 max-w-2xl"><Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input aria-label="Buscar na Central de Ajuda" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar assunto..." className="h-16 rounded-[22px] pl-14 text-base" /></div>
         </section>
 
         <section className="mx-auto mt-12 max-w-4xl space-y-3">

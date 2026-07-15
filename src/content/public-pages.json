@@ -1,0 +1,185 @@
+{
+  "siteUrl": "https://www.neuronexai.com.br",
+  "defaultImage": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+  "pages": [
+    {
+      "route": "/",
+      "file": null,
+      "title": "NeuroNex AI | Sistema operacional inteligente para psicólogos",
+      "description": "Conecte agenda, prontuário, teleconsulta, Portal do Paciente, NeuroFinance e o Synapse por texto, voz e WhatsApp em uma única operação.",
+      "eyebrow": "NeuroNex AI",
+      "heading": "Sua prática inteira. Uma única inteligência operacional.",
+      "lead": "Agenda, atendimento, registros, comunicação e financeiro compartilham contexto para reduzir trabalho operacional sem tirar do psicólogo as decisões importantes.",
+      "highlights": ["Operação conectada", "Synapse multicanal", "NeuroFinance e NeuroBox"],
+      "sections": [
+        { "title": "Da rotina fragmentada a uma operação conectada", "text": "A NeuroNex reúne as áreas que sustentam o consultório e transforma tarefas isoladas em um fluxo acompanhável." },
+        { "title": "Um Synapse para painel, voz e WhatsApp", "text": "O canal muda, mas a linha de contexto autorizado permanece. Ações com efeito real continuam sob confirmação." },
+        { "title": "NeuroBox", "text": "NeuroView, NeuroFlow, NeuroPulse e NeuroScan ampliam formas de visualizar, organizar e transcrever informações dentro da NeuroNex." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp"
+    },
+    {
+      "route": "/synapse",
+      "file": "synapse.html",
+      "title": "Synapse AI | Agente operacional para psicólogos | NeuroNex",
+      "description": "Conheça o Synapse: a mesma inteligência contextual no painel, por voz e no WhatsApp, com histórico contínuo, permissões e confirmação de ações.",
+      "eyebrow": "Synapse AI",
+      "heading": "Uma mente. Todo o contexto autorizado. A operação inteira.",
+      "lead": "O Synapse preserva a continuidade permitida entre painel, voz e WhatsApp, encontra informações e prepara ações sem ultrapassar permissões ou confirmações.",
+      "highlights": ["Contexto contínuo", "Ação supervisionada", "Presença multicanal"],
+      "sections": [
+        { "title": "O mesmo cérebro em cada canal", "text": "Uma conversa iniciada no WhatsApp pode continuar no painel ou por voz sem precisar reconstruir todo o contexto." },
+        { "title": "NeuroZap não é outro assistente", "text": "O NeuroZap é a infraestrutura de conexão e supervisão do WhatsApp Business; o cérebro que conversa e age continua sendo o Synapse." },
+        { "title": "Ações com responsabilidade", "text": "O Synapse consulta fontes autorizadas, mostra o próximo passo e solicita confirmação quando uma ação envia, altera ou registra informações." },
+        { "title": "NeuroBox", "text": "NeuroView, NeuroFlow, NeuroPulse e NeuroScan compartilham a mesma linguagem operacional. O NeuroScan já auxilia a transcrever fichas de anamnese no prontuário." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp"
+    },
+    {
+      "route": "/neurofinance",
+      "file": "neurofinance.html",
+      "title": "NeuroFinance | Gestão financeira para psicólogos | NeuroNex",
+      "description": "Organize a gestão financeira e, com a conta habilitada, concentre cobranças, Pix, boletos, pagamentos, extrato e saques no fluxo do consultório.",
+      "eyebrow": "NeuroFinance",
+      "heading": "Gestão para decidir. NeuroFinance para movimentar.",
+      "lead": "A gestão financeira organiza a rotina. A conta NeuroFinance conecta movimentações reais conforme cadastro, análise e situação da conta.",
+      "highlights": ["Cobranças, Pix e boletos", "Saldo, extrato e saques", "Financeiro conectado à rotina"],
+      "sections": [
+        { "title": "Duas camadas, papéis claros", "text": "A gestão registra e analisa. O NeuroFinance movimenta dinheiro quando a conta financeira está aprovada e ativa." },
+        { "title": "Do atendimento ao recebimento", "text": "Informações operacionais e financeiras ficam próximas, reduzindo conferências e retrabalho entre sistemas separados." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp"
+    },
+    {
+      "route": "/neurobox",
+      "file": "neurobox.html",
+      "title": "NeuroBox | Inteligências especializadas para psicólogos | NeuroNex",
+      "description": "Conheça o NeuroBox, conjunto formado por NeuroView, NeuroFlow, NeuroPulse e NeuroScan dentro da NeuroNex.",
+      "eyebrow": "NeuroBox",
+      "heading": "Inteligências especializadas. Um mesmo contexto autorizado.",
+      "lead": "NeuroView, NeuroFlow, NeuroPulse e NeuroScan ampliam maneiras de visualizar, organizar e transcrever informações sem fragmentar a experiência.",
+      "highlights": ["NeuroView", "NeuroFlow e NeuroPulse", "NeuroScan"],
+      "sections": [
+        { "title": "Quatro produtos conectados", "text": "Cada produto do NeuroBox terá sua própria área de capacidades, preservando nomes, finalidades e limites claros." },
+        { "title": "NeuroScan", "text": "O NeuroScan já está presente na transcrição assistida de fichas de anamnese no prontuário. Novas frentes só serão comunicadas depois de definidas." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/17-neuroview-dark.webp"
+    },
+    {
+      "route": "/portal-do-paciente",
+      "file": "portal-do-paciente.html",
+      "title": "Portal do Paciente para psicólogos | NeuroNex",
+      "description": "Mantenha o vínculo entre sessões com um Portal do Paciente conectado à rotina e às permissões definidas pelo psicólogo.",
+      "eyebrow": "Portal do Paciente",
+      "heading": "Continuidade entre sessões, dentro do mesmo cuidado.",
+      "lead": "O Portal aproxima informações compartilhadas pelo paciente da rotina profissional, preservando limites de acesso e a responsabilidade do psicólogo.",
+      "highlights": ["Vínculo autorizado", "Continuidade entre sessões", "Contexto dentro da NeuroNex"],
+      "sections": [
+        { "title": "Um espaço próprio para o paciente", "text": "O Portal é uma aplicação voltada ao paciente e permanece separado da interface profissional, com acesso e permissões próprios." },
+        { "title": "Limites por plano", "text": "O Essential permite até cinco vínculos ativos; o Profissional permite até 250 vínculos ativos." }
+      ]
+    },
+    {
+      "route": "/teleconsulta-para-psicologos",
+      "file": "teleconsulta-para-psicologos.html",
+      "title": "Teleconsulta para psicólogos | NeuroNex",
+      "description": "Realize teleconsultas conectadas à agenda e ao contexto operacional da NeuroNex, com limites transparentes por plano.",
+      "eyebrow": "Teleconsulta",
+      "heading": "A sessão online dentro do fluxo da sua prática.",
+      "lead": "Agenda, acesso à sala e continuidade operacional permanecem no mesmo ambiente, sem transformar a chamada em uma ferramenta isolada.",
+      "highlights": ["Conectada à agenda", "Fluxo do atendimento", "Limites transparentes"],
+      "sections": [
+        { "title": "Essential", "text": "Cinco sessões e até 150 minutos totais de teleconsulta por mês." },
+        { "title": "Profissional", "text": "Até 80 sessões e 20 pacientes distintos por mês, além de 300 minutos mensais de transcrição." }
+      ]
+    },
+    {
+      "route": "/prontuario-para-psicologos",
+      "file": "prontuario-para-psicologos.html",
+      "title": "Prontuário para psicólogos | NeuroNex",
+      "description": "Organize registros, documentos e fichas de anamnese em um prontuário conectado à rotina do psicólogo.",
+      "eyebrow": "Prontuário",
+      "heading": "Registros organizados no contexto do atendimento.",
+      "lead": "O prontuário reúne informações necessárias ao acompanhamento profissional e se conecta às demais áreas da NeuroNex dentro das permissões aplicáveis.",
+      "highlights": ["Registros e documentos", "Fichas de anamnese", "Contexto autorizado"],
+      "sections": [
+        { "title": "NeuroScan no prontuário", "text": "O NeuroScan auxilia a transcrever fichas de anamnese, reduzindo a repetição manual sem retirar do psicólogo a revisão final." },
+        { "title": "Organização sem mistura de acessos", "text": "Conteúdo profissional, informações compartilhadas e dados administrativos mantêm finalidades e permissões próprias." }
+      ]
+    },
+    {
+      "route": "/agenda-para-psicologos",
+      "file": "agenda-para-psicologos.html",
+      "title": "Agenda para psicólogos | NeuroNex",
+      "description": "Organize horários, pacientes e compromissos em uma agenda conectada ao restante da operação NeuroNex.",
+      "eyebrow": "Agenda",
+      "heading": "A agenda como início do fluxo, não como ferramenta isolada.",
+      "lead": "Compromissos se relacionam com pacientes, teleconsulta e próximos passos operacionais no mesmo ambiente.",
+      "highlights": ["Horários e pacientes", "Teleconsulta conectada", "Próximos passos organizados"],
+      "sections": [
+        { "title": "Uma visão clara da rotina", "text": "Dia, semana e mês ajudam o psicólogo a localizar compromissos e continuar o trabalho na área correta." },
+        { "title": "Regras complexas serão definidas separadamente", "text": "Automações de cobrança, pacotes, fiscal e comunicação só serão consolidadas depois do mapeamento completo de cenários." }
+      ]
+    },
+    {
+      "route": "/ajuda",
+      "file": "ajuda.html",
+      "title": "Central de Ajuda NeuroNex",
+      "description": "Orientações sobre agenda, pacientes, prontuário, teleconsulta, financeiro, Synapse e configurações da NeuroNex.",
+      "eyebrow": "Central de Ajuda",
+      "heading": "Encontre a orientação certa para cada área da NeuroNex.",
+      "lead": "Consulte respostas sobre acesso, agenda, pacientes, prontuário, teleconsulta, financeiro, Portal do Paciente, Synapse e configurações.",
+      "highlights": ["Dúvidas por área", "Privacidade e segurança", "Contato com a equipe"]
+    },
+    {
+      "route": "/contato",
+      "file": "contato.html",
+      "title": "Contato | NeuroNex",
+      "description": "Fale com a NeuroNex sobre suporte, planos, NeuroFinance, privacidade, LGPD e uso da plataforma.",
+      "eyebrow": "Contato",
+      "heading": "Converse com a equipe NeuroNex.",
+      "lead": "Use os canais oficiais para falar sobre suporte, planos, NeuroFinance, privacidade, LGPD ou adoção da plataforma.",
+      "highlights": ["Suporte ao produto", "Planos NeuroNex", "Privacidade e LGPD"]
+    },
+    {
+      "route": "/documentos-legais",
+      "file": "documentos-legais.html",
+      "title": "Documentos legais | NeuroNex",
+      "description": "Acesse os Termos de Uso, a Política de Privacidade e as informações sobre cookies e armazenamento local da NeuroNex.",
+      "eyebrow": "Documentos legais",
+      "heading": "Regras claras para usar a NeuroNex.",
+      "lead": "Esta página reúne Termos de Uso, Política de Privacidade e informações sobre cookies em endereços públicos próprios.",
+      "highlights": ["Termos de Uso", "Política de Privacidade", "Cookies e armazenamento local"]
+    },
+    {
+      "route": "/termos-de-uso",
+      "file": "termos-de-uso.html",
+      "title": "Termos de Uso | NeuroNex",
+      "description": "Consulte as condições de uso, responsabilidades, planos, integrações e serviços financeiros da plataforma NeuroNex.",
+      "eyebrow": "Termos de Uso",
+      "heading": "Condições de uso da plataforma NeuroNex.",
+      "lead": "Consulte responsabilidades, regras de conta, planos, integrações, serviços financeiros, disponibilidade e encerramento de uso.",
+      "highlights": ["Responsabilidades", "Planos e integrações", "Serviços financeiros"]
+    },
+    {
+      "route": "/politica-de-privacidade",
+      "file": "politica-de-privacidade.html",
+      "title": "Política de Privacidade e LGPD | NeuroNex",
+      "description": "Entenda como a NeuroNex coleta, utiliza, protege, retém e trata solicitações sobre dados pessoais e integrações autorizadas.",
+      "eyebrow": "Privacidade e LGPD",
+      "heading": "Como a NeuroNex trata e protege dados.",
+      "lead": "Conheça as finalidades, bases de tratamento, medidas de proteção, direitos do titular e regras de integrações autorizadas.",
+      "highlights": ["Direitos do titular", "Proteção de dados", "Integrações autorizadas"]
+    },
+    {
+      "route": "/configuracoes-de-cookies",
+      "file": "configuracoes-de-cookies.html",
+      "title": "Cookies e armazenamento local | NeuroNex",
+      "description": "Entenda quais cookies e dados locais a NeuroNex usa, suas finalidades e como revisar as escolhas atualmente disponíveis.",
+      "eyebrow": "Cookies e dados locais",
+      "heading": "Entenda o uso de cookies e armazenamento local.",
+      "lead": "Veja o que é essencial para o funcionamento, quais medições podem existir e como revisar escolhas oferecidas pela plataforma e pelo navegador.",
+      "highlights": ["Funcionamento essencial", "Armazenamento local", "Medição e marketing"]
+    }
+  ]
+}

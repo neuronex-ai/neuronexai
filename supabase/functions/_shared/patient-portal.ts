@@ -101,6 +101,7 @@ function legacyPortalEntitlement() {
     planCode: "legacy",
     hasPortal: true,
     hasPaidAccess: true,
+    portalLinkLimit: null,
     canInvite: true,
   };
 }
@@ -124,11 +125,20 @@ export async function readProfessionalPortalEntitlement(
   const accessState = String(data?.effective_access_state || data?.access_state || "blocked");
   const planCode = String(data?.plan_code || "essential").toLowerCase();
   const features = (data?.features || {}) as Record<string, unknown>;
-  const hasPortal = Boolean(features.patient_portal) || ["professional", "enterprise"].includes(planCode);
+  const limits = (data?.limits || {}) as Record<string, unknown>;
+  const hasPortal = Boolean(features.patient_portal);
   const hasPaidAccess =
     status === "admin_override" ||
     Boolean(data?.has_paid_access) ||
     (status === "active" && accessState === "paid_access");
+
+  const rawPortalLinkLimit = limits.patient_portal_active_links;
+  const portalLinkLimit = rawPortalLinkLimit === null || rawPortalLinkLimit === "unlimited"
+    ? null
+    : Number(rawPortalLinkLimit);
+  const hasCurrentAccess =
+    ["active", "trialing", "admin_override"].includes(status) &&
+    ["limited_access", "trial_access", "paid_access", "admin_override"].includes(accessState);
 
   return {
     status,
@@ -136,7 +146,8 @@ export async function readProfessionalPortalEntitlement(
     planCode,
     hasPortal,
     hasPaidAccess,
-    canInvite: hasPortal && hasPaidAccess,
+    portalLinkLimit: Number.isFinite(portalLinkLimit) ? portalLinkLimit : null,
+    canInvite: hasPortal && hasCurrentAccess,
   };
 }
 
@@ -147,7 +158,7 @@ export async function requirePsychologistPortalAccess(req: Request) {
     return {
       user,
       entitlement,
-      response: errorResponse("Portal do Paciente esta disponivel apenas para Professional/Enterprise com assinatura ativa.", 402, {
+      response: errorResponse("O plano atual nao permite criar novos acessos ao Portal do Paciente.", 402, {
         code: "patient_portal_not_available",
         entitlement,
       }),

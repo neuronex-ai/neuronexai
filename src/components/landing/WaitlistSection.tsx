@@ -1,71 +1,19 @@
 "use client";
 
 import { Link } from "react-router-dom";
-import { ArrowRight, Building2, CheckCircle2, Sparkles, Star, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle2, Sparkles, Star, Zap } from "lucide-react";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { Button } from "@/components/ui/button";
-import { PROFESSIONAL_PLAN_PERIOD, PROFESSIONAL_PLAN_PRICE, PROFESSIONAL_TRIAL_DAYS } from "@/lib/subscription-plans";
+import {
+    PUBLIC_PLAN_CARDS,
+    type PublicPlanName,
+} from "@/content/public-plan-catalog";
 import { cn } from "@/lib/utils";
 
-const plans = [
-    {
-        name: "Essential",
-        eyebrow: "Founder incluso",
-        price: "R$ 0",
-        period: "/mês",
-        description: "Para começar com uma operação clínica organizada, portal do paciente e inteligência essencial.",
-        icon: Star,
-        cta: "Criar conta grátis",
-        href: "/create-account?plan=essential",
-        featured: false,
-        highlights: [
-            "Selo Founder + benefícios VIP de pré-lançamento",
-            "Gestão do consultório completa",
-            "Acesso limitado ao Synapse de texto",
-            "Teleconsulta HD com transcrição e resumo por IA",
-            "Portal do Paciente + diário e rastreio de humor",
-            "Relatórios completos da rotina clínica",
-        ],
-    },
-    {
-        name: "Profissional",
-        eyebrow: `${PROFESSIONAL_TRIAL_DAYS} dias grátis`,
-        price: PROFESSIONAL_PLAN_PRICE,
-        period: PROFESSIONAL_PLAN_PERIOD,
-        description: "Para psicólogos que querem automação, voz, finanças integradas e operação de ponta a ponta.",
-        icon: Zap,
-        cta: "Testar grátis",
-        href: "/create-account?plan=professional",
-        featured: true,
-        highlights: [
-            "Selo Founder + benefícios VIP de pré-lançamento",
-            "Synapse texto e voz com limites maiores",
-            "Synapse no WhatsApp incluso",
-            "NeuroBox com biblioteca de IAs NeuroNex",
-            "Gestão Financeira + NeuroFinance",
-            "Dados fiscais organizados; automação NFS-e em evolução",
-            "Tudo do Essential, com mais automação",
-        ],
-    },
-    {
-        name: "Enterprise",
-        eyebrow: "Sob medida",
-        price: "Personalizado",
-        period: "",
-        description: "Para clínicas, equipes e operações que precisam de estrutura personalizada e suporte dedicado.",
-        icon: Building2,
-        cta: "Contatar suporte",
-        href: "/ajuda",
-        featured: false,
-        highlights: [
-            "Implantação personalizada para clínicas e equipes",
-            "Multi-profissionais, permissões e operação assistida",
-            "Relatórios consolidados e fluxos dedicados",
-            "Treinamento e configuração inicial assistida",
-            "Condições comerciais para volume e expansão",
-        ],
-    },
-];
+const planIcons: Record<PublicPlanName, typeof Star> = {
+    Essential: Star,
+    Profissional: Zap,
+};
 
 export const WaitlistSection = () => {
     return (
@@ -92,21 +40,21 @@ export const WaitlistSection = () => {
                         <h2 className="mx-auto max-w-5xl text-5xl font-bold leading-[0.9] tracking-[-0.055em] md:text-7xl lg:text-8xl">
                             Escolha o plano <br />
                             <span className="bg-gradient-to-b from-foreground via-foreground/90 to-foreground/30 bg-clip-text text-transparent">
-                                ideal para a sua clínica.
+                                ideal para a sua prática.
                             </span>
                         </h2>
                     </FadeIn>
 
                     <FadeIn delay={0.3}>
                         <p className="mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/60 md:text-xl">
-                            Comece com o essencial, evolua para o profissional com preço de pré-lançamento ou fale com suporte para uma estrutura personalizada.
+                            Comece gratuitamente ou avance para uma operação mais ampla com Synapse, NeuroBox, NeuroFinance e WhatsApp conectados.
                         </p>
                     </FadeIn>
                 </div>
 
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
-                    {plans.map((plan, index) => {
-                        const Icon = plan.icon;
+                <div className="mx-auto grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2 lg:gap-6">
+                    {PUBLIC_PLAN_CARDS.map((plan, index) => {
+                        const Icon = planIcons[plan.name];
                         return (
                             <FadeIn key={plan.name} delay={0.18 + index * 0.08}>
                                 <article
@@ -147,7 +95,7 @@ export const WaitlistSection = () => {
                                         <p className={cn("mt-5 text-sm font-medium leading-relaxed", plan.featured ? "text-background/58" : "text-muted-foreground/58")}>{plan.description}</p>
 
                                         <div className="mt-8 space-y-3">
-                                            {plan.highlights.map((item) => (
+                                            {plan.features.map((item) => (
                                                 <div key={item} className={cn("flex items-start gap-3 text-sm font-bold leading-relaxed", plan.featured ? "text-background/70" : "text-muted-foreground/70")}>
                                                     <CheckCircle2 className={cn("mt-0.5 h-4 w-4 shrink-0", plan.featured ? "text-background" : "text-foreground/45")} />
                                                     <span>{item}</span>

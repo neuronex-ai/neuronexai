@@ -84,7 +84,7 @@ Medições locais servem como diagnóstico e comparação. A confirmação final
 - Mudanças de endereço preservam sinais anteriores com redirecionamento permanente e canonicalização correta.
 - Links possuem texto descritivo; títulos seguem uma hierarquia compreensível.
 - Dados estruturados descrevem somente funcionalidades e entidades reais.
-- Conteúdo é escrito para pessoas e reflete o produto atual, incluindo os diferenciais confirmados de Synapse, voz, WhatsApp, modo agêntico e NeuroBox.
+- Conteúdo é escrito para pessoas e reflete o produto atual, incluindo os diferenciais confirmados de Synapse, voz, modo agêntico e NeuroBox; o WhatsApp pelo NeuroZap deve ser qualificado como previsto para o Beta Desktop enquanto não estiver disponível.
 
 ## 8. Evidência obrigatória ao finalizar uma área
 

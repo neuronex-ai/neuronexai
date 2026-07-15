@@ -2,9 +2,17 @@
 
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useTheme } from "@/hooks/use-theme";
 
@@ -13,6 +21,7 @@ export const LandingMobileNav = () => {
     const navigate = useNavigate();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const { theme } = useTheme();
+    const shouldReduceMotion = useReducedMotion();
 
     const faviconSrc = theme === "dark" ? "/favicon-light.png" : "/favicon-dark.png";
 
@@ -39,13 +48,15 @@ export const LandingMobileNav = () => {
 
     const handleAnchorClick = (target: string) => {
         setIsMenuOpen(false);
-        const scrollToTarget = () => document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        const scrollToTarget = () => document.getElementById(target)?.scrollIntoView({
+            behavior: shouldReduceMotion ? "auto" : "smooth",
+            block: "start",
+        });
         if (location.pathname !== "/") {
-            navigate(`/#${target}`);
-            setTimeout(scrollToTarget, 180);
+            navigate({ pathname: "/", hash: `#${target}` });
             return;
         }
-        requestAnimationFrame(scrollToTarget);
+        requestAnimationFrame(() => requestAnimationFrame(scrollToTarget));
     };
 
     const extendedNavItems = [
@@ -57,109 +68,111 @@ export const LandingMobileNav = () => {
     ];
 
     return (
-        <>
-            {/* The Top Header Navbar for Mobile */}
+        <Dialog open={isMenuOpen} onOpenChange={setIsMenuOpen}>
             <motion.header
-                initial={{ y: -20, opacity: 0 }}
+                initial={shouldReduceMotion ? false : { y: -20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
+                transition={shouldReduceMotion ? { duration: 0 } : undefined}
                 className="fixed left-0 right-0 top-0 z-[100] flex items-center justify-between bg-transparent px-5 py-5 md:hidden"
             >
-                <Link to="/" className="flex items-center gap-2.5 rounded-2xl border border-border/20 bg-background/55 px-3 py-2 shadow-[0_18px_50px_-38px_rgba(0,0,0,0.7)] backdrop-blur-xl dark:border-white/10 dark:bg-black/25">
-                    <img src={faviconSrc} className="h-7 w-7 object-contain" alt="NeuroNex" />
+                <Link to="/" className="flex items-center gap-2.5 rounded-2xl border border-border/20 bg-background/55 px-3 py-2 shadow-[0_18px_50px_-38px_rgba(0,0,0,0.7)] backdrop-blur-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-black/25">
+                    <img src={faviconSrc} className="h-7 w-7 object-contain" alt="" aria-hidden="true" />
                     <span className="text-[11px] font-black uppercase tracking-[0.32em] opacity-60">NeuroNex</span>
                 </Link>
 
                 <div className="flex items-center gap-2">
                     <ThemeToggle />
-                    <button
-                        onClick={() => setIsMenuOpen(true)}
-                        className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/20 bg-background/55 text-foreground shadow-[0_18px_50px_-38px_rgba(0,0,0,0.7)] backdrop-blur-xl transition-all active:scale-95 dark:border-white/10 dark:bg-black/25"
-                        aria-label="Abrir menu"
-                    >
-                        <Menu className="h-5 w-5" />
-                    </button>
+                    <DialogTrigger asChild>
+                        <button
+                            type="button"
+                            className="flex h-11 w-11 items-center justify-center rounded-xl border border-border/20 bg-background/55 text-foreground shadow-[0_18px_50px_-38px_rgba(0,0,0,0.7)] backdrop-blur-xl transition-all active:scale-95 dark:border-white/10 dark:bg-black/25"
+                            aria-label="Abrir menu"
+                        >
+                            <Menu className="h-5 w-5" aria-hidden="true" />
+                        </button>
+                    </DialogTrigger>
                 </div>
             </motion.header>
 
-            {/* Apple iOS-Style Full Screen Drawer for Menu */}
-            <AnimatePresence>
-                {isMenuOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.97 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.97 }}
-                        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-                        className="fixed inset-0 z-[110] flex flex-col overflow-y-auto bg-background md:hidden"
-                    >
-                        <div className="pointer-events-none absolute inset-0">
-                            <div className="absolute left-1/2 top-0 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-foreground/[0.045] blur-[110px] dark:bg-white/[0.055]" />
-                            <div className="absolute inset-0 premium-noise opacity-[0.025]" />
-                        </div>
+            <DialogContent
+                showCloseButton={false}
+                overlayClassName="bg-transparent backdrop-blur-none md:hidden"
+                className="!inset-0 !left-0 !top-0 z-[111] !flex !h-[100dvh] !max-h-[100dvh] !w-screen !max-w-none !translate-x-0 !translate-y-0 flex-col gap-0 overflow-y-auto !rounded-none !border-0 bg-background !p-0 !shadow-none md:hidden motion-reduce:duration-0 motion-reduce:data-[state=open]:animate-none motion-reduce:data-[state=closed]:animate-none"
+            >
+                <DialogTitle className="sr-only">Menu de navegação</DialogTitle>
+                <DialogDescription className="sr-only">
+                    Acesse as áreas públicas da NeuroNex ou entre na plataforma.
+                </DialogDescription>
 
-                        <div className="relative z-10 flex items-center justify-between border-b border-border/10 p-5 pb-3 dark:border-white/10">
-                            <div className="flex items-center gap-2.5">
-                                <img src={faviconSrc} className="h-7 w-7 object-contain" alt="NeuroNex" />
-                                <span className="text-[11px] font-black uppercase tracking-[0.32em] opacity-55">NeuroNex</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <ThemeToggle />
+                <div className="pointer-events-none absolute inset-0">
+                    <div className="absolute left-1/2 top-0 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-foreground/[0.045] blur-[110px] dark:bg-white/[0.055]" />
+                    <div className="absolute inset-0 premium-noise opacity-[0.025]" />
+                </div>
+
+                <div className="relative z-10 flex items-center justify-between border-b border-border/10 p-5 pb-3 dark:border-white/10">
+                    <div className="flex items-center gap-2.5">
+                        <img src={faviconSrc} className="h-7 w-7 object-contain" alt="" aria-hidden="true" />
+                        <span className="text-[11px] font-black uppercase tracking-[0.32em] opacity-55">NeuroNex</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <ThemeToggle />
+                        <DialogClose asChild>
+                            <button
+                                type="button"
+                                className="flex h-11 w-11 items-center justify-center rounded-full border border-border/20 bg-foreground/[0.035] text-foreground transition-all hover:bg-foreground/[0.05] active:scale-95 dark:border-white/10 dark:bg-white/[0.045]"
+                                aria-label="Fechar menu"
+                            >
+                                <X className="h-5 w-5" aria-hidden="true" />
+                            </button>
+                        </DialogClose>
+                    </div>
+                </div>
+
+                <nav aria-label="Navegação principal" className="relative z-10 flex flex-1 flex-col justify-center gap-6 p-8">
+                    {extendedNavItems.map((item, i) => (
+                        <motion.div
+                            key={item.label}
+                            initial={shouldReduceMotion ? false : { opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { delay: i * 0.05 + 0.1, duration: 0.4 }}
+                        >
+                            {item.type === "anchor" ? (
                                 <button
-                                    onClick={() => setIsMenuOpen(false)}
-                                    className="flex h-10 w-10 items-center justify-center rounded-full border border-border/20 bg-foreground/[0.035] text-foreground transition-all hover:bg-foreground/[0.05] active:scale-95 dark:border-white/10 dark:bg-white/[0.045]"
-                                    aria-label="Fechar menu"
+                                    type="button"
+                                    onClick={() => handleAnchorClick(item.target!)}
+                                    className="block min-h-11 text-left text-4xl font-black leading-none tracking-[-0.055em] text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
                                 >
-                                    <X className="h-5 w-5" />
+                                    {item.label}
                                 </button>
-                            </div>
-                        </div>
-
-                        <div className="relative z-10 flex flex-1 flex-col justify-center gap-6 p-8">
-                            {extendedNavItems.map((item, i) => (
-                                <motion.div
-                                    key={item.label}
-                                    initial={{ opacity: 0, y: 15 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.05 + 0.1, duration: 0.4 }}
+                            ) : (
+                                <Link
+                                    to={item.path!}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className="flex min-h-11 items-center text-4xl font-black leading-none tracking-[-0.055em] text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
                                 >
-                                    {item.type === "anchor" ? (
-                                        <button
-                                            type="button"
-                                            onClick={() => handleAnchorClick(item.target!)}
-                                            className="block text-left text-4xl font-black leading-none tracking-[-0.055em] text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
-                                        >
-                                            {item.label}
-                                        </button>
-                                    ) : (
-                                        <Link
-                                            to={item.path!}
-                                            onClick={() => setIsMenuOpen(false)}
-                                            className="block text-4xl font-black leading-none tracking-[-0.055em] text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
-                                        >
-                                            {item.label}
-                                        </Link>
-                                    )}
-                                </motion.div>
-                            ))}
-                        </div>
+                                    {item.label}
+                                </Link>
+                            )}
+                        </motion.div>
+                    ))}
+                </nav>
 
-                        <div className="relative z-10 mt-auto space-y-4 border-t border-border/10 p-8 pb-10 dark:border-white/10">
-                            <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.22em] text-background shadow-premium transition-all active:scale-95">
-                                <Link to="/create-account" onClick={() => setIsMenuOpen(false)}>
-                                    Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
-                                </Link>
-                            </Button>
-                            <Button asChild variant="ghost" className="h-14 w-full rounded-2xl border border-border/30 bg-foreground/[0.035] text-[10px] font-black uppercase tracking-[0.22em] text-foreground/72 transition-all active:scale-95 dark:border-white/10 dark:bg-white/[0.045]">
-                                <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
-                                    Entrar no NeuroNex
-                                </Link>
-                            </Button>
-                            <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-muted-foreground/40">
-                                Sistema operacional financeiro, clínico e inteligente para psicólogos.
-                            </p>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </>
+                <div className="relative z-10 mt-auto space-y-4 border-t border-border/10 p-8 pb-[max(2.5rem,env(safe-area-inset-bottom))] dark:border-white/10">
+                    <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.22em] text-background shadow-premium transition-all active:scale-95">
+                        <Link to="/create-account" onClick={() => setIsMenuOpen(false)}>
+                            Começar grátis <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                        </Link>
+                    </Button>
+                    <Button asChild variant="ghost" className="h-14 w-full rounded-2xl border border-border/30 bg-foreground/[0.035] text-[10px] font-black uppercase tracking-[0.22em] text-foreground/72 transition-all active:scale-95 dark:border-white/10 dark:bg-white/[0.045]">
+                        <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
+                            Entrar no NeuroNex
+                        </Link>
+                    </Button>
+                    <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-muted-foreground/40">
+                        Sistema operacional financeiro, clínico e inteligente para psicólogos.
+                    </p>
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 };
