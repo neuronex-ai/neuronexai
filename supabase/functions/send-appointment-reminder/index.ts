@@ -53,7 +53,7 @@ serve(async (request) => {
 
     const appointmentResult = await db
       .from("appointments")
-      .select("id,user_id,patient_id,start_time,end_time,type,location,lifecycle_status")
+      .select("id,user_id,patient_id,start_time,end_time,type,location,lifecycle_status,confirmation_revision")
       .eq("id", appointmentId)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -97,11 +97,15 @@ serve(async (request) => {
         .from("appointment_confirmation_tokens")
         .insert({
           appointment_id: appointment.id,
+          appointment_revision: appointment.confirmation_revision,
           token_hash: tokenHash,
           expires_at: invitationExpiry(appointment.end_time),
           status: "pending",
           created_by: user.id,
-          metadata: { source: "appointment_detail_email" },
+          metadata: {
+            source: "appointment_detail_email",
+            appointmentRevision: appointment.confirmation_revision,
+          },
         })
         .select("id")
         .single();
@@ -154,6 +158,7 @@ serve(async (request) => {
           provider: delivery.provider,
           providerMessageId: delivery.providerMessageId,
           recipient,
+          appointmentRevision: appointment.confirmation_revision,
         },
       });
       if (invitationResult.error) throw invitationResult.error;

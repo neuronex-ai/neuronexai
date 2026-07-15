@@ -103,7 +103,7 @@ export async function resolveAppointmentInvitation(
   const tokenHash = await appointmentTokenHash(token);
   const tokenResult = await db
     .from("appointment_confirmation_tokens")
-    .select("id,appointment_id,status,expires_at,sent_at,opened_at,used_at,revoked_at,metadata")
+    .select("id,appointment_id,appointment_revision,status,expires_at,sent_at,opened_at,used_at,revoked_at,metadata")
     .eq("token_hash", tokenHash)
     .in("status", ["sent", "opened"])
     .is("revoked_at", null)
@@ -118,13 +118,20 @@ export async function resolveAppointmentInvitation(
   const appointmentResult = await db
     .from("appointments")
     .select(
-      "id,user_id,patient_id,start_time,end_time,type,status,lifecycle_status,location,google_meet_link,created_at,updated_at,payment_status,invitation_sent_at,invitation_opened_at,confirmed_at,cancelled_at,cancellation_reason,reschedule_requested_at,reschedule_approved_at,reschedule_rejected_at,metadata",
+      "id,user_id,patient_id,start_time,end_time,type,status,lifecycle_status,location,google_meet_link,created_at,updated_at,payment_status,invitation_sent_at,invitation_opened_at,confirmed_at,confirmation_revision,confirmed_revision,cancelled_at,cancellation_reason,reschedule_requested_at,reschedule_approved_at,reschedule_rejected_at,metadata",
     )
     .eq("id", tokenResult.data.appointment_id)
     .maybeSingle();
   if (appointmentResult.error) throw appointmentResult.error;
   if (!appointmentResult.data) {
     throw new AppointmentLifecycleError("Agendamento nao encontrado.", 404, "APPOINTMENT_NOT_FOUND");
+  }
+  if (tokenResult.data.appointment_revision !== appointmentResult.data.confirmation_revision) {
+    throw new AppointmentLifecycleError(
+      "Este convite foi substituido depois que os detalhes da consulta mudaram.",
+      410,
+      "SUPERSEDED_INVITATION",
+    );
   }
 
   const [patientResult, profileResult, requestResult] = await Promise.all([
@@ -186,6 +193,8 @@ export function serializePublicAppointment(context: ResolvedAppointmentInvitatio
       invitation_sent_at: appointment.invitation_sent_at,
       invitation_opened_at: appointment.invitation_opened_at,
       confirmed_at: appointment.confirmed_at,
+      confirmation_revision: appointment.confirmation_revision,
+      confirmed_revision: appointment.confirmed_revision,
       cancelled_at: appointment.cancelled_at,
       reschedule_requested_at: appointment.reschedule_requested_at,
       reschedule_approved_at: appointment.reschedule_approved_at,

@@ -68,7 +68,7 @@ serve(async (request) => {
 
     const appointmentResult = await db
       .from("appointments")
-      .select("id,user_id,patient_id,start_time,end_time,type,location")
+      .select("id,user_id,patient_id,start_time,end_time,type,location,confirmation_revision")
       .eq("id", rescheduleResult.data.appointment_id)
       .eq("user_id", user.id)
       .maybeSingle();
@@ -124,11 +124,17 @@ serve(async (request) => {
         .from("appointment_confirmation_tokens")
         .insert({
           appointment_id: reviewedAppointment.id,
+          appointment_revision: reviewedAppointment.confirmation_revision,
           token_hash: tokenHash,
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1_000).toISOString(),
           status: "pending",
           created_by: user.id,
-          metadata: { source: "reschedule_review", requestId, decision },
+          metadata: {
+            source: "reschedule_review",
+            requestId,
+            decision,
+            appointmentRevision: reviewedAppointment.confirmation_revision,
+          },
         })
         .select("id")
         .single();

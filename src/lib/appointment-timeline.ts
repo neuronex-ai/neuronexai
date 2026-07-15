@@ -34,6 +34,7 @@ const EVENT_LABELS: Record<string, string> = {
   appointment_created: "Agendamento criado",
   invitation_sent: "Convite enviado por e-mail",
   awaiting_confirmation: "Aguardando confirmação",
+  appointment_reconfirmation_required: "Agendamento alterado; nova confirmação solicitada",
   invitation_opened: "Paciente abriu o convite",
   patient_confirmed: "Paciente confirmou",
   cancellation_requested: "Cancelamento solicitado",
@@ -80,6 +81,7 @@ const EVENT_LABELS: Record<string, string> = {
 
 const EVENT_DETAILS: Record<string, string> = {
   invitation_opened: "O link seguro da consulta foi acessado.",
+  appointment_reconfirmation_required: "Os detalhes da consulta mudaram e o paciente precisa confirmar esta nova versão.",
   patient_requested_reschedule: "A solicitação aguarda a análise do profissional.",
   psychologist_approved_reschedule: "O novo horário solicitado foi aceito.",
   psychologist_rejected_reschedule: "O agendamento original foi mantido.",
@@ -101,6 +103,7 @@ const STATUS_LABELS: Record<string, string> = {
   created: "Criado",
   invitation_sent: "Convite enviado",
   awaiting_confirmation: "Aguardando confirmação",
+  awaiting_reconfirmation: "Aguardando nova confirmação",
   confirmed: "Confirmado",
   cancellation_requested: "Cancelamento solicitado",
   cancelled: "Cancelado",

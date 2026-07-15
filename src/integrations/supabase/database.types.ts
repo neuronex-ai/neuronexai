@@ -41,6 +41,7 @@ export type Database = {
       appointment_confirmation_tokens: {
         Row: {
           appointment_id: string
+          appointment_revision: number
           created_at: string | null
           created_by: string | null
           expires_at: string
@@ -56,6 +57,7 @@ export type Database = {
         }
         Insert: {
           appointment_id: string
+          appointment_revision: number
           created_at?: string | null
           created_by?: string | null
           expires_at: string
@@ -71,6 +73,7 @@ export type Database = {
         }
         Update: {
           appointment_id?: string
+          appointment_revision?: number
           created_at?: string | null
           created_by?: string | null
           expires_at?: string
@@ -574,6 +577,8 @@ export type Database = {
           cancelled_at: string | null
           charge_id: string | null
           confirmed_at: string | null
+          confirmed_revision: number | null
+          confirmation_revision: number
           created_at: string | null
           created_by: string | null
           end_time: string | null
@@ -617,6 +622,8 @@ export type Database = {
           cancelled_at?: string | null
           charge_id?: string | null
           confirmed_at?: string | null
+          confirmed_revision?: number | null
+          confirmation_revision?: number
           created_at?: string | null
           created_by?: string | null
           end_time?: string | null
@@ -660,6 +667,8 @@ export type Database = {
           cancelled_at?: string | null
           charge_id?: string | null
           confirmed_at?: string | null
+          confirmed_revision?: number | null
+          confirmation_revision?: number
           created_at?: string | null
           created_by?: string | null
           end_time?: string | null

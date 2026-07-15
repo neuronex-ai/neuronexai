@@ -105,6 +105,7 @@ const LIFECYCLE_LABELS: Record<string, string> = {
   created: "Criado",
   invitation_sent: "Convite enviado",
   awaiting_confirmation: "Aguardando confirmação",
+  awaiting_reconfirmation: "Aguardando nova confirmação",
   confirmed: "Confirmado pelo paciente",
   cancellation_requested: "Cancelamento solicitado",
   cancelled: "Cancelado",

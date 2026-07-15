@@ -28,6 +28,7 @@ type LifecycleStatus =
   | "created"
   | "invitation_sent"
   | "awaiting_confirmation"
+  | "awaiting_reconfirmation"
   | "confirmed"
   | "cancellation_requested"
   | "cancelled"
@@ -47,6 +48,8 @@ interface PublicAppointment {
   lifecycle_status: LifecycleStatus;
   location: string | null;
   payment_status?: string | null;
+  confirmation_revision?: number;
+  confirmed_revision?: number | null;
   updated_at?: string | null;
 }
 

@@ -109,6 +109,7 @@ export interface Appointment {
     | 'created'
     | 'invitation_sent'
     | 'awaiting_confirmation'
+    | 'awaiting_reconfirmation'
     | 'confirmed'
     | 'cancellation_requested'
     | 'cancelled'
@@ -122,6 +123,10 @@ export interface Appointment {
   invitation_sent_at?: string | null;
   invitation_opened_at?: string | null;
   confirmed_at?: string | null;
+  /** Monotonic version of patient-facing scheduling details. */
+  confirmation_revision?: number;
+  /** Version currently confirmed by the patient; null requires confirmation. */
+  confirmed_revision?: number | null;
   cancelled_at?: string | null;
   cancellation_reason?: string | null;
   reschedule_requested_at?: string | null;

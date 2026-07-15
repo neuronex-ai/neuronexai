@@ -28,6 +28,31 @@ describe("appointment lifecycle contract", () => {
     expect(sender).not.toMatch(/select\([^)]*\btoken\b/);
   });
 
+  it("binds confirmations and secure links to the current appointment revision", () => {
+    const migration = source("supabase/migrations/20260715184553_version_appointment_confirmation_cycle.sql");
+    const sender = source("supabase/functions/send-appointment-reminder/index.ts");
+    const shared = source("supabase/functions/_shared/appointment-lifecycle.ts");
+    const smoke = source("supabase/tests/appointment_reconfirmation_cloud_smoke.sql");
+
+    expect(migration).toContain("add column if not exists confirmation_revision");
+    expect(migration).toContain("add column if not exists appointment_revision");
+    expect(migration).toContain("lifecycle_status := 'awaiting_reconfirmation'");
+    expect(migration).toContain("status = 'revoked'");
+    expect(migration).toContain("new.confirmation_revision := old.confirmation_revision");
+    expect(migration).toContain("appointment_reconfirmation_required");
+    expect(migration).toContain("confirmation-revision:' || new.confirmation_revision::text || ':confirmed");
+    expect(sender).toContain("appointment_revision: appointment.confirmation_revision");
+    expect(shared).toContain("SUPERSEDED_INVITATION");
+    expect(shared).toContain("tokenResult.data.appointment_revision !== appointmentResult.data.confirmation_revision");
+
+    expect(smoke).toContain("patient-requested time approval incorrectly required reconfirmation");
+    expect(smoke).toContain("material professional change did not start revision 2");
+    expect(smoke).toContain("internal update incremented the revision again");
+    expect(smoke).toContain("revision 1 token confirmed revision 2");
+    expect(smoke).toContain("did not preserve both versioned confirmations");
+    expect(smoke).toContain("raw confirmation token was persisted");
+  });
+
   it("creates a pending reschedule request without moving the official appointment", () => {
     const migration = source("supabase/migrations/20260715041535_appointment_lifecycle_state_machine.sql");
     const publicAction = migration.slice(
