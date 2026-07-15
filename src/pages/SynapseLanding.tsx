@@ -27,41 +27,42 @@ import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
 import { PublicFlowComparison } from "@/components/landing/PublicFlowComparison";
+import { LandingSectionStage } from "@/components/landing/LandingSectionStage";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 
 const modes = [
-  { key: "text", label: "Texto", icon: MessageSquare, image: "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp", title: "Converse com a rotina.", text: "Localize informações e organize o trabalho em uma interface de conversa." },
-  { key: "voice", label: "Voz", icon: Mic, image: "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp", title: "Use a voz.", text: "Consulte o dia e abra contextos sem interromper o fluxo." },
+  { key: "text", label: "Texto", icon: MessageSquare, image: "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp", title: "Converse com a sua prática.", text: "Pergunte, revise o que foi encontrado e deixe uma ação pronta para confirmar." },
+  { key: "voice", label: "Voz", icon: Mic, image: "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp", title: "Fale sem sair do ritmo.", text: "Consulte o dia, encontre uma informação e abra a área certa sem interromper o atendimento." },
 ];
 
 const questions = [
-  ["O que o Synapse faz?", "Ele consulta contexto permitido, ajuda a navegar pelo sistema e prepara ações operacionais. Ações que gravam, enviam ou alteram informações exigem a confirmação prevista para aquele fluxo."],
-  ["Texto, voz e WhatsApp usam o mesmo cérebro?", "Sim. O Synapse mantém uma linha de contexto autorizada entre os canais. O NeuroZap não é outro assistente: ele é a infraestrutura que conecta e permite supervisionar o WhatsApp Business."],
-  ["O que significa modo agêntico?", "Significa que o Synapse pode combinar etapas: localizar o contexto, escolher a ferramenta adequada, preparar a ação e levar você à tela certa. Ele não recebe liberdade para ultrapassar permissões ou confirmações."],
-  ["O que é o NeuroBox?", "É o conjunto formado por NeuroView, NeuroFlow, NeuroPulse e NeuroScan. Cada produto terá suas capacidades detalhadas em uma área própria; hoje, o NeuroScan já auxilia a transcrever fichas de anamnese no prontuário."],
-  ["Ele acessa qualquer informação?", "Não. O acesso respeita as permissões e o contexto disponível ao usuário."],
+  ["O que o Synapse faz?", "Ele ajuda a encontrar o contexto que você autorizou, organiza o que importa e deixa o próximo passo pronto. Se uma ação envia, altera ou registra algo, ele pede a confirmação prevista para aquele caso."],
+  ["Texto, voz e WhatsApp usam o mesmo Synapse?", "Sim. A conversa pode continuar entre painel, voz e WhatsApp sem perder o histórico autorizado. O NeuroZap faz a conexão e a supervisão do WhatsApp Business; ele não é outro assistente."],
+  ["Ele pode executar tarefas?", "Ele pode reunir etapas, encontrar a ferramenta certa e preparar uma ação. Acesso, limites do plano e confirmações continuam valendo em cada parte do caminho."],
+  ["O que é o NeuroBox?", "É o conjunto de ferramentas NeuroView, NeuroFlow, NeuroPulse e NeuroScan. O NeuroScan já ajuda a transcrever fichas de anamnese no prontuário."],
+  ["Ele acessa qualquer informação?", "Não. O Synapse só trabalha com o contexto e as permissões disponíveis para aquela pessoa e situação."],
 ];
 
 const channels = [
   {
     icon: MessageSquare,
     title: "Texto",
-    eyebrow: "Precisão",
+    eyebrow: "Para pensar e revisar",
     text: "Pergunte, revise a resposta e acompanhe cada ação preparada antes de confirmar.",
   },
   {
     icon: Mic,
     title: "Voz",
-    eyebrow: "Continuidade",
-    text: "Consulte e navegue sem interromper a rotina, mantendo as mesmas regras de segurança do texto.",
+    eyebrow: "Para não perder o ritmo",
+    text: "Consulte e navegue sem interromper a rotina, com as mesmas regras de segurança do texto.",
   },
   {
     icon: MessageCircle,
     title: "WhatsApp",
-    eyebrow: "Mesmo cérebro",
-    text: "O psicólogo continua a conversa com o Synapse por texto ou áudio. O histórico alimenta a mesma linha contextual disponível no painel.",
+    eyebrow: "A conversa continua",
+    text: "O psicólogo fala com o Synapse por texto ou áudio. O histórico também fica disponível no painel da NeuroNex.",
   },
 ];
 
@@ -102,22 +103,25 @@ const SynapseLanding = () => {
       <div className="hidden md:block"><Navbar /></div>
       <LandingMobileNav />
       <main>
+        <LandingSectionStage index={0}>
         <section className="relative overflow-hidden px-5 pb-20 pt-32 md:px-8 md:pb-28 md:pt-48">
           <div className="pointer-events-none absolute left-1/2 top-0 h-[620px] w-[980px] -translate-x-1/2 rounded-full bg-foreground/[0.045] blur-[170px] dark:bg-white/[0.035]" />
           <div className="relative z-10 mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
               <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-foreground/[0.035] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]"><Sparkles className="h-3.5 w-3.5" />Synapse AI</motion.div>
-              <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-8 text-[clamp(3.4rem,7.5vw,7.8rem)] font-black leading-[0.84] tracking-[-0.075em]">Uma mente. <span className="text-muted-foreground/35">Todo o contexto autorizado. A operação inteira.</span></motion.h1>
-              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Converse pelo painel, por voz ou pelo WhatsApp. O Synapse preserva a continuidade permitida, encontra informações e prepara ações com confirmação quando existe efeito real.</motion.p>
+              <motion.h1 initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }} className="mt-8 text-[clamp(3.4rem,7.5vw,7.8rem)] font-black leading-[0.84] tracking-[-0.075em]">Você conversa. <span className="text-muted-foreground/35">O Synapse acompanha.</span></motion.h1>
+              <motion.p initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.16 }} className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">No painel, por voz ou pelo WhatsApp, o Synapse entende o contexto que você autorizou, encontra o que importa e deixa o próximo passo pronto para sua confirmação.</motion.p>
               <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background"><Link to="/create-account">Experimentar <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]" onClick={() => scrollToSection("synapse-demo")}>Ver como funciona</Button></div>
             </div>
             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }} className="mt-16 overflow-hidden rounded-[34px] border border-border/45 bg-card shadow-[0_36px_120px_-76px_rgba(0,0,0,0.8)] dark:border-white/10 dark:bg-[#08090b]"><img src="/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp" alt="Synapse AI no NeuroNex" width={1280} height={720} className="block aspect-video w-full object-cover" /></motion.div>
           </div>
         </section>
+        </LandingSectionStage>
 
+        <LandingSectionStage index={1}>
         <section id="synapse-demo" className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
-            <div className="max-w-5xl"><p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Texto e voz</p><h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">Pergunte. <span className="opacity-35">O Synapse organiza a resposta.</span></h2></div>
+            <div className="max-w-5xl"><p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Texto e voz</p><h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">Pergunte do seu jeito. <span className="opacity-35">O Synapse encontra o fio da rotina.</span></h2></div>
             <Tabs value={mode} onValueChange={setMode} orientation="vertical" className="mt-12 grid gap-6 lg:grid-cols-[250px_minmax(0,1fr)]">
               <TabsList aria-label="Formas de conversar com o Synapse" className="grid h-auto content-start gap-2 rounded-[28px] border-background/10 bg-background/[0.07] p-3 text-background/60 shadow-none dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] dark:text-zinc-950/60">
                 {modes.map((item) => (
@@ -140,13 +144,15 @@ const SynapseLanding = () => {
             </Tabs>
           </div>
         </section>
+        </LandingSectionStage>
 
+        <LandingSectionStage index={2}>
         <section className="px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Um cérebro, três canais</p>
-              <h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">O contexto acompanha <span className="text-muted-foreground/35">a conversa.</span></h2>
-              <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">O canal muda; a identidade, o histórico autorizado e as regras permanecem. O NeuroZap cuida da conexão e da supervisão do WhatsApp Business — não substitui o Synapse.</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Uma conversa, três canais</p>
+              <h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">O que você falou antes <span className="text-muted-foreground/35">não precisa ficar para trás.</span></h2>
+              <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">O canal muda, mas a conversa e o histórico autorizado continuam. O NeuroZap conecta e supervisiona o WhatsApp Business; o Synapse continua sendo a inteligência que entende a sua rotina.</p>
             </div>
             <div className="mt-12 grid gap-4 lg:grid-cols-3">
               {channels.map((channel) => (
@@ -160,18 +166,20 @@ const SynapseLanding = () => {
             </div>
           </div>
         </section>
+        </LandingSectionStage>
 
-        <PublicFlowComparison variant="synapse" />
+        <LandingSectionStage index={3}><PublicFlowComparison variant="synapse" /></LandingSectionStage>
 
+        <LandingSectionStage index={4}>
         <section className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-[1380px] gap-6 lg:grid-cols-[0.82fr_1.18fr]">
             <article className="rounded-[38px] border border-background/10 bg-background/[0.07] p-8 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] md:p-10">
               <Bot aria-hidden="true" className="h-7 w-7 opacity-55" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Modo agêntico</p>
-              <h2 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-6xl">Não apenas responde. <span className="opacity-35">Prepara o próximo passo.</span></h2>
-              <p className="mt-6 text-sm font-medium leading-relaxed opacity-65 md:text-base">O Synapse pode localizar contexto, selecionar a ferramenta adequada, navegar até a área correta e preparar uma ação. Permissões, limites do plano e confirmações continuam valendo em cada etapa.</p>
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Quando você pede uma ação</p>
+              <h2 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-6xl">Ele não para na resposta. <span className="opacity-35">Deixa a próxima etapa pronta.</span></h2>
+              <p className="mt-6 text-sm font-medium leading-relaxed opacity-65 md:text-base">O Synapse encontra o contexto, abre o caminho certo e prepara uma ação para você revisar. Permissões, limites do plano e confirmações continuam valendo em cada etapa.</p>
               <div className="mt-8 grid gap-2">
-                {["Entende a intenção", "Localiza o contexto permitido", "Prepara ou abre a ação", "Solicita confirmação quando há efeito real"].map((step, index) => (
+                {["Entende o que você precisa", "Encontra o contexto permitido", "Prepara ou abre a próxima ação", "Pede confirmação quando existe efeito real"].map((step, index) => (
                   <div key={step} className="flex items-center gap-4 rounded-2xl border border-background/10 bg-background/[0.06] px-4 py-3 dark:border-zinc-950/10 dark:bg-zinc-950/[0.04]">
                     <span className="font-mono text-xs opacity-40">0{index + 1}</span>
                     <span className="text-sm font-semibold">{step}</span>
@@ -183,7 +191,7 @@ const SynapseLanding = () => {
             <article className="rounded-[38px] border border-background/10 bg-background/[0.07] p-8 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] md:p-10">
               <BrainCircuit aria-hidden="true" className="h-7 w-7 opacity-55" />
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroBox</p>
-              <h2 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-6xl">Inteligências especializadas, <span className="opacity-35">uma linguagem comum.</span></h2>
+              <h2 className="mt-4 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-6xl">Ferramentas diferentes, <span className="opacity-35">o mesmo contexto.</span></h2>
               <div className="mt-8 grid gap-3">
                 {neuroBoxTools.map((tool) => (
                   <div key={tool.name} className="rounded-[24px] border border-background/10 bg-background/[0.06] p-5 dark:border-zinc-950/10 dark:bg-zinc-950/[0.04]">
@@ -195,6 +203,7 @@ const SynapseLanding = () => {
             </article>
           </div>
         </section>
+        </LandingSectionStage>
 
         <section className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-[1380px]"><div className="mx-auto max-w-5xl text-center"><p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">No dia a dia</p><h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">Menos navegação. <span className="text-muted-foreground/35">Mais continuidade.</span></h2></div><div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
           { icon: CalendarDays, title: "Agenda", text: "Consulte compromissos e mudanças do dia." },

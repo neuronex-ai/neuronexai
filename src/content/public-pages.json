@@ -6,16 +6,16 @@
     {
       "route": "/",
       "file": null,
-      "title": "NeuroNex AI | Sistema operacional inteligente para psicólogos",
-      "description": "Conecte agenda, prontuário, teleconsulta, Portal do Paciente, NeuroFinance e o Synapse por texto, voz e WhatsApp em uma única operação.",
+      "title": "NeuroNex AI | Sistema para psicólogos que organiza a rotina",
+      "description": "Sistema para psicólogos com agenda, prontuário psicológico, teleconsulta, financeiro, fiscal, Portal do Paciente e o Synapse para organizar a rotina.",
       "eyebrow": "NeuroNex AI",
-      "heading": "Sua prática inteira. Uma única inteligência operacional.",
-      "lead": "Agenda, atendimento, registros, comunicação e financeiro compartilham contexto para reduzir trabalho operacional sem tirar do psicólogo as decisões importantes.",
-      "highlights": ["Operação conectada", "Synapse multicanal", "NeuroFinance e NeuroBox"],
+      "heading": "Você cuida dos pacientes. A NeuroNex organiza o resto.",
+      "lead": "Agenda, pacientes, comunicação, atendimentos, financeiro, fiscal e rotinas administrativas passam a se organizar no mesmo lugar, com o apoio do Synapse.",
+      "highlights": ["Agenda e prontuário psicológico", "Synapse no painel, voz e WhatsApp", "Financeiro, fiscal e Portal do Paciente"],
       "sections": [
-        { "title": "Da rotina fragmentada a uma operação conectada", "text": "A NeuroNex reúne as áreas que sustentam o consultório e transforma tarefas isoladas em um fluxo acompanhável." },
-        { "title": "Um Synapse para painel, voz e WhatsApp", "text": "O canal muda, mas a linha de contexto autorizado permanece. Ações com efeito real continuam sob confirmação." },
-        { "title": "NeuroBox", "text": "NeuroView, NeuroFlow, NeuroPulse e NeuroScan ampliam formas de visualizar, organizar e transcrever informações dentro da NeuroNex." }
+        { "title": "Menos coisas para lembrar", "text": "A NeuroNex aproxima as partes da rotina que normalmente ficam espalhadas entre mensagens, planilhas e sistemas diferentes." },
+        { "title": "O Synapse acompanha o contexto", "text": "No painel, por voz ou no WhatsApp, o Synapse ajuda a encontrar informações, preparar o próximo passo e pedir confirmação antes de agir." },
+        { "title": "Software para psicólogos que acompanha a rotina", "text": "Agenda para psicólogos, prontuário psicológico, teleconsulta, financeiro, fiscal, Portal do Paciente e NeuroBox trabalham no mesmo ambiente." }
       ],
       "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp"
     },
