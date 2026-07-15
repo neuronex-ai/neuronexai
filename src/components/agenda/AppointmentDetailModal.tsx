@@ -20,6 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
+import { useProfile } from "@/hooks/use-profile";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
 import {
@@ -152,7 +153,19 @@ export const AppointmentDetailModal = ({
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
   const shouldReduceMotion = useReducedMotion();
-  const lifecycle = useAppointmentLifecycle(appointment.id, open);
+  const { data: profile } = useProfile();
+  const psychologistName = useMemo(
+    () =>
+      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
+      profile?.full_name?.trim() ||
+      profile?.name?.trim() ||
+      null,
+    [profile],
+  );
+  const lifecycle = useAppointmentLifecycle(appointment.id, open, {
+    patientName: patientData?.name || appointment.patient_name,
+    psychologistName,
+  });
 
   const metadata = useMemo(() => getAppointmentMetadata(appointment), [appointment]);
   const kind = metadata.kind || "session";
@@ -742,7 +755,6 @@ export const AppointmentDetailModal = ({
               </Button>
             </header>
             <AppointmentTimelinePanel
-              appointmentId={appointment.id}
               events={lifecycle.events}
               isLoading={lifecycle.isLoading}
               error={lifecycle.error instanceof Error ? lifecycle.error : null}

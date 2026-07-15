@@ -1,45 +1,25 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
-
-export interface AppointmentTimelineEvent {
-  id: string;
-  appointment_id: string;
-  psychologist_id: string;
-  patient_id: string | null;
-  event_type: string;
-  from_status: string | null;
-  to_status: string | null;
-  actor_type: "psychologist" | "patient" | "system" | "edge_function" | "provider";
-  actor_user_id: string | null;
-  action_origin: string;
-  metadata: Record<string, unknown>;
-  created_at: string;
-}
+import {
+  toSafeAppointmentTimeline,
+  type AppointmentTimelineNames,
+  type AppointmentTimelineRecord,
+} from "@/lib/appointment-timeline";
 
 export interface AppointmentRescheduleRequest {
   id: string;
-  appointment_id: string;
-  psychologist_id: string;
-  patient_id: string | null;
   original_start_time: string;
-  original_end_time: string;
   requested_start_time: string;
-  requested_end_time: string;
   reason: string | null;
   status: "pending" | "approved" | "rejected" | "withdrawn";
-  reviewed_by: string | null;
-  review_reason: string | null;
-  reviewed_at: string | null;
   created_at: string;
-  updated_at: string;
-  metadata: Record<string, unknown>;
 }
 
 interface AppointmentLifecycleData {
-  events: AppointmentTimelineEvent[];
+  events: AppointmentTimelineRecord[];
   requests: AppointmentRescheduleRequest[];
 }
 
@@ -58,8 +38,13 @@ interface ReviewResult {
 
 const lifecycleQueryKey = (appointmentId: string) => ["appointmentLifecycle", appointmentId] as const;
 
-export function useAppointmentLifecycle(appointmentId: string, enabled = true) {
+export function useAppointmentLifecycle(
+  appointmentId: string,
+  enabled = true,
+  timelineNames: AppointmentTimelineNames = {},
+) {
   const queryClient = useQueryClient();
+  const { patientName, psychologistName } = timelineNames;
   const query = useQuery({
     queryKey: lifecycleQueryKey(appointmentId),
     enabled: enabled && Boolean(appointmentId),
@@ -68,12 +53,12 @@ export function useAppointmentLifecycle(appointmentId: string, enabled = true) {
       const [eventsResult, requestsResult] = await Promise.all([
         database
           .from("appointment_events")
-          .select("id,appointment_id,psychologist_id,patient_id,event_type,from_status,to_status,actor_type,actor_user_id,action_origin,metadata,created_at")
+          .select("event_type,from_status,to_status,actor_type,action_origin,created_at")
           .eq("appointment_id", appointmentId)
           .order("created_at", { ascending: false }),
         database
           .from("appointment_reschedule_requests")
-          .select("id,appointment_id,psychologist_id,patient_id,original_start_time,original_end_time,requested_start_time,requested_end_time,reason,status,reviewed_by,review_reason,reviewed_at,created_at,updated_at,metadata")
+          .select("id,original_start_time,requested_start_time,reason,status,created_at")
           .eq("appointment_id", appointmentId)
           .order("created_at", { ascending: false }),
       ]);
@@ -81,12 +66,17 @@ export function useAppointmentLifecycle(appointmentId: string, enabled = true) {
       if (eventsResult.error) throw eventsResult.error;
       if (requestsResult.error) throw requestsResult.error;
       return {
-        events: (eventsResult.data || []) as AppointmentTimelineEvent[],
+        events: (eventsResult.data || []) as AppointmentTimelineRecord[],
         requests: (requestsResult.data || []) as AppointmentRescheduleRequest[],
       };
     },
     staleTime: 15_000,
   });
+
+  const safeTimeline = useMemo(
+    () => toSafeAppointmentTimeline(query.data?.events || [], { patientName, psychologistName }),
+    [patientName, psychologistName, query.data?.events],
+  );
 
   useEffect(() => {
     if (!enabled || !appointmentId) return;
@@ -140,7 +130,7 @@ export function useAppointmentLifecycle(appointmentId: string, enabled = true) {
 
   return {
     ...query,
-    events: query.data?.events || [],
+    events: safeTimeline,
     requests: query.data?.requests || [],
     pendingRequest: query.data?.requests.find((request) => request.status === "pending") || null,
     reviewRequest: reviewMutation.mutateAsync,
