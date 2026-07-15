@@ -3,7 +3,6 @@
 import { FadeIn } from "@/components/animations/FadeIn";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
-import { PublicFlowComparison } from "@/components/landing/PublicFlowComparison";
 import {
   MobileRealFinanceSection,
   MobileRealProductShowcase,
@@ -30,6 +29,7 @@ import {
   ShieldCheck,
   Sparkles,
   Stethoscope,
+  X,
 } from "lucide-react";
 import { useState, type ElementType, type ReactNode } from "react";
 import { Link } from "react-router-dom";
@@ -71,10 +71,19 @@ const painPoints = [
   { icon: MessageCircle, title: "Paciente sem continuidade", text: "Diário, humor e vínculo entre sessões raramente entram no fluxo." },
 ];
 
+const diffRows = [
+  { title: "Atendimento", old: "Registro manual e histórico disperso.", neo: "Prontuário vivo com evolução, contexto e resumos." },
+  { title: "Paciente", old: "Acompanhamento para na sessão.", neo: "Portal com diário, rastreio de humor e continuidade." },
+  { title: "Teleconsulta", old: "Vídeo sem documentação estruturada.", neo: "Sala HD com transcrição e resumo por IA." },
+  { title: "Financeiro", old: "Pix, boleto e planilha separados.", neo: "Gestão Financeira e NeuroFinance com papéis claros." },
+  { title: "Fiscal", old: "NFS-e e recibos fora do fluxo.", neo: "Dados fiscais organizados perto da cobrança." },
+  { title: "IA", old: "Chat genérico, sem contexto.", neo: "Synapse com texto, voz, WhatsApp e NeuroBox." },
+];
+
 const operatingCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos e teleconsulta." },
   { icon: BrainCircuit, title: "IA contextual", text: "Synapse, voz, texto, NeuroBox e apoio operacional." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, lembretes e o mesmo Synapse no WhatsApp do psicólogo." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, WhatsApp, lembretes e continuidade." },
   { icon: CreditCard, title: "Financeiro", text: "Gestão, cobranças, Pix, boletos, extrato e saques." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais organizados; emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional para decisão." },
@@ -97,7 +106,7 @@ const HeroMobile = () => (
     <div className="relative z-10 mx-auto flex max-w-sm flex-col items-center">
       <FadeIn><MobileBadge>Sistema operacional para psicólogos</MobileBadge></FadeIn>
       <FadeIn delay={0.1}>
-        <h1 className="mt-7 text-[3.65rem] font-black leading-[0.86] tracking-[-0.075em] text-foreground">Sua prática inteira. Uma única inteligência operacional.</h1>
+        <h1 className="mt-7 text-[3.65rem] font-black leading-[0.86] tracking-[-0.075em] text-foreground">Sua clínica inteira, organizada por IA.</h1>
       </FadeIn>
       <FadeIn delay={0.2}>
         <p className="mt-6 max-w-[21rem] text-base font-medium leading-relaxed text-muted-foreground/72">Prontuário, agenda, teleconsulta, financeiro, preparação fiscal, portal do paciente e Synapse em uma única experiência.</p>
@@ -130,7 +139,7 @@ const HeroMobile = () => (
 
 const ProblemMobile = () => (
   <section id="problem" className="relative overflow-hidden bg-background px-5 py-16">
-    <MobileSectionHeader eyebrow="O problema real" title={<>O que consome tempo é o operacional.</>} description="A prática evolui, mas as ferramentas continuam espalhadas. A NeuroNex conecta tudo em um único fluxo." />
+    <MobileSectionHeader eyebrow="O problema real" title={<>O que consome tempo é o operacional.</>} description="A clínica cresce, mas as ferramentas ficam espalhadas. O NeuroNex conecta tudo em um único fluxo." />
     <div className="mt-10 grid gap-3">
       {painPoints.map((item, index) => (
         <FadeIn key={item.title} delay={index * 0.04}>
@@ -146,11 +155,30 @@ const ProblemMobile = () => (
   </section>
 );
 
+const DifferentiatorMobile = () => (
+  <section id="diferenciais" className="relative overflow-hidden bg-background px-5 py-16">
+    <MobileSectionHeader eyebrow="O diferencial" title={<>Do jeito comum ao jeito NeuroNex.</>} description="A mesma rotina, mas sem fragmentação, retrabalho e decisões sem dados." />
+    <div className="mt-10 space-y-4">
+      {diffRows.map((row, index) => (
+        <FadeIn key={row.title} delay={index * 0.04}>
+          <article className="overflow-hidden rounded-[30px] border border-border/40 bg-card dark:border-white/10 dark:bg-[#0b0b0d]">
+            <div className="border-b border-border/40 bg-foreground/[0.04] p-5 dark:border-white/10 dark:bg-white/[0.035]"><p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">{String(index + 1).padStart(2, "0")}</p><h3 className="mt-2 text-xl font-black tracking-[-0.04em] text-foreground">{row.title}</h3></div>
+            <div className="grid divide-y divide-border/40 dark:divide-white/10">
+              <div className="flex items-start gap-3 p-5"><X className="mt-0.5 h-4 w-4 shrink-0 text-red-500" /><div><p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Jeito comum</p><p className="mt-2 text-sm font-medium leading-relaxed text-muted-foreground/75">{row.old}</p></div></div>
+              <div className="flex items-start gap-3 bg-foreground p-5 text-background dark:bg-white dark:text-zinc-950"><Check className="mt-0.5 h-4 w-4 shrink-0" /><div><p className="text-[9px] font-black uppercase tracking-[0.18em] opacity-55">Jeito NeuroNex</p><p className="mt-2 text-sm font-semibold leading-relaxed opacity-82">{row.neo}</p></div></div>
+            </div>
+          </article>
+        </FadeIn>
+      ))}
+    </div>
+  </section>
+);
+
 const OperatingSystemMobile = () => (
   <section id="sistema" className="relative overflow-hidden bg-foreground px-5 py-16 text-background dark:bg-white dark:text-zinc-950">
     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_38%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.06),transparent_38%,rgba(0,0,0,0.02))]" />
     <div className="relative z-10">
-      <MobileSectionHeader eyebrow="Sistema operacional" title={<>Um único sistema para a prática inteira.</>} description="Não é só agenda, prontuário ou financeiro. É uma camada operacional conectada." inverted />
+      <MobileSectionHeader eyebrow="Sistema operacional" title={<>Um único sistema para a clínica inteira.</>} description="Não é só agenda, prontuário ou financeiro. É uma camada operacional conectada." inverted />
       <div className="mt-10 grid gap-3">
         {operatingCards.map((card, index) => (
           <FadeIn key={card.title} delay={index * 0.04}>
@@ -164,7 +192,7 @@ const OperatingSystemMobile = () => (
 
 const PlansMobile = () => (
   <section id="waitlist" className="relative overflow-hidden bg-background px-5 py-16">
-    <MobileSectionHeader eyebrow="Planos NeuroNex" title={<>Escolha o plano ideal para a sua prática.</>} description="Comece gratuitamente ou avance para o Profissional com maior escala, contexto e automação." />
+    <MobileSectionHeader eyebrow="Planos NeuroNex" title={<>Escolha o plano ideal para a sua clínica.</>} description="Comece gratuitamente ou avance para o Profissional com maior escala, contexto e automação." />
     <div className="mt-10 space-y-4">
       {PUBLIC_PLAN_CARDS.map((plan, index) => (
         <FadeIn key={plan.name} delay={index * 0.05}>
@@ -246,7 +274,7 @@ const NativeExperienceMobile = () => (
 
 const FinalCTAMobile = () => (
   <section id="cta-final" className="relative overflow-hidden bg-background px-5 py-16">
-    <div className="overflow-hidden rounded-[40px] bg-foreground p-8 text-center text-background shadow-premium dark:bg-white dark:text-zinc-950"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div><h2 className="mt-8 text-[2.65rem] font-black leading-[0.86] tracking-[-0.07em]">A próxima versão da sua prática começa aqui.</h2><p className="mt-6 text-sm font-medium leading-relaxed opacity-62">Entre agora e conecte inteligência contextual, financeiro e gestão em um único lugar.</p><div className="mt-8 grid gap-3"><Button asChild className="h-14 rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white"><Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950"><Link to="/contato">Falar com suporte</Link></Button></div></div>
+    <div className="overflow-hidden rounded-[40px] bg-foreground p-8 text-center text-background shadow-premium dark:bg-white dark:text-zinc-950"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div><h2 className="mt-8 text-[2.65rem] font-black leading-[0.86] tracking-[-0.07em]">A próxima versão da sua clínica começa aqui.</h2><p className="mt-6 text-sm font-medium leading-relaxed opacity-62">Entre agora, garanta benefícios Founder e evolua sua operação com IA, financeiro e gestão em um único lugar.</p><div className="mt-8 grid gap-3"><Button asChild className="h-14 rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white"><Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950"><Link to="/help">Falar com suporte</Link></Button></div></div>
   </section>
 );
 
@@ -256,7 +284,7 @@ export const MobileIndex = () => {
       <main>
         <HeroMobile />
         <ProblemMobile />
-        <PublicFlowComparison />
+        <DifferentiatorMobile />
         <MobileRealProductShowcase />
         <OperatingSystemMobile />
         <MobileRealSynapseSection />

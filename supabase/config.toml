@@ -269,6 +269,31 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/public-appointment-notification/index.ts"
 
+[functions.get-appointment-by-token]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/get-appointment-by-token/index.ts"
+
+[functions.get-public-availability]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/get-public-availability/index.ts"
+
+[functions.process-public-appointment]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/process-public-appointment/index.ts"
+
+[functions.send-appointment-reminder]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/send-appointment-reminder/index.ts"
+
+[functions.review-appointment-reschedule]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/review-appointment-reschedule/index.ts"
+
 [functions.verify-checkout-session]
 enabled = true
 verify_jwt = false

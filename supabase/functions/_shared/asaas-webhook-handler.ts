@@ -350,6 +350,33 @@ function notificationEventSuffixFromTimestamp(value?: string | null) {
     return parsed.toISOString().replace(/[^0-9TZ]/g, '');
 }
 
+async function recordAppointmentPaymentView(nbPayment: any, payment: any, event: string) {
+    if (!nbPayment?.appointment_id) return;
+    const eventType = event === 'PAYMENT_BANK_SLIP_VIEWED'
+        ? 'boleto_viewed'
+        : event === 'PAYMENT_CHECKOUT_VIEWED'
+            ? 'charge_viewed'
+            : null;
+    if (!eventType) return;
+
+    const viewedAt = paymentViewTimestamp(payment, event) || new Date().toISOString();
+    const suffix = notificationEventSuffixFromTimestamp(viewedAt) || crypto.randomUUID();
+    const { error } = await supabaseAdmin.rpc('record_appointment_communication_event', {
+        p_appointment_id: nbPayment.appointment_id,
+        p_event_type: eventType,
+        p_action_origin: 'neurofinance_asaas',
+        p_metadata: {
+            provider: 'asaas',
+            providerEvent: event,
+            providerPaymentId: payment?.id || nbPayment.provider_payment_id || null,
+            chargeId: nbPayment.id,
+            viewedAt,
+        },
+        p_idempotency_key: `appointment:${nbPayment.appointment_id}:payment:${nbPayment.id}:${eventType}:${suffix}`,
+    });
+    if (error) console.warn('[asaas-webhook] Failed to append appointment payment view:', error);
+}
+
 async function buildPaymentNotificationContext(nbPayment: any, payment: any, event: string): Promise<AsaasNotificationContext> {
     let patientName: string | null = null;
 
@@ -694,6 +721,8 @@ async function handlePaymentEvent(payment: any, event: string, webhookAccount?: 
         event
     );
     if (!nbPayment) return;
+
+    await recordAppointmentPaymentView(nbPayment, payment, event);
 
     const state = normalizePaymentState(payment, event);
     const actualFee = Number(nbPayment.actual_fee_amount || 0);

@@ -104,6 +104,34 @@ export interface Appointment {
   type: 'presencial' | 'online' | 'block';
   /** Estado atual do agendamento no workflow clínico */
   status: AppointmentStatus | LegacyAppointmentStatus;
+  /** Estado operacional de convite, confirmação e reagendamento */
+  lifecycle_status?:
+    | 'created'
+    | 'invitation_sent'
+    | 'awaiting_confirmation'
+    | 'confirmed'
+    | 'cancellation_requested'
+    | 'cancelled'
+    | 'reschedule_requested'
+    | 'reschedule_approved'
+    | 'reschedule_rejected'
+    | 'in_progress'
+    | 'completed'
+    | 'closed';
+  previous_status?: string | null;
+  invitation_sent_at?: string | null;
+  invitation_opened_at?: string | null;
+  confirmed_at?: string | null;
+  cancelled_at?: string | null;
+  cancellation_reason?: string | null;
+  reschedule_requested_at?: string | null;
+  reschedule_approved_at?: string | null;
+  reschedule_rejected_at?: string | null;
+  payment_status?: string | null;
+  financial_launch_id?: string | null;
+  financial_entry_id?: string | null;
+  package_id?: string | null;
+  charge_id?: string | null;
   /** Observações privadas do profissional sobre o agendamento */
   notes: string | null;
   /** Endereço físico ou link da videochamada */

@@ -1,6 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { AppointmentRescheduleReview } from "@/components/agenda/AppointmentRescheduleReview";
+import { AppointmentTimelineDialog } from "@/components/agenda/AppointmentTimelineDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useSendEmail } from "@/hooks/use-send-email";
+import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
 import {
@@ -41,7 +44,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Appointment } from "@/types";
 import { format, isBefore, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   Banknote,
   Briefcase,
@@ -95,6 +98,21 @@ const RECURRENCE_LABELS: Record<string, string> = {
   monthly: "Mensal",
 };
 
+const LIFECYCLE_LABELS: Record<string, string> = {
+  created: "Criado",
+  invitation_sent: "Convite enviado",
+  awaiting_confirmation: "Aguardando confirmação",
+  confirmed: "Confirmado pelo paciente",
+  cancellation_requested: "Cancelamento solicitado",
+  cancelled: "Cancelado",
+  reschedule_requested: "Reagendamento pendente",
+  reschedule_approved: "Reagendamento aprovado",
+  reschedule_rejected: "Reagendamento recusado",
+  in_progress: "Em atendimento",
+  completed: "Realizado",
+  closed: "Encerrado",
+};
+
 export const AppointmentDetailModal = ({
   children,
   appointment,
@@ -120,13 +138,15 @@ export const AppointmentDetailModal = ({
   const [eventLocation, setEventLocation] = useState("");
   const [sessionType, setSessionType] = useState("follow_up");
   const [modality, setModality] = useState<"presencial" | "online">("presencial");
-  const loadedAppointmentIdRef = useRef<string | null>(null);
+  const loadedAppointmentKeyRef = useRef<string | null>(null);
 
   const navigate = useNavigate();
   const sendEmail = useSendEmail();
   const updateAppointment = useUpdateAppointment();
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
+  const shouldReduceMotion = useReducedMotion();
+  const lifecycle = useAppointmentLifecycle(appointment.id, open);
 
   const metadata = useMemo(() => getAppointmentMetadata(appointment), [appointment]);
   const kind = metadata.kind || "session";
@@ -187,14 +207,15 @@ export const AppointmentDetailModal = ({
 
   useEffect(() => {
     if (!open) {
-      loadedAppointmentIdRef.current = null;
+      loadedAppointmentKeyRef.current = null;
       return;
     }
 
-    if (loadedAppointmentIdRef.current === appointment.id) return;
-    loadedAppointmentIdRef.current = appointment.id;
+    const appointmentKey = `${appointment.id}:${appointment.updated_at || appointment.start_time}`;
+    if (loadedAppointmentKeyRef.current === appointmentKey) return;
+    loadedAppointmentKeyRef.current = appointmentKey;
     void loadData();
-  }, [appointment.id, loadData, open]);
+  }, [appointment.id, appointment.start_time, appointment.updated_at, loadData, open]);
 
   const buildTimeUpdates = () => {
     const datePart = format(new Date(appointment.start_time), "yyyy-MM-dd");
@@ -271,16 +292,19 @@ export const AppointmentDetailModal = ({
       toast.error("Paciente sem e-mail cadastrado.");
       return;
     }
-    sendEmail.mutate({
-      type: "reminder",
-      params: {
-        patientEmail: patientData.email,
-        patientName: patientData.name,
-        startTime: new Date(appointment.start_time).toISOString(),
-        appointmentId: appointment.id,
-        action: "reminder",
+    sendEmail.mutate(
+      {
+        type: "reminder",
+        params: {
+          patientEmail: patientData.email,
+          patientName: patientData.name,
+          startTime: new Date(appointment.start_time).toISOString(),
+          appointmentId: appointment.id,
+          action: "invite",
+        },
       },
-    });
+      { onSuccess: () => void lifecycle.refetch() },
+    );
   };
 
   const paymentStatus = useMemo(() => {
@@ -326,21 +350,44 @@ export const AppointmentDetailModal = ({
                   {statusMeta.label}
                 </span>
               </div>
+              {appointment.lifecycle_status && appointment.lifecycle_status !== "created" ? (
+                <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.07] px-2.5 py-1 text-primary">
+                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
+                  <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em]">
+                    {LIFECYCLE_LABELS[appointment.lifecycle_status] || appointment.lifecycle_status}
+                  </span>
+                </div>
+              ) : null}
             </div>
             <p className="text-sm font-medium text-muted-foreground">
               {format(new Date(appointment.start_time), "dd 'de' MMMM, yyyy", { locale: ptBR })}
             </p>
           </div>
 
-          <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]" aria-label="Fechar ficha da sessão">
-            <X className="h-5 w-5" aria-hidden="true" />
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <AppointmentTimelineDialog
+              appointmentId={appointment.id}
+              events={lifecycle.events}
+              isLoading={lifecycle.isLoading}
+              error={lifecycle.error instanceof Error ? lifecycle.error : null}
+            />
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]" aria-label="Fechar ficha da sessão">
+              <X className="h-5 w-5" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
 
         <div className="px-5 py-3 sm:px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
           <AnimatePresence mode="wait">
             {step === 1 ? (
-              <motion.div key="details" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="space-y-4">
+              <motion.div
+                key="details"
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                transition={shouldReduceMotion ? { duration: 0 } : undefined}
+                className="space-y-4"
+              >
                 <div className="flex flex-col sm:flex-row gap-3">
                   <div className="flex-1 p-4 rounded-2xl bg-zinc-100/60 dark:bg-secondary/20 border border-zinc-200 dark:border-border/10 flex items-center justify-between shadow-sm">
                     <div className="flex items-center gap-3 min-w-0">
@@ -365,15 +412,30 @@ export const AppointmentDetailModal = ({
 
                   {isSession && (
                     <div className="flex sm:flex-col gap-2 shrink-0">
-                      <Button variant="outline" onClick={handleWhatsApp} className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-emerald-50 hover:text-emerald-600">
-                        <MessageCircle className="h-4 w-4" />
+                      <Button variant="outline" onClick={handleWhatsApp} className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-emerald-50 hover:text-emerald-600" aria-label="Enviar lembrete pelo WhatsApp">
+                        <MessageCircle className="h-4 w-4" aria-hidden="true" />
                       </Button>
-                      <Button variant="outline" onClick={handleSendEmail} disabled={sendEmail.isPending} className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-blue-50 hover:text-blue-600">
-                        {sendEmail.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+                      <Button
+                        variant="outline"
+                        onClick={handleSendEmail}
+                        disabled={sendEmail.isPending || ["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "")}
+                        className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-blue-50 hover:text-blue-600"
+                        aria-label="Enviar convite de confirmação por e-mail"
+                        title="Enviar convite de confirmação por e-mail"
+                      >
+                        {sendEmail.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Enviando convite" /> : <Mail className="h-4 w-4" aria-hidden="true" />}
                       </Button>
                     </div>
                   )}
                 </div>
+
+                {lifecycle.pendingRequest ? (
+                  <AppointmentRescheduleReview
+                    request={lifecycle.pendingRequest}
+                    isReviewing={lifecycle.isReviewing}
+                    onReview={lifecycle.reviewRequest}
+                  />
+                ) : null}
 
                 {isEvent && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -530,7 +592,13 @@ export const AppointmentDetailModal = ({
                 </div>
               </motion.div>
             ) : (
-              <motion.div key="success" initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="flex flex-col items-center text-center space-y-4 py-8">
+              <motion.div
+                key="success"
+                initial={shouldReduceMotion ? false : { scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={shouldReduceMotion ? { duration: 0 } : undefined}
+                className="flex flex-col items-center text-center space-y-4 py-8"
+              >
                 <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center">
                   <CheckCircle className="h-10 w-10 text-emerald-500" />
                 </div>

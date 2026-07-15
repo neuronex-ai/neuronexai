@@ -45,7 +45,7 @@ serve(async (request) => {
     const result = await db.rpc("process_appointment_public_action", {
       p_token_hash: tokenHash,
       p_action: action,
-      p_cancellation_reason: String(body.reason || "").trim() || null,
+      p_reason: String(body.reason || "").trim() || null,
       p_requested_start_time: optionalIso(body.requestedStartTime),
       p_requested_end_time: optionalIso(body.requestedEndTime),
       p_metadata: publicRequestMetadata(request),

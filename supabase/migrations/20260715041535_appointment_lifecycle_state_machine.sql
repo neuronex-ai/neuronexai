@@ -164,6 +164,129 @@ create index if not exists appointments_created_by_idx
 create index if not exists appointments_updated_by_idx
   on public.appointments (updated_by) where updated_by is not null;
 
+-- Preserve direct appointment references for financial records that predate
+-- this lifecycle model. Source records remain authoritative; these columns
+-- are convenient back-references on the central appointment entity.
+do $$
+begin
+  if to_regclass('public.financial_entries') is not null then
+    execute $sql$
+      update public.appointments appointment
+      set financial_entry_id = (
+        select entry.id
+        from public.financial_entries entry
+        where entry.appointment_id = appointment.id
+        order by entry.created_at asc nulls last, entry.id
+        limit 1
+      )
+      where appointment.financial_entry_id is null
+        and exists (
+          select 1 from public.financial_entries entry
+          where entry.appointment_id = appointment.id
+        )
+    $sql$;
+    execute $sql$
+      update public.appointments appointment
+      set payment_status = (
+        select case lower(coalesce(entry.status, 'pending'))
+          when 'paid' then 'paid'
+          when 'overdue' then 'overdue'
+          when 'cancelled' then 'cancelled'
+          else 'pending'
+        end
+        from public.financial_entries entry
+        where entry.appointment_id = appointment.id
+        order by entry.created_at desc nulls last, entry.id desc
+        limit 1
+      )
+      where appointment.payment_status = 'not_applicable'
+        and exists (
+          select 1 from public.financial_entries entry
+          where entry.appointment_id = appointment.id
+        )
+    $sql$;
+  end if;
+
+  if to_regclass('public.transactions') is not null then
+    execute $sql$
+      update public.appointments appointment
+      set financial_launch_id = (
+        select transaction_row.id
+        from public.transactions transaction_row
+        where transaction_row.appointment_id = appointment.id
+        order by transaction_row.created_at asc nulls last, transaction_row.id
+        limit 1
+      )
+      where appointment.financial_launch_id is null
+        and exists (
+          select 1 from public.transactions transaction_row
+          where transaction_row.appointment_id = appointment.id
+        )
+    $sql$;
+  end if;
+
+  if to_regclass('public.nb_payments') is not null then
+    execute $sql$
+      update public.appointments appointment
+      set charge_id = (
+        select payment.id
+        from public.nb_payments payment
+        where payment.appointment_id = appointment.id
+        order by payment.created_at asc nulls last, payment.id
+        limit 1
+      )
+      where appointment.charge_id is null
+        and exists (
+          select 1 from public.nb_payments payment
+          where payment.appointment_id = appointment.id
+        )
+    $sql$;
+    execute $sql$
+      update public.appointments appointment
+      set payment_status = (
+        select case lower(coalesce(payment.normalized_status, payment.status, 'pending'))
+          when 'paid' then 'paid'
+          when 'processing' then 'processing'
+          when 'failed' then 'failed'
+          when 'canceled' then 'cancelled'
+          when 'cancelled' then 'cancelled'
+          when 'refunded' then 'refunded'
+          when 'partially_refunded' then 'refunded'
+          when 'expired' then 'expired'
+          when 'overdue' then 'overdue'
+          else 'pending'
+        end
+        from public.nb_payments payment
+        where payment.appointment_id = appointment.id
+        order by payment.created_at desc nulls last, payment.id desc
+        limit 1
+      )
+      where exists (
+        select 1 from public.nb_payments payment
+        where payment.appointment_id = appointment.id
+      )
+    $sql$;
+  end if;
+
+  if to_regclass('public.patient_package_session_usages') is not null then
+    execute $sql$
+      update public.appointments appointment
+      set package_id = (
+        select usage.package_id
+        from public.patient_package_session_usages usage
+        where usage.appointment_id = appointment.id
+        order by usage.id
+        limit 1
+      )
+      where appointment.package_id is null
+        and exists (
+          select 1 from public.patient_package_session_usages usage
+          where usage.appointment_id = appointment.id
+        )
+    $sql$;
+  end if;
+end $$;
+
 alter table public.appointment_confirmation_tokens
   add column if not exists token_hash text,
   add column if not exists status text not null default 'pending',
@@ -185,9 +308,13 @@ set
   sent_at = coalesce(sent_at, created_at),
   metadata = coalesce(metadata, '{}'::jsonb);
 
+-- Public invitation secrets are bearer credentials. Keep only their digest in
+-- the database so a read leak cannot be turned into a valid patient link.
+alter table public.appointment_confirmation_tokens
+  alter column token drop not null;
+
 insert into public.appointment_confirmation_tokens (
   appointment_id,
-  token,
   token_hash,
   expires_at,
   status,
@@ -197,11 +324,6 @@ insert into public.appointment_confirmation_tokens (
 )
 select
   appointment.id,
-  case
-    when appointment.token ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-      then appointment.token::uuid
-    else gen_random_uuid()
-  end,
   encode(digest(appointment.token, 'sha256'), 'hex'),
   greatest(coalesce(appointment.end_time, now()) + interval '7 days', now() + interval '30 days'),
   'sent',
@@ -215,6 +337,11 @@ where appointment.token is not null
     from public.appointment_confirmation_tokens existing_token
     where existing_token.token_hash = encode(digest(appointment.token, 'sha256'), 'hex')
   );
+
+update public.appointment_confirmation_tokens
+set token = null
+where token is not null
+  and token_hash is not null;
 
 update public.appointments
 set token = null, auth_code = null
@@ -324,6 +451,11 @@ alter table public.appointment_events enable row level security;
 alter table public.appointment_reschedule_requests enable row level security;
 alter table public.appointment_confirmation_tokens enable row level security;
 alter table public.appointments enable row level security;
+
+-- Superseded by the lifecycle notification trigger below. The legacy trigger
+-- depended on the plaintext appointments.token column.
+drop trigger if exists appointments_emit_persistent_notification
+  on public.appointments;
 
 drop policy if exists "Patients can update their appointment via token" on public.appointments;
 drop policy if exists "Patients can view their pending appointment via token" on public.appointments;
@@ -682,7 +814,7 @@ begin
   if not found or v_appointment.user_id <> p_actor_user_id then
     raise exception 'Appointment not found for this professional';
   end if;
-  if v_appointment.lifecycle_status in ('cancelled', 'completed', 'closed') then
+  if v_appointment.lifecycle_status in ('cancelled', 'in_progress', 'completed', 'closed') then
     raise exception 'This appointment no longer accepts invitations';
   end if;
 
@@ -697,6 +829,31 @@ begin
 
   if not found then
     raise exception 'Confirmation token not found';
+  end if;
+
+  if v_appointment.lifecycle_status not in ('created', 'invitation_sent', 'awaiting_confirmation') then
+    update public.appointments
+    set
+      invitation_sent_at = v_now,
+      updated_by = p_actor_user_id,
+      action_origin = 'professional_app',
+      last_actor_type = 'psychologist',
+      audit_metadata = coalesce(p_delivery, '{}'::jsonb) || jsonb_build_object('tokenId', p_token_id)
+    where id = p_appointment_id
+    returning * into v_appointment;
+
+    perform private.append_appointment_event(
+      p_appointment_id,
+      'invitation_sent',
+      v_appointment.lifecycle_status,
+      v_appointment.lifecycle_status,
+      'psychologist',
+      p_actor_user_id,
+      'professional_app',
+      coalesce(p_delivery, '{}'::jsonb) || jsonb_build_object('tokenId', p_token_id),
+      'appointment:' || p_appointment_id::text || ':invitation:' || p_token_id::text || ':sent'
+    );
+    return to_jsonb(v_appointment);
   end if;
 
   update public.appointments
@@ -794,7 +951,7 @@ $$;
 create or replace function public.process_appointment_public_action(
   p_token_hash text,
   p_action text,
-  p_cancellation_reason text default null,
+  p_reason text default null,
   p_requested_start_time timestamptz default null,
   p_requested_end_time timestamptz default null,
   p_metadata jsonb default '{}'::jsonb
@@ -848,6 +1005,9 @@ begin
     if v_appointment.lifecycle_status = 'cancelled' then
       raise exception 'A cancelled appointment cannot be confirmed';
     end if;
+    if v_appointment.lifecycle_status = 'reschedule_requested' then
+      raise exception 'The pending reschedule request must be reviewed first';
+    end if;
     if v_appointment.lifecycle_status in ('completed', 'closed') then
       raise exception 'This appointment is already finished';
     end if;
@@ -880,18 +1040,26 @@ begin
       raise exception 'A finished appointment cannot be cancelled';
     end if;
 
+    update public.appointment_reschedule_requests
+    set
+      status = 'withdrawn',
+      reviewed_at = now(),
+      metadata = metadata || jsonb_build_object('withdrawnBy', 'patient_cancellation')
+    where appointment_id = v_appointment.id
+      and status = 'pending';
+
     update public.appointments
     set
       status = 'cancelled_by_patient',
       lifecycle_status = 'cancelled',
       cancelled_at = now(),
-      cancellation_reason = nullif(btrim(p_cancellation_reason), ''),
+      cancellation_reason = nullif(btrim(p_reason), ''),
       updated_by = null,
       action_origin = 'public_appointment',
       last_actor_type = 'patient',
       audit_metadata = coalesce(p_metadata, '{}'::jsonb) || jsonb_build_object(
         'tokenId', v_token.id,
-        'reason', nullif(btrim(p_cancellation_reason), ''),
+        'reason', nullif(btrim(p_reason), ''),
         'idempotencyKey', 'appointment:' || v_appointment.id::text || ':cancelled'
       )
     where id = v_appointment.id
@@ -919,6 +1087,11 @@ begin
   v_current_duration := v_appointment.end_time - v_appointment.start_time;
   if v_duration <> v_current_duration then
     raise exception 'The requested duration must match the original appointment';
+  end if;
+  if p_requested_start_time = v_appointment.start_time
+    and p_requested_end_time = v_appointment.end_time
+  then
+    raise exception 'Choose a time different from the current appointment';
   end if;
 
   perform pg_advisory_xact_lock(hashtextextended(v_appointment.user_id::text, 0));
@@ -978,7 +1151,7 @@ begin
     v_appointment.end_time,
     p_requested_start_time,
     p_requested_end_time,
-    nullif(btrim(p_cancellation_reason), ''),
+    nullif(btrim(p_reason), ''),
     coalesce(p_metadata, '{}'::jsonb) || jsonb_build_object('tokenId', v_token.id)
   )
   returning * into v_request;
@@ -1300,6 +1473,7 @@ begin
       when 'paid' then 'paid'
       when 'processing' then 'processing'
       when 'failed' then 'failed'
+      when 'overdue' then 'overdue'
       when 'canceled' then 'cancelled'
       when 'cancelled' then 'cancelled'
       when 'refunded' then 'refunded'
@@ -1313,9 +1487,11 @@ begin
     v_event_type := case
       when tg_op = 'INSERT' then 'charge_created'
       when v_status is distinct from v_old_status and v_status = 'paid' then 'payment_paid'
+      when v_status is distinct from v_old_status and v_status = 'overdue' then 'payment_overdue'
       when v_status is distinct from v_old_status and v_status = 'expired' then 'payment_expired'
       when v_status is distinct from v_old_status and v_status = 'failed' then 'payment_failed'
       when v_status is distinct from v_old_status and v_status in ('refunded', 'partially_refunded') then 'payment_refunded'
+      when v_status is distinct from v_old_status and v_status in ('cancelled', 'canceled') then 'charge_cancelled'
       when coalesce(v_old ->> 'pix_copy_paste', '') = '' and coalesce(v_new ->> 'pix_copy_paste', '') <> '' then 'pix_generated'
       when coalesce(v_old ->> 'boleto_url', '') = '' and coalesce(v_new ->> 'boleto_url', '') <> '' then 'boleto_generated'
       else null
@@ -1360,6 +1536,50 @@ begin
     )),
     v_key
   );
+
+  if tg_table_name = 'nb_payments'
+    and coalesce(v_old ->> 'pix_copy_paste', '') = ''
+    and coalesce(v_new ->> 'pix_copy_paste', '') <> ''
+    and v_event_type <> 'pix_generated'
+  then
+    perform private.append_appointment_event(
+      v_appointment_id,
+      'pix_generated',
+      null,
+      null,
+      'provider',
+      null,
+      'neurofinance',
+      jsonb_strip_nulls(jsonb_build_object(
+        'sourceTable', tg_table_name,
+        'sourceId', v_source_id,
+        'providerPaymentId', v_new ->> 'provider_payment_id'
+      )),
+      tg_table_name || ':' || v_source_id::text || ':pix_generated'
+    );
+  end if;
+
+  if tg_table_name = 'nb_payments'
+    and coalesce(v_old ->> 'boleto_url', '') = ''
+    and coalesce(v_new ->> 'boleto_url', '') <> ''
+    and v_event_type <> 'boleto_generated'
+  then
+    perform private.append_appointment_event(
+      v_appointment_id,
+      'boleto_generated',
+      null,
+      null,
+      'provider',
+      null,
+      'neurofinance',
+      jsonb_strip_nulls(jsonb_build_object(
+        'sourceTable', tg_table_name,
+        'sourceId', v_source_id,
+        'providerPaymentId', v_new ->> 'provider_payment_id'
+      )),
+      tg_table_name || ':' || v_source_id::text || ':boleto_generated'
+    );
+  end if;
 
   return new;
 end;
