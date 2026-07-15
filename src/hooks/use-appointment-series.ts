@@ -20,6 +20,7 @@ interface AppointmentSeriesTimes {
 
 export interface CreateAppointmentSeriesInput extends AppointmentSeriesTimes {
   patientId: string | null;
+  packageId?: string | null;
   type: "presencial" | "online" | "block";
   notes: string | null;
   location: string | null;
@@ -60,7 +61,7 @@ export function useAppointmentSeries() {
     mutationFn: async (input: CreateAppointmentSeriesInput) => {
       if (!user?.id) throw new Error("Sessão expirada. Entre novamente.");
       const database = supabase as any;
-      const { data, error } = await database.rpc("create_appointment_series", {
+      const { data, error } = await database.rpc("create_appointment_series_with_package", {
         p_patient_id: input.patientId,
         p_start_time: input.startTime.toISOString(),
         p_end_time: input.endTime.toISOString(),
@@ -70,6 +71,7 @@ export function useAppointmentSeries() {
         p_notes: input.notes,
         p_location: input.location,
         p_metadata: input.metadata,
+        p_package_id: input.packageId || null,
       });
       if (error) throw new Error(rpcErrorMessage(error));
       return normalizeAppointmentSeriesCreateResult(data);

@@ -123,7 +123,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       });
     }
     if (activePackages.data?.length) {
-      const remaining = activePackages.data.reduce((sum, item) => sum + Math.max(0, item.total_sessions - item.sessions_used), 0);
+      const remaining = activePackages.data.reduce((sum, item) => sum + Math.max(0, item.total_sessions - item.sessions_used - (item.sessions_reserved || 0)), 0);
       cards.push({
         icon: PackageCheck,
         label: "Pacotes ativos",
@@ -189,7 +189,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
 
   useEffect(() => {
     if (!selectedPackage) return;
-    const remaining = Math.max(0, selectedPackage.total_sessions - selectedPackage.sessions_used);
+    const remaining = Math.max(0, selectedPackage.total_sessions - selectedPackage.sessions_used - (selectedPackage.sessions_reserved || 0));
     const valuePerSession = selectedPackage.price && selectedPackage.total_sessions > 0
       ? Number(selectedPackage.price) / selectedPackage.total_sessions
       : 0;
@@ -212,7 +212,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   };
 
   const handleSubmit = async () => {
-    if(packageConsumesOnly&&selectedPackage&&patientId){try{await consumePackage.mutateAsync({packageId:selectedPackage.id,patientId,appointmentId:appointmentId||null,idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-package-use",selectedPackage.id,appointmentId||operationKey.current]),reason:notes.trim()||"Uso pela Gestão Financeira"});resetAndClose();}catch(error){console.error(error);}return;}
+    if(packageConsumesOnly&&selectedPackage&&patientId){if(!appointmentId){toast.error("Selecione o agendamento que possui a reserva do pacote.");return;}try{await consumePackage.mutateAsync({packageId:selectedPackage.id,patientId,appointmentId,idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-package-use",selectedPackage.id,appointmentId]),reason:notes.trim()||"Uso pela Gestão Financeira"});resetAndClose();}catch(error){console.error(error);}return;}
     if (!description.trim()) {
       toast.error("Informe uma descrição para a cobrança.");
       return;
@@ -340,7 +340,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
                   <SelectContent>
                     <SelectItem value="none">Não vincular pacote</SelectItem>
                     {activePackages.data.map((item) => {
-                      const remaining = Math.max(0, item.total_sessions - item.sessions_used);
+                      const remaining = Math.max(0, item.total_sessions - item.sessions_used - (item.sessions_reserved || 0));
                       const valuePerSession = item.price && item.total_sessions > 0 ? Number(item.price) / item.total_sessions : 0;
                       return (
                         <SelectItem key={item.id} value={item.id}>

@@ -84,7 +84,7 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
     ? format(new Date(data.lastSession.start_time), "dd MMM yyyy", { locale: ptBR })
     : "Ainda sem sessão";
   const packageLabel = data.activePackage
-    ? `${Math.max(0, data.activePackage.total_sessions - data.activePackage.sessions_used)} de ${data.activePackage.total_sessions} restantes`
+    ? `${Math.max(0, data.activePackage.total_sessions - data.activePackage.sessions_used - data.activePackage.sessions_reserved)} de ${data.activePackage.total_sessions} disponíveis`
     : "Nenhum plano ativo";
   const moodLabel = data.latestMood ? moodLabels[data.latestMood.mood_score] || `Nível ${data.latestMood.mood_score}` : "Sem registro";
 

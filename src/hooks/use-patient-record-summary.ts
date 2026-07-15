@@ -13,6 +13,7 @@ export interface PatientRecordSummary {
     description: string;
     total_sessions: number;
     sessions_used: number;
+    sessions_reserved: number;
   } | null;
   openBalance: number;
   latestMood: { mood_score: number; created_at: string | null } | null;
@@ -43,7 +44,9 @@ export function asPatientRecordSummary(value: unknown): PatientRecordSummary {
     activeGoals: Number(record.activeGoals || 0),
     nextSession: record.nextSession ?? null,
     lastSession: record.lastSession ?? null,
-    activePackage: record.activePackage ?? null,
+    activePackage: record.activePackage
+      ? { ...record.activePackage, sessions_reserved: Number(record.activePackage.sessions_reserved || 0) }
+      : null,
     openBalance: Number(record.openBalance || 0),
     latestMood: record.latestMood ?? null,
     riskScore: Number(record.riskScore || 0),
@@ -105,7 +108,7 @@ async function fetchPatientRecordSummaryFallback(patientId: string): Promise<Pat
       .maybeSingle(),
     supabase
       .from("patient_packages")
-      .select("id,description,total_sessions,sessions_used,active,end_date,start_date")
+      .select("id,description,total_sessions,sessions_used,sessions_reserved,active,end_date,start_date,package_status")
       .eq("patient_id", patientId)
       .order("start_date", { ascending: false, nullsFirst: false }),
     supabase
@@ -130,7 +133,8 @@ async function fetchPatientRecordSummaryFallback(patientId: string): Promise<Pat
   const activePackage = (packagesResult.data || []).find((item) => {
     const active = String(item.active ?? "true").toLowerCase();
     return !["false", "inactive", "cancelled", "completed"].includes(active)
-      && item.sessions_used < item.total_sessions
+      && !["paused", "completed", "cancelled", "ended", "replaced"].includes(String(item.package_status || "active"))
+      && item.sessions_used + item.sessions_reserved < item.total_sessions
       && (!item.end_date || item.end_date >= today);
   }) ?? null;
 
@@ -147,6 +151,7 @@ async function fetchPatientRecordSummaryFallback(patientId: string): Promise<Pat
           description: activePackage.description,
           total_sessions: activePackage.total_sessions,
           sessions_used: activePackage.sessions_used,
+          sessions_reserved: activePackage.sessions_reserved,
         }
       : null,
     openBalance: (financialResult.data || []).reduce((total, entry) => total + Math.abs(Number(entry.amount || 0)), 0),
@@ -160,7 +165,29 @@ export async function fetchPatientRecordSummary(patientId: string): Promise<Pati
     p_patient_id: patientId,
   });
 
-  if (!error) return asPatientRecordSummary(data);
+  if (!error) {
+    const summary = asPatientRecordSummary(data);
+    if (!summary.activePackage) return summary;
+
+    const packageResult = await supabase
+      .from("patient_packages")
+      .select("sessions_reserved,package_status,active,end_date")
+      .eq("id", summary.activePackage.id)
+      .maybeSingle();
+    if (packageResult.error || !packageResult.data) return summary;
+
+    const reserved = packageResult.data.sessions_reserved || 0;
+    const available = summary.activePackage.total_sessions - summary.activePackage.sessions_used - reserved;
+    const inactive = ["paused", "completed", "cancelled", "ended", "replaced"].includes(
+      String(packageResult.data.package_status || "active"),
+    );
+    return {
+      ...summary,
+      activePackage: inactive || available <= 0
+        ? null
+        : { ...summary.activePackage, sessions_reserved: reserved },
+    };
+  }
 
   // Keeps the summary useful while a newly pulled frontend is ahead of the
   // linked database migration. Every fallback query still relies on RLS and

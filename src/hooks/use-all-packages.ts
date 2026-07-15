@@ -8,6 +8,7 @@ export interface PatientPackageWithPatient {
     user_id: string;
     total_sessions: number;
     sessions_used: number;
+    sessions_reserved?: number;
     price: number;
     start_date: string;
     end_date: string;

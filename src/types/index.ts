@@ -247,13 +247,19 @@ export interface PatientPackage {
   name?: string; // Alias for description
   active?: boolean | string | null;
   billing_mode?: 'upfront' | 'per_session' | 'installment' | null;
-  package_status?: 'active' | 'paused' | 'completed' | 'cancelled' | null;
+  billing_status?: 'unconfigured' | 'pending' | 'partially_paid' | 'paid' | 'cancelled' | null;
+  default_payment_method?: string | null;
+  package_status?: 'active' | 'paused' | 'completed' | 'cancelled' | 'ended' | 'replaced' | null;
   total_sessions: number;
   sessions_used: number;
+  sessions_reserved?: number;
   price: number | null;
   start_date: string;
   end_date: string | null;
   due_day?: number | null;
+  ended_at?: string | null;
+  ended_reason?: string | null;
+  replaced_by_package_id?: string | null;
   created_at: string;
 }
 

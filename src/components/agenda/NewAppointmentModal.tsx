@@ -57,7 +57,6 @@ import { useAddAppointment } from "@/hooks/use-add-appointment";
 import { useAddAppointmentTransaction } from "@/hooks/use-add-appointment-transaction";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
-import { useUsePackageSession } from "@/hooks/use-use-package-session";
 import { useAppointmentSeries } from "@/hooks/use-appointment-series";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
@@ -272,7 +271,6 @@ export function NewAppointmentModal({
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
   const { mutateAsync: createAppointmentTransaction, isPending: isCreatingTransaction } = useAddAppointmentTransaction();
-  const { mutateAsync: debitPackageSession, isPending: isDebitingPackage } = useUsePackageSession();
   const {
     previewSeries,
     createSeries,
@@ -371,17 +369,20 @@ export function NewAppointmentModal({
     return activePackages?.find((p) => p.id === selectedPackageId) || activePackages?.[0];
   }, [activePackages, selectedPackageId]);
 
-  const remainingSessions = selectedPackage ? selectedPackage.total_sessions - selectedPackage.sessions_used : 0;
-  const afterDebitSessions = remainingSessions - 1;
+  const remainingSessions = selectedPackage
+    ? selectedPackage.total_sessions - selectedPackage.sessions_used - (selectedPackage.sessions_reserved || 0)
+    : 0;
+  const afterDebitSessions = remainingSessions - (recurrenceEnabled ? recurrenceCount : 1);
   const latestPackage = patientPackages?.[0];
-  const latestPackageRemaining = latestPackage ? latestPackage.total_sessions - latestPackage.sessions_used : 0;
+  const latestPackageRemaining = latestPackage
+    ? latestPackage.total_sessions - latestPackage.sessions_used - (latestPackage.sessions_reserved || 0)
+    : 0;
   const latestPackageIsExpired = !!latestPackage?.end_date && new Date(`${latestPackage.end_date}T23:59:59`) < new Date();
   const projectedUncoveredBalance = latestPackage ? Math.min(latestPackageRemaining - 1, -1) : -1;
   const isCheckingFinancialRules = isLoadingPackages || isLoadingPatientPackages;
   const isSubmitting =
     isCreatingAppointment ||
     isCreatingTransaction ||
-    isDebitingPackage ||
     isPreviewingSeries ||
     isCreatingSeries;
 
@@ -513,6 +514,10 @@ export function NewAppointmentModal({
           notes: notesStr || null,
           location: values.eventType === "event" ? values.eventLocation || null : locStr,
           metadata,
+          packageId:
+            values.eventType === "session" && values.usePackage
+              ? selectedPackage?.id || values.packageId || null
+              : null,
         });
 
         if (!result.success) {
@@ -521,20 +526,33 @@ export function NewAppointmentModal({
           toast.error("A disponibilidade mudou. Nenhum agendamento foi criado.");
           return;
         }
+      } else if (
+        values.eventType === "session"
+        && values.usePackage
+        && selectedPackage?.id
+        && values.patientId
+      ) {
+        const result = await createSeries({
+          patientId: values.patientId,
+          packageId: selectedPackage.id,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          frequency: "single",
+          occurrenceCount: 1,
+          type: values.modality as "presencial" | "online",
+          notes: notesStr || null,
+          location: locStr,
+          metadata,
+        });
+        if (!result.success) {
+          throw new Error("A disponibilidade mudou. Nenhum agendamento foi criado.");
+        }
       } else {
         const result = await createAppointment(appointmentPayload as any);
         createdPrimaryAppointment = result.newAppointment;
 
         if (values.eventType === "session" && result.newAppointment) {
-          if (values.usePackage && selectedPackage?.id && values.patientId) {
-            await debitPackageSession({
-              packageId: selectedPackage.id,
-              patientId: values.patientId,
-              appointmentId: result.newAppointment.id,
-              idempotencyKey: `appointment:${result.newAppointment.id}`,
-              reason: "Sessão vinculada ao agendamento",
-            });
-          } else if (values.shouldCreateTransaction) {
+          if (values.shouldCreateTransaction) {
             await createAppointmentTransaction({
               appointmentId: result.newAppointment.id,
               description: `Sessão - ${patients?.find((patient) => patient.id === values.patientId)?.name || "Paciente"}`,
@@ -1137,7 +1155,7 @@ export function NewAppointmentModal({
                 </p>
                 {usePackageSwitch && (
                   <p className="text-xs text-muted-foreground/70 mt-1 animate-in fade-in-0 duration-200">
-                    Após débito: <span className={cn("font-mono font-bold", afterDebitSessions <= 1 ? "text-amber-400" : "text-emerald-400")}>{afterDebitSessions}</span> sessões
+                    Após reserva: <span className={cn("font-mono font-bold", afterDebitSessions <= 1 ? "text-amber-400" : "text-emerald-400")}>{afterDebitSessions}</span> sessões
                   </p>
                 )}
               </div>
@@ -1202,7 +1220,7 @@ export function NewAppointmentModal({
                           <div className="flex w-full items-center justify-between">
                             <span className="font-bold text-base text-foreground">{pkg.description}</span>
                             <span className="text-xs font-mono text-muted-foreground bg-secondary/50 px-2 py-1 rounded-full">
-                              {pkg.total_sessions - pkg.sessions_used} restantes
+                              {Math.max(pkg.total_sessions - pkg.sessions_used - (pkg.sessions_reserved || 0), 0)} disponíveis
                             </span>
                           </div>
                         </label>
@@ -1447,7 +1465,7 @@ export function NewAppointmentModal({
             </div>
 
             <p className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-              Nesta etapa serão criados apenas a série e seus agendamentos. Pacotes, cobranças, e-mails em lote e notas fiscais não serão gerados.
+              A série, seus agendamentos e, quando escolhido, as reservas do pacote serão criados na mesma operação. Cobranças, e-mails em lote e notas fiscais não serão gerados nesta etapa.
             </p>
           </>
         ) : null}

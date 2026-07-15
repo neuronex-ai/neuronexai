@@ -49,9 +49,9 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
         return d >= currentMonthStart && d <= currentMonthEnd;
     }) || [];
 
-    const activePkg = packages?.find(p => p.total_sessions > p.sessions_used);
+    const activePkg = packages?.find(p => p.total_sessions > p.sessions_used + (p.sessions_reserved || 0));
 
-    const isRunningLow = activePkg && (activePkg.total_sessions - activePkg.sessions_used <= 1);
+    const isRunningLow = activePkg && (activePkg.total_sessions - activePkg.sessions_used - (activePkg.sessions_reserved || 0) <= 1);
 
     const reportData = {
         patientName: patient?.name || "Paciente",
@@ -141,7 +141,7 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                             </div>
                             <div>
                                 <p className="text-sm font-black uppercase tracking-wide text-foreground">Plano perto do fim</p>
-                                <p className="mt-0.5 text-xs font-medium text-muted-foreground">Resta apenas <span className="font-black text-foreground">{activePkg.total_sessions - activePkg.sessions_used}</span> sessão neste plano.</p>
+                                <p className="mt-0.5 text-xs font-medium text-muted-foreground">Resta apenas <span className="font-black text-foreground">{activePkg.total_sessions - activePkg.sessions_used - (activePkg.sessions_reserved || 0)}</span> sessão disponível neste pacote.</p>
                             </div>
                         </div>
                         <NewPackageModal patientId={patientId}>

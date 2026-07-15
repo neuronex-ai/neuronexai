@@ -64,7 +64,7 @@ export const GlobalPlanosModal = ({ children }: { children: ReactNode }) => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <AnimatePresence>
                                 {packages && packages.length > 0 ? packages.map((pkg, idx) => {
-                                    const remaining = pkg.total_sessions - pkg.sessions_used;
+                                    const remaining = pkg.total_sessions - pkg.sessions_used - (pkg.sessions_reserved || 0);
                                     const isActive = remaining > 0 && pkg.status === 'active';
 
                                     return (

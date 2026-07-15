@@ -199,6 +199,237 @@ export type Database = {
           },
         ]
       }
+      appointment_financial_coverages: {
+        Row: {
+          appointment_id: string
+          binding_id: string
+          covered_at: string
+          created_at: string
+          financial_entry_id: string | null
+          id: string
+          idempotency_key: string
+          package_id: string
+          patient_id: string
+          payment_id: string | null
+          professional_id: string
+          reason: string | null
+          released_at: string | null
+          replaced_by_coverage_id: string | null
+          source: string
+          status: string
+        }
+        Insert: {
+          appointment_id: string
+          binding_id: string
+          covered_at?: string
+          created_at?: string
+          financial_entry_id?: string | null
+          id?: string
+          idempotency_key: string
+          package_id: string
+          patient_id: string
+          payment_id?: string | null
+          professional_id: string
+          reason?: string | null
+          released_at?: string | null
+          replaced_by_coverage_id?: string | null
+          source?: string
+          status?: string
+        }
+        Update: {
+          appointment_id?: string
+          binding_id?: string
+          covered_at?: string
+          created_at?: string
+          financial_entry_id?: string | null
+          id?: string
+          idempotency_key?: string
+          package_id?: string
+          patient_id?: string
+          payment_id?: string | null
+          professional_id?: string
+          reason?: string | null
+          released_at?: string | null
+          replaced_by_coverage_id?: string | null
+          source?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_financial_coverages_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_binding_id_fkey"
+            columns: ["binding_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_package_bindings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "nb_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "nb_payments_safe_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_chargebacks_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_charges_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_eligible_anticipation_payments_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_financial_coverages_replaced_by_fkey"
+            columns: ["replaced_by_coverage_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_financial_coverages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_package_bindings: {
+        Row: {
+          appointment_id: string
+          bound_at: string
+          consumed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          idempotency_key: string
+          package_id: string
+          patient_id: string
+          professional_id: string
+          reason: string | null
+          released_at: string | null
+          replaced_by_binding_id: string | null
+          series_id: string | null
+          source: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id: string
+          bound_at?: string
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key: string
+          package_id: string
+          patient_id: string
+          professional_id: string
+          reason?: string | null
+          released_at?: string | null
+          replaced_by_binding_id?: string | null
+          series_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string
+          bound_at?: string
+          consumed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          idempotency_key?: string
+          package_id?: string
+          patient_id?: string
+          professional_id?: string
+          reason?: string | null
+          released_at?: string | null
+          replaced_by_binding_id?: string | null
+          series_id?: string | null
+          source?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_package_bindings_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_package_bindings_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_package_bindings_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_package_bindings_replaced_by_fkey"
+            columns: ["replaced_by_binding_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_package_bindings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_package_bindings_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_reschedule_requests: {
         Row: {
           appointment_id: string
@@ -3143,6 +3374,261 @@ export type Database = {
           },
         ]
       }
+      package_financial_adjustment_outbox: {
+        Row: {
+          appointment_id: string | null
+          attempt_count: number
+          available_at: string
+          created_at: string
+          depends_on_idempotency_key: string | null
+          financial_entry_id: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          next_attempt_at: string | null
+          operation_id: string
+          patient_id: string
+          payload: Json
+          payment_id: string | null
+          professional_id: string
+          source_package_id: string
+          status: string
+          target_package_id: string | null
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_id?: string | null
+          attempt_count?: number
+          available_at?: string
+          created_at?: string
+          depends_on_idempotency_key?: string | null
+          financial_entry_id?: string | null
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          next_attempt_at?: string | null
+          operation_id: string
+          patient_id: string
+          payload?: Json
+          payment_id?: string | null
+          professional_id: string
+          source_package_id: string
+          status?: string
+          target_package_id?: string | null
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_id?: string | null
+          attempt_count?: number
+          available_at?: string
+          created_at?: string
+          depends_on_idempotency_key?: string | null
+          financial_entry_id?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          next_attempt_at?: string | null
+          operation_id?: string
+          patient_id?: string
+          payload?: Json
+          payment_id?: string | null
+          professional_id?: string
+          source_package_id?: string
+          status?: string
+          target_package_id?: string | null
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_operation_id_fkey"
+            columns: ["operation_id"]
+            isOneToOne: false
+            referencedRelation: "package_replacement_operations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "nb_payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "nb_payments_safe_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_chargebacks_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_charges_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "neurofinance_eligible_anticipation_payments_v"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_source_package_id_fkey"
+            columns: ["source_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_financial_adjustment_outbox_target_package_id_fkey"
+            columns: ["target_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      package_replacement_operations: {
+        Row: {
+          action_origin: string
+          actor_user_id: string | null
+          affected_appointments: number
+          anchor_appointment_id: string | null
+          completed_at: string | null
+          created_at: string
+          financial_strategy: string
+          financial_summary: Json
+          id: string
+          idempotency_key: string
+          operation_type: string
+          patient_id: string
+          preview_snapshot: Json
+          professional_id: string
+          reason: string
+          scope: string
+          series_id: string | null
+          source_package_id: string
+          status: string
+          target_package_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          action_origin?: string
+          actor_user_id?: string | null
+          affected_appointments?: number
+          anchor_appointment_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          financial_strategy: string
+          financial_summary?: Json
+          id?: string
+          idempotency_key: string
+          operation_type: string
+          patient_id: string
+          preview_snapshot?: Json
+          professional_id: string
+          reason: string
+          scope: string
+          series_id?: string | null
+          source_package_id: string
+          status?: string
+          target_package_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          action_origin?: string
+          actor_user_id?: string | null
+          affected_appointments?: number
+          anchor_appointment_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          financial_strategy?: string
+          financial_summary?: Json
+          id?: string
+          idempotency_key?: string
+          operation_type?: string
+          patient_id?: string
+          preview_snapshot?: Json
+          professional_id?: string
+          reason?: string
+          scope?: string
+          series_id?: string | null
+          source_package_id?: string
+          status?: string
+          target_package_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "package_replacement_operations_anchor_appointment_id_fkey"
+            columns: ["anchor_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_replacement_operations_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_replacement_operations_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_replacement_operations_source_package_id_fkey"
+            columns: ["source_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_replacement_operations_target_package_id_fkey"
+            columns: ["target_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       patient_anamneses: {
         Row: {
           access_token: string | null
@@ -3440,6 +3926,7 @@ export type Database = {
         Row: {
           action: string
           appointment_id: string | null
+          binding_id: string | null
           created_at: string
           id: string
           idempotency_key: string
@@ -3449,10 +3936,13 @@ export type Database = {
           professional_id: string
           reason: string | null
           reverses_usage_id: string | null
+          series_id: string | null
+          source: string
         }
         Insert: {
           action?: string
           appointment_id?: string | null
+          binding_id?: string | null
           created_at?: string
           id?: string
           idempotency_key: string
@@ -3462,10 +3952,13 @@ export type Database = {
           professional_id: string
           reason?: string | null
           reverses_usage_id?: string | null
+          series_id?: string | null
+          source?: string
         }
         Update: {
           action?: string
           appointment_id?: string | null
+          binding_id?: string | null
           created_at?: string
           id?: string
           idempotency_key?: string
@@ -3475,6 +3968,8 @@ export type Database = {
           professional_id?: string
           reason?: string | null
           reverses_usage_id?: string | null
+          series_id?: string | null
+          source?: string
         }
         Relationships: [
           {
@@ -3482,6 +3977,13 @@ export type Database = {
             columns: ["appointment_id"]
             isOneToOne: false
             referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_package_session_usages_binding_id_fkey"
+            columns: ["binding_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_package_bindings"
             referencedColumns: ["id"]
           },
           {
@@ -3505,6 +4007,13 @@ export type Database = {
             referencedRelation: "patient_package_session_usages"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "patient_package_session_usages_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
+            referencedColumns: ["id"]
+          },
         ]
       }
       patient_packages: {
@@ -3512,14 +4021,22 @@ export type Database = {
           active: string | null
           balance: number | null
           billing_mode: string
+          billing_status: string
           created_at: string | null
+          default_payment_method: string | null
           description: string
           due_day: number | null
           end_date: string | null
+          ended_at: string | null
+          ended_by: string | null
+          ended_origin: string | null
+          ended_reason: string | null
           id: string
           package_status: string
           patient_id: string
           price: number | null
+          replaced_by_package_id: string | null
+          sessions_reserved: number
           sessions_used: number
           start_date: string | null
           total_sessions: number
@@ -3529,14 +4046,22 @@ export type Database = {
           active?: string | null
           balance?: number | null
           billing_mode?: string
+          billing_status?: string
           created_at?: string | null
+          default_payment_method?: string | null
           description: string
           due_day?: number | null
           end_date?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          ended_origin?: string | null
+          ended_reason?: string | null
           id?: string
           package_status?: string
           patient_id: string
           price?: number | null
+          replaced_by_package_id?: string | null
+          sessions_reserved?: number
           sessions_used?: number
           start_date?: string | null
           total_sessions: number
@@ -3546,14 +4071,22 @@ export type Database = {
           active?: string | null
           balance?: number | null
           billing_mode?: string
+          billing_status?: string
           created_at?: string | null
+          default_payment_method?: string | null
           description?: string
           due_day?: number | null
           end_date?: string | null
+          ended_at?: string | null
+          ended_by?: string | null
+          ended_origin?: string | null
+          ended_reason?: string | null
           id?: string
           package_status?: string
           patient_id?: string
           price?: number | null
+          replaced_by_package_id?: string | null
+          sessions_reserved?: number
           sessions_used?: number
           start_date?: string | null
           total_sessions?: number
@@ -3565,6 +4098,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "patient_packages_replaced_by_package_id_fkey"
+            columns: ["replaced_by_package_id"]
+            isOneToOne: false
+            referencedRelation: "patient_packages"
             referencedColumns: ["id"]
           },
         ]
@@ -7776,6 +8316,22 @@ export type Database = {
         }
         Returns: Json
       }
+      create_appointment_series_with_package: {
+        Args: {
+          p_end_time: string
+          p_frequency?: string
+          p_location?: string
+          p_metadata?: Json
+          p_notes?: string
+          p_occurrence_count?: number
+          p_package_id?: string
+          p_patient_id: string
+          p_psychologist_id?: string
+          p_start_time: string
+          p_type?: string
+        }
+        Returns: Json
+      }
       current_user_can_use_feature: {
         Args: { feature_key: string }
         Returns: boolean
@@ -7804,6 +8360,22 @@ export type Database = {
           p_user_id: string
         }
         Returns: string
+      }
+      execute_package_lifecycle_change_internal: {
+        Args: {
+          p_action_origin?: string
+          p_actor_id: string
+          p_anchor_appointment_id?: string
+          p_expected_appointment_ids?: string[]
+          p_financial_strategy?: string
+          p_idempotency_key?: string
+          p_operation_type?: string
+          p_reason?: string
+          p_scope?: string
+          p_source_package_id: string
+          p_target_package_id?: string
+        }
+        Returns: Json
       }
       export_user_data: { Args: never; Returns: Json }
       get_asaas_account_api_key_for_edge: {
@@ -7979,6 +8551,18 @@ export type Database = {
         }
         Returns: Json
       }
+      preview_package_lifecycle_change_internal: {
+        Args: {
+          p_actor_id: string
+          p_anchor_appointment_id?: string
+          p_financial_strategy?: string
+          p_operation_type?: string
+          p_scope?: string
+          p_source_package_id: string
+          p_target_package_id?: string
+        }
+        Returns: Json
+      }
       process_appointment_public_action: {
         Args: {
           p_action: string
@@ -8087,6 +8671,15 @@ export type Database = {
       update_public_anamnesis: {
         Args: { p_content: Json; p_id: string; p_token: string }
         Returns: undefined
+      }
+      validate_package_lifecycle_progress_internal: {
+        Args: {
+          p_actor_id: string
+          p_anchor_appointment_id?: string
+          p_scope?: string
+          p_source_package_id: string
+        }
+        Returns: Json
       }
       verify_financial_pin: { Args: { pin_attempt: string }; Returns: boolean }
       verify_notification_webhook_secret: {

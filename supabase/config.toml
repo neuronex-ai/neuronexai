@@ -294,6 +294,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/review-appointment-reschedule/index.ts"
 
+[functions.manage-package-lifecycle]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/manage-package-lifecycle/index.ts"
+
 [functions.verify-checkout-session]
 enabled = true
 verify_jwt = false

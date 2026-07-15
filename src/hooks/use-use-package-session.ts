@@ -1,3 +1,55 @@
-import{useAuth}from'@/components/auth/SessionContextProvider';import{supabase}from'@/integrations/supabase/client';import{useMutation,useQueryClient}from'@tanstack/react-query';import{toast}from'sonner';
-interface Input{packageId:string;patientId:string;appointmentId?:string|null;idempotencyKey?:string;reason?:string}interface Result{usage_id:string;package_id:string;sessions_used:number;total_sessions:number;remaining_sessions:number;idempotent_replay:boolean}
-export const useUsePackageSession=()=>{const qc=useQueryClient();const{user}=useAuth();return useMutation({mutationFn:async(data:Input)=>{if(!user?.id)throw new Error('Usuário não autenticado.');const{data:result,error}=await(supabase.rpc as any)('consume_patient_package_session',{p_package_id:data.packageId,p_patient_id:data.patientId,p_appointment_id:data.appointmentId||null,p_idempotency_key:data.idempotencyKey||`package-use:${data.packageId}:${data.appointmentId||crypto.randomUUID()}`,p_reason:data.reason||'Sessão vinculada ao pacote'});if(error)throw new Error(error.message);return result as Result;},onSuccess:(data,v)=>{if(!data.idempotent_replay)toast.success(`Sessão registrada no pacote. Restam ${data.remaining_sessions}.`);qc.invalidateQueries({queryKey:['patientPackages',v.patientId]});qc.invalidateQueries({queryKey:['activePatientPackages',v.patientId]});qc.invalidateQueries({queryKey:['transactions']});},onError:e=>toast.error(e.message)});};
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+
+import { useAuth } from "@/components/auth/SessionContextProvider";
+import { supabase } from "@/integrations/supabase/client";
+
+interface Input {
+  packageId: string;
+  patientId: string;
+  appointmentId: string;
+  idempotencyKey?: string;
+  reason?: string;
+}
+
+interface Result {
+  consumed: boolean;
+  usageId: string;
+  bindingId: string;
+  packageId: string;
+  sessionsUsed: number;
+  sessionsReserved: number;
+  remainingSessions: number;
+  idempotentReplay: boolean;
+}
+
+export const useUsePackageSession = () => {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  return useMutation({
+    mutationFn: async (input: Input) => {
+      if (!user?.id) throw new Error("Usuário não autenticado.");
+      if (!input.appointmentId) {
+        throw new Error("Selecione o agendamento que possui a reserva deste pacote.");
+      }
+      const { data, error } = await supabase.rpc("consume_patient_package_session", {
+        p_package_id: input.packageId,
+        p_patient_id: input.patientId,
+        p_appointment_id: input.appointmentId,
+        p_idempotency_key: input.idempotencyKey || `package-consume:${input.appointmentId}`,
+        p_reason: input.reason || "Sessão realizada",
+      });
+      if (error) throw new Error(error.message);
+      return data as Result;
+    },
+    onSuccess: (result, input) => {
+      if (!result.idempotentReplay) toast.success("Sessão consumida da reserva do agendamento.");
+      void queryClient.invalidateQueries({ queryKey: ["patientPackages", input.patientId] });
+      void queryClient.invalidateQueries({ queryKey: ["activePatientPackages", input.patientId] });
+      void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+};

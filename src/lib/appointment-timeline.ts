@@ -61,6 +61,16 @@ const EVENT_LABELS: Record<string, string> = {
   payment_failed: "Falha na cobrança",
   payment_refunded: "Pagamento estornado",
   package_session_linked: "Sessão vinculada ao pacote",
+  package_sessions_reserved: "Sessão reservada no pacote",
+  package_session_consumed: "Sessão consumida do pacote",
+  package_reservation_released: "Reserva do pacote liberada",
+  package_session_reversed: "Consumo do pacote estornado",
+  package_replacement_linked: "Novo pacote vinculado às sessões futuras",
+  package_ended_partial: "Pacote encerrado após uso parcial",
+  future_charges_preserved: "Cobranças futuras mantidas",
+  charge_cancellation_requested: "Cancelamento de cobrança solicitado",
+  new_charges_prepared: "Novas cobranças preparadas",
+  financial_adjustment_review: "Ajuste financeiro aguardando revisão",
   cancellation_email_sent: "E-mail de cancelamento enviado",
   reschedule_approved_email_sent: "Novo horário enviado ao paciente",
   reschedule_rejected_email_sent: "Recusa enviada ao paciente",
@@ -76,6 +86,15 @@ const EVENT_DETAILS: Record<string, string> = {
   appointment_rescheduled: "O novo horário passou a ser o horário oficial da consulta.",
   reschedule_approved_email_sent: "Os novos detalhes da consulta foram enviados ao paciente.",
   reschedule_rejected_email_sent: "A decisão foi comunicada ao paciente.",
+  package_sessions_reserved: "A sessão foi reservada sem consumir o saldo realizado.",
+  package_session_consumed: "O consumo foi registrado para esta ocorrência específica.",
+  package_reservation_released: "A reserva futura foi liberada sem alterar sessões já realizadas.",
+  package_replacement_linked: "A ocorrência futura passou a ser coberta pelo novo pacote.",
+  package_ended_partial: "Sessões realizadas, pagamentos e documentos fiscais anteriores foram preservados.",
+  future_charges_preserved: "A cobrança existente foi mantida sem nova chamada ao provedor.",
+  charge_cancellation_requested: "O cancelamento será processado antes de qualquer nova cobrança.",
+  new_charges_prepared: "A nova cobrança permanece bloqueada até a confirmação do cancelamento anterior.",
+  financial_adjustment_review: "A operação exige análise financeira antes de continuar.",
 };
 
 const STATUS_LABELS: Record<string, string> = {
@@ -139,7 +158,8 @@ const visualKind = (eventType: string): AppointmentTimelineVisualKind => {
     eventType.includes("financial") ||
     eventType.includes("charge") ||
     eventType.includes("pix") ||
-    eventType.includes("boleto")
+    eventType.includes("boleto") ||
+    eventType.includes("package")
   ) {
     return "financial";
   }
