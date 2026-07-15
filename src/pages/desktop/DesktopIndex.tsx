@@ -32,10 +32,10 @@ const DesktopIndex = () => {
         <div className="min-h-screen bg-transparent selection:bg-primary/30">
             <Navbar />
             <main>
-                <LandingSectionStage index={0}><Hero /></LandingSectionStage>
-                <LandingSectionStage index={1}><LandingProblemSection /></LandingSectionStage>
-                <LandingSectionStage index={2}><PublicFlowComparison /></LandingSectionStage>
-                <LandingSectionStage index={3}><LandingRealProductShowcase /></LandingSectionStage>
+                <LandingSectionStage index={0} effect="none"><Hero /></LandingSectionStage>
+                <LandingSectionStage index={1} progressLinked effect="focus-in"><LandingRealProductShowcase /></LandingSectionStage>
+                <LandingSectionStage index={2} progressLinked effect="handoff"><LandingProblemSection /></LandingSectionStage>
+                <LandingSectionStage index={3} progressLinked effect="zoom-out"><PublicFlowComparison /></LandingSectionStage>
                 <LandingSectionStage index={4}>
                     <section className="bg-transparent px-6 pb-12">
                         <div className="mx-auto flex max-w-[1320px] flex-col justify-center gap-3 rounded-[28px] border border-border/40 bg-card/70 p-5 sm:flex-row dark:border-white/10 dark:bg-white/[0.03]">
@@ -44,9 +44,9 @@ const DesktopIndex = () => {
                         </div>
                     </section>
                 </LandingSectionStage>
-                <LandingSectionStage index={5}><LandingOperatingSystemSection /></LandingSectionStage>
-                <LandingSectionStage index={6}><LandingRealSynapseSection /></LandingSectionStage>
-                <LandingSectionStage index={7}><LandingRealFinanceFiscalSection /></LandingSectionStage>
+                <LandingSectionStage index={5} progressLinked effect="handoff"><LandingOperatingSystemSection /></LandingSectionStage>
+                <LandingSectionStage index={6} progressLinked effect="focus-in"><LandingRealSynapseSection /></LandingSectionStage>
+                <LandingSectionStage index={7} progressLinked effect="handoff"><LandingRealFinanceFiscalSection /></LandingSectionStage>
                 <LandingSectionStage index={8}><WaitlistSection /></LandingSectionStage>
                 <LandingSectionStage index={9}><LandingPlanComparisonSection /></LandingSectionStage>
                 <LandingSectionStage index={10}><LandingTrustAndFAQSection /></LandingSectionStage>

@@ -1,752 +1,555 @@
 "use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from "framer-motion";
+import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "framer-motion";
 import {
-    Activity, Bell, Calendar, LayoutDashboard, Search, TrendingUp, Users, Wallet, 
-    Video, MessageSquare, FileText, Zap, MoreHorizontal, Mic,
-    ArrowRight, Sparkles, Landmark, Send, QrCode,
-    Play, ZoomIn, ZoomOut, Target, Maximize, Settings2, MoreVertical, Paperclip, Type, List, RotateCcw,
-    UserPlus
+    ArrowLeft,
+    ArrowRight,
+    AudioLines,
+    BrainCircuit,
+    CalendarDays,
+    Check,
+    Clock3,
+    FileText,
+    LayoutDashboard,
+    MessageSquareText,
+    Mic2,
+    Network,
+    Pause,
+    Play,
+    Route,
+    ShieldCheck,
+    Sparkles,
+    UsersRound,
+    WalletCards,
+    type LucideIcon,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { VoiceSpiral } from "@/components/ai-chat/VoiceSpiral";
-import { Logo } from "@/components/ui/Logo";
+import { useTheme } from "next-themes";
+import { useCallback, useEffect, useMemo, useState, type KeyboardEvent } from "react";
+import { cn } from "@/lib/utils";
 
-// --- WIDGET COMPONENTS ---
+const SCREENSHOT_ROOT = "/landing/screenshots/desktop";
 
-const FloatingWidget = ({ children, className, x, y, delay, depth = 1, mouseX, mouseY }: any) => {
-    const moveX = useTransform(mouseX, [0, 1000], [depth * 10, depth * -10]);
-    const moveY = useTransform(mouseY, [0, 650], [depth * 10, depth * -10]);
-
-    return (
-        <motion.div
-            initial={{ opacity: 0, scale: 0.8, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ delay, duration: 0.8, type: "spring", stiffness: 50, damping: 20 }}
-            style={{ top: y, left: x, x: moveX, y: moveY }}
-            className={cn(
-                "absolute z-30 bg-white/95 dark:bg-[#121214]/95 border border-zinc-200 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] backdrop-blur-xl p-4 flex flex-col gap-3",
-                "hover:border-zinc-300 dark:hover:border-white/20 transition-colors duration-300 group/widget font-sans",
-                className
-            )}
-        >
-            {children}
-        </motion.div>
-    );
+type TourScene = {
+    id: string;
+    eyebrow: string;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    darkAsset: string;
+    lightAsset?: string;
+    secondaryDarkAsset?: string;
+    secondaryLightAsset?: string;
+    secondaryLabel?: string;
+    points: string[];
+    alt: string;
+    duration: number;
+    kind?: "voice";
 };
 
-// --- SCREEN MOCKS ---
+const tourScenes: TourScene[] = [
+    {
+        id: "central",
+        eyebrow: "Central da clínica",
+        title: "O dia começa pelo que realmente pede atenção.",
+        description: "Agenda, pacientes e pendências aparecem no mesmo panorama, com a próxima ação à vista.",
+        icon: LayoutDashboard,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/01-dashboard-command-center-dark.webp`,
+        points: ["Resumo do dia", "Próxima sessão", "Pendências visíveis"],
+        alt: "Central da Clínica NeuroNex com atendimentos do dia, próxima ação e indicadores da rotina.",
+        duration: 6_200,
+    },
+    {
+        id: "agenda",
+        eyebrow: "Agenda viva",
+        title: "Horários deixam de ser compromissos isolados.",
+        description: "Cada sessão pode carregar comunicação, contexto e próximos passos sem espalhar a rotina.",
+        icon: CalendarDays,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/nova remessa/9-agenda-mensal-dark.webp`,
+        lightAsset: `${SCREENSHOT_ROOT}/light/9-agenda-mensal-white.webp`,
+        points: ["Dia, semana e mês", "Contexto da sessão", "Integrações no fluxo"],
+        alt: "Agenda mensal da NeuroNex com compromissos e organização visual da rotina clínica.",
+        duration: 6_200,
+    },
+    {
+        id: "patients",
+        eyebrow: "Pacientes e prontuário",
+        title: "O histórico acompanha a pessoa, não a tela.",
+        description: "Lista de pacientes, registros e evolução clínica ficam próximos o suficiente para preservar a continuidade.",
+        icon: UsersRound,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/11-pacientes-lista-dark.webp`,
+        secondaryDarkAsset: `${SCREENSHOT_ROOT}/dark/12-paciente-prontuario-historico-dark.webp`,
+        secondaryLabel: "Prontuário em contexto",
+        points: ["Pacientes ativos", "Histórico clínico", "Evolução organizada"],
+        alt: "Área de pacientes da NeuroNex com uma prévia do histórico do prontuário.",
+        duration: 6_500,
+    },
+    {
+        id: "neurobox",
+        eyebrow: "NeuroView e NeuroBox",
+        title: "O contexto deixa de ficar preso em uma sequência de notas.",
+        description: "Relações, padrões e ferramentas clínicas podem ser acessados pelo mesmo espaço de trabalho.",
+        icon: Network,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/17-neuroview-3d-dark.webp`,
+        lightAsset: `${SCREENSHOT_ROOT}/light/17-neuroview-3d-white.webp`,
+        points: ["NeuroView", "NeuroFlow", "NeuroPulse", "NeuroScan"],
+        alt: "NeuroView da NeuroNex exibindo conexões entre notas e pacientes no espaço NeuroBox.",
+        duration: 6_600,
+    },
+    {
+        id: "finance",
+        eyebrow: "NeuroFinance e fiscal",
+        title: "A rotina financeira encontra o que aconteceu na agenda.",
+        description: "Saldo, recebimentos e emissão fiscal passam a fazer parte do mesmo encadeamento de trabalho.",
+        icon: WalletCards,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp`,
+        lightAsset: `${SCREENSHOT_ROOT}/light/Nova remessa/08-neurofinance-conta-saldo-white.webp`,
+        secondaryDarkAsset: `${SCREENSHOT_ROOT}/dark/13-fiscal-dados-nfse-dark.webp`,
+        secondaryLightAsset: `${SCREENSHOT_ROOT}/light/Nova remessa/13-fiscal-dados-nfse-white.webp`,
+        secondaryLabel: "Fiscal no mesmo fluxo",
+        points: ["Conta e saldo", "Cobranças", "Dados para NFS-e"],
+        alt: "NeuroFinance da NeuroNex com saldo da conta e uma prévia da configuração fiscal.",
+        duration: 6_500,
+    },
+    {
+        id: "synapse-text",
+        eyebrow: "Synapse por texto",
+        title: "Você conversa com a própria prática.",
+        description: "O Synapse recupera contexto, organiza a resposta e deixa claro o que pode acontecer depois.",
+        icon: MessageSquareText,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/15-synapse-chat-dark.webp`,
+        points: ["Contexto preservado", "Respostas explicáveis", "Próxima ação preparada"],
+        alt: "Conversa por texto com o Synapse dentro do painel da NeuroNex.",
+        duration: 6_800,
+    },
+    {
+        id: "synapse-voice",
+        eyebrow: "Synapse por voz",
+        title: "Uma frase pode movimentar o painel inteiro.",
+        description: "O comando é compreendido, a tela certa é aberta e o contexto aparece antes da próxima sessão.",
+        icon: AudioLines,
+        darkAsset: `${SCREENSHOT_ROOT}/dark/16-synapse-voz-dark.webp`,
+        secondaryDarkAsset: `${SCREENSHOT_ROOT}/dark/17-neuroview-2d-visao-de-todas-conexoes-dark.webp`,
+        points: ["Comando compreendido", "Navegação executada", "Controle preservado"],
+        alt: "Demonstração do Synapse por voz abrindo o NeuroView e preparando o contexto de uma paciente.",
+        duration: 11_500,
+        kind: "voice",
+    },
+];
 
-const DashboardScreen = () => (
-    <div className="space-y-6 h-full overflow-y-auto pr-2 custom-scrollbar font-sans">
-        <div className="flex justify-between items-start mb-8 relative z-10">
-            <div>
-                <h1 className="text-2xl font-bold text-zinc-900 dark:text-white mb-1 tracking-tight">Bom dia, Dr. Silva</h1>
-                <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <p className="text-zinc-500 dark:text-white/40 text-[10px] font-bold uppercase tracking-widest">Sua clínica está operando normalmente • 8 sessões hoje</p>
-                </div>
-            </div>
-            <div className="flex gap-2">
-                <div className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center border border-zinc-200 dark:border-white/10">
-                    <Bell className="w-4 h-4 text-zinc-500" />
-                </div>
-            </div>
-        </div>
+function resolveAsset(scene: TourScene, lightTheme: boolean) {
+    return lightTheme && scene.lightAsset ? scene.lightAsset : scene.darkAsset;
+}
 
-        <div className="grid grid-cols-12 gap-4 mb-6">
-            <div className="col-span-8 p-6 rounded-[24px] bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm relative overflow-hidden group">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-3xl rounded-full -mr-16 -mt-16" />
-                <div className="relative z-10">
-                    <h3 className="text-xs font-black text-zinc-400 uppercase tracking-[0.2em] mb-4">Briefing Matinal</h3>
-                    <div className="space-y-3">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
-                                <Users className="w-4 h-4 text-zinc-600 dark:text-white/60" />
-                            </div>
-                            <span className="text-xs text-zinc-600 dark:text-white/70">3 novos pacientes aguardando triagem</span>
-                        </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
-                                <TrendingUp className="w-4 h-4 text-emerald-500" />
-                            </div>
-                            <span className="text-xs text-zinc-600 dark:text-white/70">Faturamento 12% acima da média semanal</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="col-span-4 p-6 rounded-[24px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-xl relative overflow-hidden group">
-                <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent dark:from-black/5" />
-                <div className="relative z-10 h-full flex flex-col justify-between">
-                    <div>
-                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] opacity-60 mb-2">Próximo Paciente</h3>
-                        <p className="text-lg font-bold leading-tight">Mariana Silva</p>
-                        <p className="text-[10px] opacity-60 font-medium">14:00 • Teleconsulta</p>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2">
-                        <div className="px-3 py-1 rounded-full bg-white/20 dark:bg-black/10 text-[9px] font-bold uppercase tracking-wider">Entrar na Sala</div>
-                        <ArrowRight className="w-3 h-3" />
-                    </div>
-                </div>
-            </div>
-        </div>
+function resolveSecondaryAsset(scene: TourScene, lightTheme: boolean) {
+    if (lightTheme && scene.secondaryLightAsset) return scene.secondaryLightAsset;
+    return scene.secondaryDarkAsset;
+}
 
-        <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm">
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Pacientes Ativos</span>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-zinc-900 dark:text-white">42</span>
-                    <span className="text-[10px] text-emerald-500 font-bold">+3</span>
-                </div>
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm">
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Sessões Hoje</span>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-zinc-900 dark:text-white">8</span>
-                    <span className="text-[10px] text-zinc-400 font-bold">de 10</span>
-                </div>
-            </div>
-            <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm">
-                <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest block mb-1">Taxa de Adesão</span>
-                <div className="flex items-baseline gap-2">
-                    <span className="text-2xl font-bold text-zinc-900 dark:text-white">94%</span>
-                    <Activity className="w-3 h-3 text-emerald-500" />
-                </div>
-            </div>
-        </div>
-    </div>
-);
-
-const AgendaScreen = () => (
-    <div className="h-full flex gap-6 overflow-hidden font-sans">
-        <div className="w-[200px] shrink-0 space-y-6">
-            <div className="p-4 rounded-2xl bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Novembro 2024</span>
-                </div>
-                <div className="grid grid-cols-7 gap-1 text-[8px] font-bold text-zinc-400 mb-2">
-                    {['S', 'T', 'Q', 'Q', 'S', 'S', 'D'].map(d => <div key={d} className="text-center">{d}</div>)}
-                </div>
-                <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: 30 }).map((_, i) => (
-                        <div key={i} className={cn(
-                            "aspect-square flex items-center justify-center rounded-md text-[9px] font-medium transition-colors",
-                            i === 14 ? "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold" : "text-zinc-500 dark:text-white/40 hover:bg-zinc-100 dark:hover:bg-white/5"
-                        )}>
-                            {i + 1}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        </div>
-
-        <div className="flex-1 bg-white dark:bg-white/[0.01] border border-zinc-200 dark:border-white/[0.05] rounded-[32px] flex flex-col overflow-hidden shadow-xl">
-            <div className="p-6 border-b border-zinc-100 dark:border-white/5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <h2 className="text-lg font-bold text-zinc-900 dark:text-white tracking-tight">11 — 17 Nov</h2>
-                </div>
-            </div>
-            <div className="flex-1 grid grid-cols-5 p-4 gap-4 overflow-y-auto custom-scrollbar">
-                {['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'].map((day, dIdx) => (
-                    <div key={day} className="space-y-4">
-                        <div className="text-center pb-2 border-b border-zinc-100 dark:border-white/5">
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">{day}</p>
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white">{11 + dIdx}</p>
-                        </div>
-                        <div className="space-y-3">
-                            {[1, 2, 3].map((_, aIdx) => (
-                                <div key={aIdx} className={cn(
-                                    "p-3 rounded-2xl border transition-all",
-                                    dIdx === 2 && aIdx === 1 
-                                        ? "bg-zinc-900 dark:bg-white border-transparent text-white dark:text-zinc-950 shadow-lg" 
-                                        : "bg-white dark:bg-white/[0.03] border-zinc-100 dark:border-white/5"
-                                )}>
-                                    <p className="text-[10px] font-bold truncate">Paciente #{100 + dIdx * 3 + aIdx}</p>
-                                    <p className="text-[8px] opacity-40 uppercase tracking-widest font-black mt-1">{9 + aIdx * 2}:00</p>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        </div>
-    </div>
-);
-
-const TeleconsultaScreen = () => (
-    <div className="h-full flex flex-col space-y-6 font-sans">
-        <div className="grid grid-cols-4 gap-4">
-            <div className="col-span-3 aspect-video rounded-[32px] bg-zinc-900 relative overflow-hidden group">
-                <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=1200" className="w-full h-full object-cover opacity-60" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-6 left-6 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full border-2 border-white/20 overflow-hidden">
-                        <img src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=100" />
-                    </div>
-                    <div>
-                        <p className="text-white font-bold text-sm">Mariana Silva</p>
-                        <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[10px] text-white/60 font-bold uppercase tracking-widest">Em Sessão • 42:12</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div className="aspect-video rounded-[32px] bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden">
-                <div className="text-center">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-2">
-                        <Users className="w-5 h-5 text-primary" />
-                    </div>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Você</p>
-                </div>
-            </div>
-        </div>
-        <div className="flex-1 flex gap-4">
-            <div className="flex-1 p-6 rounded-[32px] bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm flex flex-col">
-                 <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Notas Rápidas</h3>
-                 <div className="flex-1 space-y-3">
-                     <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-white/5 text-[11px] text-zinc-600 dark:text-white/60 leading-relaxed italic">
-                        "Paciente relata melhora no sono após início do protocolo de higiene do sono..."
-                     </div>
-                 </div>
-            </div>
-            <div className="w-[300px] p-6 rounded-[32px] bg-zinc-950 text-white flex flex-col">
-                 <h3 className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-4">Chat de Sessão</h3>
-                 <div className="flex-1"></div>
-                 <div className="flex items-center gap-2 bg-white/10 p-2 rounded-2xl">
-                     <div className="flex-1 h-8 bg-transparent text-[11px] px-2 flex items-center text-white/60">Escreva aqui...</div>
-                     <Send className="w-4 h-4 text-primary" />
-                 </div>
-            </div>
-        </div>
-    </div>
-);
-
-const PatientsScreen = () => (
-    <div className="h-full flex flex-col space-y-6 font-sans">
-        <div className="flex items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                <input className="w-full h-12 pl-12 pr-4 rounded-2xl bg-zinc-100 dark:bg-white/5 border-none text-sm placeholder:text-zinc-400 focus:ring-2 ring-primary/20" placeholder="Buscar pacientes..." />
-            </div>
-            <button className="h-12 px-6 rounded-2xl bg-primary text-white text-[11px] font-black uppercase tracking-widest flex items-center gap-2">
-                <UserPlus className="w-4 h-4" /> Novo Paciente
-            </button>
-        </div>
-        <div className="grid grid-cols-1 gap-4 overflow-y-auto custom-scrollbar pr-2">
-            {[
-                { name: "Mariana Silva", status: "Ativo", email: "mariana.s@email.com", last: "Hoje", risk: "Baixo" },
-                { name: "Carlos Eduardo", status: "Ativo", email: "cadu@email.com", last: "Ontem", risk: "Médio" },
-                { name: "Ana Beatriz", status: "Ativo", email: "ana.b@email.com", last: "Há 3 dias", risk: "Baixo" },
-                { name: "Rodrigo Melo", status: "Em espera", email: "rodrigo.m@email.com", last: "Há 1 semana", risk: "Alto" },
-            ].map((p, i) => (
-                <div key={i} className="p-5 rounded-[24px] bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] flex items-center justify-between group hover:border-primary/20 transition-all">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-full bg-zinc-100 dark:bg-white/5 flex items-center justify-center font-bold text-zinc-400">{p.name[0]}</div>
-                        <div>
-                            <p className="text-sm font-bold text-zinc-900 dark:text-white">{p.name}</p>
-                            <p className="text-[10px] text-zinc-400">{p.email}</p>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-8">
-                        <div className="text-center">
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Última</p>
-                            <p className="text-[11px] font-bold">{p.last}</p>
-                        </div>
-                        <div className="text-center">
-                            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Risco</p>
-                            <div className={cn(
-                                "px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest",
-                                p.risk === 'Baixo' ? "bg-emerald-500/10 text-emerald-500" :
-                                p.risk === 'Médio' ? "bg-amber-500/10 text-amber-500" : "bg-red-500/10 text-red-500"
-                            )}>
-                                {p.risk}
-                            </div>
-                        </div>
-                        <MoreHorizontal className="w-4 h-4 text-zinc-300 group-hover:text-zinc-600 transition-colors" />
-                    </div>
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
-const NeuroViewMock = () => {
-    const nodes = [
-        { id: 'dr', type: 'doctor', label: 'Dr. Silva', x: 0, y: 0, icon: Zap },
-        { id: 'p1', type: 'patient', label: 'Mariana Silva', x: -180, y: -100, initials: 'MS', avatar: 'https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=100' },
-        { id: 'p2', type: 'patient', label: 'Carlos Eduardo', x: 180, y: -80, initials: 'CE' },
-        { id: 'p3', type: 'patient', label: 'Ana Beatriz', x: 0, y: 160, initials: 'AB' },
-        { id: 'n1', type: 'note', label: 'Sessão #04', x: -280, y: -40, content: 'Estresse laboral detectado' },
-        { id: 'n2', type: 'note', label: 'Sessão #03', x: -250, y: -160, content: 'Melhora no sono' },
-        { id: 'n3', type: 'note', label: 'Triagem', x: 260, y: -20, content: 'Ansiedade generalizada' },
-        { id: 'n4', type: 'note', label: 'Relatório', x: 100, y: 240, content: 'Evolução positiva' },
-    ];
-
-    const edges = [
-        { from: 'dr', to: 'p1' },
-        { from: 'dr', to: 'p2' },
-        { from: 'dr', to: 'p3' },
-        { from: 'p1', to: 'n1' },
-        { from: 'p1', to: 'n2' },
-        { from: 'p2', to: 'n3' },
-        { from: 'p3', to: 'n4' },
-    ];
-
-    return (
-        <div className="relative w-full h-full bg-[#F5F5F7] dark:bg-[#020204] rounded-[32px] overflow-hidden flex flex-col font-sans">
-            <div className="absolute inset-0 z-0 pointer-events-none">
-                <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0)_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(ellipse_at_center,#1a1a1a_0%,#0d0d0d_40%,#000000_100%)]" />
-            </div>
-
-            <div className="absolute top-4 right-4 z-50 flex flex-col gap-3">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/40" />
-                    <div className="pl-10 pr-4 h-10 w-[240px] bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-zinc-200 dark:border-white/10 rounded-xl flex items-center">
-                        <span className="text-[11px] text-zinc-400">Buscar no grafo...</span>
-                    </div>
-                </div>
-                <div className="flex items-center gap-2">
-                    {[Play, ZoomOut, ZoomIn, Target, Settings2, Maximize].map((Icon, i) => (
-                        <div key={i} className="h-9 w-9 rounded-xl bg-white/80 dark:bg-black/60 backdrop-blur-xl border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-500 dark:text-white/70">
-                            <Icon className="h-4 w-4" />
-                        </div>
-                    ))}
-                </div>
-            </div>
-
-            <div className="flex-1 relative flex items-center justify-center overflow-hidden">
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-10">
-                    {edges.map((edge, i) => {
-                        const fromNode = nodes.find(n => n.id === edge.from)!;
-                        const toNode = nodes.find(n => n.id === edge.to)!;
-                        return (
-                            <motion.line
-                                key={i}
-                                initial={{ pathLength: 0, opacity: 0 }}
-                                animate={{ pathLength: 1, opacity: 1 }}
-                                transition={{ delay: 0.5 + i * 0.1, duration: 1.5 }}
-                                x1={`calc(50% + ${fromNode.x}px)`}
-                                y1={`calc(50% + ${fromNode.y}px)`}
-                                x2={`calc(50% + ${toNode.x}px)`}
-                                y2={`calc(50% + ${toNode.y}px)`}
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                className="text-primary/30"
-                            />
-                        );
-                    })}
-                </svg>
-
-                {nodes.map((node, i) => (
-                    <motion.div
-                        key={node.id}
-                        initial={{ opacity: 0, scale: 0.5 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ delay: 0.2 + i * 0.1, type: "spring" }}
-                        className="absolute z-20"
-                        style={{ x: node.x, y: node.y }}
-                    >
-                        <div className="relative group/node flex flex-col items-center">
-                            {node.type === 'doctor' ? (
-                                <div className="w-14 h-14 rounded-full bg-primary shadow-[0_0_30px_rgba(var(--primary-rgb),0.4)] flex items-center justify-center text-white ring-4 ring-primary/20">
-                                    <Zap className="w-6 h-6" />
-                                </div>
-                            ) : node.type === 'patient' ? (
-                                <div className="w-10 h-10 rounded-full bg-white dark:bg-zinc-800 border-2 border-primary/40 shadow-xl overflow-hidden flex items-center justify-center">
-                                    {node.avatar ? <img src={node.avatar} className="w-full h-full object-cover" /> : <span className="text-[10px] font-black text-zinc-500">{node.initials}</span>}
-                                </div>
-                            ) : (
-                                <div className="w-8 h-8 rounded-lg bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 shadow-lg flex items-center justify-center text-zinc-400">
-                                    <FileText className="w-4 h-4" />
-                                </div>
-                            )}
-                            <div className="absolute -bottom-7 whitespace-nowrap px-2 py-0.5 rounded-md bg-white/90 dark:bg-black/90 text-[9px] font-black uppercase tracking-widest text-zinc-600 dark:text-zinc-400 border border-zinc-200/50 dark:border-white/5 opacity-0 group-hover/node:opacity-100 transition-opacity">
-                                {node.label}
-                            </div>
-                        </div>
-                    </motion.div>
-                ))}
-            </div>
-
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-6 py-3 rounded-full bg-white/90 dark:bg-black/80 backdrop-blur-2xl border border-zinc-200 dark:border-white/10 shadow-2xl z-20">
-                {[Type, Paperclip, List, RotateCcw, MessageSquare, Sparkles].map((Icon, i) => (
-                    <div key={i} className={cn(
-                        "w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer",
-                        i === 5 ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-zinc-500 dark:text-white/40 hover:bg-zinc-100 dark:hover:bg-white/5"
-                    )}>
-                        <Icon className="w-5 h-5" />
-                    </div>
-                ))}
-                <div className="w-px h-6 bg-zinc-200 dark:bg-white/10 mx-2" />
-                <div className="w-10 h-10 rounded-xl bg-red-500/10 text-red-500 flex items-center justify-center">
-                    <MoreVertical className="w-5 h-5" />
-                </div>
-            </div>
-        </div>
-    );
+type ProductScreenshotProps = {
+    scene: TourScene;
+    lightTheme: boolean;
+    eager: boolean;
+    reduceMotion: boolean;
 };
 
-const FinanceScreen = () => {
+function ProductScreenshot({ scene, lightTheme, eager, reduceMotion }: ProductScreenshotProps) {
+    const Icon = scene.icon;
+    const secondaryAsset = resolveSecondaryAsset(scene, lightTheme);
+
     return (
-        <div className="h-full flex flex-col space-y-6 overflow-y-auto custom-scrollbar pr-2 font-sans">
-            {/* Balance Card Monocromático */}
-            <motion.div 
-                whileHover={{ y: -5 }}
-                className={cn(
-                    "p-8 rounded-[32px] relative overflow-hidden group transition-all duration-500 shadow-2xl",
-                    "bg-zinc-950 text-white dark:bg-white dark:text-zinc-950",
-                    "shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(255,255,255,0.05)]"
-                )}
-            >
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent dark:from-black/5 pointer-events-none" />
-                <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 dark:bg-black/5 blur-[80px] rounded-full -mr-32 -mt-32 transition-transform duration-1000 group-hover:scale-125" />
-                
-                <div className="relative z-10">
-                    <div className="flex items-center justify-between mb-8">
-                        <span className="text-xs font-black uppercase tracking-[0.3em] opacity-60">Saldo Disponível</span>
-                        <div className="flex items-center justify-center w-8 h-8 rounded-full bg-white/10 dark:bg-black/10 backdrop-blur-md">
-                            <Zap className="w-4 h-4 text-primary" />
-                        </div>
-                    </div>
-                    <div className="flex items-baseline gap-4 mb-8">
-                        <span className="text-sm font-bold opacity-40">R$</span>
-                        <motion.span 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            className="text-5xl font-black tracking-tighter"
-                        >
-                            18.240,42
-                        </motion.span>
-                    </div>
-                    <div className="flex gap-4">
-                        <div className="flex-1 px-4 py-3 rounded-2xl bg-white/10 dark:bg-black/5 border border-white/10 dark:border-black/10 backdrop-blur-md flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest transition-all hover:bg-white/20 dark:hover:bg-black/10 cursor-pointer">
-                            <Send className="w-3.5 h-3.5" /> Saque Pix
-                        </div>
-                        <div className="flex-1 px-4 py-3 rounded-2xl bg-primary text-white shadow-lg shadow-primary/20 flex items-center justify-center gap-2 font-bold text-[10px] uppercase tracking-widest transition-transform hover:scale-105 active:scale-95 cursor-pointer">
-                            <QrCode className="w-3.5 h-3.5" /> Pagar
-                        </div>
-                    </div>
-                </div>
-            </motion.div>
-
-            <div className="grid grid-cols-2 gap-6">
-                <div className="p-6 rounded-[24px] bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm">
-                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-6">Receitas p/ Mês</h3>
-                    <div className="h-32 flex items-end justify-between gap-1">
-                        {[40, 65, 45, 80, 55, 90, 75].map((h, i) => (
-                            <div key={i} className="flex-1 flex flex-col items-center gap-2">
-                                <div style={{ height: `${h}%` }} className={cn(
-                                    "w-full rounded-t-lg transition-all duration-1000",
-                                    i === 5 ? "bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)]" : "bg-zinc-100 dark:bg-white/10"
-                                )} />
-                                <span className="text-[8px] font-black text-zinc-400">{['M', 'A', 'M', 'J', 'J', 'A', 'S'][i]}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                <div className="p-6 rounded-[24px] bg-white dark:bg-white/[0.02] border border-zinc-200 dark:border-white/[0.05] shadow-sm">
-                    <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-4">Transações Recentes</h3>
-                    <div className="space-y-4">
-                        {[
-                            { label: "Sessão #142", val: "+ R$ 250,00", type: "in" },
-                            { label: "Assinatura Zoom", val: "- R$ 85,90", type: "out" },
-                            { label: "Repasse Profissional", val: "- R$ 420,00", type: "out" },
-                            { label: "Sessão #141", val: "+ R$ 250,00", type: "in" },
-                        ].map((t, i) => (
-                            <div key={i} className="flex items-center justify-between">
-                                <div className="flex items-center gap-3">
-                                    <div className={cn("w-2 h-2 rounded-full", t.type === 'in' ? "bg-emerald-500" : "bg-zinc-400")} />
-                                    <span className="text-[10px] font-medium text-zinc-600 dark:text-zinc-400">{t.label}</span>
-                                </div>
-                                <span className={cn("text-[10px] font-bold font-mono", t.type === 'in' ? "text-emerald-500" : "text-zinc-900 dark:text-white")}>{t.val}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const SynapseAIScreen = () => (
-    <div className="h-full flex flex-col items-center justify-center space-y-10 relative overflow-hidden font-sans">
-        <div className="relative z-10 w-64 h-64 flex items-center justify-center rounded-full group">
-            <div className="absolute inset-0 rounded-full border border-primary/20 scale-110 group-hover:scale-125 transition-transform duration-1000" />
-            <div className="absolute inset-0 rounded-full border border-primary/10 scale-125 group-hover:scale-150 transition-transform duration-1000 delay-75" />
-            
-            <VoiceSpiral 
-                isListening={true} 
-                className="w-full h-full scale-[1.1] opacity-100 dark:mix-blend-screen"
+        <div className="relative h-full w-full overflow-hidden bg-[#050505]">
+            <motion.img
+                src={resolveAsset(scene, lightTheme)}
+                alt={scene.alt}
+                loading={eager ? "eager" : "lazy"}
+                fetchPriority={eager ? "high" : "auto"}
+                decoding="async"
+                initial={reduceMotion ? false : { opacity: 0, scale: 1.018 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: reduceMotion ? 0 : 0.85, ease: [0.22, 1, 0.36, 1] }}
+                className="h-full w-full object-cover object-top"
             />
-        </div>
 
-        <div className="text-center space-y-4 relative z-10">
-            <motion.div 
-                animate={{ opacity: [0.4, 1, 0.4] }}
-                transition={{ repeat: Infinity, duration: 2 }}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary/10 border border-primary/20"
-            >
-                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-                <span className="text-[10px] font-black text-primary uppercase tracking-[0.3em]">Interface Clínica Inteligente</span>
-            </motion.div>
-            <h2 className="text-2xl font-black text-zinc-900 dark:text-white uppercase tracking-[0.3em] italic leading-tight">A Voz do seu<br/>Conhecimento.</h2>
-            <p className="text-[11px] text-zinc-400 font-medium max-w-xs mx-auto leading-relaxed">
-                O Synapse é a interface inteligente entre você e o sistema. Vamos transformar sua prática agora?
-            </p>
-        </div>
-    </div>
-);
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/90 via-black/5 to-black/5" />
+            <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
 
-// --- MAIN COMPONENT ---
+            {secondaryAsset ? (
+                <motion.figure
+                    initial={reduceMotion ? false : { opacity: 0, y: 24, scale: 0.94 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ delay: reduceMotion ? 0 : 0.3, duration: reduceMotion ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute right-[2.4%] top-[9%] hidden w-[36%] overflow-hidden rounded-[1.15rem] border border-white/20 bg-black/80 p-1.5 shadow-[0_28px_90px_rgba(0,0,0,0.65)] backdrop-blur-xl md:block"
+                >
+                    <img
+                        src={secondaryAsset}
+                        alt=""
+                        aria-hidden="true"
+                        loading="lazy"
+                        decoding="async"
+                        className="aspect-video w-full rounded-[0.8rem] object-cover object-top"
+                    />
+                    <figcaption className="absolute bottom-3 left-3 rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-white/75 backdrop-blur-md">
+                        {scene.secondaryLabel}
+                    </figcaption>
+                </motion.figure>
+            ) : null}
+
+            <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-6 p-5 sm:p-7 lg:p-9">
+                <div className="max-w-[46rem] text-white">
+                    <div className="mb-2 flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.22em] text-white/55 sm:text-[10px]">
+                        <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+                        {scene.eyebrow}
+                    </div>
+                    <h3 className="max-w-2xl text-xl font-semibold leading-tight tracking-[-0.035em] sm:text-2xl lg:text-[2rem]">
+                        {scene.title}
+                    </h3>
+                    <p className="mt-2 hidden max-w-2xl text-sm leading-relaxed text-white/62 sm:block lg:text-base">
+                        {scene.description}
+                    </p>
+                </div>
+
+                <div className="hidden max-w-[22rem] flex-wrap justify-end gap-2 lg:flex" aria-label="Recursos mostrados nesta cena">
+                    {scene.points.map((point) => (
+                        <span key={point} className="rounded-full border border-white/14 bg-black/42 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.14em] text-white/68 backdrop-blur-lg">
+                            {point}
+                        </span>
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
+type VoiceActionSceneProps = {
+    scene: TourScene;
+    lightTheme: boolean;
+    paused: boolean;
+    reduceMotion: boolean;
+};
+
+const voicePhaseDelays = [1_350, 1_650, 1_650, 1_850];
+
+function VoiceActionScene({ scene, lightTheme, paused, reduceMotion }: VoiceActionSceneProps) {
+    const [phase, setPhase] = useState(reduceMotion ? 4 : 0);
+    const neuroViewAsset = resolveSecondaryAsset(scene, lightTheme) ?? scene.darkAsset;
+
+    useEffect(() => {
+        if (reduceMotion) {
+            setPhase(4);
+            return;
+        }
+
+        if (paused || phase >= 4) return;
+
+        const timer = window.setTimeout(() => {
+            setPhase((current) => Math.min(current + 1, 4));
+        }, voicePhaseDelays[phase]);
+
+        return () => window.clearTimeout(timer);
+    }, [paused, phase, reduceMotion]);
+
+    const phaseLabel = [
+        "Ouvindo o pedido",
+        "Pedido compreendido",
+        "Abrindo o NeuroView",
+        "Relacionando o contexto",
+        "Ação concluída",
+    ][phase];
+
+    return (
+        <div className="relative h-full w-full overflow-hidden bg-black">
+            <AnimatePresence mode="sync" initial={false}>
+                <motion.img
+                    key={phase >= 2 ? "neuroview" : "voice"}
+                    src={phase >= 2 ? neuroViewAsset : resolveAsset(scene, lightTheme)}
+                    alt={scene.alt}
+                    loading="lazy"
+                    decoding="async"
+                    initial={reduceMotion ? false : { opacity: 0, scale: phase >= 2 ? 1.05 : 1 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: reduceMotion ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0 h-full w-full object-cover object-top"
+                />
+            </AnimatePresence>
+
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/92 via-black/5 to-black/25" />
+            <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
+
+            <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-white/15 bg-black/64 px-3 py-2 text-[9px] font-black uppercase tracking-[0.18em] text-white/72 shadow-2xl backdrop-blur-xl sm:left-6 sm:top-6">
+                {phase === 0 ? <Mic2 className="h-3.5 w-3.5" aria-hidden="true" /> : phase === 4 ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
+                {phaseLabel}
+            </div>
+
+            <AnimatePresence mode="wait" initial={false}>
+                {phase <= 1 ? (
+                    <motion.div
+                        key="transcript"
+                        initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.98 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -14, scale: 0.985 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute bottom-5 left-1/2 w-[min(92%,56rem)] -translate-x-1/2 rounded-[1.4rem] border border-white/15 bg-black/78 p-4 text-white shadow-[0_30px_100px_rgba(0,0,0,0.7)] backdrop-blur-2xl sm:bottom-7 sm:p-5"
+                    >
+                        <div className="mb-3 flex items-center gap-3">
+                            <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-black">
+                                <AudioLines className="h-4 w-4" aria-hidden="true" />
+                                {phase === 0 && !reduceMotion ? <span className="absolute inset-0 animate-ping rounded-full border border-white/50" /> : null}
+                            </span>
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/42">Comando de voz</p>
+                                <p className="mt-1 text-sm font-medium leading-snug sm:text-lg">
+                                    “Synapse, mostre o NeuroView da paciente Mariana e destaque o que devo revisar antes da teleconsulta.”
+                                </p>
+                            </div>
+                        </div>
+                        {phase === 1 ? (
+                            <div className="flex items-center gap-2 border-t border-white/10 pt-3 text-[10px] font-bold uppercase tracking-[0.15em] text-white/58">
+                                <BrainCircuit className="h-3.5 w-3.5" aria-hidden="true" />
+                                Paciente identificada · sessão localizada · autorização preservada
+                            </div>
+                        ) : null}
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="neuroview-context"
+                        initial={reduceMotion ? false : { opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: reduceMotion ? 0 : 0.6, ease: [0.22, 1, 0.36, 1] }}
+                        className="absolute inset-x-4 bottom-4 flex flex-col gap-3 sm:inset-x-6 sm:bottom-6 lg:flex-row lg:items-end lg:justify-between"
+                    >
+                        <div className="max-w-xl rounded-[1.3rem] border border-white/15 bg-black/78 p-4 text-white shadow-2xl backdrop-blur-2xl sm:p-5">
+                            <div className="flex flex-wrap items-center gap-2 text-[9px] font-black uppercase tracking-[0.16em] text-white/55">
+                                <Route className="h-3.5 w-3.5" aria-hidden="true" />
+                                Notas <ArrowRight className="h-3 w-3" aria-hidden="true" /> NeuroView <ArrowRight className="h-3 w-3" aria-hidden="true" /> Mariana
+                            </div>
+                            <h3 className="mt-3 text-lg font-semibold tracking-[-0.025em] sm:text-xl">
+                                {phase === 2 ? "Abrindo o grafo e localizando a paciente." : phase === 3 ? "Relações que merecem uma revisão agora." : "Contexto preparado antes da teleconsulta."}
+                            </h3>
+
+                            {phase >= 3 ? (
+                                <div className="mt-3 grid gap-2 text-[10px] text-white/68 sm:grid-cols-3">
+                                    {["Sono + rotina\n4 registros", "Trabalho + ansiedade\npadrão recorrente", "Rede de apoio\nmudança recente"].map((pattern) => {
+                                        const [name, detail] = pattern.split("\n");
+                                        return (
+                                            <div key={name} className="rounded-xl border border-white/10 bg-white/[0.055] px-3 py-2">
+                                                <span className="block font-semibold text-white/90">{name}</span>
+                                                <span>{detail}</span>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            ) : null}
+
+                            {phase === 4 ? (
+                                <div className="mt-3 flex items-start gap-2 border-t border-white/10 pt-3 text-xs leading-relaxed text-white/66">
+                                    <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-white" aria-hidden="true" />
+                                    A tela foi aberta e os pontos foram destacados. O psicólogo continua no controle das decisões.
+                                </div>
+                            ) : null}
+                        </div>
+
+                        <motion.div
+                            animate={phase >= 3 && !reduceMotion ? { scale: [1, 1.025, 1] } : undefined}
+                            transition={{ duration: 1.1, repeat: phase === 3 ? 1 : 0 }}
+                            className="flex items-center gap-3 self-start rounded-[1.1rem] border border-white/15 bg-white px-4 py-3 text-black shadow-[0_20px_65px_rgba(0,0,0,0.45)] lg:self-auto"
+                        >
+                            <span className="grid h-9 w-9 place-items-center rounded-full bg-black text-white">
+                                <Clock3 className="h-4 w-4" aria-hidden="true" />
+                            </span>
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-[0.16em] text-black/45">Próxima sessão</p>
+                                <p className="text-sm font-semibold">Teleconsulta em 10 min</p>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    );
+}
 
 export const HeroVisual = () => {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const [currentScreen, setCurrentScreen] = useState(0);
+    const { resolvedTheme } = useTheme();
+    const reduceMotion = useReducedMotion() ?? false;
+    const lightTheme = resolvedTheme === "light";
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const [userPaused, setUserPaused] = useState(false);
+    const [pointerPaused, setPointerPaused] = useState(false);
+    const [focusPaused, setFocusPaused] = useState(false);
+    const [documentHidden, setDocumentHidden] = useState(false);
 
-    const screens = [
-        <DashboardScreen />,
-        <AgendaScreen />,
-        <TeleconsultaScreen />,
-        <PatientsScreen />,
-        <NeuroViewMock />,
-        <FinanceScreen />,
-        <SynapseAIScreen />
-    ];
+    const currentScene = tourScenes[currentIndex];
+    const autoplayPaused = reduceMotion || userPaused || pointerPaused || focusPaused || documentHidden;
 
-    const menuItems = [
-        { icon: LayoutDashboard, label: "Dashboard", id: 0 },
-        { icon: Calendar, label: "Agenda", id: 1 },
-        { icon: Video, label: "Teleconsulta", id: 2 },
-        { icon: Users, label: "Pacientes", id: 3 },
-        { icon: FileText, label: "Notas", id: 4 },
-        { icon: Wallet, label: "NeuroFinance", id: 5 },
-        { icon: Sparkles, label: "Synapse AI", id: 6 },
-    ];
+    const selectScene = useCallback((index: number) => {
+        setCurrentIndex((index + tourScenes.length) % tourScenes.length);
+    }, []);
 
-    const mouseX = useMotionValue(500);
-    const mouseY = useMotionValue(325);
-    const smoothMouseX = useSpring(mouseX, { stiffness: 100, damping: 30 });
-    const smoothMouseY = useSpring(mouseY, { stiffness: 100, damping: 30 });
+    const previousScene = useCallback(() => selectScene(currentIndex - 1), [currentIndex, selectScene]);
+    const nextScene = useCallback(() => selectScene(currentIndex + 1), [currentIndex, selectScene]);
 
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (!containerRef.current) return;
-        const rect = containerRef.current.getBoundingClientRect();
-        mouseX.set(e.clientX - rect.left);
-        mouseY.set(e.clientY - rect.top);
+    useEffect(() => {
+        const handleVisibilityChange = () => setDocumentHidden(document.visibilityState !== "visible");
+        handleVisibilityChange();
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+        return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }, []);
+
+    useEffect(() => {
+        if (autoplayPaused) return;
+        const timer = window.setTimeout(nextScene, currentScene.duration);
+        return () => window.clearTimeout(timer);
+    }, [autoplayPaused, currentScene.duration, nextScene]);
+
+    const handleKeyboardNavigation = (event: KeyboardEvent<HTMLElement>) => {
+        if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            previousScene();
+        }
+        if (event.key === "ArrowRight") {
+            event.preventDefault();
+            nextScene();
+        }
     };
 
-    // Ajuste do intervalo: a aba final do Synapse dura 2x (16s)
-    useEffect(() => {
-        const duration = currentScreen === screens.length - 1 ? 16000 : 8000;
-        const interval = setInterval(() => {
-            setCurrentScreen((prev) => (prev + 1) % screens.length);
-        }, duration);
-        return () => clearInterval(interval);
-    }, [currentScreen, screens.length]);
-
-    // Comentários contextuais do Synapse baseados na tela atual
-    const synapseInsights = [
-        {
-            text: "Notei que 3 novos pacientes ainda não foram triados. Quer que eu agende?",
-            action: "Agendar Triagens"
-        },
-        {
-            text: "Você tem um buraco na quarta às 15h. Ofereço pro Carlos que pediu encaixe?",
-            action: "Oferecer Horário"
-        },
-        {
-            text: "Mariana parece mais ansiosa hoje. Quer um sumário comparativo das notas?",
-            action: "Gerar Sumário"
-        },
-        {
-            text: "Posso preparar um lembrete gentil para o Rodrigo no WhatsApp e mostrar a mensagem antes do envio.",
-            action: "Ver fluxo"
-        },
-        {
-            text: "Ficou clara a relação da Mariana com o trabalho no grafo. Quer ver o mapa?",
-            action: "Ver Mapa Mental"
-        },
-        {
-            text: "Saldo de R$ 18k liberado. Programo o repasse automático pros parceiros?",
-            action: "Programar Repasses"
-        },
-        {
-            text: "Tô monitorando tudo. Quer que eu faça o briefing pros atendimentos de amanhã?",
-            action: "Fazer Briefing Clínico"
-        }
-    ];
+    const progress = useMemo(() => `${((currentIndex + 1) / tourScenes.length) * 100}%`, [currentIndex]);
 
     return (
-        <div className="w-full h-[700px] relative flex items-center justify-center z-10 overflow-visible mt-8 select-none perspective-[2000px] font-sans">
-            <div className="relative w-[1100px] h-full flex items-center justify-center">
+        <MotionConfig reducedMotion="user">
+            <section
+                aria-roledescription="carrossel"
+                aria-label="Conheça a NeuroNex por dentro"
+                onMouseEnter={() => setPointerPaused(true)}
+                onMouseLeave={() => setPointerPaused(false)}
+                onFocusCapture={() => setFocusPaused(true)}
+                onBlurCapture={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusPaused(false);
+                }}
+                onKeyDown={handleKeyboardNavigation}
+                className="mx-auto w-[min(94vw,80rem)] outline-none"
+            >
+                <p className="sr-only" aria-live="polite" aria-atomic="true">
+                    Cena {currentIndex + 1} de {tourScenes.length}: {currentScene.eyebrow}. {currentScene.title}
+                </p>
 
-                <motion.div
-                    ref={containerRef}
-                    onMouseMove={handleMouseMove}
-                    initial={{ rotateX: 2, y: 20, opacity: 0 }}
-                    animate={{ rotateX: 0, y: 0, opacity: 1 }}
-                    transition={{ duration: 1.2, type: "spring", stiffness: 30 }}
-                    className="relative w-full aspect-[16/10] rounded-[40px] overflow-hidden shadow-[0_0_100px_-30px_rgba(0,0,0,0.1)] dark:shadow-[0_0_100px_-30px_rgba(255,255,255,0.05)] ring-1 ring-zinc-200 dark:ring-white/10 bg-white dark:bg-[#050507] group gpu-accelerated border-[10px] border-zinc-100 dark:border-[#0F0F12]"
+                <div className="mb-4 flex items-end justify-between gap-5 px-1 sm:mb-5">
+                    <div>
+                        <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground/55 sm:text-[10px]">
+                            A NeuroNex por dentro
+                        </p>
+                        <p className="mt-1 max-w-xl text-sm font-medium text-foreground/66 sm:text-base">
+                            Sete partes da rotina, trabalhando como uma só.
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setUserPaused((paused) => !paused)}
+                            disabled={reduceMotion}
+                            aria-label={reduceMotion ? "Avanço automático desativado pela preferência de redução de movimento" : userPaused ? "Retomar apresentação automática" : "Pausar apresentação automática"}
+                            className="grid h-10 w-10 place-items-center rounded-full border border-border/20 bg-background/75 text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-default disabled:opacity-45"
+                        >
+                            {userPaused || reduceMotion ? <Play className="h-3.5 w-3.5" aria-hidden="true" /> : <Pause className="h-3.5 w-3.5" aria-hidden="true" />}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={previousScene}
+                            aria-label="Ver cena anterior"
+                            className="grid h-10 w-10 place-items-center rounded-full border border-border/20 bg-background/75 text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                        <button
+                            type="button"
+                            onClick={nextScene}
+                            aria-label="Ver próxima cena"
+                            className="grid h-10 w-10 place-items-center rounded-full border border-border/20 bg-background/75 text-foreground transition-colors hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+                        </button>
+                    </div>
+                </div>
+
+                <div
+                    id="hero-product-tour-panel"
+                    role="tabpanel"
+                    aria-labelledby={`hero-product-tour-tab-${currentScene.id}`}
+                    tabIndex={0}
+                    className="relative overflow-hidden rounded-[1.35rem] border border-border/20 bg-black shadow-[0_35px_110px_-45px_rgba(0,0,0,0.78)] outline-none focus-visible:ring-2 focus-visible:ring-ring sm:rounded-[1.8rem]"
                 >
-                    <div className="h-16 border-b border-zinc-200 dark:border-white/[0.06] flex items-center justify-between px-8 bg-white/95 dark:bg-[#0A0A0B]/95 backdrop-blur-md sticky top-0 z-30">
-                        <div className="flex items-center gap-4">
-                            <div className="flex items-center gap-2.5 px-4 py-2 rounded-2xl bg-primary/5 border border-primary/10">
-                                <Logo className="w-4 h-4" />
-                                <span className="text-[12px] font-black text-primary uppercase tracking-[0.2em]">NeuroNex AI</span>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-1 p-1 rounded-2xl bg-zinc-100/50 dark:bg-white/[0.03] border border-zinc-200/50 dark:border-white/[0.05]">
-                            {menuItems.map((item, i) => {
-                                const isActive = currentScreen === item.id;
-                                return (
-                                    <button 
-                                        key={i} 
-                                        onClick={() => setCurrentScreen(item.id)}
-                                        className={cn(
-                                            "flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-500",
-                                            isActive
-                                                ? "bg-white dark:bg-white/[0.1] text-zinc-900 dark:text-white shadow-sm border border-zinc-200 dark:border-white/10"
-                                                : "text-zinc-400 dark:text-white/30 hover:text-zinc-600 dark:hover:text-white/60"
-                                        )}
-                                    >
-                                        <item.icon className={cn("w-3.5 h-3.5", isActive ? "text-primary" : "text-zinc-400")} />
-                                        <AnimatePresence initial={false}>
-                                            {isActive && (
-                                                <motion.span
-                                                    initial={{ width: 0, opacity: 0, x: -10 }}
-                                                    animate={{ width: "auto", opacity: 1, x: 0 }}
-                                                    exit={{ width: 0, opacity: 0, x: -10 }}
-                                                    transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-                                                    className="overflow-hidden whitespace-nowrap"
-                                                >
-                                                    {item.label}
-                                                </motion.span>
-                                            )}
-                                        </AnimatePresence>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        
-                        <div className="flex items-center gap-6">
-                            <Avatar className="w-7 h-7 border border-zinc-200 dark:border-white/10">
-                                <AvatarFallback className="bg-zinc-100 dark:bg-zinc-800 text-[9px] text-zinc-600 dark:text-white font-black">DS</AvatarFallback>
-                            </Avatar>
-                            <div className="h-4 w-px bg-zinc-200 dark:bg-white/10" />
-                            <div className="flex gap-2">
-                                <div className="w-3 h-3 rounded-full bg-[#FFBD2E]" />
-                                <div className="w-3 h-3 rounded-full bg-[#27C93F]" />
-                                <div className="w-3 h-3 rounded-full bg-[#FF5F56]" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="h-[calc(100%-64px)] relative">
-                        <div className="h-full p-10 bg-white dark:bg-[#050507] relative overflow-hidden">
-                             <AnimatePresence mode="wait">
-                                <motion.div
-                                    key={currentScreen}
-                                    initial={{ opacity: 0, scale: 0.98, filter: "blur(10px)" }}
-                                    animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                                    exit={{ opacity: 0, scale: 1.02, filter: "blur(10px)" }}
-                                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-                                    className="h-full relative z-10"
-                                >
-                                    {screens[currentScreen]}
-                                </motion.div>
-                             </AnimatePresence>
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* Widget: Receita Hoje */}
-                <FloatingWidget x="82%" y="15%" delay={0.5} depth={3} mouseX={smoothMouseX} mouseY={smoothMouseY} className="w-[280px]">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center ring-1 ring-emerald-500/20">
-                                <Landmark className="w-4 h-4 text-emerald-500" />
-                            </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">Receita Hoje</span>
-                        </div>
-                        <TrendingUp className="w-4 h-4 text-emerald-500" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-4xl font-black text-zinc-900 dark:text-white tracking-tighter">R$ 1.250</span>
-                        <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">+18% vs ontem</span>
-                        </div>
-                    </div>
-                </FloatingWidget>
-
-                {/* Widget: Synapse Inteligente */}
-                <FloatingWidget x="85%" y="65%" delay={0.8} depth={4} mouseX={smoothMouseX} mouseY={smoothMouseY} className="w-[340px] p-6">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-10 h-10 rounded-2xl bg-zinc-950 dark:bg-white flex items-center justify-center shadow-xl">
-                            <Sparkles className="w-5 h-5 text-white dark:text-zinc-950" />
-                        </div>
-                        <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                                <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">Synapse AI</span>
-                                <div className="flex gap-1">
-                                    <div className="w-1 h-1 rounded-full bg-primary animate-pulse" />
-                                    <div className="w-1 h-1 rounded-full bg-primary animate-pulse delay-75" />
-                                    <div className="w-1 h-1 rounded-full bg-primary animate-pulse delay-150" />
-                                </div>
-                            </div>
-                            <p className="text-[9px] font-bold text-primary uppercase tracking-widest">Analisando contexto...</p>
-                        </div>
-                    </div>
-
-                    <div className="bg-zinc-50 dark:bg-white/[0.03] rounded-2xl p-4 border border-zinc-100 dark:border-white/[0.05] mb-4">
-                        <AnimatePresence mode="wait">
+                    <div className="relative aspect-[16/8.35] min-h-[22rem] max-h-[44rem] w-full">
+                        <AnimatePresence initial={false} mode="wait">
                             <motion.div
-                                key={currentScreen}
-                                initial={{ opacity: 0, x: 10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: -10 }}
-                                className="space-y-4"
+                                key={currentScene.id}
+                                initial={reduceMotion ? false : { opacity: 0, scale: 0.992 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.008 }}
+                                transition={{ duration: reduceMotion ? 0 : 0.55, ease: [0.22, 1, 0.36, 1] }}
+                                className="absolute inset-0"
                             >
-                                <p className="text-[13px] text-zinc-700 dark:text-zinc-300 leading-relaxed font-medium">
-                                    {synapseInsights[currentScreen].text}
-                                </p>
+                                {currentScene.kind === "voice" ? (
+                                    <VoiceActionScene
+                                        scene={currentScene}
+                                        lightTheme={lightTheme}
+                                        paused={autoplayPaused}
+                                        reduceMotion={reduceMotion}
+                                    />
+                                ) : (
+                                    <ProductScreenshot
+                                        scene={currentScene}
+                                        lightTheme={lightTheme}
+                                        eager={currentIndex === 0}
+                                        reduceMotion={reduceMotion}
+                                    />
+                                )}
                             </motion.div>
                         </AnimatePresence>
                     </div>
 
-                    <div className="flex items-center gap-3 bg-white dark:bg-black/40 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-2.5">
-                        <div className="flex-1 text-[11px] text-zinc-400 font-medium italic">Falar com Synapse...</div>
-                        <div className="flex gap-2">
-                            <Mic className="w-4 h-4 text-zinc-300" />
-                            <Send className="w-4 h-4 text-primary" />
-                        </div>
+                    <div className="absolute inset-x-0 top-0 z-30 h-[2px] bg-white/[0.08]" aria-hidden="true">
+                        <motion.div
+                            className="h-full origin-left bg-white"
+                            animate={{ width: progress }}
+                            transition={{ duration: reduceMotion ? 0 : 0.65, ease: [0.22, 1, 0.36, 1] }}
+                        />
                     </div>
-                </FloatingWidget>
+                </div>
 
-                <FloatingWidget x="-80px" y="40%" delay={1.1} depth={2} mouseX={smoothMouseX} mouseY={smoothMouseY} className="w-[280px]">
-                    <div className="flex items-center gap-4">
-                        <div className="relative">
-                            <Avatar className="h-11 w-11 border-2 border-primary/20 ring-4 ring-primary/5 shadow-2xl">
-                                <AvatarImage src="https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?q=80&w=100" />
-                                <AvatarFallback className="bg-zinc-100 dark:bg-zinc-900 text-xs text-zinc-700 dark:text-white">MS</AvatarFallback>
-                            </Avatar>
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 border-2 border-white dark:border-[#121214] rounded-full" />
-                        </div>
-                        <div>
-                            <p className="text-[14px] font-black text-zinc-900 dark:text-white tracking-tight uppercase">Mariana Silva</p>
-                            <div className="flex items-center gap-2 mt-1">
-                                <div className="flex gap-0.5">
-                                    {[1, 2, 3, 4, 5].map(i => <div key={i} className={cn("w-1 h-3 rounded-full", i < 4 ? "bg-primary" : "bg-zinc-200 dark:bg-white/10")} />)}
-                                </div>
-                                <span className="text-[10px] text-zinc-400 dark:text-white/30 font-bold uppercase tracking-widest ml-2">Gravando</span>
-                            </div>
-                        </div>
-                    </div>
-                </FloatingWidget>
-            </div>
-        </div>
+                <div className="mt-4 grid grid-cols-4 gap-2 sm:flex sm:flex-wrap sm:justify-center" role="tablist" aria-label="Cenas da apresentação">
+                    {tourScenes.map((scene, index) => {
+                        const Icon = scene.icon;
+                        const active = index === currentIndex;
+                        return (
+                            <button
+                                key={scene.id}
+                                id={`hero-product-tour-tab-${scene.id}`}
+                                type="button"
+                                role="tab"
+                                aria-selected={active}
+                                aria-controls="hero-product-tour-panel"
+                                aria-label={`Cena ${index + 1}: ${scene.eyebrow}`}
+                                onClick={() => selectScene(index)}
+                                className={cn(
+                                    "group flex min-h-11 items-center justify-center gap-2 rounded-full border px-3 py-2 text-[9px] font-black uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring sm:min-w-0 sm:px-4",
+                                    active
+                                        ? "border-foreground bg-foreground text-background"
+                                        : "border-border/20 bg-background/55 text-muted-foreground hover:border-foreground/30 hover:text-foreground",
+                                )}
+                            >
+                                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                <span className="hidden xl:inline">{scene.eyebrow}</span>
+                                <span className="xl:hidden">{index + 1}</span>
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <p className="mt-3 text-center text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground/45">
+                    {reduceMotion ? "Avanço manual · redução de movimento ativa" : autoplayPaused ? "Apresentação pausada" : "Avanço automático · passe o cursor ou use os controles para pausar"}
+                </p>
+            </section>
+        </MotionConfig>
     );
 };
