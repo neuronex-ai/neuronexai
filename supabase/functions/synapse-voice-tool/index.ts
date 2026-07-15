@@ -149,13 +149,23 @@ async function saveMessage(
     .maybeSingle();
   if (recent?.content === text && Date.now() - new Date(recent.created_at).getTime() < 8000) return;
 
-  const { error } = await admin.from("messages").insert({
+  const basePayload = {
     user_id: userId,
     session_id: sessionId,
     role,
     content: text,
     attachments: attachments.length ? attachments : null,
+  };
+  let { error } = await admin.from("messages").insert({
+    ...basePayload,
+    source_channel: "voice",
+    actor_kind: role === "user" ? "professional" : role === "assistant" ? "synapse" : "system",
+    metadata: { source: "synapse_voice_tool" },
   });
+  if (error && ["42703", "PGRST204"].includes(String(error.code || ""))) {
+    const compatibilityResult = await admin.from("messages").insert(basePayload);
+    error = compatibilityResult.error;
+  }
   if (error) throw error;
 
   await admin
@@ -351,6 +361,7 @@ serve(async (request): Promise<Response> => {
       authorization: auth.authorization,
       requestOrigin: request.headers.get("origin") || null,
       userClient: auth.userClient,
+      channel: "voice",
     };
 
     if (action === "cancel_pending_action" || clean(body.name, 120) === "cancel_pending_action") {

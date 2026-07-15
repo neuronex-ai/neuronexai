@@ -7,6 +7,10 @@ import {
   consumeSynapseQuota,
   synapseQuotaErrorResponse,
 } from "../_shared/synapse-quota.ts";
+import {
+  resolveSynapseRequestIdentity,
+  synapseRequestAuthErrorResponse,
+} from "../_shared/synapse-request-auth.ts";
 import { AGENT_TOOLS_V3 } from "./tools-v3.ts";
 import {
   executeAgentToolV3,
@@ -200,6 +204,35 @@ async function updatePending(admin: any, pending: PendingReference, status: Pend
   await admin.from("messages").update({ attachments }).eq("id", pending.row.id);
 }
 
+type MessageProvenance = {
+  source_channel: "panel" | "voice" | "whatsapp";
+  source_event_id?: string | null;
+  actor_kind: "professional" | "patient" | "synapse" | "system" | "tool";
+  idempotency_key?: string | null;
+  metadata?: Record<string, unknown>;
+};
+
+async function insertMessageWithProvenance(
+  admin: any,
+  basePayload: Record<string, unknown>,
+  provenance: MessageProvenance,
+) {
+  const { error } = await admin.from("messages").insert({ ...basePayload, ...provenance });
+  if (!error) return true;
+  if (error.code === "23505") return false;
+
+  // Edge Functions may be deployed before an additive migration is applied.
+  // Keep the existing conversation working until the new columns are present.
+  if (["42703", "PGRST204"].includes(String(error.code || ""))) {
+    const { error: compatibilityError } = await admin.from("messages").insert(basePayload);
+    if (!compatibilityError) return true;
+    if (compatibilityError.code === "23505") return false;
+    throw compatibilityError;
+  }
+
+  throw error;
+}
+
 async function saveUserMessage(
   admin: any,
   userId: string,
@@ -207,17 +240,17 @@ async function saveUserMessage(
   message: string,
   existingRows: MessageRow[],
   attachments: unknown[],
+  provenance: MessageProvenance,
 ) {
   const latestUser = existingRows.find((row) => row.role === "user");
   if (latestUser?.content === message && Date.now() - new Date(latestUser.created_at).getTime() < 120_000) return;
-  const { error } = await admin.from("messages").insert({
+  await insertMessageWithProvenance(admin, {
     user_id: userId,
     session_id: sessionId,
     role: "user",
     content: message,
     attachments: attachments.length ? attachments : null,
-  });
-  if (error) throw error;
+  }, provenance);
 }
 
 async function saveAssistantMessage(
@@ -226,16 +259,16 @@ async function saveAssistantMessage(
   sessionId: string,
   content: string,
   attachments: unknown[],
+  provenance: MessageProvenance,
 ) {
   const safeContent = sanitizeSynapseResponseWithWidget(content);
-  const { error } = await admin.from("messages").insert({
+  await insertMessageWithProvenance(admin, {
     user_id: userId,
     session_id: sessionId,
     role: "assistant",
     content: safeContent,
     attachments: attachments.length ? attachments : null,
-  });
-  if (error) throw error;
+  }, provenance);
   await admin.from("chat_sessions").update({ updated_at: new Date().toISOString() })
     .eq("id", sessionId).eq("user_id", userId);
 }
@@ -345,8 +378,6 @@ Deno.serve(async (request) => {
   const run = async () => {
   try {
     const authorization = request.headers.get("Authorization") || "";
-    if (!authorization.startsWith("Bearer ")) return reply({ error: "Sessão ausente." }, 401);
-
     const body = await request.json();
     const message = String(body.message || "").trim();
     const sessionId = String(body.sessionId || body.session_id || "").trim();
@@ -367,9 +398,14 @@ Deno.serve(async (request) => {
       auth: { persistSession: false },
     });
     const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
-    const { data: authData, error: authError } = await userClient.auth.getUser();
-    const user = authData.user;
-    if (authError || !user) return reply({ error: "Sessão inválida." }, 401);
+    const identity = await resolveSynapseRequestIdentity({
+      request,
+      body,
+      userClient,
+      admin,
+      expectedInternalSecret: Deno.env.get("SYNAPSE_INTERNAL_SECRET") || "",
+    });
+    const user = identity.user;
     await requireEntitlementForUser(
       {
         id: user.id,
@@ -378,13 +414,6 @@ Deno.serve(async (request) => {
       },
       "ai_copilot",
     );
-    await consumeSynapseQuota(admin, user.id, 15);
-    progress({
-      stage: "authorization",
-      label: "Acesso confirmado",
-      detail: "Quota e plano do Synapse validados",
-    });
-
     const { data: session, error: sessionError } = await admin
       .from("chat_sessions")
       .select("id")
@@ -392,6 +421,21 @@ Deno.serve(async (request) => {
       .eq("user_id", user.id)
       .maybeSingle();
     if (sessionError || !session) return reply({ error: "Conversa não encontrada." }, 404);
+
+    const sourceRequestId = String(
+      body.requestId ||
+      body.request_id ||
+      (body.source && typeof body.source === "object"
+        ? (body.source as Record<string, unknown>).source_message_id
+        : "") ||
+      crypto.randomUUID(),
+    ).trim();
+    await consumeSynapseQuota(admin, user.id, `synapse-text:${sessionId}:${sourceRequestId}`);
+    progress({
+      stage: "authorization",
+      label: "Acesso confirmado",
+      detail: "Quota e plano do Synapse validados",
+    });
 
     const { data: historyData, error: historyError } = await admin
       .from("messages")
@@ -405,13 +449,38 @@ Deno.serve(async (request) => {
     const pending = findPending(rows);
     const loadedContext = await loadConversationContext(admin, user.id, sessionId);
     let conversationState = await seedContextFromFrontend(admin, user.id, loadedContext.state, context);
+    const source = body.source && typeof body.source === "object"
+      ? body.source as Record<string, unknown>
+      : {};
+    const sourceEventId = String(source.source_message_id || "").trim() || null;
+    const conversationKind = String(context?.conversationKind || source.conversation_kind || "");
+    const provenanceMetadata = {
+      message_type: String(source.message_type || "text"),
+      conversation_kind: conversationKind || null,
+    };
+    const userProvenance: MessageProvenance = {
+      source_channel: identity.channel,
+      source_event_id: sourceEventId,
+      actor_kind: identity.channel === "whatsapp" && conversationKind === "patient"
+        ? "patient"
+        : "professional",
+      idempotency_key: sourceEventId ? `synapse:${sessionId}:${sourceEventId}:user` : null,
+      metadata: provenanceMetadata,
+    };
+    const assistantProvenance: MessageProvenance = {
+      source_channel: identity.channel,
+      source_event_id: sourceEventId ? `synapse:${sourceEventId}:assistant` : null,
+      actor_kind: "synapse",
+      idempotency_key: sourceEventId ? `synapse:${sessionId}:${sourceEventId}:assistant` : null,
+      metadata: provenanceMetadata,
+    };
     progress({
       stage: "context",
       label: "Carregando memória da conversa",
       detail: pending ? "Há uma ação aguardando confirmação" : "Lendo histórico recente e contexto durável",
     });
 
-    await saveUserMessage(admin, user.id, sessionId, message, rows, inputAttachments);
+    await saveUserMessage(admin, user.id, sessionId, message, rows, inputAttachments, userProvenance);
     progress({
       stage: "message_saved",
       label: "Solicitação registrada",
@@ -424,7 +493,8 @@ Deno.serve(async (request) => {
       sessionId,
       authorization,
       requestOrigin: request.headers.get("origin") || context?.origin || null,
-      userClient,
+      userClient: identity.userClient || undefined,
+      channel: identity.channel,
     };
 
     if (pending && CANCEL.test(message)) {
@@ -441,7 +511,7 @@ Deno.serve(async (request) => {
         grounded: true,
         toolsUsed: [],
         generatedAt: new Date().toISOString(),
-      }]);
+      }], assistantProvenance);
       return reply({ response, clientAction: null, session_id: sessionId, provider: "system", grounded: true });
     }
 
@@ -471,7 +541,7 @@ Deno.serve(async (request) => {
         toolsUsed: [pending.action.toolName],
         recordsFound: result.recordCount || 0,
         generatedAt: new Date().toISOString(),
-      }]);
+      }], assistantProvenance);
       return reply({
         response,
         clientAction: result.clientAction || null,
@@ -491,7 +561,7 @@ Deno.serve(async (request) => {
         detail: "Nenhuma ação pendente foi encontrada",
       });
       const response = "Não há nenhuma ação pendente para confirmar.";
-      await saveAssistantMessage(admin, user.id, sessionId, response, []);
+      await saveAssistantMessage(admin, user.id, sessionId, response, [], assistantProvenance);
       return reply({ response, clientAction: null, session_id: sessionId, provider: "system", grounded: true });
     }
 
@@ -626,7 +696,7 @@ Deno.serve(async (request) => {
           toolsUsed: records.map((item) => item.name),
           generatedAt: new Date().toISOString(),
         },
-      ]);
+      ], assistantProvenance);
       return reply({
         response,
         clientAction: null,
@@ -672,7 +742,7 @@ Deno.serve(async (request) => {
       toolsUsed,
       recordsFound,
       generatedAt: new Date().toISOString(),
-    }]);
+    }], assistantProvenance);
 
     return reply({
       response,
@@ -686,6 +756,9 @@ Deno.serve(async (request) => {
       recordsFound,
     });
   } catch (error) {
+    const authResponse = synapseRequestAuthErrorResponse(error, CORS);
+    if (authResponse) return authResponse;
+
     const quotaResponse = synapseQuotaErrorResponse(error, CORS);
     if (quotaResponse) return quotaResponse;
 

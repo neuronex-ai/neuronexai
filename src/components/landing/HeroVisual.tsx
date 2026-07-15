@@ -563,7 +563,7 @@ export const HeroVisual = () => {
         },
         {
             text: "Posso preparar um lembrete gentil para o Rodrigo no WhatsApp e mostrar a mensagem antes do envio.",
-            action: "Ver fluxo Beta"
+            action: "Ver fluxo"
         },
         {
             text: "Ficou clara a relação da Mariana com o trabalho no grafo. Quer ver o mapa?",

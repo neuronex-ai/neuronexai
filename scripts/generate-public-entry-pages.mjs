@@ -8,6 +8,7 @@ export const PUBLIC_SITE_URL = publicPageCatalog.siteUrl;
 export const PUBLIC_ENTRY_DIRECTORY = "public-pages";
 export const publicPages = publicPageCatalog.pages;
 export const publicEntryPages = publicPages.filter((page) => page.file);
+export const PUBLIC_LAST_MODIFIED = publicPageCatalog.lastModified;
 
 const DEFAULT_IMAGE = publicPageCatalog.defaultImage;
 
@@ -21,6 +22,16 @@ const escapeHtml = (value) =>
 
 const absoluteUrl = (resourcePath) =>
   new URL(resourcePath, `${PUBLIC_SITE_URL}/`).toString();
+
+export function renderPublicSitemap(pages = publicPages) {
+  const urls = pages
+    .map(
+      (page) => `  <url>\n    <loc>${escapeHtml(absoluteUrl(page.route))}</loc>\n    <lastmod>${escapeHtml(PUBLIC_LAST_MODIFIED)}</lastmod>\n  </url>`,
+    )
+    .join("\n");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
+}
 
 const publicNavigation = [
   ["Início", "/"],
@@ -130,6 +141,8 @@ export async function generatePublicEntryPages(outputRoot = path.resolve("dist")
       writeFile(path.join(targetDirectory, page.file), buildPublicEntryHtml(template, page), "utf8"),
     ),
   );
+
+  await writeFile(path.join(outputRoot, "sitemap.xml"), renderPublicSitemap(), "utf8");
 }
 
 const isDirectExecution =
@@ -137,5 +150,6 @@ const isDirectExecution =
 
 if (isDirectExecution) {
   await generatePublicEntryPages();
+  await writeFile(path.resolve("public/sitemap.xml"), renderPublicSitemap(), "utf8");
   console.log(`[NeuroNex] ${publicEntryPages.length} public entry pages generated.`);
 }

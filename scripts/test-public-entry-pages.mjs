@@ -6,6 +6,7 @@ import {
   buildPublicEntryHtml,
   PUBLIC_ENTRY_DIRECTORY,
   PUBLIC_SITE_URL,
+  renderPublicSitemap,
   publicEntryPages,
   publicPages,
 } from "./generate-public-entry-pages.mjs";
@@ -71,6 +72,7 @@ test("sitemap and Vercel rewrites cover every generated public entry", async () 
   );
   const expectedRoutes = publicPages.map(({ route }) => route);
   assert.deepEqual(new Set(sitemapRoutes), new Set(expectedRoutes));
+  assert.equal(sitemap, renderPublicSitemap());
 
   const generatedRewriteRoutes = vercel.rewrites
     .filter(({ destination }) => destination.startsWith(`/${PUBLIC_ENTRY_DIRECTORY}/`))

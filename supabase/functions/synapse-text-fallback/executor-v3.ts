@@ -13,6 +13,7 @@ import {
 } from "./entity-context.ts";
 import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
 import { normalizeSynapseError } from "../_shared/synapse-errors.ts";
+import { shouldBlockSynapseExternalAction } from "../_shared/synapse-channel-policy.ts";
 
 export interface AgentToolContextV3 {
   admin: any;
@@ -21,6 +22,7 @@ export interface AgentToolContextV3 {
   authorization: string;
   requestOrigin?: string | null;
   userClient?: any;
+  channel?: "panel" | "voice" | "whatsapp";
 }
 
 export interface AgentToolExecutionV3 {
@@ -1009,6 +1011,22 @@ export async function executeConfirmedMutationV3(
   context: AgentToolContextV3,
 ): Promise<AgentToolResult> {
   const args = pending.arguments as Record<string, any>;
+
+  if (shouldBlockSynapseExternalAction({
+    channel: context.channel,
+    toolName: pending.toolName,
+    allowWhatsappExternalActions: Deno.env.get("SYNAPSE_WHATSAPP_ALLOW_EXTERNAL_ACTIONS"),
+  })) {
+    return {
+      ok: false,
+      grounded: true,
+      error: "Por segurança, esta ação externa precisa ser concluída no painel NeuroNex.",
+      data: {
+        blocked_channel: "whatsapp",
+        requires_panel_confirmation: true,
+      },
+    };
+  }
 
   try {
     switch (pending.toolName) {

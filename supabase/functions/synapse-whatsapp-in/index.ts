@@ -222,23 +222,33 @@ async function ensureWhatsappSession(
         : phone || remoteJid || "Paciente";
   const title = `WhatsApp Business - ${label}`.slice(0, 180);
 
-  const { data: created, error: createError } = await admin
+  const basePayload = {
+    user_id: professionalId,
+    title,
+    context_state: {
+      source: "whatsapp",
+      remoteJid: remoteJid || null,
+      canonicalRemoteJid: canonical || remoteJid || null,
+      aliases,
+      pushName: pushName || null,
+      phoneNumber: phone || null,
+      conversation_kind: conversationKind,
+    },
+  };
+  let { data: created, error: createError } = await admin
     .from("chat_sessions")
-    .insert({
-      user_id: professionalId,
-      title,
-      context_state: {
-        source: "whatsapp",
-        remoteJid: remoteJid || null,
-        canonicalRemoteJid: canonical || remoteJid || null,
-        aliases,
-        pushName: pushName || null,
-        phoneNumber: phone || null,
-        conversation_kind: conversationKind,
-      },
-    })
+    .insert({ ...basePayload, origin_channel: "whatsapp", last_channel: "whatsapp" })
     .select("id")
     .single();
+  if (createError && ["42703", "PGRST204"].includes(String(createError.code || ""))) {
+    const compatibilityResult = await admin
+      .from("chat_sessions")
+      .insert(basePayload)
+      .select("id")
+      .single();
+    created = compatibilityResult.data;
+    createError = compatibilityResult.error;
+  }
   if (createError) throw createError;
   return created.id;
 }
@@ -504,7 +514,7 @@ serve(async (req) => {
       },
     };
 
-    const coreResponse = await fetch(`${supabaseUrl}/functions/v1/gemini-text-chat`, {
+    const coreResponse = await fetch(`${supabaseUrl}/functions/v1/synapse-text-fallback`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -77,13 +77,13 @@ export function buildPublicStructuredData(config: PublicSeoConfig) {
       operatingSystem: "Web, Windows",
       audience: {
         "@type": "Audience",
-        audienceType: "Psicólogos e clínicas de psicologia",
+        audienceType: "Psicólogos",
       },
       description: config.description,
       featureList: [
         "Agenda e gestão de pacientes",
         "Prontuário, documentos e teleconsulta",
-        "Synapse por texto e voz; WhatsApp previsto no Beta Desktop",
+        "Synapse com continuidade entre painel, voz e WhatsApp",
         "Gestão financeira e NeuroFinance",
         "NeuroBox com inteligências especializadas",
       ],

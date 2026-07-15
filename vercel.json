@@ -52,6 +52,11 @@
   "rewrites": [
     { "source": "/synapse", "destination": "/public-pages/synapse.html" },
     { "source": "/neurofinance", "destination": "/public-pages/neurofinance.html" },
+    { "source": "/neurobox", "destination": "/public-pages/neurobox.html" },
+    { "source": "/portal-do-paciente", "destination": "/public-pages/portal-do-paciente.html" },
+    { "source": "/teleconsulta-para-psicologos", "destination": "/public-pages/teleconsulta-para-psicologos.html" },
+    { "source": "/prontuario-para-psicologos", "destination": "/public-pages/prontuario-para-psicologos.html" },
+    { "source": "/agenda-para-psicologos", "destination": "/public-pages/agenda-para-psicologos.html" },
     { "source": "/ajuda", "destination": "/public-pages/ajuda.html" },
     { "source": "/contato", "destination": "/public-pages/contato.html" },
     {

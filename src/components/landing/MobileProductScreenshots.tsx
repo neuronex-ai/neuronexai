@@ -303,7 +303,7 @@ export const MobileRealFinanceSection = () => (
       {[
         { title: "Gestão Financeira", text: "Resultado, receitas, despesas, fluxo e planejamento." },
         { title: "NeuroFinance", text: "Pix, boletos, pagamentos, transferências e saldo real." },
-        { title: "Preparação fiscal", text: "Dados fiscais organizados; emissão de NFS-e ainda em evolução." },
+        { title: "Fluxo fiscal", text: "Dados fiscais, cobrança e emissão de NFS-e no mesmo percurso operacional." },
       ].map((item, index) => (
         <FadeIn key={item.title} delay={0.04 * index}>
           <article className="rounded-[26px] border border-border/40 bg-card/76 p-5 dark:border-white/10 dark:bg-white/[0.035]">

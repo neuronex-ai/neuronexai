@@ -25,7 +25,7 @@ export type ChatHistoryChannel = 'neuronex' | 'whatsapp';
 const CHAT_HISTORY_PAGE_SIZE = 48;
 const CHAT_MESSAGE_RENDER_LIMIT = 160;
 
-const GEMINI_CHAT_URL = edgeFunctionUrl("gemini-text-chat");
+const SYNAPSE_CHAT_URL = edgeFunctionUrl("synapse-text-fallback");
 
 export type SynapseProgressEvent = {
   stage?: string;
@@ -249,7 +249,7 @@ const sendMessageToAI = async (
 ) => {
   try {
     const wantsProgressStream = Boolean(options.streamProgress && options.onProgress);
-    const response = await fetch(GEMINI_CHAT_URL, {
+    const response = await fetch(SYNAPSE_CHAT_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -257,7 +257,14 @@ const sendMessageToAI = async (
         'Accept': wantsProgressStream ? 'text/event-stream' : 'application/json',
         ...(wantsProgressStream ? { 'X-Synapse-Progress': 'stream' } : {}),
       },
-      body: JSON.stringify({ message, sessionId, attachments, context, streamProgress: wantsProgressStream }),
+      body: JSON.stringify({
+        message,
+        sessionId,
+        attachments,
+        context,
+        streamProgress: wantsProgressStream,
+        requestId: crypto.randomUUID(),
+      }),
     });
 
     const contentType = response.headers.get("content-type");

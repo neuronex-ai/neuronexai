@@ -1474,23 +1474,33 @@ const ensureSynapseSession = async (
     conversationKind === "psychologist"
       ? "WhatsApp Business - Voc\u00ea e Synapse"
       : `WhatsApp Business - ${displayName || phone || "Paciente"}`.slice(0, 180);
-  const { data: created, error: createError } = await supabaseAdmin
+  const basePayload = {
+    user_id: userId,
+    title,
+    context_state: {
+      source: "whatsapp",
+      remoteJid,
+      canonicalRemoteJid: canonical || remoteJid,
+      aliases,
+      phoneNumber: phone || null,
+      pushName: displayName || null,
+      conversation_kind: conversationKind,
+    },
+  };
+  let { data: created, error: createError } = await supabaseAdmin
     .from("chat_sessions")
-    .insert({
-      user_id: userId,
-      title,
-      context_state: {
-        source: "whatsapp",
-        remoteJid,
-        canonicalRemoteJid: canonical || remoteJid,
-        aliases,
-        phoneNumber: phone || null,
-        pushName: displayName || null,
-        conversation_kind: conversationKind,
-      },
-    })
+    .insert({ ...basePayload, origin_channel: "whatsapp", last_channel: "whatsapp" })
     .select("id")
     .single();
+  if (createError && ["42703", "PGRST204"].includes(String(createError.code || ""))) {
+    const compatibilityResult = await supabaseAdmin
+      .from("chat_sessions")
+      .insert(basePayload)
+      .select("id")
+      .single();
+    created = compatibilityResult.data;
+    createError = compatibilityResult.error;
+  }
   if (createError) throw createError;
   return created.id;
 };

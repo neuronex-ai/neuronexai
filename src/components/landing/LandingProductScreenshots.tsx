@@ -466,9 +466,9 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
   {
     title: "Preparação fiscal",
     eyebrow: "Dados fiscais e evolução da NFS-e",
-    description: "A base fiscal fica próxima do paciente, da cobrança e do financeiro; emissão e automações ainda estão em evolução.",
+    description: "Dados fiscais, paciente, cobrança e emissão de NFS-e permanecem conectados ao mesmo fluxo financeiro.",
     icon: FileCheck2,
-    items: ["Dados fiscais", "Base para NFS-e", "Em evolução"],
+    items: ["Dados fiscais", "Emissão de NFS-e", "Automação fiscal"],
     dark: `${SCREENSHOT_ROOT}/desktop/dark/13-fiscal-dados-nfse-dark.webp`,
     light: `${LIGHT_NEW_BATCH}/13-fiscal-dados-nfse-white.webp`,
     alt: "Tela de dados fiscais e preparação para NFS-e no NeuroNex",

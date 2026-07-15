@@ -225,7 +225,7 @@ const productModules = [
     label: "Fiscal",
     title: "Dados fiscais e evolução da NFS-e",
     icon: FileCheck2,
-    subtitle: "A base fiscal acompanha a clínica; emissão e automações ainda estão em evolução.",
+    subtitle: "Dados fiscais, cobrança e emissão de NFS-e compartilham o mesmo fluxo.",
     bullets: ["Emissão no fluxo", "Dados conectados", "Menos tarefas repetitivas"],
   },
 ];
@@ -348,7 +348,7 @@ const systemCards = [
   { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
   { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, lembretes e o mesmo Synapse no WhatsApp do psicólogo." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
-  { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
+  { icon: FileCheck2, title: "Fluxo fiscal", text: "Dados fiscais, cobrança e emissão de NFS-e organizados no mesmo percurso." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
 ];
 
@@ -445,10 +445,10 @@ export const LandingFinanceFiscalSection = () => (
         <FadeIn delay={0.1}>
           <article className="relative h-full overflow-hidden rounded-[42px] border border-border/40 bg-foreground p-8 text-background shadow-[0_34px_120px_-80px_rgba(0,0,0,0.86)] dark:bg-white dark:text-zinc-950 md:p-10">
             <FileCheck2 className="h-8 w-8 opacity-60" />
-            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em]">Dados fiscais no fluxo. Automação em evolução.</h2>
-            <p className="mt-6 text-base font-medium leading-relaxed opacity-62">A NeuroNex já organiza a base fiscal perto da cobrança. Emissão de NFS-e e automações fiscais serão liberadas conforme cada fluxo for validado.</p>
+            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em]">Dados fiscais e NFS-e no mesmo fluxo.</h2>
+            <p className="mt-6 text-base font-medium leading-relaxed opacity-62">A NeuroNex conecta dados fiscais, cobrança e NeuroFinance para organizar a emissão e acompanhar cada etapa sem alternar sistemas.</p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
-              {["Dados fiscais", "Recibos", "Base para NFS-e", "Automação em evolução"].map((item) => <div key={item} className="rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">{item}</div>)}
+              {["Dados fiscais", "Recibos", "Emissão de NFS-e", "Automação fiscal"].map((item) => <div key={item} className="rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">{item}</div>)}
             </div>
           </article>
         </FadeIn>

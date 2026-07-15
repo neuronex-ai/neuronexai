@@ -196,23 +196,21 @@ const SharedRoutes = () => {
 };
 
 const OperationalApplication = () => (
-  <SessionContextProvider>
-    <AIProvider>
-      <SynapseProvider>
-        <SubscriptionProvider>
-          <TourProvider>
-            <NeuroFinancePostOnboardingGate />
-            <Suspense fallback={null}>
-              <SynapseShellGate />
-            </Suspense>
-            <SharedRoutes />
-            <GlobalTourOverlay />
-            <TrialExpiredUpsell />
-          </TourProvider>
-        </SubscriptionProvider>
-      </SynapseProvider>
-    </AIProvider>
-  </SessionContextProvider>
+  <AIProvider>
+    <SynapseProvider>
+      <SubscriptionProvider>
+        <TourProvider>
+          <NeuroFinancePostOnboardingGate />
+          <Suspense fallback={null}>
+            <SynapseShellGate />
+          </Suspense>
+          <SharedRoutes />
+          <GlobalTourOverlay />
+          <TrialExpiredUpsell />
+        </TourProvider>
+      </SubscriptionProvider>
+    </SynapseProvider>
+  </AIProvider>
 );
 
 const ApplicationSurfaceGate = () => {
@@ -232,13 +230,15 @@ function App() {
               v7_relativeSplatPath: true,
             }}
           >
-            <PublicSeoManager />
-            <ScrollToTop />
-            <TooltipProvider>
-              <ApplicationSurfaceGate />
-              <Toaster position="top-right" />
-              <CookieConsent />
-            </TooltipProvider>
+            <SessionContextProvider>
+              <PublicSeoManager />
+              <ScrollToTop />
+              <TooltipProvider>
+                <ApplicationSurfaceGate />
+                <Toaster position="top-right" />
+                <CookieConsent />
+              </TooltipProvider>
+            </SessionContextProvider>
           </BrowserRouter>
         </ThemeProvider>
       </QueryClientProvider>
