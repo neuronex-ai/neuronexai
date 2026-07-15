@@ -10,10 +10,10 @@ import { LandingSynapseSDR } from "@/components/landing/LandingSynapseSDR";
 import { LandingSectionStage } from "@/components/landing/LandingSectionStage";
 import { Navbar } from "@/components/landing/Navbar";
 import { PublicFlowComparison } from "@/components/landing/PublicFlowComparison";
+import { SynapseVoiceChapter } from "@/components/landing/SynapseVoiceChapter";
 import {
     LandingRealFinanceFiscalSection,
     LandingRealProductShowcase,
-    LandingRealSynapseSection,
 } from "@/components/landing/LandingProductScreenshots";
 import {
     LandingFinalCTASection,
@@ -32,9 +32,9 @@ const DesktopIndex = () => {
         <div className="min-h-screen bg-transparent selection:bg-primary/30">
             <Navbar />
             <main>
-                <LandingSectionStage index={0}><Hero /></LandingSectionStage>
+                <Hero />
                 <LandingSectionStage index={1}><LandingProblemSection /></LandingSectionStage>
-                <LandingSectionStage index={2}><PublicFlowComparison /></LandingSectionStage>
+                <PublicFlowComparison />
                 <LandingSectionStage index={3}><LandingRealProductShowcase /></LandingSectionStage>
                 <LandingSectionStage index={4}>
                     <section className="bg-transparent px-6 pb-12">
@@ -45,7 +45,7 @@ const DesktopIndex = () => {
                     </section>
                 </LandingSectionStage>
                 <LandingSectionStage index={5}><LandingOperatingSystemSection /></LandingSectionStage>
-                <LandingSectionStage index={6}><LandingRealSynapseSection /></LandingSectionStage>
+                <SynapseVoiceChapter id="synapse" variant="compact" />
                 <LandingSectionStage index={7}><LandingRealFinanceFiscalSection /></LandingSectionStage>
                 <LandingSectionStage index={8}><WaitlistSection /></LandingSectionStage>
                 <LandingSectionStage index={9}><LandingPlanComparisonSection /></LandingSectionStage>
