@@ -103,7 +103,7 @@ const SynapseLanding = () => {
       <div className="hidden md:block"><Navbar /></div>
       <LandingMobileNav />
       <main>
-        <LandingSectionStage index={0} effect="none">
+        <LandingSectionStage index={0}>
         <section className="relative overflow-hidden px-5 pb-20 pt-32 md:px-8 md:pb-28 md:pt-48">
           <div className="pointer-events-none absolute left-1/2 top-0 h-[620px] w-[980px] -translate-x-1/2 rounded-full bg-foreground/[0.045] blur-[170px] dark:bg-white/[0.035]" />
           <div className="relative z-10 mx-auto max-w-[1380px]">
@@ -118,7 +118,7 @@ const SynapseLanding = () => {
         </section>
         </LandingSectionStage>
 
-        <LandingSectionStage index={1} progressLinked effect="focus-in">
+        <LandingSectionStage index={1}>
         <section id="synapse-demo" className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
             <div className="max-w-5xl"><p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Texto e voz</p><h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">Pergunte do seu jeito. <span className="opacity-35">O Synapse encontra o fio da rotina.</span></h2></div>
@@ -146,7 +146,7 @@ const SynapseLanding = () => {
         </section>
         </LandingSectionStage>
 
-        <LandingSectionStage index={2} progressLinked effect="handoff">
+        <LandingSectionStage index={2}>
         <section className="px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
@@ -168,9 +168,9 @@ const SynapseLanding = () => {
         </section>
         </LandingSectionStage>
 
-        <LandingSectionStage index={3} progressLinked effect="zoom-out"><PublicFlowComparison variant="synapse" /></LandingSectionStage>
+        <LandingSectionStage index={3}><PublicFlowComparison variant="synapse" /></LandingSectionStage>
 
-        <LandingSectionStage index={4} progressLinked effect="focus-in">
+        <LandingSectionStage index={4}>
         <section className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-[1380px] gap-6 lg:grid-cols-[0.82fr_1.18fr]">
             <article className="rounded-[38px] border border-background/10 bg-background/[0.07] p-8 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045] md:p-10">

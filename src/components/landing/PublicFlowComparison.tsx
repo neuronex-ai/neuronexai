@@ -1,59 +1,44 @@
+import { useId, useState } from "react";
+import { AnimatePresence, MotionConfig, motion, useReducedMotion } from "framer-motion";
 import {
-  useCallback,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
-import {
-  MotionConfig,
-  motion,
-  useMotionValue,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-  useTransform,
-  type MotionValue,
-} from "framer-motion";
-import {
+  ArrowDown,
+  ArrowRight,
   BellRing,
+  Bot,
   BrainCircuit,
   CalendarDays,
+  Check,
   CheckCircle2,
   CircleDollarSign,
   ClipboardList,
   FileCheck2,
+  FileText,
   Mail,
   MessageCircle,
-  Mic2,
   Monitor,
+  Network,
   UserRound,
   Video,
-  type LucideIcon,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
 type ComparisonMode = "without" | "with";
 type ComparisonVariant = "ecosystem" | "synapse";
-type StoryPhase = "fragmented" | "retracting" | "synapse" | "connected";
-type NodeSide = "left" | "right";
 
-type FlowNode = {
+type FlowItem = {
   id: string;
-  icon: LucideIcon;
+  icon: typeof CalendarDays;
   label: string;
   detail: string;
-  side: NodeSide;
 };
 
 type FlowScenario = {
   id: string;
   label: string;
+  without: string[];
+  with: string[];
   active: string[];
-  without: [string, string, string];
-  with: [string, string, string];
 };
 
 type ComparisonContent = {
@@ -64,211 +49,175 @@ type ComparisonContent = {
   withoutText: string;
   withTitle: string;
   withText: string;
-  nodes: [FlowNode, FlowNode, FlowNode, FlowNode, FlowNode, FlowNode];
+  inputs: FlowItem[];
+  outputs: FlowItem[];
   scenarios: FlowScenario[];
-};
-
-type ConnectionGeometry = {
-  id: string;
-  side: NodeSide;
-  startX: number;
-  startY: number;
-  endX: number;
-  endY: number;
 };
 
 const ecosystemContent: ComparisonContent = {
   eyebrow: "O que muda na prática",
   title: "Hoje, você ainda precisa conectar tudo sozinho.",
   description:
-    "Agenda, mensagens, prontuário, atendimentos e cobranças vivem separados. No fim, é você quem precisa conferir e atualizar cada parte.",
-  withoutTitle: "As ferramentas guardam informações. Você ainda faz as conexões.",
+    "Agenda, mensagens, prontuário, cobranças e documentos vivem separados. No fim, é você quem precisa lembrar, conferir e atualizar cada parte.",
+  withoutTitle: "As informações estão guardadas. O trabalho ainda fica com você.",
   withoutText:
-    "Cada parte registra um pedaço da rotina, mas é o psicólogo quem procura, transporta e reorganiza o contexto.",
-  withTitle: "Com a NeuroNex, a rotina passa a trabalhar em conjunto.",
+    "Ferramentas diferentes registram pedaços da rotina, mas não entendem o que aconteceu antes nem o que precisa acontecer depois.",
+  withTitle: "Com a NeuroNex, tudo passa a trabalhar junto.",
   withText:
-    "O Synapse relaciona o contexto, prepara a próxima etapa e pede sua confirmação sempre que uma decisão depende de você.",
-  nodes: [
-    { id: "agenda", icon: CalendarDays, label: "Agenda", detail: "horários, sessões e mudanças", side: "left" },
-    { id: "whatsapp", icon: MessageCircle, label: "WhatsApp", detail: "pedidos, mensagens e áudios", side: "left" },
-    { id: "prontuario", icon: ClipboardList, label: "Prontuário", detail: "histórico e registros clínicos", side: "left" },
-    { id: "teleconsulta", icon: Video, label: "Teleconsulta", detail: "atendimento e continuidade", side: "right" },
-    { id: "financeiro", icon: CircleDollarSign, label: "NeuroFinance", detail: "cobrança, pagamento e saldo", side: "right" },
-    { id: "fiscal", icon: FileCheck2, label: "Fiscal", detail: "dados e emissão de NFS-e", side: "right" },
+    "O Synapse reúne o contexto que você autorizou, prepara o próximo passo e coordena a rotina. Você continua decidindo o que precisa da sua confirmação.",
+  inputs: [
+    { id: "agenda", icon: CalendarDays, label: "Agenda", detail: "horários, sessões e mudanças" },
+    { id: "whatsapp", icon: MessageCircle, label: "WhatsApp", detail: "pedidos, mensagens e áudios" },
+    { id: "portal", icon: UserRound, label: "Portal do Paciente", detail: "informações entre sessões" },
+    { id: "teleconsulta", icon: Video, label: "Teleconsulta", detail: "atendimento e continuidade" },
+    { id: "prontuario", icon: ClipboardList, label: "Prontuário", detail: "histórico e registros clínicos" },
+  ],
+  outputs: [
+    { id: "comunicacao", icon: Mail, label: "Comunicação", detail: "confirmações e lembretes" },
+    { id: "financeiro", icon: CircleDollarSign, label: "NeuroFinance", detail: "cobrança, pagamento e saldo" },
+    { id: "fiscal", icon: FileCheck2, label: "Fiscal", detail: "dados e emissão de NFS-e" },
+    { id: "documentos", icon: FileText, label: "Documentos", detail: "arquivos e anexos no contexto certo" },
+    { id: "notificacoes", icon: BellRing, label: "Próximos passos", detail: "o que pede sua atenção" },
   ],
   scenarios: [
     {
       id: "appointment",
       label: "Novo agendamento",
-      active: ["agenda", "whatsapp", "financeiro", "fiscal"],
+      active: ["whatsapp", "agenda", "comunicacao", "financeiro", "fiscal", "notificacoes"],
       without: [
-        "O pedido chega e você abre a agenda.",
-        "Você cria a sessão e volta para enviar a confirmação.",
-        "Depois prepara cobrança, acompanha pagamento e confere o fiscal.",
+        "Você recebe o pedido e abre a agenda.",
+        "Cria a sessão e volta para enviar a confirmação.",
+        "Prepara a cobrança e, depois, precisa conferir pagamento e fiscal.",
       ],
       with: [
         "Você pede o agendamento ao Synapse.",
-        "Ele confere o contexto e mostra um resumo para sua validação.",
-        "Agenda, comunicação, financeiro e fiscal seguem o mesmo percurso.",
+        "Ele verifica as informações e mostra um resumo do que vai acontecer.",
+        "Depois da sua confirmação, agenda, comunicação e os próximos fluxos ficam alinhados.",
       ],
     },
     {
       id: "reschedule",
       label: "Reagendamento",
-      active: ["agenda", "whatsapp"],
+      active: ["whatsapp", "agenda", "comunicacao", "notificacoes"],
       without: [
-        "A mudança chega por mensagem e a agenda está em outra tela.",
-        "Você procura a sessão, troca o horário e responde novamente.",
-        "Lembretes e pendências precisam ser conferidos à parte.",
+        "A mensagem chega em um canal e a agenda está em outro.",
+        "Você procura a sessão, troca o horário e avisa novamente.",
+        "Qualquer lembrete ou pendência precisa ser revisado por você.",
       ],
       with: [
-        "O Synapse localiza a sessão a partir da conversa.",
-        "Ele apresenta horários possíveis e espera sua confirmação.",
-        "A alteração atualiza a agenda e preserva o histórico do pedido.",
+        "O Synapse localiza a sessão certa a partir da conversa.",
+        "Ele apresenta as opções disponíveis e espera sua confirmação.",
+        "A mudança atualiza os pontos relacionados e deixa o histórico organizado.",
       ],
     },
     {
       id: "teleconsultation",
       label: "Teleconsulta",
-      active: ["agenda", "prontuario", "teleconsulta"],
+      active: ["agenda", "teleconsulta", "prontuario", "documentos", "notificacoes"],
       without: [
-        "Você confere o horário e procura o histórico em outra tela.",
-        "Abre a sala e alterna entre o atendimento e os registros.",
-        "Depois volta para organizar o que precisa acontecer.",
+        "Você confere o horário, abre a sala e procura o histórico em outra tela.",
+        "Depois do atendimento, registra o que precisa e volta para atualizar a rotina.",
+        "O contexto fica repartido entre chamada, notas e próximos passos.",
       ],
       with: [
-        "A sessão já aparece ligada à agenda e ao paciente certo.",
-        "O Synapse reúne o contexto autorizado para sua leitura.",
-        "Registros e próximos passos continuam no mesmo ambiente.",
+        "A sessão já nasce ligada à agenda e ao contexto disponível do paciente.",
+        "O Synapse ajuda a encontrar o que importa durante o fluxo, sem tomar decisão clínica.",
+        "Ao terminar, os registros e pendências continuam no mesmo ambiente.",
       ],
     },
     {
       id: "billing",
       label: "Cobrança",
-      active: ["financeiro", "fiscal", "whatsapp"],
+      active: ["financeiro", "comunicacao", "notificacoes", "fiscal"],
       without: [
-        "Você cria a cobrança e prepara a mensagem em etapas separadas.",
-        "Depois precisa lembrar de conferir o pagamento.",
-        "Recibo, nota e pendências continuam dependendo de outra revisão.",
+        "Você cria a cobrança, envia a mensagem e acompanha o pagamento em etapas separadas.",
+        "Depois precisa lembrar se existe nota, recibo ou uma pendência para resolver.",
+        "O dinheiro até pode estar registrado, mas o próximo passo continua escondido.",
       ],
       with: [
-        "O Synapse prepara a cobrança com o contexto da sessão.",
-        "Você revisa antes de qualquer envio ou alteração externa.",
-        "Pagamento, comunicação e fiscal aparecem como um único percurso.",
+        "O Synapse prepara a cobrança com o contexto da sessão e do paciente.",
+        "Você revisa antes de qualquer ação externa.",
+        "Pagamento, comunicação e fiscal passam a aparecer como partes do mesmo percurso.",
       ],
     },
     {
       id: "patient-message",
       label: "Mensagem de paciente",
-      active: ["whatsapp", "prontuario", "agenda"],
+      active: ["whatsapp", "portal", "prontuario", "agenda", "notificacoes"],
       without: [
-        "Uma informação importante chega fora do prontuário.",
-        "Você procura o contexto e decide onde registrar.",
+        "Uma informação importante chega por mensagem, fora do prontuário.",
+        "Você tenta lembrar o contexto, procura dados e decide onde registrar.",
         "A continuidade depende da sua memória e do tempo disponível.",
       ],
       with: [
-        "O Synapse relaciona a conversa ao contexto autorizado.",
-        "Ele destaca o que merece atenção e prepara a área certa.",
-        "A leitura clínica e a decisão continuam sob seu controle.",
+        "O Synapse relaciona a conversa ao contexto que você autorizou.",
+        "Ele aponta o que merece atenção e prepara o caminho para a área certa.",
+        "Você preserva o controle da leitura clínica e da decisão.",
       ],
     },
   ],
 };
 
 const synapseContent: ComparisonContent = {
-  eyebrow: "Um contexto, em todos os canais",
-  title: "A conversa continua, mesmo quando o canal muda.",
+  eyebrow: "A mesma conversa, em mais de um lugar",
+  title: "Você não precisa recomeçar o contexto a cada canal.",
   description:
-    "Voz, painel e WhatsApp passam a compartilhar o histórico autorizado, sem obrigar você a reconstruir o pedido em cada lugar.",
-  withoutTitle: "Cada canal conhece apenas a conversa que aconteceu ali.",
+    "Uma conversa por voz, no painel ou no WhatsApp pode continuar de onde parou — sempre dentro do que você autorizou o Synapse a acessar.",
+  withoutTitle: "Cada conversa começa quase do zero.",
   withoutText:
-    "Você repete o pedido, procura o histórico e volta a explicar o que estava fazendo antes de avançar.",
-  withTitle: "O Synapse acompanha a conversa e movimenta o painel.",
+    "Você repete informações, procura o histórico e reconstrói o que estava acontecendo antes de pedir uma ajuda de verdade.",
+  withTitle: "O Synapse acompanha a sua rotina.",
   withText:
-    "Ele entende o pedido, encontra o contexto permitido e prepara a ação na área correta da NeuroNex.",
-  nodes: [
-    { id: "whatsapp", icon: MessageCircle, label: "WhatsApp", detail: "áudio, texto e pedidos do dia", side: "left" },
-    { id: "voice", icon: Mic2, label: "Voz", detail: "comandos enquanto você trabalha", side: "left" },
-    { id: "panel", icon: Monitor, label: "Painel", detail: "conversa e ações no sistema", side: "left" },
-    { id: "agenda", icon: CalendarDays, label: "Agenda", detail: "o que acontece agora", side: "right" },
-    { id: "prontuario", icon: ClipboardList, label: "Prontuário", detail: "histórico que você autorizou", side: "right" },
-    { id: "actions", icon: BellRing, label: "Próxima ação", detail: "o que fica pronto para você", side: "right" },
+    "O canal muda, mas a conversa, o histórico autorizado e as regras continuam. Ações que alteram, enviam ou registram algo esperam a sua confirmação.",
+  inputs: [
+    { id: "whatsapp", icon: MessageCircle, label: "WhatsApp", detail: "áudio, texto e pedidos do dia" },
+    { id: "voice", icon: Bot, label: "Voz", detail: "uma pergunta durante a rotina" },
+    { id: "panel", icon: Monitor, label: "Painel", detail: "conversa e ações no sistema" },
+    { id: "agenda", icon: CalendarDays, label: "Agenda", detail: "o que está acontecendo hoje" },
+    { id: "prontuario", icon: ClipboardList, label: "Prontuário", detail: "histórico que você autorizou" },
+  ],
+  outputs: [
+    { id: "comunicacao", icon: Mail, label: "Resposta preparada", detail: "o que dizer e onde continuar" },
+    { id: "notificacoes", icon: BellRing, label: "Pendências visíveis", detail: "o que pede atenção agora" },
+    { id: "agenda", icon: CalendarDays, label: "Próximo horário", detail: "a sessão certa, no momento certo" },
+    { id: "documentos", icon: FileText, label: "Contexto organizado", detail: "referências reunidas para você" },
+    { id: "panel", icon: Monitor, label: "Histórico contínuo", detail: "a conversa volta para o painel" },
   ],
   scenarios: [
     {
       id: "appointment",
       label: "Novo agendamento",
-      active: ["whatsapp", "panel", "agenda", "actions"],
-      without: [
-        "O pedido chega no WhatsApp.",
-        "Você abre outras telas para entender o dia.",
-        "A conversa e a ação terminam separadas.",
-      ],
-      with: [
-        "Você continua o pedido por voz, painel ou WhatsApp.",
-        "O Synapse encontra o contexto permitido e prepara o agendamento.",
-        "A ação só avança depois da confirmação necessária.",
-      ],
+      active: ["whatsapp", "panel", "agenda", "comunicacao", "notificacoes"],
+      without: ["O pedido chega no WhatsApp.", "Você abre outras telas para entender o dia e responder.", "A conversa e a ação ficam separadas."],
+      with: ["Você pede ou continua a conversa em qualquer canal.", "O Synapse consulta o contexto permitido e prepara o próximo passo.", "A confirmação acontece antes de uma ação com efeito real."],
     },
     {
       id: "reschedule",
       label: "Reagendamento",
-      active: ["whatsapp", "panel", "agenda", "actions"],
-      without: [
-        "A conversa não sabe qual sessão você procura.",
-        "Você encontra o nome, o horário e o histórico manualmente.",
-        "Depois volta ao primeiro canal para responder.",
-      ],
-      with: [
-        "O Synapse localiza a sessão dentro da conversa.",
-        "Ele apresenta opções no painel e mantém o mesmo histórico.",
-        "Você valida a mudança antes de ela acontecer.",
-      ],
+      active: ["whatsapp", "agenda", "panel", "notificacoes"],
+      without: ["A conversa não sabe qual sessão você está procurando.", "Você procura o nome, o horário e o histórico manualmente.", "Depois ainda precisa voltar para responder."],
+      with: ["O Synapse localiza o contexto da sessão.", "Ele apresenta opções e mantém a conversa no mesmo histórico.", "Você valida a alteração antes de ela acontecer."],
     },
     {
       id: "teleconsultation",
       label: "Teleconsulta",
-      active: ["voice", "panel", "agenda", "prontuario"],
-      without: [
-        "O contexto da próxima sessão está espalhado por abas.",
-        "Você interrompe a preparação para procurar informações.",
-        "Depois decide sozinho o que merece atenção.",
-      ],
-      with: [
-        "Você pede por voz para abrir o contexto da próxima sessão.",
-        "O Synapse leva o painel à área correta e destaca as relações.",
-        "Você recebe o resumo sem entregar a decisão clínica ao sistema.",
-      ],
+      active: ["voice", "panel", "agenda", "prontuario", "documentos"],
+      without: ["Durante a sessão, o contexto está espalhado por abas.", "Você pausa para procurar o que precisa.", "Depois decide onde cada informação deve ficar."],
+      with: ["Você pergunta por voz ou texto sem abandonar a tela.", "O Synapse mostra apenas o contexto permitido para aquela situação.", "As referências ficam prontas para sua leitura e decisão."],
     },
     {
       id: "billing",
       label: "Cobrança",
-      active: ["whatsapp", "panel", "actions"],
-      without: [
-        "A conversa sobre pagamento fica longe da rotina do paciente.",
-        "Você procura os dados e prepara cada etapa.",
-        "Uma nova conferência será necessária depois.",
-      ],
-      with: [
-        "O Synapse reúne o contexto permitido da cobrança.",
-        "Ele prepara a ação e explica o que vai acontecer.",
-        "Você confirma antes de qualquer envio ou alteração.",
-      ],
+      active: ["panel", "whatsapp", "comunicacao", "notificacoes"],
+      without: ["A conversa sobre pagamento fica separada do restante da rotina.", "Você procura dados, prepara a ação e volta para responder.", "O acompanhamento depende de uma nova conferência."],
+      with: ["O Synapse reúne o contexto que você autorizou.", "Ele prepara a ação e explica o que vai acontecer.", "Você confirma antes de qualquer envio ou alteração."],
     },
     {
       id: "patient-message",
       label: "Mensagem de paciente",
-      active: ["whatsapp", "panel", "prontuario", "actions"],
-      without: [
-        "A mensagem chega sem o histórico das outras conversas.",
-        "Você tenta lembrar o contexto e procura os registros.",
-        "O que importa pode permanecer perdido em outro canal.",
-      ],
-      with: [
-        "A mensagem continua uma conversa iniciada no painel.",
-        "O Synapse relaciona o histórico dentro das permissões.",
-        "Ele mostra o próximo passo sem substituir sua decisão.",
-      ],
+      active: ["whatsapp", "prontuario", "panel", "documentos", "notificacoes"],
+      without: ["Você recebe uma mensagem e tenta lembrar o contexto da pessoa.", "O histórico não acompanha automaticamente a conversa.", "O que importa pode ficar perdido em outro canal."],
+      with: ["A mensagem pode continuar uma conversa já iniciada no painel.", "O Synapse relaciona as informações dentro das permissões.", "Ele mostra o próximo passo sem substituir a sua decisão clínica."],
     },
   ],
 };
@@ -278,598 +227,224 @@ const contentByVariant: Record<ComparisonVariant, ComparisonContent> = {
   synapse: synapseContent,
 };
 
-const phaseFromProgress = (progress: number): StoryPhase => {
-  if (progress < 0.28) return "fragmented";
-  if (progress < 0.48) return "retracting";
-  if (progress < 0.68) return "synapse";
-  return "connected";
-};
+const motionTransition = { duration: 0.72, ease: [0.22, 1, 0.36, 1] as const };
 
-const modeFromProgress = (progress: number): ComparisonMode =>
-  progress < 0.56 ? "without" : "with";
-
-const phaseLabels: Record<StoryPhase, string> = {
-  fragmented: "Ferramentas separadas",
-  retracting: "O trabalho manual perde espaço",
-  synapse: "O contexto encontra um núcleo",
-  connected: "Uma rotina coordenada",
-};
-
-function ModeTabs({
-  id,
-  mode,
-  onChange,
-}: {
-  id: string;
-  mode: ComparisonMode;
-  onChange: (mode: ComparisonMode) => void;
-}) {
-  return (
-    <div
-      role="tablist"
-      aria-label="Comparar a rotina com e sem a NeuroNex"
-      className="grid min-w-[284px] grid-cols-2 rounded-2xl border border-border/55 bg-card/80 p-1 dark:border-white/10 dark:bg-white/[0.04]"
-    >
-      {(["without", "with"] as const).map((item) => {
-        const selected = mode === item;
-        return (
-          <button
-            key={item}
-            id={`${id}-${item}-tab`}
-            type="button"
-            role="tab"
-            aria-selected={selected}
-            aria-controls={`${id}-panel`}
-            tabIndex={selected ? 0 : -1}
-            onClick={() => onChange(item)}
-            className={cn(
-              "min-h-10 rounded-xl px-3 text-[9px] font-black uppercase tracking-[0.15em] outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-ring",
-              selected
-                ? "bg-foreground text-background"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {item === "without" ? "Sem a NeuroNex" : "Com a NeuroNex"}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function ScenarioTabs({
-  scenarios,
-  selectedId,
-  onChange,
-}: {
-  scenarios: FlowScenario[];
-  selectedId: string;
-  onChange: (id: string) => void;
-}) {
-  return (
-    <div
-      className="flex flex-wrap items-center justify-center gap-1.5 lg:justify-end"
-      aria-label="Escolha uma situação comum da rotina"
-    >
-      {scenarios.map((scenario) => (
-        <button
-          key={scenario.id}
-          type="button"
-          aria-pressed={selectedId === scenario.id}
-          onClick={() => onChange(scenario.id)}
-          className={cn(
-            "min-h-9 rounded-full border px-3 text-[8px] font-black uppercase tracking-[0.11em] outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-ring",
-            selectedId === scenario.id
-              ? "border-foreground bg-foreground text-background"
-              : "border-border/55 bg-card/70 text-muted-foreground hover:border-foreground/35 hover:text-foreground dark:border-white/10 dark:bg-white/[0.025]",
-          )}
-        >
-          {scenario.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function FlowNodeCard({
-  item,
-  index,
-  active,
-  progress,
-  nodeRef,
-}: {
-  item: FlowNode;
-  index: number;
-  active: boolean;
-  progress: MotionValue<number>;
-  nodeRef: (node: HTMLElement | null) => void;
-}) {
+function FlowCard({ item, connected, active, side }: { item: FlowItem; connected: boolean; active: boolean; side: "input" | "output" }) {
   const Icon = item.icon;
-  const manualOffset = index % 3 === 0 ? -5 : index % 3 === 1 ? 4 : 7;
-  const y = useTransform(progress, [0, 0.28, 0.5], [manualOffset, manualOffset / 2, 0]);
-  const scale = useTransform(progress, [0, 0.38, 0.62, 1], [0.975, 0.955, 1, 1]);
-  const nodeOpacity = useTransform(progress, [0, 0.34, 0.5, 0.72], [1, 0.62, 0.72, 1]);
 
   return (
     <motion.article
-      ref={nodeRef}
-      style={{
-        y,
-        scale,
-        opacity: nodeOpacity,
-        gridColumn: item.side === "left" ? 1 : 3,
-        gridRow: (index % 3) + 1,
-      }}
+      layout
+      transition={motionTransition}
       className={cn(
-        "relative z-10 flex min-h-0 items-center gap-3 self-stretch overflow-hidden rounded-[18px] border bg-[#111114]/95 px-3.5 py-2.5 shadow-[0_14px_38px_-30px_rgba(0,0,0,0.95)]",
-        active ? "border-white/28" : "border-white/10",
+        "relative z-10 min-h-[96px] rounded-[22px] border p-4 text-left transition-colors duration-500 motion-reduce:transition-none",
+        connected
+          ? "border-white/12 bg-white/[0.055] text-white shadow-[0_18px_42px_-34px_rgba(0,0,0,0.95)]"
+          : "border-white/10 bg-white/[0.03] text-white/90",
+        active
+          ? connected
+            ? "ring-1 ring-white/45"
+            : "border-white/25 bg-white/[0.075]"
+          : "opacity-54",
       )}
     >
-      <span
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border",
-          active
-            ? "border-white/18 bg-white text-black"
-            : "border-white/10 bg-white/[0.06] text-white/52",
-        )}
-      >
-        <Icon aria-hidden="true" className="h-4 w-4" />
-      </span>
-      <span className="min-w-0">
-        <strong className="block truncate text-[13px] font-black tracking-[-0.02em] text-white">
-          {item.label}
-        </strong>
-        <span className="mt-0.5 block truncate text-[10px] font-medium text-white/48">
-          {item.detail}
-        </span>
+      <div className="flex items-start gap-3">
+        <div
+          className={cn(
+            "flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border",
+            connected && active ? "border-white/20 bg-white text-zinc-950" : "border-white/10 bg-white/[0.08] text-white/72",
+          )}
+        >
+          <Icon aria-hidden="true" className="h-4 w-4" />
+        </div>
+        <div className="min-w-0">
+          <h4 className="text-sm font-black tracking-[-0.025em]">{item.label}</h4>
+          <p className="mt-1 text-xs font-medium leading-relaxed text-white/54">{item.detail}</p>
+        </div>
+      </div>
+      <span className="mt-3 block text-[8px] font-black uppercase tracking-[0.16em] text-white/38">
+        {connected ? side === "input" ? "alimenta o contexto" : "recebe o próximo passo" : "ferramenta isolada"}
       </span>
     </motion.article>
   );
 }
 
-function CentralCore({ progress }: { progress: MotionValue<number> }) {
-  const userOpacity = useTransform(progress, [0, 0.25, 0.43], [1, 1, 0]);
-  const userScale = useTransform(progress, [0, 0.32, 0.45], [1, 0.96, 0.86]);
-  const synapseOpacity = useTransform(progress, [0.38, 0.55, 1], [0, 1, 1]);
-  const synapseScale = useTransform(progress, [0.38, 0.58, 0.76, 1], [0.84, 0.96, 1, 1]);
-  const coreScale = useTransform(progress, [0, 0.38, 0.6, 1], [1, 0.91, 1.03, 1]);
-  const glowOpacity = useTransform(progress, [0.35, 0.62, 1], [0, 0.7, 0.32]);
+function ConnectionLayer({ connected, reduceMotion }: { connected: boolean; reduceMotion: boolean | null }) {
+  const paths = connected
+    ? ["M42 55 C380 55 420 166 570 210", "M42 125 C360 125 425 185 570 210", "M42 210 C360 210 425 210 570 210", "M42 295 C360 295 425 235 570 210", "M42 365 C380 365 420 255 570 210", "M630 210 C790 210 835 55 1160 55", "M630 210 C790 210 835 125 1160 125", "M630 210 C790 210 835 210 1160 210", "M630 210 C790 210 835 295 1160 295", "M630 210 C790 210 835 365 1160 365"]
+    : ["M42 55 C300 55 430 135 570 210", "M42 125 C290 125 420 160 570 210", "M42 210 C300 210 430 210 570 210", "M42 295 C300 295 420 260 570 210", "M42 365 C300 365 430 285 570 210", "M630 210 C790 210 875 55 1160 55", "M630 210 C790 210 875 125 1160 125", "M630 210 C790 210 875 210 1160 210", "M630 210 C790 210 875 295 1160 295", "M630 210 C790 210 875 365 1160 365"];
 
   return (
-    <motion.div
-      style={{ scale: coreScale, gridColumn: 2, gridRow: "1 / span 3" }}
-      className="relative z-20 flex min-h-0 items-center justify-center"
-    >
-      <motion.div
-        aria-hidden="true"
-        style={{ opacity: glowOpacity }}
-        className="pointer-events-none absolute h-48 w-48 rounded-full bg-white/15 blur-[58px]"
-      />
-      <div className="relative h-[156px] w-full max-w-[188px] overflow-hidden rounded-[30px] border border-white/18 bg-[#141417]/95 shadow-[0_28px_85px_-55px_rgba(255,255,255,0.75)]">
-        <motion.div
-          style={{ opacity: userOpacity, scale: userScale }}
-          className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
-        >
-          <UserRound aria-hidden="true" className="h-7 w-7 text-white/68" />
-          <strong className="mt-3 text-lg font-black tracking-[-0.04em] text-white">Você</strong>
-          <span className="mt-2 text-[10px] font-medium leading-relaxed text-white/48">
-            confere, copia e decide cada próximo passo
-          </span>
-        </motion.div>
-        <motion.div
-          style={{ opacity: synapseOpacity, scale: synapseScale }}
-          className="absolute inset-0 flex flex-col items-center justify-center px-4 text-center"
-        >
-          <BrainCircuit aria-hidden="true" className="h-8 w-8 text-white" />
-          <strong className="mt-3 text-xl font-black tracking-[-0.04em] text-white">Synapse</strong>
-          <span className="mt-2 text-[10px] font-medium leading-relaxed text-white/52">
-            relaciona o contexto e prepara a ação
-          </span>
-          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-white/14 bg-white/[0.06] px-2.5 py-1 text-[7px] font-black uppercase tracking-[0.12em] text-white/64">
-            <CheckCircle2 aria-hidden="true" className="h-3 w-3" />
-            você confirma
-          </span>
-        </motion.div>
-      </div>
-    </motion.div>
-  );
-}
-
-const createConnectionPath = (connection: ConnectionGeometry) => {
-  const direction = connection.side === "left" ? 1 : -1;
-  const distance = Math.abs(connection.endX - connection.startX);
-  const bend = Math.max(34, distance * 0.46);
-
-  return [
-    `M ${connection.startX} ${connection.startY}`,
-    `C ${connection.startX + bend * direction} ${connection.startY}`,
-    `${connection.endX - bend * direction} ${connection.endY}`,
-    `${connection.endX} ${connection.endY}`,
-  ].join(" ");
-};
-
-function FlowConnection({
-  connection,
-  progress,
-  active,
-}: {
-  connection: ConnectionGeometry;
-  progress: MotionValue<number>;
-  active: boolean;
-}) {
-  const manualLength = useTransform(progress, [0, 0.12, 0.31, 0.44], [0.78, 1, 0.38, 0]);
-  const manualOpacity = useTransform(progress, [0, 0.22, 0.44], [active ? 0.52 : 0.2, active ? 0.58 : 0.22, 0]);
-  const connectedLength = useTransform(progress, [0.5, 0.66, 0.86, 1], [0, 0.18, 1, 1]);
-  const connectedOpacity = useTransform(progress, [0.5, 0.64, 0.82, 1], [0, 0, active ? 0.78 : 0.24, active ? 0.62 : 0.18]);
-  const d = createConnectionPath(connection);
-
-  return (
-    <>
-      <motion.path
-        d={d}
-        fill="none"
-        stroke="rgba(255,255,255,0.55)"
-        strokeWidth="1"
-        strokeDasharray="5 8"
-        style={{ pathLength: manualLength, opacity: manualOpacity }}
-      />
-      <motion.path
-        d={d}
-        fill="none"
-        stroke={active ? "rgba(255,255,255,0.88)" : "rgba(255,255,255,0.3)"}
-        strokeWidth={active ? 1.5 : 1}
-        style={{ pathLength: connectedLength, opacity: connectedOpacity }}
-      />
-    </>
-  );
-}
-
-function ConnectionLayer({
-  connections,
-  progress,
-  activeIds,
-}: {
-  connections: ConnectionGeometry[];
-  progress: MotionValue<number>;
-  activeIds: string[];
-}) {
-  if (connections.length === 0) return null;
-
-  return (
-    <svg
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 z-0 h-full w-full overflow-visible"
-    >
-      {connections.map((connection) => (
-        <FlowConnection
-          key={connection.id}
-          connection={connection}
-          progress={progress}
-          active={activeIds.includes(connection.id)}
+    <svg aria-hidden="true" viewBox="0 0 1200 420" preserveAspectRatio="none" className="pointer-events-none absolute inset-0 hidden h-full w-full lg:block">
+      <defs>
+        <linearGradient id={connected ? "neuronex-connected-flow" : "neuronex-manual-flow"} x1="0" x2="1">
+          <stop offset="0" stopColor="currentColor" stopOpacity={connected ? "0.16" : "0.08"} />
+          <stop offset="0.5" stopColor="currentColor" stopOpacity={connected ? "0.62" : "0.38"} />
+          <stop offset="1" stopColor="currentColor" stopOpacity={connected ? "0.16" : "0.08"} />
+        </linearGradient>
+      </defs>
+      {paths.map((d, index) => (
+        <motion.path
+          key={`${connected}-${index}`}
+          d={d}
+          fill="none"
+          stroke={`url(#${connected ? "neuronex-connected-flow" : "neuronex-manual-flow"})`}
+          strokeWidth={connected ? 1.6 : 1}
+          strokeDasharray={connected ? "0" : "5 9"}
+          initial={reduceMotion ? false : { pathLength: 0, opacity: 0 }}
+          animate={{ pathLength: 1, opacity: 1 }}
+          transition={{ duration: reduceMotion ? 0 : 0.6, delay: reduceMotion ? 0 : index * 0.035, ease: "easeOut" }}
         />
       ))}
     </svg>
   );
 }
 
-function ScenarioSummary({
-  scenario,
-  mode,
-}: {
-  scenario: FlowScenario;
-  mode: ComparisonMode;
-}) {
+function ScenarioSteps({ scenario, mode }: { scenario: FlowScenario; mode: ComparisonMode }) {
   const steps = mode === "with" ? scenario.with : scenario.without;
 
   return (
-    <ol className="grid grid-cols-3 gap-2" aria-label={`Etapas do cenário ${scenario.label}`}>
-      {steps.map((step, index) => (
-        <li
-          key={step}
-          className="flex min-w-0 items-start gap-2 rounded-xl border border-white/8 bg-white/[0.025] px-3 py-2"
-        >
-          <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full border border-white/14 text-[7px] font-black text-white/52">
-            {index + 1}
-          </span>
-          <span className="line-clamp-2 text-[9px] font-medium leading-relaxed text-white/54">
-            {step}
-          </span>
-        </li>
-      ))}
-    </ol>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.div
+        key={`${scenario.id}-${mode}`}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -8 }}
+        transition={motionTransition}
+        className="grid gap-2"
+      >
+        {steps.map((step, index) => (
+          <div key={step} className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-4 py-3">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[9px] font-black text-white/58">{index + 1}</span>
+            <p className="text-sm font-medium leading-relaxed text-white/72">{step}</p>
+          </div>
+        ))}
+      </motion.div>
+    </AnimatePresence>
   );
 }
 
-function CompactComparison({
-  id,
-  content,
-  scenario,
-  mode,
-  onModeChange,
-  onScenarioChange,
-}: {
-  id: string;
-  content: ComparisonContent;
-  scenario: FlowScenario;
-  mode: ComparisonMode;
-  onModeChange: (mode: ComparisonMode) => void;
-  onScenarioChange: (id: string) => void;
-}) {
+function MobileFlow({ content, mode, scenario }: { content: ComparisonContent; mode: ComparisonMode; scenario: FlowScenario }) {
+  const connected = mode === "with";
+  const visibleInputs = content.inputs.filter((item) => scenario.active.includes(item.id)).slice(0, 3);
+  const visibleOutputs = content.outputs.filter((item) => scenario.active.includes(item.id)).slice(0, 3);
+
   return (
-    <div className="mx-auto max-w-3xl lg:hidden">
-      <div className="text-center">
-        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">
-          {content.eyebrow}
-        </p>
-        <h2 className="mt-4 text-3xl font-black leading-[0.95] tracking-[-0.055em] text-foreground sm:text-4xl">
-          {content.title}
-        </h2>
-        <p className="mx-auto mt-4 max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground">
-          {content.description}
-        </p>
+    <div className="space-y-3 lg:hidden">
+      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/42">De onde vem a informação</p>
+      <div className="grid gap-2 sm:grid-cols-2">{visibleInputs.map((item) => <FlowCard key={`${item.id}-mobile-input`} item={item} connected={connected} active side="input" />)}</div>
+      <div className="flex flex-col items-center gap-2 py-1 text-white/46"><ArrowDown aria-hidden="true" className="h-5 w-5" /><span className="text-[8px] font-black uppercase tracking-[0.16em]">{connected ? "o Synapse relaciona o contexto" : "você precisa ligar os pontos"}</span><ArrowDown aria-hidden="true" className="h-5 w-5" /></div>
+      <div className={cn("rounded-[28px] border p-6 text-center", connected ? "border-white/22 bg-white/[0.09]" : "border-white/12 bg-white/[0.045]") }>
+        {connected ? <BrainCircuit aria-hidden="true" className="mx-auto h-7 w-7 text-white" /> : <UserRound aria-hidden="true" className="mx-auto h-7 w-7 text-white/72" />}
+        <h4 className="mt-4 text-xl font-black tracking-[-0.04em]">{connected ? "Synapse" : "Você"}</h4>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-white/56">{connected ? "entende o contexto e prepara a próxima ação" : "confere, procura, copia e decide o próximo passo"}</p>
       </div>
-
-      <div className="mt-7 grid gap-3">
-        <ModeTabs id={`${id}-compact`} mode={mode} onChange={onModeChange} />
-        <ScenarioTabs scenarios={content.scenarios} selectedId={scenario.id} onChange={onScenarioChange} />
-      </div>
-
-      <article
-        id={`${id}-compact-panel`}
-        role="tabpanel"
-        aria-labelledby={`${id}-compact-${mode}-tab`}
-        className="mt-6 overflow-hidden rounded-[28px] border border-white/10 bg-[#09090b] p-4 text-white"
-      >
-        <h3 className="text-2xl font-black leading-tight tracking-[-0.045em]">
-          {mode === "with" ? content.withTitle : content.withoutTitle}
-        </h3>
-        <p className="mt-3 text-sm font-medium leading-relaxed text-white/56">
-          {mode === "with" ? content.withText : content.withoutText}
-        </p>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2">
-          {content.nodes.map((node) => {
-            const Icon = node.icon;
-            const active = scenario.active.includes(node.id);
-            return (
-              <div
-                key={node.id}
-                className={cn(
-                  "flex items-center gap-3 rounded-2xl border bg-white/[0.035] p-3",
-                  active ? "border-white/25" : "border-white/8 opacity-55",
-                )}
-              >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.08]">
-                  <Icon aria-hidden="true" className="h-4 w-4" />
-                </span>
-                <span>
-                  <strong className="block text-sm font-black">{node.label}</strong>
-                  <span className="mt-0.5 block text-[10px] text-white/48">{node.detail}</span>
-                </span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="mt-5 space-y-2">
-          {(mode === "with" ? scenario.with : scenario.without).map((step, index) => (
-            <div key={step} className="flex items-start gap-3 rounded-xl border border-white/8 px-3 py-2.5">
-              <span className="text-[9px] font-black text-white/42">0{index + 1}</span>
-              <p className="text-xs font-medium leading-relaxed text-white/62">{step}</p>
-            </div>
-          ))}
-        </div>
-      </article>
+      <div className="flex flex-col items-center gap-2 py-1 text-white/46"><ArrowDown aria-hidden="true" className="h-5 w-5" /></div>
+      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/42">O que precisa acontecer depois</p>
+      <div className="grid gap-2 sm:grid-cols-2">{visibleOutputs.map((item) => <FlowCard key={`${item.id}-mobile-output`} item={item} connected={connected} active side="output" />)}</div>
     </div>
   );
 }
 
-export const PublicFlowComparison = ({
-  variant = "ecosystem",
-}: {
-  variant?: ComparisonVariant;
-}) => {
-  const content = contentByVariant[variant];
-  const sectionId = useId();
-  const sectionRef = useRef<HTMLElement | null>(null);
-  const canvasRef = useRef<HTMLDivElement | null>(null);
-  const coreRef = useRef<HTMLDivElement | null>(null);
-  const nodeRefs = useRef(new Map<string, HTMLElement>());
+export const PublicFlowComparison = ({ variant = "ecosystem" }: { variant?: ComparisonVariant }) => {
+  const [mode, setMode] = useState<ComparisonMode>("without");
   const [scenarioId, setScenarioId] = useState("appointment");
-  const [scrollMode, setScrollMode] = useState<ComparisonMode>("without");
-  const [manualMode, setManualMode] = useState<ComparisonMode>("without");
-  const [phase, setPhase] = useState<StoryPhase>("fragmented");
-  const [connections, setConnections] = useState<ConnectionGeometry[]>([]);
   const reduceMotion = useReducedMotion();
-  const staticProgress = useMotionValue(0);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
-  const storyProgress = reduceMotion ? staticProgress : scrollYProgress;
+  const sectionId = useId();
+  const content = contentByVariant[variant];
   const scenario = content.scenarios.find((item) => item.id === scenarioId) ?? content.scenarios[0];
-  const mode = reduceMotion ? manualMode : scrollMode;
-
-  useEffect(() => {
-    if (!reduceMotion) return;
-    staticProgress.set(manualMode === "with" ? 1 : 0);
-    setPhase(manualMode === "with" ? "connected" : "fragmented");
-  }, [manualMode, reduceMotion, staticProgress]);
-
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    if (reduceMotion) return;
-    const nextMode = modeFromProgress(latest);
-    const nextPhase = phaseFromProgress(latest);
-    setScrollMode((current) => (current === nextMode ? current : nextMode));
-    setPhase((current) => (current === nextPhase ? current : nextPhase));
-  });
-
-  const registerNode = useCallback((id: string, node: HTMLElement | null) => {
-    if (node) nodeRefs.current.set(id, node);
-    else nodeRefs.current.delete(id);
-  }, []);
-
-  useLayoutEffect(() => {
-    const canvas = canvasRef.current;
-    const core = coreRef.current;
-    if (!canvas || !core) return;
-
-    let frame = 0;
-    const measure = () => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        if (canvas.offsetWidth === 0 || canvas.offsetHeight === 0) return;
-
-        const coreLeft = core.offsetLeft;
-        const coreRight = core.offsetLeft + core.offsetWidth;
-        const coreCenterY = core.offsetTop + core.offsetHeight / 2;
-        const nextConnections = content.nodes.flatMap((node) => {
-          const element = nodeRefs.current.get(node.id);
-          if (!element) return [];
-
-          const nodeCenterY = element.offsetTop + element.offsetHeight / 2;
-          return [{
-            id: node.id,
-            side: node.side,
-            startX: node.side === "left" ? element.offsetLeft + element.offsetWidth : coreRight,
-            startY: node.side === "left" ? nodeCenterY : coreCenterY,
-            endX: node.side === "left" ? coreLeft : element.offsetLeft,
-            endY: node.side === "left" ? coreCenterY : nodeCenterY,
-          } satisfies ConnectionGeometry];
-        });
-
-        setConnections(nextConnections);
-      });
-    };
-
-    const observer = new ResizeObserver(measure);
-    observer.observe(canvas);
-    observer.observe(core);
-    nodeRefs.current.forEach((node) => observer.observe(node));
-    measure();
-
-    return () => {
-      cancelAnimationFrame(frame);
-      observer.disconnect();
-    };
-  }, [content]);
-
-  const changeDesktopMode = useCallback((nextMode: ComparisonMode) => {
-    if (reduceMotion) {
-      setManualMode(nextMode);
-      return;
-    }
-
-    const section = sectionRef.current;
-    if (!section) return;
-    const sectionTop = window.scrollY + section.getBoundingClientRect().top;
-    const availableTravel = Math.max(0, section.offsetHeight - window.innerHeight);
-    const targetProgress = nextMode === "without" ? 0.06 : 0.82;
-    window.scrollTo({
-      top: sectionTop + availableTravel * targetProgress,
-      behavior: "smooth",
-    });
-  }, [reduceMotion]);
-
-  const activeTitle = mode === "with" ? content.withTitle : content.withoutTitle;
-  const activeText = mode === "with" ? content.withText : content.withoutText;
-  const sceneTitleOpacity = useTransform(storyProgress, [0, 0.32, 0.5, 0.68, 1], [1, 0.74, 0.42, 0.82, 1]);
-  const sceneScale = useTransform(storyProgress, [0, 0.34, 0.56, 0.76, 1], [1, 0.985, 0.965, 1, 1]);
+  const connected = mode === "with";
 
   return (
     <MotionConfig reducedMotion="user">
-      <section
-        ref={sectionRef}
-        id={variant === "ecosystem" ? "diferenciais" : "synapse-continuity"}
-        aria-label={content.title}
-        className={cn(
-          "relative bg-background px-5 py-20 md:px-8",
-          reduceMotion ? "lg:py-28" : "lg:h-[360svh] lg:px-6 lg:py-0",
-        )}
-      >
-        <CompactComparison
-          id={sectionId}
-          content={content}
-          scenario={scenario}
-          mode={manualMode}
-          onModeChange={setManualMode}
-          onScenarioChange={setScenarioId}
-        />
+      <section id={variant === "ecosystem" ? "diferenciais" : "synapse-continuity"} aria-labelledby={`${sectionId}-title`} className="relative overflow-hidden bg-background px-5 py-20 md:px-8 md:py-32">
+        <div className="pointer-events-none absolute left-1/2 top-0 h-[620px] w-[960px] -translate-x-1/2 rounded-full bg-foreground/[0.035] blur-[170px]" />
+        <div className="relative z-10 mx-auto max-w-[1280px]">
+          <div className="mx-auto max-w-4xl text-center">
+            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">{content.eyebrow}</p>
+            <h2 id={`${sectionId}-title`} className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.065em] text-foreground md:text-7xl">{content.title}</h2>
+            <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">{content.description}</p>
+          </div>
 
-        <div className={cn("hidden lg:block", reduceMotion ? "" : "sticky top-0 h-svh overflow-hidden")}>
-          <div className="mx-auto grid h-full max-w-[1260px] grid-rows-[auto_auto_minmax(0,1fr)] pb-4 pt-[112px] xl:pt-[116px]">
-            <header className="grid grid-cols-[minmax(0,1fr)_minmax(320px,0.72fr)] items-end gap-8">
-              <div>
-                <p className="text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-                  {content.eyebrow}
-                </p>
-                <h2 className="mt-2 max-w-[760px] text-[clamp(2rem,3.6vw,3.9rem)] font-black leading-[0.91] tracking-[-0.06em] text-foreground">
-                  {content.title}
-                </h2>
-              </div>
-              <p className="max-w-[470px] pb-1 text-sm font-medium leading-relaxed text-muted-foreground">
-                {content.description}
-              </p>
-            </header>
+          <div className="mx-auto mt-10 max-w-[620px]">
+            <div role="tablist" aria-label="Comparar a rotina com e sem a NeuroNex" className="grid grid-cols-2 rounded-[20px] border border-border/45 bg-card/75 p-1.5 dark:border-white/10 dark:bg-white/[0.035]">
+              {(["without", "with"] as const).map((item) => {
+                const selected = mode === item;
+                return (
+                  <button
+                    key={item}
+                    id={`${sectionId}-${item}-tab`}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    aria-controls={`${sectionId}-panel`}
+                    onClick={() => setMode(item)}
+                    className={cn("min-h-12 rounded-[14px] px-4 text-[10px] font-black uppercase tracking-[0.16em] outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background", selected ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}
+                  >
+                    {item === "without" ? "Sem a NeuroNex" : "Com a NeuroNex"}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-4 flex flex-wrap justify-center gap-2" aria-label="Escolha uma situação comum da rotina">
+              {content.scenarios.map((item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-pressed={scenarioId === item.id}
+                  onClick={() => setScenarioId(item.id)}
+                  className={cn("min-h-10 rounded-full border px-3.5 text-[9px] font-black uppercase tracking-[0.13em] outline-none transition-colors motion-reduce:transition-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background", scenarioId === item.id ? "border-foreground bg-foreground text-background" : "border-border/45 bg-card/55 text-muted-foreground hover:border-foreground/35 hover:text-foreground dark:border-white/10 dark:bg-white/[0.025]")}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
 
-            <div className="mt-3 flex items-center justify-between gap-4">
-              <ModeTabs id={`${sectionId}-desktop`} mode={mode} onChange={changeDesktopMode} />
-              <ScenarioTabs scenarios={content.scenarios} selectedId={scenario.id} onChange={setScenarioId} />
+          <motion.article id={`${sectionId}-panel`} role="tabpanel" aria-labelledby={`${sectionId}-${mode}-tab`} layout layoutDependency={`${mode}-${scenario.id}`} className="relative mt-8 overflow-hidden rounded-[38px] border border-white/10 bg-[#09090b] p-5 text-white shadow-[0_42px_150px_-88px_rgba(0,0,0,0.96)] md:p-8">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_47%,rgba(255,255,255,0.09),transparent_24%),linear-gradient(135deg,rgba(255,255,255,0.045),transparent_35%,rgba(255,255,255,0.015))]" />
+            <div className="relative z-10 flex flex-col justify-between gap-5 border-b border-white/10 pb-7 lg:flex-row lg:items-end">
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div key={mode} initial={reduceMotion ? false : { opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={reduceMotion ? undefined : { opacity: 0, y: -8 }} transition={motionTransition} className="max-w-3xl">
+                  <p className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-white/48">
+                    {connected ? <Check aria-hidden="true" className="h-4 w-4" /> : <UserRound aria-hidden="true" className="h-4 w-4" />}
+                    {connected ? "rotina coordenada" : "rotina fragmentada"}
+                  </p>
+                  <h3 className="mt-4 text-3xl font-black leading-[0.92] tracking-[-0.05em] md:text-5xl">{connected ? content.withTitle : content.withoutTitle}</h3>
+                  <p className="mt-4 max-w-2xl text-sm font-medium leading-relaxed text-white/62 md:text-base">{connected ? content.withText : content.withoutText}</p>
+                </motion.div>
+              </AnimatePresence>
+              <div className="rounded-full border border-white/10 bg-white/[0.045] px-4 py-2 text-[9px] font-black uppercase tracking-[0.15em] text-white/55">Cenário: {scenario.label}</div>
             </div>
 
-            <motion.article
-              id={`${sectionId}-desktop-panel`}
-              role="tabpanel"
-              aria-labelledby={`${sectionId}-desktop-${mode}-tab`}
-              style={{ scale: sceneScale }}
-              className="relative mt-3 grid min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden rounded-[30px] border border-white/10 bg-[#09090b] p-4 text-white shadow-[0_38px_120px_-78px_rgba(0,0,0,0.95)] xl:p-5"
-            >
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_51%,rgba(255,255,255,0.085),transparent_23%),linear-gradient(135deg,rgba(255,255,255,0.035),transparent_36%)]" />
-              <div className="relative z-20 flex items-start justify-between gap-6 border-b border-white/8 pb-3">
-                <motion.div style={{ opacity: sceneTitleOpacity }} className="min-w-0 max-w-[840px]">
-                  <div className="flex items-center gap-2">
-                    <span className="h-1.5 w-1.5 rounded-full bg-white/75" />
-                    <p className="text-[8px] font-black uppercase tracking-[0.18em] text-white/44">
-                      {phaseLabels[phase]}
-                    </p>
-                  </div>
-                  <h3 className="mt-2 truncate text-[clamp(1.25rem,2vw,2rem)] font-black tracking-[-0.045em]">
-                    {activeTitle}
-                  </h3>
-                  <p className="mt-1 line-clamp-1 text-[11px] font-medium text-white/48">
-                    {activeText}
-                  </p>
+            <div className="relative mt-7 hidden min-h-[420px] grid-cols-[minmax(0,1fr)_220px_minmax(0,1fr)] gap-8 lg:grid">
+              <ConnectionLayer connected={connected} reduceMotion={reduceMotion} />
+              <div className="relative z-10 grid content-center gap-3">{content.inputs.map((item) => <FlowCard key={`input-${item.id}`} item={item} connected={connected} active={scenario.active.includes(item.id)} side="input" />)}</div>
+              <motion.div layout transition={motionTransition} className="relative z-10 flex flex-col items-center justify-center px-2 text-center">
+                <motion.div animate={connected && !reduceMotion ? { scale: [1, 1.035, 1], opacity: [0.9, 1, 0.9] } : { scale: 1, opacity: 1 }} transition={{ duration: 0.72, ease: "easeOut" }} className={cn("flex min-h-[222px] w-full flex-col items-center justify-center rounded-[32px] border px-5", connected ? "border-white/25 bg-white/[0.11] shadow-[0_28px_90px_-54px_rgba(255,255,255,0.7)]" : "border-white/12 bg-white/[0.045]") }>
+                  {connected ? <BrainCircuit aria-hidden="true" className="h-9 w-9" /> : <UserRound aria-hidden="true" className="h-9 w-9 text-white/68" />}
+                  <strong className="mt-5 text-2xl font-black tracking-[-0.04em]">{connected ? "Synapse" : "Você"}</strong>
+                  <span className="mt-3 max-w-[170px] text-xs font-medium leading-relaxed text-white/56">{connected ? "recebe o contexto, prepara a ação e pede confirmação" : "confere, lembra, transporta informações e decide o próximo passo"}</span>
+                  {connected ? <span className="mt-5 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.13em] text-white/70"><CheckCircle2 aria-hidden="true" className="h-3.5 w-3.5" />controle preservado</span> : null}
                 </motion.div>
-                <span className="shrink-0 rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[7px] font-black uppercase tracking-[0.14em] text-white/48">
-                  {scenario.label}
-                </span>
-              </div>
+              </motion.div>
+              <div className="relative z-10 grid content-center gap-3">{content.outputs.map((item) => <FlowCard key={`output-${item.id}`} item={item} connected={connected} active={scenario.active.includes(item.id)} side="output" />)}</div>
+            </div>
 
-              <div
-                ref={canvasRef}
-                className="relative z-10 grid min-h-0 grid-cols-[minmax(0,1fr)_188px_minmax(0,1fr)] grid-rows-3 gap-x-[clamp(3rem,7vw,7.5rem)] gap-y-2 py-3 xl:grid-cols-[minmax(0,1fr)_208px_minmax(0,1fr)]"
-              >
-                <ConnectionLayer connections={connections} progress={storyProgress} activeIds={scenario.active} />
-                {content.nodes.map((node, index) => (
-                  <FlowNodeCard
-                    key={node.id}
-                    item={node}
-                    index={index}
-                    active={scenario.active.includes(node.id)}
-                    progress={storyProgress}
-                    nodeRef={(element) => registerNode(node.id, element)}
-                  />
-                ))}
-                <div ref={coreRef} style={{ gridColumn: 2, gridRow: "1 / span 3" }} className="pointer-events-none invisible min-h-0" aria-hidden="true" />
-                <CentralCore progress={storyProgress} />
-              </div>
+            <div className="mt-7"><MobileFlow content={content} mode={mode} scenario={scenario} /></div>
 
-              <div className="relative z-20 border-t border-white/8 pt-3">
-                <ScenarioSummary scenario={scenario} mode={mode} />
+            <div className="relative z-10 mt-7 grid gap-4 border-t border-white/10 pt-7 lg:grid-cols-[0.82fr_1.18fr]">
+              <div className="rounded-[26px] border border-white/10 bg-white/[0.035] p-5">
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/42">{connected ? "O que muda" : "O ponto de atrito"}</p>
+                <h4 className="mt-3 text-xl font-black tracking-[-0.04em]">{connected ? "A NeuroNex vira o painel de trabalho do Synapse." : "O sistema registra. Você ainda precisa operar cada parte."}</h4>
+                <p className="mt-3 text-sm font-medium leading-relaxed text-white/58">{connected ? "O profissional continua podendo inserir e editar informações. A diferença é não depender só de trabalho manual para manter a rotina em movimento." : "Mesmo quando um sistema guarda agenda, prontuário e financeiro, interpretar o contexto e descobrir a próxima ação ainda costuma ficar por sua conta."}</p>
               </div>
-              <p className="sr-only" aria-live="polite">
-                {phaseLabels[phase]}. Cenário selecionado: {scenario.label}.
-              </p>
-            </motion.article>
-          </div>
+              <div>
+                <p className="mb-3 text-[9px] font-black uppercase tracking-[0.18em] text-white/42">{connected ? "Como esse cenário fica com a NeuroNex" : "Como esse cenário costuma acontecer hoje"}</p>
+                <ScenarioSteps scenario={scenario} mode={mode} />
+              </div>
+            </div>
+          </motion.article>
         </div>
       </section>
     </MotionConfig>
