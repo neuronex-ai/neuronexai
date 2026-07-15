@@ -79,7 +79,7 @@ export const LandingProblemSection = () => (
       <SectionHeader
         eyebrow="O problema real"
         title={<>O que consome tempo não é a psicologia. <span className="text-muted-foreground/35">É o operacional.</span></>}
-        description="A maioria das clínicas cresce juntando ferramentas. O NeuroNex nasce para substituir esse mosaico por uma operação única, inteligente e conectada."
+        description="Nenhum psicólogo deveria terminar o dia conferindo mensagens, copiando dados e tentando lembrar o que ficou pendente. A NeuroNex aproxima essas partes da rotina para dar mais clareza antes, durante e depois de cada atendimento."
       />
       <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {painPoints.map((item, index) => (
@@ -344,12 +344,12 @@ export const LandingProductShowcase = () => {
 };
 
 const systemCards = [
-  { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos, teleconsulta e evolução clínica." },
-  { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, lembretes e o mesmo Synapse no WhatsApp do psicólogo." },
-  { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
-  { icon: FileCheck2, title: "Fluxo fiscal", text: "Dados fiscais, cobrança e emissão de NFS-e organizados no mesmo percurso." },
-  { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
+  { icon: Stethoscope, title: "Rotina clínica", text: "Agenda, pacientes, prontuário, documentos e teleconsulta no mesmo ambiente." },
+  { icon: BrainCircuit, title: "Synapse", text: "Texto, voz, NeuroBox e apoio para organizar os próximos passos." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, lembretes e conversas que não precisam perder o contexto." },
+  { icon: CreditCard, title: "Financeiro", text: "Cobranças, recebimentos e o que precisa ser acompanhado na rotina." },
+  { icon: FileCheck2, title: "Fiscal", text: "Dados fiscais conectados ao fluxo de cobrança para reduzir conferências separadas." },
+  { icon: BarChart3, title: "Visão da prática", text: "Informações clínicas, financeiras e operacionais mais fáceis de encontrar." },
 ];
 
 export const LandingOperatingSystemSection = () => (
@@ -358,9 +358,9 @@ export const LandingOperatingSystemSection = () => (
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
         <div>
-          <SectionBadge icon={BadgeCheck}>Sistema operacional</SectionBadge>
-          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">Um único sistema para operar a prática inteira.</h2>
-          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-62 md:text-xl">O NeuroNex não é só uma agenda, um prontuário ou um financeiro. É uma camada operacional que conecta cada parte da rotina.</p>
+          <SectionBadge icon={BadgeCheck}>A rotina no mesmo lugar</SectionBadge>
+          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">Tudo o que sustenta a prática, mais perto.</h2>
+          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Você continua no controle. A diferença é não precisar tratar agenda, prontuário, comunicação e financeiro como ilhas que exigem uma conferência por vez.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {systemCards.map((card) => (
@@ -377,9 +377,9 @@ export const LandingOperatingSystemSection = () => (
 );
 
 const synapseFeatures = [
-  { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
-  { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "O mesmo Synapse acompanha o psicólogo no WhatsApp. O NeuroZap é a infraestrutura de conexão e supervisão do WhatsApp Business." },
+  { icon: FileText, title: "Texto", text: "Converse, revise e deixe uma ação preparada para confirmar no momento certo." },
+  { icon: Mic2, title: "Voz", text: "Pergunte e navegue sem quebrar o ritmo com cliques e buscas repetidas." },
+  { icon: MessageCircle, title: "WhatsApp", text: "A conversa com o psicólogo continua pelo WhatsApp e aparece no histórico da NeuroNex." },
   { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroFlow, NeuroPulse e NeuroScan. O NeuroScan já auxilia a transcrever fichas de anamnese no prontuário." },
 ];
 
@@ -390,8 +390,8 @@ export const LandingSynapseSection = () => (
         <SectionHeader
           align="left"
           eyebrow="Synapse AI"
-          title={<>Não é um chat. <span className="text-muted-foreground/35">É a inteligência operacional da clínica.</span></>}
-          description="O Synapse apoia documentação, organização, comunicação e tomada de decisão operacional. A atuação clínica continua sempre sob responsabilidade do profissional."
+          title={<>O Synapse acompanha o que está acontecendo. <span className="text-muted-foreground/35">E deixa a próxima etapa mais clara.</span></>}
+          description="Ele ajuda a encontrar informações, organizar uma conversa e preparar rotinas. A leitura clínica e a decisão permanecem com o psicólogo."
         />
         <FadeIn delay={0.2}>
           <div className="rounded-[38px] border border-border/40 bg-card/80 p-5 shadow-premium dark:border-white/10 dark:bg-white/[0.035]">
@@ -400,7 +400,7 @@ export const LandingSynapseSection = () => (
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Sparkles className="h-5 w-5" /></div>
                 <span className="text-[9px] font-black uppercase tracking-[0.22em] opacity-50">contexto ativo</span>
               </div>
-              <p className="mt-12 text-3xl font-black leading-[0.95] tracking-[-0.06em]">Agenda, prontuário, paciente e financeiro no mesmo raciocínio.</p>
+              <p className="mt-12 text-3xl font-black leading-[0.95] tracking-[-0.06em]">O contexto não precisa se perder toda vez que você muda de tela ou de canal.</p>
               <div className="mt-8 grid gap-2">
                 {synapseFeatures.map((feature) => (
                   <div key={feature.title} className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
@@ -435,8 +435,8 @@ export const LandingFinanceFiscalSection = () => (
         <FadeIn>
           <article className="relative h-full overflow-hidden rounded-[42px] border border-border/40 bg-card/80 p-8 shadow-premium dark:border-white/10 dark:bg-white/[0.035] md:p-10">
             <WalletCards className="h-8 w-8 text-muted-foreground" />
-            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em] text-foreground">NeuroFinance para receber, cobrar e decidir.</h2>
-            <p className="mt-6 text-base font-medium leading-relaxed text-muted-foreground/70">Pix, QR Code, boletos, cobranças, saques e extrato em um painel financeiro feito para a rotina do consultório.</p>
+            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em] text-foreground">Cobrar e acompanhar sem abrir mais uma planilha.</h2>
+            <p className="mt-6 text-base font-medium leading-relaxed text-muted-foreground/70">Pix, QR Code, boletos, cobranças, saques e extrato próximos da rotina do consultório — com uma visão simples do que entrou, saiu e pede atenção.</p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {["Pix e QR Code", "Boletos e cobranças", "Extrato e repasses", "Saúde da conta"].map((item) => <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.035] px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] text-foreground/70 dark:border-white/10 dark:bg-white/[0.045]">{item}</div>)}
             </div>
@@ -445,8 +445,8 @@ export const LandingFinanceFiscalSection = () => (
         <FadeIn delay={0.1}>
           <article className="relative h-full overflow-hidden rounded-[42px] border border-border/40 bg-foreground p-8 text-background shadow-[0_34px_120px_-80px_rgba(0,0,0,0.86)] dark:bg-white dark:text-zinc-950 md:p-10">
             <FileCheck2 className="h-8 w-8 opacity-60" />
-            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em]">Dados fiscais e NFS-e no mesmo fluxo.</h2>
-            <p className="mt-6 text-base font-medium leading-relaxed opacity-62">A NeuroNex conecta dados fiscais, cobrança e NeuroFinance para organizar a emissão e acompanhar cada etapa sem alternar sistemas.</p>
+            <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em]">Fiscal não precisa virar uma tarefa esquecida no fim do dia.</h2>
+            <p className="mt-6 text-base font-medium leading-relaxed opacity-62">Dados fiscais, cobrança e NeuroFinance ficam no mesmo percurso para que você acompanhe cada etapa sem alternar sistemas para conferir o que falta.</p>
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {["Dados fiscais", "Recibos", "Emissão de NFS-e", "Automação fiscal"].map((item) => <div key={item} className="rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[10px] font-black uppercase tracking-[0.16em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">{item}</div>)}
             </div>
@@ -546,8 +546,8 @@ export const LandingFinalCTASection = () => (
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_42%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.055),transparent_42%,rgba(0,0,0,0.02))]" />
       <div className="relative z-10 mx-auto max-w-4xl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div>
-        <h2 className="mt-9 text-5xl font-black leading-[0.88] tracking-[-0.065em] md:text-7xl">A próxima versão da sua prática começa aqui.</h2>
-        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Entre agora e conecte inteligência contextual, financeiro e gestão em um único lugar.</p>
+        <h2 className="mt-9 text-5xl font-black leading-[0.88] tracking-[-0.065em] md:text-7xl">A sua prática não precisa continuar espalhada.</h2>
+        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Conheça uma forma mais simples de acompanhar pacientes, atendimentos, comunicação e a rotina que acontece entre as sessões.</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button asChild className="h-14 rounded-2xl bg-background px-8 text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>

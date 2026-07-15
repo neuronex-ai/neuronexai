@@ -205,16 +205,124 @@ const SynapseLanding = () => {
         </section>
         </LandingSectionStage>
 
-        <section className="px-5 py-20 md:px-8 md:py-28"><div className="mx-auto max-w-[1380px]"><div className="mx-auto max-w-5xl text-center"><p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">No dia a dia</p><h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">Menos navegação. <span className="text-muted-foreground/35">Mais continuidade.</span></h2></div><div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{[
-          { icon: CalendarDays, title: "Agenda", text: "Consulte compromissos e mudanças do dia." },
-          { icon: ClipboardList, title: "Contexto", text: "Encontre informações permitidas rapidamente." },
-          { icon: Sparkles, title: "Organização", text: "Transforme perguntas em próximos passos." },
-          { icon: WalletCards, title: "Financeiro", text: "Consulte indicadores conforme permissões." },
-        ].map((item) => <article key={item.title} className="rounded-[28px] border border-border/40 bg-card/72 p-6 dark:border-white/10 dark:bg-white/[0.03]"><item.icon className="h-5 w-5 text-muted-foreground" /><h3 className="mt-8 text-xl font-black">{item.title}</h3><p className="mt-3 text-sm font-medium text-muted-foreground/68">{item.text}</p></article>)}</div></div></section>
+        <LandingSectionStage index={5}>
+          <section className="px-5 py-20 md:px-8 md:py-28">
+            <div className="mx-auto max-w-[1380px]">
+              <div className="mx-auto max-w-5xl text-center">
+                <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">No dia a dia</p>
+                <h2 className="mt-6 text-4xl font-black leading-[0.9] tracking-[-0.06em] md:text-7xl">
+                  Menos procura. <span className="text-muted-foreground/35">Mais continuidade.</span>
+                </h2>
+                <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
+                  Quando a rotina não fica espalhada, sobra menos tempo procurando a informação certa e mais espaço para estar presente no atendimento.
+                </p>
+              </div>
+              <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {[
+                  { icon: CalendarDays, title: "Agenda", text: "Veja o que mudou no dia sem conferir várias telas." },
+                  { icon: ClipboardList, title: "Contexto", text: "Encontre o histórico permitido quando ele realmente faz falta." },
+                  { icon: Sparkles, title: "Próximo passo", text: "Transforme uma pergunta em um caminho claro para revisar." },
+                  { icon: WalletCards, title: "Financeiro", text: "Acompanhe o que pede atenção sem separar a rotina em planilhas." },
+                ].map((item) => (
+                  <article key={item.title} className="rounded-[28px] border border-border/40 bg-card/72 p-6 dark:border-white/10 dark:bg-white/[0.03]">
+                    <item.icon aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
+                    <h3 className="mt-8 text-xl font-black">{item.title}</h3>
+                    <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground/68">{item.text}</p>
+                  </article>
+                ))}
+              </div>
+            </div>
+          </section>
+        </LandingSectionStage>
 
-        <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto grid max-w-[1200px] gap-5 lg:grid-cols-2"><article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950"><LockKeyhole aria-hidden="true" className="h-7 w-7 opacity-55" /><h2 className="mt-9 text-4xl font-black leading-[0.9] tracking-[-0.06em]">Contexto dentro das permissões.</h2><div className="mt-7 grid gap-2">{["Acesso condicionado ao usuário", "Informações dentro do escopo disponível", "Controle e rastreabilidade", "Uso responsável da inteligência"].map((item) => <div key={item} className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-sm font-semibold dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]"><Check aria-hidden="true" className="h-4 w-4" />{item}</div>)}</div></article><article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03]"><p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Dúvidas frequentes</p><div className="mt-4 divide-y divide-border/40 dark:divide-white/10">{questions.map(([question, answer], index) => { const isOpen = open === index; return <div key={question}><button id={`synapse-faq-trigger-${index}`} type="button" aria-expanded={isOpen} aria-controls={`synapse-faq-panel-${index}`} onClick={() => setOpen(isOpen ? -1 : index)} className="block min-h-12 w-full py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"><div className="flex items-center justify-between gap-4"><span className="text-sm font-black">{question}</span><ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} /></div></button><AnimatePresence initial={false}>{isOpen ? <motion.p id={`synapse-faq-panel-${index}`} role="region" aria-labelledby={`synapse-faq-trigger-${index}`} initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden pb-5 text-sm font-medium leading-relaxed text-muted-foreground/72">{answer}</motion.p> : null}</AnimatePresence></div>; })}</div></article></div></section>
+        <LandingSectionStage index={6}>
+          <section className="px-5 pb-20 md:px-8 md:pb-28">
+            <div className="mx-auto grid max-w-[1200px] gap-5 lg:grid-cols-2">
+              <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950">
+                <LockKeyhole aria-hidden="true" className="h-7 w-7 opacity-55" />
+                <h2 className="mt-9 text-4xl font-black leading-[0.9] tracking-[-0.06em]">Contexto só onde ele faz sentido.</h2>
+                <p className="mt-5 text-sm font-medium leading-relaxed opacity-65">
+                  O Synapse não é uma porta aberta para todos os dados. Ele trabalha dentro do acesso disponível, registra o caminho e respeita as confirmações necessárias.
+                </p>
+                <div className="mt-7 grid gap-2">
+                  {[
+                    "Acesso ligado à pessoa e ao seu papel",
+                    "Informações dentro do que foi autorizado",
+                    "Histórico das ações que precisaram ser registradas",
+                    "Uso de IA com responsabilidade",
+                  ].map((item) => (
+                    <div key={item} className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-sm font-semibold dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
+                      <Check aria-hidden="true" className="h-4 w-4" />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </article>
+              <article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03]">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Dúvidas frequentes</p>
+                <div className="mt-4 divide-y divide-border/40 dark:divide-white/10">
+                  {questions.map(([question, answer], index) => {
+                    const isOpen = open === index;
 
-        <section className="px-5 pb-20 md:px-8 md:pb-28"><div className="mx-auto max-w-[1200px] rounded-[42px] bg-foreground p-8 text-center text-background dark:bg-white dark:text-zinc-950 md:p-12"><h2 className="mx-auto max-w-4xl text-4xl font-black leading-[0.88] tracking-[-0.065em] md:text-6xl">Sua rotina já tem contexto. Agora ela pode responder.</h2><div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row"><Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white"><Link to="/create-account">Começar agora <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-transparent px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background dark:border-zinc-950/20 dark:text-zinc-950"><Link to="/contato">Falar com a equipe</Link></Button></div></div></section>
+                    return (
+                      <div key={question}>
+                        <button
+                          id={`synapse-faq-trigger-${index}`}
+                          type="button"
+                          aria-expanded={isOpen}
+                          aria-controls={`synapse-faq-panel-${index}`}
+                          onClick={() => setOpen(isOpen ? -1 : index)}
+                          className="block min-h-12 w-full py-5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          <span className="flex items-center justify-between gap-4">
+                            <span className="text-sm font-black">{question}</span>
+                            <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                          </span>
+                        </button>
+                        <AnimatePresence initial={false}>
+                          {isOpen ? (
+                            <motion.p
+                              id={`synapse-faq-panel-${index}`}
+                              role="region"
+                              aria-labelledby={`synapse-faq-trigger-${index}`}
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden pb-5 text-sm font-medium leading-relaxed text-muted-foreground/72"
+                            >
+                              {answer}
+                            </motion.p>
+                          ) : null}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
+                </div>
+              </article>
+            </div>
+          </section>
+        </LandingSectionStage>
+
+        <LandingSectionStage index={7}>
+          <section className="px-5 pb-20 md:px-8 md:pb-28">
+            <div className="mx-auto max-w-[1200px] rounded-[42px] bg-foreground p-8 text-center text-background dark:bg-white dark:text-zinc-950 md:p-12">
+              <h2 className="mx-auto max-w-4xl text-4xl font-black leading-[0.88] tracking-[-0.065em] md:text-6xl">
+                Sua prática já tem contexto. Agora ele pode trabalhar a seu favor.
+              </h2>
+              <p className="mx-auto mt-6 max-w-2xl text-sm font-medium leading-relaxed opacity-65 md:text-base">
+                Conheça um sistema para psicólogos que aproxima agenda, prontuário, comunicação, financeiro e as tarefas que hoje dependem de você lembrar de tudo.
+              </p>
+              <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+                <Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white">
+                  <Link to="/create-account">Começar agora <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                </Button>
+                <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-transparent px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background dark:border-zinc-950/20 dark:text-zinc-950">
+                  <Link to="/contato">Falar com a equipe</Link>
+                </Button>
+              </div>
+            </div>
+          </section>
+        </LandingSectionStage>
       </main>
       <Footer />
     </div>
