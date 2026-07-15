@@ -26,7 +26,7 @@ import {
   StickyNote,
   Plus,
 } from "lucide-react";
-import { addMonths, addWeeks, differenceInMinutes, format, startOfDay } from "date-fns";
+import { differenceInMinutes, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
@@ -58,6 +58,7 @@ import { useAddAppointmentTransaction } from "@/hooks/use-add-appointment-transa
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
 import { useUsePackageSession } from "@/hooks/use-use-package-session";
+import { useAppointmentSeries } from "@/hooks/use-appointment-series";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
@@ -66,6 +67,11 @@ import {
   buildEventNotes as buildEventNotesFromMetadata,
   buildSessionMetadata,
 } from "@/lib/appointment-metadata";
+import {
+  APPOINTMENT_RECURRENCE_LABELS,
+  appointmentSeriesSummary,
+  type AppointmentSeriesPreview,
+} from "@/lib/appointment-recurrence";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
@@ -105,6 +111,10 @@ const formSchema = z
     recurrenceFrequency: z.enum(["weekly", "biweekly", "monthly"]).default("weekly"),
     recurrenceCount: z.coerce.number().min(1).max(20).optional(),
   })
+  .refine(
+    (data) => !data.recurrence || (data.recurrenceCount || 0) >= 2,
+    { message: "Informe pelo menos 2 ocorrências", path: ["recurrenceCount"] },
+  )
   .refine(
     (data) => {
       if (data.eventType === "session") return !!data.patientId && data.patientId.length > 0;
@@ -168,10 +178,23 @@ const addMinutesToTime = (time: string, minutesToAdd: number) => {
   return format(date, "HH:mm");
 };
 
-const addRecurrenceInterval = (date: Date, index: number, frequency: FormValues["recurrenceFrequency"]) => {
-  if (frequency === "biweekly") return addWeeks(date, index * 2);
-  if (frequency === "monthly") return addMonths(date, index);
-  return addWeeks(date, index);
+const buildAppointmentTimes = (values: FormValues) => {
+  const startDateTime = new Date(values.date);
+  const [hours, minutes] = values.startTime.split(":").map(Number);
+  startDateTime.setHours(hours, minutes, 0, 0);
+
+  let endDateTime: Date;
+  if (values.endTime) {
+    endDateTime = new Date(values.date);
+    const [endHours, endMinutes] = values.endTime.split(":").map(Number);
+    endDateTime.setHours(endHours, endMinutes, 0, 0);
+    if (endDateTime <= startDateTime) endDateTime.setDate(endDateTime.getDate() + 1);
+  } else {
+    endDateTime = new Date(startDateTime);
+    endDateTime.setMinutes(endDateTime.getMinutes() + values.duration);
+  }
+
+  return { startDateTime, endDateTime };
 };
 
 // ─── Props ────────────────────────────────────────────────────────────
@@ -244,10 +267,18 @@ export function NewAppointmentModal({
   const onOpenChange = externalOnOpenChange || setInternalIsOpen;
 
   const [step, setStep] = useState(1);
+  const [seriesPreview, setSeriesPreview] = useState<AppointmentSeriesPreview | null>(null);
+  const [seriesPreviewError, setSeriesPreviewError] = useState<string | null>(null);
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
   const { mutateAsync: createAppointmentTransaction, isPending: isCreatingTransaction } = useAddAppointmentTransaction();
   const { mutateAsync: debitPackageSession, isPending: isDebitingPackage } = useUsePackageSession();
+  const {
+    previewSeries,
+    createSeries,
+    isPreviewingSeries,
+    isCreatingSeries,
+  } = useAppointmentSeries();
 
   const effectiveDate = selectedDate || initialDate;
 
@@ -297,11 +328,30 @@ export function NewAppointmentModal({
   const startTime = form.watch("startTime");
   const duration = form.watch("duration");
   const modality = form.watch("modality");
+  const recurrenceEnabled = form.watch("recurrence");
+  const recurrenceFrequency = form.watch("recurrenceFrequency");
+  const recurrenceCount = form.watch("recurrenceCount") || 1;
+  const selectedFormDate = form.watch("date");
+  const selectedEndTime = form.watch("endTime");
 
   useEffect(() => {
     if (!startTime || !duration) return;
     form.setValue("endTime", addMinutesToTime(startTime, duration));
   }, [duration, form, startTime]);
+
+  useEffect(() => {
+    setSeriesPreview(null);
+    setSeriesPreviewError(null);
+  }, [
+    duration,
+    eventType,
+    recurrenceCount,
+    recurrenceEnabled,
+    recurrenceFrequency,
+    selectedEndTime,
+    selectedFormDate,
+    startTime,
+  ]);
 
   // Reset step quando muda de tipo
   useEffect(() => {
@@ -331,11 +381,13 @@ export function NewAppointmentModal({
   const isSubmitting =
     isCreatingAppointment ||
     isCreatingTransaction ||
-    isDebitingPackage;
+    isDebitingPackage ||
+    isPreviewingSeries ||
+    isCreatingSeries;
 
   // Auto‑ativar pacote quando tem pacotes, ou abrir lançamento quando não tem
   useEffect(() => {
-    if (eventType !== "session" || step !== 3) return;
+    if (eventType !== "session" || recurrenceEnabled || step !== 3) return;
     if (hasActivePackage) {
       form.setValue("usePackage", true);
       if (activePackages && activePackages.length > 0 && !form.getValues("packageId")) {
@@ -348,7 +400,7 @@ export function NewAppointmentModal({
         form.setValue("transactionAmount", 150);
       }
     }
-  }, [hasActivePackage, activePackages, step, eventType, form]);
+  }, [hasActivePackage, activePackages, step, eventType, form, recurrenceEnabled]);
 
   // Zerar valor da transação quando usa pacote
   useEffect(() => {
@@ -359,41 +411,38 @@ export function NewAppointmentModal({
   }, [usePackageSwitch, activePackages, form]);
 
   // ── Número total de passos ─────────────────────────────────────────
-  const totalSteps = eventType === "event" ? 2 : 3;
+  const totalSteps = recurrenceEnabled ? 3 : eventType === "event" ? 2 : 3;
+
+  const loadSeriesPreview = async (values: FormValues) => {
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values);
+    setSeriesPreviewError(null);
+    try {
+      const preview = await previewSeries({
+        startTime: startDateTime,
+        endTime: endDateTime,
+        frequency: values.recurrenceFrequency,
+        occurrenceCount: values.recurrenceCount || 1,
+      });
+      setSeriesPreview(preview);
+      return preview;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Não foi possível verificar a disponibilidade.";
+      setSeriesPreview(null);
+      setSeriesPreviewError(message);
+      toast.error(message);
+      return null;
+    }
+  };
 
   // ── Submit ─────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
-    const startDateTime = new Date(values.date);
-    const [hours, minutes] = values.startTime.split(":").map(Number);
-    startDateTime.setHours(hours, minutes, 0, 0);
-
-    let endDateTime: Date;
-
-    if (values.endTime) {
-      endDateTime = new Date(values.date);
-      const [eh, em] = values.endTime.split(":").map(Number);
-      endDateTime.setHours(eh, em, 0, 0);
-      if (endDateTime <= startDateTime) {
-        endDateTime.setDate(endDateTime.getDate() + 1);
-      }
-    } else {
-      endDateTime = new Date(startDateTime);
-      endDateTime.setMinutes(endDateTime.getMinutes() + values.duration);
-    }
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values);
 
     let notesStr = values.notes || "";
     let locStr: string | null = null;
 
     const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000);
-    const recurrenceCount = values.recurrence ? values.recurrenceCount || 1 : 1;
-    if(values.eventType==="session"&&values.usePackage&&selectedPackage&&remainingSessions<recurrenceCount){toast.error(`O pacote possui ${remainingSessions} sess${remainingSessions===1?"ão disponível":"ões disponíveis"}, mas a recorrência cria ${recurrenceCount}.`);return;}
-    const recurrenceMetadata = values.recurrence
-      ? {
-          enabled: true,
-          frequency: values.recurrenceFrequency,
-          count: recurrenceCount,
-        }
-      : { enabled: false };
     const metadata = values.eventType === "event"
       ? buildEventMetadata({
           title: values.eventTitle || "Compromisso",
@@ -419,7 +468,6 @@ export function NewAppointmentModal({
             installments: values.installments || 1,
           },
         });
-    metadata.recurrence = recurrenceMetadata;
 
     if (values.eventType === "event") {
       notesStr = buildEventNotesFromMetadata(metadata);
@@ -439,35 +487,77 @@ export function NewAppointmentModal({
       metadata,
     };
 
-    let createdPrimaryAppointment: any = null;
+    let createdPrimaryAppointment: Awaited<ReturnType<typeof createAppointment>>["newAppointment"] | null = null;
 
     try {
-      const createdAppointments = [];
-
-      for (let index = 0; index < recurrenceCount; index += 1) {
-        const occurrenceStart = addRecurrenceInterval(startDateTime, index, values.recurrenceFrequency);
-        const occurrenceEnd = addRecurrenceInterval(endDateTime, index, values.recurrenceFrequency);
-
-        const result = await createAppointment({
-          ...appointmentPayload,
-          start_time: occurrenceStart,
-          end_time: occurrenceEnd,
-          metadata:{...metadata,recurrence:{...recurrenceMetadata,occurrence:index+1}},
-        } as any);
-
-        createdAppointments.push(result.newAppointment);
-        if (!createdPrimaryAppointment) {
-          createdPrimaryAppointment = result.newAppointment;
+      if (values.recurrence) {
+        const latestPreview = seriesPreview?.valid
+          ? seriesPreview
+          : await loadSeriesPreview(values);
+        if (!latestPreview?.valid) {
+          setStep(3);
+          toast.error("Revise as datas em conflito antes de criar a série.");
+          return;
         }
-        if(values.eventType==="session"&&result.newAppointment){if(values.usePackage&&selectedPackage?.id&&values.patientId){await debitPackageSession({packageId:selectedPackage.id,patientId:values.patientId,appointmentId:result.newAppointment.id,idempotencyKey:`appointment:${result.newAppointment.id}`,reason:`Sessão ${index+1} de ${recurrenceCount} vinculada ao agendamento`});}else if(values.shouldCreateTransaction){await createAppointmentTransaction({appointmentId:result.newAppointment.id,description:`Sessão - ${patients?.find(p=>p.id===values.patientId)?.name||"Paciente"}`,amount:values.transactionAmount||0,type:"income",category:"Sessão",date:occurrenceStart,payment_method:values.transactionMethod||"pix",installments:values.installments||1,patient_id:values.patientId||null,package_id:null,status:"pending"});}}
-      }
 
-      createdPrimaryAppointment = createdAppointments[0] || createdPrimaryAppointment;
+        const result = await createSeries({
+          patientId: values.eventType === "session" ? values.patientId || null : null,
+          startTime: startDateTime,
+          endTime: endDateTime,
+          frequency: values.recurrenceFrequency,
+          occurrenceCount: values.recurrenceCount || 1,
+          type:
+            values.eventType === "session"
+              ? (values.modality as "presencial" | "online")
+              : "block",
+          notes: notesStr || null,
+          location: values.eventType === "event" ? values.eventLocation || null : locStr,
+          metadata,
+        });
+
+        if (!result.success) {
+          if (result.preview) setSeriesPreview(result.preview);
+          setSeriesPreviewError("A disponibilidade mudou. Revise os conflitos encontrados.");
+          toast.error("A disponibilidade mudou. Nenhum agendamento foi criado.");
+          return;
+        }
+      } else {
+        const result = await createAppointment(appointmentPayload as any);
+        createdPrimaryAppointment = result.newAppointment;
+
+        if (values.eventType === "session" && result.newAppointment) {
+          if (values.usePackage && selectedPackage?.id && values.patientId) {
+            await debitPackageSession({
+              packageId: selectedPackage.id,
+              patientId: values.patientId,
+              appointmentId: result.newAppointment.id,
+              idempotencyKey: `appointment:${result.newAppointment.id}`,
+              reason: "Sessão vinculada ao agendamento",
+            });
+          } else if (values.shouldCreateTransaction) {
+            await createAppointmentTransaction({
+              appointmentId: result.newAppointment.id,
+              description: `Sessão - ${patients?.find((patient) => patient.id === values.patientId)?.name || "Paciente"}`,
+              amount: values.transactionAmount || 0,
+              type: "income",
+              category: "Sessão",
+              date: startDateTime,
+              payment_method: values.transactionMethod || "pix",
+              installments: values.installments || 1,
+              patient_id: values.patientId || null,
+              package_id: null,
+              status: "pending",
+            });
+          }
+        }
+      }
 
       onOpenChange(false);
       form.reset();
+      setSeriesPreview(null);
+      setSeriesPreviewError(null);
       setStep(1);
-    } catch (error: any) {
+    } catch (error: unknown) {
       if (createdPrimaryAppointment) {
         toast.warning("Agendamento criado, mas o alinhamento financeiro precisa ser revisado.");
         onOpenChange(false);
@@ -476,7 +566,9 @@ export function NewAppointmentModal({
         return;
       }
 
-      toast.error(error?.message || "Não foi possível registrar o agendamento.");
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível registrar o agendamento.",
+      );
     }
   };
 
@@ -760,7 +852,7 @@ export function NewAppointmentModal({
                 <Repeat className="h-4 w-4 text-muted-foreground/60" />
                 Recorrência
               </FormLabel>
-              <p className="text-xs text-muted-foreground/60">Cria novas ocorrências com a frequência selecionada.</p>
+              <p className="text-xs text-muted-foreground/60">A quantidade total inclui a primeira sessão.</p>
             </div>
             <FormControl>
               <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-foreground" />
@@ -801,8 +893,9 @@ export function NewAppointmentModal({
               <FormItem className="space-y-2">
                 <FormLabel className={labelBase}>{eventType === "event" ? "Ocorrências" : "Sessões"}</FormLabel>
                 <FormControl>
-                  <Input type="number" min={1} max={20} {...field} className={cn(inputBase, "px-4 font-medium")} />
+                  <Input type="number" min={2} max={20} {...field} className={cn(inputBase, "px-4 font-medium")} />
                 </FormControl>
+                <FormMessage />
               </FormItem>
             )}
           />
@@ -1245,6 +1338,123 @@ export function NewAppointmentModal({
     </div>
   );
 
+  const renderRecurrencePreview = () => {
+    const frequencyLabel = APPOINTMENT_RECURRENCE_LABELS[recurrenceFrequency];
+    return (
+      <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 motion-reduce:animate-none">
+        <div className="space-y-1.5">
+          <h3 className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
+            <span className="rounded-full bg-secondary/20 p-2">
+              <Repeat className="h-4 w-4 text-foreground" aria-hidden="true" />
+            </span>
+            Revisar recorrência
+          </h3>
+          <p className="ml-1 text-sm font-medium text-muted-foreground">
+            Confira todas as datas antes de confirmar. A disponibilidade será revalidada ao criar.
+          </p>
+        </div>
+
+        {isPreviewingSeries ? (
+          <div className={cn(cardBase, "flex min-h-32 items-center justify-center gap-3")} role="status">
+            <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+            <span className="text-sm font-medium text-muted-foreground">Verificando todas as datas...</span>
+          </div>
+        ) : null}
+
+        {!isPreviewingSeries && seriesPreviewError ? (
+          <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.07] p-4 text-sm text-red-600" role="alert">
+            {seriesPreviewError}
+          </div>
+        ) : null}
+
+        {!isPreviewingSeries && seriesPreview ? (
+          <>
+            <div
+              className={cn(
+                "rounded-2xl border p-4",
+                seriesPreview.valid
+                  ? "border-emerald-500/25 bg-emerald-500/[0.07]"
+                  : "border-amber-500/25 bg-amber-500/[0.07]",
+              )}
+            >
+              <div className="flex items-start gap-3">
+                {seriesPreview.valid ? (
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
+                ) : (
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
+                )}
+                <div>
+                  <p className="font-bold text-foreground">
+                    {appointmentSeriesSummary(seriesPreview.frequency, seriesPreview.totalOccurrences)}
+                  </p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                    {seriesPreview.valid
+                      ? "Todos os horários estão disponíveis neste momento."
+                      : `${seriesPreview.conflicts.length} ${seriesPreview.conflicts.length === 1 ? "conflito encontrado" : "conflitos encontrados"}. Volte e ajuste a data ou o horário.`}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {[
+                ["Frequência", frequencyLabel],
+                ["Quantidade total", String(seriesPreview.totalOccurrences)],
+                ["Duração", `${seriesPreview.durationMinutes} min`],
+                ["Horário", format(new Date(seriesPreview.firstStartTime), "HH:mm")],
+                ["Primeira data", format(new Date(seriesPreview.firstStartTime), "dd/MM/yyyy")],
+                ["Última data", format(new Date(seriesPreview.lastStartTime), "dd/MM/yyyy")],
+              ].map(([label, value]) => (
+                <div key={label} className={cn(cardBase, "space-y-1 p-3")}>
+                  <dt className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{label}</dt>
+                  <dd className="text-sm font-bold text-foreground">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="space-y-2" aria-label="Datas da série">
+              <p className={labelBase}>Datas geradas</p>
+              <ol className="grid gap-2">
+                {seriesPreview.occurrences.map((occurrence) => (
+                  <li
+                    key={`${occurrence.occurrenceNumber}-${occurrence.startTime}`}
+                    className={cn(
+                      "flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-4 py-3",
+                      occurrence.status === "conflict"
+                        ? "border-red-500/25 bg-red-500/[0.06]"
+                        : "border-border/60 bg-muted/20",
+                    )}
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background text-xs font-bold tabular-nums">
+                        {occurrence.occurrenceNumber}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-bold text-foreground">
+                          {format(new Date(occurrence.startTime), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                        </p>
+                        {occurrence.reason ? (
+                          <p className="mt-0.5 text-xs text-red-600">{occurrence.reason}</p>
+                        ) : null}
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                      {format(new Date(occurrence.startTime), "HH:mm")}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <p className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+              Nesta etapa serão criados apenas a série e seus agendamentos. Pacotes, cobranças, e-mails em lote e notas fiscais não serão gerados.
+            </p>
+          </>
+        ) : null}
+      </div>
+    );
+  };
+
   // ─── Progress Dots ────────────────────────────────────────────────
 
   const renderProgressDots = () => {
@@ -1274,23 +1484,47 @@ export function NewAppointmentModal({
 
   const handleContinue = async () => {
     if (eventType === "session" && step === 1) {
-      const isValid = await form.trigger(["patientId", "date", "startTime", "endTime"]);
+      const isValid = await form.trigger([
+        "patientId",
+        "date",
+        "startTime",
+        "endTime",
+        "recurrence",
+        "recurrenceFrequency",
+        "recurrenceCount",
+      ]);
       if (isValid) nextStep();
     } else if (eventType === "session" && step === 2) {
       const isValid = await form.trigger(["type", "modality", "duration"]);
-      if (isValid) nextStep();
+      if (isValid) {
+        if (recurrenceEnabled) await loadSeriesPreview(form.getValues());
+        nextStep();
+      }
     } else if (eventType === "event" && step === 1) {
-      const isValid = await form.trigger(["eventTitle", "eventCategory", "date", "startTime", "endTime"]);
+      const isValid = await form.trigger([
+        "eventTitle",
+        "eventCategory",
+        "date",
+        "startTime",
+        "endTime",
+        "recurrence",
+        "recurrenceFrequency",
+        "recurrenceCount",
+      ]);
       if (isValid) nextStep();
+    } else if (eventType === "event" && step === 2 && recurrenceEnabled) {
+      await loadSeriesPreview(form.getValues());
+      nextStep();
     } else {
       nextStep();
     }
   };
 
   const submitButtonLabel = useMemo(() => {
+    if (recurrenceEnabled) return "Criar série";
     if (eventType === "event") return "Registrar Evento";
     return "Registrar Agendamento";
-  }, [eventType]);
+  }, [eventType, recurrenceEnabled]);
 
   // ─── Render ───────────────────────────────────────────────────────
 
@@ -1329,7 +1563,7 @@ export function NewAppointmentModal({
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
-              {step === 3 && renderStep3()}
+              {step === 3 && (recurrenceEnabled ? renderRecurrencePreview() : renderStep3())}
             </form>
           </Form>
         </div>
@@ -1360,7 +1594,7 @@ export function NewAppointmentModal({
           ) : (
             <Button
               onClick={form.handleSubmit(onSubmit)}
-              disabled={isSubmitting}
+              disabled={isSubmitting || (recurrenceEnabled && !seriesPreview?.valid)}
               className={cn(
                 "rounded-full px-6 h-10 font-bold tracking-wide shadow-lg hover:shadow-xl transition-all active:scale-95",
                 eventType === "event"

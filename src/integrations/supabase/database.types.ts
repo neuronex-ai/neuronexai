@@ -274,6 +274,66 @@ export type Database = {
           },
         ]
       }
+      appointment_series: {
+        Row: {
+          appointment_type: string
+          created_at: string
+          created_by: string | null
+          duration_minutes: number
+          first_start_time: string
+          frequency: string
+          id: string
+          last_start_time: string
+          patient_id: string | null
+          psychologist_id: string
+          total_occurrences: number
+          updated_at: string
+        }
+        Insert: {
+          appointment_type: string
+          created_at?: string
+          created_by?: string | null
+          duration_minutes: number
+          first_start_time: string
+          frequency: string
+          id?: string
+          last_start_time: string
+          patient_id?: string | null
+          psychologist_id: string
+          total_occurrences: number
+          updated_at?: string
+        }
+        Update: {
+          appointment_type?: string
+          created_at?: string
+          created_by?: string | null
+          duration_minutes?: number
+          first_start_time?: string
+          frequency?: string
+          id?: string
+          last_start_time?: string
+          patient_id?: string | null
+          psychologist_id?: string
+          total_occurrences?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_series_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_series_psychologist_id_fkey"
+            columns: ["psychologist_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointments: {
         Row: {
           action_origin: string
@@ -298,6 +358,8 @@ export type Database = {
           location: string | null
           metadata: Json | null
           notes: string | null
+          occurrence_count: number | null
+          occurrence_number: number | null
           package_id: string | null
           patient_id: string | null
           payment_config: Json | null
@@ -307,6 +369,7 @@ export type Database = {
           reschedule_approved_at: string | null
           reschedule_rejected_at: string | null
           reschedule_requested_at: string | null
+          series_id: string | null
           start_time: string | null
           status: string | null
           token: string | null
@@ -338,6 +401,8 @@ export type Database = {
           location?: string | null
           metadata?: Json | null
           notes?: string | null
+          occurrence_count?: number | null
+          occurrence_number?: number | null
           package_id?: string | null
           patient_id?: string | null
           payment_config?: Json | null
@@ -347,6 +412,7 @@ export type Database = {
           reschedule_approved_at?: string | null
           reschedule_rejected_at?: string | null
           reschedule_requested_at?: string | null
+          series_id?: string | null
           start_time?: string | null
           status?: string | null
           token?: string | null
@@ -378,6 +444,8 @@ export type Database = {
           location?: string | null
           metadata?: Json | null
           notes?: string | null
+          occurrence_count?: number | null
+          occurrence_number?: number | null
           package_id?: string | null
           patient_id?: string | null
           payment_config?: Json | null
@@ -387,6 +455,7 @@ export type Database = {
           reschedule_approved_at?: string | null
           reschedule_rejected_at?: string | null
           reschedule_requested_at?: string | null
+          series_id?: string | null
           start_time?: string | null
           status?: string | null
           token?: string | null
@@ -450,6 +519,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
             referencedColumns: ["id"]
           },
           {
@@ -7685,6 +7761,21 @@ export type Database = {
           used_count: number
         }[]
       }
+      create_appointment_series: {
+        Args: {
+          p_end_time: string
+          p_frequency?: string
+          p_location?: string
+          p_metadata?: Json
+          p_notes?: string
+          p_occurrence_count?: number
+          p_patient_id: string
+          p_psychologist_id?: string
+          p_start_time: string
+          p_type?: string
+        }
+        Returns: Json
+      }
       current_user_can_use_feature: {
         Args: { feature_key: string }
         Returns: boolean
@@ -7877,6 +7968,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      preview_appointment_series: {
+        Args: {
+          p_end_time: string
+          p_frequency?: string
+          p_occurrence_count?: number
+          p_psychologist_id?: string
+          p_start_time: string
+        }
+        Returns: Json
       }
       process_appointment_public_action: {
         Args: {

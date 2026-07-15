@@ -127,6 +127,12 @@ export interface Appointment {
   reschedule_requested_at?: string | null;
   reschedule_approved_at?: string | null;
   reschedule_rejected_at?: string | null;
+  /** Canonical recurrence series. Null for legacy and non-recurring appointments. */
+  series_id?: string | null;
+  /** One-based position inside the series. */
+  occurrence_number?: number | null;
+  /** Exact total number of appointments in the series. */
+  occurrence_count?: number | null;
   payment_status?: string | null;
   financial_launch_id?: string | null;
   financial_entry_id?: string | null;
