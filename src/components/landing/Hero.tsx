@@ -1,100 +1,105 @@
 "use client";
 
-// [SWARM] Auditado pelo Agente 1 — Nenhum console.log encontrado
 import { Link } from "react-router-dom";
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { FadeIn } from "@/components/animations/FadeIn";
-import { Magnetic } from "@/components/animations/Magnetic";
+import { useRef } from "react";
+
 import { HeroVisual } from "@/components/landing/HeroVisual";
+import { Button } from "@/components/ui/button";
+
+export const HERO_HEADLINE_LINES = [
+  "Você cuida dos pacientes.",
+  "A NeuroNex organiza o resto.",
+] as const;
+
+const scrollToPlans = () => {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  document.getElementById("waitlist")?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
+};
 
 export const Hero = () => {
-    const { scrollY } = useScroll();
-    const reduceMotion = useReducedMotion();
+  const heroRef = useRef<HTMLElement>(null);
+  const reduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
 
-    const heroTextY = useTransform(scrollY, [0, 500], [0, 80]);
-    const heroOpacity = useTransform(scrollY, [0, 430], [1, 0]);
-    const visualY = useTransform(scrollY, [0, 500], [0, -40]);
-    const bgScale = useTransform(scrollY, [0, 1000], [1.05, 1.2]);
+  const textY = useTransform(scrollYProgress, [0, 0.42, 0.72], [0, -86, -142]);
+  const textScale = useTransform(scrollYProgress, [0, 0.52], [1, 0.84]);
+  const textOpacity = useTransform(scrollYProgress, [0, 0.48, 0.72], [1, 0.86, 0]);
+  const visualY = useTransform(scrollYProgress, [0, 0.44, 0.86], [34, -42, -86]);
+  const visualScale = useTransform(scrollYProgress, [0, 0.5, 0.92], [0.94, 1, 1.035]);
+  const visualOpacity = useTransform(scrollYProgress, [0, 0.16], [0.84, 1]);
+  const backdropScale = useTransform(scrollYProgress, [0, 1], [1, 1.12]);
 
-    return (
-        <section className="relative w-full flex flex-col items-center justify-start z-10 min-h-screen overflow-hidden bg-background">
-            {/* --- IMMERSIVE BACKGROUND LAYER --- */}
-            <div className="absolute inset-0 z-0 overflow-hidden">
-                <motion.div
-                    style={reduceMotion ? undefined : { scale: bgScale }}
-                    className="relative w-full h-full will-change-transform"
-                >
-                </motion.div>
+  return (
+    <section
+      ref={heroRef}
+      id="hero"
+      aria-labelledby="landing-hero-title"
+      className="relative min-h-[168vh] overflow-clip bg-background"
+    >
+      <div className="sticky top-0 flex min-h-screen flex-col justify-start overflow-hidden pt-24 md:pt-28">
+        <motion.div
+          aria-hidden="true"
+          style={reduceMotion ? undefined : { scale: backdropScale }}
+          className="pointer-events-none absolute inset-0"
+        >
+          <div className="absolute left-1/2 top-[-18%] h-[560px] w-[980px] -translate-x-1/2 rounded-full bg-foreground/[0.05] blur-[180px] dark:bg-white/[0.035]" />
+          <div className="absolute inset-x-0 bottom-0 h-[34vh] bg-gradient-to-t from-background via-background/88 to-transparent" />
+        </motion.div>
 
-                <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_40%,hsl(var(--primary)/0.12)_0%,transparent_70%)]" />
-                <div className="absolute inset-0 z-[3] bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-[4]" />
-            </div>
+        <motion.div
+          style={reduceMotion ? undefined : { y: textY, scale: textScale, opacity: textOpacity, willChange: "transform, opacity" }}
+          className="relative z-10 mx-auto flex w-full max-w-[1220px] flex-col items-center px-4 text-center sm:px-6"
+        >
+          <div className="inline-flex min-h-9 items-center rounded-full border border-border/40 bg-foreground/[0.035] px-4 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.045]">
+            Sistema operacional para psicólogos
+          </div>
 
-            {/* --- MAIN CONTENT LAYER --- */}
-            <motion.div
-                style={reduceMotion ? undefined : { y: heroTextY, opacity: heroOpacity, willChange: "transform, opacity" }}
-                className="relative z-10 text-center flex flex-col items-center w-full max-w-6xl mx-auto pt-[16vh] md:pt-[20vh] lg:pt-[23vh] px-4"
+          <h1
+            id="landing-hero-title"
+            className="mt-6 w-[min(94vw,1180px)] text-center font-black tracking-[-0.055em] text-foreground"
+          >
+            <span className="block whitespace-nowrap text-[clamp(2.55rem,6.05vw,6.15rem)] leading-[0.9]">
+              {HERO_HEADLINE_LINES[0]}
+            </span>
+            <span className="mt-1.5 block whitespace-nowrap text-[clamp(2.05rem,4.95vw,5rem)] leading-[0.92] text-muted-foreground/62">
+              {HERO_HEADLINE_LINES[1]}
+            </span>
+          </h1>
+
+          <p className="mx-auto mt-5 max-w-3xl px-2 text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
+            Agenda, pacientes, conversas, atendimentos, financeiro, fiscal e as tarefas entre uma consulta e outra passam a se organizar no mesmo lugar, com o Synapse ajudando você a seguir o próximo passo.
+          </p>
+
+          <div className="mt-7 flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+            <Button asChild className="h-14 w-full rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background hover:bg-foreground/90 sm:w-auto">
+              <Link to="/create-account">
+                Começar grátis
+                <ChevronRight aria-hidden="true" className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={scrollToPlans}
+              className="h-14 w-full rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em] sm:w-auto"
             >
-                <FadeIn delay={0.3}>
-                    <div className="inline-flex items-center gap-2 bg-foreground/[0.03] border border-border/10 rounded-full px-5 py-1.5 mb-8 backdrop-blur-sm">
-                        <span className="text-[11px] uppercase tracking-[0.25em] font-black text-foreground/80">Sistema operacional para psicólogos</span>
-                    </div>
-                </FadeIn>
+              Ver planos
+            </Button>
+          </div>
+        </motion.div>
 
-                <motion.h1
-                    initial={reduceMotion ? false : { opacity: 0, y: 22 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: reduceMotion ? 0 : 0.9, delay: reduceMotion ? 0 : 0.12, ease: [0.22, 1, 0.36, 1] }}
-                    className="mb-4 pb-2 text-center font-bold tracking-[-0.065em] text-foreground"
-                >
-                    <span className="block text-[2.9rem] leading-[0.86] sm:text-[3.7rem] md:text-[4.7rem] lg:text-[6.55rem] xl:text-[7.1rem]">Você cuida dos pacientes.</span>
-                    <span className="mt-2 block text-[2.35rem] leading-[0.9] text-muted-foreground/52 sm:text-[3rem] md:text-[3.8rem] lg:text-[5.25rem] xl:text-[5.7rem]">A NeuroNex organiza o resto.</span>
-                </motion.h1>
-
-                <FadeIn delay={0.6}>
-                    <p className="text-base md:text-xl lg:text-2xl text-muted-foreground/70 font-medium max-w-4xl mx-auto leading-relaxed md:leading-[1.5] tracking-tight mb-8 md:mb-10 lg:mb-12 px-2">
-                        Agenda, pacientes, conversas, atendimentos, financeiro, fiscal e as tarefas entre uma consulta e outra passam a se organizar no mesmo lugar, com o Synapse ajudando você a seguir o próximo passo.
-                    </p>
-                </FadeIn>
-
-                <FadeIn delay={0.8} className="w-full">
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-8 w-full">
-                        <Magnetic strength={0.2} className="w-full sm:w-auto">
-                            <Button asChild className="group relative overflow-hidden w-full sm:w-auto h-14 sm:h-16 px-8 sm:px-12 rounded-full bg-foreground text-background hover:bg-foreground/90 text-[11px] sm:text-[12px] font-black uppercase tracking-[0.3em] shadow-lg transition-all duration-500 hover:scale-105 active:scale-[0.98] border-0">
-                                <Link to="/create-account">
-                                    <span className="relative flex items-center">
-                                        Começar grátis
-                                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2.5 opacity-70 group-hover:translate-x-1.5 transition-transform duration-500 ease-out" />
-                                    </span>
-                                </Link>
-                            </Button>
-                        </Magnetic>
-
-                        <Magnetic strength={0.2} className="w-full sm:w-auto">
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
-                                className="w-full sm:w-auto h-14 sm:h-16 px-6 sm:px-10 rounded-full text-foreground/70 hover:text-foreground hover:bg-foreground/5 text-[11px] sm:text-[12px] font-black uppercase tracking-[0.25em] transition-all duration-500 border border-border/10 hover:border-primary/20 backdrop-blur-xl hover:scale-105 active:scale-[0.98]"
-                            >
-                                Ver planos
-                            </Button>
-                        </Magnetic>
-                    </div>
-                </FadeIn>
-            </motion.div>
-
-            {/* --- 3D HERO VISUAL LAYER --- */}
-            <div className="w-full relative z-20 mt-12 md:mt-20 lg:mt-24 xl:mt-32 flex flex-col items-center">
-                <motion.div style={reduceMotion ? undefined : { y: visualY }} className="w-full relative gpu-accelerated mb-32">
-                    <FadeIn delay={0.5} direction="up" distance={80} duration={1.5}>
-                        <HeroVisual />
-                    </FadeIn>
-                </motion.div>
-            </div>
-        </section>
-    );
+        <motion.div
+          style={reduceMotion ? undefined : { y: visualY, scale: visualScale, opacity: visualOpacity, willChange: "transform, opacity" }}
+          className="relative z-20 mt-10 pb-12 md:mt-12"
+        >
+          <HeroVisual />
+        </motion.div>
+      </div>
+    </section>
+  );
 };
