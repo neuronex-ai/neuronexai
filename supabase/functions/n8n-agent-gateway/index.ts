@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.8';
-import { ensureTeleconsultationInvite } from '../_shared/teleconsultation-access.ts';
+import { prepareAppointmentActionPlan } from '../_shared/appointment-action-plans.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -398,36 +398,88 @@ serve(async (req: Request) => {
       }
 
       case 'create_appointment': {
-        const { patient_id, start_time, end_time, type = 'presencial', notes } = params || {};
+        const { patient_id, start_time, end_time, type = 'presencial', notes, location } = params || {};
         if (!start_time || !end_time) throw new Error('Parâmetros `start_time` e `end_time` são obrigatórios para agendamentos.');
+        result = await prepareAppointmentActionPlan(
+          {
+            admin: supabaseClient,
+            userId: profissionalIdClean,
+            sessionId: params?.conversation_id || null,
+            channel: 'whatsapp',
+            whatsappMessageId: params?.message_id || params?.source_message_id || null,
+            correlationId: params?.correlation_id || params?.source_message_id || null,
+          },
+          'create_appointment',
+          'create',
+          {
+            patient_id: patient_id || null,
+            start_time,
+            end_time,
+            type,
+            notes: notes || null,
+            location: location || null,
+            frequency: params?.frequency || (Number(params?.occurrence_count || 1) > 1 ? 'weekly' : 'single'),
+            occurrence_count: Number(params?.occurrence_count || 1),
+            package_id: params?.package_id || null,
+            communication: params?.communication || { sendConfirmation: true, provider: 'configured' },
+            financial: params?.financial || { mode: params?.financial_mode || 'none' },
+            fiscal: params?.fiscal || { automationEnabled: false, trigger: 'professional_settings' },
+          },
+          buildN8nFinancialIdempotencyKey('prepare_appointment', profissionalIdClean, params, body),
+        );
+        break;
+      }
 
-        const { data, error } = await supabaseClient.from('appointments').insert({
-          user_id: profissionalIdClean,
-          patient_id: patient_id || null,
-          start_time,
-          end_time,
-          type,
-          status: 'pending',
-          notes: notes || null,
-          google_meet_link: null
-        }).select().single();
-        if (error) throw error;
-        result = type === 'online'
-          ? { ...data, google_meet_link: (await ensureTeleconsultationInvite(supabaseClient, data)).meetLink }
-          : data;
+      case 'reschedule_appointment': {
+        const { appointment_id, start_time, end_time } = params || {};
+        if (!appointment_id || !start_time || !end_time) {
+          throw new Error('Parâmetros `appointment_id`, `start_time` e `end_time` são obrigatórios.');
+        }
+        result = await prepareAppointmentActionPlan(
+          {
+            admin: supabaseClient,
+            userId: profissionalIdClean,
+            sessionId: params?.conversation_id || null,
+            channel: 'whatsapp',
+            whatsappMessageId: params?.message_id || params?.source_message_id || null,
+            correlationId: params?.correlation_id || params?.source_message_id || null,
+          },
+          'reschedule_appointment',
+          'reschedule',
+          {
+            appointment_id,
+            start_time,
+            end_time,
+            type: params?.type || null,
+            location: params?.location || null,
+            communication: params?.communication || { sendConfirmation: true, provider: 'configured' },
+          },
+          buildN8nFinancialIdempotencyKey('prepare_reschedule', profissionalIdClean, params, body),
+        );
         break;
       }
 
       case 'cancel_appointment': {
         const { appointment_id } = params || {};
         if (!appointment_id) throw new Error('Parâmetro `appointment_id` é obrigatório para cancelamentos.');
-
-        const { data, error } = await supabaseClient.from('appointments').update({ status: 'cancelled' })
-          .eq('id', appointment_id)
-          .eq('user_id', profissionalIdClean)
-          .select().single();
-        if (error) throw error;
-        result = data;
+        result = await prepareAppointmentActionPlan(
+          {
+            admin: supabaseClient,
+            userId: profissionalIdClean,
+            sessionId: params?.conversation_id || null,
+            channel: 'whatsapp',
+            whatsappMessageId: params?.message_id || params?.source_message_id || null,
+            correlationId: params?.correlation_id || params?.source_message_id || null,
+          },
+          'cancel_appointment',
+          'cancel',
+          {
+            appointment_id,
+            reason: params?.reason || 'Cancelamento solicitado pelo adaptador do WhatsApp',
+            communication: params?.communication || { sendConfirmation: true, provider: 'configured' },
+          },
+          buildN8nFinancialIdempotencyKey('prepare_cancellation', profissionalIdClean, params, body),
+        );
         break;
       }
 
@@ -736,13 +788,6 @@ serve(async (req: Request) => {
 
         const gmailData = await sendViaGmail(accessToken, rawEmail);
 
-        // 5. Atualizar status da consulta para confirmed
-        await supabaseClient
-          .from('appointments')
-          .update({ status: 'confirmed' })
-          .eq('id', appointment_id)
-          .eq('user_id', profissionalIdClean);
-
         result = {
           success: true,
           action: 'send_appointment_confirmation',
@@ -751,7 +796,7 @@ serve(async (req: Request) => {
           email_to: appointment.patients.email,
           appointment_date: details.dateFormatted,
           appointment_time: details.timeFormatted,
-          status_updated: 'confirmed',
+          appointment_status_unchanged: true,
         };
         break;
       }

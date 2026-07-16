@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { generateEmbedding } from './embeddings.ts';
+import { prepareAppointmentActionPlan } from '../_shared/appointment-action-plans.ts';
 
 const normalizeIdempotencyPart = (value: unknown) =>
     String(value || '')
@@ -20,6 +21,19 @@ const buildSynapseEntryIdempotencyKey = (ctx: any, toolName: string) => {
 
 export async function executeTool(name: string, args: any, ctx: any) {
     const { supabaseUser, user } = ctx;
+    const conversationId = /^[0-9a-f-]{36}$/i.test(String(ctx?.sessionId || ''))
+        ? String(ctx.sessionId)
+        : null;
+    const planContext = {
+        admin: ctx.supabaseAdmin,
+        userId: user.id,
+        sessionId: conversationId,
+        channel: ctx?.channel || 'panel',
+        voiceSessionId: ctx?.voiceSessionId || null,
+        whatsappMessageId: ctx?.source?.message_id || null,
+        toolCallId: ctx?.toolCallId || null,
+        correlationId: ctx?.source?.source_message_id || ctx?.idempotencyKey || null,
+    };
     let result: any = { error: "Erro desconhecido" };
     let structuredData: any = null;
 
@@ -392,30 +406,39 @@ Seja conciso e prático.`;
             }
 
             case 'create_appointment': {
-                // Force Brazil timezone (-03:00) for naive datetime strings from the AI
                 const startTimeStr = args.datetime.includes('T') && !args.datetime.match(/Z$|[+-]\d{2}:\d{2}$|[+-]\d{4}$/)
                     ? `${args.datetime}-03:00`
                     : args.datetime;
                 const start_time = new Date(startTimeStr).toISOString();
                 const end_time = new Date(new Date(startTimeStr).getTime() + (args.duration || 50) * 60000).toISOString();
-
-                const { data, error } = await supabaseUser.from('appointments').insert({
-                    user_id: user.id,
-                    patient_id: args.patientId,
-                    start_time: start_time,
-                    end_time: end_time,
-                    type: args.type || 'presencial',
-                    notes: args.notes,
-                    status: 'confirmed'
-                }).select('*, patient:patient_id(name)').single();
-
-                if (!error) {
-                    result = { success: true, appointmentId: data.id };
-                    const enrichedData = { ...data, patient_name: data.patient?.name || 'Paciente' };
-                    structuredData = { type: 'appointment_card', data: enrichedData };
-                } else {
-                    result = { error: error.message };
-                }
+                const plan = await prepareAppointmentActionPlan(
+                    planContext,
+                    'create_appointment',
+                    'create',
+                    {
+                        patient_id: args.patientId,
+                        start_time,
+                        end_time,
+                        type: args.type || 'presencial',
+                        notes: args.notes || null,
+                        location: args.location || null,
+                        frequency: args.frequency || (Number(args.occurrenceCount || 1) > 1 ? 'weekly' : 'single'),
+                        occurrence_count: Number(args.occurrenceCount || 1),
+                        package_id: args.packageId || null,
+                        communication: args.communication || { sendConfirmation: true, provider: 'configured' },
+                        financial: args.financial || { mode: args.financialMode || 'none' },
+                        fiscal: args.fiscal || { automationEnabled: false, trigger: 'professional_settings' },
+                    },
+                    buildSynapseEntryIdempotencyKey(ctx, 'prepare_appointment'),
+                );
+                result = {
+                    success: true,
+                    confirmation_required: plan.status === 'awaiting_confirmation',
+                    review_required: plan.status === 'review_required',
+                    status: plan.status,
+                    summary: plan.summary,
+                };
+                structuredData = { type: 'appointment_plan_prepared', data: result };
                 break;
             }
 
@@ -468,7 +491,6 @@ Seja conciso e prático.`;
             }
 
             case 'reschedule_appointment': {
-                // Get appointment details
                 const { data: appointment, error: fetchError } = await ctx.supabaseAdmin
                     .from('appointments')
                     .select('*, patient:patient_id(name, phone)')
@@ -492,50 +514,33 @@ Seja conciso e prático.`;
 
                 const newStartIso = new Date(newStartTimeStr).toISOString();
                 const newEndIso = new Date(new Date(newStartTimeStr).getTime() + duration * 60000).toISOString();
-
-                // Update appointment
-                const { error: updateError } = await ctx.supabaseAdmin
-                    .from('appointments')
-                    .update({
+                const plan = await prepareAppointmentActionPlan(
+                    planContext,
+                    'reschedule_appointment',
+                    'reschedule',
+                    {
+                        appointment_id: args.appointmentId,
                         start_time: newStartIso,
                         end_time: newEndIso,
-                        status: 'confirmed'
-                    })
-                    .eq('id', args.appointmentId);
-
-                if (updateError) {
-                    result = { error: `Erro ao remarcar: ${updateError.message}` };
-                    break;
-                }
-
-                const formattedTime = new Intl.DateTimeFormat('pt-BR', {
-                    timeZone: 'America/Sao_Paulo',
-                    dateStyle: 'short',
-                    timeStyle: 'short'
-                }).format(new Date(newStartIso));
-
+                        type: args.type || appointment.type,
+                        location: args.location === undefined ? appointment.location : args.location,
+                        communication: { sendConfirmation: args.notifyPatient !== false, provider: 'configured' },
+                    },
+                    buildSynapseEntryIdempotencyKey(ctx, 'prepare_reschedule'),
+                );
                 result = {
                     success: true,
-                    message: `📅 Consulta de ${patientName} remarcada para ${formattedTime}!`,
-                    newDatetime: args.newDatetime
+                    confirmation_required: plan.status === 'awaiting_confirmation',
+                    review_required: plan.status === 'review_required',
+                    status: plan.status,
+                    patientName,
+                    summary: plan.summary,
                 };
-
-                structuredData = {
-                    type: 'appointment_rescheduled',
-                    data: {
-                        patientName,
-                        appointmentId: args.appointmentId,
-                        newDatetime: args.newDatetime,
-                        patientPhone: appointment.patient?.phone
-                    }
-                };
-
-                // TODO: If notifyPatient is true, could send WhatsApp notification
+                structuredData = { type: 'appointment_plan_prepared', data: result };
                 break;
             }
 
             case 'cancel_appointment': {
-                // Get appointment details first
                 const { data: appointment, error: fetchError } = await ctx.supabaseAdmin
                     .from('appointments')
                     .select('*, patient:patient_id(name, phone)')
@@ -549,43 +554,26 @@ Seja conciso e prático.`;
                 }
 
                 const patientName = args.patientName || appointment.patient?.name || 'Paciente';
-                const appointmentTime = new Date(appointment.start_time).toLocaleString('pt-BR', {
-                    dateStyle: 'short',
-                    timeStyle: 'short'
-                });
-
-                // Update status to cancelled
-                const { error: updateError } = await ctx.supabaseAdmin
-                    .from('appointments')
-                    .update({
-                        status: 'cancelled',
-                        notes: appointment.notes
-                            ? `${appointment.notes}\n[Cancelado: ${args.reason || 'Sem motivo informado'}]`
-                            : `[Cancelado: ${args.reason || 'Sem motivo informado'}]`
-                    })
-                    .eq('id', args.appointmentId);
-
-                if (updateError) {
-                    result = { error: `Erro ao cancelar: ${updateError.message}` };
-                    break;
-                }
-
+                const plan = await prepareAppointmentActionPlan(
+                    planContext,
+                    'cancel_appointment',
+                    'cancel',
+                    {
+                        appointment_id: args.appointmentId,
+                        reason: args.reason || 'Sem motivo informado',
+                        communication: { sendConfirmation: true, provider: 'configured' },
+                    },
+                    buildSynapseEntryIdempotencyKey(ctx, 'prepare_cancellation'),
+                );
                 result = {
                     success: true,
-                    message: `❌ Consulta de ${patientName} em ${appointmentTime} foi cancelada.`,
-                    reason: args.reason
+                    confirmation_required: plan.status === 'awaiting_confirmation',
+                    review_required: plan.status === 'review_required',
+                    status: plan.status,
+                    patientName,
+                    summary: plan.summary,
                 };
-
-                structuredData = {
-                    type: 'appointment_cancelled',
-                    data: {
-                        patientName,
-                        appointmentId: args.appointmentId,
-                        originalTime: appointment.start_time,
-                        reason: args.reason,
-                        patientPhone: appointment.patient?.phone
-                    }
-                };
+                structuredData = { type: 'appointment_plan_prepared', data: result };
                 break;
             }
 

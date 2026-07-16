@@ -17,6 +17,7 @@ import {
   executeConfirmedMutationV3,
   type AgentToolContextV3,
 } from "./executor-v3.ts";
+import { cancelPendingAppointmentPlan } from "./executor.ts";
 import {
   formatContextForPrompt,
   loadConversationContext,
@@ -495,6 +496,7 @@ Deno.serve(async (request) => {
       requestOrigin: request.headers.get("origin") || context?.origin || null,
       userClient: identity.userClient || undefined,
       channel: identity.channel,
+      correlationId: sourceRequestId,
     };
 
     if (pending && CANCEL.test(message)) {
@@ -503,6 +505,7 @@ Deno.serve(async (request) => {
         label: "Cancelando ação pendente",
         detail: progressText(pending.action.summary, 160) || "Nenhuma alteração será realizada",
       });
+      await cancelPendingAppointmentPlan(pending.action, toolContext);
       await updatePending(admin, pending, "cancelled");
       const response = "A ação pendente foi cancelada. Nenhuma alteração foi realizada.";
       await saveAssistantMessage(admin, user.id, sessionId, response, [{
@@ -648,7 +651,12 @@ Deno.serve(async (request) => {
           args = {};
         }
         progress(toolProgressCopy(name, args, "started"));
-        const execution = await executeAgentToolV3(name, args, toolContext, conversationState);
+        const execution = await executeAgentToolV3(
+          name,
+          args,
+          { ...toolContext, toolCallId: String(call.id || "").trim().slice(0, 120) || null },
+          conversationState,
+        );
         progress(toolProgressCopy(name, args, "finished", Number(execution.result.recordCount || 0)));
         conversationState = execution.state;
         records.push({ name, result: execution.result });

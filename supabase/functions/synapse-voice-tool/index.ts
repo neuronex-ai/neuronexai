@@ -5,6 +5,7 @@ import {
   executeConfirmedMutationV3,
   type AgentToolContextV3,
 } from "../synapse-text-fallback/executor-v3.ts";
+import { cancelPendingAppointmentPlan } from "../synapse-text-fallback/executor.ts";
 import {
   loadConversationContext,
   saveConversationContext,
@@ -362,6 +363,9 @@ serve(async (request): Promise<Response> => {
       requestOrigin: request.headers.get("origin") || null,
       userClient: auth.userClient,
       channel: "voice",
+      voiceSessionId: voiceSessionId || null,
+      toolCallId: clean(body.callId || body.id, 120) || null,
+      correlationId: clean(body.requestId || body.request_id || body.callId || body.id, 120) || null,
     };
 
     if (action === "cancel_pending_action" || clean(body.name, 120) === "cancel_pending_action") {
@@ -397,6 +401,7 @@ serve(async (request): Promise<Response> => {
           }),
         });
       }
+      await cancelPendingAppointmentPlan(pending.action, toolContext);
       await updatePending(auth.admin, pending, "cancelled");
       const message = "A acao pendente foi cancelada. Nenhuma alteracao foi realizada.";
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [{

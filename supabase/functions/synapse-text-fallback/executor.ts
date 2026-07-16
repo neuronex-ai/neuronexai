@@ -8,7 +8,12 @@ import {
   summarizeNotesMutation,
 } from "./notes-tools.ts";
 import { executeNeuroNotesAgentTool } from "./neuro-notes-tools.ts";
-import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
+import {
+  appointmentPlanSummary,
+  cancelAppointmentActionPlan,
+  executeAppointmentActionPlan,
+  prepareAppointmentActionPlan,
+} from "../_shared/appointment-action-plans.ts";
 import {
   formatPatientAmbiguity,
   resolvePatientCandidates,
@@ -19,6 +24,11 @@ export interface AgentToolContext {
   admin: any;
   userId: string;
   sessionId: string;
+  channel?: "panel" | "voice" | "whatsapp";
+  voiceSessionId?: string | null;
+  whatsappMessageId?: string | null;
+  toolCallId?: string | null;
+  correlationId?: string | null;
 }
 
 export interface PendingAction {
@@ -47,6 +57,13 @@ export interface AgentToolResult {
 
 const CANCELLED_STATUSES = new Set(["cancelled", "canceled", "cancelled_by_patient", "cancelled_by_professional"]);
 const PAID_STATUSES = new Set(["paid", "received", "completed"]);
+const APPOINTMENT_MUTATION_TOOLS = new Set([
+  "create_appointment",
+  "reschedule_appointment",
+  "cancel_appointment",
+  "set_teleconsultation_transcription_decision",
+  "close_teleconsultation_room",
+]);
 
 const clamp = (value: unknown, fallback: number, min: number, max: number) => {
   const parsed = Number(value);
@@ -216,12 +233,177 @@ async function findAppointment(admin: any, userId: string, args: Record<string, 
   if (appointments.length > 1) throw new Error(`Há mais de uma consulta possível. Especifique uma destas datas: ${appointments.slice(0, 5).map((item) => item.start_time_local).join(", ")}.`);
   return appointments[0];
 }
-async function hasAppointmentConflict(admin: any, userId: string, start: string, end: string, excludeId?: string | null) {
-  let query = admin.from("appointments").select("id,start_time,end_time,type,status,patient:patient_id(name)").eq("user_id", userId).not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)").lt("start_time", end).gt("end_time", start).limit(5);
-  if (excludeId) query = query.neq("id", excludeId);
-  const { data, error } = await query;
-  if (error) throw error;
-  return (data || []).map(mapAppointment);
+
+const appointmentPlanContext = (context: AgentToolContext) => ({
+  admin: context.admin,
+  userId: context.userId,
+  sessionId: context.sessionId,
+  channel: context.channel,
+  voiceSessionId: context.voiceSessionId,
+  whatsappMessageId: context.whatsappMessageId,
+  toolCallId: context.toolCallId,
+  correlationId: context.correlationId,
+});
+
+const appointmentPlanReference = (args: Record<string, any>) => ({
+  planId: cleanText(args.plan_id, 80),
+  planVersion: Number(args.plan_version),
+  planHash: cleanText(args.plan_hash, 80).toLowerCase(),
+});
+
+const planIdempotencyKey = (context: AgentToolContext, name: string, actionId: string) =>
+  `synapse:${context.sessionId}:${context.correlationId || context.toolCallId || actionId}:${name}`.slice(0, 240);
+
+async function prepareAppointmentMutation(
+  name: string,
+  args: Record<string, any>,
+  context: AgentToolContext,
+): Promise<AgentToolResult> {
+  const actionId = crypto.randomUUID();
+  let action:
+    | "create"
+    | "reschedule"
+    | "cancel"
+    | "set_teleconsultation_transcription"
+    | "close_teleconsultation";
+  let input: Record<string, unknown>;
+
+  if (name === "create_appointment") {
+    action = "create";
+    const start = brazilIso(args.datetime);
+    const duration = clamp(args.duration_minutes, 50, 15, 240);
+    const occurrenceCount = clamp(args.occurrence_count, 1, 1, 20);
+    input = {
+      patient_id: args.patient_id ? cleanId(args.patient_id) : null,
+      start_time: start,
+      end_time: new Date(new Date(start).getTime() + duration * 60_000).toISOString(),
+      frequency: cleanText(
+        args.frequency || args.recurrence_frequency || (occurrenceCount > 1 ? "weekly" : "single"),
+        24,
+      ),
+      occurrence_count: occurrenceCount,
+      type: cleanText(args.appointment_type || "presencial", 24),
+      location: args.location ? cleanText(args.location, 300) : null,
+      notes: args.notes ? cleanText(args.notes, 3000) : null,
+      package_id: args.package_id ? cleanId(args.package_id) : null,
+      communication: args.communication || {
+        sendConfirmation: args.send_confirmation !== false,
+        provider: cleanText(args.communication_provider || "configured", 40),
+        template: cleanText(args.confirmation_template || "appointment_invitation", 80),
+        reminderPolicy: cleanText(args.reminder_policy || "professional_settings", 80),
+      },
+      financial: args.financial || {
+        mode: cleanText(args.financial_mode || (args.package_id ? "package" : args.price ? "manual" : "none"), 40),
+        value_per_session: Number(args.value_per_session ?? args.price ?? 0),
+        total: Number(args.total ?? 0),
+        charge_mode: cleanText(args.charge_mode || "per_occurrence", 40),
+      },
+      fiscal: args.fiscal || {
+        automationEnabled: Boolean(args.fiscal_automation_enabled),
+        trigger: cleanText(args.fiscal_trigger || "professional_settings", 80),
+        potentialDocuments: occurrenceCount,
+        blocked: false,
+      },
+    };
+  } else {
+    const appointment = await findAppointment(context.admin, context.userId, args);
+    if (!appointment) throw new Error("Consulta não encontrada.");
+    if (name === "reschedule_appointment") {
+      action = "reschedule";
+      const start = brazilIso(args.new_datetime);
+      const currentDuration = Math.max(
+        15,
+        Math.round((new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60_000),
+      );
+      const duration = clamp(args.new_duration_minutes, currentDuration || 50, 15, 240);
+      input = {
+        appointment_id: appointment.id,
+        start_time: start,
+        end_time: new Date(new Date(start).getTime() + duration * 60_000).toISOString(),
+        type: cleanText(args.appointment_type || appointment.type, 24),
+        location: args.location === undefined ? appointment.location : cleanText(args.location, 300),
+        communication: {
+          sendConfirmation: args.send_confirmation !== false,
+          provider: "configured",
+          template: "appointment_reconfirmation_required",
+          reminderPolicy: "professional_settings",
+        },
+      };
+    } else if (name === "cancel_appointment") {
+      action = "cancel";
+      input = {
+        appointment_id: appointment.id,
+        reason: cleanText(args.reason || "Sem motivo informado", 500),
+        communication: {
+          sendConfirmation: true,
+          provider: "configured",
+          template: "appointment_cancelled",
+          reminderPolicy: "cancelled",
+        },
+      };
+    } else if (name === "set_teleconsultation_transcription_decision") {
+      action = "set_teleconsultation_transcription";
+      input = {
+        appointment_id: appointment.id,
+        enabled: Boolean(args.enabled),
+        notes: args.notes ? cleanText(args.notes, 500) : null,
+      };
+    } else {
+      action = "close_teleconsultation";
+      input = {
+        appointment_id: appointment.id,
+        reason: cleanText(args.reason || "synapse_close", 120),
+      };
+    }
+  }
+
+  const plan = await prepareAppointmentActionPlan(
+    appointmentPlanContext(context),
+    name,
+    action,
+    input,
+    planIdempotencyKey(context, name, actionId),
+  );
+  const summary = appointmentPlanSummary(plan);
+  const pendingAction: PendingAction = {
+    kind: "synapse_pending_action",
+    actionId,
+    toolName: name,
+    arguments: {
+      plan_id: plan.planId,
+      plan_version: plan.planVersion,
+      plan_hash: plan.planHash,
+      conversation_id: context.sessionId,
+    },
+    summary,
+    status: "pending",
+    createdAt: plan.createdAt || new Date().toISOString(),
+    expiresAt: plan.expiresAt || new Date(Date.now() + 15 * 60_000).toISOString(),
+  };
+  return {
+    ok: true,
+    grounded: true,
+    pendingAction,
+    message: summary,
+    data: {
+      confirmation_required: plan.status === "awaiting_confirmation",
+      review_required: plan.status === "review_required",
+      status: plan.status,
+      summary: plan.summary,
+    },
+    structuredData: {
+      type: "appointment_plan_prepared",
+      data: { status: plan.status, summary: plan.summary },
+    },
+  };
+}
+
+export async function cancelPendingAppointmentPlan(pending: PendingAction, context: AgentToolContext) {
+  if (!APPOINTMENT_MUTATION_TOOLS.has(pending.toolName)) return null;
+  return cancelAppointmentActionPlan(
+    appointmentPlanContext(context),
+    appointmentPlanReference(pending.arguments as Record<string, any>),
+  );
 }
 async function buildSlots(admin: any, userId: string, args: Record<string, any>) {
   const start = cleanText(args.start_date || dateOnly(new Date()), 10);
@@ -278,6 +460,13 @@ function teleStatus(appointment: any) {
 }
 
 export async function executeAgentTool(name: string, args: Record<string, any>, context: AgentToolContext): Promise<AgentToolResult> {
+  if (APPOINTMENT_MUTATION_TOOLS.has(name)) {
+    try {
+      return await prepareAppointmentMutation(name, args, context);
+    } catch (error) {
+      return { ok: false, grounded: true, error: error instanceof Error ? error.message : "Falha ao preparar o plano do agendamento." };
+    }
+  }
   if (MUTATING_TOOLS.has(name)) return stageMutation(name, args);
   try {
     const neuroNotesResult = await executeNeuroNotesAgentTool(name, args, context);
@@ -531,6 +720,29 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
 }
 
 export async function executeConfirmedMutation(pending: PendingAction, context: AgentToolContext): Promise<AgentToolResult> {
+  if (APPOINTMENT_MUTATION_TOOLS.has(pending.toolName)) {
+    try {
+      const plan = await executeAppointmentActionPlan(
+        appointmentPlanContext(context),
+        appointmentPlanReference(pending.arguments as Record<string, any>),
+      );
+      const result = plan.result || {};
+      return {
+        ok: plan.status === "completed",
+        grounded: true,
+        recordCount: Array.isArray((result as any).appointmentIds)
+          ? (result as any).appointmentIds.length
+          : plan.status === "completed" ? 1 : 0,
+        data: { plan_status: plan.status, result },
+        message: String((result as any).message || (plan.status === "completed"
+          ? "Alteração do agendamento concluída."
+          : "O plano mudou e precisa de uma nova revisão.")),
+        structuredData: { type: "appointment_plan_result", data: { status: plan.status, result } },
+      };
+    } catch (error) {
+      return { ok: false, grounded: true, error: error instanceof Error ? error.message : "Falha ao executar o plano do agendamento." };
+    }
+  }
   const notesResult = await executeConfirmedNotesMutation(pending, context);
   if (notesResult) return notesResult;
 
@@ -584,87 +796,6 @@ export async function executeConfirmedMutation(pending: PendingAction, context: 
         const { data, error } = await admin.from("session_notes").insert({ user_id: userId, patient_id: patientId, appointment_id: args.appointment_id ? cleanId(args.appointment_id) : null, notes: cleanText(args.notes, 12000), created_at: new Date().toISOString() }).select("id,created_at").single();
         if (error) throw error;
         return { ok: true, grounded: true, recordCount: 1, data: { note: data, patient_id: patientId, patient_name: patient.name }, message: `Anotação registrada no prontuário de ${patient.name}.`, structuredData: { type: "session_note_created", data: { ...data, patientName: patient.name } }, clientAction: { type: "interface_action", data: { action: "navigate", destination: "patient.sessions.history", patientId, reason: "Anotação registrada no prontuário" } } };
-      }
-      case "create_appointment": {
-        const start = brazilIso(args.datetime);
-        const duration = clamp(args.duration_minutes, 50, 15, 240);
-        const end = new Date(new Date(start).getTime() + duration * 60000).toISOString();
-        const conflicts = await hasAppointmentConflict(admin, userId, start, end, null);
-        if (conflicts.length) throw new Error(`Já existe compromisso nesse horário: ${conflicts.map((item) => `${item.patient_name} às ${item.time_label}`).join(", ")}.`);
-        const patientId = args.patient_id ? cleanId(args.patient_id) : null;
-        if (patientId) {
-          const { data: patient } = await admin.from("patients").select("id,name").eq("id", patientId).eq("user_id", userId).maybeSingle();
-          if (!patient) throw new Error("Paciente não encontrado.");
-        }
-        const { data, error } = await admin.from("appointments").insert({ user_id: userId, patient_id: patientId, start_time: start, end_time: end, type: args.appointment_type || "presencial", notes: args.notes ? cleanText(args.notes, 3000) : null, location: args.location ? cleanText(args.location, 300) : null, price: args.price ?? null, status: "confirmed", metadata: { source: "synapse", created_from: "agenda_desktop" } }).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
-        if (error) throw error;
-        if (data.type === "online") {
-          try {
-            const invite = await ensureTeleconsultationInvite(admin, { ...data, user_id: userId });
-            data.google_meet_link = invite.meetLink;
-          } catch (inviteError) {
-            await admin.from("appointments").delete().eq("id", data.id).eq("user_id", userId);
-            throw inviteError;
-          }
-        }
-        const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Agendamento criado para ${appointment.start_time_local}.`, structuredData: { type: "appointment_card", data: appointment }, clientAction: { type: "interface_action", data: { action: "scroll_to_appointment", appointmentId: appointment.id, date: appointment.start_time, reason: "Agendamento criado" } } };
-      }
-      case "reschedule_appointment": {
-        const appointmentId = cleanId(args.appointment_id);
-        const { data: current } = await admin.from("appointments").select("id,start_time,end_time,metadata,patient:patient_id(name)").eq("id", appointmentId).eq("user_id", userId).maybeSingle();
-        if (!current) throw new Error("Consulta não encontrada.");
-        const start = brazilIso(args.new_datetime);
-        const currentDuration = (new Date(current.end_time).getTime() - new Date(current.start_time).getTime()) / 60000;
-        const duration = clamp(args.new_duration_minutes, currentDuration || 50, 15, 240);
-        const end = new Date(new Date(start).getTime() + duration * 60000).toISOString();
-        const conflicts = await hasAppointmentConflict(admin, userId, start, end, appointmentId);
-        if (conflicts.length) throw new Error(`Não dá para remarcar para esse horário porque há conflito com ${conflicts.map((item) => item.patient_name).join(", ")}.`);
-        const metadata = { ...(current.metadata || {}), rescheduled_by: "synapse", previous_start_time: current.start_time, updated_from: "agenda_desktop" };
-        const { data, error } = await admin.from("appointments").update({ start_time: start, end_time: end, status: "confirmed", metadata, updated_at: new Date().toISOString() }).eq("id", appointmentId).eq("user_id", userId).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
-        if (error) throw error;
-        if (data.type === "online") {
-          const invite = await ensureTeleconsultationInvite(admin, { ...data, user_id: userId });
-          data.google_meet_link = invite.meetLink;
-        }
-        const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} remarcada para ${appointment.start_time_local}.`, structuredData: { type: "appointment_rescheduled", data: appointment }, clientAction: { type: "interface_action", data: { action: "scroll_to_appointment", appointmentId: appointment.id, date: appointment.start_time, reason: "Consulta remarcada" } } };
-      }
-      case "cancel_appointment": {
-        const appointmentId = cleanId(args.appointment_id);
-        const { data: current } = await admin.from("appointments").select("id,notes,start_time,metadata,patient:patient_id(name)").eq("id", appointmentId).eq("user_id", userId).maybeSingle();
-        if (!current) throw new Error("Consulta não encontrada.");
-        const reason = cleanText(args.reason || "Sem motivo informado", 500);
-        const notes = current.notes ? `${current.notes}\n[Cancelado pelo Synapse: ${reason}]` : `[Cancelado pelo Synapse: ${reason}]`;
-        const metadata = { ...(current.metadata || {}), cancelled_by: "synapse", cancellation_reason: reason, updated_from: "agenda_desktop" };
-        const { data, error } = await admin.from("appointments").update({ status: "cancelled", notes, metadata, updated_at: new Date().toISOString() }).eq("id", appointmentId).eq("user_id", userId).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
-        if (error) throw error;
-        const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Consulta de ${appointment.patient_name || "paciente"} cancelada.`, structuredData: { type: "appointment_cancelled", data: { ...appointment, reason } }, clientAction: { type: "interface_action", data: { action: "scroll_to_appointment", appointmentId: appointment.id, date: appointment.start_time, reason: "Consulta cancelada" } } };
-      }
-      case "set_teleconsultation_transcription_decision": {
-        const appointmentId = cleanId(args.appointment_id);
-        const { data: current, error: findError } = await admin.from("appointments").select("id,metadata,patient:patient_id(name)").eq("id", appointmentId).eq("user_id", userId).maybeSingle();
-        if (findError) throw findError;
-        if (!current) throw new Error("Sessão não encontrada.");
-        const decision = { enabled: Boolean(args.enabled), decidedAt: new Date().toISOString(), decidedBy: userId, noticeVersion: "2026-06-teleconsultation-transcription-v1", notes: args.notes ? cleanText(args.notes, 500) : undefined };
-        const metadata = { ...(current.metadata || {}), teleconsultationTranscription: decision };
-        const { data, error } = await admin.from("appointments").update({ metadata, updated_at: new Date().toISOString() }).eq("id", appointmentId).eq("user_id", userId).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
-        if (error) throw error;
-        const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment, transcription_decision: decision }, message: decision.enabled ? "Transcrição autorizada para esta sessão." : "Sessão marcada para seguir sem transcrição.", structuredData: { type: "teleconsultation_session_status", data: teleStatus(appointment) } };
-      }
-      case "close_teleconsultation_room": {
-        const appointmentId = cleanId(args.appointment_id);
-        const { data: current, error: findError } = await admin.from("appointments").select("id,metadata,patient:patient_id(name)").eq("id", appointmentId).eq("user_id", userId).maybeSingle();
-        if (findError) throw findError;
-        if (!current) throw new Error("Sessão não encontrada.");
-        const now = new Date().toISOString();
-        const metadata = { ...(current.metadata || {}), teleconsultationRoom: { ...(current.metadata?.teleconsultationRoom || {}), status: "closed", closedAt: now, closedReason: cleanText(args.reason || "synapse_close", 120) } };
-        const { data, error } = await admin.from("appointments").update({ metadata, updated_at: now }).eq("id", appointmentId).eq("user_id", userId).select("id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").single();
-        if (error) throw error;
-        const appointment = mapAppointment(data);
-        return { ok: true, grounded: true, recordCount: 1, data: { appointment }, message: `Sala de ${appointment.patient_name || "paciente"} encerrada com segurança.`, structuredData: { type: "teleconsultation_session_status", data: teleStatus(appointment) } };
       }
       case "create_financial_entry": {
         const amount = Math.abs(Number(args.amount || 0));

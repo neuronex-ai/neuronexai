@@ -23,6 +23,10 @@ export interface AgentToolContextV3 {
   requestOrigin?: string | null;
   userClient?: any;
   channel?: "panel" | "voice" | "whatsapp";
+  voiceSessionId?: string | null;
+  whatsappMessageId?: string | null;
+  toolCallId?: string | null;
+  correlationId?: string | null;
 }
 
 export interface AgentToolExecutionV3 {
