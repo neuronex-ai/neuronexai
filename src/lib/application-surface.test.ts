@@ -20,7 +20,6 @@ describe("application surface provider boundary", () => {
   it.each([
     "/auth",
     "/portal/ativar",
-    "/confirmar-agendamento/token",
     "/join/token",
     "/anamnese-externa/id",
     "/dashboard",
@@ -41,6 +40,7 @@ describe("application surface provider boundary", () => {
     "/termos-de-uso",
     "/politica-de-privacidade",
     "/configuracoes-de-cookies",
+    "/confirmar-agendamento/token",
     "/id/perfil-publico",
     "/authentic",
     "/rota-inexistente",

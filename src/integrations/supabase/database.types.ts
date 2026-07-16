@@ -38,6 +38,119 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_communication_outbox: {
+        Row: {
+          appointment_end_time: string
+          appointment_id: string
+          appointment_revision: number
+          appointment_start_time: string
+          attempts: number
+          claimed_at: string | null
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          next_attempt_at: string
+          patient_id: string | null
+          payload: Json
+          payload_fingerprint: string
+          policy_snapshot_id: string | null
+          provider: string | null
+          provider_message_id: string | null
+          psychologist_id: string
+          reschedule_request_id: string | null
+          status: string
+          template_key: string
+          updated_at: string
+        }
+        Insert: {
+          appointment_end_time: string
+          appointment_id: string
+          appointment_revision: number
+          appointment_start_time: string
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          patient_id?: string | null
+          payload?: Json
+          payload_fingerprint: string
+          policy_snapshot_id?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          psychologist_id: string
+          reschedule_request_id?: string | null
+          status?: string
+          template_key: string
+          updated_at?: string
+        }
+        Update: {
+          appointment_end_time?: string
+          appointment_id?: string
+          appointment_revision?: number
+          appointment_start_time?: string
+          attempts?: number
+          claimed_at?: string | null
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          patient_id?: string | null
+          payload?: Json
+          payload_fingerprint?: string
+          policy_snapshot_id?: string | null
+          provider?: string | null
+          provider_message_id?: string | null
+          psychologist_id?: string
+          reschedule_request_id?: string | null
+          status?: string
+          template_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_communication_outbox_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_communication_outbox_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_communication_outbox_policy_snapshot_id_fkey"
+            columns: ["policy_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_communication_outbox_reschedule_request_id_fkey"
+            columns: ["reschedule_request_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_reschedule_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_confirmation_tokens: {
         Row: {
           appointment_id: string
@@ -46,8 +159,11 @@ export type Database = {
           created_by: string | null
           expires_at: string
           id: string
+          idempotency_key: string | null
+          last_prepared_at: string | null
           metadata: Json
           opened_at: string | null
+          request_fingerprint: string | null
           revoked_at: string | null
           sent_at: string | null
           status: string
@@ -62,8 +178,11 @@ export type Database = {
           created_by?: string | null
           expires_at: string
           id?: string
+          idempotency_key?: string | null
+          last_prepared_at?: string | null
           metadata?: Json
           opened_at?: string | null
+          request_fingerprint?: string | null
           revoked_at?: string | null
           sent_at?: string | null
           status?: string
@@ -78,8 +197,11 @@ export type Database = {
           created_by?: string | null
           expires_at?: string
           id?: string
+          idempotency_key?: string | null
+          last_prepared_at?: string | null
           metadata?: Json
           opened_at?: string | null
+          request_fingerprint?: string | null
           revoked_at?: string | null
           sent_at?: string | null
           status?: string
@@ -337,6 +459,87 @@ export type Database = {
           },
         ]
       }
+      appointment_outcome_override_requests: {
+        Row: {
+          action_origin: string
+          appointment_id: string
+          created_at: string
+          evidence: Json
+          id: string
+          idempotency_key: string
+          patient_right_status: string
+          policy_snapshot_id: string | null
+          psychologist_id: string
+          reason: string
+          request_fingerprint: string
+          requested_by: string | null
+          requested_clinical_outcome: string | null
+          requested_financial_outcome: string | null
+          requested_status: string | null
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+        }
+        Insert: {
+          action_origin?: string
+          appointment_id: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          idempotency_key: string
+          patient_right_status: string
+          policy_snapshot_id?: string | null
+          psychologist_id: string
+          reason: string
+          request_fingerprint: string
+          requested_by?: string | null
+          requested_clinical_outcome?: string | null
+          requested_financial_outcome?: string | null
+          requested_status?: string | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Update: {
+          action_origin?: string
+          appointment_id?: string
+          created_at?: string
+          evidence?: Json
+          id?: string
+          idempotency_key?: string
+          patient_right_status?: string
+          policy_snapshot_id?: string | null
+          psychologist_id?: string
+          reason?: string
+          request_fingerprint?: string
+          requested_by?: string | null
+          requested_clinical_outcome?: string | null
+          requested_financial_outcome?: string | null
+          requested_status?: string | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_outcome_override_requests_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_outcome_override_requests_policy_snapshot_id_fkey"
+            columns: ["policy_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_package_bindings: {
         Row: {
           appointment_id: string
@@ -433,63 +636,311 @@ export type Database = {
           },
         ]
       }
+      appointment_policy_application_operations: {
+        Row: {
+          appointment_ids: string[]
+          created_at: string
+          id: string
+          idempotency_key: string
+          policy_version_id: string
+          psychologist_id: string
+          reason: string
+          request_fingerprint: string
+          result: Json
+          status: string
+        }
+        Insert: {
+          appointment_ids: string[]
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          policy_version_id: string
+          psychologist_id: string
+          reason: string
+          request_fingerprint: string
+          result?: Json
+          status?: string
+        }
+        Update: {
+          appointment_ids?: string[]
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          policy_version_id?: string
+          psychologist_id?: string
+          reason?: string
+          request_fingerprint?: string
+          result?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_policy_application_operation_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_policy_snapshots: {
+        Row: {
+          appointment_end_time: string
+          appointment_id: string
+          appointment_revision: number
+          appointment_start_time: string
+          charge_policy: string
+          created_at: string
+          fiscal_policy: string
+          free_cancellation_cutoff_at: string
+          free_cancellation_hours: number
+          free_reschedule_cutoff_at: string
+          free_reschedule_hours: number
+          id: string
+          late_cancellation_consequence: string
+          metadata: Json
+          minimum_patient_reaction_hours: number
+          no_show_consequence: string
+          package_credit_policy: string
+          policy_version: number
+          policy_version_id: string | null
+          predicted_financial_consequence: string
+          professional_no_response_behavior: string
+          professional_response_sla_hours: number
+          snapshot_sequence: number
+          source: string
+          timezone: string
+        }
+        Insert: {
+          appointment_end_time: string
+          appointment_id: string
+          appointment_revision: number
+          appointment_start_time: string
+          charge_policy: string
+          created_at?: string
+          fiscal_policy: string
+          free_cancellation_cutoff_at: string
+          free_cancellation_hours: number
+          free_reschedule_cutoff_at: string
+          free_reschedule_hours: number
+          id?: string
+          late_cancellation_consequence: string
+          metadata?: Json
+          minimum_patient_reaction_hours: number
+          no_show_consequence: string
+          package_credit_policy: string
+          policy_version: number
+          policy_version_id?: string | null
+          predicted_financial_consequence: string
+          professional_no_response_behavior: string
+          professional_response_sla_hours: number
+          snapshot_sequence: number
+          source: string
+          timezone: string
+        }
+        Update: {
+          appointment_end_time?: string
+          appointment_id?: string
+          appointment_revision?: number
+          appointment_start_time?: string
+          charge_policy?: string
+          created_at?: string
+          fiscal_policy?: string
+          free_cancellation_cutoff_at?: string
+          free_cancellation_hours?: number
+          free_reschedule_cutoff_at?: string
+          free_reschedule_hours?: number
+          id?: string
+          late_cancellation_consequence?: string
+          metadata?: Json
+          minimum_patient_reaction_hours?: number
+          no_show_consequence?: string
+          package_credit_policy?: string
+          policy_version?: number
+          policy_version_id?: string | null
+          predicted_financial_consequence?: string
+          professional_no_response_behavior?: string
+          professional_response_sla_hours?: number
+          snapshot_sequence?: number
+          source?: string
+          timezone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_policy_snapshots_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_policy_snapshots_policy_version_id_fkey"
+            columns: ["policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_policy_versions: {
+        Row: {
+          charge_policy: string
+          created_at: string
+          created_by: string | null
+          effective_at: string
+          fiscal_policy: string
+          free_cancellation_hours: number
+          free_reschedule_hours: number
+          id: string
+          idempotency_key: string | null
+          late_cancellation_consequence: string
+          metadata: Json
+          minimum_patient_reaction_hours: number
+          no_show_consequence: string
+          package_credit_policy: string
+          professional_no_response_behavior: string
+          professional_response_sla_hours: number
+          psychologist_id: string
+          request_fingerprint: string | null
+          source: string
+          timezone: string
+          version: number
+        }
+        Insert: {
+          charge_policy?: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string
+          fiscal_policy?: string
+          free_cancellation_hours?: number
+          free_reschedule_hours?: number
+          id?: string
+          idempotency_key?: string | null
+          late_cancellation_consequence?: string
+          metadata?: Json
+          minimum_patient_reaction_hours?: number
+          no_show_consequence?: string
+          package_credit_policy?: string
+          professional_no_response_behavior?: string
+          professional_response_sla_hours?: number
+          psychologist_id: string
+          request_fingerprint?: string | null
+          source?: string
+          timezone?: string
+          version: number
+        }
+        Update: {
+          charge_policy?: string
+          created_at?: string
+          created_by?: string | null
+          effective_at?: string
+          fiscal_policy?: string
+          free_cancellation_hours?: number
+          free_reschedule_hours?: number
+          id?: string
+          idempotency_key?: string | null
+          late_cancellation_consequence?: string
+          metadata?: Json
+          minimum_patient_reaction_hours?: number
+          no_show_consequence?: string
+          package_credit_policy?: string
+          professional_no_response_behavior?: string
+          professional_response_sla_hours?: number
+          psychologist_id?: string
+          request_fingerprint?: string | null
+          source?: string
+          timezone?: string
+          version?: number
+        }
+        Relationships: []
+      }
       appointment_reschedule_requests: {
         Row: {
           appointment_id: string
+          appointment_revision: number
           created_at: string
+          expired_without_response_at: string | null
+          financial_right_protected: boolean
           id: string
           metadata: Json
           original_end_time: string
           original_start_time: string
           patient_id: string | null
+          policy_snapshot_id: string | null
+          professional_response_due_at: string | null
+          protection_reason: string | null
           psychologist_id: string
+          reaction_due_at: string | null
           reason: string | null
+          requested_at: string
           requested_by_user_id: string | null
           requested_end_time: string
           requested_start_time: string
           review_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          seconds_remaining_at_request: number | null
           status: string
           updated_at: string
+          within_free_window: boolean
         }
         Insert: {
           appointment_id: string
+          appointment_revision: number
           created_at?: string
+          expired_without_response_at?: string | null
+          financial_right_protected?: boolean
           id?: string
           metadata?: Json
           original_end_time: string
           original_start_time: string
           patient_id?: string | null
+          policy_snapshot_id?: string | null
+          professional_response_due_at?: string | null
+          protection_reason?: string | null
           psychologist_id: string
+          reaction_due_at?: string | null
           reason?: string | null
+          requested_at: string
           requested_by_user_id?: string | null
           requested_end_time: string
           requested_start_time: string
           review_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          seconds_remaining_at_request?: number | null
           status?: string
           updated_at?: string
+          within_free_window: boolean
         }
         Update: {
           appointment_id?: string
+          appointment_revision?: number
           created_at?: string
+          expired_without_response_at?: string | null
+          financial_right_protected?: boolean
           id?: string
           metadata?: Json
           original_end_time?: string
           original_start_time?: string
           patient_id?: string | null
+          policy_snapshot_id?: string | null
+          professional_response_due_at?: string | null
+          protection_reason?: string | null
           psychologist_id?: string
+          reaction_due_at?: string | null
           reason?: string | null
+          requested_at?: string
           requested_by_user_id?: string | null
           requested_end_time?: string
           requested_start_time?: string
           review_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          seconds_remaining_at_request?: number | null
           status?: string
           updated_at?: string
+          within_free_window?: boolean
         }
         Relationships: [
           {
@@ -505,6 +956,24 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "patients"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_requests_policy_snapshot_id_fkey"
+            columns: ["policy_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_snapshots"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_reschedule_requests_snapshot_coherence_fkey"
+            columns: [
+              "policy_snapshot_id",
+              "appointment_id",
+              "appointment_revision",
+            ]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_snapshots"
+            referencedColumns: ["id", "appointment_id", "appointment_revision"]
           },
         ]
       }
@@ -575,15 +1044,19 @@ export type Database = {
           auth_code: string | null
           cancellation_reason: string | null
           cancelled_at: string | null
+          change_responsibility: string
           charge_id: string | null
+          clinical_outcome: string
+          confirmation_revision: number
           confirmed_at: string | null
           confirmed_revision: number | null
-          confirmation_revision: number
           created_at: string | null
           created_by: string | null
           end_time: string | null
           financial_entry_id: string | null
           financial_launch_id: string | null
+          financial_outcome: string
+          financial_protection_reason: string | null
           google_event_id: string | null
           google_meet_link: string | null
           id: string
@@ -596,12 +1069,17 @@ export type Database = {
           notes: string | null
           occurrence_count: number | null
           occurrence_number: number | null
+          outcome_review_required: boolean
           package_id: string | null
+          patient_action_due_at: string | null
           patient_id: string | null
+          patient_right_status: string
           payment_config: Json | null
           payment_status: string
+          policy_snapshot_id: string | null
           previous_status: string | null
           price: number | null
+          professional_response_due_at: string | null
           reschedule_approved_at: string | null
           reschedule_rejected_at: string | null
           reschedule_requested_at: string | null
@@ -620,15 +1098,19 @@ export type Database = {
           auth_code?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          change_responsibility?: string
           charge_id?: string | null
+          clinical_outcome?: string
+          confirmation_revision?: number
           confirmed_at?: string | null
           confirmed_revision?: number | null
-          confirmation_revision?: number
           created_at?: string | null
           created_by?: string | null
           end_time?: string | null
           financial_entry_id?: string | null
           financial_launch_id?: string | null
+          financial_outcome?: string
+          financial_protection_reason?: string | null
           google_event_id?: string | null
           google_meet_link?: string | null
           id?: string
@@ -641,12 +1123,17 @@ export type Database = {
           notes?: string | null
           occurrence_count?: number | null
           occurrence_number?: number | null
+          outcome_review_required?: boolean
           package_id?: string | null
+          patient_action_due_at?: string | null
           patient_id?: string | null
+          patient_right_status?: string
           payment_config?: Json | null
           payment_status?: string
+          policy_snapshot_id?: string | null
           previous_status?: string | null
           price?: number | null
+          professional_response_due_at?: string | null
           reschedule_approved_at?: string | null
           reschedule_rejected_at?: string | null
           reschedule_requested_at?: string | null
@@ -665,15 +1152,19 @@ export type Database = {
           auth_code?: string | null
           cancellation_reason?: string | null
           cancelled_at?: string | null
+          change_responsibility?: string
           charge_id?: string | null
+          clinical_outcome?: string
+          confirmation_revision?: number
           confirmed_at?: string | null
           confirmed_revision?: number | null
-          confirmation_revision?: number
           created_at?: string | null
           created_by?: string | null
           end_time?: string | null
           financial_entry_id?: string | null
           financial_launch_id?: string | null
+          financial_outcome?: string
+          financial_protection_reason?: string | null
           google_event_id?: string | null
           google_meet_link?: string | null
           id?: string
@@ -686,12 +1177,17 @@ export type Database = {
           notes?: string | null
           occurrence_count?: number | null
           occurrence_number?: number | null
+          outcome_review_required?: boolean
           package_id?: string | null
+          patient_action_due_at?: string | null
           patient_id?: string | null
+          patient_right_status?: string
           payment_config?: Json | null
           payment_status?: string
+          policy_snapshot_id?: string | null
           previous_status?: string | null
           price?: number | null
+          professional_response_due_at?: string | null
           reschedule_approved_at?: string | null
           reschedule_rejected_at?: string | null
           reschedule_requested_at?: string | null
@@ -759,6 +1255,13 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_policy_snapshot_id_fkey"
+            columns: ["policy_snapshot_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_policy_snapshots"
             referencedColumns: ["id"]
           },
           {
@@ -6351,30 +6854,39 @@ export type Database = {
       system_email_templates: {
         Row: {
           body_html: string
+          body_text: string | null
           created_at: string
           enabled: boolean
+          preheader: string | null
           sender_profile: string
           subject: string
           template_key: string
           updated_at: string
+          version: number
         }
         Insert: {
           body_html: string
+          body_text?: string | null
           created_at?: string
           enabled?: boolean
+          preheader?: string | null
           sender_profile?: string
           subject: string
           template_key: string
           updated_at?: string
+          version?: number
         }
         Update: {
           body_html?: string
+          body_text?: string | null
           created_at?: string
           enabled?: boolean
+          preheader?: string | null
           sender_profile?: string
           subject?: string
           template_key?: string
           updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -8243,6 +8755,15 @@ export type Database = {
       }
     }
     Functions: {
+      apply_appointment_policy_to_future_occurrences: {
+        Args: {
+          p_appointment_ids: string[]
+          p_idempotency_key: string
+          p_policy_version_id: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       check_appointment_overlap: {
         Args: {
           p_end_time: string
@@ -8251,6 +8772,10 @@ export type Database = {
           p_user_id: string
         }
         Returns: boolean
+      }
+      claim_appointment_communication_outbox: {
+        Args: { p_limit?: number; p_outbox_id?: string }
+        Returns: Json
       }
       cleanup_old_notifications: { Args: never; Returns: number }
       commit_synapse_neuroflow_run: {
@@ -8278,6 +8803,27 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      complete_appointment_clinical_session: {
+        Args: {
+          p_appointment_id: string
+          p_draft_pending: boolean
+          p_idempotency_key: string
+          p_session_summary_note_id: string
+          p_session_transcript_id: string
+        }
+        Returns: Json
+      }
+      complete_appointment_communication_outbox: {
+        Args: {
+          p_error?: string
+          p_lease_token: string
+          p_outbox_id: string
+          p_provider?: string
+          p_provider_message_id?: string
+          p_success: boolean
+        }
+        Returns: undefined
       }
       complete_synapse_neuroview_run: {
         Args: {
@@ -8309,6 +8855,24 @@ export type Database = {
           unlocks_at: string
           used_count: number
         }[]
+      }
+      create_appointment_policy_version: {
+        Args: {
+          p_charge_policy: string
+          p_effective_at?: string
+          p_fiscal_policy: string
+          p_free_cancellation_hours: number
+          p_free_reschedule_hours: number
+          p_idempotency_key?: string
+          p_late_cancellation_consequence: string
+          p_minimum_patient_reaction_hours: number
+          p_no_show_consequence: string
+          p_package_credit_policy: string
+          p_professional_response_sla_hours: number
+          p_reason?: string
+          p_timezone?: string
+        }
+        Returns: Json
       }
       create_appointment_series: {
         Args: {
@@ -8370,6 +8934,14 @@ export type Database = {
         }
         Returns: string
       }
+      ensure_appointment_policy_snapshot: {
+        Args: {
+          p_actor_user_id: string
+          p_appointment_id: string
+          p_source?: string
+        }
+        Returns: Json
+      }
       execute_package_lifecycle_change_internal: {
         Args: {
           p_action_origin?: string
@@ -8398,6 +8970,7 @@ export type Database = {
           total_bytes: number
         }[]
       }
+      get_effective_appointment_policy: { Args: never; Returns: Json }
       get_financial_management_snapshot: {
         Args: { p_basis?: string; p_month?: string }
         Returns: Json
@@ -8413,6 +8986,18 @@ export type Database = {
       get_public_anamnesis: {
         Args: { p_id: string; p_token: string }
         Returns: Json
+      }
+      get_safe_appointment_timeline: {
+        Args: { p_appointment_id: string }
+        Returns: {
+          actor_name: string
+          channel_name: string
+          detail: string
+          occurred_at: string
+          status_change: string
+          title: string
+          visual_kind: string
+        }[]
       }
       increment_template_usage: {
         Args: { template_id: string }
@@ -8510,6 +9095,17 @@ export type Database = {
         }
         Returns: undefined
       }
+      prepare_appointment_invitation: {
+        Args: {
+          p_actor_user_id: string
+          p_appointment_id: string
+          p_appointment_revision: number
+          p_idempotency_key: string
+          p_metadata?: Json
+          p_token_hash: string
+        }
+        Returns: Json
+      }
       prepare_document_upload: {
         Args: {
           p_bucket: string
@@ -8549,6 +9145,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      preview_appointment_policy_application: {
+        Args: { p_appointment_ids: string[]; p_policy_version_id: string }
+        Returns: Json
       }
       preview_appointment_series: {
         Args: {
@@ -8609,6 +9209,18 @@ export type Database = {
       render_template: {
         Args: { template_id: string; variables_json: Json }
         Returns: string
+      }
+      request_appointment_outcome_override: {
+        Args: {
+          p_appointment_id: string
+          p_evidence: Json
+          p_idempotency_key: string
+          p_reason: string
+          p_requested_clinical_outcome: string
+          p_requested_financial_outcome: string
+          p_requested_status: string
+        }
+        Returns: Json
       }
       restore_notification: {
         Args: { p_notification_id: string }
@@ -8689,6 +9301,10 @@ export type Database = {
           p_source_package_id: string
         }
         Returns: Json
+      }
+      verify_appointment_communication_webhook_secret: {
+        Args: { p_candidate: string }
+        Returns: boolean
       }
       verify_financial_pin: { Args: { pin_attempt: string }; Returns: boolean }
       verify_notification_webhook_secret: {
@@ -8827,3 +9443,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
