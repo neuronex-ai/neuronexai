@@ -34,6 +34,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/animations/FadeIn";
+import { getPublicPage } from "@/content/public-content";
 import { PUBLIC_PLAN_COMPARISON } from "@/content/public-plan-catalog";
 import { cn } from "@/lib/utils";
 
@@ -550,62 +551,51 @@ export const LandingPlanComparisonSection = () => (
   </section>
 );
 
-const publicLandingCarouselItems = [
+const publicLandingCarouselSpecs = [
   {
-    eyebrow: "NeuroZap",
-    title: "WhatsApp Business conectado à NeuroNex em Desktop Beta.",
-    description: "Conexão e sincronização disponíveis em Beta; inbox, auditoria e ações contextuais seguem em evolução.",
     href: "/neurozap-para-psicologos",
-    image: "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
     accent: "Comunicação",
     icon: MessageCircle,
   },
   {
-    eyebrow: "Teleconsulta",
-    title: "Sessão online dentro do sistema operacional clínico.",
-    description: "Agenda, pré-sala, vídeo, prontuário, transcrição autorizada e resumo revisável pelo Synapse.",
     href: "/teleconsulta-para-psicologos",
-    image: "/landing/screenshots/mobile/light/26-mobile-teleconsulta-white.webp",
     accent: "Atendimento",
     icon: MonitorPlay,
   },
   {
-    eyebrow: "Pacientes",
-    title: "Cadastro, prontuário, portal e IA clínica no mesmo contexto.",
-    description: "A jornada do paciente vira base operacional para NeuroScan, NeuroView, NeuroPulse e continuidade entre sessões.",
     href: "/pacientes-para-psicologos",
-    image: "/landing/screenshots/desktop/dark/12-paciente-prontuario-grafico-tendencia-humor-minicards-dark.webp",
     accent: "Continuidade",
     icon: Users,
   },
   {
-    eyebrow: "NeuroBox",
-    title: "NeuroView, Flow, Pulse, Scan e Finance intermediados pelo Synapse.",
-    description: "Ferramentas de IA profunda para transformar notas, sintomas, fluxos e finanças em metadados acionáveis.",
     href: "/neurobox",
-    image: "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp",
     accent: "IA profunda",
     icon: BrainCircuit,
   },
   {
-    eyebrow: "NeuroFinance",
-    title: "Core banking e previsibilidade financeira para psicólogos.",
-    description: "Conta digital, Área Pix, boletos, NFS-e/RPS, recebíveis e capital de giro preditivo no fluxo da clínica.",
     href: "/neurofinance",
-    image: "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp",
     accent: "Financeiro",
     icon: WalletCards,
   },
   {
-    eyebrow: "Agenda",
-    title: "A agenda como início do fluxo, não como calendário isolado.",
-    description: "Compromissos conectam pacientes, teleconsulta, confirmações, no-show, cobrança e próximos passos.",
     href: "/agenda-para-psicologos",
-    image: "/landing/screenshots/desktop/dark/nova remessa/9-agenda-mensal-dark.webp",
     accent: "Operação",
     icon: CalendarDays,
   },
 ];
+
+const publicLandingCarouselItems = publicLandingCarouselSpecs.flatMap((spec) => {
+  const page = getPublicPage(spec.href);
+  if (!page) return [];
+  return [{
+    ...spec,
+    eyebrow: page.eyebrow,
+    title: page.heading,
+    description: page.lead,
+    image: page.image,
+    status: page.status,
+  }];
+});
 
 const wrapIndex = (index: number, total: number) => (index + total) % total;
 
@@ -690,7 +680,7 @@ export const LandingPublicPagesCarouselSection = () => {
                   />
                   <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,hsl(var(--background)/0.86)_100%)] lg:bg-[linear-gradient(90deg,transparent_45%,hsl(var(--card))_100%)] dark:lg:bg-[linear-gradient(90deg,transparent_45%,#08090b_100%)]" />
                   <div className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-xl">
-                    {activeItem.accent}
+                    {activeItem.accent} · {activeItem.status}
                   </div>
                 </div>
 
