@@ -18,8 +18,9 @@ import {
 import { Transaction } from "@/types";
 import { Button } from "@/components/ui/button";
 import { ReceiptModal } from "@/components/financeiro/ReceiptModal";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
+import { managementOriginOf } from "@/lib/financial-management-model";
 
 interface TransactionDetailViewProps {
     transaction: Transaction;
@@ -45,6 +46,7 @@ const openDocument = (url: string, unavailableMessage: string) => {
 };
 
 const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewProps) => {
+    const shouldReduceMotion = useReducedMotion();
     const isIncome = transaction.type === "income";
     const metadata=((transaction as any).metadata||{})as Record<string,any>;const financialStatus=String(metadata.financial_entry_status||transaction.status||"pending").toLowerCase();const isPaid=financialStatus==="paid"||transaction.status==="completed";const isCancelled=["cancelled","canceled"].includes(financialStatus);const isNeuro=Boolean(transaction.origin==="gateway_auto"||metadata.neurofinance_charge_id||metadata.neurofinance_transaction_id||metadata.provider_payment_id||metadata.asaas_payment_id);const isReconciled=Boolean(metadata.neurofinance_transaction_id||metadata.reconciliation_id||metadata.reconciliation_status==="matched");
     const patientName = (transaction as any).patient_name || (transaction as any).patients?.name;
@@ -52,36 +54,37 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
     const patientEmail = (transaction as any).patient_email || (transaction as any).patients?.email;
 
     const InfoRow = ({ icon: Icon, label, value, subValue }: any) => (
-        <div className="flex items-start gap-4 rounded-[24px] border border-zinc-100 bg-white p-5 dark:border-white/5 dark:bg-white/[0.02]">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-50 text-zinc-400 dark:bg-white/5">
+        <div className="desktop-retina-inset flex items-start gap-4 rounded-[20px] border border-border/45 bg-background/58 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-muted/65 text-muted-foreground">
                 <Icon className="h-4 w-4" />
             </div>
             <div className="flex min-w-0 flex-col">
                 <span className="mb-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">{label}</span>
-                <span className="truncate text-[11px] font-black uppercase tracking-tight text-zinc-900 dark:text-white">{value}</span>
-                {subValue && <span className="mt-0.5 text-[9px] font-medium uppercase tracking-widest text-zinc-400">{subValue}</span>}
+                <span className="truncate text-[11px] font-black uppercase tracking-tight text-foreground">{value}</span>
+                {subValue && <span className="mt-0.5 text-[9px] font-medium uppercase tracking-widest text-muted-foreground">{subValue}</span>}
             </div>
         </div>
     );
 
     return (
         <motion.div
-            initial={{ opacity: 0, x: 20 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, x: 12 }}
             animate={{ opacity: 1, x: 0 }}
-            className="mx-auto flex max-w-2xl flex-col gap-8"
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+            className="mx-auto flex max-w-2xl flex-col gap-6"
         >
             <div className="flex items-center justify-between">
-                <Button variant="ghost" size="sm" onClick={onBack} className="h-10 rounded-full bg-zinc-100 px-4 text-[10px] font-black uppercase tracking-widest dark:bg-white/5">
-                    <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
+                <Button variant="ghost" size="sm" onClick={onBack} className="h-10 rounded-xl bg-muted/55 px-4 text-[10px] font-black uppercase tracking-widest">
+                    <ChevronLeft className="mr-2 h-4 w-4" /> Fechar
                 </Button>
                 <div className="flex items-center gap-2">
                     {isPaid?<ReceiptModal transaction={transaction} patientEmail={patientEmail}>
-                        <Button variant="outline" size="sm" className="h-10 rounded-full border-zinc-200 px-6 text-[10px] font-black uppercase tracking-widest dark:border-white/10">
+                        <Button variant="outline" size="sm" className="h-10 rounded-full border-zinc-200 px-6 text-[10px] font-black uppercase tracking-widest dark:border-zinc-800">
                             <Receipt className="mr-2 h-3.5 w-3.5" /> Recibo
                         </Button>
                     </ReceiptModal>:null}
                     {isNeuro && invoiceUrl && (
-                        <Button onClick={() => openDocument(invoiceUrl, "Fatura ainda não disponível para esta movimentação.")} variant="outline" size="sm" className="h-10 rounded-full border-zinc-200 px-6 text-[10px] font-black uppercase tracking-widest dark:border-white/10">
+                        <Button onClick={() => openDocument(invoiceUrl, "Fatura ainda não disponível para esta movimentação.")} variant="outline" size="sm" className="h-10 rounded-full border-zinc-200 px-6 text-[10px] font-black uppercase tracking-widest dark:border-zinc-800">
                             <FileText className="mr-2 h-3.5 w-3.5" /> Fatura
                         </Button>
                     )}
@@ -90,13 +93,13 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
 
             <div className="space-y-4 py-6 text-center">
                 <div className={cn(
-                    "mx-auto flex h-20 w-20 items-center justify-center rounded-[32px] border shadow-2xl transition-transform duration-500 hover:scale-105",
-                    isIncome ? "border-zinc-900 bg-zinc-900 text-white dark:border-white dark:bg-white dark:text-black" : "border-zinc-200 bg-zinc-100 text-zinc-400 dark:border-white/5 dark:bg-white/10"
+                    "mx-auto flex h-16 w-16 items-center justify-center rounded-[23px] bg-foreground text-background shadow-xl",
+                    !isIncome && "bg-muted text-muted-foreground"
                 )}>
                     {isIncome ? <ArrowUpRight className="h-8 w-8" /> : <ArrowDownLeft className="h-8 w-8" />}
                 </div>
                 <div>
-                    <h3 className="text-3xl font-black tracking-tighter text-zinc-900 dark:text-white md:text-4xl">
+                    <h3 className="text-3xl font-black tracking-tighter text-foreground md:text-4xl">
                         {isIncome ? "+" : "-"} R$ {Math.abs(transaction.amount || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
                     </h3>
                     <p className="mt-2 text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">{transaction.description}</p>
@@ -124,7 +127,7 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                 <InfoRow
                     icon={Landmark}
                     label={isIncome ? "Origem" : "Destino"}
-                    value={isNeuro ? "Conta NeuroFinance" : "Lançamento manual"}
+                    value={managementOriginOf(transaction)}
                     subValue={transaction.category?.toUpperCase() || "Geral"}
                 />
                 <InfoRow
@@ -133,16 +136,10 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                     value={transaction.payment_method?.toUpperCase() || (transaction as any).method?.toUpperCase() || "Não especificado"}
                     subValue={(transaction as any).installments ? `${(transaction as any).installments} parcelas` : "À vista"}
                 />
-                <InfoRow
-                    icon={FileText}
-                    label="ID da transação"
-                    value={transaction.id ? transaction.id.slice(0, 18).toUpperCase() : "N/A"}
-                    subValue={transaction.external_reference || "Registro interno"}
-                />
             </div>
 
             {isNeuro && (
-                <div className="group relative mt-4 overflow-hidden rounded-[32px] bg-zinc-900 p-8 text-white shadow-2xl dark:bg-white dark:text-black">
+                <div className="group relative mt-2 overflow-hidden rounded-[24px] bg-foreground p-6 text-background shadow-xl">
                     <div className="premium-noise pointer-events-none absolute inset-0 opacity-10" />
                     <div className="relative z-10 flex items-center justify-between">
                         <div>

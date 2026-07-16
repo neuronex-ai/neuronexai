@@ -81,4 +81,31 @@ describe("patient appointment history safe DTO", () => {
     }
     expect(renderedPayload).not.toMatch(/appointment_id|patient_id|professional_id|event_id|actor_user_id|token|ip_address|user_agent|metadata/iu);
   });
+
+  it("repairs legacy encoding before history text reaches the interface", () => {
+    const page = normalizePatientAppointmentHistoryPage({
+      items: [{
+        modality: "Teleconsulta",
+        confirmation: "ConfirmaÃ§Ã£o pendente",
+        lifecycle: "SituaÃ§Ã£o atualizada",
+        events: [{
+          title: "CobranÃ§a cancelada",
+          actor_name: "NeuroNex",
+          channel_name: "AutomaÃ§Ã£o da NeuroNex",
+          occurred_at: "2026-07-15T19:00:00.000Z",
+          detail: "ConsequÃªncia sujeita a revisÃ£o",
+          visual_kind: "financial",
+        }],
+      }],
+    });
+
+    expect(page.items[0]?.confirmation).toBe("Confirmação pendente");
+    expect(page.items[0]?.lifecycle).toBe("Situação atualizada");
+    expect(page.items[0]?.events[0]).toMatchObject({
+      title: "Cobrança cancelada",
+      channelName: "Automação da NeuroNex",
+      detail: "Consequência sujeita a revisão",
+    });
+    expect(JSON.stringify(page)).not.toMatch(/Ã|Â|�/u);
+  });
 });

@@ -1,6 +1,7 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import { repairMojibake } from "@/lib/text-encoding";
 
 export interface SafePatientAppointmentEvent {
   title: string;
@@ -46,7 +47,7 @@ interface PatientAppointmentHistoryPage {
 const PAGE_SIZE = 12;
 
 const asString = (value: unknown): string | null =>
-  typeof value === "string" && value.trim() ? value : null;
+  typeof value === "string" && value.trim() ? repairMojibake(value.trim()) : null;
 
 const asObject = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)

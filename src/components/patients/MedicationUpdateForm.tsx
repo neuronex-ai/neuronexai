@@ -3,7 +3,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Form, FormControl, FormField, FormItem, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useUpdatePatient } from "@/hooks/use-update-patient";
 import { Patient } from "@/types";
 import { Loader2, Plus, Trash2 } from "lucide-react";
@@ -62,17 +62,18 @@ export const MedicationUpdateForm = ({ patient, onSuccess }: MedicationUpdateFor
 
     return (
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="space-y-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="desktop-retina-form space-y-6">
+                <div className="patient-record-scrollbar max-h-[400px] space-y-3 overflow-y-auto pr-2">
                     {fields.map((field, index) => (
-                        <div key={field.id} className="flex gap-3 items-start animate-in slide-in-from-left-2 fade-in duration-300">
+                        <div key={field.id} className="desktop-retina-inset grid gap-3 rounded-[20px] border border-border/45 bg-background/55 p-3 sm:grid-cols-[minmax(0,1fr)_110px_150px_40px] sm:items-start">
                             <FormField
                                 control={form.control}
                                 name={`medications.${index}.name`}
                                 render={({ field }) => (
                                     <FormItem className="flex-1">
+                                        <FormLabel className="sr-only">Nome da medicação</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Nome da medicação" {...field} className="bg-secondary/20 border-border/10 h-10 text-sm rounded-xl focus:border-blue-500/30 transition-all font-medium placeholder:text-muted-foreground/70 text-foreground" />
+                                            <Input placeholder="Nome da medicação" {...field} className="h-10 rounded-xl border-border/45 bg-background/64 text-sm font-medium" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -82,9 +83,23 @@ export const MedicationUpdateForm = ({ patient, onSuccess }: MedicationUpdateFor
                                 control={form.control}
                                 name={`medications.${index}.dosage`}
                                 render={({ field }) => (
-                                    <FormItem className="w-24">
+                                    <FormItem>
+                                        <FormLabel className="sr-only">Dosagem</FormLabel>
                                         <FormControl>
-                                            <Input placeholder="Mg" {...field} className="bg-secondary/20 border-border/10 h-10 text-sm rounded-xl focus:border-blue-500/30 transition-all text-center placeholder:text-muted-foreground/70 text-foreground" />
+                                            <Input placeholder="Dosagem" {...field} className="h-10 rounded-xl border-border/45 bg-background/64 text-center text-sm" />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name={`medications.${index}.frequency`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel className="sr-only">Frequência</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Ex.: 1 vez ao dia" {...field} className="h-10 rounded-xl border-border/45 bg-background/64 text-sm" />
                                         </FormControl>
                                         <FormMessage />
                                     </FormItem>
@@ -95,7 +110,8 @@ export const MedicationUpdateForm = ({ patient, onSuccess }: MedicationUpdateFor
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => remove(index)}
-                                className="h-10 w-10 text-muted-foreground hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-colors flex-shrink-0"
+                                className="h-10 w-10 flex-shrink-0 rounded-xl text-muted-foreground hover:bg-rose-500/10 hover:text-rose-500"
+                                aria-label={`Remover medicação ${index + 1}`}
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -103,7 +119,7 @@ export const MedicationUpdateForm = ({ patient, onSuccess }: MedicationUpdateFor
                     ))}
 
                     {fields.length === 0 && (
-                        <div className="py-8 text-center border border-dashed border-border/20 rounded-2xl bg-secondary/5">
+                        <div className="rounded-[20px] bg-muted/30 py-8 text-center">
                             <p className="text-xs text-muted-foreground">Nenhuma medicação registrada.</p>
                         </div>
                     )}
@@ -113,15 +129,15 @@ export const MedicationUpdateForm = ({ patient, onSuccess }: MedicationUpdateFor
                     <Button
                         type="button"
                         variant="outline"
-                        onClick={() => append({ name: "", dosage: "" })}
-                        className="flex-1 h-11 border-dashed border-border/20 hover:bg-secondary/20 text-muted-foreground hover:text-foreground rounded-xl text-xs uppercase font-bold tracking-wider"
+                        onClick={() => append({ name: "", dosage: "", frequency: "" })}
+                        className="h-11 flex-1 rounded-xl border-border/45 bg-background/55 text-xs font-bold uppercase tracking-wider text-muted-foreground hover:bg-muted hover:text-foreground"
                     >
                         <Plus className="h-4 w-4 mr-2" /> Adicionar
                     </Button>
                     <Button
                         type="submit"
                         disabled={isPending}
-                        className="flex-1 h-11 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs uppercase font-bold tracking-wider shadow-[0_0_20px_rgba(37,99,235,0.2)]"
+                        className="h-11 flex-1 rounded-xl bg-foreground text-xs font-bold uppercase tracking-wider text-background hover:bg-foreground/90"
                     >
                         {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                     </Button>

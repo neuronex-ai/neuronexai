@@ -944,6 +944,27 @@
     border-color: rgba(44, 44, 44, 0.82) !important;
   }
 
+  .dark .patient-record-content :where([class*="border-border"], [class*="border-zinc"]),
+  .dark .patient-record-shell :where([class*="border-border"], [class*="border-zinc"]) {
+    border-color: rgba(40, 40, 40, 0.88) !important;
+  }
+
+  .patient-status-icon,
+  .finance-modal-icon {
+    border: 0 !important;
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.32),
+      0 12px 28px -24px hsl(var(--foreground) / 0.42);
+  }
+
+  .dark .patient-status-icon,
+  .dark .finance-modal-icon {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.025),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.36),
+      0 12px 30px -24px rgba(0, 0, 0, 0.95);
+  }
+
   .patient-record-scrollbar {
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--foreground) / 0.12) transparent;
@@ -3271,6 +3292,21 @@
   .notification-scroll-region {
     scrollbar-gutter: stable;
     overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--foreground) / 0.11) transparent;
+  }
+
+  .notification-scroll-region::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .notification-scroll-region::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .notification-scroll-region::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: hsl(var(--foreground) / 0.1);
   }
 
   .notification-popover-surface {

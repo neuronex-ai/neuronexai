@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { SessionAppointmentSource } from "@/components/patients/SessionAppointmentSource";
 
 interface ClinicalSummaryCardProps {
   latestNote: SessionNote | undefined;
@@ -220,6 +221,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
               <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Synapse AI</span>
               <span className="block text-lg font-bold tracking-tight text-foreground">Resumo da sessão</span>
             </div>
+            <SessionAppointmentSource appointmentId={latestNote.appointment_id} />
             <div className="mb-1 flex w-fit items-center gap-2 rounded-full border border-border/70 bg-muted/55 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:border-zinc-800 dark:bg-[#141414]">
               <SentimentIcon className="h-3.5 w-3.5" />
               <span>{summary.sentiment}</span>

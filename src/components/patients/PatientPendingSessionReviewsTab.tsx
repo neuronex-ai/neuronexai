@@ -28,6 +28,8 @@ import {
 } from "@/hooks/use-session-notes";
 import { cn } from "@/lib/utils";
 import type { AISummary, SessionNote } from "@/types";
+import { PatientStatusIcon } from "@/components/patients/PatientStatusIcon";
+import { SessionAppointmentSource } from "@/components/patients/SessionAppointmentSource";
 
 interface PatientPendingSessionReviewsTabProps {
   patientId: string;
@@ -102,11 +104,15 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
               {format(new Date(note.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </span>
             {note.ai_summary_edited ? (
-              <span className="inline-flex items-center gap-2 rounded-full border border-sky-500/20 bg-sky-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-sky-600 dark:text-sky-300">
-                <Pencil className="h-3.5 w-3.5" />
-                Editado
-              </span>
+              <PatientStatusIcon
+                icon={Pencil}
+                tone="blue"
+                label="Este resumo gerado pela NeuroNex AI foi editado pelo profissional; a versão original foi preservada."
+              />
             ) : null}
+          </div>
+          <div className="mt-3">
+            <SessionAppointmentSource appointmentId={note.appointment_id} />
           </div>
           <h3 className="mt-4 text-xl font-black tracking-[-0.035em] text-foreground">
             Resumo de sessão aguardando confirmação

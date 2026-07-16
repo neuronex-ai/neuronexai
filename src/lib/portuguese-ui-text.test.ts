@@ -14,4 +14,10 @@ describe('polishPortugueseUiText', () => {
       'Resumo da teleconsulta pendente',
     );
   });
+
+  it('corrects operational appointment notifications', () => {
+    expect(polishPortugueseUiText('Solicitacao de reagendamento')).toBe(
+      'Solicitação de reagendamento',
+    );
+  });
 });

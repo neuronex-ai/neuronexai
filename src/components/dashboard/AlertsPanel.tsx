@@ -171,17 +171,19 @@ export const AlertsPanel = () => {
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col bg-transparent">
-      <header className="notification-panel-header sticky top-0 z-20 border-b border-border/35 px-5 pb-3 pt-4 dark:border-white/[0.065]">
-        <div className="flex items-start justify-between gap-4">
+      <header className="notification-panel-header sticky top-0 z-20 border-b border-border/35 px-4 py-3">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <Bell className="h-4 w-4 text-muted-foreground" />
-              <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Central persistente</p>
+              <Bell className="h-3.5 w-3.5 text-muted-foreground" />
+              <p className="text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">Central persistente</p>
             </div>
-            <h3 className="mt-1.5 text-xl font-black tracking-[-0.04em] text-foreground">Notificações</h3>
-            <p className="mt-1 text-xs font-medium text-muted-foreground">
+            <div className="mt-1 flex items-baseline gap-2">
+              <h3 className="text-[17px] font-black tracking-[-0.035em] text-foreground">Notificações</h3>
+              <p className="text-[10px] font-medium text-muted-foreground">
               {unreadCount > 0 ? `${unreadCount} não lida${unreadCount === 1 ? '' : 's'}` : 'Tudo em dia'}
-            </p>
+              </p>
+            </div>
           </div>
           {unreadCount > 0 ? (
             <Button
@@ -190,7 +192,7 @@ export const AlertsPanel = () => {
               size="sm"
               disabled={isMutating}
               onClick={() => void markAllAsRead()}
-              className="h-9 rounded-xl border-border/45 px-3 text-[8px] font-black uppercase tracking-[0.12em] dark:border-white/10"
+              className="h-9 rounded-xl border-border/45 px-3 text-[8px] font-black uppercase tracking-[0.12em]"
             >
               <CheckCheck className="mr-2 h-3.5 w-3.5" />
               Ler todas
@@ -198,7 +200,7 @@ export const AlertsPanel = () => {
           ) : null}
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-[14px] border border-border/35 bg-muted/45 px-3 py-1.5 dark:border-white/8">
+        <div className="mt-2 flex items-center justify-between gap-3 rounded-[13px] bg-muted/45 px-3 py-1.5">
           <div className="min-w-0">
             <p className="text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/70">Filtro</p>
             <p className="mt-0.5 truncate text-xs font-black text-foreground">{activeFilterLabel}</p>
@@ -209,7 +211,7 @@ export const AlertsPanel = () => {
                 type="button"
                 variant="outline"
                 size="icon"
-                className="h-9 w-9 rounded-[13px] border-border/50 bg-background/70"
+                className="h-8 w-8 rounded-[11px] border-0 bg-background/70"
                 aria-label="Filtrar notificações"
               >
                 <ListFilter className="h-4 w-4" />
@@ -239,7 +241,7 @@ export const AlertsPanel = () => {
         </div>
       </header>
 
-      <div className={cn('notification-scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain custom-scrollbar [scrollbar-gutter:stable]', isMobile ? 'px-4 pb-24 pt-4' : 'px-4 pb-5 pt-4')}>
+      <div className={cn('notification-scroll-region min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]', isMobile ? 'px-4 pb-24 pt-4' : 'px-3 pb-4 pt-3')}>
         <motion.div
           key={filter}
           initial={reduceMotion ? false : { opacity: 0, x: 3 }}
@@ -251,32 +253,32 @@ export const AlertsPanel = () => {
             groupedNotifications.map(([label, items]) => (
               <section
                 key={label}
-                className="mb-5"
+                className="mb-4"
               >
-                <p className="mb-3 px-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">{label}</p>
-                <div className="space-y-2.5">
+                <p className="mb-2 px-2 text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/70">{label}</p>
+                <div className="space-y-2">
                   {items.map((notification) => (
                     <article
                       key={notification.id}
                       className={cn(
-                        'notification-card desktop-tactile group relative overflow-hidden rounded-[22px] border p-3.5',
+                        'notification-card desktop-tactile group relative overflow-hidden rounded-[18px] border p-3',
                         notification.isRead
-                          ? 'border-border/35 bg-card/55 dark:border-white/8'
-                          : 'border-foreground/15 bg-card shadow-md dark:border-white/15',
+                          ? 'border-border/35 bg-card/55'
+                          : 'border-foreground/15 bg-card shadow-md',
                       )}
                     >
                       {!notification.isRead ? <span className="absolute left-0 top-6 h-8 w-1 rounded-r-full bg-foreground" /> : null}
                       <div className="flex items-start gap-3">
                         <div
                           className={cn(
-                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border',
+                            'patient-status-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px]',
                             notification.severity === 'destructive'
-                              ? 'border-rose-500/20 bg-rose-500/10 text-rose-500'
+                              ? 'bg-rose-500/10 text-rose-500'
                               : notification.severity === 'warning'
-                                ? 'border-amber-500/20 bg-amber-500/10 text-amber-600'
+                                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-300'
                                 : notification.severity === 'success'
-                                  ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600'
-                                  : 'border-border/35 bg-muted/55 text-muted-foreground dark:border-white/8',
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300'
+                                  : 'bg-muted/55 text-muted-foreground',
                           )}
                         >
                           <NotificationIcon notification={notification} />
@@ -346,7 +348,7 @@ export const AlertsPanel = () => {
             ))
           ) : (
             <div className="flex min-h-[360px] flex-col items-center justify-center px-8 text-center">
-              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-border/35 bg-muted/45 dark:border-white/8">
+              <div className="relative flex h-24 w-24 items-center justify-center rounded-full border border-border/35 bg-muted/45 dark:border-zinc-800/80">
                 <Shield className="h-10 w-10 text-muted-foreground/35" strokeWidth={1.2} />
               </div>
               <p className="mt-6 text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground">Nenhuma notificação</p>

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { AISummary, SessionNote } from '@/types';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { toast } from 'sonner';
+import { repairTextEncodingDeep } from '@/lib/text-encoding';
 
 interface SessionNotesOptions {
   limit?: number;
@@ -28,7 +29,7 @@ const fetchSessionNotes = async (patientId: string, userId: string, options: Ses
     throw new Error(error.message);
   }
 
-  return data || [];
+  return repairTextEncodingDeep((data || []) as SessionNote[]);
 };
 
 export const useSessionNotes = (patientId: string, options: SessionNotesOptions = {}) => {
@@ -56,7 +57,7 @@ const fetchPendingSessionReviews = async (patientId: string, userId: string): Pr
     throw new Error(error.message);
   }
 
-  return data || [];
+  return repairTextEncodingDeep((data || []) as SessionNote[]);
 };
 
 export const usePendingSessionReviews = (patientId: string) => {

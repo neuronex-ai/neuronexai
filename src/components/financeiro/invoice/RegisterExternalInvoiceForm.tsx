@@ -7,7 +7,7 @@ import { usePatients } from "@/hooks/use-patients";
 import { useUploadInvoice } from "@/hooks/use-upload-invoice";
 import { supabase } from "@/integrations/supabase/client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Check, Loader2, Upload } from "lucide-react";
+import { ArrowLeft, Check, FileCheck2, Loader2, Upload } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -93,15 +93,22 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
 
   return (
     <div className="space-y-6">
-        <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={onBack} className="h-8 w-8 rounded-full hover:bg-white/10">
+        <div className="grid grid-cols-[40px_1fr_40px] items-start">
+            <Button variant="ghost" size="icon" onClick={onBack} className="h-10 w-10 rounded-xl hover:bg-muted" aria-label="Voltar para gestão fiscal">
                 <ArrowLeft className="h-4 w-4" />
             </Button>
-            <h3 className="text-lg font-semibold text-white">Registrar Nota Externa</h3>
+            <div className="flex flex-col items-center text-center">
+                <span className="finance-modal-icon flex h-11 w-11 items-center justify-center rounded-[15px] bg-muted/65 text-foreground">
+                    <FileCheck2 className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <h3 className="mt-3 text-lg font-semibold text-foreground">Arquivar NFS-e externa</h3>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Registre um documento fiscal já emitido.</p>
+            </div>
+            <span aria-hidden="true" />
         </div>
 
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="desktop-retina-form space-y-5">
                 <FormField
                     control={form.control}
                     name="patientId"
@@ -110,9 +117,9 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
                             <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Paciente</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value} disabled={Boolean(initialPatientId)}>
                                 <FormControl>
-                                    <SelectTrigger className="bg-black/20 border-white/10 h-11 rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                                    <SelectTrigger className="h-11 rounded-xl border-border/45 bg-background/64"><SelectValue placeholder="Selecione" /></SelectTrigger>
                                 </FormControl>
-                                <SelectContent className="bg-[#0A0A0B] border-white/10">
+                                <SelectContent className="desktop-retina-modal border-border/55 bg-popover/96">
                                     {patients?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
@@ -129,7 +136,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
                             <FormItem>
                                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Número da Nota</FormLabel>
                                 <FormControl>
-                                    <Input placeholder="000123" {...field} className="bg-black/20 border-white/10 h-11 rounded-xl" />
+                                    <Input placeholder="000123" {...field} className="h-11 rounded-xl border-border/45 bg-background/64" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -142,7 +149,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
                             <FormItem>
                                 <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Valor (R$)</FormLabel>
                                 <FormControl>
-                                    <Input type="number" placeholder="0.00" {...field} className="bg-black/20 border-white/10 h-11 rounded-xl" />
+                                    <Input type="number" min="0" step="0.01" placeholder="0,00" {...field} className="h-11 rounded-xl border-border/45 bg-background/64" />
                                 </FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -157,7 +164,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
                         <FormItem>
                             <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Data de Emissão</FormLabel>
                             <FormControl>
-                                <Input type="date" {...field} className="bg-black/20 border-white/10 h-11 rounded-xl" />
+                                <Input type="date" {...field} className="h-11 rounded-xl border-border/45 bg-background/64" />
                             </FormControl>
                             <FormMessage />
                         </FormItem>
@@ -166,7 +173,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
 
                 <div className="space-y-2">
                     <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Arquivo da Nota (PDF)</FormLabel>
-                    <div className="border-2 border-dashed border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer relative">
+                    <div className="desktop-retina-inset relative flex cursor-pointer flex-col items-center justify-center rounded-[18px] border border-dashed border-border/55 bg-background/52 p-6 text-center transition-colors hover:bg-muted/55">
                         <input 
                             type="file" 
                             accept=".pdf" 
@@ -174,7 +181,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
                             onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
                         />
                         {selectedFile ? (
-                            <div className="flex items-center gap-2 text-emerald-400">
+                            <div className="flex items-center gap-2 text-foreground">
                                 <Check className="h-5 w-5" />
                                 <span className="text-sm font-medium">{selectedFile.name}</span>
                             </div>
@@ -187,7 +194,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientI
                     </div>
                 </div>
 
-                <Button type="submit" disabled={isSubmitting || isUploading} className="w-full h-12 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold uppercase text-xs tracking-widest shadow-glow mt-2">
+                <Button type="submit" disabled={isSubmitting || isUploading} className="mt-2 h-12 w-full rounded-xl bg-foreground text-xs font-bold uppercase tracking-widest text-background hover:bg-foreground/90">
                     {isSubmitting || isUploading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Arquivar Nota"}
                 </Button>
             </form>

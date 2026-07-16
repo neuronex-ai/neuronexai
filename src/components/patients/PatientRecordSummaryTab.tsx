@@ -10,6 +10,7 @@ import {
   Flag,
   PackageCheck,
   ShieldAlert,
+  ShieldCheck,
   Smile,
   type LucideIcon,
 } from "lucide-react";
@@ -20,6 +21,7 @@ import { usePatientRecordSummary } from "@/hooks/use-patient-record-summary";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/types";
 import { PatientCompleteAppointmentHistory } from "@/components/patients/PatientCompleteAppointmentHistory";
+import { PatientStatusIcon } from "@/components/patients/PatientStatusIcon";
 
 interface PatientRecordSummaryTabProps {
   patient: Patient;
@@ -74,10 +76,10 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
 
   const data = summary.data;
   const riskState = data.riskScore >= 8
-    ? { label: "Atenção clínica prioritária", className: "border-rose-500/20 bg-rose-500/10 text-rose-500" }
+    ? { label: "Atenção clínica prioritária", tone: "red" as const, icon: ShieldAlert }
     : data.riskScore >= 4
-      ? { label: "Ponto de atenção informado", className: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300" }
-      : { label: "Sem alerta informado", className: "border-emerald-500/16 bg-emerald-500/8 text-emerald-600 dark:text-emerald-300" };
+      ? { label: "Ponto de atenção informado", tone: "amber" as const, icon: ShieldAlert }
+      : { label: "Sem alerta informado", tone: "green" as const, icon: ShieldCheck };
   const nextSessionLabel = data.nextSession?.start_time
     ? format(new Date(data.nextSession.start_time), "dd MMM, HH:mm", { locale: ptBR })
     : "Sem agendamento";
@@ -170,13 +172,12 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
               Próximos passos, registros e pontos de atenção reunidos em uma única leitura.
             </p>
           </div>
-          <span className={cn(
-            "inline-flex w-fit items-center gap-2 rounded-full border px-3 py-2 text-[9px] font-black uppercase tracking-[0.15em]",
-            riskState.className,
-          )}>
-            <span className="h-1.5 w-1.5 rounded-full bg-current" />
-            {riskState.label}
-          </span>
+          <PatientStatusIcon
+            icon={riskState.icon}
+            label={riskState.label}
+            tone={riskState.tone}
+            className="h-9 w-9 rounded-[13px]"
+          />
         </div>
       </section>
 

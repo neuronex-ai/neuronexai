@@ -10,6 +10,7 @@ import {
   ExternalLink,
   FileCheck2,
   FileText,
+  Layers3,
   Plus,
   Receipt,
   Wallet,
@@ -24,6 +25,7 @@ import { usePatientInvoices } from "@/hooks/use-invoices";
 import { usePatientTransactions } from "@/hooks/use-patient-transactions";
 import { cn } from "@/lib/utils";
 import type { Invoice, Transaction } from "@/types";
+import { managementOriginOf } from "@/lib/financial-management-model";
 
 interface PatientFinanceTabProps {
   patientId: string;
@@ -44,6 +46,8 @@ const TransactionItem = memo(function TransactionItem({
   isMobile: boolean;
 }) {
   const isIncome = transaction.type === "income";
+  const originLabel = managementOriginOf(transaction);
+  const isEditable = originLabel === "Lançamento manual";
 
   return (
     <div
@@ -57,16 +61,16 @@ const TransactionItem = memo(function TransactionItem({
             "flex w-full items-center justify-between gap-4 rounded-[22px] text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45",
             isMobile ? "p-4" : "p-5",
           )}
-          aria-label={`Editar ${transaction.description}`}
+          aria-label={`${isEditable ? "Editar" : "Abrir detalhes de"} ${transaction.description}`}
         >
           <span className="flex min-w-0 flex-1 items-center gap-4">
             <span
               className={cn(
-                "flex shrink-0 items-center justify-center rounded-2xl border",
+                "patient-status-icon flex shrink-0 items-center justify-center rounded-2xl",
                 isMobile ? "h-10 w-10" : "h-11 w-11",
                 isIncome
-                  ? "border-emerald-500/18 bg-emerald-500/9 text-emerald-600 dark:text-emerald-400"
-                  : "border-rose-500/18 bg-rose-500/9 text-rose-600 dark:text-rose-400",
+                  ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/12 dark:text-emerald-300"
+                  : "bg-rose-500/10 text-rose-600 dark:bg-rose-400/12 dark:text-rose-300",
               )}
             >
               {isIncome ? <ArrowDownRight className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
@@ -76,13 +80,18 @@ const TransactionItem = memo(function TransactionItem({
               <span className="block truncate text-sm font-semibold tracking-tight text-foreground">
                 {transaction.description}
               </span>
-              <span className="flex min-w-0 items-center gap-2 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+              <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
                 <span className="flex shrink-0 items-center gap-1.5">
                   <Calendar className="h-3 w-3" aria-hidden="true" />
                   {new Date(`${transaction.date}T00:00:00`).toLocaleDateString("pt-BR")}
                 </span>
                 <span aria-hidden="true">•</span>
                 <span className="truncate">{transaction.category || "Geral"}</span>
+                <span aria-hidden="true">•</span>
+                <span className="inline-flex min-w-0 items-center gap-1.5 truncate">
+                  <Layers3 className="h-3 w-3 shrink-0" aria-hidden="true" />
+                  {originLabel}
+                </span>
               </span>
             </span>
           </span>

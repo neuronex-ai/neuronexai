@@ -7,6 +7,7 @@ import {
   Edit,
   MoreVertical,
   Package,
+  PackageCheck,
   PackageSearch,
   Unlink,
 } from "lucide-react";
@@ -25,6 +26,7 @@ import type { PatientPackage } from "@/types";
 
 import { EditPackageModal } from "./EditPackageModal";
 import { PackageLifecycleDialog } from "./PackageLifecycleDialog";
+import { PatientStatusIcon } from "./PatientStatusIcon";
 
 interface PackageCardProps {
   pkg: PatientPackage;
@@ -83,18 +85,20 @@ export const PackageCard = ({ pkg, patientId }: PackageCardProps) => {
             <div>
               <h3 className="text-lg font-black tracking-tight text-zinc-900 dark:text-white">{pkg.description}</h3>
               <div className="mt-1 flex items-center gap-2">
-                <span
-                  className={cn(
-                    "rounded-lg border px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.15em]",
-                    isCompleted || isEnded
-                      ? "border-border/50 bg-muted/55 text-muted-foreground"
-                      : isExpired
-                      ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                      : "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-                  )}
-                >
-                  {statusLabel}
-                </span>
+                {!isCompleted && !isEnded && !isExpired ? (
+                  <PatientStatusIcon icon={PackageCheck} label={statusLabel} tone="green" />
+                ) : (
+                  <span
+                    className={cn(
+                      "rounded-lg px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.15em]",
+                      isExpired
+                        ? "bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        : "bg-muted/55 text-muted-foreground",
+                    )}
+                  >
+                    {statusLabel}
+                  </span>
+                )}
               </div>
             </div>
           </div>

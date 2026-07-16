@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { repairTextEncodingDeep } from '@/lib/text-encoding';
 
 export type TimelineItemType = 'note' | 'goal' | 'document' | 'mood' | 'transaction';
 
@@ -35,7 +36,7 @@ const fetchPatientTimelinePage = async (
   const [notesResult, goalsResult, moodResult, filesResult] = await Promise.all([
     supabase
       .from('session_notes')
-      .select('id, created_at, notes, ai_summary, review_status, original_ai_summary, original_transcription, ai_summary_edited, ai_summary_edited_at')
+      .select('id, appointment_id, created_at, notes, ai_summary, review_status, original_ai_summary, original_transcription, ai_summary_edited, ai_summary_edited_at')
       .eq('patient_id', patientId)
       .or('review_status.is.null,review_status.eq.confirmed')
       .order('created_at', { ascending: false })
@@ -73,7 +74,7 @@ const fetchPatientTimelinePage = async (
       id: note.id,
       type: 'note',
       date: new Date(note.created_at),
-      data: note,
+      data: repairTextEncodingDeep(note),
     });
   });
 
@@ -82,7 +83,7 @@ const fetchPatientTimelinePage = async (
       id: goal.id,
       type: 'goal',
       date: new Date(goal.created_at),
-      data: goal,
+      data: repairTextEncodingDeep(goal),
     });
   });
 
@@ -91,7 +92,7 @@ const fetchPatientTimelinePage = async (
       id: log.id,
       type: 'mood',
       date: new Date(log.created_at),
-      data: log,
+      data: repairTextEncodingDeep(log),
     });
   });
 

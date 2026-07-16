@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { AppointmentTimelinePanel } from "@/components/agenda/AppointmentTimelineDialog";
 import {
+  repairAppointmentTimelineItem,
   toSafeAppointmentTimeline,
   type AppointmentTimelineRecord,
 } from "@/lib/appointment-timeline";
@@ -127,5 +128,24 @@ describe("appointment timeline safe DTO", () => {
     expect(hookSource).not.toContain('.from("appointment_events")');
     expect(hookSource).not.toContain('table: "appointment_events"');
     expect(hookSource).toContain('table: "appointments"');
+  });
+
+  it("repairs legacy Portuguese encoding in the safe timeline DTO", () => {
+    const repaired = repairAppointmentTimelineItem({
+      title: "Agendamento criado",
+      actorName: "Jhonatan",
+      channelName: "AutomaÃ§Ã£o da NeuroNex",
+      occurredAt: "2026-07-15T19:00:00.000Z",
+      statusChange: "SituaÃ§Ã£o atual: Criado",
+      detail: "ConfirmaÃ§Ã£o necessÃ¡ria",
+      visualKind: "default",
+    });
+
+    expect(repaired).toMatchObject({
+      channelName: "Automação da NeuroNex",
+      statusChange: "Situação atual: Criado",
+      detail: "Confirmação necessária",
+    });
+    expect(JSON.stringify(repaired)).not.toMatch(/Ã|Â|�/u);
   });
 });

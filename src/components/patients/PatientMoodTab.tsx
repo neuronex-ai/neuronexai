@@ -14,12 +14,12 @@ interface PatientMoodTabProps {
 
 const MOOD_PAGE_SIZE = 9;
 
-const moodConfig: Record<number, { label: string; icon: typeof Smile; color: string; bg: string; border: string }> = {
-  1: { label: "Muito difícil", icon: Angry, color: "#e11d48", bg: "bg-rose-500/10", border: "border-rose-500/18" },
-  2: { label: "Ruim", icon: Frown, color: "#ea580c", bg: "bg-orange-500/10", border: "border-orange-500/18" },
-  3: { label: "Neutro", icon: Meh, color: "#71717a", bg: "bg-zinc-500/10", border: "border-zinc-500/18" },
-  4: { label: "Bem", icon: Smile, color: "#059669", bg: "bg-emerald-500/10", border: "border-emerald-500/18" },
-  5: { label: "Muito bem", icon: Laugh, color: "#047857", bg: "bg-emerald-500/10", border: "border-emerald-500/18" },
+const moodConfig: Record<number, { label: string; icon: typeof Smile; color: string; bg: string }> = {
+  1: { label: "Muito difícil", icon: Angry, color: "text-rose-600 dark:text-rose-300", bg: "bg-rose-500/10 dark:bg-rose-400/12" },
+  2: { label: "Ruim", icon: Frown, color: "text-amber-700 dark:text-amber-300", bg: "bg-amber-500/11 dark:bg-amber-400/12" },
+  3: { label: "Neutro", icon: Meh, color: "text-blue-600 dark:text-blue-300", bg: "bg-blue-500/9 dark:bg-blue-400/11" },
+  4: { label: "Bem", icon: Smile, color: "text-cyan-700 dark:text-cyan-300", bg: "bg-cyan-500/10 dark:bg-cyan-400/12" },
+  5: { label: "Muito bem", icon: Laugh, color: "text-emerald-700 dark:text-emerald-300", bg: "bg-emerald-500/10 dark:bg-emerald-400/12" },
 };
 
 export const PatientMoodTab = ({ patientId }: PatientMoodTabProps) => {
@@ -86,8 +86,8 @@ export const PatientMoodTab = ({ patientId }: PatientMoodTabProps) => {
                 style={{ contentVisibility: "auto", containIntrinsicSize: "190px" }}
               >
                 <div className="mb-5 flex items-center justify-between gap-3">
-                  <span className={cn("flex h-10 w-10 items-center justify-center rounded-[15px] border", config.bg, config.border)}>
-                    <Icon className="h-5 w-5" style={{ color: config.color }} aria-hidden="true" />
+                  <span className={cn("patient-status-icon flex h-10 w-10 items-center justify-center rounded-[15px]", config.bg, config.color)}>
+                    <Icon className="h-5 w-5" aria-hidden="true" />
                   </span>
                   <time className="text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground" dateTime={log.created_at}>
                     {format(new Date(log.created_at), "dd/MM • HH:mm")}

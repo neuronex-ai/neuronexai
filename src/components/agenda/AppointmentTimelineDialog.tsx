@@ -27,14 +27,14 @@ const eventIcon = (kind: AppointmentTimelineVisualKind) => {
 };
 
 const eventTone = (kind: AppointmentTimelineVisualKind) => {
-  if (kind === "cancel") return "border-red-500/25 bg-red-500/10 text-red-600";
+  if (kind === "cancel") return "bg-red-500/10 text-red-600 dark:text-red-300";
   if (kind === "success") {
-    return "border-emerald-500/25 bg-emerald-500/10 text-emerald-600";
+    return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300";
   }
   if (kind === "reschedule") {
-    return "border-amber-500/25 bg-amber-500/10 text-amber-600";
+    return "bg-amber-500/10 text-amber-600 dark:text-amber-300";
   }
-  return "border-border/70 bg-muted/60 text-muted-foreground";
+  return "bg-muted/60 text-muted-foreground";
 };
 
 export function AppointmentTimelinePanel({
@@ -87,7 +87,7 @@ export function AppointmentTimelinePanel({
               >
                 <div
                   className={cn(
-                    "relative z-10 flex h-10 w-10 items-center justify-center rounded-full border",
+                    "patient-status-icon relative z-10 flex h-10 w-10 items-center justify-center rounded-[14px]",
                     eventTone(event.visualKind),
                   )}
                 >

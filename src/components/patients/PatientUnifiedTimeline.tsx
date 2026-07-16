@@ -9,11 +9,13 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
     Angry, BrainCircuit, CheckCircle2, ChevronDown,
-    ChevronUp, Download, Frown, Laugh, Loader2, Meh, Paperclip, Smile, Target
+    ChevronUp, Download, Frown, Laugh, Loader2, Meh, Paperclip, Pencil, Smile, Target
 } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
+import { PatientStatusIcon } from "@/components/patients/PatientStatusIcon";
+import { SessionAppointmentSource } from "@/components/patients/SessionAppointmentSource";
 
 interface PatientUnifiedTimelineProps {
     patientId: string;
@@ -151,7 +153,7 @@ export const PatientUnifiedTimeline = ({ patientId }: PatientUnifiedTimelineProp
                                     className="p-6"
                                     innerClassName="relative overflow-hidden"
                                 >
-                                    <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-zinc-700/45" />
+                                    <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-foreground/8 to-transparent dark:via-zinc-800/65" />
                                     <div className="relative z-10 mb-6 flex items-center justify-between">
                                         <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-3">
@@ -164,10 +166,13 @@ export const PatientUnifiedTimeline = ({ patientId }: PatientUnifiedTimelineProp
                                                 {format(item.date, "HH:mm")} <span className="w-1.5 h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800" /> {item.data.ai_summary?.sentiment || "Estável"}
                                             </p>
                                             {item.data.ai_summary_edited ? (
-                                                <span className="inline-flex w-fit rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.16em] text-sky-600 dark:text-sky-300">
-                                                    Editado
-                                                </span>
+                                                <PatientStatusIcon
+                                                    icon={Pencil}
+                                                    tone="blue"
+                                                    label="Resumo gerado pela NeuroNex AI e editado pelo profissional; a versão original foi preservada."
+                                                />
                                             ) : null}
+                                            <SessionAppointmentSource appointmentId={item.data.appointment_id} compact />
                                         </div>
                                         <BrainCircuit className="h-5 w-5 text-muted-foreground/45" />
                                     </div>

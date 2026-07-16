@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { repairTextEncodingDeep } from '@/lib/text-encoding';
 
 export interface MoodLog {
   id: string;
@@ -16,7 +17,7 @@ const fetchPatientMoodLogs = async (patientId: string): Promise<MoodLog[]> => {
     .order('created_at', { ascending: true }); // Ascending for charts
 
   if (error) throw new Error(error.message);
-  return data || [];
+  return repairTextEncodingDeep((data || []) as MoodLog[]);
 };
 
 export const usePatientMoodLogs = (patientId: string) => {

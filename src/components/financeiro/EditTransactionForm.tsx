@@ -67,14 +67,14 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar pr-2">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="desktop-retina-form space-y-5">
 
         <FormField
           control={form.control}
           name="type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Tipo</FormLabel>
+              <FormLabel className="ml-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Tipo de lançamento</FormLabel>
               <FormControl>
                 <RadioGroup
                   onValueChange={field.onChange}
@@ -88,10 +88,10 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                         <label
                           htmlFor="income"
                           className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all duration-300",
+                            "desktop-retina-interactive flex min-h-20 cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] border p-3 transition-colors",
                             field.value === "income"
-                              ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400 shadow-[0_0_20px_-5px_rgba(16,185,129,0.2)]"
-                              : "bg-white/[0.02] border-white/10 text-muted-foreground hover:bg-white/[0.05]"
+                              ? "border-foreground bg-foreground text-background"
+                              : "desktop-retina-inset border-border/45 bg-background/58 text-muted-foreground hover:bg-muted"
                           )}
                         >
                           <TrendingUp className="h-5 w-5" />
@@ -108,10 +108,10 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                         <label
                           htmlFor="expense"
                           className={cn(
-                            "cursor-pointer flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all duration-300",
+                            "desktop-retina-interactive flex min-h-20 cursor-pointer flex-col items-center justify-center gap-2 rounded-[18px] border p-3 transition-colors",
                             field.value === "expense"
-                              ? "bg-rose-500/10 border-rose-500/50 text-rose-400 shadow-[0_0_20px_-5px_rgba(244,63,94,0.2)]"
-                              : "bg-white/[0.02] border-white/10 text-muted-foreground hover:bg-white/[0.05]"
+                              ? "border-foreground bg-foreground text-background"
+                              : "desktop-retina-inset border-border/45 bg-background/58 text-muted-foreground hover:bg-muted"
                           )}
                         >
                           <TrendingDown className="h-5 w-5" />
@@ -134,7 +134,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
             <FormItem>
               <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Descrição</FormLabel>
               <FormControl>
-                <Input placeholder="Ex: Sessão - João Silva" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                <Input placeholder="Ex.: Sessão de psicoterapia" {...field} className="h-11 rounded-xl border-border/45 bg-background/64" />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -154,7 +154,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                 <FormControl>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input type="number" placeholder="0.00" {...field} className="pl-9 bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl font-mono" />
+                    <Input type="number" min="0" step="0.01" placeholder="0,00" {...field} className="h-11 rounded-xl border-border/45 bg-background/64 pl-9 font-mono" />
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -168,7 +168,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
               <FormItem>
                 <FormLabel className="text-xs text-muted-foreground uppercase tracking-wider font-semibold ml-1">Categoria</FormLabel>
                 <FormControl>
-                  <Input placeholder="Ex: Terapia" {...field} className="bg-black/20 border-white/10 focus:bg-black/40 h-11 rounded-xl" />
+                  <Input placeholder="Ex.: Terapia" {...field} className="h-11 rounded-xl border-border/45 bg-background/64" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -176,7 +176,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
           />
         </div>
 
-        <div className="space-y-3 p-4 rounded-xl bg-white/[0.03] border border-white/5">
+        <div className="desktop-retina-inset space-y-3 rounded-[20px] border border-border/45 bg-background/52 p-4">
           <FormField
             control={form.control}
             name="payment_method"
@@ -194,7 +194,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                         <FormControl>
                           <RadioGroupItem value={m.id} id={m.id} className="peer sr-only" />
                         </FormControl>
-                        <label htmlFor={m.id} className="flex flex-col items-center justify-center p-2 rounded-lg border border-white/5 bg-black/20 hover:bg-white/5 peer-aria-checked:bg-primary/20 peer-aria-checked:border-primary/50 peer-aria-checked:text-primary transition-all cursor-pointer text-muted-foreground">
+                        <label htmlFor={m.id} className="flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-xl bg-muted/45 p-2 text-muted-foreground transition-colors hover:bg-muted peer-data-[state=checked]:bg-foreground peer-data-[state=checked]:text-background">
                           <m.icon className="h-4 w-4 mb-1" />
                           <span className="text-[9px] font-bold uppercase">{m.l}</span>
                         </label>
@@ -217,9 +217,9 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                     <FormLabel className="text-[10px] uppercase font-bold text-muted-foreground">Parcelas</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={String(field.value)}>
                       <FormControl>
-                        <SelectTrigger className="w-24 h-8 text-xs bg-black/40 border-white/10 rounded-lg"><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-9 w-24 rounded-xl border-border/45 bg-background/65 text-xs"><SelectValue /></SelectTrigger>
                       </FormControl>
-                      <SelectContent className="bg-[#1A1A1D] border-white/10">
+                      <SelectContent className="desktop-retina-modal border-border/55 bg-popover/96">
                         {[1, 2, 3, 4, 5, 6, 10, 12].map(i => <SelectItem key={i} value={String(i)}>{i}x</SelectItem>)}
                       </SelectContent>
                     </Select>
@@ -242,7 +242,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                     <Button
                       variant={"outline"}
                       className={cn(
-                        "w-full pl-3 text-left font-normal bg-black/20 border-white/10 hover:bg-black/30 h-11 rounded-xl",
+                        "h-11 w-full rounded-xl border-border/45 bg-background/64 pl-3 text-left font-normal hover:bg-muted",
                         !field.value && "text-muted-foreground"
                       )}
                     >
@@ -251,7 +251,7 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 border-white/10 bg-[#0A0A0B]" align="start">
+                <PopoverContent className="desktop-retina-modal w-auto border-border/55 bg-popover/96 p-0" align="start">
                   <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus locale={ptBR} />
                 </PopoverContent>
               </Popover>
@@ -260,7 +260,27 @@ export const EditTransactionForm = ({ transaction, onSuccess }: EditTransactionF
           )}
         />
 
-        <Button type="submit" className="w-full gap-2 h-12 rounded-xl shadow-glow" disabled={isPending}>
+        <FormField
+          control={form.control}
+          name="external_reference"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel className="ml-1 text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
+                Referência ou comprovante
+              </FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Opcional: número do recibo ou referência externa"
+                  {...field}
+                  className="h-11 rounded-xl border-border/45 bg-background/64"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Button type="submit" className="h-12 w-full gap-2 rounded-xl bg-foreground text-background hover:bg-foreground/90" disabled={isPending}>
           {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           <Save className="h-4 w-4" />
           {isPending ? "Salvando..." : "Salvar Alterações"}

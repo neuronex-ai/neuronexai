@@ -36,13 +36,13 @@ const formatDateTime = (value: string | null, pattern = "dd 'de' MMMM 'de' yyyy,
   value ? format(new Date(value), pattern, { locale: ptBR }) : "Data não informada";
 
 const toneByEvent = {
-  success: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
-  cancel: "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-300",
-  archive: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300",
-  reschedule: "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-300",
-  financial: "border-violet-500/20 bg-violet-500/10 text-violet-600 dark:text-violet-300",
-  email: "border-cyan-500/20 bg-cyan-500/10 text-cyan-600 dark:text-cyan-300",
-  default: "border-border/55 bg-muted/35 text-muted-foreground",
+  success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-300",
+  cancel: "bg-rose-500/10 text-rose-600 dark:text-rose-300",
+  archive: "bg-amber-500/10 text-amber-600 dark:text-amber-300",
+  reschedule: "bg-sky-500/10 text-sky-600 dark:text-sky-300",
+  financial: "bg-violet-500/10 text-violet-600 dark:text-violet-300",
+  email: "bg-cyan-500/10 text-cyan-600 dark:text-cyan-300",
+  default: "bg-muted/35 text-muted-foreground",
 } as const;
 
 export function PatientCompleteAppointmentHistory({ patientId }: { patientId: string }) {
@@ -88,7 +88,8 @@ export function PatientCompleteAppointmentHistory({ patientId }: { patientId: st
             </p>
           </div>
         </div>
-        <span className="w-fit rounded-full border border-border/50 bg-muted/35 px-3 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+        <span className="inline-flex w-fit items-center gap-2 rounded-full bg-muted/35 px-3 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
+          <Archive className="h-3.5 w-3.5" aria-hidden="true" />
           Inclui itens removidos da agenda
         </span>
       </header>
@@ -184,7 +185,7 @@ function AppointmentHistoryCard({
         </span>
         <span className="flex shrink-0 items-center gap-2">
           {item.archived ? (
-            <span className="hidden rounded-full border border-amber-500/20 bg-amber-500/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] text-amber-600 dark:text-amber-300 sm:inline-flex">
+            <span className="hidden rounded-full bg-amber-500/10 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.14em] text-amber-600 dark:text-amber-300 sm:inline-flex">
               {item.archiveLabel}
             </span>
           ) : null}
@@ -236,7 +237,7 @@ function AppointmentHistoryCard({
                   <li key={`${event.occurredAt}-${eventIndex}`} className="clinical-inset-surface rounded-[18px] border p-4">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <span className={cn("inline-flex rounded-full border px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.12em]", toneByEvent[event.visualKind] || toneByEvent.default)}>
+                        <span className={cn("inline-flex rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-[0.12em]", toneByEvent[event.visualKind] || toneByEvent.default)}>
                           {event.title}
                         </span>
                         <p className="mt-2 text-xs font-semibold text-foreground">{event.actorName} · {event.channelName}</p>

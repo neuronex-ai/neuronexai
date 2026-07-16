@@ -1,3 +1,5 @@
+import { repairMojibake } from "@/lib/text-encoding";
+
 export type AppointmentTimelineVisualKind =
   | "default"
   | "email"
@@ -29,6 +31,17 @@ export interface AppointmentTimelineNames {
   patientName?: string | null;
   psychologistName?: string | null;
 }
+
+export const repairAppointmentTimelineItem = (
+  item: AppointmentTimelineItem,
+): AppointmentTimelineItem => ({
+  ...item,
+  title: repairMojibake(item.title),
+  actorName: repairMojibake(item.actorName),
+  channelName: repairMojibake(item.channelName),
+  statusChange: item.statusChange ? repairMojibake(item.statusChange) : null,
+  detail: item.detail ? repairMojibake(item.detail) : null,
+});
 
 const EVENT_LABELS: Record<string, string> = {
   appointment_created: "Agendamento criado",
@@ -128,7 +141,8 @@ const CHANNEL_LABELS: Record<string, string> = {
   migration: "Automação da NeuroNex",
 };
 
-const cleanName = (name: string | null | undefined) => name?.trim() || null;
+const cleanName = (name: string | null | undefined) =>
+  name?.trim() ? repairMojibake(name.trim()) : null;
 
 const actorName = (actorType: string, names: AppointmentTimelineNames) => {
   if (actorType === "patient") return cleanName(names.patientName) || "Paciente";
@@ -181,7 +195,7 @@ export function toSafeAppointmentTimeline(
   records: readonly AppointmentTimelineRecord[],
   names: AppointmentTimelineNames = {},
 ): AppointmentTimelineItem[] {
-  return records.map((record) => ({
+  return records.map((record) => repairAppointmentTimelineItem({
     title: EVENT_LABELS[record.event_type] || "Atualização do agendamento",
     actorName: actorName(record.actor_type, names),
     channelName: channelName(record.action_origin),

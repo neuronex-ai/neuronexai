@@ -6,7 +6,9 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   type AppointmentTimelineItem,
   type AppointmentTimelineVisualKind,
+  repairAppointmentTimelineItem,
 } from "@/lib/appointment-timeline";
+import { repairTextEncodingDeep } from "@/lib/text-encoding";
 
 export interface AppointmentRescheduleRequest {
   id: string;
@@ -62,7 +64,7 @@ interface ReviewResult {
 
 const lifecycleQueryKey = (appointmentId: string) => ["appointmentLifecycle", appointmentId] as const;
 
-const toTimelineItem = (row: SafeAppointmentTimelineRpcRow): AppointmentTimelineItem => ({
+const toTimelineItem = (row: SafeAppointmentTimelineRpcRow): AppointmentTimelineItem => repairAppointmentTimelineItem({
   title: row.title,
   actorName: row.actor_name,
   channelName: row.channel_name,
@@ -97,7 +99,7 @@ export function useAppointmentLifecycle(
       if (requestsResult.error) throw requestsResult.error;
       return {
         events: ((timelineResult.data || []) as SafeAppointmentTimelineRpcRow[]).map(toTimelineItem),
-        requests: (requestsResult.data || []) as AppointmentRescheduleRequest[],
+        requests: repairTextEncodingDeep((requestsResult.data || []) as AppointmentRescheduleRequest[]),
       };
     },
     staleTime: 15_000,
