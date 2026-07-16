@@ -3,12 +3,6 @@
 import { Button } from "@/components/ui/button";
 import { AppointmentRescheduleReview } from "@/components/agenda/AppointmentRescheduleReview";
 import { AppointmentTimelinePanel } from "@/components/agenda/AppointmentTimelineDialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import {
   Select,
@@ -20,15 +14,11 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
-import { useProfile } from "@/hooks/use-profile";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
 import {
-  APPOINTMENT_STATUS_META,
-  APPOINTMENT_STATUS_VALUES,
   getAppointmentStatusMeta,
   normalizeAppointmentStatus,
-  type AppointmentStatus,
 } from "@/lib/appointment-status";
 import {
   buildEventNotes,
@@ -52,7 +42,6 @@ import {
   Briefcase,
   CalendarDays,
   CheckCircle,
-  ChevronDown,
   ChevronRight,
   Clock,
   Clock3,
@@ -112,6 +101,7 @@ const LIFECYCLE_LABELS: Record<string, string> = {
   reschedule_requested: "Reagendamento pendente",
   reschedule_approved: "Reagendamento aprovado",
   reschedule_rejected: "Reagendamento recusado",
+  professional_response_overdue: "Resposta profissional em atraso",
   in_progress: "Em atendimento",
   completed: "Realizado",
   closed: "Encerrado",
@@ -135,7 +125,6 @@ export const AppointmentDetailModal = ({
   const [transactionData, setTransactionData] = useState<any>(null);
   const [packageData, setPackageData] = useState<any>(null);
   const [notes, setNotes] = useState("");
-  const [status, setStatus] = useState<AppointmentStatus>("unscored");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [eventTitle, setEventTitle] = useState("");
@@ -147,6 +136,7 @@ export const AppointmentDetailModal = ({
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyBackButtonRef = useRef<HTMLButtonElement>(null);
   const shouldRestoreHistoryFocusRef = useRef(false);
+  const invitationIdempotencyKeyRef = useRef<string | null>(null);
 
   const navigate = useNavigate();
   const sendEmail = useSendEmail();
@@ -154,34 +144,28 @@ export const AppointmentDetailModal = ({
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
   const shouldReduceMotion = useReducedMotion();
-  const { data: profile } = useProfile();
-  const psychologistName = useMemo(
-    () =>
-      [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim() ||
-      profile?.full_name?.trim() ||
-      profile?.name?.trim() ||
-      null,
-    [profile],
-  );
-  const lifecycle = useAppointmentLifecycle(appointment.id, open, {
-    patientName: patientData?.name || appointment.patient_name,
-    psychologistName,
-  });
+  const lifecycle = useAppointmentLifecycle(appointment.id, open);
 
   const metadata = useMemo(() => getAppointmentMetadata(appointment), [appointment]);
   const kind = metadata.kind || "session";
   const isSession = kind === "session";
   const isEvent = kind === "event";
   const displayTitle = getAppointmentDisplayTitle(appointment);
-  const statusMeta = getAppointmentStatusMeta(status, appointment.notes);
+  const statusMeta = getAppointmentStatusMeta(
+    normalizeAppointmentStatus(appointment.status, appointment.notes),
+    appointment.notes,
+  );
   const recurrence = metadata.recurrence;
+  const lifecycleLabel = appointment.lifecycle_status
+    ? LIFECYCLE_LABELS[appointment.lifecycle_status] || "Situação do agendamento atualizada"
+    : null;
+  const invitationBlockedByPendingRequest = Boolean(lifecycle.pendingRequest);
 
   const loadData = useCallback(async () => {
     setStep(1);
     const currentMetadata = getAppointmentMetadata(appointment);
 
     setNotes(getEditableAppointmentNotes(appointment));
-    setStatus(normalizeAppointmentStatus(appointment.status, appointment.notes));
     setStartTime(format(new Date(appointment.start_time), "HH:mm"));
     setEndTime(format(new Date(appointment.end_time), "HH:mm"));
     setEventTitle(currentMetadata.eventTitle || displayTitle || "");
@@ -266,8 +250,7 @@ export const AppointmentDetailModal = ({
     };
   };
 
-  const saveDetails = async (overrideStatus?: AppointmentStatus) => {
-    const nextStatus = overrideStatus || status;
+  const saveDetails = async () => {
     const timeUpdates = buildTimeUpdates();
     const nextMetadata: AppointmentMetadata = {
       ...metadata,
@@ -300,7 +283,6 @@ export const AppointmentDetailModal = ({
       id: appointment.id,
       updates: {
         ...timeUpdates,
-        status: nextStatus,
         type: isSession ? modality : appointment.type,
         notes: nextNotes,
         location: nextLocation,
@@ -325,10 +307,19 @@ export const AppointmentDetailModal = ({
   };
 
   const handleSendEmail = () => {
+    if (lifecycle.isLoading) {
+      toast.info("Aguarde a verificação das pendências deste agendamento.");
+      return;
+    }
+    if (invitationBlockedByPendingRequest) {
+      toast.error("Analise a solicitação de reagendamento antes de reenviar a confirmação.");
+      return;
+    }
     if (!patientData?.email) {
       toast.error("Paciente sem e-mail cadastrado.");
       return;
     }
+    invitationIdempotencyKeyRef.current ||= crypto.randomUUID();
     sendEmail.mutate(
       {
         type: "reminder",
@@ -337,10 +328,19 @@ export const AppointmentDetailModal = ({
           patientName: patientData.name,
           startTime: new Date(appointment.start_time).toISOString(),
           appointmentId: appointment.id,
+          idempotencyKey: invitationIdempotencyKeyRef.current,
           action: "invite",
         },
       },
-      { onSuccess: () => void lifecycle.refetch() },
+      {
+        onSuccess: () => {
+          invitationIdempotencyKeyRef.current = null;
+          void lifecycle.refetch();
+        },
+        onError: () => {
+          invitationIdempotencyKeyRef.current = null;
+        },
+      },
     );
   };
 
@@ -401,7 +401,7 @@ export const AppointmentDetailModal = ({
                 <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.07] px-2.5 py-1 text-primary">
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                   <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em]">
-                    {LIFECYCLE_LABELS[appointment.lifecycle_status] || appointment.lifecycle_status}
+                    {lifecycleLabel}
                   </span>
                 </div>
               ) : null}
@@ -478,10 +478,19 @@ export const AppointmentDetailModal = ({
                       <Button
                         variant="outline"
                         onClick={handleSendEmail}
-                        disabled={sendEmail.isPending || ["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "")}
+                        disabled={
+                          sendEmail.isPending ||
+                          lifecycle.isLoading ||
+                          invitationBlockedByPendingRequest ||
+                          ["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "")
+                        }
                         className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-blue-50 hover:text-blue-600"
                         aria-label="Enviar convite de confirmação por e-mail"
-                        title="Enviar convite de confirmação por e-mail"
+                        title={
+                          invitationBlockedByPendingRequest
+                            ? "Analise o reagendamento pendente antes de enviar uma nova confirmação"
+                            : "Enviar convite de confirmação por e-mail"
+                        }
                       >
                         {sendEmail.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Enviando convite" /> : <Mail className="h-4 w-4" aria-hidden="true" />}
                       </Button>
@@ -489,9 +498,9 @@ export const AppointmentDetailModal = ({
                   )}
                 </div>
 
-                {lifecycle.pendingRequest ? (
+                {lifecycle.visibleRequest ? (
                   <AppointmentRescheduleReview
-                    request={lifecycle.pendingRequest}
+                    request={lifecycle.visibleRequest}
                     isReviewing={lifecycle.isReviewing}
                     onReview={lifecycle.reviewRequest}
                   />
@@ -591,21 +600,12 @@ export const AppointmentDetailModal = ({
                 </FieldShell>
 
                 <FieldShell label="Status do agendamento" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-                  <Select value={status} onValueChange={(value) => setStatus(value as AppointmentStatus)}>
-                    <SelectTrigger className={inputClassName}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {APPOINTMENT_STATUS_VALUES.map((value) => {
-                        const meta = APPOINTMENT_STATUS_META[value];
-                        return (
-                          <SelectItem key={value} value={value}>
-                            {meta.label}
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
+                  <div className="rounded-2xl border border-zinc-200 bg-background/70 px-4 py-3 dark:border-border/10">
+                    <p className="text-sm font-bold text-foreground">{statusMeta.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                      Presença, conclusão e cancelamento devem ser registrados pelas ações próprias de cada fluxo.
+                    </p>
+                  </div>
                 </FieldShell>
 
                 {isSession && transactionData && (
@@ -674,36 +674,18 @@ export const AppointmentDetailModal = ({
 
         {step === 1 && (
           <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-muted/20 p-4 backdrop-blur-xl sm:flex-row sm:justify-end">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={updateAppointment.isPending}
-                  className="w-full sm:w-auto rounded-full px-5 h-10 font-bold text-red-600 border-red-500/20 hover:bg-red-500/10 hover:text-red-700"
-                >
-                  Cancelar
-                  <ChevronDown className="ml-2 h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2">
-                <DropdownMenuItem
-                  onClick={() => void saveDetails("cancelled_by_patient")}
-                  className="rounded-xl px-3 py-2.5 text-sm font-bold text-red-600 focus:bg-red-500/10 focus:text-red-700"
-                >
-                  Paciente cancelou
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => void saveDetails("cancelled_by_professional")}
-                  className="rounded-xl px-3 py-2.5 text-sm font-bold text-red-600 focus:bg-red-500/10 focus:text-red-700"
-                >
-                  Eu cancelei
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={updateAppointment.isPending}
+              onClick={() => setOpen(false)}
+              className="h-10 w-full rounded-full px-5 font-bold sm:w-auto"
+            >
+              Descartar alterações
+            </Button>
 
             <Button
-              onClick={() => saveDetails()}
+              onClick={() => void saveDetails()}
               disabled={updateAppointment.isPending}
               className="w-full sm:w-auto rounded-full px-6 h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg transition-all active:scale-95 tracking-wide"
             >

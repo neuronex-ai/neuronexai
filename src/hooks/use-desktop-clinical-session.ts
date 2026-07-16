@@ -1,6 +1,7 @@
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import type { JitsiRef } from '@/components/teleconsulta/JitsiMeet';
 import { useAI } from '@/context/AIContext';
+import { useCompleteAppointmentClinicalSession } from '@/hooks/use-complete-appointment-clinical-session';
 import { useGenerateSessionProntuario } from '@/hooks/use-generate-session-prontuario';
 import { useJitsiToken } from '@/hooks/use-jitsi-token';
 import { useTeleconsultationInvite } from '@/hooks/use-teleconsultation-invite';
@@ -66,6 +67,7 @@ export const useDesktopClinicalSession = (
   const jitsiRef = useRef<JitsiRef>(null);
   const joinedAtRef = useRef<number | null>(null);
   const reviewRequestedRef = useRef(false);
+  const finishSessionInFlightRef = useRef<Promise<void> | null>(null);
 
   const { toggleFocusMode, isFocusMode } = useAI();
   const { user } = useAuth();
@@ -101,6 +103,11 @@ export const useDesktopClinicalSession = (
       : 'pending',
   });
   const { mutateAsync: updateAppointment, isPending: isUpdatingAppointment } = useUpdateAppointment();
+  const {
+    completeClinicalSession,
+    isCompletingClinicalSession,
+    resetClinicalSessionCompletionAttempt,
+  } = useCompleteAppointmentClinicalSession(appointmentId, patientId);
   const { mutateAsync: generateProntuario, isPending: isGeneratingProntuario } = useGenerateSessionProntuario();
   const notesDraft = useResilientSessionNotes(appointmentId);
   const capture = useSessionCapture({
@@ -138,7 +145,10 @@ export const useDesktopClinicalSession = (
     clearRecovery,
   } = capture;
 
-  const isProcessing = completionMode !== 'idle' || isUpdatingAppointment || isGeneratingProntuario;
+  const isProcessing = completionMode !== 'idle'
+    || isUpdatingAppointment
+    || isCompletingClinicalSession
+    || isGeneratingProntuario;
   const captureAvailable = isOnlineSession || speechSupported;
   const hasTranscriptionDecision = !isOnlineSession || Boolean(transcriptionDecision);
   const transcriptionEnabled = transcriptionDecision?.enabled === true;
@@ -435,29 +445,43 @@ export const useDesktopClinicalSession = (
     }
   }, [appointmentId, captureState, consentStatus, finalizeCapture, generateProntuario, hasJoined, hasNetwork, isOnlineSession, linkSummaryNote, markReviewed, notesDraft.notes, patientId, persistRoomStatus, retrySync, transcriptId, transcriptText]);
 
-  const finishSession = useCallback(async (
+  const finishSession = useCallback((
     draftPending: boolean,
     summaryNoteId?: string,
   ) => {
-    await updateAppointment({
-      id: appointmentId,
-      updates: {
-        status: 'attended',
-        metadata: {
-          ...(activeAppointment.metadata || {}),
-          sessionTranscriptId: transcriptId,
-          sessionSummaryNoteId: summaryNoteId || null,
-          sessionDraftPending: draftPending,
-          sessionDraftNotes: draftPending ? reviewNotes : null,
-          sessionCompletedAt: new Date().toISOString(),
-        },
+    if (finishSessionInFlightRef.current) return finishSessionInFlightRef.current;
+
+    const operation = (async () => {
+      await completeClinicalSession({
+        draftPending,
+        sessionSummaryNoteId: summaryNoteId ?? null,
+        sessionTranscriptId: transcriptId ?? null,
+      });
+
+      const cleanup = [clearRecovery()];
+      if (!draftPending || summaryNoteId) cleanup.push(notesDraft.clearDraft());
+      await Promise.all(cleanup);
+      if (isFocusMode) toggleFocusMode();
+      setReviewOpen(false);
+      onSessionEnd();
+      resetClinicalSessionCompletionAttempt();
+    })();
+
+    finishSessionInFlightRef.current = operation;
+    void operation.then(
+      () => {
+        if (finishSessionInFlightRef.current === operation) {
+          finishSessionInFlightRef.current = null;
+        }
       },
-    });
-    await Promise.all([clearRecovery(), notesDraft.clearDraft()]);
-    if (isFocusMode) toggleFocusMode();
-    setReviewOpen(false);
-    onSessionEnd();
-  }, [activeAppointment.metadata, appointmentId, clearRecovery, isFocusMode, notesDraft, onSessionEnd, reviewNotes, toggleFocusMode, transcriptId, updateAppointment]);
+      () => {
+        if (finishSessionInFlightRef.current === operation) {
+          finishSessionInFlightRef.current = null;
+        }
+      },
+    );
+    return operation;
+  }, [clearRecovery, completeClinicalSession, isFocusMode, notesDraft, onSessionEnd, resetClinicalSessionCompletionAttempt, toggleFocusMode, transcriptId]);
 
   const confirmSummaryNote = useCallback(async (noteId: string, finalSummary?: AISummary) => {
     if (!user?.id) throw new Error('Usuário não autenticado.');

@@ -43,7 +43,9 @@ describe("appointment lifecycle contract", () => {
     expect(migration).toContain("confirmation-revision:' || new.confirmation_revision::text || ':confirmed");
     expect(sender).toContain("appointment_revision: appointment.confirmation_revision");
     expect(shared).toContain("SUPERSEDED_INVITATION");
-    expect(shared).toContain("tokenResult.data.appointment_revision !== appointmentResult.data.confirmation_revision");
+    expect(shared).toMatch(
+      /tokenResult\.data\.appointment_revision\s*!==\s*appointmentResult\.data\.confirmation_revision/u,
+    );
 
     expect(smoke).toContain("patient-requested time approval incorrectly required reconfirmation");
     expect(smoke).toContain("material professional change did not start revision 2");
@@ -86,11 +88,29 @@ describe("appointment lifecycle contract", () => {
 
     expect(detail).toContain("AppointmentTimelinePanel");
     expect(detail).toContain("AppointmentRescheduleReview");
-    expect(hook).toContain('table: "appointment_events"');
+    expect(hook).toContain('database.rpc("get_safe_appointment_timeline"');
+    expect(hook).not.toContain('.from("appointment_events")');
+    expect(hook).not.toContain('table: "appointment_events"');
+    expect(hook).toContain('table: "appointments"');
     expect(hook).toContain('table: "appointment_reschedule_requests"');
     expect(hook).toContain('.order("created_at", { ascending: false })');
     expect(review).toContain('db.rpc("review_appointment_reschedule"');
     expect(review).toContain("deliverPatientEmail");
     expect(review).toContain("notificationSent: true");
+  });
+
+  it("does not let the detail modal bypass protected lifecycle outcomes", () => {
+    const detail = source("src/components/agenda/AppointmentDetailModal.tsx");
+    const saveDetails = detail.slice(
+      detail.indexOf("const saveDetails"),
+      detail.indexOf("const handleWhatsApp"),
+    );
+
+    expect(saveDetails).not.toMatch(/\bstatus\s*:/);
+    expect(detail).not.toContain("cancelled_by_patient");
+    expect(detail).not.toContain("cancelled_by_professional");
+    expect(detail).not.toContain("APPOINTMENT_STATUS_VALUES.map");
+    expect(detail).toContain("invitationBlockedByPendingRequest");
+    expect(detail).toContain("Analise a solicitação de reagendamento antes de reenviar");
   });
 });

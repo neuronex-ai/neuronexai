@@ -116,18 +116,16 @@ describe("appointment timeline safe DTO", () => {
     expect(screen.queryByText(/internal_table_name/)).not.toBeInTheDocument();
   });
 
-  it("does not request audit fields that the timeline presentation does not need", () => {
+  it("loads the timeline through the safe RPC without selecting or streaming raw audit rows", () => {
     const hookSource = readFileSync(
       resolve(process.cwd(), "src/hooks/use-appointment-lifecycle.ts"),
       "utf8",
     );
-    const timelineSelect = hookSource.match(/from\("appointment_events"\)[\s\S]*?\.select\("([^"]+)"\)/)?.[1];
 
-    expect(timelineSelect).toBe(
-      "event_type,from_status,to_status,actor_type,action_origin,created_at",
-    );
-    expect(timelineSelect).not.toMatch(
-      /(^|,)(id|appointment_id|psychologist_id|patient_id|actor_user_id|metadata)(,|$)/,
-    );
+    expect(hookSource).toContain('database.rpc("get_safe_appointment_timeline"');
+    expect(hookSource).toContain("p_appointment_id: appointmentId");
+    expect(hookSource).not.toContain('.from("appointment_events")');
+    expect(hookSource).not.toContain('table: "appointment_events"');
+    expect(hookSource).toContain('table: "appointments"');
   });
 });

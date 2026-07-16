@@ -1,26 +1,45 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
-  toSafeAppointmentTimeline,
-  type AppointmentTimelineNames,
-  type AppointmentTimelineRecord,
+  type AppointmentTimelineItem,
+  type AppointmentTimelineVisualKind,
 } from "@/lib/appointment-timeline";
 
 export interface AppointmentRescheduleRequest {
   id: string;
+  original_end_time: string;
   original_start_time: string;
+  requested_end_time: string;
   requested_start_time: string;
   reason: string | null;
-  status: "pending" | "approved" | "rejected" | "withdrawn";
+  review_reason: string | null;
+  status: "pending" | "approved" | "rejected" | "withdrawn" | "expired_no_response";
   created_at: string;
+  requested_at: string | null;
+  within_free_window: boolean | null;
+  professional_response_due_at: string | null;
+  financial_right_protected: boolean;
+  reaction_due_at: string | null;
+  protection_reason: string | null;
+  expired_without_response_at: string | null;
 }
 
 interface AppointmentLifecycleData {
-  events: AppointmentTimelineRecord[];
+  events: AppointmentTimelineItem[];
   requests: AppointmentRescheduleRequest[];
+}
+
+interface SafeAppointmentTimelineRpcRow {
+  title: string;
+  actor_name: string;
+  channel_name: string;
+  occurred_at: string;
+  status_change: string | null;
+  detail: string | null;
+  visual_kind: AppointmentTimelineVisualKind;
 }
 
 interface ReviewInput {
@@ -31,66 +50,78 @@ interface ReviewInput {
 
 interface ReviewResult {
   success: boolean;
-  decision: "approve" | "reject";
+  outcome: "approved" | "declined" | "response_overdue";
   notificationSent: boolean;
+  notificationQueued?: boolean;
+  repeatedRequest?: boolean;
+  financialProtectionActive?: boolean;
+  patientActionDeadline?: string | null;
+  message?: string;
   warning?: string;
 }
 
 const lifecycleQueryKey = (appointmentId: string) => ["appointmentLifecycle", appointmentId] as const;
 
+const toTimelineItem = (row: SafeAppointmentTimelineRpcRow): AppointmentTimelineItem => ({
+  title: row.title,
+  actorName: row.actor_name,
+  channelName: row.channel_name,
+  occurredAt: row.occurred_at,
+  statusChange: row.status_change,
+  detail: row.detail,
+  visualKind: row.visual_kind,
+});
+
 export function useAppointmentLifecycle(
   appointmentId: string,
   enabled = true,
-  timelineNames: AppointmentTimelineNames = {},
 ) {
   const queryClient = useQueryClient();
-  const { patientName, psychologistName } = timelineNames;
   const query = useQuery({
     queryKey: lifecycleQueryKey(appointmentId),
     enabled: enabled && Boolean(appointmentId),
     queryFn: async (): Promise<AppointmentLifecycleData> => {
       const database = supabase as any;
-      const [eventsResult, requestsResult] = await Promise.all([
-        database
-          .from("appointment_events")
-          .select("event_type,from_status,to_status,actor_type,action_origin,created_at")
-          .eq("appointment_id", appointmentId)
-          .order("created_at", { ascending: false }),
+      const [timelineResult, requestsResult] = await Promise.all([
+        database.rpc("get_safe_appointment_timeline", {
+          p_appointment_id: appointmentId,
+        }),
         database
           .from("appointment_reschedule_requests")
-          .select("id,original_start_time,requested_start_time,reason,status,created_at")
+          .select("id,original_start_time,original_end_time,requested_start_time,requested_end_time,reason,review_reason,status,created_at,requested_at,within_free_window,professional_response_due_at,financial_right_protected,reaction_due_at,protection_reason,expired_without_response_at")
           .eq("appointment_id", appointmentId)
           .order("created_at", { ascending: false }),
       ]);
 
-      if (eventsResult.error) throw eventsResult.error;
+      if (timelineResult.error) throw timelineResult.error;
       if (requestsResult.error) throw requestsResult.error;
       return {
-        events: (eventsResult.data || []) as AppointmentTimelineRecord[],
+        events: ((timelineResult.data || []) as SafeAppointmentTimelineRpcRow[]).map(toTimelineItem),
         requests: (requestsResult.data || []) as AppointmentRescheduleRequest[],
       };
     },
     staleTime: 15_000,
+    refetchInterval: 30_000,
   });
-
-  const safeTimeline = useMemo(
-    () => toSafeAppointmentTimeline(query.data?.events || [], { patientName, psychologistName }),
-    [patientName, psychologistName, query.data?.events],
-  );
 
   useEffect(() => {
     if (!enabled || !appointmentId) return;
+    const invalidateAppointment = () => {
+      void queryClient.invalidateQueries({ queryKey: lifecycleQueryKey(appointmentId) });
+      void queryClient.invalidateQueries({ queryKey: ["appointments"] });
+      void queryClient.invalidateQueries({ queryKey: ["appointmentsByDateRange"] });
+    };
     const channel = supabase
       .channel(`appointment-lifecycle-${appointmentId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "appointment_events", filter: `appointment_id=eq.${appointmentId}` },
-        () => void queryClient.invalidateQueries({ queryKey: lifecycleQueryKey(appointmentId) }),
+        { event: "*", schema: "public", table: "appointments", filter: `id=eq.${appointmentId}` },
+        invalidateAppointment,
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "appointment_reschedule_requests", filter: `appointment_id=eq.${appointmentId}` },
-        () => void queryClient.invalidateQueries({ queryKey: lifecycleQueryKey(appointmentId) }),
+        invalidateAppointment,
       )
       .subscribe();
 
@@ -113,7 +144,14 @@ export function useAppointmentLifecycle(
       return data;
     },
     onSuccess: (result) => {
-      toast.success(result.decision === "approve" ? "Novo horário aprovado." : "Solicitação recusada.");
+      toast.success(
+        result.outcome === "approved"
+          ? "Novo horário aprovado."
+          : result.outcome === "response_overdue"
+            ? "O prazo de resposta venceu e os direitos do paciente foram protegidos."
+            : "Solicitação recusada.",
+      );
+      if (result.message) toast.info(result.message);
       if (result.warning) toast.warning(result.warning);
     },
     onError: (error: Error) => {
@@ -130,9 +168,12 @@ export function useAppointmentLifecycle(
 
   return {
     ...query,
-    events: safeTimeline,
+    events: query.data?.events || [],
     requests: query.data?.requests || [],
     pendingRequest: query.data?.requests.find((request) => request.status === "pending") || null,
+    visibleRequest: query.data?.requests.find((request) =>
+      request.status === "pending" || request.status === "expired_no_response"
+    ) || null,
     reviewRequest: reviewMutation.mutateAsync,
     isReviewing: reviewMutation.isPending,
   };

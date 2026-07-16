@@ -6,12 +6,16 @@ import {
   appointmentJson,
   publicRequestMetadata,
   resolveAppointmentInvitation,
-  serializePublicAppointment,
 } from "../_shared/appointment-lifecycle.ts";
+import { serializePublicAppointment } from "../_shared/appointment-public-dto.ts";
 
 serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response(null, { headers: appointmentCorsHeaders });
-  if (request.method !== "POST") return appointmentJson({ error: "Metodo nao permitido." }, 405);
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: appointmentCorsHeaders });
+  }
+  if (request.method !== "POST") {
+    return appointmentJson({ error: "Método não permitido." }, 405);
+  }
 
   try {
     const { token } = await request.json().catch(() => ({}));

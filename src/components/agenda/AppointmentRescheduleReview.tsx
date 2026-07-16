@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowRight, CalendarClock, Check, Loader2, X } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, CalendarClock, Check, Clock3, Loader2, ShieldCheck, X } from "lucide-react";
+import { useId, useState } from "react";
 
 import {
   AlertDialog,
@@ -32,6 +32,8 @@ export function AppointmentRescheduleReview({
 }) {
   const [decision, setDecision] = useState<Decision | null>(null);
   const [reason, setReason] = useState("");
+  const headingId = useId();
+  const isOverdue = request.status === "expired_no_response";
 
   const closeDialog = () => {
     if (isReviewing) return;
@@ -51,15 +53,15 @@ export function AppointmentRescheduleReview({
 
   return (
     <>
-      <section className="rounded-[22px] border border-amber-500/25 bg-amber-500/[0.07] p-4 sm:p-5" aria-labelledby={`reschedule-request-${request.id}`}>
+      <section className="rounded-[22px] border border-amber-500/25 bg-amber-500/[0.07] p-4 sm:p-5" aria-labelledby={headingId}>
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
             <CalendarClock className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">Pendência do paciente</p>
-            <h3 id={`reschedule-request-${request.id}`} className="mt-1 text-base font-bold tracking-tight text-foreground">Solicitação de reagendamento</h3>
-            <p className="mt-1 text-xs text-muted-foreground">Recebida em {format(new Date(request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700 dark:text-amber-400">{isOverdue ? "Proteção do paciente" : "Pendência do paciente"}</p>
+            <h3 id={headingId} className="mt-1 text-base font-bold tracking-tight text-foreground">{isOverdue ? "Decisão profissional em atraso" : "Solicitação de reagendamento"}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">Recebida em {format(new Date(request.requested_at || request.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}</p>
           </div>
         </div>
 
@@ -79,7 +81,28 @@ export function AppointmentRescheduleReview({
           <blockquote className="mt-3 rounded-xl border-l-2 border-amber-500/50 bg-background/50 px-3 py-2 text-sm text-muted-foreground">“{request.reason}”</blockquote>
         ) : null}
 
-        <div className="mt-4 grid gap-2 sm:grid-cols-2">
+        <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
+          {request.professional_response_due_at ? (
+            <p className="flex items-center gap-2 rounded-xl border border-border/60 bg-background/50 px-3 py-2 text-muted-foreground">
+              <Clock3 className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Prazo de resposta: {dateTime(request.professional_response_due_at)}
+            </p>
+          ) : null}
+          {request.financial_right_protected ? (
+            <p className="flex items-center gap-2 rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] px-3 py-2 font-semibold text-emerald-700 dark:text-emerald-300">
+              <ShieldCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+              Direito financeiro protegido
+            </p>
+          ) : null}
+        </div>
+
+        {isOverdue ? (
+          <p className="mt-3 rounded-xl border border-amber-500/25 bg-background/60 px-3 py-2 text-sm leading-relaxed text-muted-foreground" role="status">
+            O prazo de análise terminou. Nenhuma falta, consumo de pacote ou penalidade financeira automática pode ser aplicada enquanto o caso estiver protegido.
+          </p>
+        ) : null}
+
+        {!isOverdue ? <div className="mt-4 grid gap-2 sm:grid-cols-2">
           <Button
             type="button"
             variant="outline"
@@ -92,7 +115,7 @@ export function AppointmentRescheduleReview({
           <Button type="button" className="h-11 rounded-xl" disabled={isReviewing} onClick={() => setDecision("approve")}>
             <Check className="mr-2 h-4 w-4" aria-hidden="true" />Aceitar novo horário
           </Button>
-        </div>
+        </div> : null}
       </section>
 
       <AlertDialog open={decision !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>

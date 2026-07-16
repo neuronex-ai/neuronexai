@@ -24,48 +24,33 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
-type LifecycleStatus =
-  | "created"
-  | "invitation_sent"
-  | "awaiting_confirmation"
-  | "awaiting_reconfirmation"
+type PublicFlowState =
+  | "awaiting_action"
   | "confirmed"
-  | "cancellation_requested"
   | "cancelled"
-  | "reschedule_requested"
-  | "reschedule_approved"
-  | "reschedule_rejected"
-  | "in_progress"
-  | "completed"
+  | "waiting_for_professional"
+  | "reschedule_accepted"
+  | "request_declined_actions_open"
+  | "professional_late_actions_open"
   | "closed";
 
 interface PublicAppointment {
-  id: string;
   start_time: string;
   end_time: string;
   type: "presencial" | "online" | "block";
-  status: string;
-  lifecycle_status: LifecycleStatus;
+  flow_state: PublicFlowState;
   location: string | null;
-  payment_status?: string | null;
-  confirmation_revision?: number;
-  confirmed_revision?: number | null;
-  updated_at?: string | null;
+  patient_action_due_at?: string | null;
+  financial_right_protected?: boolean;
 }
 
 interface PublicProfessional {
-  id: string;
   name: string;
   clinic: string;
   avatarUrl: string | null;
-  phone: string | null;
-  address: string | null;
-  city: string | null;
 }
 
 interface RescheduleRequest {
-  id: string;
-  status: "pending" | "approved" | "rejected" | "withdrawn";
   originalStartTime: string;
   originalEndTime: string;
   requestedStartTime: string;
@@ -74,6 +59,34 @@ interface RescheduleRequest {
   reviewReason: string | null;
   reviewedAt: string | null;
   createdAt: string;
+  requestedAt: string | null;
+  withinFreeWindow: boolean | null;
+  professionalResponseDueAt: string | null;
+  financialRightProtected: boolean;
+  reactionDueAt: string | null;
+  expiredWithoutResponseAt: string | null;
+  protectionMessage: string | null;
+}
+
+interface AppointmentPolicy {
+  freeCancellationCutoffAt: string;
+  freeRescheduleCutoffAt: string;
+  minimumPatientReactionHours: number;
+  professionalResponseSlaHours: number;
+  lateCancellationMessage: string;
+  noShowMessage: string;
+  creditMessage: string;
+  chargeMessage: string;
+  fiscalMessage: string;
+  timezone: string;
+  calendarMinDate: string;
+  calendarMaxDate: string;
+}
+
+interface PublicActionOption {
+  allowed: boolean;
+  message: string;
+  deadline?: string | null;
 }
 
 interface AppointmentResponse {
@@ -81,6 +94,12 @@ interface AppointmentResponse {
   patient: { firstName: string };
   professional: PublicProfessional;
   rescheduleRequest: RescheduleRequest | null;
+  policy: AppointmentPolicy | null;
+  actions: {
+    confirm: PublicActionOption;
+    cancel: PublicActionOption;
+    reschedule: PublicActionOption;
+  };
 }
 
 interface AvailabilitySlot {
@@ -106,26 +125,45 @@ type WizardStep =
   | "cancelled"
   | "reschedule_sent"
   | "reschedule_approved"
-  | "reschedule_rejected"
   | "closed";
 
-const finalStepFor = (status: LifecycleStatus): WizardStep | null => {
+const finalStepFor = (status: PublicFlowState): WizardStep | null => {
   if (status === "confirmed") return "confirmed";
   if (status === "cancelled") return "cancelled";
-  if (status === "reschedule_requested") return "reschedule_sent";
-  if (status === "reschedule_approved") return "reschedule_approved";
-  if (status === "reschedule_rejected") return "reschedule_rejected";
-  if (["in_progress", "completed", "closed"].includes(status)) return "closed";
+  if (status === "waiting_for_professional") return "reschedule_sent";
+  if (status === "reschedule_accepted") return "reschedule_approved";
+  if (status === "closed") return "closed";
   return null;
 };
 
-const dateTimeLabel = (value: string) => {
-  const label = format(new Date(value), "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR });
+const reopensPatientActions = (status: PublicFlowState) =>
+  status === "request_declined_actions_open" || status === "professional_late_actions_open";
+
+const dateTimeLabel = (value: string, timeZone = "America/Sao_Paulo") => {
+  const label = new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    weekday: "long",
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
   return `${label.charAt(0).toUpperCase()}${label.slice(1)}`;
 };
 
-const compactDateTimeLabel = (value: string) =>
-  format(new Date(value), "dd 'de' MMMM 'às' HH:mm", { locale: ptBR });
+const compactDateTimeLabel = (value: string, timeZone = "America/Sao_Paulo") =>
+  new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    day: "2-digit",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+
+const calendarDateFromIso = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day, 12);
+};
 
 const availabilityMessage: Record<Exclude<AvailabilityResponse["reason"], null>, string> = {
   availability_not_configured: "O profissional ainda não publicou a grade de atendimento.",
@@ -138,6 +176,7 @@ export default function SecureConfirmAppointment() {
   const navigate = useNavigate();
   const shouldReduceMotion = useReducedMotion();
   const initializedRef = useRef(false);
+  const stepPanelRef = useRef<HTMLElement>(null);
   const [step, setStep] = useState<WizardStep>("overview");
   const [context, setContext] = useState<AppointmentResponse | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -153,6 +192,7 @@ export default function SecureConfirmAppointment() {
   const appointment = context?.appointment;
   const professional = context?.professional;
   const rescheduleRequest = context?.rescheduleRequest;
+  const policyTimeZone = context?.policy?.timezone || "America/Sao_Paulo";
 
   const loadAppointment = useCallback(async (silent = false) => {
     if (!token || token === "invalid") {
@@ -166,16 +206,23 @@ export default function SecureConfirmAppointment() {
       body: { token },
     });
     if (error || !data?.appointment) {
-      if (!silent) setLoadError(true);
+      setLoadError(true);
+      setContext(null);
       setInitialLoading(false);
       return;
     }
 
     setContext(data);
     setLoadError(false);
-    const serverStep = finalStepFor(data.appointment.lifecycle_status);
-    if (!initializedRef.current || (silent && serverStep)) {
-      setStep(serverStep || "overview");
+    const serverStep = finalStepFor(data.appointment.flow_state);
+    const reopened = reopensPatientActions(data.appointment.flow_state);
+    if (!initializedRef.current || (silent && (serverStep || reopened))) {
+      setStep(reopened ? "overview" : serverStep || "overview");
+      if (reopened) {
+        setSelectedDate(undefined);
+        setSelectedSlot(undefined);
+        setAvailability(null);
+      }
     }
     initializedRef.current = true;
     setInitialLoading(false);
@@ -186,10 +233,28 @@ export default function SecureConfirmAppointment() {
   }, [loadAppointment]);
 
   useEffect(() => {
-    if (appointment?.lifecycle_status !== "reschedule_requested") return;
+    if (!appointment || ["confirmed", "cancelled", "reschedule_accepted", "closed"].includes(appointment.flow_state)) return;
     const interval = window.setInterval(() => void loadAppointment(true), 10_000);
     return () => window.clearInterval(interval);
-  }, [appointment?.lifecycle_status, loadAppointment]);
+  }, [appointment, loadAppointment]);
+
+  useEffect(() => {
+    if (!initializedRef.current) return;
+    window.requestAnimationFrame(() => stepPanelRef.current?.focus());
+  }, [step]);
+
+  useEffect(() => {
+    if (!appointment || ["confirmed", "cancelled", "reschedule_accepted", "closed"].includes(appointment.flow_state)) return;
+    const revalidateWhenVisible = () => {
+      if (document.visibilityState === "visible") void loadAppointment(true);
+    };
+    document.addEventListener("visibilitychange", revalidateWhenVisible);
+    window.addEventListener("focus", revalidateWhenVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", revalidateWhenVisible);
+      window.removeEventListener("focus", revalidateWhenVisible);
+    };
+  }, [appointment, loadAppointment]);
 
   const loadAvailability = useCallback(async (date: Date) => {
     setAvailabilityLoading(true);
@@ -289,7 +354,7 @@ export default function SecureConfirmAppointment() {
     return (
       <main className="flex min-h-dvh items-center justify-center bg-background" aria-busy="true">
         <div className="space-y-3 text-center">
-          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" aria-hidden="true" />
+          <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary motion-reduce:animate-none" aria-hidden="true" />
           <p className="text-sm text-muted-foreground">Carregando agendamento...</p>
         </div>
       </main>
@@ -333,21 +398,24 @@ export default function SecureConfirmAppointment() {
           </div>
         </header>
 
-        <div className="mb-4 grid grid-cols-2 gap-2" aria-label={`Etapa ${secondStage ? 2 : 1} de 2`}>
-          <div className="h-1.5 rounded-full bg-primary" />
-          <div className={`h-1.5 rounded-full ${secondStage ? "bg-primary" : "bg-muted"}`} />
-        </div>
+        <ol className="mb-4 grid grid-cols-2 gap-2" aria-label={`Etapa ${secondStage ? 2 : 1} de 2`}>
+          <li className="h-1.5 rounded-full bg-primary" aria-label="Etapa 1 concluída" />
+          <li className={`h-1.5 rounded-full ${secondStage ? "bg-primary" : "bg-muted"}`} aria-current={secondStage ? "step" : undefined} aria-label="Etapa 2" />
+        </ol>
 
         <Card className="overflow-hidden rounded-[28px] border-border/70 bg-card/95 shadow-2xl backdrop-blur-xl">
           <CardContent className="p-0">
             <AnimatePresence mode="wait">
-              <motion.section key={step} {...motionProps} className="p-5 sm:p-8">
+              <motion.section ref={stepPanelRef} tabIndex={-1} key={step} {...motionProps} className="p-5 outline-none sm:p-8">
                 {step === "overview" ? (
                   <OverviewStep
                     appointment={appointment}
                     professional={professional}
                     patientFirstName={context.patient.firstName}
                     durationMinutes={durationMinutes}
+                    policy={context.policy}
+                    rescheduleRequest={rescheduleRequest}
+                    actions={context.actions}
                     loading={actionLoading}
                     onConfirm={() => void confirmAppointment()}
                     onCancel={() => setStep("cancel")}
@@ -366,6 +434,9 @@ export default function SecureConfirmAppointment() {
                       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                         O profissional será avisado e essa ação ficará registrada no histórico.
                       </p>
+                      <p className="mt-3 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm leading-relaxed text-muted-foreground">
+                        {context.actions.cancel.message}
+                      </p>
                     </div>
                     <div>
                       <label htmlFor="cancellation-reason" className="mb-2 block text-sm font-semibold">Motivo do cancelamento <span className="font-normal text-muted-foreground">(opcional)</span></label>
@@ -381,7 +452,7 @@ export default function SecureConfirmAppointment() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Button variant="outline" className="h-12 rounded-xl" disabled={actionLoading} onClick={() => setStep("overview")}>Não, voltar</Button>
                       <Button variant="destructive" className="h-12 rounded-xl" disabled={actionLoading} onClick={() => void cancelAppointment()}>
-                        {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Sim, cancelar"}
+                        {actionLoading ? <><Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" /><span className="sr-only">Cancelando agendamento</span></> : "Sim, cancelar"}
                       </Button>
                     </div>
                   </div>
@@ -396,7 +467,10 @@ export default function SecureConfirmAppointment() {
                       </div>
                       <h2 className="text-2xl font-bold tracking-tight">Solicitar novo horário</h2>
                       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        A consulta atual permanece em {compactDateTimeLabel(appointment.start_time)} até a aprovação do profissional.
+                        A consulta atual permanece em {compactDateTimeLabel(appointment.start_time, policyTimeZone)} até a aprovação do profissional.
+                      </p>
+                      <p className="mt-3 rounded-xl border border-border/70 bg-muted/20 p-3 text-sm leading-relaxed text-muted-foreground">
+                        {context.actions.reschedule.message}
                       </p>
                     </div>
 
@@ -406,7 +480,10 @@ export default function SecureConfirmAppointment() {
                           mode="single"
                           selected={selectedDate}
                           onSelect={selectDate}
-                          disabled={{ before: startOfDay(new Date()), after: addMonths(new Date(), 6) }}
+                          disabled={{
+                            before: context.policy ? calendarDateFromIso(context.policy.calendarMinDate) : startOfDay(new Date()),
+                            after: context.policy ? calendarDateFromIso(context.policy.calendarMaxDate) : addMonths(new Date(), 6),
+                          }}
                           locale={ptBR}
                           className="mx-auto"
                         />
@@ -419,13 +496,13 @@ export default function SecureConfirmAppointment() {
                           </div>
                           {selectedDate ? (
                             <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" disabled={availabilityLoading} onClick={() => void loadAvailability(selectedDate)} aria-label="Atualizar horários">
-                              <RefreshCw className={`h-4 w-4 ${availabilityLoading ? "animate-spin" : ""}`} aria-hidden="true" />
+                              <RefreshCw className={`h-4 w-4 ${availabilityLoading ? "animate-spin motion-reduce:animate-none" : ""}`} aria-hidden="true" />
                             </Button>
                           ) : null}
                         </div>
                         {!selectedDate ? <p className="text-sm text-muted-foreground">Selecione um dia no calendário.</p> : null}
                         {availabilityLoading ? (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Consultando a agenda...</div>
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" /> Consultando a agenda...</div>
                         ) : null}
                         {!availabilityLoading && availability?.reason ? (
                           <p className="rounded-xl border border-dashed border-border p-3 text-sm text-muted-foreground">{availabilityMessage[availability.reason]}</p>
@@ -462,33 +539,32 @@ export default function SecureConfirmAppointment() {
                     <div className="grid gap-3 sm:grid-cols-2">
                       <Button variant="outline" className="h-12 rounded-xl" disabled={actionLoading} onClick={() => setStep("overview")}>Voltar</Button>
                       <Button className="h-12 rounded-xl" disabled={actionLoading || !selectedSlot} onClick={() => void requestReschedule()}>
-                        {actionLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : "Confirmar solicitação"}
+                        {actionLoading ? <><Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" /><span className="sr-only">Enviando solicitação</span></> : "Confirmar solicitação"}
                       </Button>
                     </div>
                   </div>
                 ) : null}
 
                 {step === "confirmed" ? (
-                  <ResultStep icon={<CheckCircle2 className="h-11 w-11" />} tone="success" title="Consulta confirmada" description={`Sua presença foi confirmada para ${compactDateTimeLabel(appointment.start_time)}.`} onClose={() => navigate("/")} />
+                  <ResultStep icon={<CheckCircle2 className="h-11 w-11" />} tone="success" title="Consulta confirmada" description={`Sua presença foi confirmada para ${compactDateTimeLabel(appointment.start_time, policyTimeZone)}.`} onClose={() => navigate("/")} />
                 ) : null}
                 {step === "cancelled" ? (
-                  <ResultStep icon={<XCircle className="h-11 w-11" />} tone="danger" title="Agendamento cancelado" description="O profissional foi notificado e o cancelamento foi registrado no histórico." onClose={() => navigate("/")} />
+                  <ResultStep icon={<XCircle className="h-11 w-11" />} tone="danger" title="Agendamento cancelado" description={`O profissional foi notificado e o cancelamento foi registrado no histórico. ${context.actions.cancel.message}`} onClose={() => navigate("/")} />
                 ) : null}
                 {step === "reschedule_sent" ? (
                   <ResultStep
                     icon={<RotateCcw className="h-11 w-11" />}
                     tone="warning"
                     title="Solicitação enviada"
-                    description={rescheduleRequest?.requestedStartTime ? `Você solicitou ${compactDateTimeLabel(rescheduleRequest.requestedStartTime)}. O horário original permanece até a resposta do profissional.` : "O profissional recebeu a pendência. O horário original permanece até a resposta."}
-                    detail="Esta página será atualizada quando a solicitação for analisada."
+                    description={rescheduleRequest?.requestedStartTime ? `Você solicitou ${compactDateTimeLabel(rescheduleRequest.requestedStartTime, policyTimeZone)}. O horário original permanece até a resposta do profissional.` : "O profissional recebeu a pendência. O horário original permanece até a resposta."}
+                    detail={rescheduleRequest?.professionalResponseDueAt
+                      ? `O profissional deve responder até ${compactDateTimeLabel(rescheduleRequest.professionalResponseDueAt, policyTimeZone)}. ${rescheduleRequest.financialRightProtected ? "Seus direitos financeiros estão protegidos." : "O servidor preservou o instante exato do seu pedido."}`
+                      : "Esta página será atualizada quando a solicitação for analisada."}
                     onClose={() => navigate("/")}
                   />
                 ) : null}
                 {step === "reschedule_approved" ? (
-                  <ResultStep icon={<CheckCircle2 className="h-11 w-11" />} tone="success" title="Novo horário aprovado" description={`A consulta agora está marcada para ${compactDateTimeLabel(appointment.start_time)}.`} detail={rescheduleRequest?.reviewReason || undefined} onClose={() => navigate("/")} />
-                ) : null}
-                {step === "reschedule_rejected" ? (
-                  <ResultStep icon={<RotateCcw className="h-11 w-11" />} tone="warning" title="Horário original mantido" description={`O pedido de reagendamento não foi aceito. Sua consulta continua em ${compactDateTimeLabel(appointment.start_time)}.`} detail={rescheduleRequest?.reviewReason || undefined} onClose={() => navigate("/")} />
+                  <ResultStep icon={<CheckCircle2 className="h-11 w-11" />} tone="success" title="Novo horário aprovado" description={`A consulta agora está marcada para ${compactDateTimeLabel(appointment.start_time, policyTimeZone)}.`} detail={rescheduleRequest?.reviewReason || undefined} onClose={() => navigate("/")} />
                 ) : null}
                 {step === "closed" ? (
                   <ResultStep icon={<ShieldCheck className="h-11 w-11" />} tone="neutral" title="Consulta encerrada" description="Este agendamento não aceita mais alterações por este link." onClose={() => navigate("/")} />
@@ -498,7 +574,7 @@ export default function SecureConfirmAppointment() {
           </CardContent>
         </Card>
         <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
-          As alterações ficam vinculadas ao ID do agendamento e ao histórico de auditoria.
+          Suas escolhas ficam protegidas no histórico de auditoria da NeuroNex.
         </p>
       </div>
     </main>
@@ -510,6 +586,9 @@ function OverviewStep({
   professional,
   patientFirstName,
   durationMinutes,
+  policy,
+  rescheduleRequest,
+  actions,
   loading,
   onConfirm,
   onCancel,
@@ -519,13 +598,63 @@ function OverviewStep({
   professional: PublicProfessional;
   patientFirstName: string;
   durationMinutes: number;
+  policy: AppointmentPolicy | null;
+  rescheduleRequest: RescheduleRequest | null;
+  actions: AppointmentResponse["actions"];
   loading: boolean;
   onConfirm: () => void;
   onCancel: () => void;
   onReschedule: () => void;
 }) {
+  const isRejected = appointment.flow_state === "request_declined_actions_open";
+  const isProfessionalOverdue = appointment.flow_state === "professional_late_actions_open";
+  const patientActionDeadline = rescheduleRequest?.reactionDueAt || appointment.patient_action_due_at;
+  const financialProtection = Boolean(
+    appointment.financial_right_protected || rescheduleRequest?.financialRightProtected,
+  );
+
   return (
     <div className="space-y-6">
+      {isRejected || isProfessionalOverdue ? (
+        <section
+          className="rounded-2xl border border-amber-500/30 bg-amber-500/[0.08] p-4"
+          aria-labelledby="patient-action-status-title"
+          role="status"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300">
+              {financialProtection ? <ShieldCheck className="h-5 w-5" aria-hidden="true" /> : <RotateCcw className="h-5 w-5" aria-hidden="true" />}
+            </div>
+            <div className="min-w-0">
+              <h2 id="patient-action-status-title" className="font-bold">
+                {isProfessionalOverdue ? "Resposta do profissional em atraso" : "O horário original foi mantido"}
+              </h2>
+              <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                {isProfessionalOverdue
+                  ? "A NeuroNex preservou seus direitos financeiros. O horário original continua visível, mas o silêncio do profissional não confirma presença nem autoriza penalidade."
+                  : "Você pode confirmar o horário original, cancelar ou solicitar uma alternativa diferente."}
+              </p>
+              {rescheduleRequest?.reviewReason ? (
+                <p className="mt-3 rounded-xl border border-border/60 bg-background/60 px-3 py-2 text-sm">
+                  <span className="font-semibold">Retorno do profissional:</span> {rescheduleRequest.reviewReason}
+                </p>
+              ) : null}
+              {patientActionDeadline ? (
+                <p className="mt-3 flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                  <Clock3 className="h-4 w-4" aria-hidden="true" />
+                  Você pode agir até {compactDateTimeLabel(patientActionDeadline, policy?.timezone)}.
+                </p>
+              ) : null}
+              {financialProtection ? (
+                <p className="mt-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                  Nenhuma penalidade financeira automática será aplicada enquanto o caso estiver protegido.
+                </p>
+              ) : null}
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       <div className="flex items-center gap-4 rounded-2xl border border-border/70 bg-muted/25 p-4">
         <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-primary">
           {professional.avatarUrl ? <img src={professional.avatarUrl} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-6 w-6" aria-hidden="true" />}
@@ -539,7 +668,7 @@ function OverviewStep({
 
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-primary">Resumo da consulta</p>
-        <h3 className="mt-2 text-2xl font-bold tracking-tight">{dateTimeLabel(appointment.start_time)}</h3>
+        <h3 className="mt-2 text-2xl font-bold tracking-tight">{dateTimeLabel(appointment.start_time, policy?.timezone)}</h3>
       </div>
 
       <dl className="grid gap-3 sm:grid-cols-3">
@@ -548,13 +677,44 @@ function OverviewStep({
         <SummaryItem icon={<MapPin className="h-4 w-4" />} label="Local" value={appointment.location || "A combinar"} />
       </dl>
 
+      {policy ? (
+        <section className="rounded-2xl border border-border/70 bg-muted/20 p-4" aria-labelledby="appointment-policy-title">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-emerald-600" aria-hidden="true" />
+            <h3 id="appointment-policy-title" className="text-sm font-bold">Prazos e proteção desta consulta</h3>
+          </div>
+          <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
+            <div>
+              <dt className="text-xs font-semibold text-muted-foreground">Cancelar sem perda de crédito</dt>
+              <dd className="mt-1 font-semibold">Até {compactDateTimeLabel(policy.freeCancellationCutoffAt, policy.timezone)}</dd>
+            </div>
+            <div>
+              <dt className="text-xs font-semibold text-muted-foreground">Solicitar outro horário sem perda de crédito</dt>
+              <dd className="mt-1 font-semibold">Até {compactDateTimeLabel(policy.freeRescheduleCutoffAt, policy.timezone)}</dd>
+            </div>
+          </dl>
+          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            Depois desses prazos: {policy.lateCancellationMessage} O servidor revalida o horário exato ao receber cada ação.
+          </p>
+        </section>
+      ) : null}
+
       <div className="grid gap-3">
-        <Button className="h-12 rounded-xl text-base" disabled={loading} onClick={onConfirm}>
-          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <><CheckCircle2 className="mr-2 h-5 w-5" />Confirmar</>}
-        </Button>
+        <div className="rounded-2xl border border-border/60 bg-background/50 p-3">
+          <Button className="h-12 w-full rounded-xl text-base" aria-busy={loading} disabled={loading || !actions.confirm.allowed} onClick={onConfirm}>
+            {loading ? <><Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" /><span className="sr-only">Confirmando consulta</span></> : <><CheckCircle2 className="mr-2 h-5 w-5" />Confirmar</>}
+          </Button>
+          <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">{actions.confirm.message}</p>
+        </div>
         <div className="grid gap-3 sm:grid-cols-2">
-          <Button variant="outline" className="h-12 rounded-xl" disabled={loading} onClick={onReschedule}><RotateCcw className="mr-2 h-4 w-4" />Solicitar reagendamento</Button>
-          <Button variant="outline" className="h-12 rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={loading} onClick={onCancel}><XCircle className="mr-2 h-4 w-4" />Cancelar</Button>
+          <div className="rounded-2xl border border-border/60 bg-background/50 p-3">
+            <Button variant="outline" className="h-12 w-full rounded-xl" disabled={loading || !actions.reschedule.allowed} onClick={onReschedule}><RotateCcw className="mr-2 h-4 w-4" />Solicitar reagendamento</Button>
+            <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">{actions.reschedule.message}</p>
+          </div>
+          <div className="rounded-2xl border border-destructive/20 bg-background/50 p-3">
+            <Button variant="outline" className="h-12 w-full rounded-xl border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive" disabled={loading || !actions.cancel.allowed} onClick={onCancel}><XCircle className="mr-2 h-4 w-4" />Cancelar</Button>
+            <p className="mt-2 px-1 text-xs leading-relaxed text-muted-foreground">{actions.cancel.message}</p>
+          </div>
         </div>
       </div>
     </div>

@@ -1,14 +1,13 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import {
-  AppointmentLifecycleError,
   appointmentAdminClient,
   appointmentCorsHeaders,
   appointmentErrorResponse,
   appointmentJson,
+  AppointmentLifecycleError,
   resolveAppointmentInvitation,
 } from "../_shared/appointment-lifecycle.ts";
 
-const TIME_ZONE_OFFSET = "-03:00";
 const SLOT_INTERVAL_MINUTES = 30;
 const MAX_MONTHS_AHEAD = 6;
 
@@ -21,25 +20,75 @@ type WorkingDay = {
 function parseDate(value: unknown) {
   const date = String(value || "").trim();
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    throw new AppointmentLifecycleError("Selecione uma data valida.", 400, "INVALID_DATE");
+    throw new AppointmentLifecycleError(
+      "Selecione uma data valida.",
+      400,
+      "INVALID_DATE",
+    );
   }
-
-  const parsed = new Date(`${date}T12:00:00${TIME_ZONE_OFFSET}`);
-  if (!Number.isFinite(parsed.getTime())) {
-    throw new AppointmentLifecycleError("Selecione uma data valida.", 400, "INVALID_DATE");
+  const [year, month, day] = date.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day, 12));
+  if (
+    !Number.isFinite(parsed.getTime()) ||
+    parsed.getUTCFullYear() !== year ||
+    parsed.getUTCMonth() !== month - 1 ||
+    parsed.getUTCDate() !== day
+  ) {
+    throw new AppointmentLifecycleError(
+      "Selecione uma data valida.",
+      400,
+      "INVALID_DATE",
+    );
   }
   return { date, parsed };
 }
 
-function saoPauloDate(value = new Date()) {
+function dateInTimeZone(timeZone: string, value = new Date()) {
   const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
+    timeZone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }).formatToParts(value);
-  const part = (type: string) => parts.find((item) => item.type === type)?.value || "";
+  const part = (type: string) =>
+    parts.find((item) => item.type === type)?.value || "";
   return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function addCalendarMonths(date: string, months: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const result = new Date(Date.UTC(year, month - 1 + months, day, 12));
+  return result.toISOString().slice(0, 10);
+}
+
+function addCalendarDays(date: string, days: number) {
+  const [year, month, day] = date.split("-").map(Number);
+  const result = new Date(Date.UTC(year, month - 1, day + days, 12));
+  return result.toISOString().slice(0, 10);
+}
+
+function timeZoneOffsetMilliseconds(value: Date, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(value);
+  const part = (type: string) =>
+    Number(parts.find((item) => item.type === type)?.value || 0);
+  const representedAsUtc = Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+    part("second"),
+  );
+  return representedAsUtc - value.getTime();
 }
 
 function minutesFromClock(value: unknown) {
@@ -57,26 +106,76 @@ function clockFromMinutes(value: number) {
   return `${hours}:${minutes}`;
 }
 
-function localDateTime(date: string, minuteOfDay: number) {
-  return new Date(`${date}T${clockFromMinutes(minuteOfDay)}:00${TIME_ZONE_OFFSET}`);
+function localDateTime(date: string, minuteOfDay: number, timeZone: string) {
+  const [year, month, day] = date.split("-").map(Number);
+  const localAsUtc = Date.UTC(
+    year,
+    month - 1,
+    day,
+    Math.floor(minuteOfDay / 60),
+    minuteOfDay % 60,
+  );
+  let candidate = new Date(localAsUtc);
+  candidate = new Date(
+    localAsUtc - timeZoneOffsetMilliseconds(candidate, timeZone),
+  );
+  candidate = new Date(
+    localAsUtc - timeZoneOffsetMilliseconds(candidate, timeZone),
+  );
+  return candidate;
 }
 
 serve(async (request) => {
-  if (request.method === "OPTIONS") return new Response(null, { headers: appointmentCorsHeaders });
-  if (request.method !== "POST") return appointmentJson({ error: "Metodo nao permitido." }, 405);
+  if (request.method === "OPTIONS") {
+    return new Response(null, { headers: appointmentCorsHeaders });
+  }
+  if (request.method !== "POST") {
+    return appointmentJson({ error: "Método não permitido." }, 405);
+  }
 
   try {
     const body = await request.json().catch(() => ({}));
     const token = String(body.token || "").trim();
     const { date, parsed } = parseDate(body.date);
-    const today = saoPauloDate();
-    const limit = new Date(`${today}T12:00:00${TIME_ZONE_OFFSET}`);
-    limit.setUTCMonth(limit.getUTCMonth() + MAX_MONTHS_AHEAD);
 
-    if (date < today) {
-      throw new AppointmentLifecycleError("Datas passadas nao estao disponiveis.", 400, "PAST_DATE");
+    const db = appointmentAdminClient();
+    const context = await resolveAppointmentInvitation(db, token);
+    const appointment = context.appointment;
+    const lifecycleStatus = String(appointment.lifecycle_status || "created");
+    if (
+      ["cancelled", "in_progress", "completed", "closed"].includes(
+        lifecycleStatus,
+      )
+    ) {
+      throw new AppointmentLifecycleError(
+        "Este agendamento não aceita mais reagendamento.",
+        409,
+        "RESCHEDULE_NOT_ALLOWED",
+      );
     }
-    if (parsed > limit) {
+
+    const timeZone = String(
+      context.policySnapshot?.timezone || "America/Sao_Paulo",
+    );
+    try {
+      new Intl.DateTimeFormat("en-US", { timeZone }).format(new Date());
+    } catch {
+      throw new AppointmentLifecycleError(
+        "Fuso horário do agendamento inválido.",
+        409,
+        "INVALID_TIMEZONE",
+      );
+    }
+    const today = dateInTimeZone(timeZone);
+    const limit = addCalendarMonths(today, MAX_MONTHS_AHEAD);
+    if (date < today) {
+      throw new AppointmentLifecycleError(
+        "Datas passadas não estão disponíveis.",
+        400,
+        "PAST_DATE",
+      );
+    }
+    if (date > limit) {
       throw new AppointmentLifecycleError(
         "Escolha uma data dentro dos proximos seis meses.",
         400,
@@ -84,68 +183,96 @@ serve(async (request) => {
       );
     }
 
-    const db = appointmentAdminClient();
-    const context = await resolveAppointmentInvitation(db, token);
-    const appointment = context.appointment;
-    const lifecycleStatus = String(appointment.lifecycle_status || "created");
-    if (["cancelled", "completed", "closed"].includes(lifecycleStatus)) {
+    const durationMinutes = Math.round(
+      (new Date(appointment.end_time).getTime() -
+        new Date(appointment.start_time).getTime()) / 60_000,
+    );
+    if (durationMinutes <= 0) {
       throw new AppointmentLifecycleError(
-        "Este agendamento nao aceita mais reagendamento.",
+        "Duração do agendamento inválida.",
         409,
-        "RESCHEDULE_NOT_ALLOWED",
+        "INVALID_DURATION",
       );
     }
 
-    const durationMinutes = Math.round(
-      (new Date(appointment.end_time).getTime() - new Date(appointment.start_time).getTime()) / 60_000,
-    );
-    if (durationMinutes <= 0) {
-      throw new AppointmentLifecycleError("Duracao do agendamento invalida.", 409, "INVALID_DURATION");
-    }
-
-    const workingHours = (context.professional?.working_hours || {}) as Record<string, WorkingDay>;
+    const workingHours = (context.professional?.working_hours || {}) as Record<
+      string,
+      WorkingDay
+    >;
     const day = workingHours[String(parsed.getUTCDay())];
     const startMinute = minutesFromClock(day?.start);
     const endMinute = minutesFromClock(day?.end);
 
-    if (!day?.enabled || startMinute === null || endMinute === null || endMinute <= startMinute) {
+    if (
+      !day?.enabled || startMinute === null || endMinute === null ||
+      endMinute <= startMinute
+    ) {
       return appointmentJson({
         date,
         durationMinutes,
         intervalMinutes: SLOT_INTERVAL_MINUTES,
         availableSlots: [],
-        reason: Object.keys(workingHours).length === 0 ? "availability_not_configured" : "professional_unavailable",
+        reason: Object.keys(workingHours).length === 0
+          ? "availability_not_configured"
+          : "professional_unavailable",
       });
     }
 
-    const dayStart = new Date(`${date}T00:00:00${TIME_ZONE_OFFSET}`);
-    const dayEnd = new Date(`${date}T23:59:59.999${TIME_ZONE_OFFSET}`);
-    const busyResult = await db
-      .from("appointments")
-      .select("id,start_time,end_time")
-      .eq("user_id", appointment.user_id)
-      .neq("id", appointment.id)
-      .neq("lifecycle_status", "cancelled")
-      .not("status", "in", "(cancelled_by_patient,cancelled_by_professional,cancelled,canceled)")
-      .lt("start_time", dayEnd.toISOString())
-      .gt("end_time", dayStart.toISOString());
+    const dayStart = localDateTime(date, 0, timeZone);
+    const dayEnd = localDateTime(addCalendarDays(date, 1), 0, timeZone);
+    const [busyResult, rejectedResult] = await Promise.all([
+      db
+        .from("appointments")
+        .select("id,start_time,end_time")
+        .eq("user_id", appointment.user_id)
+        .neq("id", appointment.id)
+        .neq("lifecycle_status", "cancelled")
+        .not(
+          "status",
+          "in",
+          "(cancelled_by_patient,cancelled_by_professional,cancelled,canceled)",
+        )
+        .lt("start_time", dayEnd.toISOString())
+        .gt("end_time", dayStart.toISOString()),
+      db
+        .from("appointment_reschedule_requests")
+        .select("requested_start_time,requested_end_time")
+        .eq("appointment_id", appointment.id)
+        .eq("appointment_revision", appointment.confirmation_revision)
+        .eq("status", "rejected"),
+    ]);
     if (busyResult.error) throw busyResult.error;
+    if (rejectedResult.error) throw rejectedResult.error;
 
     const busySlots = (busyResult.data || []).map((slot) => ({
       start: new Date(slot.start_time).getTime(),
       end: new Date(slot.end_time).getTime(),
+    }));
+    const rejectedSlots = (rejectedResult.data || []).map((slot) => ({
+      start: new Date(slot.requested_start_time).getTime(),
+      end: new Date(slot.requested_end_time).getTime(),
     }));
     const now = Date.now();
     const originalStart = new Date(appointment.start_time).getTime();
     const originalEnd = new Date(appointment.end_time).getTime();
     const availableSlots = [];
 
-    for (let minute = startMinute; minute + durationMinutes <= endMinute; minute += SLOT_INTERVAL_MINUTES) {
-      const start = localDateTime(date, minute);
+    for (
+      let minute = startMinute;
+      minute + durationMinutes <= endMinute;
+      minute += SLOT_INTERVAL_MINUTES
+    ) {
+      const start = localDateTime(date, minute, timeZone);
       const end = new Date(start.getTime() + durationMinutes * 60_000);
-      const isOriginalTime = start.getTime() === originalStart && end.getTime() === originalEnd;
-      const isBusy = busySlots.some((slot) => start.getTime() < slot.end && end.getTime() > slot.start);
-      if (start.getTime() > now && !isOriginalTime && !isBusy) {
+      const isOriginalTime = start.getTime() === originalStart &&
+        end.getTime() === originalEnd;
+      const isBusy = busySlots.some((slot) =>
+        start.getTime() < slot.end && end.getTime() > slot.start
+      );
+      const wasRejected = rejectedSlots.some((slot) =>
+        start.getTime() === slot.start && end.getTime() === slot.end
+      );
+      if (start.getTime() > now && !isOriginalTime && !isBusy && !wasRejected) {
         availableSlots.push({
           label: clockFromMinutes(minute),
           startTime: start.toISOString(),

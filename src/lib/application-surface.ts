@@ -6,7 +6,6 @@ export const OPERATIONAL_ROUTE_ROOTS = [
   "/create-account",
   "/account-created",
   "/google-connection-success",
-  "/confirmar-agendamento",
   "/join",
   "/payment",
   "/anamnese-externa",

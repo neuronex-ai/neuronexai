@@ -258,7 +258,7 @@ CONTEXTO DO PACIENTE:
                 const suggestionPrompt = `
 Como consultor especializado em psicologia clínica, sugira abordagens terapêuticas baseadas em evidências.
 
-CONDIÃ‡ÃƒO: ${condition}
+CONDIÇÃO: ${condition}
 ABORDAGEM PREFERIDA: ${approach}
 ${patientContext}
 
@@ -884,7 +884,7 @@ Seja breve e cite a norma.
                 const patientContext = `
 PACIENTE: ${patient?.name || 'Nome não encontrado'}
 CPF: ${patient?.cpf || 'Não informado'}
-HISTÃ“RICO RECENTE:
+HISTÓRICO RECENTE:
 ${notes?.map((n: any) => `- ${new Date(n.created_at).toLocaleDateString()}: ${n.notes}`).join('\n')}
                 `;
 
@@ -916,14 +916,14 @@ REGRAS NORMATIVAS (Siga estritamente):
 ${normativeContext}
 (Se não houver regras acima, siga a Resolução CFP 06/2019 padrão).
 
-ESTRUTURA OBRIGATÃ“RIA (CFP 06/2019):
+ESTRUTURA OBRIGATÓRIA (CFP 06/2019):
 1. Identificação
 2. Descrição da Demanda
 3. Procedimento (Cite: Entrevistas, Testes, Observação)
 4. Análise
 5. Conclusão (Com encaminhamento se necessário)
 
-REGRAS DE REDAÃ‡ÃƒO:
+REGRAS DE REDAÇÃO:
 - Use linguagem técnica, impessoal e objetiva.
 - NÃO faça diagnósticos fechados se não houver dados suficientes.
 - Use termos como "sugere", "indica", "compatível com".

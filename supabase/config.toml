@@ -1,3 +1,5 @@
+project_id = "neurobackupofc"
+
 [functions.scientific-updater]
 enabled = true
 verify_jwt = true
@@ -265,9 +267,14 @@ verify_jwt = false
 entrypoint = "./functions/public-anamnesis/index.ts"
 
 [functions.public-appointment-notification]
-enabled = true
+enabled = false
 verify_jwt = false
 entrypoint = "./functions/public-appointment-notification/index.ts"
+
+[functions.google-calendar-poll]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/google-calendar-poll/index.ts"
 
 [functions.get-appointment-by-token]
 enabled = true
@@ -293,6 +300,11 @@ entrypoint = "./functions/send-appointment-reminder/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/review-appointment-reschedule/index.ts"
+
+[functions.process-appointment-communications]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/process-appointment-communications/index.ts"
 
 [functions.manage-package-lifecycle]
 enabled = true

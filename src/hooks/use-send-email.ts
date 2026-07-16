@@ -18,6 +18,7 @@ interface SendDocumentEmailParams {
 
 interface SendReminderEmailParams {
   appointmentId?: string;
+  idempotencyKey?: string;
   patientEmail: string;
   patientName: string;
   startTime: string;
@@ -50,7 +51,7 @@ export const useSendEmail = () =>
 
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      return data as { provider?: "gmail" | "resend" };
+      return data as { provider?: "gmail" | "resend"; idempotentReplay?: boolean };
     },
     onSuccess: (result, variables) => {
       const emailType =

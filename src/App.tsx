@@ -93,6 +93,7 @@ const SynapseShellGate = () => {
   const location = useLocation();
   const isFocusedPublicSurface =
     location.pathname.startsWith("/portal") ||
+    location.pathname.startsWith("/confirmar-agendamento/") ||
     location.pathname.startsWith("/join/") ||
     location.pathname.startsWith("/id/");
   if (isFocusedPublicSurface) return null;

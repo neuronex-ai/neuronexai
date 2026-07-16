@@ -4,7 +4,19 @@ import { Button } from "@/components/ui/button";
 import { AnimatePresence, motion } from "framer-motion";
 import { Cookie, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
+
+const SENSITIVE_ROUTE_ROOTS = [
+    "/confirmar-agendamento",
+    "/join",
+    "/portal",
+    "/anamnese-externa",
+    "/payment",
+] as const;
+
+const isSensitiveRoute = (pathname: string) => SENSITIVE_ROUTE_ROOTS.some(
+    (root) => pathname === root || pathname.startsWith(`${root}/`),
+);
 
 // Preferences recorded by the current banner. They do not yet provide
 // category-by-category technical control over third-party scripts.
@@ -54,6 +66,7 @@ const reportRecordedPreferences = (preferences: CookiePreferences) => {
 };
 
 export const CookieConsent = () => {
+    const { pathname } = useLocation();
     const [isVisible, setIsVisible] = useState(false);
     const [showDetails, setShowDetails] = useState(false);
     const [_preferences, setPreferences] = useState<CookiePreferences>(DEFAULT_PREFERENCES);
@@ -121,6 +134,8 @@ export const CookieConsent = () => {
         setPreferences(minimalPrefs);
         setIsVisible(false);
     };
+
+    if (isSensitiveRoute(pathname)) return null;
 
     return (
         <AnimatePresence>

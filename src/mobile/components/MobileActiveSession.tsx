@@ -3,6 +3,7 @@ import { JitsiMeet, type JitsiRef } from '@/components/teleconsulta/JitsiMeet';
 import { TranscriptionConsentPanel } from '@/components/teleconsulta/TranscriptionConsentPanel';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useCompleteAppointmentClinicalSession } from '@/hooks/use-complete-appointment-clinical-session';
 import { useGenerateSessionProntuario } from '@/hooks/use-generate-session-prontuario';
 import { useJitsiToken } from '@/hooks/use-jitsi-token';
 import { useTeleconsultationInvite } from '@/hooks/use-teleconsultation-invite';
@@ -10,7 +11,6 @@ import type { MediaDeviceChoice } from '@/hooks/use-media-readiness';
 import { usePatientById } from '@/hooks/use-patient-by-id';
 import { useResilientSessionNotes } from '@/hooks/use-resilient-session-notes';
 import { useSessionCapture } from '@/hooks/use-session-capture';
-import { useUpdateAppointment } from '@/hooks/use-update-appointment';
 import { cn, getInitials } from '@/lib/utils';
 import type { Appointment } from '@/types';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -70,6 +70,7 @@ export const MobileActiveSession = ({ activeAppointment, onSessionEnd }: MobileA
   const jitsiRef = useRef<JitsiRef>(null);
   const joinedAtRef = useRef<number | null>(null);
   const reviewRequestedRef = useRef(false);
+  const finishSessionInFlightRef = useRef<Promise<void> | null>(null);
 
   const { user } = useAuth();
   const therapistName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Terapeuta';
@@ -89,7 +90,11 @@ export const MobileActiveSession = ({ activeAppointment, onSessionEnd }: MobileA
   const { data: jitsiToken, error: jitsiError, isLoading: isLoadingToken } = useJitsiToken(roomName, {
     enabled: isOnlineSession,
   });
-  const { mutateAsync: updateAppointment, isPending: isUpdatingAppointment } = useUpdateAppointment();
+  const {
+    completeClinicalSession,
+    isCompletingClinicalSession,
+    resetClinicalSessionCompletionAttempt,
+  } = useCompleteAppointmentClinicalSession(appointmentId, patientId);
   const { mutateAsync: generateProntuario, isPending: isGeneratingProntuario } = useGenerateSessionProntuario();
   const notesDraft = useResilientSessionNotes(appointmentId);
   const capture = useSessionCapture({
@@ -128,7 +133,9 @@ export const MobileActiveSession = ({ activeAppointment, onSessionEnd }: MobileA
     clearRecovery,
   } = capture;
 
-  const isProcessing = completionMode !== 'idle' || isUpdatingAppointment || isGeneratingProntuario;
+  const isProcessing = completionMode !== 'idle'
+    || isCompletingClinicalSession
+    || isGeneratingProntuario;
   const captureLabel = useMemo(() => {
     if (consentStatus === 'declined') return 'Sem transcrição';
     if (consentStatus === 'revoked') return 'Consentimento revogado';
@@ -247,23 +254,40 @@ export const MobileActiveSession = ({ activeAppointment, onSessionEnd }: MobileA
     }
   }, [captureState, consentStatus, finalizeCapture, hasJoined, isOnlineSession]);
 
-  const finishSession = useCallback(async (draftPending: boolean, summaryNoteId?: string) => {
-    await updateAppointment({
-      id: appointmentId,
-      updates: {
-        status: 'attended',
-        metadata: {
-          sessionTranscriptId: transcriptId,
-          sessionSummaryNoteId: summaryNoteId || null,
-          sessionDraftPending: draftPending,
-          sessionDraftNotes: draftPending ? notesDraft.notes : null,
-          sessionCompletedAt: new Date().toISOString(),
-        },
+  const finishSession = useCallback((draftPending: boolean, summaryNoteId?: string) => {
+    if (finishSessionInFlightRef.current) return finishSessionInFlightRef.current;
+
+    const operation = (async () => {
+      await completeClinicalSession({
+        draftPending,
+        sessionSummaryNoteId: summaryNoteId ?? null,
+        sessionTranscriptId: transcriptId ?? null,
+      });
+
+      const cleanup = [clearRecovery()];
+      // Without a persisted summary note, the local draft remains available
+      // for the promised later review instead of being copied to appointment metadata.
+      if (!draftPending || summaryNoteId) cleanup.push(notesDraft.clearDraft());
+      await Promise.all(cleanup);
+      onSessionEnd();
+      resetClinicalSessionCompletionAttempt();
+    })();
+
+    finishSessionInFlightRef.current = operation;
+    void operation.then(
+      () => {
+        if (finishSessionInFlightRef.current === operation) {
+          finishSessionInFlightRef.current = null;
+        }
       },
-    });
-    await Promise.all([clearRecovery(), notesDraft.clearDraft()]);
-    onSessionEnd();
-  }, [appointmentId, clearRecovery, notesDraft, onSessionEnd, transcriptId, updateAppointment]);
+      () => {
+        if (finishSessionInFlightRef.current === operation) {
+          finishSessionInFlightRef.current = null;
+        }
+      },
+    );
+    return operation;
+  }, [clearRecovery, completeClinicalSession, notesDraft, onSessionEnd, resetClinicalSessionCompletionAttempt, transcriptId]);
 
   const completeWithAi = useCallback(async () => {
     if (!reviewConfirmed || !patientId) return;
