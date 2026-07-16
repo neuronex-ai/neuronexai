@@ -120,6 +120,8 @@ const calculateChurnRisk = async (patientId: string, userId: string): Promise<Ch
     .select('id, status, notes')
     .eq('user_id', userId)
     .eq('patient_id', patientId)
+    .eq('visibility_status', 'visible')
+    .is('archived_at', null)
     .gte('start_time', now.toISOString());
 
   const futureCount = futureAppointments?.filter((appointment) =>

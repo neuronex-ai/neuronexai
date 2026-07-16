@@ -163,7 +163,7 @@ const AnamnesisEntry = memo(function AnamnesisEntry({
                 className="relative mb-1 pb-4 pt-7 first:pt-0"
                 style={{ contentVisibility: "auto", containIntrinsicSize: "72px" }}
             >
-                <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-zinc-950/10 to-transparent dark:via-white/[0.075]" />
+                <div className="pointer-events-none absolute inset-x-6 top-1/2 h-px bg-gradient-to-r from-transparent via-zinc-950/10 to-transparent dark:via-zinc-700/45" />
                 <div className="relative z-10 flex justify-center">
                     <div className="desktop-retina-inset relative overflow-hidden rounded-full border border-border/50 bg-background/82 px-8 py-2">
                         <AutoSaveField
@@ -183,7 +183,7 @@ const AnamnesisEntry = memo(function AnamnesisEntry({
             className="patient-record-card group/item relative overflow-hidden rounded-[26px] border p-6 md:p-7"
             style={{ contentVisibility: "auto", containIntrinsicSize: "190px" }}
         >
-            <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-white/[0.08]" />
+            <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-zinc-700/45" />
             <div className="relative z-10 mb-4">
                 <AutoSaveField
                     type="question"
@@ -520,11 +520,11 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.28, ease: [0.32, 0.72, 0, 1] }}
                     className="patient-record-panel group/doc-container relative flex h-full w-full flex-col overflow-hidden rounded-[30px] border"
                 >
-                    <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent opacity-75 dark:via-white/[0.08]" />
+                    <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent opacity-75 dark:via-zinc-700/45" />
 
                     <div className="relative z-20 flex flex-col items-center justify-between gap-4 border-b border-border/50 bg-muted/24 p-5 sm:flex-row sm:px-6">
                         <div className="flex items-center gap-4">
-                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200/70 bg-zinc-950 text-white shadow-[0_18px_38px_-24px_rgba(24,24,27,0.55)] dark:border-white/[0.08] dark:bg-white dark:text-zinc-950 dark:shadow-[0_18px_42px_-28px_rgba(255,255,255,0.3)]">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-zinc-200/70 bg-zinc-950 text-white shadow-[0_18px_38px_-24px_rgba(24,24,27,0.55)] dark:border-zinc-700 dark:bg-zinc-200 dark:text-zinc-950 dark:shadow-[0_18px_42px_-28px_rgba(0,0,0,0.72)]">
                                 <ClipboardList className="h-4.5 w-4.5" />
                             </div>
                             <div>
@@ -536,12 +536,12 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                         <div className="flex items-center gap-3">
                             <AnimatePresence mode="wait">
                                 {saveStatus === 'saving' && (
-                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-3 rounded-full border border-zinc-200/70 bg-white/74 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 shadow-sm backdrop-blur-xl dark:border-white/[0.06] dark:bg-white/[0.045]">
+                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-3 rounded-full border border-zinc-200/70 bg-white/74 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 shadow-sm backdrop-blur-xl dark:border-zinc-800 dark:bg-zinc-900/75">
                                         <Loader2 className="w-4 h-4 animate-spin" /> SALVANDO...
                                     </motion.div>
                                 )}
                                 {saveStatus === 'saved' && (
-                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-3 rounded-full border border-zinc-200/70 bg-zinc-950 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_16px_38px_-28px_rgba(24,24,27,0.7)] dark:border-white/[0.08] dark:bg-white dark:text-zinc-950">
+                                    <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} className="flex items-center gap-3 rounded-full border border-zinc-200/70 bg-zinc-950 px-4 py-2 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-[0_16px_38px_-28px_rgba(24,24,27,0.7)] dark:border-zinc-700 dark:bg-zinc-200 dark:text-zinc-950">
                                         <Check className="w-4 h-4" /> ATUALIZADO
                                     </motion.div>
                                 )}
@@ -566,7 +566,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                                     <DropdownMenuItem onClick={handleGenerateLink} className="gap-4 rounded-2xl cursor-pointer text-zinc-700 dark:text-zinc-300 text-[11px] font-black uppercase tracking-widest py-4 px-5 hover:bg-zinc-50 dark:hover:bg-white/5 transition-all">
                                         <div className="p-2 rounded-xl bg-zinc-50 dark:bg-white/10"><ClipboardList className="h-4 w-4" /></div> Enviar ao paciente
                                     </DropdownMenuItem>
-                                    <DropdownMenuSeparator className="bg-zinc-100 dark:bg-white/5 my-3 mx-2" />
+                                    <DropdownMenuSeparator className="mx-2 my-3 bg-zinc-200/70 dark:bg-zinc-800/75" />
                                     <DropdownMenuItem
                                         onClick={() => {
                                             if (onChangeTemplate) {
@@ -601,7 +601,7 @@ export function ViewAnamnesis({ onChangeTemplate, onResetToSelection }: ViewAnam
                                         type="button"
                                         variant="outline"
                                         onClick={handleLoadMoreFields}
-                                        className="h-12 rounded-2xl border-zinc-200/70 bg-white/70 px-6 text-[10px] font-black uppercase tracking-[0.18em] text-foreground shadow-[0_18px_40px_-32px_rgba(24,24,27,0.45)] backdrop-blur-xl transition-all hover:bg-white active:scale-[0.98] dark:border-white/[0.075] dark:bg-white/[0.045] dark:hover:bg-white/[0.075]"
+                                        className="h-12 rounded-2xl border-zinc-200/70 bg-white/70 px-6 text-[10px] font-black uppercase tracking-[0.18em] text-foreground shadow-[0_18px_40px_-32px_rgba(24,24,27,0.45)] backdrop-blur-xl transition-all hover:bg-white active:scale-[0.98] dark:border-zinc-800 dark:bg-zinc-900/75 dark:hover:bg-zinc-900"
                                     >
                                         Carregar mais campos
                                     </Button>

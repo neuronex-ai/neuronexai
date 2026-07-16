@@ -98,7 +98,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
               {expired ? <AlertTriangle className="h-3.5 w-3.5" /> : <Clock3 className="h-3.5 w-3.5" />}
               {expired ? "Prazo vencido" : `Pendente ${dueLabel}`}
             </span>
-            <span className="rounded-full border border-border/45 bg-background/70 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground dark:border-white/10">
+            <span className="rounded-full border border-border/45 bg-background/70 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-muted-foreground dark:border-zinc-800">
               {format(new Date(note.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
             </span>
             {note.ai_summary_edited ? (
@@ -130,7 +130,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
                 variant="outline"
                 disabled={isBusy}
                 onClick={handleCancelEdit}
-                className="h-11 rounded-2xl border-border/50 px-4 text-[10px] font-black uppercase tracking-[0.14em] dark:border-white/10"
+                className="h-11 rounded-2xl border-border/50 px-4 text-[10px] font-black uppercase tracking-[0.14em] dark:border-zinc-800"
               >
                 <X className="mr-2 h-4 w-4" />
                 Cancelar
@@ -151,7 +151,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
               variant="outline"
               disabled={isBusy || expired}
               onClick={() => setIsEditing(true)}
-              className="h-11 rounded-2xl border-border/50 px-4 text-[10px] font-black uppercase tracking-[0.14em] dark:border-white/10"
+              className="h-11 rounded-2xl border-border/50 px-4 text-[10px] font-black uppercase tracking-[0.14em] dark:border-zinc-800"
             >
               <Pencil className="mr-2 h-4 w-4" />
               Editar
@@ -169,7 +169,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
         </div>
       </div>
 
-      <div className="rounded-[22px] border border-border/40 bg-background/60 p-4 dark:border-white/10">
+      <div className="rounded-[22px] border border-border/40 bg-background/60 p-4 dark:border-zinc-800">
         <div className="mb-4 max-w-sm space-y-1">
           <span className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
             Emoção predominante do paciente
@@ -180,7 +180,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
               disabled={expired || updateReview.isPending}
               onValueChange={(value) => setDraft((current) => ({ ...current, sentiment: value }))}
             >
-              <SelectTrigger className="h-10 rounded-2xl border-border/45 bg-background/75 text-xs font-bold dark:border-white/10">
+              <SelectTrigger className="h-10 rounded-2xl border-border/45 bg-background/75 text-xs font-bold dark:border-zinc-800">
                 <SelectValue placeholder="Selecionar emoção" />
               </SelectTrigger>
               <SelectContent>
@@ -192,7 +192,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
               </SelectContent>
             </Select>
           ) : (
-            <span className="inline-flex rounded-full border border-border/45 bg-background/75 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-foreground dark:border-white/10">
+            <span className="inline-flex rounded-full border border-border/45 bg-background/75 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-foreground dark:border-zinc-800">
               {draft.sentiment || "Neutro"}
             </span>
           )}
@@ -203,7 +203,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
             value={draft.summary}
             disabled={expired || updateReview.isPending}
             onChange={(event) => setDraft((current) => ({ ...current, summary: event.target.value }))}
-            className="min-h-[220px] resize-y rounded-[20px] border-border/40 bg-background/70 text-sm leading-7 text-foreground/90 dark:border-white/10"
+            className="min-h-[220px] resize-y rounded-[20px] border-border/40 bg-background/70 text-sm leading-7 text-foreground/90 dark:border-zinc-800"
             placeholder="Resumo gerado pela IA"
           />
         ) : (
@@ -218,7 +218,7 @@ const PendingReviewCard = ({ note, patientId }: { note: SessionNote; patientId: 
           {draft.topics.slice(0, 5).map((topic) => (
             <span
               key={topic}
-              className="rounded-full border border-border/45 bg-background/70 px-3 py-1.5 text-[10px] font-bold text-muted-foreground dark:border-white/10"
+              className="rounded-full border border-border/45 bg-background/70 px-3 py-1.5 text-[10px] font-bold text-muted-foreground dark:border-zinc-800"
             >
               {topic}
             </span>

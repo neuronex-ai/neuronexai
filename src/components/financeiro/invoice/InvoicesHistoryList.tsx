@@ -1,4 +1,4 @@
-import { useInvoices } from "@/hooks/use-invoices";
+import { useInvoicesPage } from "@/hooks/use-invoices";
 import { formatCurrency } from "@/lib/utils";
 import { Loader2, FileCheck, ExternalLink, Trash2, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,13 @@ import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 interface InvoicesHistoryListProps {
     fiscalOnly?: boolean;
     heightClassName?: string;
+    patientId?: string;
+    allowDelete?: boolean;
 }
 
-export const InvoicesHistoryList = ({ fiscalOnly = false, heightClassName = "h-[350px]" }: InvoicesHistoryListProps) => {
-    const { data: invoices, isLoading } = useInvoices();
+export const InvoicesHistoryList = ({ fiscalOnly = false, heightClassName = "h-[350px]", patientId, allowDelete = true }: InvoicesHistoryListProps) => {
+    const { data: invoicePage, isLoading } = useInvoicesPage({ page: 1, pageSize: 50, patientId });
+    const invoices = invoicePage?.invoices;
     const { data: patients } = usePatients();
     const queryClient = useQueryClient();
     const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -141,7 +144,7 @@ export const InvoicesHistoryList = ({ fiscalOnly = false, heightClassName = "h-[
                                     </Button>
                                 )}
 
-                                <Button
+                                {allowDelete ? <Button
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 rounded-lg hover:bg-rose-500/10 text-zinc-600 hover:text-rose-500 transition-colors"
@@ -150,7 +153,7 @@ export const InvoicesHistoryList = ({ fiscalOnly = false, heightClassName = "h-[
                                     title="Excluir Cobrança"
                                 >
                                     {deletingId === inv.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                                </Button>
+                                </Button> : null}
                             </div>
                         </div>
                     );

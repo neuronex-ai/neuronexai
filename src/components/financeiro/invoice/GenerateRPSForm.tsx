@@ -1,4 +1,4 @@
-﻿import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useFiscalSettings } from "@/hooks/use-fiscal-settings";
@@ -11,15 +11,17 @@ import {
     AlertTriangle, ArrowRight, Building2, CheckCircle2, ChevronLeft, Settings, ShieldCheck
 } from "lucide-react";
 import { useState } from "react";
+import { useEffect } from "react";
 import { toast } from "sonner";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 interface GenerateRPSFormProps {
     onBack: () => void;
     onSuccess: () => void;
+    initialPatientId?: string;
 }
 
-export const GenerateRPSForm = ({ onBack, onSuccess }: GenerateRPSFormProps) => {
+export const GenerateRPSForm = ({ onBack, onSuccess, initialPatientId }: GenerateRPSFormProps) => {
     const [step, setStep] = useState(0);
     const { data: patients } = usePatients();
     const { data: invoices } = useInvoices();
@@ -27,15 +29,20 @@ export const GenerateRPSForm = ({ onBack, onSuccess }: GenerateRPSFormProps) => 
     const { issueInvoice, isIssuing } = useAsaasNfse();
     const { mutate: createInvoice, isPending: isCreatingInvoice } = useGenerateInvoice();
 
-    const [patientId, setPatientId] = useState("");
+    const [patientId, setPatientId] = useState(initialPatientId || "");
     const [selectedPaymentId, setSelectedPaymentId] = useState("new");
     const [amount, setAmount] = useState("");
     const [description, setDescription] = useState("Sessão de Psicoterapia");
     const eligiblePayments = (invoices || []).filter((invoice) =>
         invoice.gateway_payment_id &&
         invoice.status === "paid" &&
-        !invoice.nfse_reference
+        !invoice.nfse_reference &&
+        (!initialPatientId || invoice.patient_id === initialPatientId)
     );
+
+    useEffect(() => {
+        if (initialPatientId) setPatientId(initialPatientId);
+    }, [initialPatientId]);
 
     // Requisitos mínimos para emissão
     const missingFields = [];
@@ -192,7 +199,7 @@ export const GenerateRPSForm = ({ onBack, onSuccess }: GenerateRPSFormProps) => 
 
                             <div className="space-y-3">
                                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Paciente (Tomador)</label>
-                                <Select value={patientId} onValueChange={setPatientId}>
+                                <Select value={patientId} onValueChange={setPatientId} disabled={Boolean(initialPatientId)}>
                                     <SelectTrigger className="bg-accent/30 dark:bg-white/[0.03] border-border h-16 rounded-[24px] text-base px-6 shadow-sm focus:ring-ring">
                                         <SelectValue placeholder="Selecione o Paciente" />
                                     </SelectTrigger>

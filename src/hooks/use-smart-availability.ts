@@ -47,6 +47,8 @@ export const useSmartAvailability = () => {
         .from('appointments')
         .select('start_time, end_time, status, notes')
         .eq('user_id', userId)
+        .eq('visibility_status', 'visible')
+        .is('archived_at', null)
         .gte('start_time', startOfDay(startDate).toISOString())
         .lte('end_time', endOfDay(endDate).toISOString());
 
@@ -91,7 +93,7 @@ export const useSmartAvailability = () => {
           if (!hasConflict) {
             foundSlots.push({ start: new Date(scanTime), end: potentialEnd });
             // Se achou um slot, pula a duração dele para não sugerir horários sobrepostos (ex: 14:00 e 14:30 para uma consulta de 1h)
-            // scanTime = potentialEnd; 
+            // scanTime = potentialEnd;
             // Ou, avançamos apenas 30min para dar mais opções de início? Vamos avançar 30min.
             scanTime = addMinutes(scanTime, 30);
           } else {

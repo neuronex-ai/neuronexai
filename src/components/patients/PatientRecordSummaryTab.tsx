@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { usePatientRecordSummary } from "@/hooks/use-patient-record-summary";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/types";
+import { PatientCompleteAppointmentHistory } from "@/components/patients/PatientCompleteAppointmentHistory";
 
 interface PatientRecordSummaryTabProps {
   patient: Patient;
@@ -205,6 +206,8 @@ export function PatientRecordSummaryTab({ patient, patientId, onNavigate }: Pati
           </button>
         ))}
       </div>
+
+      <PatientCompleteAppointmentHistory patientId={patientId} />
     </div>
   );
 }

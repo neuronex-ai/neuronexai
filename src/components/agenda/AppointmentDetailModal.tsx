@@ -3,7 +3,15 @@
 import { Button } from "@/components/ui/button";
 import { AppointmentRescheduleReview } from "@/components/agenda/AppointmentRescheduleReview";
 import { AppointmentTimelinePanel } from "@/components/agenda/AppointmentTimelineDialog";
+import { AppointmentProfessionalActionDialog } from "@/components/agenda/AppointmentProfessionalActionDialog";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -15,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
+import type { ProfessionalAppointmentAction } from "@/hooks/use-appointment-professional-action";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
 import {
   getAppointmentStatusMeta,
@@ -38,6 +47,7 @@ import { ptBR } from "date-fns/locale";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
+  Archive,
   Banknote,
   Briefcase,
   CalendarDays,
@@ -50,12 +60,14 @@ import {
   Loader2,
   Mail,
   MessageCircle,
+  MoreHorizontal,
   QrCode,
   Repeat,
   ShieldCheck,
   User,
   Video,
   X,
+  XCircle,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
@@ -132,6 +144,7 @@ export const AppointmentDetailModal = ({
   const [eventLocation, setEventLocation] = useState("");
   const [sessionType, setSessionType] = useState("follow_up");
   const [modality, setModality] = useState<"presencial" | "online">("presencial");
+  const [professionalAction, setProfessionalAction] = useState<ProfessionalAppointmentAction | null>(null);
   const loadedAppointmentKeyRef = useRef<string | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyBackButtonRef = useRef<HTMLButtonElement>(null);
@@ -365,14 +378,15 @@ export const AppointmentDetailModal = ({
   };
 
   return (
+    <>
     <ResponsiveModal
       open={open}
       onOpenChange={setOpen}
       trigger={children}
       showCloseButton={false}
-      className="desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[24px] border border-border/70 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl sm:max-w-[680px]"
+      className="appointment-detail-shell desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[30px] border border-border/55 bg-background/94 p-0 shadow-2xl backdrop-blur-3xl sm:max-w-[740px]"
       drawerClassName="max-h-[92dvh]"
-      contentStyle={{ maxHeight: "min(700px, calc(100dvh - 1rem))" }}
+      contentStyle={{ maxHeight: "min(760px, calc(100dvh - 1.5rem))" }}
     >
       <AnimatePresence initial={false} mode="wait">
         {activeView === "details" ? (
@@ -383,9 +397,9 @@ export const AppointmentDetailModal = ({
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -48 }}
             transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
             onAnimationComplete={restoreHistoryButtonFocus}
-            className="flex min-h-0 flex-1 flex-col bg-background"
+            className="flex min-h-0 flex-1 flex-col bg-transparent"
           >
-        <div className="px-5 pt-5 pb-3 sm:px-6 flex items-center justify-between shrink-0">
+        <div className="flex shrink-0 items-center justify-between border-b border-border/40 bg-background/48 px-5 pb-4 pt-5 backdrop-blur-2xl sm:px-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h2 className="text-xl font-bold text-foreground tracking-tight">
@@ -418,7 +432,7 @@ export const AppointmentDetailModal = ({
               variant="ghost"
               size="icon"
               onClick={openHistory}
-              className="relative h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+              className="appointment-liquid-control relative h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground hover:text-foreground"
               aria-label="Abrir histórico do agendamento"
             >
               <Clock3 className="h-5 w-5" aria-hidden="true" />
@@ -431,13 +445,13 @@ export const AppointmentDetailModal = ({
                 </span>
               ) : null}
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]" aria-label="Fechar ficha da sessão">
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] motion-reduce:active:scale-100" aria-label="Fechar ficha da sessão">
               <X className="h-5 w-5" aria-hidden="true" />
             </Button>
           </div>
         </div>
 
-        <div className="px-5 py-3 sm:px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+        <div className="patient-record-scrollbar min-h-0 flex-1 overflow-y-auto px-5 py-4 [scrollbar-gutter:stable] sm:px-6">
           <AnimatePresence mode="wait">
             {step === 1 ? (
               <motion.div
@@ -448,8 +462,8 @@ export const AppointmentDetailModal = ({
                 transition={shouldReduceMotion ? { duration: 0 } : undefined}
                 className="space-y-4"
               >
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <div className="flex-1 p-4 rounded-2xl bg-zinc-100/60 dark:bg-secondary/20 border border-zinc-200 dark:border-border/10 flex items-center justify-between shadow-sm">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <div className="appointment-liquid-card flex flex-1 items-center justify-between rounded-[22px] border border-border/45 p-4">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         {isSession ? <User className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />}
@@ -464,15 +478,15 @@ export const AppointmentDetailModal = ({
                       </div>
                     </div>
                     {isSession && (
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-muted-foreground hover:text-foreground hover:bg-background/50" onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}>
+                      <Button variant="ghost" size="icon" className="appointment-liquid-control h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground" onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}>
                         <ChevronRight className="h-5 w-5" />
                       </Button>
                     )}
                   </div>
 
                   {isSession && (
-                    <div className="flex sm:flex-col gap-2 shrink-0">
-                      <Button variant="outline" onClick={handleWhatsApp} className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-emerald-50 hover:text-emerald-600" aria-label="Enviar lembrete pelo WhatsApp">
+                    <div className="flex shrink-0 gap-2 sm:flex-col">
+                      <Button variant="outline" onClick={handleWhatsApp} className="appointment-liquid-control h-11 flex-1 rounded-[16px] border-border/45 px-3 hover:text-emerald-600 sm:w-11 sm:flex-none sm:px-0" aria-label="Enviar lembrete pelo WhatsApp">
                         <MessageCircle className="h-4 w-4" aria-hidden="true" />
                       </Button>
                       <Button
@@ -484,7 +498,7 @@ export const AppointmentDetailModal = ({
                           invitationBlockedByPendingRequest ||
                           ["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "")
                         }
-                        className="flex-1 sm:flex-none h-auto py-3 rounded-[20px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-blue-50 hover:text-blue-600"
+                        className="appointment-liquid-control h-11 flex-1 rounded-[16px] border-border/45 px-3 hover:text-sky-600 sm:w-11 sm:flex-none sm:px-0"
                         aria-label="Enviar convite de confirmação por e-mail"
                         title={
                           invitationBlockedByPendingRequest
@@ -582,17 +596,17 @@ export const AppointmentDetailModal = ({
 
                 <FieldShell label="Recorrência" icon={<Repeat className="w-3.5 h-3.5" />}>
                   <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <div className="rounded-2xl bg-background/70 border border-zinc-200 dark:border-border/10 px-4 py-3">
+                    <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Frequência</p>
                       <p className="mt-1 text-sm font-bold text-foreground">
                         {recurrence?.enabled ? RECURRENCE_LABELS[recurrence.frequency || "weekly"] || recurrence.frequency : "Sem recorrência"}
                       </p>
                     </div>
-                    <div className="rounded-2xl bg-background/70 border border-zinc-200 dark:border-border/10 px-4 py-3">
+                    <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Ocorrências</p>
                       <p className="mt-1 text-sm font-bold text-foreground">{recurrence?.enabled ? recurrence.count || 1 : 1}</p>
                     </div>
-                    <div className="rounded-2xl bg-background/70 border border-zinc-200 dark:border-border/10 px-4 py-3">
+                    <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
                       <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Duração</p>
                       <p className="mt-1 text-sm font-bold text-foreground">{getDurationString(appointment.start_time, appointment.end_time)}</p>
                     </div>
@@ -600,7 +614,7 @@ export const AppointmentDetailModal = ({
                 </FieldShell>
 
                 <FieldShell label="Status do agendamento" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-                  <div className="rounded-2xl border border-zinc-200 bg-background/70 px-4 py-3 dark:border-border/10">
+                  <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
                     <p className="text-sm font-bold text-foreground">{statusMeta.label}</p>
                     <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                       Presença, conclusão e cancelamento devem ser registrados pelas ações próprias de cada fluxo.
@@ -609,7 +623,7 @@ export const AppointmentDetailModal = ({
                 </FieldShell>
 
                 {isSession && transactionData && (
-                  <div className="p-4 rounded-2xl bg-zinc-100/60 dark:bg-secondary/20 border border-zinc-200 dark:border-border/10 shadow-sm">
+                  <div className="appointment-liquid-card rounded-[22px] border border-border/45 p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                       <div>
                         <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground flex items-center gap-2 mb-2">
@@ -646,7 +660,7 @@ export const AppointmentDetailModal = ({
                   <Textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-[88px] bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-zinc-200/60 dark:hover:bg-secondary/30 focus:bg-zinc-200/60 dark:focus:bg-secondary/30 rounded-2xl resize-none text-foreground px-4 py-3 text-sm transition-all focus:border-border/20 focus:ring-0 placeholder:text-muted-foreground/50"
+                    className="appointment-liquid-control min-h-[96px] resize-none rounded-[18px] border-border/45 px-4 py-3 text-sm text-foreground transition-colors placeholder:text-muted-foreground/50 focus:border-ring/35 focus:ring-2 focus:ring-ring/15"
                     placeholder={isSession ? "Adicione observações da sessão..." : "Adicione notas internas do compromisso..."}
                   />
                 </div>
@@ -673,13 +687,40 @@ export const AppointmentDetailModal = ({
         </div>
 
         {step === 1 && (
-          <div className="flex shrink-0 flex-col gap-3 border-t border-border/60 bg-muted/20 p-4 backdrop-blur-xl sm:flex-row sm:justify-end">
+          <div className="flex shrink-0 flex-col gap-3 border-t border-border/40 bg-background/54 p-4 backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button type="button" variant="ghost" className="appointment-liquid-control min-h-11 rounded-xl border border-border/45 px-4 text-xs font-bold text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal className="mr-2 h-4 w-4" aria-hidden="true" />
+                  Ações
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="desktop-retina-modal w-72 rounded-[20px] border-border/55 bg-popover/96 p-2 shadow-xl">
+                <DropdownMenuItem
+                  onSelect={() => setProfessionalAction("archive")}
+                  className="min-h-11 rounded-[14px] px-3 text-sm font-medium"
+                >
+                  <Archive className="mr-3 h-4 w-4 text-amber-500" aria-hidden="true" />
+                  Remover da agenda
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border/45" />
+                <DropdownMenuItem
+                  onSelect={() => setProfessionalAction("cancel")}
+                  className="min-h-11 rounded-[14px] px-3 text-sm font-medium text-rose-600 focus:bg-rose-500/10 focus:text-rose-600 dark:text-rose-300"
+                >
+                  <XCircle className="mr-3 h-4 w-4" aria-hidden="true" />
+                  Cancelar agendamento
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
             <Button
               type="button"
               variant="outline"
               disabled={updateAppointment.isPending}
               onClick={() => setOpen(false)}
-              className="h-10 w-full rounded-full px-5 font-bold sm:w-auto"
+              className="appointment-liquid-control min-h-11 w-full rounded-xl border-border/45 px-5 font-bold sm:w-auto"
             >
               Descartar alterações
             </Button>
@@ -687,10 +728,11 @@ export const AppointmentDetailModal = ({
             <Button
               onClick={() => void saveDetails()}
               disabled={updateAppointment.isPending}
-              className="w-full sm:w-auto rounded-full px-6 h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-lg transition-all active:scale-95 tracking-wide"
+              className="min-h-11 w-full rounded-xl bg-foreground px-6 font-bold tracking-wide text-background shadow-sm transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto"
             >
               {updateAppointment.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Salvar e Fechar"}
             </Button>
+            </div>
           </div>
         )}
           </motion.div>
@@ -702,9 +744,9 @@ export const AppointmentDetailModal = ({
             exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 48 }}
             transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
             onAnimationComplete={() => historyBackButtonRef.current?.focus()}
-            className="flex min-h-0 flex-1 flex-col bg-background"
+            className="flex min-h-0 flex-1 flex-col bg-transparent"
           >
-            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/60 px-5 py-4 sm:px-6">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 bg-background/48 px-5 py-4 backdrop-blur-2xl sm:px-6">
               <div className="flex min-w-0 items-start gap-3">
                 <Button
                   ref={historyBackButtonRef}
@@ -712,7 +754,7 @@ export const AppointmentDetailModal = ({
                   variant="ghost"
                   size="icon"
                   onClick={returnToDetails}
-                  className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+                  className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground hover:text-foreground"
                   aria-label="Voltar aos detalhes do agendamento"
                 >
                   <ArrowLeft className="h-5 w-5" aria-hidden="true" />
@@ -731,7 +773,7 @@ export const AppointmentDetailModal = ({
                 variant="ghost"
                 size="icon"
                 onClick={() => setOpen(false)}
-                className="h-11 w-11 shrink-0 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground transition-colors hover:text-foreground"
                 aria-label="Fechar ficha da sessão"
               >
                 <X className="h-5 w-5" aria-hidden="true" />
@@ -746,11 +788,22 @@ export const AppointmentDetailModal = ({
         )}
       </AnimatePresence>
     </ResponsiveModal>
+    <AppointmentProfessionalActionDialog
+      appointmentId={appointment.id}
+      patientName={patientData?.name || appointment.patient_name || displayTitle}
+      patientEmail={patientData?.email}
+      startTime={appointment.start_time}
+      action={professionalAction}
+      open={Boolean(professionalAction)}
+      onOpenChange={(nextOpen) => { if (!nextOpen) setProfessionalAction(null); }}
+      onCompleted={() => setOpen(false)}
+    />
+    </>
   );
 };
 
 const inputClassName =
-  "w-full h-10 rounded-xl bg-background/70 border border-zinc-200 dark:border-border/10 px-3 text-sm font-bold text-foreground outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all";
+  "appointment-liquid-control h-10 w-full rounded-xl border border-border/40 px-3 text-sm font-bold text-foreground outline-none transition-colors focus:border-ring/35 focus:ring-2 focus:ring-ring/15";
 
 const FieldShell = ({
   label,
@@ -763,7 +816,7 @@ const FieldShell = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={cn("p-4 rounded-2xl bg-zinc-100/60 dark:bg-secondary/20 border border-zinc-200 dark:border-border/10 space-y-3 shadow-sm", className)}>
+  <div className={cn("appointment-liquid-card space-y-3 rounded-[22px] border border-border/45 p-4", className)}>
     <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground flex items-center gap-2">
       {icon}
       {label}

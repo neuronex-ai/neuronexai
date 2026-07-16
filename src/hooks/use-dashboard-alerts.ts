@@ -146,6 +146,8 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
       .from('appointments')
       .select('id, start_time, created_at, updated_at, status, notes, patient:patient_id(name)')
       .eq('user_id', userId)
+      .eq('visibility_status', 'visible')
+      .is('archived_at', null)
       .gte('updated_at', yesterday.toISOString());
 
     const rescheduled = recentReschedules?.filter(apt => {
@@ -172,6 +174,8 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
       .from('appointments')
       .select('id, start_time, status, notes, patient:patient_id(name)')
       .eq('user_id', userId)
+      .eq('visibility_status', 'visible')
+      .is('archived_at', null)
       .gte('start_time', now.toISOString())
       .neq('type', 'block')
       .order('start_time', { ascending: true })

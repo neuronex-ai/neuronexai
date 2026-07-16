@@ -220,7 +220,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
               <span className="mb-1 block text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Synapse AI</span>
               <span className="block text-lg font-bold tracking-tight text-foreground">Resumo da sessão</span>
             </div>
-            <div className="mb-1 flex w-fit items-center gap-2 rounded-full border border-border/70 bg-muted/55 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:border-white/[0.075] dark:bg-[#141414]">
+            <div className="mb-1 flex w-fit items-center gap-2 rounded-full border border-border/70 bg-muted/55 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground dark:border-zinc-800 dark:bg-[#141414]">
               <SentimentIcon className="h-3.5 w-3.5" />
               <span>{summary.sentiment}</span>
             </div>
@@ -229,7 +229,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
           <div className="flex items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-border/70 bg-muted/45 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-white/[0.075] dark:bg-[#141414] dark:hover:bg-[#181818]">
+                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl border border-border/70 bg-muted/45 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground dark:border-zinc-800 dark:bg-[#141414] dark:hover:bg-[#181818]">
                   <MoreVertical className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
@@ -244,14 +244,14 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
                 <DropdownMenuItem onClick={handleWhatsApp} className="cursor-pointer gap-3 rounded-lg py-2.5">
                   <MessageSquare className="h-4 w-4 text-green-400" /> WhatsApp
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10 my-1" />
-                <DropdownMenuItem onClick={handleExportToNotes} className="gap-3 rounded-xl py-3 cursor-pointer text-zinc-300 focus:bg-white/10 focus:text-white">
+                <DropdownMenuSeparator className="my-1 bg-border/60" />
+                <DropdownMenuItem onClick={handleExportToNotes} className="cursor-pointer gap-3 rounded-xl py-3 text-muted-foreground focus:bg-muted focus:text-foreground">
                   <NotebookPen className="h-4 w-4 text-amber-400" /> Mover para Notas
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleExportToReminders} className="gap-3 rounded-xl py-3 cursor-pointer text-zinc-300 focus:bg-white/10 focus:text-white">
+                <DropdownMenuItem onClick={handleExportToReminders} className="cursor-pointer gap-3 rounded-xl py-3 text-muted-foreground focus:bg-muted focus:text-foreground">
                   <ListTodo className="h-4 w-4 text-purple-400" /> Criar Lembretes
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-white/10 my-1" />
+                <DropdownMenuSeparator className="my-1 bg-border/60" />
                 <DropdownMenuItem onClick={handleDelete} className="gap-3 rounded-xl py-3 text-rose-400 focus:text-rose-300 focus:bg-rose-500/10 cursor-pointer">
                   <Trash2 className="h-4 w-4" /> Excluir Análise
                 </DropdownMenuItem>
@@ -264,7 +264,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-0 right-0 h-6 w-6 rounded-lg hover:bg-zinc-100 dark:hover:bg-white/10 text-zinc-400 hover:text-zinc-900 dark:hover:text-white opacity-0 group-hover/summary:opacity-100 transition-all z-20"
+            className="absolute right-0 top-0 z-20 h-6 w-6 rounded-lg text-muted-foreground opacity-0 transition-all hover:bg-muted hover:text-foreground group-hover/summary:opacity-100"
             onClick={() => {
               setEditType("summary");
               setEditedSummary(summary.summary);
@@ -286,7 +286,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-lg hover:bg-white/10 hover:text-white text-zinc-500 opacity-0 group-hover/topics:opacity-100 transition-opacity"
+                className="h-7 w-7 rounded-lg text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover/topics:opacity-100"
                 onClick={() => {
                   setEditType("topics");
                   setEditedSteps([...(summary.topics || [])]);
@@ -298,7 +298,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
             </div>
             <div className="flex flex-wrap gap-2.5">
               {summary.topics.map((topic) => (
-                <div key={topic} className="px-4 py-1.5 rounded-full bg-zinc-100 dark:bg-[#141414] border border-zinc-200 dark:border-white/[0.075] hover:bg-zinc-200 dark:hover:bg-[#181818] transition-colors text-xs text-zinc-600 dark:text-zinc-300 font-medium cursor-default">
+                <div key={topic} className="cursor-default rounded-full border border-zinc-200 bg-zinc-100 px-4 py-1.5 text-xs font-medium text-zinc-600 transition-colors hover:bg-zinc-200 dark:border-zinc-800 dark:bg-[#141414] dark:text-zinc-300 dark:hover:bg-[#181818]">
                   {topic}
                 </div>
               ))}
@@ -316,7 +316,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 rounded-lg hover:bg-white/10 hover:text-white text-zinc-500 opacity-0 group-hover/steps:opacity-100 transition-opacity"
+                className="h-7 w-7 rounded-lg text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-foreground group-hover/steps:opacity-100"
                 onClick={() => {
                   setEditType("next_steps");
                   setEditedSteps([...summary.next_steps]);
@@ -330,7 +330,7 @@ export const ClinicalSummaryCard = ({ latestNote, patient }: ClinicalSummaryCard
               {summary.next_steps.map((step) => (
                 <div
                   key={step}
-                  className="flex items-start gap-4 p-5 rounded-3xl bg-zinc-50 dark:bg-[#141414] border border-zinc-100 dark:border-white/[0.075] hover:bg-zinc-100 dark:hover:bg-[#181818] hover:border-zinc-200 dark:hover:border-white/[0.11] transition-all select-text group/item"
+                  className="group/item flex select-text items-start gap-4 rounded-3xl border border-zinc-100 bg-zinc-50 p-5 transition-all hover:border-zinc-200 hover:bg-zinc-100 dark:border-zinc-800 dark:bg-[#141414] dark:hover:border-zinc-700 dark:hover:bg-[#181818]"
                 >
                   <div className="w-1.5 h-1.5 rounded-full bg-zinc-400 dark:bg-zinc-600 group-hover/item:bg-emerald-400 transition-colors mt-2 shrink-0" />
                   <span className="text-sm text-zinc-600 dark:text-zinc-300 font-light leading-relaxed">{step}</span>

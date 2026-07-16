@@ -23,6 +23,8 @@ const fetchAppointmentsByDateRange = async ({ startDate, endDate, userId }: Fetc
       patient:patient_id (name, email, phone)
     `)
     .eq('user_id', userId)
+    .eq('visibility_status', 'visible')
+    .is('archived_at', null)
     .gte('start_time', startISO)
     .lte('start_time', endISO)
     .order('start_time', { ascending: true });

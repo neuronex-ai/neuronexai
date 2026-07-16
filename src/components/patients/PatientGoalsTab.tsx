@@ -29,9 +29,9 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
   if (isLoading) {
     return (
       <div className="space-y-3">
-        <Skeleton className="h-16 w-full bg-white/5 rounded-2xl" />
-        <Skeleton className="h-16 w-full bg-white/5 rounded-2xl" />
-        <Skeleton className="h-16 w-full bg-white/5 rounded-2xl" />
+        <Skeleton className="h-16 w-full rounded-2xl bg-muted/65 motion-reduce:animate-none" />
+        <Skeleton className="h-16 w-full rounded-2xl bg-muted/65 motion-reduce:animate-none" />
+        <Skeleton className="h-16 w-full rounded-2xl bg-muted/65 motion-reduce:animate-none" />
       </div>
     );
   }
@@ -150,7 +150,7 @@ export const PatientGoalsTab = ({ patientId }: PatientGoalsTabProps) => {
                       <CheckCircle2 className="h-4 w-4" />
                     </div>
                   ) : (
-                    <div className="h-6 w-6 rounded-full border-2 border-border/20 transition-colors hover:border-foreground/35 hover:bg-foreground/5 dark:border-white/[0.14] dark:hover:bg-[#181818]" />
+                    <div className="h-6 w-6 rounded-full border-2 border-border/20 transition-colors hover:border-foreground/35 hover:bg-foreground/5 dark:border-zinc-700 dark:hover:bg-zinc-900" />
                   )}
                 </button>
 

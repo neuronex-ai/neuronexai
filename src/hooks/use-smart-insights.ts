@@ -172,6 +172,8 @@ const fetchSmartInsights = async (userId: string): Promise<SmartInsight[]> => {
     .from('appointments')
     .select('id, status, notes')
     .eq('user_id', userId)
+    .eq('visibility_status', 'visible')
+    .is('archived_at', null)
     .gte('start_time', now.toISOString())
     .lte('start_time', threeDaysFromNow.toISOString())
     .neq('type', 'block');

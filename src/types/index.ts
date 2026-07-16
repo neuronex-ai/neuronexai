@@ -161,6 +161,12 @@ export interface Appointment {
   google_event_id?: string | null;
   /** URL da sala de conferência para consultas online */
   google_meet_link?: string | null;
+  /** Visual archive fields. Archived appointments remain in the patient record. */
+  archived_at?: string | null;
+  archived_by?: string | null;
+  archive_reason?: string | null;
+  visibility_status?: 'visible' | 'archived';
+  archive_origin?: string | null;
 }
 
 /** Métodos de pagamento suportados nativamente pela infraestrutura NeuroNex */
@@ -288,6 +294,7 @@ export interface Invoice {
   due_date: string | null;
   created_at: string;
   description?: string;
+  appointment_id?: string | null;
 
   // Payment gateway integration
   gateway_payment_id?: string | null;

@@ -18,9 +18,10 @@ type ViewState = 'menu' | 'register' | 'rps';
 
 interface InvoiceEmissionModalProps {
     children?: React.ReactNode;
+    initialPatientId?: string;
 }
 
-export const InvoiceEmissionModal = ({ children }: InvoiceEmissionModalProps) => {
+export const InvoiceEmissionModal = ({ children, initialPatientId }: InvoiceEmissionModalProps) => {
     const [open, setOpen] = useState(false);
     const [view, setView] = useState<ViewState>('menu');
     // NeuroFinance: check Asaas BaaS approval
@@ -135,7 +136,7 @@ export const InvoiceEmissionModal = ({ children }: InvoiceEmissionModalProps) =>
                                 </TabsContent>
 
                                 <TabsContent value="history" className="p-8 pt-4 mt-0">
-                                    <InvoicesHistoryList />
+                                    <InvoicesHistoryList patientId={initialPatientId} allowDelete={false} />
                                 </TabsContent>
                             </Tabs>
                         </motion.div>
@@ -150,7 +151,7 @@ export const InvoiceEmissionModal = ({ children }: InvoiceEmissionModalProps) =>
                             transition={{ duration: 0.2 }}
                             className="p-8"
                         >
-                            <RegisterExternalInvoiceForm onBack={() => setView('menu')} onSuccess={() => setOpen(false)} />
+                            <RegisterExternalInvoiceForm onBack={() => setView('menu')} onSuccess={() => setOpen(false)} initialPatientId={initialPatientId} />
                         </motion.div>
                     )}
 
@@ -163,7 +164,7 @@ export const InvoiceEmissionModal = ({ children }: InvoiceEmissionModalProps) =>
                             transition={{ duration: 0.2 }}
                             className="flex flex-col h-full"
                         >
-                            <GenerateRPSForm onBack={() => setView('menu')} onSuccess={() => setOpen(false)} />
+                            <GenerateRPSForm onBack={() => setView('menu')} onSuccess={() => setOpen(false)} initialPatientId={initialPatientId} />
                         </motion.div>
                     )}
                 </AnimatePresence>

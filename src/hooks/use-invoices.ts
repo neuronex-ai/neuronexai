@@ -13,6 +13,7 @@ export interface InvoiceListParams {
     pageSize?: number;
     search?: string;
     status?: string[];
+    patientId?: string;
 }
 
 export interface InvoiceListResult {
@@ -94,6 +95,9 @@ export const fetchInvoicesPage = async (userId: string, params: InvoiceListParam
     if (search) {
         legacyQuery = legacyQuery.or(`description.ilike.%${search}%,invoice_number.ilike.%${search}%`);
     }
+    if (params.patientId) {
+        legacyQuery = legacyQuery.eq("patient_id", params.patientId);
+    }
 
     const buildNbQuery = (select: string) => {
         let query = supabase
@@ -105,6 +109,9 @@ export const fetchInvoicesPage = async (userId: string, params: InvoiceListParam
 
         if (search) {
             query = query.ilike("description", `%${search}%`);
+        }
+        if (params.patientId) {
+            query = query.eq("patient_id", params.patientId);
         }
 
         return query;
@@ -157,6 +164,18 @@ export const useInvoicesPage = (params: InvoiceListParams = {}) => {
         queryFn: () => fetchInvoicesPage(userId!, params),
         enabled: Boolean(userId),
         placeholderData: (previous) => previous,
+    });
+};
+
+export const usePatientInvoices = (patientId: string) => {
+    const { user } = useAuth();
+    const userId = user?.id;
+
+    return useQuery<InvoiceListResult, Error>({
+        queryKey: ["patient-invoices", userId, patientId],
+        queryFn: () => fetchInvoicesPage(userId!, { page: 1, pageSize: 50, patientId }),
+        enabled: Boolean(userId && patientId),
+        staleTime: 30_000,
     });
 };
 

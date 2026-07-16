@@ -486,7 +486,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                         >
                                             {item.isSection ? (
                                                 <div className="flex items-center gap-6 pt-8 pb-4 mt-6 first:mt-0">
-                                                    <div className="h-px bg-zinc-100 dark:bg-white/5 flex-1" />
+                                                    <div className="h-px flex-1 bg-zinc-200/70 dark:bg-zinc-800/75" />
                                                     <div className="flex items-center gap-2 shrink-0 group">
                                                         {item.isEditing ? (
                                                             <div className="flex items-center gap-2">
@@ -508,7 +508,7 @@ export function ImportAnamnesis({ onBack, onSuccess }: ImportAnamnesisProps) {
                                                             </>
                                                         )}
                                                     </div>
-                                                    <div className="h-px bg-zinc-100 dark:bg-white/5 flex-1" />
+                                                    <div className="h-px flex-1 bg-zinc-200/70 dark:bg-zinc-800/75" />
                                                 </div>
                                             ) : (
                                                 <div className="desktop-retina-inset group relative rounded-[22px] border border-border/40 bg-background/56 p-5 transition-colors duration-300 hover:border-border/75 hover:bg-background/76">

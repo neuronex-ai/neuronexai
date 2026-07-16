@@ -29,7 +29,9 @@ export const useAppointments = ({ startDate, endDate, patientId, includeCancelle
             name
           )
         `)
-        .eq("user_id", userId);
+        .eq("user_id", userId)
+        .eq("visibility_status", "visible")
+        .is("archived_at", null);
 
       query = query.order("start_time", { ascending: true });
 

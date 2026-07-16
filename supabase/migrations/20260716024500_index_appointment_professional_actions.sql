@@ -1,0 +1,2 @@
+create index if not exists appointment_professional_action_operations_appointment_id_idx
+  on public.appointment_professional_action_operations (appointment_id);

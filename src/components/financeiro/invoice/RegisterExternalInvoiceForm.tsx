@@ -27,9 +27,10 @@ type ExternalInvoiceFormValues = z.infer<typeof ExternalInvoiceSchema>;
 interface RegisterExternalInvoiceFormProps {
   onBack: () => void;
   onSuccess: () => void;
+  initialPatientId?: string;
 }
 
-export const RegisterExternalInvoiceForm = ({ onBack, onSuccess }: RegisterExternalInvoiceFormProps) => {
+export const RegisterExternalInvoiceForm = ({ onBack, onSuccess, initialPatientId }: RegisterExternalInvoiceFormProps) => {
   const { user } = useAuth();
   const { data: patients } = usePatients();
   const { mutateAsync: uploadFile, isPending: isUploading } = useUploadInvoice();
@@ -39,6 +40,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess }: RegisterExter
   const form = useForm<ExternalInvoiceFormValues>({
     resolver: zodResolver(ExternalInvoiceSchema),
     defaultValues: {
+      patientId: initialPatientId || "",
       description: "Serviços de Psicologia",
       date: new Date().toISOString().split('T')[0]
     }
@@ -106,7 +108,7 @@ export const RegisterExternalInvoiceForm = ({ onBack, onSuccess }: RegisterExter
                     render={({ field }) => (
                         <FormItem>
                             <FormLabel className="text-xs uppercase tracking-wider text-muted-foreground font-bold">Paciente</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={Boolean(initialPatientId)}>
                                 <FormControl>
                                     <SelectTrigger className="bg-black/20 border-white/10 h-11 rounded-xl"><SelectValue placeholder="Selecione" /></SelectTrigger>
                                 </FormControl>

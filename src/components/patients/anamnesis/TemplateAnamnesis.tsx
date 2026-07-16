@@ -312,7 +312,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                             Visualização dos campos do modelo antes de aplicá-lo ao prontuário.
                                         </DialogDescription>
                                         <div className="flex items-center gap-3">
-                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 bg-zinc-100 dark:bg-white/5 px-3 py-1 rounded-lg border border-zinc-200/50 dark:border-white/5">
+                                            <span className="rounded-lg border border-zinc-200/50 bg-zinc-100 px-3 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:border-zinc-800 dark:bg-zinc-900/75">
                                                 Visualização
                                             </span>
                                             <p className="text-[11px] text-zinc-500 font-bold uppercase tracking-widest">
@@ -351,7 +351,7 @@ export function TemplateAnamnesis({ onBack, onSuccess }: TemplateAnamnesisProps)
                                                     <h4 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">
                                                         {section.title}
                                                     </h4>
-                                                    <div className="flex-1 h-px bg-gradient-to-r from-zinc-100 dark:from-white/5 to-transparent" />
+                                                    <div className="h-px flex-1 bg-gradient-to-r from-zinc-200/70 to-transparent dark:from-zinc-800/75" />
                                                 </div>
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                                     {section.fields.map((field, fIdx) => (

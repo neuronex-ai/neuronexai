@@ -116,7 +116,7 @@ export const PatientUnifiedTimeline = ({ patientId }: PatientUnifiedTimelineProp
     return (
         <div className="relative space-y-8 pb-24 pl-9 pr-1 pt-3">
             {/* Fine Filament Timeline Line */}
-            <div className="absolute bottom-8 left-[15px] top-0 z-0 w-px bg-gradient-to-b from-transparent via-zinc-950/12 to-transparent dark:via-white/[0.095]" />
+            <div className="absolute bottom-8 left-[15px] top-0 z-0 w-px bg-gradient-to-b from-transparent via-zinc-950/12 to-transparent dark:via-zinc-700/55" />
 
             {timeline.map((item, index) => {
                 const isLatest = index === 0;
@@ -128,10 +128,10 @@ export const PatientUnifiedTimeline = ({ patientId }: PatientUnifiedTimelineProp
                     >
                         {/* Status/Type Connector Dot */}
                         <div className={cn(
-                            "absolute -left-[26px] top-5 z-10 h-3.5 w-3.5 rounded-full border-2 bg-background shadow-[0_0_0_4px_rgba(255,255,255,0.45)] transition-all duration-300 dark:shadow-[0_0_0_4px_rgba(255,255,255,0.025)]",
+                            "absolute -left-[26px] top-5 z-10 h-3.5 w-3.5 rounded-full border-2 bg-background shadow-[0_0_0_4px_rgba(255,255,255,0.45)] transition-all duration-300 dark:shadow-[0_0_0_4px_rgba(9,9,11,0.8)] motion-reduce:transition-none",
                             isLatest
-                                ? "scale-110 border-zinc-950 shadow-[0_0_0_5px_rgba(24,24,27,0.08)] dark:border-white dark:shadow-[0_0_0_5px_rgba(255,255,255,0.065)]"
-                                : "border-zinc-300 dark:border-white/[0.14]"
+                                ? "scale-110 border-zinc-950 shadow-[0_0_0_5px_rgba(24,24,27,0.08)] dark:border-zinc-500 dark:shadow-[0_0_0_5px_rgba(39,39,42,0.34)]"
+                                : "border-zinc-300 dark:border-zinc-700"
                         )} />
 
                         {/* Date Header Segment */}
@@ -151,11 +151,11 @@ export const PatientUnifiedTimeline = ({ patientId }: PatientUnifiedTimelineProp
                                     className="p-6"
                                     innerClassName="relative overflow-hidden"
                                 >
-                                    <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-white/[0.08]" />
+                                    <div className="pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-80 dark:via-zinc-700/45" />
                                     <div className="relative z-10 mb-6 flex items-center justify-between">
                                         <div className="flex flex-col gap-2">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-white animate-pulse shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
+                                                <div className="h-2 w-2 animate-pulse rounded-full bg-zinc-900 shadow-[0_0_10px_rgba(24,24,27,0.2)] dark:bg-zinc-300 dark:shadow-[0_0_8px_rgba(161,161,170,0.18)] motion-reduce:animate-none" />
                                                 <h4 className="text-sm font-bold tracking-tight text-foreground">
                                                     Registro de sessão
                                                 </h4>
@@ -226,7 +226,7 @@ export const PatientUnifiedTimeline = ({ patientId }: PatientUnifiedTimelineProp
                                     <div className={cn(
                                         "flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border transition-colors duration-300",
                                         item.data.is_completed
-                                            ? "bg-zinc-900 text-zinc-100 dark:bg-white dark:text-black border-zinc-900 dark:border-white shadow-xl"
+                                            ? "border-zinc-900 bg-zinc-900 text-zinc-100 shadow-xl dark:border-zinc-600 dark:bg-zinc-200 dark:text-zinc-950"
                                             : "border-border/50 bg-muted/55 text-muted-foreground"
                                     )}>
                                         {item.data.is_completed ? <CheckCircle2 className="h-5 w-5" /> : <Target className="h-5 w-5" />}

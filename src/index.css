@@ -729,6 +729,66 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
   }
 
+  .appointment-detail-shell {
+    background-image:
+      linear-gradient(150deg, hsl(var(--background) / 0.94), hsl(var(--background) / 0.82)),
+      radial-gradient(70% 48% at 18% 0%, hsl(var(--foreground) / 0.05), transparent 72%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.58),
+      0 36px 110px -58px rgba(24, 24, 27, 0.55);
+  }
+
+  .appointment-liquid-card,
+  .appointment-liquid-control {
+    background-color: hsl(var(--background) / 0.66);
+    background-image: linear-gradient(145deg, hsl(var(--foreground) / 0.025), transparent 55%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.62),
+      inset 0 -1px 0 hsl(var(--foreground) / 0.025),
+      0 15px 38px -34px hsl(var(--foreground) / 0.34);
+    backdrop-filter: blur(20px) saturate(1.08);
+  }
+
+  .appointment-liquid-control:hover {
+    background-color: hsl(var(--muted) / 0.72);
+  }
+
+  .dark .appointment-detail-shell {
+    border-color: rgba(44, 44, 44, 0.88) !important;
+    background-color: rgba(8, 8, 8, 0.96) !important;
+    background-image:
+      linear-gradient(150deg, rgba(24, 24, 24, 0.9), rgba(7, 7, 7, 0.95)),
+      radial-gradient(72% 48% at 18% 0%, rgba(255, 255, 255, 0.028), transparent 72%);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.026),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.64),
+      0 42px 120px -52px rgba(0, 0, 0, 0.98) !important;
+  }
+
+  .dark .appointment-liquid-card {
+    border-color: rgba(45, 45, 45, 0.82) !important;
+    background-color: rgba(18, 18, 18, 0.88) !important;
+    background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.022), rgba(0, 0, 0, 0.11));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.024),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+      0 18px 46px -40px rgba(0, 0, 0, 0.96) !important;
+  }
+
+  .dark .appointment-liquid-control {
+    border-color: rgba(42, 42, 42, 0.9) !important;
+    background-color: rgba(12, 12, 12, 0.82) !important;
+    background-image: linear-gradient(145deg, rgba(255, 255, 255, 0.016), rgba(0, 0, 0, 0.12));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.017),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.54) !important;
+  }
+
+  .dark .appointment-liquid-control:hover {
+    border-color: rgba(56, 56, 56, 0.94) !important;
+    background-color: rgba(20, 20, 20, 0.92) !important;
+  }
+
   .dark .app-dialog-surface :where(input, textarea, button[role="combobox"]) {
     border-color: rgba(255, 255, 255, 0.046) !important;
     background-color: rgba(20, 20, 20, 0.88) !important;
@@ -875,6 +935,13 @@
   .dark .patient-record-content :where([class*="dark:border-white"]),
   .dark .patients-desktop-shell :where(.desktop-retina-panel, .desktop-retina-inset)[class*="dark:border-white"] {
     border-color: rgba(45, 45, 45, 0.76) !important;
+  }
+
+  /* Clinical record lines use neutral material edges in dark appearance.
+     This prevents translucent white rules from reading as layout defects. */
+  .dark .patient-record-content :where([class*="dark:border-white/"]):not([class*="dark:bg-white"]),
+  .dark .patient-record-shell :where([class*="dark:border-white/"]):not([class*="dark:bg-white"]) {
+    border-color: rgba(44, 44, 44, 0.82) !important;
   }
 
   .patient-record-scrollbar {

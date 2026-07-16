@@ -854,6 +854,53 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_professional_action_operations: {
+        Row: {
+          action: string
+          appointment_id: string
+          created_at: string
+          id: string
+          idempotency_key: string
+          psychologist_id: string
+          reason: string
+          request_fingerprint: string
+          result: Json
+          status: string
+        }
+        Insert: {
+          action: string
+          appointment_id: string
+          created_at?: string
+          id?: string
+          idempotency_key: string
+          psychologist_id: string
+          reason: string
+          request_fingerprint: string
+          result?: Json
+          status?: string
+        }
+        Update: {
+          action?: string
+          appointment_id?: string
+          created_at?: string
+          id?: string
+          idempotency_key?: string
+          psychologist_id?: string
+          reason?: string
+          request_fingerprint?: string
+          result?: Json
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_professional_action_operations_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_reschedule_requests: {
         Row: {
           appointment_id: string
@@ -1040,6 +1087,10 @@ export type Database = {
       appointments: {
         Row: {
           action_origin: string
+          archive_origin: string | null
+          archive_reason: string | null
+          archived_at: string | null
+          archived_by: string | null
           audit_metadata: Json
           auth_code: string | null
           cancellation_reason: string | null
@@ -1091,9 +1142,14 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           user_id: string
+          visibility_status: string
         }
         Insert: {
           action_origin?: string
+          archive_origin?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           audit_metadata?: Json
           auth_code?: string | null
           cancellation_reason?: string | null
@@ -1145,9 +1201,14 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           user_id: string
+          visibility_status?: string
         }
         Update: {
           action_origin?: string
+          archive_origin?: string | null
+          archive_reason?: string | null
+          archived_at?: string | null
+          archived_by?: string | null
           audit_metadata?: Json
           auth_code?: string | null
           cancellation_reason?: string | null
@@ -1199,6 +1260,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           user_id?: string
+          visibility_status?: string
         }
         Relationships: [
           {
@@ -8958,6 +9020,15 @@ export type Database = {
         }
         Returns: Json
       }
+      execute_professional_appointment_action: {
+        Args: {
+          p_action: string
+          p_appointment_id: string
+          p_idempotency_key: string
+          p_reason: string
+        }
+        Returns: Json
+      }
       export_user_data: { Args: never; Returns: Json }
       get_asaas_account_api_key_for_edge: {
         Args: { p_financial_account_id: string }
@@ -8981,6 +9052,10 @@ export type Database = {
       }
       get_monthly_report_data: {
         Args: { end_date: string; start_date: string }
+        Returns: Json
+      }
+      get_patient_complete_appointment_history: {
+        Args: { p_limit?: number; p_offset?: number; p_patient_id: string }
         Returns: Json
       }
       get_public_anamnesis: {
@@ -9170,6 +9245,10 @@ export type Database = {
           p_source_package_id: string
           p_target_package_id?: string
         }
+        Returns: Json
+      }
+      preview_professional_appointment_action: {
+        Args: { p_action: string; p_appointment_id: string }
         Returns: Json
       }
       process_appointment_public_action: {
@@ -9443,4 +9522,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-

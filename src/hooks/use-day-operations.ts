@@ -41,6 +41,8 @@ export const useDayOperations = () => {
         .from('appointments')
         .select('*, patient:patient_id(name)')
         .eq('user_id', userId)
+        .eq('visibility_status', 'visible')
+        .is('archived_at', null)
         .gte('start_time', `${sourceStr}T00:00:00`)
         .lte('start_time', `${sourceStr}T23:59:59`);
 
@@ -55,6 +57,8 @@ export const useDayOperations = () => {
         .from('appointments')
         .select('*')
         .eq('user_id', userId)
+        .eq('visibility_status', 'visible')
+        .is('archived_at', null)
         .gte('start_time', `${targetStr}T00:00:00`)
         .lte('start_time', `${targetStr}T23:59:59`);
 

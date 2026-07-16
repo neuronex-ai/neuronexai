@@ -19,6 +19,8 @@ const fetchPatientAppointments = async (_userId: string, patientId?: string): Pr
       *,
       patient:patient_id (name)
     `)
+    .eq('visibility_status', 'visible')
+    .is('archived_at', null)
     .gte('start_time', now) // Only upcoming appointments
     .order('start_time', { ascending: true });
 
