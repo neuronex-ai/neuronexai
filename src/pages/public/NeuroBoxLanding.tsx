@@ -9,6 +9,7 @@ import {
   Check,
   FileText,
   GitBranch,
+  HardDrive,
   MessageCircle,
   Mic2,
   Network,
@@ -98,6 +99,18 @@ const tools: NeuroBoxTool[] = [
     alt: "Prontuário com histórico do paciente usado como base do NeuroScan",
   },
   {
+    key: "neurodrive",
+    label: "NeuroDrive",
+    title: "Arquivos clínicos com vínculo e finalidade",
+    eyebrow: "Documentos organizados",
+    description:
+      "Arquivos próprios e arquivos de pacientes ficam separados, com busca, vínculo, prévia, download e links seguros para os fluxos autorizados.",
+    bullets: ["Arquivos próprios", "Vínculo com paciente", "Acesso por finalidade"],
+    icon: HardDrive,
+    dark: "/landing/screenshots/desktop/dark/12-paciente-prontuario-historico-dark.webp",
+    alt: "Prontuário e arquivos do paciente conectados ao NeuroDrive",
+  },
+  {
     key: "neurofinance",
     label: "NeuroFinance",
     title: "Metadados financeiros no raciocínio da clínica",
@@ -129,6 +142,7 @@ const metadataRows = [
   "Nós e arestas do NeuroView para busca semântica",
   "Diagramas Mermaid e fluxos gerados pelo NeuroPulse",
   "Canvas, origem, destino e estado do NeuroFlow",
+  "Arquivos próprios e de pacientes no NeuroDrive",
   "Cobranças, Pix, NFS-e/RPS e risco financeiro",
   "Consentimento, plano, permissão, PIN e trilha de auditoria",
 ];
