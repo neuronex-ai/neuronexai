@@ -23,6 +23,10 @@ import { getR2DocumentDownloadUrl, uploadDocumentToR2 } from "@/lib/r2-documents
 import { SynapseClientAction, isRecord } from "@/lib/synapse-widget-parser";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 import { cn } from "@/lib/utils";
+import {
+    parseAppointmentPlanReviewAction,
+    requestAppointmentPlanReview,
+} from "@/lib/appointment-plan-review";
 
 type UploadedSynapseFile = {
     name: string;
@@ -126,6 +130,12 @@ export default function DesktopAIChat() {
     };
 
     const handleClientAction = useCallback((action: SynapseClientAction, sessionId: string) => {
+        const appointmentPlan = parseAppointmentPlanReviewAction(action);
+        if (appointmentPlan) {
+            requestAppointmentPlanReview(appointmentPlan);
+            setRichMessages((prev) => ({ ...prev, [sessionId]: action }));
+            return;
+        }
         const payload = action.payload ?? action.data;
 
         if (action.type === "review_draft") {

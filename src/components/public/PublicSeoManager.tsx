@@ -49,6 +49,7 @@ export function PublicSeoManager() {
     document.title = config.title;
 
     upsertMeta('meta[name="description"]', { name: "description" }, config.description);
+    upsertMeta('meta[name="keywords"]', { name: "keywords" }, config.keywords.join(", "));
     upsertMeta(
       'meta[name="robots"]',
       { name: "robots" },
@@ -58,14 +59,17 @@ export function PublicSeoManager() {
     upsertMeta('meta[property="og:title"]', { property: "og:title" }, config.title);
     upsertMeta('meta[property="og:description"]', { property: "og:description" }, config.description);
     upsertMeta('meta[property="og:image"]', { property: "og:image" }, imageUrl);
-    upsertMeta('meta[property="og:image:alt"]', { property: "og:image:alt" }, "Interface da plataforma NeuroNex AI");
+    upsertMeta('meta[property="og:image:alt"]', { property: "og:image:alt" }, config.imageAlt);
+    upsertMeta('meta[property="og:image:width"]', { property: "og:image:width" }, "1280");
+    upsertMeta('meta[property="og:image:height"]', { property: "og:image:height" }, "720");
     upsertMeta('meta[property="og:locale"]', { property: "og:locale" }, "pt_BR");
     upsertMeta('meta[property="og:site_name"]', { property: "og:site_name" }, "NeuroNex AI");
+    upsertMeta('meta[name="application-name"]', { name: "application-name" }, "NeuroNex AI");
     upsertMeta('meta[name="twitter:card"]', { name: "twitter:card" }, "summary_large_image");
     upsertMeta('meta[name="twitter:title"]', { name: "twitter:title" }, config.title);
     upsertMeta('meta[name="twitter:description"]', { name: "twitter:description" }, config.description);
     upsertMeta('meta[name="twitter:image"]', { name: "twitter:image" }, imageUrl);
-    upsertMeta('meta[name="twitter:image:alt"]', { name: "twitter:image:alt" }, "Interface da plataforma NeuroNex AI");
+    upsertMeta('meta[name="twitter:image:alt"]', { name: "twitter:image:alt" }, config.imageAlt);
 
     if (canonicalUrl) {
       upsertMeta('meta[property="og:url"]', { property: "og:url" }, canonicalUrl);
@@ -78,7 +82,7 @@ export function PublicSeoManager() {
 
     document.getElementById(ROUTE_SCHEMA_ID)?.remove();
     const structuredData = buildPublicStructuredData(config);
-    if (structuredData.length) {
+    if (structuredData) {
       const script = document.createElement("script");
       script.id = ROUTE_SCHEMA_ID;
       script.type = "application/ld+json";

@@ -1,233 +1,150 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { Appointment } from "@/types";
 import { toast } from "sonner";
+
 import { useAuth } from "@/components/auth/SessionContextProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { prepareAndExecuteAppointmentAction } from "@/lib/appointment-action-plans";
 import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
-import { syncAppointmentFinancialEntryAfterUpdate } from "@/lib/financial-appointment-automation";
-import { edgeFunctionUrl } from "@/lib/supabase-config";
+import type { Appointment } from "@/types";
 
 interface UpdateAppointmentData {
   id: string;
   updates: Partial<Omit<Appointment, "id" | "user_id" | "created_at">>;
 }
 
-const syncGoogleUpdate = async (
-  googleEventId: string,
-  action: "update" | "delete",
-  appointmentData: any,
-  accessToken: string,
-) => {
-  try {
-    await fetch(edgeFunctionUrl("google-calendar-manage"), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        action,
-        googleEventId,
-        appointmentData,
-      }),
-    });
-  } catch (e) {
-    console.error("Background Google Sync Error:", e);
-  }
-};
+const MATERIAL_FIELDS = new Set(["start_time", "end_time", "type", "location"]);
+const DIRECT_CLINICAL_FIELDS = new Set(["notes", "metadata"]);
 
-const updateAppointmentFn = async (
-  { id, updates }: UpdateAppointmentData,
-  userId: string,
-  accessToken: string,
-) => {
-  if (updates.start_time && updates.end_time) {
-    const { data: hasConflict, error: conflictError } = await supabase.rpc(
-      "check_appointment_overlap",
-      {
-        p_user_id: userId,
-        p_start_time: updates.start_time,
-        p_end_time: updates.end_time,
-        p_exclude_appointment_id: id,
-      },
-    );
-
-    if (conflictError) throw new Error(conflictError.message);
-    if (hasConflict) {
-      throw new Error(
-        "Conflito de horário. Já existe um agendamento neste novo período.",
-      );
-    }
-  }
-
+const updateAppointmentFn = async ({ id, updates }: UpdateAppointmentData, userId: string) => {
   const { data: existingAppointment, error: fetchError } = await supabase
     .from("appointments")
-    .select(`*, patient:patient_id (name, email, phone)`)
+    .select("*")
     .eq("id", id)
     .eq("user_id", userId)
     .single();
+  if (fetchError || !existingAppointment) throw new Error("Agendamento não encontrado.");
 
-  if (fetchError || !existingAppointment)
-    throw new Error("Agendamento não encontrado.");
+  const changedKeys = Object.keys(updates).filter((key) => (updates as Record<string, unknown>)[key] !== undefined);
+  const hasMaterialChange = changedKeys.some((key) => MATERIAL_FIELDS.has(key));
+  const cancellationRequested = updates.status !== undefined && isCancelledAppointmentStatus(updates.status, updates.notes);
 
-  const updatePayload = {
-    ...updates,
-    metadata: updates.metadata
-      ? {
-          ...(existingAppointment.metadata || {}),
-          ...updates.metadata,
-          localUpdatedAt: new Date().toISOString(),
-        }
-      : existingAppointment.metadata,
-  };
-
-  const { data: updatedAppointment, error: updateError } = await supabase
-    .from("appointments")
-    .update(updatePayload)
-    .eq("id", id)
-    .eq("user_id", userId)
-    .select()
-    .single();
-
-  if (updateError) throw new Error(updateError.message);
-
-  if (
-    existingAppointment.google_event_id &&
-    (updates.start_time ||
-      updates.end_time ||
-      updates.notes ||
-      updates.location ||
-      updates.status ||
-      updates.metadata)
-  ) {
-    const action = isCancelledAppointmentStatus(
-      updates.status,
-      updates.notes || existingAppointment.notes,
-    )
-      ? "delete"
-      : "update";
-    syncGoogleUpdate(
-      existingAppointment.google_event_id,
-      action,
-      updatedAppointment,
-      accessToken,
-    );
+  if (updates.status !== undefined && !cancellationRequested) {
+    throw new Error("Esta mudança de estado exige o comando específico do ciclo do agendamento.");
+  }
+  const unsupported = changedKeys.filter((key) => !MATERIAL_FIELDS.has(key) && !DIRECT_CLINICAL_FIELDS.has(key) && key !== "status");
+  if (unsupported.length) {
+    throw new Error("Um campo protegido do agendamento não pode ser alterado diretamente.");
   }
 
-  try {
-    await syncAppointmentFinancialEntryAfterUpdate(
-      existingAppointment as Appointment & {
-        patient?: { name?: string | null } | null;
+  let currentAppointment = existingAppointment as Appointment;
+  if (cancellationRequested) {
+    const plan = await prepareAndExecuteAppointmentAction("cancel", {
+      appointment_id: id,
+      reason: updates.notes || "Cancelamento confirmado pelo profissional",
+      communication: {
+        sendConfirmation: true,
+        provider: "configured",
+        template: "appointment_cancelled",
+        reminderPolicy: "cancelled",
       },
-      updatedAppointment as Appointment,
-      userId,
-    );
-  } catch (financialError) {
-    console.warn(
-      "[useUpdateAppointment] Agendamento atualizado, mas a sincronização financeira não foi aplicada:",
-      financialError,
-    );
+    }, `professional-app:cancel:${id}:${crypto.randomUUID()}`);
+    if (!plan.result) throw new Error("O cancelamento não retornou um resultado válido.");
+  } else if (hasMaterialChange) {
+    const startTime = updates.start_time || existingAppointment.start_time;
+    const endTime = updates.end_time || existingAppointment.end_time;
+    await prepareAndExecuteAppointmentAction("reschedule", {
+      appointment_id: id,
+      start_time: startTime,
+      end_time: endTime,
+      type: updates.type || existingAppointment.type,
+      location: updates.location === undefined ? existingAppointment.location : updates.location,
+      communication: {
+        sendConfirmation: true,
+        provider: "configured",
+        template: "appointment_reconfirmation_required",
+        reminderPolicy: "professional_settings",
+      },
+    }, `professional-app:reschedule:${id}:${crypto.randomUUID()}`);
   }
 
-  return updatedAppointment;
+  const directUpdates: Record<string, unknown> = {};
+  if (updates.notes !== undefined && !cancellationRequested) directUpdates.notes = updates.notes;
+  if (updates.metadata !== undefined) {
+    directUpdates.metadata = {
+      ...(existingAppointment.metadata || {}),
+      ...updates.metadata,
+      localUpdatedAt: new Date().toISOString(),
+    };
+  }
+  if (Object.keys(directUpdates).length) {
+    const { data, error } = await supabase
+      .from("appointments")
+      .update(directUpdates)
+      .eq("id", id)
+      .eq("user_id", userId)
+      .select()
+      .single();
+    if (error) throw error;
+    currentAppointment = data as Appointment;
+  } else if (hasMaterialChange || cancellationRequested) {
+    const { data, error } = await supabase
+      .from("appointments")
+      .select("*")
+      .eq("id", id)
+      .eq("user_id", userId)
+      .single();
+    if (error || !data) throw new Error("A alteração foi concluída, mas o agendamento não pôde ser recarregado.");
+    currentAppointment = data as Appointment;
+  }
+
+  return currentAppointment;
 };
 
 export const useUpdateAppointment = () => {
   const queryClient = useQueryClient();
-  const { session, user } = useAuth();
-  const userId = user?.id;
-  const accessToken = session?.access_token;
+  const { user } = useAuth();
 
   return useMutation({
     mutationFn: (data: UpdateAppointmentData) => {
-      if (!userId || !accessToken) throw new Error("Usuário não autenticado.");
-      return updateAppointmentFn(data, userId, accessToken);
+      if (!user?.id) throw new Error("Usuário não autenticado.");
+      return updateAppointmentFn(data, user.id);
     },
     onMutate: async (newData) => {
-      await queryClient.cancelQueries({
-        queryKey: ["appointmentsByDateRange"],
-      });
+      await queryClient.cancelQueries({ queryKey: ["appointmentsByDateRange"] });
       await queryClient.cancelQueries({ queryKey: ["appointments"] });
-
-      const previousDateRangeAppointments = queryClient.getQueryData([
-        "appointmentsByDateRange",
-      ]);
+      const previousDateRangeAppointments = queryClient.getQueryData(["appointmentsByDateRange"]);
       const previousAppointments = queryClient.getQueryData(["appointments"]);
-
-      queryClient.setQueriesData(
-        { queryKey: ["appointmentsByDateRange"] },
-        (old: any) => {
-          if (!old) return [];
-          return old.map((apt: Appointment) =>
-            apt.id === newData.id
-              ? {
-                  ...apt,
-                  ...newData.updates,
-                  metadata: newData.updates.metadata
-                    ? { ...(apt.metadata || {}), ...newData.updates.metadata }
-                    : apt.metadata,
-                }
-              : apt,
-          );
-        },
-      );
-
-      queryClient.setQueriesData({ queryKey: ["appointments"] }, (old: any) => {
-        if (!old) return old;
-        return old.map((apt: Appointment) =>
-          apt.id === newData.id
-            ? {
-                ...apt,
-                ...newData.updates,
-                metadata: newData.updates.metadata
-                  ? { ...(apt.metadata || {}), ...newData.updates.metadata }
-                  : apt.metadata,
-              }
-            : apt,
-        );
-      });
-
+      const optimistic = (old: Appointment[] | undefined) => old?.map((appointment) => appointment.id === newData.id
+        ? {
+          ...appointment,
+          ...newData.updates,
+          metadata: newData.updates.metadata
+            ? { ...(appointment.metadata || {}), ...newData.updates.metadata }
+            : appointment.metadata,
+        }
+        : appointment);
+      queryClient.setQueriesData({ queryKey: ["appointmentsByDateRange"] }, optimistic);
+      queryClient.setQueriesData({ queryKey: ["appointments"] }, optimistic);
       return { previousDateRangeAppointments, previousAppointments };
     },
     onError: (error, _, context) => {
       if (context?.previousDateRangeAppointments) {
-        queryClient.setQueriesData(
-          { queryKey: ["appointmentsByDateRange"] },
-          context.previousDateRangeAppointments,
-        );
+        queryClient.setQueriesData({ queryKey: ["appointmentsByDateRange"] }, context.previousDateRangeAppointments);
       }
       if (context?.previousAppointments) {
-        queryClient.setQueriesData(
-          { queryKey: ["appointments"] },
-          context.previousAppointments,
-        );
+        queryClient.setQueriesData({ queryKey: ["appointments"] }, context.previousAppointments);
       }
-      console.error(
-        "[useUpdateAppointment] Falha ao atualizar agendamento",
-        error,
-      );
+      console.error("[useUpdateAppointment] Falha ao atualizar agendamento", error);
       toast.error(getUserFacingErrorMessage(error, "save"));
     },
     onSettled: (data) => {
-      queryClient.invalidateQueries({ queryKey: ["appointmentsByDateRange"] });
-      queryClient.invalidateQueries({ queryKey: ["appointments"] });
-      queryClient.invalidateQueries({ queryKey: ["financialEntries"] });
-      queryClient.invalidateQueries({ queryKey: ["patientTransactions"] });
-      queryClient.invalidateQueries({ queryKey: ["financialMetrics"] });
-      queryClient.invalidateQueries({ queryKey: ["advancedCashFlow"] });
-      queryClient.invalidateQueries({ queryKey: ["monthly-session-metrics"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-activities"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboardAlerts"] });
-      queryClient.invalidateQueries({ queryKey: ["smartInsights"] });
-      queryClient.invalidateQueries({ queryKey: ["churnAlerts"] });
-      queryClient.invalidateQueries({ queryKey: ["patientAppointments"] });
-
-      if (data?.patient_id) {
-        queryClient.invalidateQueries({
-          queryKey: ["patients", data.patient_id],
-        });
-      }
+      for (const queryKey of [
+        "appointmentsByDateRange", "appointments", "financialEntries", "patientTransactions",
+        "financialMetrics", "advancedCashFlow", "monthly-session-metrics", "dashboard-activities",
+        "dashboardAlerts", "smartInsights", "churnAlerts", "patientAppointments", "appointment-lifecycle",
+      ]) void queryClient.invalidateQueries({ queryKey: [queryKey] });
+      if (data?.patient_id) void queryClient.invalidateQueries({ queryKey: ["patients", data.patient_id] });
     },
   });
 };

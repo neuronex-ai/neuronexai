@@ -9,6 +9,10 @@ import {
   normalizeSynapseClientAction,
   type SynapseActionLifecycleEvent,
 } from "@/lib/synapse-interface-actions";
+import {
+  parseAppointmentPlanReviewAction,
+  requestAppointmentPlanReview,
+} from "@/lib/appointment-plan-review";
 
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
@@ -66,6 +70,16 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
         optionsRef.current?.onClientAction?.(rawAction);
       } catch (error) {
         console.warn("[Synapse Voice] client action observer failed", error);
+      }
+      const appointmentPlan = parseAppointmentPlanReviewAction(rawAction);
+      if (appointmentPlan) {
+        requestAppointmentPlanReview(appointmentPlan);
+        return {
+          success: true,
+          action: "review_appointment_plan",
+          message: "Plano aberto para revisão no painel.",
+          durationMs: 0,
+        };
       }
       const action = normalizeSynapseClientAction(rawAction);
       if (!action) {

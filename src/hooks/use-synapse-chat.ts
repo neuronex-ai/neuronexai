@@ -19,6 +19,10 @@ import {
     type SynapseInterfaceAction,
 } from '@/lib/synapse-interface-actions';
 import { sanitizeSynapseDisplayText } from '@/lib/synapse-humanize';
+import {
+    parseAppointmentPlanReviewAction,
+    requestAppointmentPlanReview,
+} from '@/lib/appointment-plan-review';
 
 // ─── Synapse Chat Hook ────────────────────────────────────────────────
 // Text and voice share sessions, memory, tools and the same structured
@@ -160,6 +164,19 @@ export const useSynapseChat = () => {
                 },
                 {
                     onSuccess: async (data) => {
+                        const appointmentPlan = parseAppointmentPlanReviewAction(data?.clientAction);
+                        if (appointmentPlan) {
+                            requestAppointmentPlanReview(appointmentPlan);
+                            setExecState('success');
+                            addTimelineEntry({
+                                label: 'Plano de agendamento pronto para revisão',
+                                state: 'success',
+                                detail: 'A confirmação será feita com os dados atualizados do servidor.',
+                            });
+                            window.setTimeout(() => setExecState('idle'), 2200);
+                            setProgressEvent(null);
+                            return;
+                        }
                         const action = normalizeSynapseClientAction(data?.clientAction);
 
                         if (action) {

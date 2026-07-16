@@ -54,7 +54,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { usePatients } from "@/hooks/use-patients";
 import { useAddAppointment } from "@/hooks/use-add-appointment";
-import { useAddAppointmentTransaction } from "@/hooks/use-add-appointment-transaction";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
 import { useAppointmentSeries } from "@/hooks/use-appointment-series";
@@ -270,7 +269,6 @@ export function NewAppointmentModal({
   const [seriesPreviewError, setSeriesPreviewError] = useState<string | null>(null);
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
-  const { mutateAsync: createAppointmentTransaction, isPending: isCreatingTransaction } = useAddAppointmentTransaction();
   const {
     previewSeries,
     createSeries,
@@ -382,7 +380,6 @@ export function NewAppointmentModal({
   const isCheckingFinancialRules = isLoadingPackages || isLoadingPatientPackages;
   const isSubmitting =
     isCreatingAppointment ||
-    isCreatingTransaction ||
     isPreviewingSeries ||
     isCreatingSeries;
 

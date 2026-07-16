@@ -11,6 +11,28 @@ export const publicEntryPages = publicPages.filter((page) => page.file);
 export const PUBLIC_LAST_MODIFIED = publicPageCatalog.lastModified;
 
 const DEFAULT_IMAGE = publicPageCatalog.defaultImage;
+const DEFAULT_KEYWORDS = [
+  "sistema para psicólogos",
+  "software para psicólogos",
+  "sistema operacional clínico com IA",
+  "plataforma de IA com core banking para psicólogos",
+  "prontuário psicológico com IA",
+  "gestão financeira para clínicas de psicologia",
+];
+
+const PLATFORM_FEATURES = [
+  "Synapse AI: agente operacional por voz, texto e WhatsApp para comandos clínicos, administrativos e financeiros com confirmação assistida.",
+  "NeuroFinance: core banking integrado com conta digital, Área Pix, cobranças, boletos, antecipação de recebíveis, conciliação e NFS-e/RPS.",
+  "NeuroView: mapeamento de sintomas, eventos e evolução clínica do paciente em grafos 2D e 3D Universe.",
+  "NeuroPulse: tradução de texto clínico em diagramas Mermaid baseados em abordagens como TCC, Psicanálise e formulação de caso.",
+  "NeuroFlow: canvas para fluxos clínicos, operacionais e financeiros conectados ao prontuário e ao RAG do Synapse.",
+  "NeuroZap: automação por WhatsApp com Evolution API para cobrança, no-show, lembretes e contexto operacional supervisionado.",
+  "Workspace de Teleconsulta: prontuário integrado com captação incremental de áudio e transcrição via Deepgram.",
+];
+
+const organizationId = `${PUBLIC_SITE_URL}/#organization`;
+const websiteId = `${PUBLIC_SITE_URL}/#website`;
+const softwareId = `${PUBLIC_SITE_URL}/#software`;
 
 const escapeHtml = (value) =>
   String(value)
@@ -37,6 +59,7 @@ const publicNavigation = [
   ["Início", "/"],
   ["Synapse", "/synapse"],
   ["NeuroFinance", "/neurofinance"],
+  ["NeuroBox", "/neurobox"],
   ["Ajuda", "/ajuda"],
   ["Contato", "/contato"],
   ["Privacidade", "/politica-de-privacidade"],
@@ -67,19 +90,162 @@ export function renderPublicStaticShell(page) {
 
 function routeStructuredData(page) {
   const url = absoluteUrl(page.route);
-  return [
+  const image = absoluteUrl(page.image || DEFAULT_IMAGE);
+  const keywords = [...new Set([...(page.keywords || []), ...DEFAULT_KEYWORDS])];
+  const graph = [
     {
-      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": organizationId,
+      name: "NeuroNex AI",
+      legalName: "NEURONEX AI LTDA",
+      url: `${PUBLIC_SITE_URL}/`,
+      logo: absoluteUrl("/pwa-512.png"),
+      image: absoluteUrl(DEFAULT_IMAGE),
+      slogan: "Sistema Operacional Clínico com IA e Core Banking Integrado.",
+      description:
+        "Plataforma brasileira de inteligência artificial e infraestrutura clínica para psicólogos, com gestão, prontuário, teleconsulta, NeuroFinance, NeuroBox, NeuroZap e Synapse AI.",
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "customer service",
+        email: "contato@neuronexai.com.br",
+        telephone: "+55-47-98873-0611",
+        areaServed: "BR",
+        availableLanguage: ["pt-BR"],
+        url: absoluteUrl("/contato"),
+      },
+    },
+    {
+      "@type": "WebSite",
+      "@id": websiteId,
+      name: "NeuroNex AI",
+      url: `${PUBLIC_SITE_URL}/`,
+      publisher: { "@id": organizationId },
+      inLanguage: "pt-BR",
+      about: { "@id": softwareId },
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": softwareId,
+      name: "NeuroNex AI",
+      alternateName: "Sistema Operacional Clínico NeuroNex",
+      url: `${PUBLIC_SITE_URL}/`,
+      applicationCategory: ["MedicalApplication", "BusinessApplication", "FinancialApplication"],
+      applicationSubCategory: "Clinical Operating System with AI and integrated core banking",
+      operatingSystem: ["Web", "Windows", "iOS", "Android"],
+      browserRequirements: "Requires HTML5 compatible browser.",
+      softwareVersion: "2.0-beta",
+      inLanguage: "pt-BR",
+      countriesSupported: "BR",
+      creator: { "@id": organizationId },
+      provider: { "@id": organizationId },
+      audience: {
+        "@type": "Audience",
+        audienceType: "Psicólogos e clínicas de psicologia",
+        geographicArea: { "@type": "Country", name: "Brasil" },
+      },
+      offers: {
+        "@type": "AggregateOffer",
+        priceCurrency: "BRL",
+        offerCount: 2,
+        availability: "https://schema.org/OnlineOnly",
+        url: `${PUBLIC_SITE_URL}/#waitlist`,
+        offers: [
+          { "@type": "Offer", name: "Plano Essential", category: "Subscription", url: `${PUBLIC_SITE_URL}/#waitlist` },
+          { "@type": "Offer", name: "Plano Profissional", category: "Subscription", url: `${PUBLIC_SITE_URL}/#waitlist` },
+        ],
+      },
+      featureList: PLATFORM_FEATURES,
+      screenshot: [
+        absoluteUrl("/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp"),
+        absoluteUrl("/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp"),
+        absoluteUrl("/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp"),
+      ],
+      softwareAddOn: [
+        { "@id": `${PUBLIC_SITE_URL}/synapse#software` },
+        { "@id": `${PUBLIC_SITE_URL}/neurofinance#financial-product` },
+        { "@id": `${PUBLIC_SITE_URL}/neurobox#software` },
+      ],
+    },
+    {
       "@type": "WebPage",
       "@id": `${url}#webpage`,
       url,
       name: page.title,
+      headline: page.title,
       description: page.description,
+      keywords,
       inLanguage: "pt-BR",
-      isPartOf: { "@id": `${PUBLIC_SITE_URL}/#website` },
-      primaryImageOfPage: absoluteUrl(page.image || DEFAULT_IMAGE),
+      isPartOf: { "@id": websiteId },
+      publisher: { "@id": organizationId },
+      about: [{ "@id": softwareId }],
+      primaryImageOfPage: {
+        "@type": "ImageObject",
+        url: image,
+        caption: "Interface da plataforma NeuroNex AI",
+      },
     },
   ];
+
+  if (page.route === "/neurofinance") {
+    graph.push({
+      "@type": "FinancialProduct",
+      "@id": `${PUBLIC_SITE_URL}/neurofinance#financial-product`,
+      name: "NeuroFinance por NeuroNex",
+      url,
+      category: "Core banking e gestão financeira para psicólogos",
+      description:
+        "Infraestrutura financeira integrada ao consultório de psicologia para conta digital, Área Pix, cobranças, boletos, pagamentos, saques, conciliação, NFS-e/RPS, antecipação de recebíveis e capital de giro preditivo pela Synapse AI.",
+      provider: { "@id": organizationId },
+      feesAndCommissionsSpecification: absoluteUrl("/termos-de-uso"),
+      termsOfService: absoluteUrl("/termos-de-uso"),
+      areaServed: { "@type": "Country", name: "Brasil" },
+      isRelatedTo: { "@id": softwareId },
+    });
+  }
+
+  if (page.route === "/synapse") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${PUBLIC_SITE_URL}/synapse#software`,
+      name: "Synapse AI",
+      url,
+      applicationCategory: "BusinessApplication",
+      applicationSubCategory: "Agente operacional por voz e texto para psicólogos",
+      operatingSystem: ["Web", "Windows", "iOS", "Android"],
+      provider: { "@id": organizationId },
+      isPartOf: { "@id": softwareId },
+      description:
+        "Agente operacional da NeuroNex com voz, texto, WhatsApp, RAG clínico, permissões, confirmação por PIN ou validação de voz assistida e trilha de auditoria.",
+    });
+  }
+
+  if (page.route === "/neurobox") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${PUBLIC_SITE_URL}/neurobox#software`,
+      name: "NeuroBox",
+      url,
+      applicationCategory: ["MedicalApplication", "BusinessApplication"],
+      applicationSubCategory: "Clinical AI toolkit for psychologists",
+      operatingSystem: ["Web", "Windows", "iOS", "Android"],
+      provider: { "@id": organizationId },
+      isPartOf: { "@id": softwareId },
+      description:
+        "Conjunto de ferramentas de IA profunda da NeuroNex com NeuroView, NeuroFlow, NeuroPulse, NeuroScan, NeuroFinance e intermediação em tempo real pelo Synapse.",
+      featureList: [
+        "NeuroView: grafos clínicos 2D e 3D Universe",
+        "NeuroPulse: diagramas Mermaid para formulação clínica",
+        "NeuroFlow: canvas de fluxos clínicos e operacionais",
+        "NeuroScan: estruturação assistida de fichas de anamnese",
+        "Synapse: agente de voz e texto com agência assistida",
+      ],
+    });
+  }
+
+  return {
+    "@context": "https://schema.org",
+    "@graph": graph,
+  };
 }
 
 function replaceMeta(html, attribute, key, content) {
@@ -106,6 +272,12 @@ export function buildPublicEntryHtml(template, page) {
   html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(page.title)}</title>`);
   html = replaceMeta(html, "name", "title", page.title);
   html = replaceMeta(html, "name", "description", page.description);
+  html = replaceMeta(
+    html,
+    "name",
+    "keywords",
+    [...new Set([...(page.keywords || []), ...DEFAULT_KEYWORDS])].join(", "),
+  );
   html = replaceMeta(html, "name", "robots", "index, follow, max-image-preview:large");
   html = replaceMeta(html, "property", "og:url", canonical);
   html = replaceMeta(html, "property", "og:title", page.title);

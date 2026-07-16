@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseContext';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
 import { SynapsePill } from './SynapsePill';
+import { AppointmentPlanReviewDialog } from '@/components/appointments/AppointmentPlanReviewDialog';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
 // Assistant chrome: z-index 90 (above page content, below alerts, sheets and dialogs).
@@ -108,6 +109,7 @@ export const SynapseGlobalShell = () => {
     const visibleShellState = isRestoringPillAfterVoice ? 'pill' : shellState;
 
     const shell = (
+        <>
         <AnimatePresence initial={false} mode="sync">
             {isVoiceExperienceActive ? (
                 <motion.div
@@ -150,6 +152,8 @@ export const SynapseGlobalShell = () => {
                 </motion.div>
             ) : null}
         </AnimatePresence>
+        <AppointmentPlanReviewDialog />
+        </>
     );
 
     return typeof document === 'undefined' ? shell : createPortal(shell, document.body);

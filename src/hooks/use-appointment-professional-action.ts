@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import { prepareAndExecuteAppointmentAction } from "@/lib/appointment-action-plans";
 
 export type ProfessionalAppointmentAction = "cancel" | "archive";
 
@@ -84,6 +85,26 @@ export const useExecuteProfessionalAppointmentAction = () => {
       reason: string;
       idempotencyKey: string;
     }) => {
+      if (action === "cancel") {
+        const plan = await prepareAndExecuteAppointmentAction("cancel", {
+          appointment_id: appointmentId,
+          reason,
+          communication: {
+            sendConfirmation: true,
+            provider: "configured",
+            template: "appointment_cancelled",
+            reminderPolicy: "cancelled",
+          },
+        }, idempotencyKey);
+        const result = plan.result || {};
+        return {
+          success: true,
+          action,
+          message: String(result.message || "Agendamento cancelado pelo fluxo profissional."),
+          emailRequired: false,
+          idempotentReplay: Boolean(result.idempotentReplay),
+        } satisfies ExecuteResult;
+      }
       const { data, error } = await supabase.rpc("execute_professional_appointment_action", {
         p_appointment_id: appointmentId,
         p_action: action,

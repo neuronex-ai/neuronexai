@@ -12,6 +12,7 @@ describe("public SEO routes", () => {
     ["/", "/"],
     ["/synapse", "/synapse"],
     ["/neurofinance/", "/neurofinance"],
+    ["/neurobox", "/neurobox"],
     ["/ajuda", "/ajuda"],
     ["/contato", "/contato"],
     ["/documentos-legais", "/documentos-legais"],
@@ -42,7 +43,7 @@ describe("public SEO routes", () => {
 
     expect(config.indexable).toBe(false);
     expect(config.canonicalPath).toBeUndefined();
-    expect(buildPublicStructuredData(config)).toEqual([]);
+    expect(buildPublicStructuredData(config)).toBeNull();
   });
 
   it("does not index professional profiles until the profile can be validated for search", () => {
@@ -50,13 +51,27 @@ describe("public SEO routes", () => {
 
     expect(config.indexable).toBe(false);
     expect(config.canonicalPath).toBeUndefined();
-    expect(buildPublicStructuredData(config)).toEqual([]);
+    expect(buildPublicStructuredData(config)).toBeNull();
   });
 
   it("publishes product structured data on the home page", () => {
     const structuredData = buildPublicStructuredData(getPublicSeoConfig("/"));
+    const graph = structuredData?.["@graph"] || [];
 
-    expect(structuredData.some((item) => item["@type"] === "SoftwareApplication")).toBe(true);
-    expect(structuredData.some((item) => item["@type"] === "WebPage")).toBe(true);
+    expect(graph.some((item) => item["@type"] === "SoftwareApplication")).toBe(true);
+    expect(graph.some((item) => item["@type"] === "WebPage")).toBe(true);
+    expect(graph.some((item) => item["@type"] === "Organization")).toBe(true);
+  });
+
+  it("publishes page-specific structured data for strategic public products", () => {
+    const financeGraph = buildPublicStructuredData(getPublicSeoConfig("/neurofinance"))?.["@graph"] || [];
+    const neuroboxGraph = buildPublicStructuredData(getPublicSeoConfig("/neurobox"))?.["@graph"] || [];
+
+    expect(financeGraph.some((item) => item["@type"] === "FinancialProduct")).toBe(true);
+    expect(
+      neuroboxGraph.some(
+        (item) => item["@type"] === "SoftwareApplication" && item.name === "NeuroBox",
+      ),
+    ).toBe(true);
   });
 });

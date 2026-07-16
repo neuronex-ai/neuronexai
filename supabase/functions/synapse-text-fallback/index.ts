@@ -448,6 +448,23 @@ Deno.serve(async (request) => {
     if (historyError) throw historyError;
     const rows = (historyData || []) as MessageRow[];
     const pending = findPending(rows);
+    const requestedPlanConfirmation = body.appointmentPlanConfirmation && typeof body.appointmentPlanConfirmation === "object"
+      ? body.appointmentPlanConfirmation as Record<string, unknown>
+      : null;
+    if (requestedPlanConfirmation) {
+      const pendingArguments = pending?.action.arguments || {};
+      const requestedPlanId = String(requestedPlanConfirmation.planId || "");
+      const requestedPlanVersion = Number(requestedPlanConfirmation.planVersion);
+      const requestedPlanHash = String(requestedPlanConfirmation.planHash || "").toLowerCase();
+      if (
+        !pending ||
+        String(pendingArguments.plan_id || "") !== requestedPlanId ||
+        Number(pendingArguments.plan_version) !== requestedPlanVersion ||
+        String(pendingArguments.plan_hash || "").toLowerCase() !== requestedPlanHash
+      ) {
+        return reply({ error: "O plano não pertence a esta conversa ou não é mais a versão pendente." }, 409);
+      }
+    }
     const loadedContext = await loadConversationContext(admin, user.id, sessionId);
     let conversationState = await seedContextFromFrontend(admin, user.id, loadedContext.state, context);
     const source = body.source && typeof body.source === "object"
@@ -525,7 +542,10 @@ Deno.serve(async (request) => {
         detail: progressText(pending.action.summary, 160),
       });
       await updatePending(admin, pending, "executing");
-      const result = await executeConfirmedMutationV3(pending.action, toolContext);
+      const executionContext = requestedPlanConfirmation
+        ? { ...toolContext, channel: "professional_app" as any }
+        : toolContext;
+      const result = await executeConfirmedMutationV3(pending.action, executionContext);
       await updatePending(admin, pending, result.ok ? "executed" : "failed", result.error);
       conversationState = updateContextFromResult(conversationState, pending.action.toolName, pending.action.arguments, result);
       await saveConversationContext(admin, user.id, sessionId, conversationState);

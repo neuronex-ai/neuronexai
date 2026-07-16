@@ -12,6 +12,7 @@ import {
   appointmentPlanSummary,
   cancelAppointmentActionPlan,
   executeAppointmentActionPlan,
+  normalizeAppointmentPlanChannel,
   prepareAppointmentActionPlan,
 } from "../_shared/appointment-action-plans.ts";
 import {
@@ -395,6 +396,16 @@ async function prepareAppointmentMutation(
       type: "appointment_plan_prepared",
       data: { status: plan.status, summary: plan.summary },
     },
+    clientAction: plan.status === "awaiting_confirmation" ? {
+      type: "review_appointment_plan",
+      data: {
+        planId: plan.planId,
+        planVersion: plan.planVersion,
+        planHash: plan.planHash,
+        conversationId: context.sessionId,
+        originChannel: normalizeAppointmentPlanChannel(context.channel),
+      },
+    } : undefined,
   };
 }
 
