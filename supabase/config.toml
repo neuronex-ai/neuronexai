@@ -261,6 +261,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/patient-portal-current/index.ts"
 
+[functions.patient-portal-appointment-action]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/patient-portal-appointment-action/index.ts"
+
 [functions.public-anamnesis]
 enabled = true
 verify_jwt = false

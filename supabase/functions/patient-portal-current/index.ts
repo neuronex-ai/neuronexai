@@ -11,6 +11,8 @@ import {
   getPatientPortalContext,
   requireActivePatientPortal,
 } from "../_shared/patient-portal.ts";
+import { resolveAppointmentContextById } from "../_shared/appointment-lifecycle.ts";
+import { serializePublicAppointment } from "../_shared/appointment-public-dto.ts";
 import { ensureTeleconsultationInvite } from "../_shared/teleconsultation-access.ts";
 
 async function readBody(req: Request) {
@@ -41,23 +43,50 @@ async function safeModule(module: string, fallback: Record<string, unknown>, loa
 async function loadAppointments(context: any) {
   const { data, error } = await supabaseAdmin
     .from("appointments")
-    .select("id,user_id,start_time,end_time,type,status,location,google_meet_link,created_at,updated_at,metadata,notes")
+    .select("id,user_id,patient_id,start_time,end_time,type,status,lifecycle_status,location,google_meet_link,confirmation_revision")
     .eq("patient_id", context.patient.id)
     .eq("user_id", context.professional.id)
     .order("start_time", { ascending: true });
   if (error) throw error;
   const appointments = await Promise.all((data || []).map(async (appointment: any) => {
-    if (appointment.type !== "online") return appointment;
+    let meetLink = appointment.google_meet_link || null;
     const isCancelled = [
       "cancelled",
       "canceled",
       "cancelled_by_patient",
       "cancelled_by_professional",
-    ].includes(String(appointment.status || "").toLowerCase());
+    ].includes(String(appointment.lifecycle_status || appointment.status || "").toLowerCase());
     const sessionEnded = new Date(appointment.end_time || appointment.start_time).getTime() < Date.now();
-    if (isCancelled || sessionEnded) return { ...appointment, google_meet_link: null };
-    const invite = await ensureTeleconsultationInvite(supabaseAdmin, appointment);
-    return { ...appointment, google_meet_link: invite.meetLink };
+    if (appointment.type === "online" && !isCancelled && !sessionEnded) {
+      const invite = await ensureTeleconsultationInvite(supabaseAdmin, appointment);
+      meetLink = invite.meetLink;
+    } else if (isCancelled || sessionEnded) {
+      meetLink = null;
+    }
+
+    const canonicalContext = await resolveAppointmentContextById(
+      supabaseAdmin,
+      appointment.id,
+      {
+        patientId: context.patient.id,
+        professionalId: context.professional.id,
+      },
+    );
+    const safe = serializePublicAppointment(canonicalContext);
+    return {
+      id: appointment.id,
+      start_time: safe.appointment.start_time,
+      end_time: safe.appointment.end_time,
+      type: safe.appointment.type,
+      status: safe.appointment.flow_state,
+      lifecycle_status: appointment.lifecycle_status,
+      location: safe.appointment.location,
+      google_meet_link: meetLink,
+      revision: safe.revision,
+      actions: safe.actions,
+      policy: safe.policy,
+      rescheduleRequest: safe.rescheduleRequest,
+    };
   }));
   return { appointments };
 }
@@ -577,44 +606,6 @@ async function loadMood(user: any, context: any, body: Record<string, unknown>) 
   };
 }
 
-async function requestAppointment(context: any, body: Record<string, unknown>) {
-  const startTime = new Date(String(body.startTime || ""));
-  const type = String(body.type || "online");
-
-  if (!Number.isFinite(startTime.getTime()) || startTime.getTime() <= Date.now()) {
-    return errorResponse("Escolha um horário futuro.", 400);
-  }
-  if (!["online", "presencial"].includes(type)) {
-    return errorResponse("Modalidade invalida.", 400);
-  }
-
-  const endTime = new Date(startTime.getTime() + 50 * 60 * 1000);
-  const { data, error } = await supabaseAdmin
-    .from("appointments")
-    .insert({
-      user_id: context.professional.id,
-      patient_id: context.patient.id,
-      start_time: startTime.toISOString(),
-      end_time: endTime.toISOString(),
-      type,
-      status: "unscored",
-      notes: "Solicitacao via Portal do Paciente",
-      metadata: {
-        kind: "session",
-        sessionType: "acompanhamento",
-        modality: type,
-        durationMinutes: 50,
-        origin: "patient_portal",
-        syncStatus: "pending",
-      },
-    })
-    .select("id,start_time,end_time,type,status,location,google_meet_link,created_at,updated_at")
-    .single();
-
-  if (error) throw error;
-  return { appointment: data };
-}
-
 async function toggleGoal(context: any, body: Record<string, unknown>) {
   const goalId = String(body.goalId || "");
   const isCompleted = Boolean(body.isCompleted);
@@ -972,8 +963,10 @@ Deno.serve(async (req: Request) => {
       return result instanceof Response ? result : jsonResponse(result);
     }
     if (action === "request_appointment") {
-      const result = await requestAppointment(context, body as Record<string, unknown>);
-      return result instanceof Response ? result : jsonResponse(result);
+      return errorResponse(
+        "A solicitação de uma nova sessão está temporariamente indisponível. Use um agendamento existente ou fale com o profissional.",
+        410,
+      );
     }
     if (action === "toggle_goal") {
       const result = await toggleGoal(context, body as Record<string, unknown>);

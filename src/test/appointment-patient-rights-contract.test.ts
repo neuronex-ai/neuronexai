@@ -86,16 +86,16 @@ describe("secure appointment public surface", () => {
   });
 
   it("filters the exact rejected slot in the current appointment revision", () => {
-    const source = read("supabase/functions/get-public-availability/index.ts");
+    const source = read("supabase/functions/_shared/appointment-availability.ts");
 
     expect(source).toMatch(/from\(["']appointment_reschedule_requests["']\)[\s\S]*?\.eq\(["']appointment_revision["'],\s*appointment\.confirmation_revision\)/u);
     expect(source).toMatch(/\.eq\(["']status["'],\s*["']rejected["']\)/u);
-    expect(source).toMatch(/wasRejected[\s\S]*?start\.getTime\(\)\s*===\s*slot\.start[\s\S]*?end\.getTime\(\)\s*===\s*slot\.end/u);
-    expect(source).toMatch(/!wasRejected/u);
+    expect(source).toMatch(/rejected[\s\S]*?start\.getTime\(\)\s*===\s*slot\.start[\s\S]*?end\.getTime\(\)\s*===\s*slot\.end/u);
+    expect(source).toMatch(/!rejected/u);
   });
 
   it("builds availability in the snapshot timezone instead of a fixed UTC offset", () => {
-    const source = read("supabase/functions/get-public-availability/index.ts");
+    const source = read("supabase/functions/_shared/appointment-availability.ts");
 
     expect(source).toMatch(/context\.policySnapshot\?\.timezone/u);
     expect(source).toMatch(/new\s+Intl\.DateTimeFormat\([\s\S]*?\{\s*timeZone\s*\}/u);

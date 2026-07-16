@@ -69,13 +69,15 @@ describe("appointment lifecycle contract", () => {
   });
 
   it("derives availability from the secure token and preserves the appointment duration", () => {
-    const availability = source("supabase/functions/get-public-availability/index.ts");
+    const publicAvailability = source("supabase/functions/get-public-availability/index.ts");
+    const availability = source("supabase/functions/_shared/appointment-availability.ts");
     const page = source("src/pages/SecureConfirmAppointment.tsx");
 
-    expect(availability).toContain("resolveAppointmentInvitation(db, token)");
+    expect(publicAvailability).toContain("resolveAppointmentInvitation");
+    expect(publicAvailability).toContain("calculatePatientAppointmentAvailability");
     expect(availability).toContain("context.professional?.working_hours");
     expect(availability).toContain("durationMinutes");
-    expect(availability).toContain("isBusy");
+    expect(availability).toContain("const busy");
     expect(page).toContain('"get-public-availability"');
     expect(page).toContain("requestedStartTime: selectedSlot.startTime");
     expect(page).not.toContain("AVAILABLE_TIMES");

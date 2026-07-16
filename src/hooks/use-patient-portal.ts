@@ -58,10 +58,40 @@ export interface PatientPortalAppointment {
   end_time: string;
   type: string;
   status: string;
+  lifecycle_status: string;
   location: string | null;
   google_meet_link: string | null;
-  notes?: string | null;
-  metadata?: Record<string, unknown> | null;
+  revision: number;
+  actions: {
+    confirm: { allowed: boolean; message: string };
+    cancel: { allowed: boolean; deadline: string | null; message: string };
+    reschedule: { allowed: boolean; deadline: string | null; message: string };
+  };
+  policy: {
+    calendarMinDate: string;
+    calendarMaxDate: string;
+    timezone: string;
+  } | null;
+  rescheduleRequest: {
+    requestedStartTime: string;
+    requestedEndTime: string;
+    reviewReason: string | null;
+    reviewedAt: string | null;
+    createdAt: string;
+    financialRightProtected: boolean;
+  } | null;
+}
+
+export interface PatientPortalAvailability {
+  date: string;
+  durationMinutes: number;
+  intervalMinutes: number;
+  availableSlots: Array<{
+    label: string;
+    startTime: string;
+    endTime: string;
+  }>;
+  reason: string | null;
 }
 
 export interface PatientPortalDocument {
@@ -348,6 +378,44 @@ export const usePatientPortalAppointments = (enabled = true) => {
       invokePortalFunction<{ appointments: PatientPortalAppointment[] }>("patient-portal-current", { action: "appointments" }),
     enabled: Boolean(user?.id) && enabled,
   });
+};
+
+export const usePatientPortalAppointmentAction = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["patient-portal-appointments", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["patient-portal-progress", user?.id] });
+    queryClient.invalidateQueries({ queryKey: ["patient-portal-current", user?.id] });
+  };
+
+  const action = useMutation({
+    mutationFn: (input: {
+      appointmentId: string;
+      expectedRevision: number;
+      action: "confirm" | "cancel" | "reschedule";
+      reason?: string;
+      requestedStartTime?: string;
+      requestedEndTime?: string;
+    }) =>
+      invokePortalFunction(
+        "patient-portal-appointment-action",
+        input,
+        "Não foi possível atualizar o agendamento.",
+      ),
+    onSuccess: invalidate,
+  });
+
+  const availability = useMutation({
+    mutationFn: (input: { appointmentId: string; date: string }) =>
+      invokePortalFunction<PatientPortalAvailability>(
+        "patient-portal-appointment-action",
+        { ...input, action: "availability" },
+        "Não foi possível consultar a disponibilidade.",
+      ),
+  });
+
+  return { action, availability };
 };
 
 export const usePatientPortalDocuments = (enabled = true) => {

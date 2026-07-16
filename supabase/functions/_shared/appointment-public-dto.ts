@@ -122,6 +122,7 @@ export function serializePublicAppointment(context: PublicAppointmentContext) {
   const calendarMaxDate = addCalendarMonths(calendarMinDate, 6);
 
   return {
+    revision: Number(appointment.confirmation_revision || 1),
     appointment: {
       start_time: appointment.start_time,
       end_time: appointment.end_time,
@@ -161,9 +162,10 @@ export function serializePublicAppointment(context: PublicAppointmentContext) {
           : null,
         expiredWithoutResponseAt:
           context.pendingRequest.expired_without_response_at,
-        protectionMessage: requestProtectionIsCurrent && context.pendingRequest.protection_reason
-          ? "Seus direitos financeiros est\u00e3o protegidos enquanto este caso \u00e9 analisado."
-          : null,
+        protectionMessage:
+          requestProtectionIsCurrent && context.pendingRequest.protection_reason
+            ? "Seus direitos financeiros est\u00e3o protegidos enquanto este caso \u00e9 analisado."
+            : null,
       }
       : null,
     policy: context.policySnapshot

@@ -125,6 +125,90 @@ export type ResolvedAppointmentInvitation = {
   policySnapshot: Record<string, any> | null;
 };
 
+export type AppointmentContextScope = {
+  patientId?: string;
+  professionalId?: string;
+};
+
+type AppointmentDatabaseClient = {
+  from: (relation: string) => any;
+};
+
+/** Shared context resolver for every patient-facing appointment surface. */
+export async function resolveAppointmentContextById(
+  db: AppointmentDatabaseClient,
+  appointmentId: string,
+  scope: AppointmentContextScope = {},
+): Promise<Omit<ResolvedAppointmentInvitation, "tokenHash" | "tokenRow">> {
+  let appointmentQuery = db
+    .from("appointments")
+    .select(
+      "id,user_id,patient_id,start_time,end_time,type,status,lifecycle_status,location,google_meet_link,created_at,updated_at,payment_status,invitation_sent_at,invitation_opened_at,confirmed_at,confirmation_revision,confirmed_revision,cancelled_at,cancellation_reason,reschedule_requested_at,reschedule_approved_at,reschedule_rejected_at,policy_snapshot_id,patient_right_status,patient_action_due_at,professional_response_due_at,financial_outcome,financial_protection_reason,outcome_review_required",
+    )
+    .eq("id", appointmentId);
+  if (scope.patientId) {
+    appointmentQuery = appointmentQuery.eq("patient_id", scope.patientId);
+  }
+  if (scope.professionalId) {
+    appointmentQuery = appointmentQuery.eq("user_id", scope.professionalId);
+  }
+
+  const appointmentResult = await appointmentQuery.maybeSingle();
+  if (appointmentResult.error) throw appointmentResult.error;
+  if (!appointmentResult.data) {
+    throw new AppointmentLifecycleError(
+      "Agendamento n\u00e3o encontrado para este v\u00ednculo.",
+      404,
+      "APPOINTMENT_NOT_FOUND",
+    );
+  }
+
+  const [patientResult, profileResult, requestResult, policyResult] =
+    await Promise.all([
+      appointmentResult.data.patient_id
+        ? db.from("patients").select("id,name,email").eq(
+          "id",
+          appointmentResult.data.patient_id,
+        ).maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+      db.from("profiles")
+        .select(
+          "id,first_name,last_name,full_name,name,clinic_name,avatar_url,address,address_line1,address_city,phone,working_hours",
+        )
+        .eq("id", appointmentResult.data.user_id)
+        .maybeSingle(),
+      db.from("appointment_reschedule_requests")
+        .select(
+          "status,original_start_time,original_end_time,requested_start_time,requested_end_time,reason,review_reason,reviewed_at,created_at,requested_at,within_free_window,professional_response_due_at,financial_right_protected,reaction_due_at,protection_reason,expired_without_response_at",
+        )
+        .eq("appointment_id", appointmentResult.data.id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      appointmentResult.data.policy_snapshot_id
+        ? db.from("appointment_policy_snapshots")
+          .select(
+            "free_cancellation_cutoff_at,free_reschedule_cutoff_at,minimum_patient_reaction_hours,professional_response_sla_hours,late_cancellation_consequence,no_show_consequence,package_credit_policy,charge_policy,fiscal_policy,timezone",
+          )
+          .eq("id", appointmentResult.data.policy_snapshot_id)
+          .maybeSingle()
+        : Promise.resolve({ data: null, error: null }),
+    ]);
+
+  if (patientResult.error) throw patientResult.error;
+  if (profileResult.error) throw profileResult.error;
+  if (requestResult.error) throw requestResult.error;
+  if (policyResult.error) throw policyResult.error;
+
+  return {
+    appointment: appointmentResult.data,
+    patient: patientResult.data,
+    professional: profileResult.data,
+    pendingRequest: requestResult.data,
+    policySnapshot: policyResult.data,
+  };
+}
+
 export async function resolveAppointmentInvitation(
   db: ReturnType<typeof appointmentAdminClient>,
   rawToken: string,

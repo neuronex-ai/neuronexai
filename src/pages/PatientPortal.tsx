@@ -19,6 +19,7 @@ import {
   type PatientPortalPackage,
   type PatientPortalSessionSummary,
   usePatientPortalAnamnesis,
+  usePatientPortalAppointmentAction,
   usePatientPortalAppointments,
   usePatientPortalBilling,
   usePatientPortalCurrent,
@@ -30,7 +31,6 @@ import {
   usePatientPortalProgress,
   usePatientPortalSessionSummaries,
   usePatientPortalTasks,
-  useRequestPatientPortalAppointment,
   useSavePatientPortalAnamnesis,
   useTogglePatientPortalGoal,
   useUpdatePatientPortalProfile,
@@ -38,7 +38,6 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Angry,
-  ArrowRight,
   BrainCircuit,
   CalendarDays,
   CalendarPlus,
@@ -158,9 +157,6 @@ const statusLabel = (status?: string | null) => {
   if (["absent", "missed"].includes(normalized)) return "Não compareceu";
   return "Em acompanhamento";
 };
-
-const isPortalRequest = (appointment: PatientPortalAppointment) =>
-  appointment.metadata?.origin === "patient_portal" && appointment.metadata?.syncStatus === "pending";
 
 const patientQuotes = [
   "Pequenos passos também desenham caminhos inteiros.",
@@ -440,6 +436,19 @@ const PortalHero = ({
 );
 
 const AppointmentRequestDialog = () => {
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled
+      className="h-11 rounded-2xl"
+      title="Fale com o profissional para solicitar uma nova sessão."
+    >
+      <CalendarPlus className="mr-2 h-4 w-4" aria-hidden="true" />
+      Nova sessão indisponível
+    </Button>
+  );
+  /*
   const tomorrow = useMemo(() => {
     const date = new Date();
     date.setDate(date.getDate() + 1);
@@ -540,12 +549,193 @@ const AppointmentRequestDialog = () => {
       </DialogContent>
     </Dialog>
   );
+  */
+};
+
+type PatientAppointmentAction = "confirm" | "cancel" | "reschedule";
+
+const AppointmentActions = ({
+  appointment,
+}: {
+  appointment: PatientPortalAppointment;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [actionType, setActionType] = useState<PatientAppointmentAction>("confirm");
+  const [reason, setReason] = useState("");
+  const [date, setDate] = useState(
+    appointment.policy?.calendarMinDate || toDateInputValue(new Date()),
+  );
+  const [selectedStart, setSelectedStart] = useState("");
+  const { action, availability } = usePatientPortalAppointmentAction();
+  const selectedSlot = availability.data?.availableSlots.find(
+    (slot) => slot.startTime === selectedStart,
+  );
+
+  const show = (nextAction: PatientAppointmentAction) => {
+    setActionType(nextAction);
+    setReason("");
+    setSelectedStart("");
+    availability.reset();
+    setOpen(true);
+  };
+
+  const submit = () => {
+    if (actionType === "reschedule" && !selectedSlot) {
+      toast.error("Escolha um horário disponível.");
+      return;
+    }
+    action.mutate(
+      {
+        appointmentId: appointment.id,
+        expectedRevision: appointment.revision,
+        action: actionType,
+        reason: reason || undefined,
+        requestedStartTime: selectedSlot?.startTime,
+        requestedEndTime: selectedSlot?.endTime,
+      },
+      {
+        onSuccess: () => {
+          toast.success(
+            actionType === "confirm"
+              ? "Agendamento confirmado."
+              : actionType === "cancel"
+                ? "Agendamento cancelado."
+                : "Pedido de reagendamento enviado.",
+          );
+          setOpen(false);
+        },
+        onError: (error) =>
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : "Não foi possível atualizar o agendamento.",
+          ),
+      },
+    );
+  };
+
+  const title = actionType === "confirm"
+    ? "Confirmar agendamento"
+    : actionType === "cancel"
+      ? "Cancelar agendamento"
+      : "Solicitar outro horário";
+  const message = appointment.actions[actionType].message;
+
+  return (
+    <>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {appointment.actions.confirm.allowed && (
+          <Button type="button" size="sm" onClick={() => show("confirm")} className="rounded-xl">
+            Confirmar
+          </Button>
+        )}
+        {appointment.actions.reschedule.allowed && (
+          <Button type="button" size="sm" variant="outline" onClick={() => show("reschedule")} className="rounded-xl">
+            Reagendar
+          </Button>
+        )}
+        {appointment.actions.cancel.allowed && (
+          <Button type="button" size="sm" variant="ghost" onClick={() => show("cancel")} className="rounded-xl text-destructive hover:text-destructive">
+            Cancelar
+          </Button>
+        )}
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-[540px] rounded-[28px] border border-border/70 bg-card p-0 shadow-2xl">
+          <div className="border-b border-border/60 p-6">
+            <DialogTitle className="text-xl font-semibold tracking-tight">{title}</DialogTitle>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{message}</p>
+          </div>
+          <div className="space-y-5 p-6">
+            {actionType === "reschedule" && (
+              <>
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                    Data
+                  </span>
+                  <div className="flex gap-2">
+                    <input
+                      type="date"
+                      min={appointment.policy?.calendarMinDate}
+                      max={appointment.policy?.calendarMaxDate}
+                      value={date}
+                      onChange={(event) => {
+                        setDate(event.target.value);
+                        setSelectedStart("");
+                        availability.reset();
+                      }}
+                      className="h-11 flex-1 rounded-xl border border-border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={availability.isPending || !date}
+                      onClick={() => availability.mutate({ appointmentId: appointment.id, date })}
+                      className="rounded-xl"
+                    >
+                      {availability.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Ver horários
+                    </Button>
+                  </div>
+                </label>
+                {availability.data && (
+                  <div className="grid max-h-44 grid-cols-3 gap-2 overflow-y-auto rounded-2xl border border-border bg-background p-3 sm:grid-cols-4">
+                    {availability.data.availableSlots.length ? (
+                      availability.data.availableSlots.map((slot) => (
+                        <Button
+                          key={slot.startTime}
+                          type="button"
+                          size="sm"
+                          variant={selectedStart === slot.startTime ? "default" : "outline"}
+                          aria-pressed={selectedStart === slot.startTime}
+                          onClick={() => setSelectedStart(slot.startTime)}
+                          className="rounded-xl"
+                        >
+                          {slot.label}
+                        </Button>
+                      ))
+                    ) : (
+                      <p className="col-span-full py-3 text-center text-sm text-muted-foreground">
+                        Nenhum horário disponível nesta data.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </>
+            )}
+            {actionType !== "confirm" && (
+              <label className="block space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                  Motivo opcional
+                </span>
+                <Textarea
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value.slice(0, 500))}
+                  maxLength={500}
+                  className="min-h-24 rounded-2xl bg-background"
+                />
+              </label>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={() => setOpen(false)} className="rounded-xl">
+                Voltar
+              </Button>
+              <Button type="button" onClick={submit} disabled={action.isPending} className="rounded-xl">
+                {action.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {actionType === "confirm" ? "Confirmar" : actionType === "cancel" ? "Cancelar sessão" : "Enviar pedido"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 };
 
 const AppointmentCard = ({ appointment }: { appointment: PatientPortalAppointment }) => {
   const start = new Date(appointment.start_time);
   const isPast = start.getTime() < Date.now();
-  const isRequest = isPortalRequest(appointment);
+  const isRequest = appointment.status === "waiting_for_professional";
   const isOnline = appointmentIsOnline(appointment);
 
   return (
@@ -568,6 +758,7 @@ const AppointmentCard = ({ appointment }: { appointment: PatientPortalAppointmen
                 {appointmentTypeLabel(appointment.type)}
               </span>
             </div>
+            {!isPast && <AppointmentActions appointment={appointment} />}
           </div>
         </div>
         {isOnline && !isPast && (
@@ -703,7 +894,9 @@ const SessionsView = ({
   const rows = appointments || [];
   const upcoming = rows.filter((appointment) => new Date(appointment.start_time).getTime() >= Date.now());
   const past = rows.filter((appointment) => new Date(appointment.start_time).getTime() < Date.now()).reverse();
-  const nextAppointment = upcoming.find((appointment) => !isPortalRequest(appointment));
+  const nextAppointment = upcoming.find((appointment) =>
+    appointment.status !== "cancelled" && appointment.status !== "closed"
+  );
   const summaryRows = summaries || [];
 
   return (
@@ -2182,7 +2375,11 @@ const PatientPortal = () => {
 
   const nextAppointment = useMemo(() => (
     appointmentRows
-      .filter((appointment) => new Date(appointment.start_time).getTime() >= Date.now() && !isPortalRequest(appointment))
+      .filter((appointment) =>
+        new Date(appointment.start_time).getTime() >= Date.now() &&
+        appointment.status !== "cancelled" &&
+        appointment.status !== "closed"
+      )
       .sort((left, right) => new Date(left.start_time).getTime() - new Date(right.start_time).getTime())[0]
   ), [appointmentRows]);
 
