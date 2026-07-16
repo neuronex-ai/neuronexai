@@ -4,10 +4,13 @@ import type { Patient, Transaction } from "@/types";
 import {
     emptyDetailedStatementFilters,
     filterDetailedStatementTransactions,
+    getStatementPaymentMethod,
     getStatementOrigin,
     groupStatementTransactionsByDate,
+    isPixReceivedStatementPreset,
     isStatementFeeTransaction,
     sortStatementTransactions,
+    togglePixReceivedStatementPreset,
 } from "./statement-utils";
 
 const transaction = (overrides: Partial<Transaction> = {}): Transaction => ({
@@ -161,5 +164,34 @@ describe("statement-utils", () => {
 
         expect(filterDetailedStatementTransactions([inside, outside], filters, patients).map((item) => item.id))
             .toEqual(["inside"]);
+    });
+
+    it("oferece Pix recebidos como filtro do extrato, sem incluir saídas Pix", () => {
+        const receivedPix = transaction({
+            id: "pix-received",
+            type: "income",
+            payment_method: undefined,
+            metadata: { provider_type: "PIX_TRANSACTION_CREDIT" },
+        });
+        const sentPix = transaction({
+            id: "pix-sent",
+            type: "expense",
+            payment_method: "pix",
+        });
+        const boleto = transaction({
+            id: "boleto-received",
+            type: "income",
+            payment_method: "boleto",
+        });
+        const filters = togglePixReceivedStatementPreset(emptyDetailedStatementFilters());
+
+        expect(isPixReceivedStatementPreset(filters)).toBe(true);
+        expect(getStatementPaymentMethod(receivedPix)).toBe("pix");
+        expect(filterDetailedStatementTransactions([receivedPix, sentPix, boleto], filters))
+            .toEqual([receivedPix]);
+        expect(togglePixReceivedStatementPreset(filters)).toMatchObject({
+            type: "all",
+            paymentMethods: [],
+        });
     });
 });

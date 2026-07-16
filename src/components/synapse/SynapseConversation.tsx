@@ -369,8 +369,8 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
     };
 
     return (
-        <div className="synapse-desktop-composer-dock shrink-0 px-3.5 pb-3 pt-2">
-            <div className="synapse-desktop-composer flex min-h-[54px] items-end gap-2 p-1.5">
+        <div className="synapse-desktop-composer-dock shrink-0 px-4 pb-4 pt-2.5">
+            <div className="synapse-desktop-composer flex min-h-[58px] items-end gap-2 p-2">
                 <textarea
                     ref={setTextareaRef}
                     value={value}

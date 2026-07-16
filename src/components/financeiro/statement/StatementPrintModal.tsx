@@ -37,7 +37,7 @@ export const StatementPrintModal = ({ children, transactions, dateRange, summary
     }
   };
 
-  const professionalName = profile ? `${profile.first_name} ${profile.last_name}` : "Profissional responsavel";
+  const professionalName = profile ? `${profile.first_name} ${profile.last_name}` : "Profissional responsável";
 
   return (
     <Dialog>
@@ -48,28 +48,28 @@ export const StatementPrintModal = ({ children, transactions, dateRange, summary
             </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="finance-modal-surface max-w-[900px] bg-[#0A0A0B] border-white/10 shadow-2xl p-0 overflow-hidden rounded-[32px] h-[90vh] flex flex-col outline-none">
+      <DialogContent className="finance-modal-surface flex h-[90vh] max-w-[900px] flex-col gap-0 overflow-hidden rounded-[32px] border border-border/55 bg-background/96 p-0 text-foreground shadow-2xl outline-none">
         
         {/* Header */}
-        <div className="p-6 border-b border-white/5 bg-white/[0.02] shrink-0 flex items-center justify-between">
-            <DialogTitle className="text-white flex items-center gap-3 text-lg font-bold">
-                <div className="p-2 rounded-xl bg-white/5 border border-white/10">
-                    <FileText className="h-5 w-5 text-white/70" /> 
+        <div className="flex shrink-0 items-center justify-between border-b border-border/45 bg-background/72 px-6 py-5 backdrop-blur-xl">
+            <DialogTitle className="flex items-center gap-3 text-lg font-semibold tracking-tight text-foreground">
+                <div className="grid h-10 w-10 place-items-center rounded-[14px] border border-border/45 bg-muted/70 text-muted-foreground shadow-sm">
+                    <FileText className="h-5 w-5" aria-hidden="true" />
                 </div>
                 Extrato NeuroFinance
             </DialogTitle>
             
-            <div className="text-[10px] bg-white/5 border border-white/10 px-3 py-1 rounded-full text-white/50 uppercase tracking-widest font-bold">
+            <div className="mr-8 rounded-full border border-border/45 bg-muted/55 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 Formato A4
             </div>
         </div>
 
         {/* Content (Scrollable) */}
-        <div className="flex-1 bg-[#151518] p-8 overflow-y-auto flex justify-center relative">
-            <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none" />
+        <div className="relative flex flex-1 justify-center overflow-y-auto bg-muted/55 p-8 dark:bg-black/35">
+            <div className="pointer-events-none absolute inset-0 bg-[url('/noise.png')] opacity-[0.025] dark:opacity-[0.035]" />
             
-            <div className="origin-top transform scale-[0.6] sm:scale-[0.8] transition-transform duration-500">
-                <div ref={printRef} className="shadow-2xl">
+            <div className="origin-top scale-[0.6] transform transition-transform duration-300 motion-reduce:transition-none sm:scale-[0.8]">
+                <div ref={printRef} className="overflow-hidden rounded-sm shadow-[0_24px_70px_-24px_rgba(24,24,27,0.34)] dark:shadow-[0_28px_90px_-24px_rgba(0,0,0,0.82)]">
                     <FinancialStatementTemplate 
                         transactions={transactions}
                         period={dateRange}
@@ -81,9 +81,9 @@ export const StatementPrintModal = ({ children, transactions, dateRange, summary
         </div>
 
         {/* Footer Actions */}
-        <div className="p-6 border-t border-white/10 bg-[#0A0A0B] flex justify-end shrink-0 relative z-20">
-            <Button onClick={handlePrint} className="bg-white text-black hover:bg-white/90 gap-2 font-bold uppercase text-xs tracking-widest rounded-xl h-12 px-8 shadow-lg transition-transform active:scale-95">
-                <Printer className="h-4 w-4" /> Imprimir extrato
+        <div className="relative z-20 flex shrink-0 justify-end border-t border-border/45 bg-background/78 px-6 py-5 backdrop-blur-xl">
+            <Button onClick={handlePrint} className="h-11 gap-2 rounded-[14px] bg-foreground px-7 text-xs font-semibold uppercase tracking-[0.14em] text-background shadow-md transition-[background-color,transform] hover:bg-foreground/90 active:scale-[0.98] motion-reduce:transition-none">
+                <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir extrato
             </Button>
         </div>
       </DialogContent>

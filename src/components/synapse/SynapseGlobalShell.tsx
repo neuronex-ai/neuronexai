@@ -112,7 +112,7 @@ export const SynapseGlobalShell = () => {
             {isVoiceExperienceActive ? (
                 <motion.div
                     key="synapse-voice-presence"
-                    className="synapse-presence-layer fixed flex w-[min(280px,calc(100vw-24px))] -translate-x-1/2 flex-col items-center"
+                    className="synapse-presence-layer fixed flex w-[min(320px,calc(100vw-32px))] -translate-x-1/2 flex-col items-center"
                     data-synapse-shell="true"
                     data-synapse-shell-placement="bottom-center"
                     initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
@@ -122,7 +122,7 @@ export const SynapseGlobalShell = () => {
                         ? { duration: 0 }
                         : { type: 'spring', stiffness: 360, damping: 38, mass: 0.78 }}
                     style={{
-                        bottom: 'max(12px, env(safe-area-inset-bottom))',
+                        bottom: 'max(16px, env(safe-area-inset-bottom))',
                     }}
                 >
                     <SynapsePill mode="voice-presence" />
@@ -142,8 +142,8 @@ export const SynapseGlobalShell = () => {
                         ? { duration: 0 }
                         : { type: 'spring', stiffness: 390, damping: 36, mass: 0.74 }}
                     style={{
-                        right: 'max(12px, env(safe-area-inset-right))',
-                        bottom: 'max(12px, env(safe-area-inset-bottom))',
+                        right: 'max(16px, env(safe-area-inset-right))',
+                        bottom: 'max(16px, env(safe-area-inset-bottom))',
                     }}
                 >
                     <SynapsePill mode="launcher" />

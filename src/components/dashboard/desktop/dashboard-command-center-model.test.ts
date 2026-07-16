@@ -108,7 +108,7 @@ describe("dashboard command center model", () => {
     expect(queue.map((item) => item.id)).toEqual(["pending-patients", "financial-activation"]);
     expect(queue[0].actionUrl).toBe("/pacientes");
     expect(queue[0].category).toBe("registrations");
-    expect(queue[1].actionUrl).toBe("/financeiro/neurofinance");
+    expect(queue[1].actionUrl).toBe("/financeiro?view=conta-digital");
     expect(queue[1].category).toBe("neurofinance");
   });
 

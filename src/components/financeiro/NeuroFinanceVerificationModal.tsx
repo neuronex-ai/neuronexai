@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ShieldCheck } from "lucide-react";
 
 import {
@@ -29,6 +29,8 @@ export function NeuroFinanceVerificationModal({
   setSelectedRequirement,
   onSuccess,
 }: NeuroFinanceVerificationModalProps) {
+  const reduceMotion = Boolean(useReducedMotion());
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="finance-modal-surface flex h-[88vh] flex-col overflow-hidden rounded-[34px] border border-zinc-200/80 bg-white p-0 text-zinc-950 shadow-[0_42px_120px_-42px_rgba(24,24,27,0.38)] dark:border-white/10 dark:bg-zinc-950 dark:text-white sm:max-w-[1180px]">
@@ -37,7 +39,7 @@ export function NeuroFinanceVerificationModal({
             Análise cadastral
           </DialogTitle>
           <DialogDescription className="text-sm font-medium tracking-tight text-zinc-500">
-            Status de aprovação atualizado diretamente pela Asaas.
+            Acompanhe a análise e corrija pendências quando necessário.
           </DialogDescription>
         </DialogHeader>
 
@@ -58,7 +60,7 @@ export function NeuroFinanceVerificationModal({
                 Acompanhamento
               </h4>
               <p className="mt-2 text-xs font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-                A timeline principal mostra a análise cadastral sincronizada pela Asaas. Pendências acionáveis aparecem aqui quando houver correção necessária.
+                A linha do tempo mostra cada etapa da análise. Pendências que exigem sua ação aparecem aqui com a orientação necessária.
               </p>
             </div>
           </aside>
@@ -68,10 +70,10 @@ export function NeuroFinanceVerificationModal({
               {selectedRequirement ? (
                 <motion.div
                   key={selectedRequirement}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={reduceMotion ? false : { opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.3 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: -20 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.3 }}
                   className="mx-auto max-w-xl"
                 >
                   <AccountResolutionForm requirement={selectedRequirement} onSuccess={onSuccess} />
@@ -79,10 +81,10 @@ export function NeuroFinanceVerificationModal({
               ) : (
                 <motion.div
                   key="timeline"
-                  initial={{ opacity: 0, y: 18 }}
+                  initial={reduceMotion ? false : { opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -18 }}
-                  transition={{ duration: 0.3 }}
+                  exit={reduceMotion ? undefined : { opacity: 0, y: -18 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.3 }}
                   className="mx-auto flex min-h-full max-w-3xl flex-col justify-center space-y-6"
                 >
                   <AsaasAccountStatusTimeline />
@@ -95,7 +97,7 @@ export function NeuroFinanceVerificationModal({
                       Acompanhamento cadastral
                     </h4>
                     <p className="mx-auto mt-2 max-w-md text-xs font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-                      Quando a Asaas solicitar correção documental ou cadastral, as ações disponíveis aparecerão nesta tela.
+                      Quando uma correção documental ou cadastral for necessária, as ações disponíveis aparecerão nesta tela.
                     </p>
                   </div>
                 </motion.div>

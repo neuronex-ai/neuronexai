@@ -107,10 +107,10 @@ export function BillPaymentReviewCard({
       icon: Landmark,
       label: "Instituição",
       value: consultation.bankName || (consultation.bankCode
-        ? `Código bancário ${consultation.bankCode}`
+        ? `Instituição ${consultation.bankCode}`
         : "Não informada pela instituição"),
       detail: consultation.bankCode
-        ? `Código COMPE ${consultation.bankCode}`
+        ? `Código bancário ${consultation.bankCode}`
         : "Dado não retornado na consulta",
     },
     {
@@ -126,8 +126,8 @@ export function BillPaymentReviewCard({
   ];
 
   return (
-    <section className="mx-auto max-w-4xl overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white/75 shadow-[0_35px_90px_-55px_rgba(0,0,0,0.55)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-[#09090b]/80">
-      <div className="border-b border-zinc-100 p-6 dark:border-white/5 md:p-8">
+    <section className="mx-auto max-w-4xl overflow-hidden rounded-[34px] border border-border/65 bg-card/82 text-card-foreground shadow-[0_36px_110px_-72px_hsl(var(--foreground)/0.62)] backdrop-blur-3xl">
+      <div className="border-b border-border/55 p-6 md:p-8">
         <div className="flex items-start justify-between gap-5">
           <div className="flex items-start gap-4">
             <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-[20px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -137,21 +137,21 @@ export function BillPaymentReviewCard({
               <p className="text-[9px] font-black uppercase tracking-[0.25em] text-emerald-600 dark:text-emerald-400">
                 Boleto localizado
               </p>
-              <h3 className="mt-2 text-xl font-black tracking-tight text-zinc-950 dark:text-white">
+              <h3 className="mt-2 text-xl font-black tracking-tight text-foreground">
                 Confira e escolha quando pagar
               </h3>
-              <p className="mt-1 text-xs leading-relaxed text-zinc-500">
-                Os dados foram consultados diretamente na Asaas e ficarão congelados após o PIN.
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Confira os dados abaixo. Depois do PIN, recebedor, valor e data não poderão ser alterados.
               </p>
             </div>
           </div>
-          <ReceiptText className="hidden h-6 w-6 text-zinc-300 md:block" />
+          <ReceiptText className="hidden h-6 w-6 text-muted-foreground/45 md:block" />
         </div>
       </div>
 
       <div className="p-6 md:p-8">
-        <div className="rounded-[26px] bg-white p-6 text-zinc-950 shadow-2xl">
-          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-zinc-500">Valor total:</p>
+        <div className="rounded-[26px] bg-foreground p-6 text-background shadow-[0_28px_70px_-44px_hsl(var(--foreground)/0.72)]">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-background/55">Valor total</p>
           <p className="mt-3 text-5xl font-black tracking-[-0.05em]">{formatCurrency(consultation.value)}</p>
         </div>
 
@@ -159,15 +159,15 @@ export function BillPaymentReviewCard({
           {rows.map((row) => (
             <div
               key={row.label}
-              className="flex items-center gap-4 rounded-[22px] border border-zinc-200/70 bg-zinc-50/70 p-4 dark:border-white/[0.07] dark:bg-white/[0.025]"
+              className="flex items-center gap-4 rounded-[22px] border border-border/60 bg-background/50 p-4"
             >
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-white text-zinc-600 shadow-sm dark:bg-white/[0.06] dark:text-zinc-300">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[15px] bg-foreground/[0.06] text-foreground">
                 <row.icon className="h-4 w-4" />
               </div>
               <div className="min-w-0">
-                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400">{row.label}</p>
-                <p className="mt-1 truncate text-sm font-black text-zinc-950 dark:text-white">{row.value}</p>
-                <p className="mt-0.5 text-[10px] font-semibold text-zinc-500">{row.detail}</p>
+                <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{row.label}</p>
+                <p className="mt-1 truncate text-sm font-black text-foreground">{row.value}</p>
+                <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{row.detail}</p>
               </div>
             </div>
           ))}
@@ -182,11 +182,12 @@ export function BillPaymentReviewCard({
               type="button"
               disabled={!canPayNow}
               onClick={() => setPaymentMode("now")}
+              aria-pressed={paymentMode === "now"}
               className={cn(
-                "rounded-[22px] border p-5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-45",
+                "rounded-[22px] border p-5 text-left transition-[background-color,border-color,color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none motion-reduce:active:scale-100",
                 paymentMode === "now"
-                  ? "border-zinc-950 bg-zinc-950 text-white shadow-xl dark:border-white dark:bg-white dark:text-zinc-950"
-                  : "border-zinc-200 bg-white/70 text-zinc-950 dark:border-white/10 dark:bg-white/[0.025] dark:text-white",
+                  ? "border-foreground bg-foreground text-background shadow-lg"
+                  : "border-border/65 bg-background/50 text-foreground hover:bg-muted/65",
               )}
             >
               <Clock3 className="h-5 w-5" />
@@ -205,11 +206,12 @@ export function BillPaymentReviewCard({
               type="button"
               disabled={!canSchedule}
               onClick={() => setPaymentMode("scheduled")}
+              aria-pressed={paymentMode === "scheduled"}
               className={cn(
-                "rounded-[22px] border p-5 text-left transition-all disabled:cursor-not-allowed disabled:opacity-45",
+                "rounded-[22px] border p-5 text-left transition-[background-color,border-color,color,box-shadow,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-45 motion-reduce:transition-none motion-reduce:active:scale-100",
                 paymentMode === "scheduled"
-                  ? "border-zinc-950 bg-zinc-950 text-white shadow-xl dark:border-white dark:bg-white dark:text-zinc-950"
-                  : "border-zinc-200 bg-white/70 text-zinc-950 dark:border-white/10 dark:bg-white/[0.025] dark:text-white",
+                  ? "border-foreground bg-foreground text-background shadow-lg"
+                  : "border-border/65 bg-background/50 text-foreground hover:bg-muted/65",
               )}
             >
               <CalendarClock className="h-5 w-5" />
@@ -224,7 +226,7 @@ export function BillPaymentReviewCard({
           </div>
 
           {paymentMode === "scheduled" && canSchedule && (
-            <div className="mt-3 rounded-[20px] border border-zinc-200/70 bg-zinc-50/70 p-4 dark:border-white/[0.07] dark:bg-white/[0.025]">
+            <div className="mt-3 rounded-[20px] border border-border/60 bg-background/50 p-4">
               <label className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400" htmlFor="bill-schedule-date">
                 Data do pagamento
               </label>
@@ -235,20 +237,20 @@ export function BillPaymentReviewCard({
                 max={consultation.dueDate || undefined}
                 value={scheduleDate}
                 onChange={(event) => setScheduleDate(event.target.value)}
-                className="mt-2 h-12 rounded-[16px] border-zinc-200 bg-white dark:border-white/10 dark:bg-white/[0.04]"
+                className="mt-2 h-12 rounded-[16px] border-border/70 bg-background"
               />
             </div>
           )}
         </div>
 
-        <p className="mt-6 text-[11px] font-light leading-relaxed text-zinc-600 dark:text-white">
+        <p className="mt-6 text-[11px] font-medium leading-relaxed text-muted-foreground">
           {consultation.fee > 0
             ? `Taxa desta operação: ${formatCurrency(consultation.fee)}.`
             : `${tariff?.price_label || "Pagamento sem tarifa"}.`} Após a aprovação, o boleto é processado na data escolhida. Solicitações para hoje após 14h seguem no próximo dia útil, e a confirmação bancária pode ocorrer no mesmo dia ou no próximo dia útil.
         </p>
 
-        <div className="mt-3 flex items-center gap-2 rounded-[18px] border border-amber-500/15 bg-amber-500/[0.07] px-4 py-3 text-[10px] font-bold text-amber-800 dark:text-amber-200">
-          <LockKeyhole className="h-4 w-4 shrink-0" />
+        <div className="finance-inset mt-3 flex items-center gap-2 rounded-[18px] border border-border/55 bg-muted/30 px-4 py-3 text-[10px] font-semibold text-muted-foreground dark:border-black/75 dark:bg-black/25">
+          <LockKeyhole className="h-4 w-4 shrink-0 text-foreground" />
           O pagamento ou agendamento só será enviado após a confirmação com seu PIN financeiro.
         </div>
 
@@ -268,7 +270,7 @@ export function BillPaymentReviewCard({
               paymentMode,
               scheduleDate: paymentMode === "scheduled" ? scheduleDate : null,
             })}
-            className="h-13 rounded-[18px] bg-zinc-950 text-[10px] font-black uppercase tracking-[0.16em] text-white shadow-xl hover:bg-zinc-800 dark:bg-white dark:text-zinc-950"
+            className="h-13 rounded-[18px] bg-foreground text-[10px] font-black uppercase tracking-[0.16em] text-background shadow-lg hover:bg-foreground/90"
           >
             {paymentMode === "scheduled" ? "Confirmar agendamento" : "Confirmar pagamento"}
           </Button>

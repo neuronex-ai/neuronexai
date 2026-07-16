@@ -28,6 +28,7 @@ import {
   useNeurofinanceBillPayments,
 } from "@/hooks/use-neurofinance-bill-payments";
 import { formatBoletoValue } from "@/lib/boleto";
+import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 import { cn, formatCurrency } from "@/lib/utils";
 
 const STATUS_COPY: Record<string, {
@@ -114,10 +115,7 @@ function formatBankStatus(record: BillPaymentRecord) {
   if (!raw) return "Não informado";
   const direct = BANK_STATUS_COPY[raw] || BANK_STATUS_COPY[raw.toUpperCase()] || STATUS_COPY[raw.toLowerCase()]?.label;
   if (direct) return direct;
-  return raw
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/(^|\s)\S/g, (letter) => letter.toUpperCase());
+  return "Em acompanhamento";
 }
 
 function providerDetails(record: BillPaymentRecord) {
@@ -312,7 +310,7 @@ export function BillPaymentDetailsDialog({
             </div>
           </div>
 
-          {record.error_message && <div className="rounded-[18px] border border-red-500/20 bg-red-500/[0.07] p-4 text-xs font-semibold text-red-700 dark:text-red-300">{record.error_message}</div>}
+          {record.error_message && <div className="rounded-[18px] border border-red-500/20 bg-red-500/[0.07] p-4 text-xs font-semibold text-red-700 dark:text-red-300">{getUserFacingErrorMessage(record.error_message, "payment")}</div>}
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Button type="button" variant="outline" disabled={!record.receipt_url} onClick={() => record.receipt_url && window.open(record.receipt_url, "_blank", "noopener,noreferrer")} className="h-12 rounded-[17px] text-[9px] font-black uppercase tracking-widest">
@@ -327,7 +325,7 @@ export function BillPaymentDetailsDialog({
 
           <div className="flex items-start gap-2 rounded-[18px] border border-zinc-200/70 bg-zinc-50/70 p-4 text-[10px] leading-relaxed text-zinc-500 dark:border-white/[0.07] dark:bg-white/[0.025]">
             <Landmark className="mt-0.5 h-4 w-4 shrink-0" />
-            O status é atualizado pelos eventos bancários da Asaas. Em pagamentos agendados, mantenha saldo suficiente até a data programada.
+            O status é atualizado pelo NeuroFinance conforme a confirmação bancária. Em pagamentos agendados, mantenha saldo suficiente até a data programada.
           </div>
         </div>
       </DialogContent>

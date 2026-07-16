@@ -45,7 +45,7 @@ describe("NeuroFinance support messages", () => {
       getNeuroFinanceSyncErrorMessage(
         "N?o foi poss?vel acessar a conta Asaas. Contate o suporte."
       )
-    ).toBe("Não foi possível validar a conexão com a conta Asaas.");
+    ).toBe("Não foi possível validar a conexão com o NeuroFinance.");
   });
 
   it("builds a contextual WhatsApp support link without credentials", () => {
@@ -63,5 +63,7 @@ describe("NeuroFinance support messages", () => {
     expect(message).toContain("Maria Silva");
     expect(message).toContain("Conta removida");
     expect(message).not.toContain("apiKey");
+    expect(message).not.toContain("user-1");
+    expect(message).not.toContain("acc-1");
   });
 });

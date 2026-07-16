@@ -51,12 +51,12 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_DESCRIPTIONS: Record<AsaasApprovalTone, string> = {
-  approved: "Etapa validada pela Asaas.",
+  approved: "Etapa validada.",
   pending: "A etapa ainda precisa ser concluída ou processada.",
-  review: "Aguardando análise cadastral da Asaas.",
+  review: "Aguardando análise cadastral.",
   rejected: "A etapa precisa de correção ou reenvio.",
   missing: "Informação ainda não enviada para análise.",
-  neutral: "Status aguardando retorno da Asaas.",
+  neutral: "Status aguardando atualização.",
 };
 
 const STAGE_DEFINITIONS: Array<{
@@ -214,7 +214,7 @@ const readStatus = (source: any, keys: string[]) => {
 
 export const getAsaasStatusLabel = (value: unknown) => {
   const normalized = normalizeRawStatus(value);
-  return STATUS_LABELS[normalized] || normalized.replace(/_/g, " ").toLowerCase();
+  return STATUS_LABELS[normalized] || "Em atualização";
 };
 
 export const getAsaasStatusTone = (value: unknown): AsaasApprovalTone => {

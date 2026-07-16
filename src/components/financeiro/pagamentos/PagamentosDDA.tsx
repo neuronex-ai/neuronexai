@@ -57,7 +57,7 @@ export function PagamentosDDA() {
                             Consulta DDA
                         </h3>
                         <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mt-0.5">
-                            Boletos pendentes cadastrados no DDA • NeuroFinance API
+                            Boletos pendentes disponíveis no NeuroFinance
                         </p>
                     </div>
                     <button

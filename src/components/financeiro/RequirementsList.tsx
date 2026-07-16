@@ -56,7 +56,7 @@ export const RequirementsList = ({ onSelectRequirement, activeRequirement }: Req
         </h4>
         <p className="mt-2 text-[9px] uppercase leading-relaxed tracking-tight text-zinc-500">
           {hasOpenNonActionable
-            ? "A conta está aguardando análise da Asaas. Não há nada para reenviar agora."
+            ? "A conta está aguardando análise. Não há nada para reenviar agora."
             : "Não há pendências acionáveis para corrigir neste momento."}
         </p>
       </div>

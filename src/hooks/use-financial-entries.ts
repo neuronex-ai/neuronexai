@@ -125,11 +125,45 @@ export interface NewRecurringFinancialEntryInput {
   title: string;
   amount: number;
   categoryId?: string | null;
-  frequency: 'weekly' | 'monthly' | 'yearly';
+  frequency: RecurringFinancialEntryFrequency;
   startDate: Date;
   endDate?: Date | null;
+  scope: RecurringFinancialEntryScope;
   idempotencyKey?: string | null;
   metadata?: Record<string, unknown>;
+}
+
+export type RecurringFinancialEntryFrequency = 'weekly' | 'monthly' | 'yearly';
+export type RecurringFinancialEntryScope = 'clinic' | 'personal';
+export type RecurringFinancialEntryStatus = 'active' | 'paused' | 'finished' | 'cancelled';
+export type RecurringFinancialEntryAction = 'pause' | 'resume' | 'finish';
+
+export interface RecurringFinancialEntry {
+  id: string;
+  clinic_id: string | null;
+  professional_id: string;
+  type: FinancialEntryType;
+  title: string;
+  amount: number;
+  category_id: string | null;
+  frequency: RecurringFinancialEntryFrequency;
+  start_date: string;
+  end_date: string | null;
+  next_generation_date: string | null;
+  status: RecurringFinancialEntryStatus;
+  idempotency_key: string | null;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface RecurringFinancialEntryFilters {
+  status?: RecurringFinancialEntryStatus | RecurringFinancialEntryStatus[];
+}
+
+export interface UpdateRecurringFinancialEntryStatusInput {
+  id: string;
+  action: RecurringFinancialEntryAction;
 }
 
 export interface UpdateFinancialAutomationSettingsInput {
@@ -258,6 +292,41 @@ export function buildFinancialEntryIdempotencyKey(parts: Array<string | number |
     .filter((part) => part !== null && part !== undefined && String(part).trim() !== '')
     .map((part) => String(part).trim().toLowerCase().replace(/\s+/g, '-'))
     .join(':');
+}
+
+const RECURRING_ACTION_STATUSES: Record<
+  RecurringFinancialEntryAction,
+  { next: RecurringFinancialEntryStatus; allowed: RecurringFinancialEntryStatus[] }
+> = {
+  pause: { next: 'paused', allowed: ['active', 'paused'] },
+  resume: { next: 'active', allowed: ['paused', 'active'] },
+  finish: { next: 'finished', allowed: ['active', 'paused', 'finished'] },
+};
+
+export function recurringFinancialEntryStatusForAction(action: RecurringFinancialEntryAction) {
+  return RECURRING_ACTION_STATUSES[action].next;
+}
+
+export function recurringFinancialEntryAllowedStatusesForAction(action: RecurringFinancialEntryAction) {
+  return [...RECURRING_ACTION_STATUSES[action].allowed];
+}
+
+export function recurringFinancialEntryScopeOf(
+  entry: Pick<RecurringFinancialEntry, 'metadata'>,
+): RecurringFinancialEntryScope {
+  return entry.metadata?.scope === 'personal' ? 'personal' : 'clinic';
+}
+
+export function validateRecurringFinancialEntryInput(input: NewRecurringFinancialEntryInput) {
+  if (!input.title.trim()) return 'Informe um título para a recorrência.';
+  if (input.title.trim().length > 160) return 'Use um título com até 160 caracteres.';
+  if (!Number.isFinite(input.amount) || input.amount <= 0) return 'Informe um valor maior que zero.';
+  if (Number.isNaN(input.startDate.getTime())) return 'Informe uma data inicial válida.';
+  if (input.endDate && Number.isNaN(input.endDate.getTime())) return 'Informe uma data final válida.';
+  if (input.endDate && format(input.endDate, 'yyyy-MM-dd') < format(input.startDate, 'yyyy-MM-dd')) {
+    return 'A data final não pode ser anterior à data inicial.';
+  }
+  return null;
 }
 
 export function computeFinancialSummary(entries: FinancialEntry[], year: number, month: number): FinancialSummary {
@@ -657,6 +726,48 @@ export function useFinancialEntries(filters: FinancialEntryFilters = {}) {
   });
 }
 
+export async function fetchRecurringFinancialEntries(
+  professionalId: string,
+  filters: RecurringFinancialEntryFilters = {},
+) {
+  let query = supabase
+    .from('recurring_financial_entries')
+    .select('*')
+    .eq('professional_id', professionalId);
+
+  if (Array.isArray(filters.status) && filters.status.length > 0) {
+    query = query.in('status', filters.status);
+  } else if (filters.status) {
+    query = query.eq('status', filters.status);
+  }
+
+  const { data, error } = await query
+    .order('next_generation_date', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as RecurringFinancialEntry[];
+}
+
+export function useRecurringFinancialEntries(filters: RecurringFinancialEntryFilters = {}) {
+  const { user } = useAuth();
+  const userId = user?.id;
+  const statusKey = Array.isArray(filters.status)
+    ? filters.status.join(',')
+    : filters.status || 'all';
+
+  return useQuery<RecurringFinancialEntry[], Error>({
+    queryKey: ['recurringFinancialEntries', userId, statusKey],
+    queryFn: () => {
+      if (!userId) throw new Error('Usuário não autenticado');
+      return fetchRecurringFinancialEntries(userId, filters);
+    },
+    enabled: Boolean(userId),
+    staleTime: 1000 * 60,
+    retry: false,
+  });
+}
+
 export function useCreateFinancialEntry() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -712,12 +823,15 @@ export function useCreateRecurringFinancialEntry() {
     mutationFn: async (input: NewRecurringFinancialEntryInput) => {
       if (!user?.id) throw new Error('Usuário não autenticado');
 
+      const validationMessage = validateRecurringFinancialEntryInput(input);
+      if (validationMessage) throw new Error(validationMessage);
+
       const { data, error } = await supabase
         .from('recurring_financial_entries')
         .insert({
           professional_id: user.id,
           type: input.type,
-          title: input.title,
+          title: input.title.trim(),
           amount: Math.abs(Number(input.amount || 0)),
           category_id: input.categoryId || null,
           frequency: input.frequency,
@@ -733,17 +847,70 @@ export function useCreateRecurringFinancialEntry() {
             input.title,
             format(input.startDate, 'yyyy-MM-dd'),
           ]),
-          metadata: input.metadata || {},
+          metadata: {
+            ...(input.metadata || {}),
+            scope: input.scope,
+          },
         })
         .select()
         .single();
 
       if (error) throw error;
-      return data;
+      return data as RecurringFinancialEntry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['recurringFinancialEntries'] });
       queryClient.invalidateQueries({ queryKey: ['financialEntries'] });
+    },
+  });
+}
+
+export async function updateRecurringFinancialEntryStatus(
+  professionalId: string,
+  input: UpdateRecurringFinancialEntryStatusInput,
+) {
+  const status = recurringFinancialEntryStatusForAction(input.action);
+  const allowedStatuses = recurringFinancialEntryAllowedStatusesForAction(input.action);
+  const patch: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.action === 'finish') patch.next_generation_date = null;
+
+  const { data, error } = await supabase
+    .from('recurring_financial_entries')
+    .update(patch)
+    .eq('id', input.id)
+    .eq('professional_id', professionalId)
+    .in('status', allowedStatuses)
+    .select()
+    .single();
+
+  if (error) {
+    throw new Error('Não foi possível atualizar esta recorrência. Recarregue a lista e tente novamente.');
+  }
+
+  return data as RecurringFinancialEntry;
+}
+
+export function useUpdateRecurringFinancialEntryStatus() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    RecurringFinancialEntry,
+    Error,
+    UpdateRecurringFinancialEntryStatusInput
+  >({
+    mutationFn: async (input) => {
+      if (!user?.id) throw new Error('Usuário não autenticado');
+      return updateRecurringFinancialEntryStatus(user.id, input);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recurringFinancialEntries'] });
+      queryClient.invalidateQueries({ queryKey: ['financialEntries'] });
+      queryClient.invalidateQueries({ queryKey: ['projected-cash-flow-v5'] });
     },
   });
 }

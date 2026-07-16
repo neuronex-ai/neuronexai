@@ -5,6 +5,8 @@ import { toast } from "sonner";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeBoletoInput } from "@/lib/boleto";
+import { EdgeFunctionInvocationError, invokeEdgeFunction } from "@/lib/invoke-edge-function";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 export interface BillConsultation {
   id: string;
@@ -64,12 +66,10 @@ export interface BillPaymentRecord {
 
 export interface BillExecutionResponse {
   success: boolean;
-  bill: Record<string, unknown>;
-  record: BillPaymentRecord;
+  record: Pick<BillPaymentRecord, "id" | "status" | "amount" | "payment_mode" | "scheduled_date" | "receipt_url">;
   status: string;
   receiptUrl?: string | null;
   idempotent?: boolean;
-  autoScheduled?: boolean;
 }
 
 function boletoPayload(input: string) {
@@ -82,43 +82,8 @@ function boletoPayload(input: string) {
     : { identificationField: normalized.digits };
 }
 
-async function extractEdgeMessage(error: unknown) {
-  const fallback = error instanceof Error ? error.message : undefined;
-  const context = typeof error === "object" && error !== null && "context" in error
-    ? (error as { context?: unknown }).context
-    : undefined;
-  if (
-    typeof context !== "object" ||
-    context === null ||
-    !("json" in context) ||
-    typeof (context as { json?: unknown }).json !== "function"
-  ) {
-    return fallback;
-  }
-
-  try {
-    const body = await (context as { json: () => Promise<unknown> }).json();
-    if (typeof body === "object" && body !== null) {
-      const payload = body as Record<string, unknown>;
-      if (typeof payload.error === "string") return payload.error;
-      if (typeof payload.message === "string") return payload.message;
-    }
-    return fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 async function invokeBillPaymentAction<T>(body: Record<string, unknown>): Promise<T> {
-  const { data, error } = await supabase.functions.invoke("asaas-bill-payment", { body });
-
-  if (error) {
-    throw new Error((await extractEdgeMessage(error)) || "Não foi possível processar este boleto.");
-  }
-  if (data?.error) {
-    throw new Error(data.error);
-  }
-  return data as T;
+  return invokeEdgeFunction<T>("asaas-bill-payment", body);
 }
 
 export async function fetchBillConsultation(params: { input: string }) {
@@ -187,7 +152,14 @@ export function useNeurofinanceBillPayments() {
 
   const consult = useMutation({
     mutationFn: fetchBillConsultation,
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      if (error instanceof EdgeFunctionInvocationError && error.code === "BILL_REVIEW_REQUIRED") {
+        toast.info("O saldo mudou. Revise novamente a forma de pagamento antes de confirmar.");
+        return;
+      }
+      const friendlyError = toUserFacingError(error, "payment");
+      toast.error(friendlyError.title, { description: friendlyError.message });
+    },
   });
 
   const authorize = useMutation({
@@ -202,7 +174,10 @@ export function useNeurofinanceBillPayments() {
       queryClient.invalidateQueries({ queryKey: ["neurofinance-overview-items"] });
       queryClient.invalidateQueries({ queryKey: ["neurofinance-statement"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      const friendlyError = toUserFacingError(error, "payment");
+      toast.error(friendlyError.title, { description: friendlyError.message });
+    },
   });
 
   useEffect(() => {

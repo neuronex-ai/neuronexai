@@ -26,7 +26,10 @@ import {
   SYNAPSE_PAGE_ACTION_EVENT,
   type SynapseInterfaceAction,
 } from "@/lib/synapse-interface-actions";
-import { RecurringManager } from "@/components/financeiro/RecurringManager";
+import {
+  ConventionAndTransfersView,
+  ManagementRecurrenceView,
+} from "@/components/financeiro/management/ManagementSpecializedViews";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import {
@@ -58,7 +61,17 @@ import type { Transaction } from "@/types";
 import type { FinanceView } from "../FinancialDashboard";
 
 const FINANCE_PANEL_SURFACE =
-  "finance-panel border-border/55 bg-background/[0.76] shadow-[0_24px_74px_-58px_rgba(0,0,0,0.34)] dark:border-black/75 dark:bg-zinc-900/[0.58] dark:shadow-[0_26px_74px_-52px_rgba(0,0,0,0.96)] dark:ring-black/50";
+  "finance-panel border-border/55 bg-background/[0.76] dark:border-black/75 dark:bg-zinc-900/[0.58] dark:ring-black/50";
+
+const MANAGEMENT_VIEW_CONTEXT: Partial<Record<FinanceView, { title: string; description: string }>> = {
+  "gestao-visao-geral": { title: "Visão geral", description: "Resultado, previsões e pendências do consultório." },
+  "gestao-cobrancas": { title: "Cobranças manuais", description: "Crie e acompanhe cobranças gerenciais sem misturá-las ao extrato bancário." },
+  "gestao-lancamentos": { title: "Lançamentos", description: "Consulte entradas e saídas registradas na gestão." },
+  "gestao-recebimentos": { title: "Recebimentos", description: "Acompanhe baixas e valores ainda em aberto." },
+  "gestao-repasses-convenio": { title: "Repasses e convênio", description: "Somente cobranças vinculadas a uma configuração estruturada de convênio." },
+  "gestao-recorrencia": { title: "Recorrência", description: "Controle entradas e saídas periódicas da clínica e pessoais." },
+  "gestao-planejamento": { title: "Planejamento", description: "Defina metas e limites para o período selecionado." },
+};
 
 export interface NeuroFinanceManagementContext {
   enabled: boolean;
@@ -181,7 +194,7 @@ function Rows({
                       "rounded-full px-2 py-1 text-xs",
                       managementStatusOf(t) === "paid"
                         ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
-                        : "bg-amber-500/10 text-amber-700 dark:text-amber-400",
+                        : "bg-muted/70 text-muted-foreground",
                     )}
                   >
                     {managementStatusOf(t) === "paid" ? "Pago" : "Em aberto"}
@@ -301,14 +314,6 @@ function Planning({
           </Button>
         </Panel>
       </div>
-      <details className="rounded-[28px] border border-border/55 bg-background/60 p-5 shadow-sm dark:border-black/75 dark:bg-zinc-900/[0.52] dark:shadow-[0_18px_48px_-38px_rgba(0,0,0,0.95)]">
-        <summary className="cursor-pointer text-sm font-semibold">
-          Gerenciar recorrências
-        </summary>
-        <div className="mt-6">
-          <RecurringManager />
-        </div>
-      </details>
     </div>
   );
 }
@@ -339,6 +344,16 @@ export const FinancialManagementDashboard = (props: Props) => {
     "gestao-relatorios": "gestao-lancamentos",
   };
   const view = aliases[props.activeView] || props.activeView;
+  const viewContext = MANAGEMENT_VIEW_CONTEXT[view] || MANAGEMENT_VIEW_CONTEXT["gestao-visao-geral"]!;
+  const showPeriodControls = [
+    "gestao-visao-geral",
+    "gestao-lancamentos",
+    "gestao-recebimentos",
+    "gestao-repasses-convenio",
+    "gestao-planejamento",
+  ].includes(view);
+  const showEntryActions = ["gestao-visao-geral", "gestao-lancamentos"].includes(view);
+  const showChargeAction = view === "gestao-visao-geral";
   const filtered = useMemo(() => {
     const query = search.trim().toLocaleLowerCase("pt-BR");
     if (!query) return rows;
@@ -425,16 +440,14 @@ export const FinancialManagementDashboard = (props: Props) => {
           if (!v) setSettlement(null);
         }}
       />
-      <DesktopWorkspaceShell className="finance-frame border-border/45 bg-background/70 shadow-[0_26px_90px_-68px_rgba(0,0,0,0.46)] dark:border-black/80 dark:bg-black/[0.32] dark:shadow-[0_28px_90px_-58px_rgba(0,0,0,0.98)] dark:ring-black/60">
-        <div className="finance-panel mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border border-border/55 bg-background/[0.76] p-4 shadow-[0_18px_54px_-44px_rgba(0,0,0,0.38)] dark:border-black/75 dark:bg-zinc-900/[0.58] dark:shadow-[0_22px_58px_-40px_rgba(0,0,0,0.96)]">
+      <DesktopWorkspaceShell className="finance-frame border-border/45 bg-background/70 dark:border-black/80 dark:bg-black/[0.32] dark:ring-black/60">
+        <div className="finance-panel mb-4 flex flex-wrap items-center gap-3 rounded-[28px] border border-border/55 bg-background/[0.76] p-4 dark:border-black/75 dark:bg-zinc-900/[0.58]">
           <DesktopWorkspaceIcon icon={CircleDollarSign} className="finance-inset dark:border-black/75 dark:bg-black/35" />
           <div className="min-w-48 flex-1">
-            <h1 className="text-xl font-bold">Gestão financeira</h1>
-            <p className="text-sm text-muted-foreground">
-              Consultório, cobranças e planejamento
-            </p>
+            <h1 className="text-xl font-bold">{viewContext.title}</h1>
+            <p className="text-sm text-muted-foreground">{viewContext.description}</p>
           </div>
-          <div className="finance-inset flex items-center rounded-xl border border-border/60 bg-background/[0.45] dark:border-black/75 dark:bg-black/25">
+          {showPeriodControls ? <div className="finance-inset flex items-center rounded-xl border border-border/60 bg-background/[0.45] dark:border-black/75 dark:bg-black/25">
             <Button
               variant="ghost"
               size="icon"
@@ -452,8 +465,8 @@ export const FinancialManagementDashboard = (props: Props) => {
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-          </div>
-          <MagneticSegmentedControl
+          </div> : null}
+          {showPeriodControls ? <MagneticSegmentedControl
             id="financial-management-basis"
             indicatorId="financial-management-basis-indicator"
             value={basis}
@@ -466,20 +479,21 @@ export const FinancialManagementDashboard = (props: Props) => {
             ]}
             className="finance-inset h-12 min-h-12 shrink-0 rounded-xl border-border/60 bg-background/[0.45] dark:border-black/75 dark:bg-black/25"
             triggerClassName="h-11 min-h-11 rounded-lg px-3 py-0 text-xs"
-          />
-          <Button variant="outline" onClick={() => openEntry("expense")}>
+          /> : null}
+          {showEntryActions ? <Button variant="outline" className="min-h-11" onClick={() => openEntry("expense")}>
             <ArrowDownRight className="mr-2 h-4 w-4" />
             Despesa
-          </Button>
-          <Button variant="outline" onClick={() => openEntry("income")}>
+          </Button> : null}
+          {showEntryActions ? <Button variant="outline" className="min-h-11" onClick={() => openEntry("income")}>
             <ArrowUpRight className="mr-2 h-4 w-4" />
             Receita
-          </Button>
-          <Button onClick={() => setChargeOpen(true)}>
+          </Button> : null}
+          {showChargeAction ? <Button className="min-h-11" onClick={() => setChargeOpen(true)}>
             <Plus className="mr-2 h-4 w-4" />
             Cobrança
-          </Button>
+          </Button> : null}
         </div>
+        <div key={view} className="animate-fade-in motion-reduce:animate-none">
         {view === "gestao-visao-geral" ? (
           <div data-synapse-target="finance-overview" className="space-y-4">
             <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-4">
@@ -547,7 +561,7 @@ export const FinancialManagementDashboard = (props: Props) => {
                         }
                         className="finance-inset flex w-full items-center gap-3 rounded-xl border border-border/55 p-3 text-left transition-[background-color,transform] duration-150 hover:bg-muted/35 active:scale-[0.99] dark:border-black/70 dark:hover:bg-white/[0.025] motion-reduce:transition-none motion-reduce:active:scale-100"
                       >
-                        <AlertTriangle className="h-4 w-4 text-amber-600" />
+                        <AlertTriangle className="h-4 w-4 text-muted-foreground" />
                         <span className="min-w-0 flex-1">
                           <b className="block truncate text-sm">{x.title}</b>
                           <span className="text-xs text-muted-foreground">
@@ -633,7 +647,11 @@ export const FinancialManagementDashboard = (props: Props) => {
         ) : null}
         {view === "gestao-cobrancas" ? (
           <div data-synapse-target="finance-charges">
-            <ChargesWorkspace scope="management" title="Cobranças" />
+            <ChargesWorkspace
+              scope="management"
+              title="Cobranças manuais"
+              initialTypeFilters={["manual"]}
+            />
           </div>
         ) : null}
         {view === "gestao-recebimentos" ? (
@@ -671,9 +689,23 @@ export const FinancialManagementDashboard = (props: Props) => {
             </Panel>
           </div>
         ) : null}
+        {view === "gestao-repasses-convenio" ? (
+          <ConventionAndTransfersView
+            transactions={rows}
+            onOpen={props.setSelectedTransaction}
+            onSettle={setSettlement}
+          />
+        ) : null}
+        {view === "gestao-recorrencia" ? (
+          <ManagementRecurrenceView
+            transactions={rows}
+            onOpen={props.setSelectedTransaction}
+          />
+        ) : null}
         {view === "gestao-planejamento" ? (
           <Planning month={month} metrics={metrics} />
         ) : null}
+        </div>
       </DesktopWorkspaceShell>
     </div>
   );

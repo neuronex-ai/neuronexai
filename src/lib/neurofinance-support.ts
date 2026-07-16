@@ -11,20 +11,20 @@ export const getNeuroFinanceSyncErrorMessage = (message?: string | null) => {
     lower.includes("não foi possível acessar") ||
     lower.includes("n?o foi poss?vel acessar")
   ) {
-    return "Não foi possível validar a conexão com a conta Asaas.";
+    return "Não foi possível validar a conexão com o NeuroFinance.";
   }
 
   return value
     .replace(/N\?o/gi, "Não")
     .replace(/poss\?vel/gi, "possível")
-    .replace(/situa\?\?o/gi, "situação");
+    .replace(/situa\?\?o/gi, "situação")
+    .replace(/asaas/gi, "NeuroFinance")
+    .replace(/subconta/gi, "conta");
 };
 
 export const buildNeuroFinanceSupportUrl = ({
   professionalName,
   professionalEmail,
-  userId,
-  accountId,
   error,
   occurredAt,
 }: {
@@ -45,12 +45,10 @@ export const buildNeuroFinanceSupportUrl = ({
     "",
     `Profissional: ${professionalName || "Não informado"}`,
     `E-mail: ${professionalEmail || "Não informado"}`,
-    `Usuário: ${userId || "Não informado"}`,
-    `Conta financeira: ${accountId || "Não informada"}`,
     `Problema: ${getNeuroFinanceSyncErrorMessage(error)}`,
     `Identificado em: ${formattedAt}`,
     "",
-    "Podem verificar a subconta Asaas e orientar a recuperação da conexão?",
+    "Podem verificar minha conta NeuroFinance e orientar a recuperação da conexão?",
   ].join("\n");
 
   return `https://wa.me/${SUPPORT_PHONE}?text=${encodeURIComponent(message)}`;

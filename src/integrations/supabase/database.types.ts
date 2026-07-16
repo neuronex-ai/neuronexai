@@ -3134,11 +3134,13 @@ export type Database = {
           description: string | null
           financial_account_id: string | null
           id: string
+          idempotency_key: string | null
           operation_type: string
           payload: Json
           provider: string
           provider_operation_id: string | null
           provider_response: Json
+          request_fingerprint: string | null
           status: string
           updated_at: string
           user_id: string
@@ -3149,11 +3151,13 @@ export type Database = {
           description?: string | null
           financial_account_id?: string | null
           id?: string
+          idempotency_key?: string | null
           operation_type: string
           payload?: Json
           provider?: string
           provider_operation_id?: string | null
           provider_response?: Json
+          request_fingerprint?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -3164,11 +3168,13 @@ export type Database = {
           description?: string | null
           financial_account_id?: string | null
           id?: string
+          idempotency_key?: string | null
           operation_type?: string
           payload?: Json
           provider?: string
           provider_operation_id?: string | null
           provider_response?: Json
+          request_fingerprint?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -9053,6 +9059,29 @@ export type Database = {
       get_monthly_report_data: {
         Args: { end_date: string; start_date: string }
         Returns: Json
+      }
+      get_neurofinance_overview_items: {
+        Args: {
+          p_end_at?: string | null
+          p_limit?: number
+          p_offset?: number
+          p_start_at?: string | null
+        }
+        Returns: {
+          amount: number
+          bank_slip_url: string | null
+          currency: string
+          description: string
+          id: string
+          invoice_url: string | null
+          item_type: string
+          occurred_at: string
+          overview_group: string
+          patient_name: string | null
+          payment_method: string | null
+          receipt_url: string | null
+          status: string
+        }[]
       }
       get_patient_complete_appointment_history: {
         Args: { p_limit?: number; p_offset?: number; p_patient_id: string }

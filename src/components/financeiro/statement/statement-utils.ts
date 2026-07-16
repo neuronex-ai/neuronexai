@@ -47,6 +47,28 @@ export const emptyDetailedStatementFilters = (): DetailedStatementFilters => ({
     transferMethods: [],
 });
 
+export function isPixReceivedStatementPreset(filters: DetailedStatementFilters) {
+    return filters.type === "income" &&
+        filters.paymentMethods.length === 1 &&
+        filters.paymentMethods[0] === "pix";
+}
+
+export function togglePixReceivedStatementPreset(filters: DetailedStatementFilters) {
+    if (isPixReceivedStatementPreset(filters)) {
+        return {
+            ...filters,
+            type: "all" as const,
+            paymentMethods: [],
+        };
+    }
+
+    return {
+        ...filters,
+        type: "income" as const,
+        paymentMethods: ["pix" as const],
+    };
+}
+
 export const normalizeStatementText = (value: unknown) =>
     String(value || "")
         .normalize("NFD")
@@ -154,12 +176,17 @@ export function getStatementPatientName(transaction: Transaction) {
 
 export function getStatementPaymentMethod(transaction: Transaction): StatementPaymentMethodFilter {
     const raw = normalizeStatementText(
-        metadataString(transaction, ["financial_entry_payment_method", "payment_method", "billing_type", "asaas_billing_type"]) ||
-        transaction.payment_method ||
+        metadataString(transaction, [
+            "financial_entry_payment_method",
+            "payment_method",
+            "billing_type",
+            "asaas_billing_type",
+        ]) || transaction.payment_method ||
+        metadataString(transaction, ["provider_type"]) ||
         "other",
     );
 
-    if (raw === "pix") return "pix";
+    if (raw === "pix" || raw.includes("pix")) return "pix";
     if (raw === "boleto" || raw === "bank_slip") return "boleto";
     if (["card", "credit_card", "debit_card", "debit"].includes(raw)) return "card";
     if (["cash", "money"].includes(raw)) return "cash";
@@ -167,6 +194,51 @@ export function getStatementPaymentMethod(transaction: Transaction): StatementPa
     if (raw === "external_transfer") return "external_transfer";
     if (raw === "manual") return "manual";
     return "other";
+}
+
+export function getStatementPaymentMethodLabel(transaction: Transaction) {
+    const labels: Record<StatementPaymentMethodFilter, string> = {
+        pix: "Pix",
+        boleto: "Boleto",
+        card: "Cartão",
+        cash: "Dinheiro",
+        convenio: "Convênio",
+        external_transfer: "Transferência externa",
+        manual: "Lançamento gerencial",
+        other: "Não informado",
+    };
+
+    return labels[getStatementPaymentMethod(transaction)];
+}
+
+export type StatementStatusKind = "completed" | "pending" | "processing" | "cancelled" | "failed" | "overdue";
+
+export function getStatementStatusPresentation(transaction: Transaction): {
+    kind: StatementStatusKind;
+    label: string;
+} {
+    const raw = normalizeStatementText(
+        metadataString(transaction, ["financial_entry_status", "provider_status", "normalized_status"]) ||
+        transaction.status ||
+        "pending",
+    );
+
+    if (["paid", "completed", "settled", "posted", "received"].includes(raw)) {
+        return { kind: "completed", label: "Confirmado" };
+    }
+    if (["cancelled", "canceled", "voided", "deleted"].includes(raw)) {
+        return { kind: "cancelled", label: "Cancelado" };
+    }
+    if (["failed", "error", "rejected", "refused"].includes(raw)) {
+        return { kind: "failed", label: "Não concluído" };
+    }
+    if (["processing", "in_process", "authorized", "confirmed"].includes(raw)) {
+        return { kind: "processing", label: "Em processamento" };
+    }
+    if (["overdue", "expired"].includes(raw)) {
+        return { kind: "overdue", label: "Vencido" };
+    }
+    return { kind: "pending", label: "Pendente" };
 }
 
 export function isStatementFeeTransaction(transaction: Transaction) {

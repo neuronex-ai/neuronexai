@@ -13,7 +13,6 @@ import {
     Settings,
     BadgeCent,
     ChevronLeft,
-    ArrowDownLeft,
     PieChart,
     Calendar,
     Send,
@@ -38,7 +37,6 @@ import TransactionDetailView from "@/components/financeiro/TransactionDetailView
 import { PixPagarCopiaCola } from "@/components/financeiro/pix/PixPagarCopiaCola";
 import { PixTransferir } from "@/components/financeiro/pix/PixTransferir";
 import { PixGerarQrCode } from "@/components/financeiro/pix/PixGerarQrCode";
-import { PixReceber } from "@/components/financeiro/pix/PixReceber";
 import { PixChaves } from "@/components/financeiro/pix/PixChaves";
 import { PixSalarios } from "@/components/financeiro/pix/PixSalarios";
 import { PixLimites } from "@/components/financeiro/pix/PixLimites";
@@ -68,6 +66,8 @@ export type FinanceView =
     | "gestao-despesas"
     | "gestao-cobrancas"
     | "gestao-inadimplencia"
+    | "gestao-repasses-convenio"
+    | "gestao-recorrencia"
     | "gestao-planejamento"
     | "gestao-relatorios"
     | "conta-digital"
@@ -137,8 +137,10 @@ const SectionHeader = ({
                 {action}
                 {onBack && (
                     <button
+                        type="button"
                         onClick={onBack}
-                        className="group/back flex h-10 w-10 items-center justify-center rounded-full bg-zinc-100 transition-all hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10"
+                        aria-label="Voltar para a visão anterior"
+                        className="group/back flex h-11 w-11 items-center justify-center rounded-full bg-zinc-100 transition-all hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10"
                     >
                         <ChevronLeft className="h-5 w-5 text-zinc-600 transition-transform group-hover/back:-translate-x-0.5 dark:text-zinc-400" />
                     </button>
@@ -162,7 +164,7 @@ const PaymentRouteSwitcher = ({
     active: "boleto" | "pix";
     onSelect: (route: "pagamentos-boletos" | "pix-pagar") => void;
 }) => (
-    <div className="finance-inset flex rounded-[18px] border border-zinc-200/70 bg-white/70 p-1 shadow-sm backdrop-blur-xl dark:border-black/75 dark:bg-black/[0.28] dark:shadow-[0_14px_34px_-28px_rgba(0,0,0,0.96)]">
+    <div role="group" aria-label="Forma de pagamento" className="finance-inset flex rounded-[18px] border border-zinc-200/70 bg-white/70 p-1 backdrop-blur-xl dark:border-black/75 dark:bg-black/[0.28]">
         {[
             { id: "boleto" as const, route: "pagamentos-boletos" as const, label: "Pagar boleto", icon: Barcode },
             { id: "pix" as const, route: "pix-pagar" as const, label: "Pagar Pix", icon: QrCode },
@@ -170,8 +172,9 @@ const PaymentRouteSwitcher = ({
             <button
                 key={item.id}
                 type="button"
+                aria-pressed={active === item.id}
                 onClick={() => onSelect(item.route)}
-                className={`flex h-9 items-center gap-2 rounded-[13px] px-4 text-[9px] font-black uppercase tracking-[0.12em] transition-all ${
+                className={`flex h-11 items-center gap-2 rounded-[13px] px-4 text-[9px] font-black uppercase tracking-[0.12em] transition-all ${
                     active === item.id
                         ? "bg-zinc-950 text-white shadow-md dark:bg-white dark:text-zinc-950"
                         : "text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
@@ -210,6 +213,7 @@ export interface FinancialDashboardProps {
     futureTransactions: Transaction[];
     subscriptionTransactions: Transaction[];
     isNbStatementLoading: boolean;
+    statementPixReceivedPreset?: boolean;
 }
 
 export function FinancialDashboard({
@@ -227,6 +231,7 @@ export function FinancialDashboard({
     realizedTransactions,
     futureTransactions,
     subscriptionTransactions,
+    statementPixReceivedPreset = false,
 }: FinancialDashboardProps) {
     const handleGoBack = () => {
         setActiveView("gestao-visao-geral");
@@ -250,6 +255,8 @@ export function FinancialDashboard({
         case "gestao-despesas":
         case "gestao-cobrancas":
         case "gestao-inadimplencia":
+        case "gestao-repasses-convenio":
+        case "gestao-recorrencia":
         case "gestao-planejamento":
         case "gestao-relatorios":
             return (
@@ -285,14 +292,17 @@ export function FinancialDashboard({
             );
 
         case "extrato":
+        case "pix":
+        case "pix-receber":
             return (
-                <motion.div {...motionProps} key="extrato" className="px-6 py-6">
+                <motion.div {...motionProps} key={`extrato-${statementPixReceivedPreset || activeView !== "extrato" ? "pix" : "all"}`} className="px-6 py-6">
                     <div className="mx-auto max-w-7xl space-y-6">
                         <SectionHeader icon={FileText} title="Extrato" subtitle="Histórico unificado NeuroFinance e manual" onBack={handleGoBack} />
                         <DetailedStatementPanel
                             tab={extratoTab}
                             onTabChange={setExtratoTab}
                             onSelectTransaction={setSelectedTransaction}
+                            initialPixReceivedFilter={statementPixReceivedPreset || activeView === "pix" || activeView === "pix-receber"}
                         />
                     </div>
                 </motion.div>
@@ -302,22 +312,18 @@ export function FinancialDashboard({
             return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={TrendingUp} title="Receitas" subtitle="Entradas confirmadas" onBack={handleGoBack} /><ContentWrapper><FinancialStatement transactions={allTransactions.filter((t) => t.type === "income")} isLoading={isLoadingTransactions} onSelectTransaction={setSelectedTransaction} /></ContentWrapper></motion.div>;
         case "despesas":
             return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={PieChart} title="Despesas" subtitle="Saídas e custos" onBack={handleGoBack} /><ContentWrapper><FinancialStatement transactions={allTransactions.filter((t) => t.type === "expense")} isLoading={isLoadingTransactions} onSelectTransaction={setSelectedTransaction} /></ContentWrapper></motion.div>;
-        case "pix":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={BadgeCent} title="Área Pix" subtitle="Tudo que você faz com Pix" onBack={handleGoBack} /><ContentWrapper><PixReceber /></ContentWrapper></motion.div>;
         case "pix-pagar":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={QrCode} title="Pagar Pix" subtitle="Cole o Pix e pague" action={<PaymentRouteSwitcher active="pix" onSelect={setActiveView} />} onBack={() => setActiveView("pix-receber")} /><ContentWrapper><PixPagarCopiaCola /></ContentWrapper></motion.div>;
+            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={QrCode} title="Pagar Pix" subtitle="Cole o Pix e pague" action={<PaymentRouteSwitcher active="pix" onSelect={setActiveView} />} onBack={() => setActiveView("extrato")} /><ContentWrapper><PixPagarCopiaCola /></ContentWrapper></motion.div>;
         case "pix-transferir":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Send} title="Transferir" subtitle="Envie para uma chave Pix" onBack={() => setActiveView("pix-receber")} /><ContentWrapper><PixTransferir /></ContentWrapper></motion.div>;
+            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Send} title="Transferir" subtitle="Envie para uma chave Pix" onBack={() => setActiveView("extrato")} /><ContentWrapper><PixTransferir /></ContentWrapper></motion.div>;
         case "pix-qrcode":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={QrCode} title="QR Code" subtitle="Gere um Pix para receber" onBack={() => setActiveView("pix-receber")} /><ContentWrapper><PixGerarQrCode /></ContentWrapper></motion.div>;
-        case "pix-receber":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={ArrowDownLeft} title="Receber" subtitle="Acompanhe o que entrou" onBack={handleGoBack} /><ContentWrapper><PixReceber /></ContentWrapper></motion.div>;
+            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={QrCode} title="QR Code" subtitle="Gere um Pix para receber" onBack={() => setActiveView("extrato")} /><ContentWrapper><PixGerarQrCode /></ContentWrapper></motion.div>;
         case "pix-chaves":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Key} title="Chaves Pix" subtitle="Suas chaves para receber" onBack={() => setActiveView("pix-receber")} /><ContentWrapper><PixChaves /></ContentWrapper></motion.div>;
+            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Key} title="Chaves Pix" subtitle="Suas chaves para receber" onBack={() => setActiveView("extrato")} /><ContentWrapper><PixChaves /></ContentWrapper></motion.div>;
         case "pix-salarios":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Users} title="Salários" subtitle="Pix em lote para sua equipe" onBack={() => setActiveView("pix-receber")} /><ContentWrapper><PixSalarios /></ContentWrapper></motion.div>;
+            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Users} title="Salários" subtitle="Pix em lote para sua equipe" onBack={() => setActiveView("extrato")} /><ContentWrapper><PixSalarios /></ContentWrapper></motion.div>;
         case "pix-limites":
-            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={ShieldCheck} title="Limites" subtitle="Segurança da conta" onBack={() => setActiveView("pix-receber")} /><ContentWrapper><PixLimites /></ContentWrapper></motion.div>;
+            return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={ShieldCheck} title="Limites" subtitle="Segurança da conta" onBack={() => setActiveView("extrato")} /><ContentWrapper><PixLimites /></ContentWrapper></motion.div>;
         case "transferencias":
             return <motion.div {...motionProps} className="px-6 py-6"><SectionHeader icon={Send} title="Saque" subtitle="Envie fundos para sua conta" onBack={handleGoBack} /><ContentWrapper><BankTransferView /></ContentWrapper></motion.div>;
         case "pagamentos":
@@ -343,7 +349,7 @@ export function FinancialDashboard({
         case "cobrancas-simulador":
             return <motion.div {...motionProps} className="space-y-6 px-6 py-6"><SectionHeader icon={BadgeCent} title="Simulador de vendas" subtitle="Veja taxas e valor líquido antes de cobrar" onBack={handleGoBack} /><SalesSimulator /></motion.div>;
         case "cobrancas-chargebacks":
-            return <motion.div {...motionProps} className="space-y-6 px-6 py-6"><SectionHeader icon={Activity} title="Chargebacks" subtitle="Contestações e reversões de pagamento" onBack={handleGoBack} /><ChargebacksPanel /></motion.div>;
+            return <motion.div {...motionProps} className="space-y-6 px-6 py-6"><SectionHeader icon={Activity} title="Contestações" subtitle="Contestações e reversões de pagamento" onBack={handleGoBack} /><ChargebacksPanel /></motion.div>;
         case "antecipacoes-lista":
             return <motion.div {...motionProps} className="space-y-6 px-6 py-6"><SectionHeader icon={Repeat} title="Minhas antecipações" subtitle="Acompanhe solicitações e créditos" onBack={handleGoBack} /><AnticipationsList /></motion.div>;
         case "antecipacoes":

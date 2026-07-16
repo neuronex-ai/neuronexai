@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Copy, Loader2, QrCode, RefreshCw, Share2, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 
@@ -11,6 +11,7 @@ import { formatMoneyInput, moneyInputToNumber } from "@/lib/financial-input";
 import { formatCurrency } from "@/lib/utils";
 
 export function PixGerarQrCode() {
+    const reduceMotion = Boolean(useReducedMotion());
     const mutation = useNeuroFinanceStaticPixQrCode();
     const [value, setValue] = useState("");
     const [description, setDescription] = useState("");
@@ -70,12 +71,12 @@ export function PixGerarQrCode() {
 
     return (
         <div className="mx-auto max-w-3xl space-y-5">
-            <div className="flex items-start gap-3 rounded-[22px] border border-blue-500/20 bg-blue-500/[0.07] p-4 text-blue-800 dark:text-blue-200">
+            <div className="flex items-start gap-3 rounded-[22px] border border-border/60 bg-card/65 p-4 text-card-foreground backdrop-blur-xl">
                 <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
                 <div>
                     <p className="text-xs font-black">QR Code para recebimento</p>
-                    <p className="mt-1.5 text-[11px] font-medium leading-relaxed opacity-75">
-                        Nome e CPF do pagador não são necessários. O QR usa uma chave Pix ativa da sua própria conta NeuroFinance.
+                    <p className="mt-1.5 text-[11px] font-medium leading-relaxed text-muted-foreground">
+                        O NeuroFinance usará uma chave Pix ativa da sua conta. Informe somente os detalhes deste recebimento.
                     </p>
                 </div>
             </div>
@@ -84,10 +85,10 @@ export function PixGerarQrCode() {
                 {!result ? (
                     <motion.section
                         key="form"
-                        initial={{ opacity: 0, y: 8 }}
+                        initial={reduceMotion ? false : { opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        className="space-y-5 rounded-[28px] border border-zinc-200/70 bg-white/75 p-5 shadow-sm dark:border-white/10 dark:bg-white/[0.03] sm:p-7"
+                        exit={reduceMotion ? undefined : { opacity: 0, y: -8 }}
+                        className="space-y-5 rounded-[30px] border border-border/65 bg-card/80 p-5 text-card-foreground shadow-[0_30px_90px_-68px_hsl(var(--foreground)/0.55)] backdrop-blur-3xl sm:p-7"
                     >
                         <div>
                             <p className="text-[8px] font-black uppercase tracking-[0.18em] text-zinc-400">Valor opcional</p>
@@ -98,7 +99,8 @@ export function PixGerarQrCode() {
                                     onChange={(event) => setValue(formatMoneyInput(event.target.value))}
                                     inputMode="decimal"
                                     placeholder="Deixe vazio para valor livre"
-                                    className="h-14 rounded-[18px] pl-12 text-xl font-black"
+                                    aria-label="Valor opcional do QR Code"
+                                    className="h-14 rounded-[18px] border-border/70 bg-background/60 pl-12 text-xl font-black"
                                 />
                             </div>
                             <p className="mt-2 text-[9px] font-medium leading-relaxed text-zinc-500">
@@ -112,7 +114,7 @@ export function PixGerarQrCode() {
                                 value={description}
                                 onChange={(event) => setDescription(event.target.value.slice(0, 140))}
                                 placeholder="Ex.: Pagamento da sessão"
-                                className="mt-2 h-12 rounded-[16px]"
+                                className="mt-2 h-12 rounded-[16px] border-border/70 bg-background/60"
                             />
                         </div>
 
@@ -129,7 +131,8 @@ export function PixGerarQrCode() {
                                         key={option.value}
                                         type="button"
                                         onClick={() => setExpiration(option.value)}
-                                        className={`min-h-11 rounded-xl border px-3 text-[8px] font-black uppercase tracking-[0.11em] transition ${expiration === option.value ? "border-zinc-950 bg-zinc-950 text-white dark:border-white dark:bg-white dark:text-zinc-950" : "border-zinc-200/70 bg-white text-zinc-500 dark:border-white/10 dark:bg-white/[0.03]"}`}
+                                        aria-pressed={expiration === option.value}
+                                        className={`min-h-11 rounded-xl border px-3 text-[8px] font-black uppercase tracking-[0.11em] transition-[background-color,border-color,color,transform] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 ${expiration === option.value ? "border-foreground bg-foreground text-background" : "border-border/70 bg-background/55 text-muted-foreground hover:bg-muted/70 hover:text-foreground"}`}
                                     >
                                         {option.label}
                                     </button>
@@ -137,7 +140,7 @@ export function PixGerarQrCode() {
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between gap-4 rounded-[18px] border border-zinc-200/70 bg-zinc-50/70 p-4 dark:border-white/10 dark:bg-white/[0.025]">
+                        <div className="flex items-center justify-between gap-4 rounded-[18px] border border-border/60 bg-background/45 p-4">
                             <div>
                                 <p className="text-xs font-black text-zinc-950 dark:text-white">Permitir vários pagamentos</p>
                                 <p className="mt-1 text-[9px] font-medium leading-relaxed text-zinc-500">O mesmo QR poderá ser reutilizado até expirar.</p>
@@ -149,18 +152,18 @@ export function PixGerarQrCode() {
                             type="button"
                             onClick={generate}
                             disabled={mutation.isPending}
-                            className="h-14 w-full rounded-[18px] bg-zinc-950 text-[9px] font-black uppercase tracking-[0.16em] text-white dark:bg-white dark:text-zinc-950"
+                            className="h-14 w-full rounded-[18px] bg-foreground text-[9px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90"
                         >
-                            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><QrCode className="mr-2 h-4 w-4" /> Gerar QR Code</>}
+                            {mutation.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : <><QrCode className="mr-2 h-4 w-4" /> Gerar QR Code</>}
                         </Button>
                     </motion.section>
                 ) : (
                     <motion.section
                         key="result"
-                        initial={{ opacity: 0, scale: 0.98 }}
+                        initial={reduceMotion ? false : { opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        className="space-y-5 rounded-[28px] border border-zinc-200/70 bg-white/80 p-5 text-center shadow-sm dark:border-white/10 dark:bg-white/[0.035] sm:p-7"
+                        exit={reduceMotion ? undefined : { opacity: 0, scale: 0.98 }}
+                        className="space-y-5 rounded-[30px] border border-border/65 bg-card/82 p-5 text-center text-card-foreground shadow-[0_30px_90px_-68px_hsl(var(--foreground)/0.55)] backdrop-blur-3xl sm:p-7"
                     >
                         <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[18px] bg-emerald-500/10 text-emerald-500"><ShieldCheck className="h-5 w-5" /></div>
                         <div>
@@ -178,7 +181,7 @@ export function PixGerarQrCode() {
                         ) : null}
 
                         {result.pix_copy_paste ? (
-                            <button type="button" onClick={copyCode} className="w-full rounded-[18px] border border-zinc-200/70 bg-zinc-50/70 p-4 text-left dark:border-white/10 dark:bg-white/[0.025]">
+                            <button type="button" onClick={copyCode} className="w-full rounded-[18px] border border-border/60 bg-background/45 p-4 text-left transition-colors hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none">
                                 <p className="text-[8px] font-black uppercase tracking-[0.15em] text-zinc-400">Pix Copia e Cola</p>
                                 <p className="mt-2 line-clamp-3 break-all font-mono text-[9px] text-zinc-700 dark:text-white/70">{result.pix_copy_paste}</p>
                                 <span className="mt-3 inline-flex items-center text-[8px] font-black uppercase tracking-[0.12em] text-zinc-950 dark:text-white">

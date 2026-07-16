@@ -23,8 +23,10 @@ const FINANCE_ROUTE_LABELS: Partial<Record<FinanceView, { groupLabel: string; vi
   "gestao-fluxo-caixa": { groupLabel: "Gestão Financeira", viewLabel: "Fluxo de Caixa" },
   "gestao-receitas": { groupLabel: "Gestão Financeira", viewLabel: "Receitas" },
   "gestao-despesas": { groupLabel: "Gestão Financeira", viewLabel: "Despesas" },
-  "gestao-cobrancas": { groupLabel: "Gestão Financeira", viewLabel: "Cobranças" },
+  "gestao-cobrancas": { groupLabel: "Gestão Financeira", viewLabel: "Cobranças Manuais" },
   "gestao-inadimplencia": { groupLabel: "Gestão Financeira", viewLabel: "Cobranças vencidas" },
+  "gestao-repasses-convenio": { groupLabel: "Gestão Financeira", viewLabel: "Repasses e Convênio" },
+  "gestao-recorrencia": { groupLabel: "Gestão Financeira", viewLabel: "Recorrência" },
   "gestao-planejamento": { groupLabel: "Gestão Financeira", viewLabel: "Planejamento" },
   "gestao-relatorios": { groupLabel: "Gestão Financeira", viewLabel: "Relatórios" },
   "conta-digital": { groupLabel: "NeuroFinance", viewLabel: "Conta e Saldo" },
@@ -48,7 +50,7 @@ const FINANCE_ROUTE_LABELS: Partial<Record<FinanceView, { groupLabel: string; vi
   "cobrancas-historia": { groupLabel: "NeuroFinance", viewLabel: "Todas as cobranças" },
   "cobrancas-config": { groupLabel: "NeuroFinance", viewLabel: "Regras automáticas" },
   "cobrancas-simulador": { groupLabel: "NeuroFinance", viewLabel: "Simulador de vendas" },
-  "cobrancas-chargebacks": { groupLabel: "NeuroFinance", viewLabel: "Chargebacks" },
+  "cobrancas-chargebacks": { groupLabel: "NeuroFinance", viewLabel: "Contestações" },
   "antecipacoes": { groupLabel: "NeuroFinance", viewLabel: "Antecipação" },
   "antecipacoes-lista": { groupLabel: "NeuroFinance", viewLabel: "Minhas antecipações" },
   "antecipacoes-solicitar": { groupLabel: "NeuroFinance", viewLabel: "Antecipar recebimento" },
@@ -75,10 +77,10 @@ const NeuroFinanceActivationScreen = ({ onStart }: { onStart: () => void }) => (
             Ative sua conta financeira.
           </h1>
           <p className="mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground md:text-lg">
-            A Gestão Financeira já funciona sem conta bancária. Para usar Pix, boletos, saques, pagamentos, antecipação e saldo real, conclua a criação do NeuroFinance.
+            A Gestão Financeira já funciona sem conta bancária. Para usar Pix, boletos, saques, pagamentos e saldo real, conclua a criação do NeuroFinance.
           </p>
           <div className="mt-8 grid max-w-3xl gap-3 md:grid-cols-3">
-            {["Pix, boleto e cartão", "Saques e transferências", "Pagamentos e antecipação"].map((item) => (
+            {["Pix, boleto e cartão", "Saques e transferências", "Pagamentos protegidos"].map((item) => (
               <div
                 key={item}
                 className="finance-inset rounded-[20px] border border-border/60 bg-background/55 p-4 text-[10px] font-black uppercase leading-relaxed tracking-[0.14em] text-muted-foreground dark:border-black/70 dark:bg-black/[0.24]"
@@ -176,7 +178,7 @@ export const FinanceiroMainContent = (props: FinancialDashboardProps) => {
         <LockedFeatureScreen
           feature="advanced_finance"
           title="NeuroFinance"
-          description="Durante o teste grátis, a Gestão Financeira continua liberada para receitas, despesas e fluxo de caixa. Pix, boletos, saques, pagamentos, antecipação e saldo real ficam disponíveis depois da assinatura ativa."
+          description="Durante o teste grátis, a Gestão Financeira continua liberada para receitas, despesas e fluxo de caixa. Pix, boletos, saques, pagamentos e saldo real ficam disponíveis depois da assinatura ativa."
         />
       );
     }

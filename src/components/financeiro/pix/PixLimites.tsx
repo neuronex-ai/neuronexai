@@ -1,226 +1,137 @@
-/**
- * ─── PixLimites — Limites de Transações Pix ─────────────────────
- * Displays and manages PIX transaction limits.
- * Shows current limits based on NeuroFinance account tier.
- * ─────────────────────────────────────────────────────────────────
- */
-
-import { useState } from "react";
-import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
+import { useState, type ElementType } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-    Gauge,
-    Shield,
-    Moon,
-    Sun,
-    Clock,
-    AlertTriangle,
-    ChevronRight,
-    ArrowUpRight,
-    ArrowDownRight,
-    Info,
+  ArrowDownRight,
+  ArrowUpRight,
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  Gauge,
+  Headphones,
+  Info,
+  Moon,
+  Shield,
+  Sun,
 } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
-import { useNeuroFinanceBalance } from "@/hooks/use-neurofinance-balance";
+import { buildNeuroFinanceSupportUrl } from "@/lib/neurofinance-support";
+import { cn, formatCurrency } from "@/lib/utils";
 
 interface LimitItem {
-    label: string;
-    current: number;
-    max: number;
-    period: string;
-    icon: React.ElementType;
-    color: string;
+  label: string;
+  maximum: number;
+  period: string;
+  icon: ElementType;
 }
 
+const REFERENCE_LIMITS: LimitItem[] = [
+  { label: "Envio diurno", maximum: 20_000, period: "por transação, das 6h às 20h", icon: Sun },
+  { label: "Envio noturno", maximum: 1_000, period: "por transação, das 20h às 6h", icon: Moon },
+  { label: "Envios no dia", maximum: 50_000, period: "valor acumulado por dia", icon: ArrowUpRight },
+  { label: "Recebimentos no dia", maximum: 100_000, period: "valor acumulado por dia", icon: ArrowDownRight },
+];
+
 export function PixLimites() {
-    const { account } = useFinancialAccount();
-    const { data: balanceData } = useNeuroFinanceBalance();
-    const [showDetails, setShowDetails] = useState(false);
+  const { account } = useFinancialAccount();
+  const [showDetails, setShowDetails] = useState(false);
+  const reduceMotion = Boolean(useReducedMotion());
+  const supportUrl = buildNeuroFinanceSupportUrl({
+    userId: account?.user_id,
+    accountId: account?.id,
+  });
 
-    // Conservative defaults until the provider returns the account-specific limits.
-    const limits: LimitItem[] = [
-        {
-            label: "Envio Diurno (6h-20h)",
-            current: balanceData?.balance || 0,
-            max: 20000,
-            period: "por transação",
-            icon: Sun,
-            color: "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900",
-        },
-        {
-            label: "Envio Noturno (20h-6h)",
-            current: 0,
-            max: 1000,
-            period: "por transação",
-            icon: Moon,
-            color: "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900",
-        },
-        {
-            label: "Limite Diário de Envio",
-            current: balanceData?.balance || 0,
-            max: 50000,
-            period: "acumulado/dia",
-            icon: ArrowUpRight,
-            color: "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900",
-        },
-        {
-            label: "Limite Diário de Recebimento",
-            current: 0,
-            max: 100000,
-            period: "acumulado/dia",
-            icon: ArrowDownRight,
-            color: "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900",
-        },
-    ];
-
-    const getUsagePercentage = (current: number, max: number) => {
-        return Math.min((current / max) * 100, 100);
-    };
-
-    const getUsageColor = (pct: number) => {
-        if (pct >= 90) return "bg-red-500";
-        if (pct >= 70) return "bg-amber-500";
-        return "bg-emerald-500";
-    };
-
-    return (
-        <div className="space-y-6">
-            {/* Header */}
-            <div className="p-6 rounded-[28px] bg-zinc-900 dark:bg-white border border-zinc-800 dark:border-zinc-200">
-                <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-white/10 dark:bg-black/5 text-white dark:text-zinc-900 flex items-center justify-center shadow-lg">
-                        <Gauge className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <h3 className="text-sm font-black uppercase tracking-tight text-white dark:text-zinc-900">
-                            Limites de Transações Pix
-                        </h3>
-                        <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mt-0.5">
-                            Gerencie seus limites de envio e recebimento • NeuroFinance
-                        </p>
-                    </div>
-                    <div className="ml-auto px-3 py-1 rounded-full bg-white/10 dark:bg-black/5 text-[8px] font-black uppercase tracking-widest text-white dark:text-zinc-900">
-                        Produção
-                    </div>
-                </div>
-            </div>
-
-            {/* Account Status */}
-            <div className="p-5 rounded-[24px] bg-white/60 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.06] flex items-center gap-4">
-                <div className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center">
-                    <Shield className="w-5 h-5 text-zinc-900 dark:text-white" />
-                </div>
-                <div className="flex-1">
-                    <p className="text-xs font-bold text-zinc-900 dark:text-white">
-                        Conta {account?.status === 'active' ? 'Ativa' : 'Em validação'}
-                    </p>
-                    <p className="text-[9px] text-zinc-400 mt-0.5">
-                        Limites informativos da conta NeuroFinance
-                    </p>
-                </div>
-                <span className="px-3 py-1 rounded-full bg-zinc-100 dark:bg-white/10 text-[8px] font-black uppercase tracking-widest text-zinc-900 dark:text-white">
-                    Operacional
-                </span>
-            </div>
-
-            {/* Limits Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {limits.map((limit, index) => {
-                    const pct = getUsagePercentage(limit.current, limit.max);
-                    const Icon = limit.icon;
-
-                    return (
-                        <motion.div
-                            key={index}
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="p-5 rounded-[24px] bg-white/60 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.06]"
-                        >
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center shadow-md", limit.color)}>
-                                    <Icon className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-[9px] font-black uppercase tracking-wider text-zinc-500">{limit.label}</p>
-                                    <p className="text-[8px] text-zinc-400">{limit.period}</p>
-                                </div>
-                            </div>
-
-                            {/* Progress */}
-                            <div className="mb-2">
-                                <div className="h-2 rounded-full bg-zinc-100 dark:bg-white/5 overflow-hidden">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${pct}%` }}
-                                        transition={{ duration: 0.8, ease: "easeOut" }}
-                                        className={cn("h-full rounded-full", getUsageColor(pct))}
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-zinc-900 dark:text-white">
-                                    R$ {limit.current.toFixed(2)}
-                                </span>
-                                <span className="text-[9px] text-zinc-400">
-                                    máx R$ {limit.max.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                                </span>
-                            </div>
-                        </motion.div>
-                    );
-                })}
-            </div>
-
-            {/* Horário Info */}
-            <div className="p-5 rounded-[24px] bg-zinc-50/80 dark:bg-white/[0.01] border border-zinc-200/50 dark:border-white/[0.06] space-y-4">
-                <div className="flex items-center gap-2">
-                    <Info className="w-4 h-4 text-zinc-400" />
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-400">
-                        Informações sobre limites Pix
-                    </p>
-                </div>
-
-                <div className="space-y-3 text-[10px] text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                    <div className="flex items-start gap-2">
-                        <Clock className="w-3 h-3 shrink-0 mt-0.5 text-zinc-400" />
-                        <p>
-                            <strong>Horário diurno (6h às 20h):</strong> Limite padrão de R$ 20.000,00 por transação.
-                            Ajustável via painel NeuroFinance.
-                        </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <Moon className="w-3 h-3 shrink-0 mt-0.5 text-zinc-400" />
-                        <p>
-                            <strong>Horário noturno (20h às 6h):</strong> Limite reduzido de R$ 1.000,00 por medida de segurança do Banco Central.
-                        </p>
-                    </div>
-                    <div className="flex items-start gap-2">
-                        <AlertTriangle className="w-3 h-3 shrink-0 mt-0.5 text-amber-500" />
-                        <p>
-                            <strong>Importante:</strong> alterações de limite dependem da habilitação e validação de segurança da Asaas.
-                        </p>
-                    </div>
-                </div>
-
-                <button
-                    onClick={() => setShowDetails(!showDetails)}
-                    className="flex items-center gap-2 text-[9px] font-black uppercase tracking-wider text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
-                >
-                    Solicitar Alteração de Limite
-                    <ChevronRight className={cn("w-3 h-3 transition-transform", showDetails && "rotate-90")} />
-                </button>
-
-                {showDetails && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        className="p-4 rounded-xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 text-[10px] text-zinc-600 dark:text-zinc-400"
-                    >
-                        Alterações de limite dependem da análise de segurança e da habilitação da Asaas para esta subconta.
-                    </motion.div>
-                )}
-            </div>
+  return (
+    <div className="space-y-5">
+      <section className="relative overflow-hidden rounded-[30px] border border-border/65 bg-card/82 p-6 text-card-foreground shadow-[0_32px_92px_-70px_hsl(var(--foreground)/0.62)] backdrop-blur-3xl">
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_0%_0%,hsl(var(--foreground)/0.055),transparent_38%)]" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-[18px] bg-foreground text-background shadow-[0_18px_42px_-28px_hsl(var(--foreground)/0.75)]">
+            <Gauge className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-black uppercase tracking-[0.08em] text-foreground">Limites do Pix</h3>
+            <p className="mt-1 text-[10px] font-semibold text-muted-foreground">Valores de segurança da sua conta NeuroFinance</p>
+          </div>
+          <div className="flex items-center gap-2 rounded-full border border-border/55 bg-background/55 px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+            <span className={cn("h-2 w-2 rounded-full", account?.status === "active" ? "bg-emerald-500" : "bg-amber-500")} />
+            {account?.status === "active" ? "Conta ativa" : "Em validação"}
+          </div>
         </div>
-    );
+      </section>
+
+      <section aria-label="Limites de referência" className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        {REFERENCE_LIMITS.map((limit, index) => (
+          <motion.article
+            key={limit.label}
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: reduceMotion ? 0 : index * 0.06 }}
+            className="rounded-[24px] border border-border/60 bg-card/68 p-5 text-card-foreground shadow-[0_18px_55px_-46px_hsl(var(--foreground)/0.55)] backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-foreground/[0.065] text-foreground">
+                <limit.icon className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">{limit.label}</p>
+                <p className="mt-0.5 text-[9px] text-muted-foreground/75">{limit.period}</p>
+              </div>
+            </div>
+            <div className="mt-5 border-t border-border/45 pt-4">
+              <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Limite de referência</p>
+              <p className="mt-1 text-xl font-black tracking-tight text-foreground">{formatCurrency(limit.maximum)}</p>
+            </div>
+          </motion.article>
+        ))}
+      </section>
+
+      <section className="rounded-[26px] border border-border/60 bg-card/68 p-5 text-card-foreground backdrop-blur-xl">
+        <div className="flex items-start gap-3">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+          <div>
+            <h4 className="text-xs font-black text-foreground">Como os limites funcionam</h4>
+            <p className="mt-1 text-[10px] font-medium leading-relaxed text-muted-foreground">
+              Os valores podem variar conforme o horário, a análise de segurança e a situação da conta. A validação final ocorre antes de cada operação.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          aria-expanded={showDetails}
+          aria-controls="pix-limit-details"
+          onClick={() => setShowDetails((current) => !current)}
+          className="mt-4 flex min-h-11 w-full items-center justify-between rounded-[16px] border border-border/55 bg-background/45 px-4 text-left text-[9px] font-black uppercase tracking-[0.13em] text-foreground transition-colors hover:bg-muted/65 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transition-none"
+        >
+          Ver horários e solicitar alteração
+          <ChevronDown className={cn("h-4 w-4 transition-transform motion-reduce:transition-none", showDetails && "rotate-180")} />
+        </button>
+
+        <AnimatePresence initial={false}>
+          {showDetails ? (
+            <motion.div
+              id="pix-limit-details"
+              initial={reduceMotion ? false : { opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={reduceMotion ? undefined : { opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-3 space-y-3 rounded-[18px] border border-border/55 bg-background/45 p-4 text-[10px] font-medium leading-relaxed text-muted-foreground">
+                <p className="flex items-start gap-2"><Clock className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span><strong className="text-foreground">Período diurno:</strong> das 6h às 20h.</span></p>
+                <p className="flex items-start gap-2"><Moon className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span><strong className="text-foreground">Período noturno:</strong> das 20h às 6h, com proteção adicional.</span></p>
+                <p className="flex items-start gap-2"><Shield className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>Alterações dependem de uma nova análise de segurança. A equipe NeuroNex acompanha a solicitação.</span></p>
+                <Button asChild variant="outline" className="mt-1 h-11 w-full rounded-[15px] text-[9px] font-black uppercase tracking-[0.13em]">
+                  <a href={supportUrl} target="_blank" rel="noreferrer">
+                    <Headphones className="mr-2 h-4 w-4" /> Falar com o suporte NeuroNex <ExternalLink className="ml-2 h-3.5 w-3.5" />
+                  </a>
+                </Button>
+              </div>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      </section>
+    </div>
+  );
 }

@@ -29,6 +29,7 @@ import {
 } from "@/hooks/use-neurofinance-scheduled-payments";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 
 const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = {
     DECODE: { label: "Decodificando", color: "text-amber-500 bg-amber-100 dark:bg-amber-500/10", icon: Clock },
@@ -38,12 +39,12 @@ const STATUS_MAP: Record<string, { label: string; color: string; icon: any }> = 
     PROCESSED: { label: "Pago", color: "text-emerald-500 bg-emerald-100 dark:bg-emerald-500/10", icon: CheckCircle2 },
     SCHEDULED: { label: "Agendado", color: "text-blue-500 bg-blue-100 dark:bg-blue-500/10", icon: Clock },
     ERROR: { label: "Erro", color: "text-red-500 bg-red-100 dark:bg-red-500/10", icon: XCircle },
-    DECODE_ERROR: { label: "Erro Decode", color: "text-red-500 bg-red-100 dark:bg-red-500/10", icon: XCircle },
+    DECODE_ERROR: { label: "Não foi possível ler", color: "text-red-500 bg-red-100 dark:bg-red-500/10", icon: XCircle },
     SCHEDULING_CANCELLED: { label: "Cancelado", color: "text-zinc-500 bg-zinc-100 dark:bg-zinc-500/10", icon: XCircle },
 };
 
 function getStatusInfo(status: string) {
-    return STATUS_MAP[status] || { label: status, color: "text-zinc-500 bg-zinc-100 dark:bg-zinc-500/10", icon: AlertCircle };
+    return STATUS_MAP[status] || { label: "Em acompanhamento", color: "text-zinc-500 bg-zinc-100 dark:bg-zinc-500/10", icon: AlertCircle };
 }
 
 export function PagamentosGrupos() {
@@ -68,7 +69,7 @@ export function PagamentosGrupos() {
                             Meus Grupos de Pagamentos
                         </h3>
                         <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider mt-0.5">
-                            Histórico e acompanhamento de grupos • NeuroFinance API
+                            Histórico e acompanhamento de pagamentos no NeuroFinance
                         </p>
                     </div>
                     <button
@@ -134,7 +135,7 @@ export function PagamentosGrupos() {
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2">
                                                 <p className="text-[11px] font-black text-zinc-800 dark:text-zinc-200 truncate">
-                                                    {group.description || `Grupo ${group.group_id?.substring(0, 8)}`}
+                                                    {group.description || "Grupo de pagamentos"}
                                                 </p>
                                                 <span className={cn("px-2 py-0.5 rounded-full text-[7px] font-black uppercase tracking-widest", statusInfo.color)}>
                                                     {statusInfo.label}
@@ -174,11 +175,6 @@ export function PagamentosGrupos() {
                             Voltar aos Grupos
                         </button>
 
-                        <div className="p-4 rounded-[20px] bg-zinc-50 dark:bg-white/[0.02] border border-zinc-200/50 dark:border-white/[0.06]">
-                            <p className="text-[9px] font-black uppercase tracking-wider text-zinc-400 mb-1">Group ID</p>
-                            <p className="text-[10px] font-mono text-zinc-700 dark:text-zinc-300">{selectedGroupId}</p>
-                        </div>
-
                         {isLoadingItems && (
                             <div className="flex flex-col items-center justify-center py-8">
                                 <Loader2 className="w-6 h-6 text-zinc-900 dark:text-white animate-spin mb-3" />
@@ -217,11 +213,6 @@ export function PagamentosGrupos() {
                                                         <span className={cn("px-1.5 py-0.5 rounded text-[7px] font-black uppercase", statusInfo.color)}>
                                                             {statusInfo.label}
                                                         </span>
-                                                        {item.product_type && (
-                                                            <span className="text-[8px] font-black text-zinc-400 uppercase">
-                                                                {item.product_type}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className="flex items-center gap-2">
@@ -254,13 +245,10 @@ export function PagamentosGrupos() {
                                             {item.error_message && (
                                                 <p className="text-[9px] text-red-500 mt-1 flex items-center gap-1">
                                                     <AlertCircle className="w-3 h-3" />
-                                                    {item.error_message}
+                                                    {getUserFacingErrorMessage(item.error_message, "payment")}
                                                 </p>
                                             )}
 
-                                            <p className="text-[8px] font-mono text-zinc-400 mt-1 truncate">
-                                                {item.content}
-                                            </p>
                                         </div>
                                     </div>
                                 </div>

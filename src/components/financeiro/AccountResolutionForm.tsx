@@ -63,10 +63,7 @@ export const AccountResolutionForm = ({ requirement, onSuccess }: AccountResolut
 
             toast.success('Informações enviadas para análise do NeuroFinance!');
 
-            // Aguarda um pequeno delay para a Asaas processar antes de forçar a sincronização
-            setTimeout(() => {
-                onSuccess();
-            }, 1500);
+            onSuccess();
         } catch (err: any) {
             console.error('Update error:', err);
             toast.error(getUserFacingErrorMessage(err, 'save'));

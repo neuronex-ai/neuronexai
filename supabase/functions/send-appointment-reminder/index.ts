@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import {
   deliverPatientEmail,
+  EmailDeliveryUnavailableError,
   renderTemplate,
 } from "../_shared/email-delivery.ts";
 import {
@@ -366,6 +367,9 @@ serve(async (request) => {
         .eq("id", pendingTokenId);
     }
     console.error("[send-appointment-reminder]", error);
+    if (error instanceof EmailDeliveryUnavailableError) {
+      return appointmentJson({ error: error.message, code: error.code }, 503);
+    }
     return appointmentErrorResponse(error);
   }
 });

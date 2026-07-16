@@ -63,7 +63,7 @@ export const PinModal = ({ open, onOpenChange, onSuccess }: PinModalProps) => {
 
   const handleBack = () => {
     onOpenChange(false);
-    navigate("/financeiro/neurofinance");
+    navigate("/financeiro?view=conta-digital");
   };
 
   const heroState = isSuccess ? "success" : error ? "error" : isLoading ? "loading" : "neutral";
@@ -75,9 +75,9 @@ export const PinModal = ({ open, onOpenChange, onSuccess }: PinModalProps) => {
       onOpenChange={(next) => { if (!isLoading) onOpenChange(next); }}
       preventClose={isLoading}
       size="sm"
-      eyebrow="Cofre financeiro"
+      eyebrow="Confirmação protegida"
       title={isSuccess ? "Acesso permitido" : "Confirme seu PIN"}
-      description={error ? "PIN incorreto. Tente novamente." : isSuccess ? "Desbloqueando ambiente seguro..." : "Digite seu código de seis dígitos para continuar."}
+      description={error ? "PIN incorreto. Tente novamente." : isSuccess ? "Acesso liberado com segurança." : "Digite seu código de seis dígitos para continuar."}
       heroIcon={<ModalHeroIcon icon={HeroIcon} state={heroState} tone="status" ariaLabel="Status do PIN financeiro" />}
       footer={
         <Button
@@ -107,6 +107,8 @@ export const PinModal = ({ open, onOpenChange, onSuccess }: PinModalProps) => {
             }}
             disabled={isLoading || isSuccess}
             autoFocus
+            aria-label="PIN financeiro de seis dígitos"
+            aria-invalid={error}
             containerClassName="justify-center"
           >
             <InputOTPGroup className="gap-2 sm:gap-3">
@@ -127,7 +129,7 @@ export const PinModal = ({ open, onOpenChange, onSuccess }: PinModalProps) => {
 
         <div className="mt-6 flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-muted-foreground">
           <ShieldCheck className="h-3.5 w-3.5" />
-          Protecao reforcada
+          Proteção reforçada
         </div>
       </div>
     </AppModalShell>

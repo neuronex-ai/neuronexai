@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { toUserFacingError } from "@/lib/user-facing-error";
+import { EdgeFunctionInvocationError } from "@/lib/invoke-edge-function";
 
 describe("toUserFacingError", () => {
   it("hides Edge Function implementation details", () => {
@@ -21,5 +22,19 @@ describe("toUserFacingError", () => {
 
     expect(result.message).toContain("saldo");
     expect(result.message).not.toContain("secret_table");
+  });
+
+  it("preserves a safe financial security challenge instead of calling it a network failure", () => {
+    const result = toUserFacingError(new EdgeFunctionInvocationError({
+      kind: "http",
+      status: 403,
+      code: "FINANCIAL_SECURITY_VERIFICATION_REQUIRED",
+      message: "Esta ação exige uma validação de segurança da sua conta NeuroFinance.",
+    }), "delete");
+
+    expect(result.code).toBe("SECURITY_VERIFICATION_REQUIRED");
+    expect(result.title).toBe("Validação de segurança necessária");
+    expect(result.message).toContain("NeuroFinance");
+    expect(result.message).not.toContain("conexão");
   });
 });

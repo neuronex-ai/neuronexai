@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { invokeEdgeFunction } from "@/lib/invoke-edge-function";
+import { toUserFacingError } from "@/lib/user-facing-error";
 
 export interface PixPaymentConsultation {
   id: string;
@@ -16,22 +17,17 @@ export interface PixPaymentConsultation {
   receiverName?: string | null;
   receiverDocument?: string | null;
   institutionName?: string | null;
-  institutionIspb?: string | null;
   description?: string | null;
   qrType?: string | null;
-  pixKey?: string | null;
   expirationDate?: string | null;
   canChangeValue: boolean;
   canPayNow: boolean;
-  providerOperationId?: string | null;
-  providerStatus?: string | null;
   receiptUrl?: string | null;
 }
 
 export interface PixPaymentExecution {
   success: boolean;
   request: PixPaymentConsultation;
-  payment: Record<string, unknown>;
   status?: string;
   receiptUrl?: string | null;
   idempotent?: boolean;
@@ -46,7 +42,10 @@ export function useNeurofinancePixPayment() {
         action: "consult",
         payload,
       }),
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      const friendlyError = toUserFacingError(error, "payment");
+      toast.error(friendlyError.title, { description: friendlyError.message });
+    },
   });
 
   const authorize = useMutation({
@@ -67,7 +66,10 @@ export function useNeurofinancePixPayment() {
       queryClient.invalidateQueries({ queryKey: ["neurofinance-overview"] });
       queryClient.invalidateQueries({ queryKey: ["neurofinance-statement"] });
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (error: Error) => {
+      const friendlyError = toUserFacingError(error, "payment");
+      toast.error(friendlyError.title, { description: friendlyError.message });
+    },
   });
 
   const receipt = useMutation({

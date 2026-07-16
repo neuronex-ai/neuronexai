@@ -38,6 +38,16 @@ function statusCopy(status: string, scheduled: boolean) {
   };
 }
 
+function humanizePaymentStatus(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["paid", "received", "confirmed", "completed"].includes(normalized)) return "Confirmado";
+  if (["scheduled"].includes(normalized)) return "Agendado";
+  if (["pending", "processing", "requested"].includes(normalized)) return "Em processamento";
+  if (["cancelled", "canceled"].includes(normalized)) return "Cancelado";
+  if (["failed", "rejected", "denied"].includes(normalized)) return "Não concluído";
+  return "Enviado";
+}
+
 export function BillPaymentSuccess({
   consultation,
   execution,
@@ -45,7 +55,6 @@ export function BillPaymentSuccess({
 }: BillPaymentSuccessProps) {
   const scheduled = execution.record?.payment_mode === "scheduled" || execution.status === "scheduled";
   const copy = statusCopy(execution.status, scheduled);
-  const providerBillId = execution.record?.provider_bill_id || String(execution.bill?.id || "");
   const receiptUrl = execution.receiptUrl || execution.record?.receipt_url;
 
   const openReceipt = () => {
@@ -85,8 +94,7 @@ export function BillPaymentSuccess({
             <dl>
               <div class="row"><dt>Recebedor</dt><dd>${escapeHtml(consultation.beneficiaryName || "Não informado")}</dd></div>
               <div class="row"><dt>Instituição</dt><dd>${escapeHtml(consultation.bankName || (consultation.bankCode ? `Código bancário ${consultation.bankCode}` : "Não informada"))}</dd></div>
-              <div class="row"><dt>Identificador</dt><dd>${escapeHtml(providerBillId || execution.record?.external_reference)}</dd></div>
-              <div class="row"><dt>Status</dt><dd>${escapeHtml(execution.status)}</dd></div>
+              <div class="row"><dt>Status</dt><dd>${escapeHtml(humanizePaymentStatus(execution.status))}</dd></div>
               <div class="row"><dt>Solicitado em</dt><dd>${escapeHtml(new Date().toLocaleString("pt-BR"))}</dd></div>
             </dl>
             <footer>Este documento registra a solicitação enviada pelo NeuroFinance. A liquidação definitiva depende da confirmação bancária.</footer>
@@ -119,7 +127,7 @@ export function BillPaymentSuccess({
         )}
         <div className="mt-6 grid gap-3 border-t border-white/10 pt-5 text-[10px] font-bold dark:border-black/10 sm:grid-cols-2">
           <span className="flex items-center gap-2"><Landmark className="h-4 w-4" /> {consultation.bankName || (consultation.bankCode ? `Banco ${consultation.bankCode}` : "Instituição não informada")}</span>
-          <span className="flex items-center gap-2"><ReceiptText className="h-4 w-4" /> {providerBillId || "Identificador registrado"}</span>
+          <span className="flex items-center gap-2"><ReceiptText className="h-4 w-4" /> Registro protegido no NeuroFinance</span>
         </div>
       </div>
 

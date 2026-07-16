@@ -10,6 +10,19 @@ export type DeliveryResult = {
   gmailError: string | null;
 };
 
+export class EmailDeliveryUnavailableError extends Error {
+  readonly code: "email_delivery_unavailable" | "google_reconnect_required";
+
+  constructor(
+    message: string,
+    code: "email_delivery_unavailable" | "google_reconnect_required",
+  ) {
+    super(message);
+    this.name = "EmailDeliveryUnavailableError";
+    this.code = code;
+  }
+}
+
 const HEADER_LINE_BREAK = /[\r\n]+/g;
 const EMAIL_ADDRESS = /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/;
 
@@ -77,20 +90,29 @@ const refreshGoogleToken = async (
   userId: string,
   refreshToken: string,
 ) => {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID")?.trim();
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")?.trim();
+  if (!clientId || !clientSecret || !refreshToken?.trim()) {
+    throw new EmailDeliveryUnavailableError(
+      "Reconecte sua conta Google nas configurações para enviar pelo Gmail.",
+      "google_reconnect_required",
+    );
+  }
   const response = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "",
-      client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET") || "",
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }),
   });
   const payload = await response.json();
   if (!response.ok || !payload.access_token) {
-    throw new Error(
-      "N\u00e3o foi poss\u00edvel renovar a conex\u00e3o Google.",
+    throw new EmailDeliveryUnavailableError(
+      "Reconecte sua conta Google nas configurações para enviar pelo Gmail.",
+      "google_reconnect_required",
     );
   }
   await db.from("user_google_tokens").update({
@@ -99,6 +121,21 @@ const refreshGoogleToken = async (
       .toISOString(),
   }).eq("user_id", userId);
   return String(payload.access_token);
+};
+
+const GMAIL_SEND_SCOPE = "https://www.googleapis.com/auth/gmail.send";
+
+export const hasGmailSendScope = (scope: unknown) => {
+  if (typeof scope !== "string" || !scope.trim()) return true;
+  return scope.split(/\s+/).includes(GMAIL_SEND_SCOPE);
+};
+
+export const googleTokenNeedsRefresh = (
+  expiresAt: unknown,
+  now = Date.now(),
+) => {
+  const expiresAtMs = new Date(String(expiresAt || "")).getTime();
+  return !Number.isFinite(expiresAtMs) || expiresAtMs <= now + 60_000;
 };
 
 export const buildRawEmail = (
@@ -188,17 +225,28 @@ const sendWithGmail = async (
   text: string,
   attachments: EmailAttachment[],
 ) => {
-  const tokens = await db.from("user_google_tokens").select("*").eq(
+  const tokens = await db.from("user_google_tokens").select(
+    "access_token,refresh_token,expires_at,scope",
+  ).eq(
     "user_id",
     userId,
   ).maybeSingle();
+  if (tokens.error) throw tokens.error;
   if (!tokens.data) return null;
-  let accessToken = tokens.data.access_token;
-  if (new Date(tokens.data.expires_at).getTime() <= Date.now() + 60_000) {
+  if (!hasGmailSendScope(tokens.data.scope)) {
+    throw new EmailDeliveryUnavailableError(
+      "Reconecte sua conta Google para autorizar o envio pelo Gmail.",
+      "google_reconnect_required",
+    );
+  }
+
+  let accessToken = String(tokens.data.access_token || "");
+  const refreshToken = String(tokens.data.refresh_token || "");
+  if (!accessToken || googleTokenNeedsRefresh(tokens.data.expires_at)) {
     accessToken = await refreshGoogleToken(
       db,
       userId,
-      tokens.data.refresh_token,
+      refreshToken,
     );
   }
   const raw = buildRawEmail(
@@ -210,19 +258,31 @@ const sendWithGmail = async (
     text,
     attachments,
   );
-  const response = await fetch(
-    "https://www.googleapis.com/gmail/v1/users/me/messages/send",
-    {
+  const invokeGmail = (token: string) =>
+    fetch("https://www.googleapis.com/gmail/v1/users/me/messages/send", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ raw: encodeBase64Url(raw) }),
-    },
-  );
+    });
+
+  let response = await invokeGmail(accessToken);
+  // O token pode ser revogado antes de expires_at. Renove e repita uma única
+  // vez; a tentativa superior continua protegida pela chave idempotente.
+  if (response.status === 401) {
+    accessToken = await refreshGoogleToken(db, userId, refreshToken);
+    response = await invokeGmail(accessToken);
+  }
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      throw new EmailDeliveryUnavailableError(
+        "Reconecte sua conta Google nas configurações para enviar pelo Gmail.",
+        "google_reconnect_required",
+      );
+    }
     throw new Error(
       payload.error?.message || `Gmail recusou o envio: ${response.status}`,
     );
@@ -316,14 +376,34 @@ export const deliverPatientEmail = async (params: {
     gmailError = error instanceof Error ? error.message : "Falha no Gmail";
   }
 
-  const resendId = await sendWithResend(
-    recipient,
-    senderEmail,
-    params.subject,
-    params.html,
-    plainText,
-    attachments,
-    params.senderProfile || "operational",
-  );
-  return { provider: "resend", providerMessageId: resendId, gmailError };
+  try {
+    const resendId = await sendWithResend(
+      recipient,
+      senderEmail,
+      params.subject,
+      params.html,
+      plainText,
+      attachments,
+      params.senderProfile || "operational",
+    );
+    return { provider: "resend", providerMessageId: resendId, gmailError };
+  } catch (resendError) {
+    console.error("[email-delivery] Providers unavailable", {
+      gmailError,
+      resendError: resendError instanceof Error
+        ? resendError.message
+        : "Falha desconhecida no canal institucional",
+    });
+    const googleReconnectRequired = Boolean(
+      gmailError?.includes("Reconecte sua conta Google"),
+    );
+    throw new EmailDeliveryUnavailableError(
+      googleReconnectRequired
+        ? "Não foi possível enviar pelo Gmail. Reconecte sua conta Google nas configurações e tente novamente."
+        : "Os canais de e-mail estão temporariamente indisponíveis. Tente novamente em instantes.",
+      googleReconnectRequired
+        ? "google_reconnect_required"
+        : "email_delivery_unavailable",
+    );
+  }
 };

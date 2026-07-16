@@ -1,72 +1,69 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { format, subDays } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/SessionContextProvider";
-import type { PaymentMethod, Transaction } from "@/types";
+import type { Transaction } from "@/types";
 import type { AccountMovement } from "@/lib/neurofinance-types";
+import {
+    filterAccountMovementsByDateRange,
+    mapAccountMovementToTransaction,
+    neuroFinanceOverviewItemsQueryKey,
+    parseAccountMovementRows,
+} from "@/lib/neurofinance-statement-data";
 
-export const useNeuroFinanceStatement = (startDate?: Date, endDate?: Date, enabled=true) => {
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 100;
+
+async function fetchStatementItems(userId: string, queryStart: string, queryEnd: string) {
+    const items: AccountMovement[] = [];
+    const startAt = new Date(`${queryStart}T00:00:00`).toISOString();
+    const endAt = new Date(`${queryEnd}T23:59:59.999`).toISOString();
+
+    for (let page = 0; page < MAX_PAGES; page += 1) {
+        const from = page * PAGE_SIZE;
+        const { data, error } = await supabase
+            .rpc("get_neurofinance_overview_items", {
+                p_end_at: endAt,
+                p_limit: PAGE_SIZE,
+                p_offset: from,
+                p_start_at: startAt,
+            });
+
+        if (error) throw error;
+        const pageItems = parseAccountMovementRows(data || []);
+        items.push(...pageItems);
+        if (pageItems.length < PAGE_SIZE) break;
+    }
+
+    return items.map((item) => mapAccountMovementToTransaction(item, userId));
+}
+
+export const useNeuroFinanceStatement = (startDate?: Date, endDate?: Date, enabled = true) => {
     const { user } = useAuth();
+    const queryClient = useQueryClient();
     const queryStart = format(startDate || subDays(new Date(), 30), "yyyy-MM-dd");
     const queryEnd = format(endDate || new Date(), "yyyy-MM-dd");
+    const startIso = `${queryStart}T00:00:00`;
+    const endIso = `${queryEnd}T23:59:59`;
 
     return useQuery<Transaction[], Error>({
         queryKey: ["neurofinance-statement", user?.id, queryStart, queryEnd],
         queryFn: async () => {
             if (!user?.id) return [];
-
-            const { data, error } = await supabase
-                .from("neurofinance_overview_items_v")
-                .select("*")
-                .eq("user_id", user.id)
-                .gte("occurred_at", `${queryStart}T00:00:00`)
-                .lte("occurred_at", `${queryEnd}T23:59:59`)
-                .order("occurred_at", { ascending: false });
-
-            if (error) throw error;
-
-            return ((data || []) as AccountMovement[]).map((item) => {
-                const metadata = (item.metadata || {}) as Record<string, any>;
-                const transactionMetadata = {
-                    ...metadata,
-                    overview_group: item.overview_group,
-                    item_type: item.item_type,
-                    payment_method: item.payment_method,
-                };
-                const receiptUrl = metadata.receipt_url || metadata.transaction_receipt_url || metadata.asaas_transaction_receipt_url;
-                const invoiceUrl = metadata.invoice_url || metadata.checkout_url || metadata.asaas_invoice_url;
-                const bankSlipUrl = metadata.bank_slip_url || metadata.asaas_bank_slip_url;
-
-                return {
-                    id: item.id,
-                    user_id: user.id,
-                    description: item.patient_name ? `${item.patient_name} · ${item.description}` : item.description,
-                    amount: Number(item.amount || 0) / 100,
-                    type: item.overview_group === "outflow" ? "expense" : "income",
-                    category: item.item_type,
-                    date: item.occurred_at,
-                    appointment_id: null,
-                    created_at: item.occurred_at,
-                    payment_method: (
-                        item.payment_method === "card"
-                            ? "credit_card"
-                            : item.payment_method === "debit"
-                                ? "debit_card"
-                                : item.payment_method
-                    ) as PaymentMethod | undefined,
-                    status: item.status === "paid" || item.status === "posted" ? "completed" : "pending",
-                    external_reference: item.reference_id || undefined,
-                    attachment_url: receiptUrl || invoiceUrl || bankSlipUrl || undefined,
-                    origin: "gateway_auto",
-                    patient_name: item.patient_name || undefined,
-                    metadata: transactionMetadata,
-                    receipt_url: receiptUrl || undefined,
-                    invoice_url: invoiceUrl || undefined,
-                    bank_slip_url: bankSlipUrl || undefined,
-                } as Transaction;
-            });
+            return fetchStatementItems(user.id, queryStart, queryEnd);
         },
-        enabled: Boolean(user?.id)&&enabled,
+        placeholderData: () => {
+            if (!user?.id) return undefined;
+            const cached = queryClient.getQueryData<AccountMovement[]>(
+                neuroFinanceOverviewItemsQueryKey(user.id),
+            );
+            if (!cached) return undefined;
+            return filterAccountMovementsByDateRange(cached, startIso, endIso)
+                .map((item) => mapAccountMovementToTransaction(item, user.id));
+        },
+        enabled: Boolean(user?.id) && enabled,
         staleTime: 1000 * 60 * 5,
+        gcTime: 1000 * 60 * 30,
+        refetchOnWindowFocus: false,
     });
 };

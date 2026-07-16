@@ -26,6 +26,7 @@ import {
     requireEntitlementForUser,
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+import { toNeurofinanceOperationError } from "../_shared/neurofinance-operation-error.ts";
 
 function consultationResponse(record: any) {
     const decoded = normalizePixQrConsultation(record?.provider_payload?.consultation || {});
@@ -35,10 +36,8 @@ function consultationResponse(record: any) {
         receiverName: decoded.receiver.name,
         receiverDocument: decoded.receiver.cpfCnpj,
         institutionName: decoded.receiver.ispbName,
-        institutionIspb: decoded.receiver.ispb,
         description: decoded.description,
         qrType: decoded.type,
-        pixKey: decoded.pixKey,
         dueDate: decoded.dueDate,
         expirationDate: decoded.expirationDate,
         canChangeValue: decoded.canBePaidWithDifferentValue,
@@ -184,7 +183,7 @@ Deno.serve(async (req: Request) => {
             const record = await findRequest(user.id, String(body.requestId || ""));
             if (!record) return errorResponse("Esta consulta Pix não foi encontrada.", 404, { code: "CONSULTATION_NOT_FOUND" });
             if (record.provider_operation_id && ["pending", "in_transit", "paid"].includes(record.status)) {
-                return jsonResponse({ success: true, request: consultationResponse(record), payment: record.provider_payload?.execution || {}, status: record.status, receiptUrl: record.receipt_url, idempotent: true });
+                return jsonResponse({ success: true, request: consultationResponse(record), status: record.status, receiptUrl: record.receipt_url, idempotent: true });
             }
             if (["submitting", "submission_unknown"].includes(record.status)) {
                 return errorResponse("Este Pix já foi enviado e aguarda confirmação bancária.", 409, { code: "PIX_ALREADY_SUBMITTED" });
@@ -261,9 +260,13 @@ Deno.serve(async (req: Request) => {
                     updated_at: new Date().toISOString(),
                 }).eq("id", claimed.id).select().single();
                 if (error) throw error;
-                return jsonResponse({ success: true, request: consultationResponse(updated), payment: result, status, receiptUrl });
+                return jsonResponse({ success: true, request: consultationResponse(updated), status, receiptUrl });
             } catch (error: any) {
                 const statusCode = Number(error?.status || 500);
+                const operationError = toNeurofinanceOperationError(
+                    error,
+                    "Não foi possível concluir este Pix.",
+                );
                 await supabaseAdmin.from("neurofinance_outgoing_requests").update({
                     status: statusCode >= 500 ? "submission_unknown" : "failed",
                     error_code: String(error?.code || "PIX_SUBMISSION_FAILED"),
@@ -273,9 +276,9 @@ Deno.serve(async (req: Request) => {
                 return errorResponse(
                     statusCode >= 500
                         ? "O Pix foi enviado, mas ainda não recebemos a confirmação bancária. Não tente novamente agora."
-                        : error?.message || "Não foi possível concluir este Pix.",
-                    statusCode,
-                    { code: statusCode >= 500 ? "PIX_SUBMISSION_UNKNOWN" : "PIX_SUBMISSION_FAILED" },
+                        : operationError.message,
+                    operationError.status,
+                    { code: statusCode >= 500 ? "PIX_SUBMISSION_UNKNOWN" : operationError.code },
                 );
             }
         }
@@ -319,8 +322,12 @@ Deno.serve(async (req: Request) => {
         const accessResponse = subscriptionAccessErrorResponse(error);
         if (accessResponse) return accessResponse;
         console.error("asaas-pix-payment error:", error);
-        return errorResponse(error?.message || "Não foi possível processar este Pix agora.", error?.status || 500, {
-            code: error?.code || "PIX_PAYMENT_FAILED",
+        const operationError = toNeurofinanceOperationError(
+            error,
+            "Não foi possível processar este Pix agora.",
+        );
+        return errorResponse(operationError.message, operationError.status, {
+            code: operationError.code,
         });
     }
 });

@@ -7,6 +7,7 @@ import {
     NB_PAYMENTS_SAFE_SELECT,
     normalizeNbPaymentRow,
 } from "@/lib/neurofinance-safe-selects";
+import { invokeEdgeFunction } from "@/lib/invoke-edge-function";
 
 export interface InvoiceListParams {
     page?: number;
@@ -84,6 +85,9 @@ export const fetchInvoicesPage = async (userId: string, params: InvoiceListParam
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
     const search = params.search?.trim();
+    const includeDeleted = params.status?.some((status) =>
+        ["cancelled", "canceled", "deleted"].includes(status.toLowerCase())
+    ) ?? false;
 
     let legacyQuery = supabase
         .from("invoices")
@@ -112,6 +116,9 @@ export const fetchInvoicesPage = async (userId: string, params: InvoiceListParam
         }
         if (params.patientId) {
             query = query.eq("patient_id", params.patientId);
+        }
+        if (!includeDeleted) {
+            query = query.neq("normalized_status", "deleted");
         }
 
         return query;
@@ -183,18 +190,17 @@ export const useInvoiceActions = () => {
     const queryClient = useQueryClient();
 
     const runAction = useMutation({
-        mutationFn: async ({ id, action }: { id: string; action: "sync" | "cancel" }) => {
-            const { data, error } = await supabase.functions.invoke("asaas-payment-actions", {
-                body: { payment_id: id, action },
-            });
-            if (error) throw error;
-            if (data?.error) throw new Error(data.error);
-            return data;
-        },
+        mutationFn: ({ id, action, idempotencyKey }: { id: string; action: "sync" | "delete"; idempotencyKey?: string }) =>
+            invokeEdgeFunction("asaas-payment-actions", {
+                payment_id: id,
+                action,
+                idempotencyKey,
+            }),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ["invoices"] });
             queryClient.invalidateQueries({ queryKey: ["invoices-page"] });
             queryClient.invalidateQueries({ queryKey: ["neurofinance-overview"] });
+            queryClient.invalidateQueries({ queryKey: ["charges-page"] });
         },
     });
 

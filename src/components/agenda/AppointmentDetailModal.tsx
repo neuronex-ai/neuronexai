@@ -25,6 +25,7 @@ import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import type { ProfessionalAppointmentAction } from "@/hooks/use-appointment-professional-action";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
+import { EdgeFunctionInvocationError } from "@/lib/invoke-edge-function";
 import {
   getAppointmentStatusMeta,
   normalizeAppointmentStatus,
@@ -350,8 +351,10 @@ export const AppointmentDetailModal = ({
           invitationIdempotencyKeyRef.current = null;
           void lifecycle.refetch();
         },
-        onError: () => {
-          invitationIdempotencyKeyRef.current = null;
+        onError: (error) => {
+          if (!(error instanceof EdgeFunctionInvocationError) || !error.retryWithSameRequest) {
+            invitationIdempotencyKeyRef.current = null;
+          }
         },
       },
     );

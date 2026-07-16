@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
     Activity,
     ArrowDownLeft,
@@ -13,10 +13,13 @@ import {
     FileText,
     Landmark,
     User,
+    XCircle,
 } from "lucide-react";
 
 import {
     getStatementOrigin,
+    getStatementPaymentMethodLabel,
+    getStatementStatusPresentation,
     groupStatementTransactionsByDate,
     sortStatementTransactions,
     type StatementSortOrder,
@@ -34,7 +37,7 @@ interface FinancialStatementProps {
 
 const originCopy = {
     neurofinance: { label: "NeuroFinance", icon: Landmark, tone: "bg-zinc-900 text-white border-zinc-900 dark:bg-white dark:text-black dark:border-white" },
-    manual: { label: "Manual", icon: FileText, tone: "bg-white text-zinc-900 border-zinc-200 dark:bg-transparent dark:text-zinc-400 dark:border-zinc-800" },
+    manual: { label: "Lançamento gerencial", icon: FileText, tone: "bg-white text-zinc-900 border-zinc-200 dark:bg-transparent dark:text-zinc-400 dark:border-zinc-800" },
     agenda: { label: "Agenda", icon: CalendarDays, tone: "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-white/[0.05] dark:text-zinc-300 dark:border-white/10" },
 } as const;
 
@@ -52,12 +55,8 @@ function OriginTag({ transaction }: { transaction: Transaction }) {
 }
 
 function MethodDetails({ transaction }: { transaction: Transaction }) {
-    const method = transaction.payment_method || "outro";
     const installments = transaction.installments;
-    let label = method.toUpperCase();
-
-    if (method === "credit_card") label = "CARTÃO";
-    if (method === "money") label = "DINHEIRO";
+    const label = getStatementPaymentMethodLabel(transaction);
 
     return (
         <div className="flex items-center gap-2">
@@ -80,16 +79,22 @@ function TransactionRow({
     index: number;
     onSelectTransaction?: (transaction: Transaction) => void;
 }) {
+    const shouldReduceMotion = useReducedMotion();
     const isIncome = transaction.type === "income";
-    const status = transaction.status || "completed";
+    const status = getStatementStatusPresentation(transaction);
     const patientName = transaction.patient_name || transaction.patients?.name;
+    const StatusIcon = status.kind === "completed"
+        ? CheckCircle2
+        : ["cancelled", "failed", "overdue"].includes(status.kind)
+            ? XCircle
+            : Clock;
 
     return (
         <motion.button
             type="button"
-            initial={{ opacity: 0, y: 10 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: Math.min(index, 8) * 0.035 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { delay: Math.min(index, 8) * 0.035 }}
             onClick={() => onSelectTransaction?.(transaction)}
             className={cn(
                 "group relative flex w-full items-center justify-between rounded-[24px] border p-4 text-left transition-all duration-300 md:p-5",
@@ -145,9 +150,14 @@ function TransactionRow({
                     </span>
                 </div>
 
-                <div className={cn("flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest", status === "completed" ? "text-zinc-400" : "text-zinc-300")}>
-                    {status === "completed" ? <CheckCircle2 className="h-3 w-3" /> : <Clock className="h-3 w-3 animate-pulse" />}
-                    {status === "completed" ? "Confirmado" : "Pendente"}
+                <div className={cn(
+                    "flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest",
+                    status.kind === "completed" ? "text-emerald-600 dark:text-emerald-400" :
+                        ["cancelled", "failed", "overdue"].includes(status.kind) ? "text-rose-600 dark:text-rose-400" :
+                            "text-amber-600 dark:text-amber-400",
+                )}>
+                    <StatusIcon className={cn("h-3 w-3", status.kind === "processing" && !shouldReduceMotion && "animate-pulse")} />
+                    {status.label}
                 </div>
             </div>
         </motion.button>

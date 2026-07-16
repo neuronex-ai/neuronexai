@@ -55,27 +55,27 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
       id: 'payment-connect',
       type: 'warning',
       title: 'NeuroFinance pendente',
-      message: 'Ative sua subconta Asaas de produção para receber cobranças automáticas.',
+      message: 'Conclua a ativação da sua conta NeuroFinance para receber cobranças automáticas.',
       time: 'Financeiro',
-      actionLink: '/financeiro/neurofinance',
+      actionLink: '/financeiro?view=conta-digital',
     });
   } else if (normalizedFinancialAccount.last_sync_error) {
     alerts.push({
       id: 'asaas-sync-error',
       type: 'destructive',
-      title: 'Sincronização Asaas',
-      message: 'Não foi possível sincronizar sua subconta Asaas. Verifique o painel financeiro.',
+      title: 'Sincronização do NeuroFinance',
+      message: 'Não foi possível atualizar sua conta NeuroFinance. Verifique o painel financeiro.',
       time: 'Financeiro',
-      actionLink: '/financeiro/neurofinance',
+      actionLink: '/financeiro?view=saude-conta',
     });
   } else if (['pending', 'onboarding', 'pending_review', 'restricted', 'disabled'].includes(normalizedFinancialAccount.status)) {
     alerts.push({
       id: 'asaas-review',
       type: normalizedFinancialAccount.status === 'restricted' || normalizedFinancialAccount.status === 'disabled' ? 'destructive' : 'warning',
-      title: 'Conta Asaas em análise',
-      message: 'Sua subconta ainda precisa de validação para liberar cobranças e repasses.',
+      title: 'Conta NeuroFinance em análise',
+      message: 'Sua conta ainda precisa de validação para liberar cobranças e repasses.',
       time: 'Financeiro',
-      actionLink: '/financeiro/neurofinance',
+      actionLink: '/financeiro?view=saude-conta',
     });
   }
 
@@ -97,7 +97,7 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
         title: 'Pagamento recebido',
         message: `${normalizedRecentPayments.length} pagamento(s) confirmado(s): ${centsToBRL(totalReceived)}.`,
         time: 'Financeiro',
-        actionLink: '/financeiro/neurofinance',
+        actionLink: '/financeiro?view=extrato&subview=realizado',
       });
     }
 
@@ -116,7 +116,7 @@ export const fetchDashboardAlerts = async (userId: string): Promise<DashboardAle
         title: 'Repasse com atenção',
         message: `${normalizedProblematicPayouts.length} repasse(s) tiveram falha ou cancelamento recente.`,
         time: 'Financeiro',
-        actionLink: '/financeiro/neurofinance',
+        actionLink: '/financeiro?view=transferencias',
       });
     }
   }

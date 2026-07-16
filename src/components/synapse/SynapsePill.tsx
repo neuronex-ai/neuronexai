@@ -81,25 +81,26 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
 
         return (
             <div
-                className="synapse-launcher flex min-h-14 items-center gap-1 rounded-full border p-1.5 text-foreground"
+                className="synapse-launcher flex min-h-16 items-center gap-1.5 rounded-full border p-2 text-foreground"
                 role="toolbar"
                 aria-label="Conversar com o Synapse"
                 data-synapse-launcher="true"
             >
-                <span className="flex h-11 items-center gap-2 pl-3 pr-2 text-[11px] font-semibold" aria-hidden="true">
+                <span className="synapse-launcher-brand flex h-12 items-center gap-2.5 rounded-full pl-3.5 pr-2.5 text-[12px] font-semibold" aria-hidden="true">
                     <Sparkles className="h-4 w-4" />
                     <span>Synapse</span>
                 </span>
-                <span className="synapse-launcher-divider h-6 w-px" aria-hidden="true" />
+                <span className="synapse-launcher-divider h-7 w-px" aria-hidden="true" />
                 <motion.button
                     type="button"
                     onClick={openTextConversation}
-                    whileHover={shouldReduceMotion ? undefined : { scale: 1.025 }}
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.975 }}
+                    whileHover={shouldReduceMotion ? undefined : { y: -1, scale: 1.018 }}
+                    whileTap={shouldReduceMotion ? undefined : { y: 0, scale: 0.976 }}
                     transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
-                    className="synapse-launcher-action flex h-11 items-center gap-2 rounded-full px-3 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                    className="synapse-launcher-action flex h-12 min-w-[76px] items-center justify-center gap-2 rounded-full px-3.5 text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                     aria-label="Abrir conversa por texto com o Synapse"
                     aria-controls="synapse-panel"
+                    data-synapse-action="text"
                 >
                     <MessageSquareText className="h-4 w-4" aria-hidden="true" />
                     <span>Texto</span>
@@ -108,12 +109,14 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                     type="button"
                     onClick={openVoiceConversation}
                     disabled={voiceStatus === "disconnecting"}
-                    whileHover={shouldReduceMotion ? undefined : { scale: 1.025 }}
-                    whileTap={shouldReduceMotion ? undefined : { scale: 0.975 }}
+                    whileHover={shouldReduceMotion ? undefined : { y: -1, scale: 1.018 }}
+                    whileTap={shouldReduceMotion ? undefined : { y: 0, scale: 0.976 }}
                     transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
-                    className="synapse-launcher-action flex h-11 items-center gap-2 rounded-full px-3 text-[11px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
+                    className="synapse-launcher-action flex h-12 min-w-[72px] items-center justify-center gap-2 rounded-full px-3.5 text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
                     aria-label="Iniciar conversa por voz com o Synapse"
                     aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
+                    aria-pressed={isVoiceSessionActive}
+                    data-synapse-action="voice"
                 >
                     <Mic className="h-4 w-4" aria-hidden="true" />
                     <span>Voz</span>
@@ -123,7 +126,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
     }
 
     return (
-        <div className="relative flex w-full flex-col items-center gap-2.5" data-synapse-presence-state={presenceState}>
+        <div className="relative flex w-full flex-col items-center gap-3" data-synapse-presence-state={presenceState}>
             <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                 {statusText}
             </span>
@@ -136,7 +139,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.99 }}
                         transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 390, damping: 38, mass: 0.72 }}
-                        className="synapse-presence-status pointer-events-none max-w-[280px] truncate rounded-full border px-4 py-2 text-center text-[11px] font-medium text-foreground"
+                        className="synapse-presence-status pointer-events-none max-w-[320px] truncate rounded-full border px-4 py-2 text-center text-[11px] font-medium text-foreground"
                     >
                         {statusText}
                     </motion.p>
@@ -149,10 +152,10 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                 disabled={voiceStatus === "disconnecting"}
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 7, scale: 0.94 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
-                whileTap={shouldReduceMotion ? undefined : { scale: 0.965 }}
+                whileHover={shouldReduceMotion ? undefined : { y: -1, scale: 1.025 }}
+                whileTap={shouldReduceMotion ? undefined : { y: 1, scale: 0.972 }}
                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 32, mass: 0.72 }}
-                className="synapse-presence-orb relative h-[61px] w-[61px] shrink-0 overflow-hidden rounded-full border-none outline-none focus-visible:outline-none disabled:cursor-wait disabled:opacity-70"
+                className="synapse-presence-orb relative h-[68px] w-[68px] shrink-0 overflow-hidden rounded-full border-none outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-70"
                 aria-label={isVoiceSessionActive ? "Encerrar conversa por voz" : "Iniciar conversa por voz"}
                 aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
                 aria-pressed={isVoiceSessionActive}

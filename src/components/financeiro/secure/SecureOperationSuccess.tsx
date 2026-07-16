@@ -16,6 +16,15 @@ interface SecureOperationSuccessProps {
   onRefreshReceipt?: () => Promise<string | null>;
 }
 
+function humanizeOperationStatus(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["paid", "received", "confirmed", "completed"].includes(normalized)) return "Confirmado";
+  if (["scheduled", "pending", "processing", "requested"].includes(normalized)) return "Em processamento";
+  if (["cancelled", "canceled"].includes(normalized)) return "Cancelado";
+  if (["failed", "rejected", "denied"].includes(normalized)) return "Não concluído";
+  return "Enviado";
+}
+
 function escapeReceiptHtml(value?: string | null) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -58,7 +67,7 @@ export function SecureOperationSuccess({
     const safeTitle = escapeReceiptHtml(title);
     const safeAmount = escapeReceiptHtml(formatCurrency(amount));
     const safeRecipient = escapeReceiptHtml(recipient);
-    const safeStatus = escapeReceiptHtml(status || "Enviado");
+    const safeStatus = escapeReceiptHtml(humanizeOperationStatus(status));
     const safeDate = escapeReceiptHtml(new Date().toLocaleString("pt-BR"));
     receiptWindow.document.write(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>Comprovante NeuroFinance</title><style>body{padding:48px;background:#f4f4f5;color:#18181b;font-family:Arial}main{max-width:620px;margin:auto;background:#fff;padding:42px;border-radius:24px}.value{font-size:42px;font-weight:900}.row{display:flex;justify-content:space-between;padding:14px 0;border-bottom:1px solid #e4e4e7}</style></head><body><main><p>NeuroFinance · Comprovante de solicitação</p><h1>${safeTitle}</h1><p class="value">${safeAmount}</p><div class="row"><span>Destino</span><strong>${safeRecipient}</strong></div><div class="row"><span>Status</span><strong>${safeStatus}</strong></div><div class="row"><span>Solicitado em</span><strong>${safeDate}</strong></div><p>A liquidação definitiva depende da confirmação bancária.</p></main><script>window.onload=()=>window.print()</script></body></html>`);
     receiptWindow.document.close();
@@ -66,7 +75,7 @@ export function SecureOperationSuccess({
 
   const shareReceipt = async () => {
     const refreshed = await resolveReceiptUrl();
-    const shareText = `${title}\n${formatCurrency(amount)}\nDestino: ${recipient}\nStatus: ${status || "Enviado"}`;
+    const shareText = `${title}\n${formatCurrency(amount)}\nDestino: ${recipient}\nStatus: ${humanizeOperationStatus(status)}`;
 
     if (navigator.share) {
       try {

@@ -13,6 +13,7 @@ import {
     requireEntitlementForUser,
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+import { toNeurofinanceOperationError } from "../_shared/neurofinance-operation-error.ts";
 
 type AsaasPaymentResponse = Record<string, unknown> & {
     status?: string;
@@ -36,12 +37,73 @@ function cents(value: unknown) {
     return Math.round(Number(value || 0) * 100);
 }
 
+async function sha256(value: string) {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function validIdempotencyKey(value: unknown) {
+    const key = String(value || "").trim();
+    return key.length >= 16 && key.length <= 160 ? key : null;
+}
+
+async function claimPaymentDeletion(params: {
+    userId: string;
+    financialAccountId: string | null;
+    paymentId: string;
+    providerPaymentId: string;
+    idempotencyKey: string;
+}) {
+    const operationType = "payment_delete";
+    const fingerprint = await sha256(`${params.paymentId}:${params.providerPaymentId}`);
+    const insert = await supabaseAdmin.from("neurofinance_baas_operations").insert({
+        user_id: params.userId,
+        financial_account_id: params.financialAccountId,
+        provider: "asaas",
+        operation_type: operationType,
+        idempotency_key: params.idempotencyKey,
+        request_fingerprint: fingerprint,
+        status: "submitting",
+        payload: { payment_id: params.paymentId },
+        provider_response: {},
+        updated_at: new Date().toISOString(),
+    }).select("id,status,request_fingerprint,provider_response").single();
+
+    if (!insert.error) return { operation: insert.data, created: true };
+    if (String(insert.error.code || "") !== "23505") throw insert.error;
+
+    const { data: existing, error } = await supabaseAdmin.from("neurofinance_baas_operations")
+        .select("id,status,request_fingerprint,provider_response")
+        .eq("user_id", params.userId)
+        .eq("operation_type", operationType)
+        .eq("idempotency_key", params.idempotencyKey)
+        .maybeSingle();
+    if (error) throw error;
+    if (!existing) throw insert.error;
+    if (existing.request_fingerprint !== fingerprint) return { conflict: true as const };
+    return { operation: existing, created: false };
+}
+
+async function setDeletionOperation(id: string, status: string, providerResponse: unknown = {}) {
+    const response = providerResponse && typeof providerResponse === "object" && !Array.isArray(providerResponse)
+        ? providerResponse as Record<string, unknown>
+        : {};
+    const { error } = await supabaseAdmin.from("neurofinance_baas_operations").update({
+        status,
+        provider_operation_id: String(response.id || "") || null,
+        provider_response: response,
+        updated_at: new Date().toISOString(),
+    }).eq("id", id);
+    if (error) throw error;
+}
+
 function normalizePaymentStatus(providerStatus?: string) {
     const status = String(providerStatus || "PENDING").toUpperCase();
     if (status === "RECEIVED") return { status: "paid", normalized_status: "paid", funds_status: "available" };
     if (status === "CONFIRMED") return { status: "processing", normalized_status: "confirmed", funds_status: "confirmed" };
     if (status === "OVERDUE") return { status: "expired", normalized_status: "overdue", funds_status: "overdue" };
-    if (["DELETED", "CANCELLED", "CANCELED"].includes(status)) return { status: "canceled", normalized_status: "canceled", funds_status: "canceled" };
+    if (status === "DELETED") return { status: "canceled", normalized_status: "deleted", funds_status: "canceled" };
+    if (["CANCELLED", "CANCELED"].includes(status)) return { status: "canceled", normalized_status: "canceled", funds_status: "canceled" };
     if (status.includes("REFUND")) return { status: "refunded", normalized_status: "refunded", funds_status: "refunded" };
     if (status.includes("CHARGEBACK")) return { status: "failed", normalized_status: "chargeback", funds_status: "chargeback" };
     return { status: "pending", normalized_status: "pending", funds_status: "pending" };
@@ -61,6 +123,7 @@ async function findPayment(userId: string, id: string) {
 
 async function updatePaymentFromProvider(localPayment: any, providerPayment: AsaasPaymentResponse) {
     const normalized = normalizePaymentStatus(providerPayment.status);
+    const providerDeleted = String(providerPayment.status || "").toUpperCase() === "DELETED";
     const metadata = {
         ...(localPayment.metadata || {}),
         asaas_invoice_url: providerPayment.invoiceUrl || null,
@@ -68,6 +131,9 @@ async function updatePaymentFromProvider(localPayment: any, providerPayment: Asa
         asaas_transaction_receipt_url: providerPayment.transactionReceiptUrl || null,
         asaas_status: providerPayment.status || null,
         last_manual_sync_at: new Date().toISOString(),
+        ...(providerDeleted
+            ? { provider_deleted: true, provider_deleted_at: new Date().toISOString() }
+            : {}),
     };
 
     const { data, error } = await supabaseAdmin
@@ -94,6 +160,15 @@ async function updatePaymentFromProvider(localPayment: any, providerPayment: Asa
 
     if (error) throw error;
     return data;
+}
+
+function paymentActionResponse(payment: any) {
+    return {
+        id: payment.id,
+        status: payment.status,
+        normalizedStatus: payment.normalized_status,
+        updatedAt: payment.updated_at,
+    };
 }
 
 Deno.serve(async (req: Request) => {
@@ -135,27 +210,100 @@ Deno.serve(async (req: Request) => {
                 matchedBy: "automatic",
                 notes: "Sincronizacao manual da cobranca",
             });
-            return jsonResponse({ success: true, payment: updated });
+            return jsonResponse({ success: true, payment: paymentActionResponse(updated) });
         }
 
-        if (action === "cancel") {
+        if (action === "delete" || action === "cancel") {
             const status = String(localPayment.normalized_status || localPayment.status || "").toLowerCase();
-            if (!["pending", "processing", "overdue"].includes(status)) {
-                return errorResponse("Só cobranças pendentes podem ser canceladas por aqui.", 400, { code: "PAYMENT_NOT_CANCELABLE" });
+            const idempotencyKey = validIdempotencyKey(body.idempotencyKey || body.idempotency_key);
+            if (!idempotencyKey) {
+                return errorResponse("Não foi possível identificar esta exclusão com segurança. Tente novamente.", 400, {
+                    code: "IDEMPOTENCY_KEY_REQUIRED",
+                });
+            }
+            if (!["pending", "overdue"].includes(status)) {
+                if (["canceled", "cancelled", "deleted"].includes(status)) {
+                    const fingerprint = await sha256(`${localPayment.id}:${localPayment.provider_payment_id}`);
+                    const { data: completedReplay, error: replayError } = await supabaseAdmin
+                        .from("neurofinance_baas_operations")
+                        .select("id,request_fingerprint,status")
+                        .eq("user_id", user.id)
+                        .eq("operation_type", "payment_delete")
+                        .eq("idempotency_key", idempotencyKey)
+                        .maybeSingle();
+                    if (replayError) throw replayError;
+                    if (completedReplay?.status === "completed" && completedReplay.request_fingerprint === fingerprint) {
+                        return jsonResponse({
+                            success: true,
+                            deleted: true,
+                            replayed: true,
+                            payment: paymentActionResponse(localPayment),
+                        });
+                    }
+                }
+                return errorResponse(
+                    "Somente cobranças pendentes ou vencidas podem ser excluídas. Cobranças em processamento exigem revisão.",
+                    409,
+                    { code: "PAYMENT_NOT_DELETABLE" },
+                );
             }
 
-            const providerPayment = normalizeProviderPayment(
-                await asaasRequest(`/payments/${encodeURIComponent(localPayment.provider_payment_id)}`, "DELETE", undefined, apiKey),
-            );
+            const claim = await claimPaymentDeletion({
+                userId: user.id,
+                financialAccountId: localPayment.financial_account_id || financialAccount?.id || null,
+                paymentId: localPayment.id,
+                providerPaymentId: localPayment.provider_payment_id,
+                idempotencyKey,
+            });
+            if (claim.conflict) {
+                return errorResponse("Esta confirmação já foi usada em outra cobrança.", 409, {
+                    code: "IDEMPOTENCY_KEY_REUSED",
+                });
+            }
+            if (!claim.operation) throw new Error("PAYMENT_DELETE_CLAIM_FAILED");
+            if (!claim.created && claim.operation.status === "submitting") {
+                return errorResponse("A exclusão desta cobrança já está sendo processada.", 409, {
+                    code: "OPERATION_IN_PROGRESS",
+                });
+            }
+
+            let providerPayment = normalizeProviderPayment(claim.operation.provider_response);
+            if (claim.operation.status !== "completed") {
+                if (!claim.created) {
+                    const { error } = await supabaseAdmin.from("neurofinance_baas_operations").update({
+                        status: "submitting",
+                        updated_at: new Date().toISOString(),
+                    }).eq("id", claim.operation.id).in("status", ["failed", "submission_unknown"]);
+                    if (error) throw error;
+                }
+                try {
+                    providerPayment = normalizeProviderPayment(
+                        await asaasRequest(`/payments/${encodeURIComponent(localPayment.provider_payment_id)}`, "DELETE", undefined, apiKey),
+                    );
+                    await setDeletionOperation(claim.operation.id, "completed", providerPayment);
+                } catch (providerError) {
+                    if (Number((providerError as { status?: unknown })?.status || 0) === 404) {
+                        providerPayment = { id: localPayment.provider_payment_id, status: "DELETED" };
+                        await setDeletionOperation(claim.operation.id, "completed", providerPayment);
+                    } else {
+                        const providerStatus = Number((providerError as { status?: unknown })?.status || 0);
+                        await setDeletionOperation(
+                            claim.operation.id,
+                            !providerStatus || providerStatus >= 500 ? "submission_unknown" : "failed",
+                        );
+                        throw providerError;
+                    }
+                }
+            }
             const updated = await updatePaymentFromProvider(localPayment, {
                 ...providerPayment,
-                status: providerPayment?.status || "DELETED",
+                status: providerPayment.status || "DELETED",
             });
             await syncFinancialEntryForPayment(updated, {
                 matchedBy: "automatic",
-                notes: "Cancelamento manual da cobranca",
+                notes: "Exclusão da cobrança bancária solicitada pelo profissional",
             });
-            return jsonResponse({ success: true, payment: updated });
+            return jsonResponse({ success: true, deleted: true, replayed: !claim.created, payment: paymentActionResponse(updated) });
         }
 
         return errorResponse("Esta ação ainda não está disponível para cobranças.", 400, { code: "UNSUPPORTED_PAYMENT_ACTION" });
@@ -163,10 +311,12 @@ Deno.serve(async (req: Request) => {
         const accessResponse = subscriptionAccessErrorResponse(error);
         if (accessResponse) return accessResponse;
         console.error("asaas-payment-actions error:", error);
-        return errorResponse(
+        const operationError = toNeurofinanceOperationError(
+            error,
             "Não conseguimos atualizar esta cobrança agora. Tente novamente em instantes.",
-            error?.status || 500,
-            { code: "PAYMENT_ACTION_FAILED" }
         );
+        return errorResponse(operationError.message, operationError.status, {
+            code: operationError.code,
+        });
     }
 });

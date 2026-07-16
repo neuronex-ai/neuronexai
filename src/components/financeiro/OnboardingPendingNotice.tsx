@@ -70,7 +70,7 @@ export const OnboardingPendingNotice = ({
           : "Ação necessária";
 
   const description = isAccountMissing
-    ? "A conexão com a subconta Asaas foi interrompida. Seu histórico continua preservado enquanto nossa equipe verifica a recuperação."
+    ? "A conexão com o NeuroFinance foi interrompida. Seu histórico continua preservado enquanto nossa equipe verifica a recuperação."
     : needsInitialOnboarding
       ? "Para começar a receber pagamentos e emitir notas fiscais, complete a configuração do seu perfil financeiro."
       : isUnderReview

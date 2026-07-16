@@ -8,6 +8,7 @@ import { isAfter, subDays } from "date-fns";
 import {
   Activity,
   ArrowDownLeft,
+  ArrowUpRight,
   BadgeCent,
   Barcode,
   CalendarClock,
@@ -15,6 +16,7 @@ import {
   CreditCard,
   FileCheck,
   FileText,
+  Handshake,
   History,
   Key,
   Landmark,
@@ -25,7 +27,6 @@ import {
   Send,
   Settings,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   Users,
   WalletCards,
@@ -43,6 +44,10 @@ import {
   type SynapseInterfaceAction,
 } from "@/lib/synapse-interface-actions";
 import { Transaction } from "@/types";
+import {
+  FINANCIAL_MANAGEMENT_NAV_ITEMS,
+  type FinancialManagementNavIcon,
+} from "@/lib/finance-management-sections";
 
 interface NavSubItem {
   id: FinanceView;
@@ -63,19 +68,28 @@ interface NavItem {
 
 const BANKING_QUERY_KEYS = ["onboarding", "payment"];
 
+const MANAGEMENT_NAV_ICONS: Record<FinancialManagementNavIcon, NavSubItem["icon"]> = {
+  overview: Landmark,
+  manualCharges: WalletCards,
+  entries: ArrowUpRight,
+  receipts: ArrowDownLeft,
+  agreements: Handshake,
+  recurrence: Repeat,
+  planning: CalendarClock,
+};
+
 const FINANCE_NAV: NavItem[] = [
   {
     id: "management-root",
     sectionLabel: "Gestão Financeira",
     label: "Gestão",
     icon: Landmark,
-    subItems: [
-      { id: "gestao-visao-geral", label: "Visão Geral", icon: Landmark, description: "Resultado, previsão, recebíveis e pendências do consultório" },
-      { id: "gestao-lancamentos", label: "Lançamentos", icon: Receipt, description: "Receitas e despesas" },
-      { id: "gestao-cobrancas", label: "Cobranças", icon: WalletCards, description: "Cobranças abertas, vencidas e recorrentes" },
-      { id: "gestao-recebimentos", label: "Recebimentos", icon: ArrowDownLeft, description: "Baixas e valores em aberto" },
-      { id: "gestao-planejamento", label: "Planejamento", icon: Sparkles, description: "Metas e recorrências" },
-    ],
+    subItems: FINANCIAL_MANAGEMENT_NAV_ITEMS.map((item) => ({
+      id: item.id,
+      label: item.label,
+      icon: MANAGEMENT_NAV_ICONS[item.icon],
+      description: item.description,
+    })),
   },
   { id: "account-balance-root", sectionLabel: "NeuroFinance", label: "Conta e Saldo", icon: CreditCard, subItems: [{ id: "conta-digital", label: "Conta e Saldo", icon: CreditCard }] },
   {
@@ -85,10 +99,9 @@ const FINANCE_NAV: NavItem[] = [
     subItems: [
       { id: "pix-pagar", label: "Pagar Pix", icon: QrCode, tag: "Grátis", description: "Cole um Pix copia e cola e pague pela conta NeuroFinance" },
       { id: "pix-qrcode", label: "Gerar QR Code", icon: QrCode, tag: "Grátis", description: "Crie um QR Code para receber na hora" },
-      { id: "pix-receber", label: "Pix recebidos", icon: ArrowDownLeft, tag: "Grátis", description: "Veja o que entrou por Pix" },
       { id: "pix-chaves", label: "Minhas chaves", icon: Key, description: "Gerencie chaves Pix" },
       { id: "pix-salarios", label: "Pagar salários", icon: Users, tag: "Grátis", description: "Pix em lote" },
-      { id: "pix-limites", label: "Limites", icon: ShieldCheck, tag: "No App", description: "Ajuste limites de segurança" },
+      { id: "pix-limites", label: "Limites", icon: ShieldCheck, description: "Consulte limites de segurança" },
     ],
   },
   { id: "statement-root", label: "Extrato da conta", icon: FileText, subItems: [{ id: "extrato", label: "Extrato da conta", icon: FileText }] },
@@ -116,9 +129,7 @@ const FINANCE_NAV: NavItem[] = [
     label: "Antecipação",
     icon: TrendingUp,
     subItems: [
-      { id: "antecipacoes-lista", label: "Minhas antecipações", icon: History },
-      { id: "antecipacoes-solicitar", label: "Antecipar recebimento", icon: TrendingUp },
-      { id: "antecipacoes-automatica", label: "Antecipação automática", icon: Repeat },
+      { id: "antecipacoes-solicitar", label: "Antecipação", icon: TrendingUp, tag: "Em breve" },
     ],
   },
   { id: "transfers-root", label: "Transferências", icon: Send, subItems: [{ id: "pix-transferir", label: "Transferir via Pix", icon: Send, tag: "Grátis", description: "Envie dinheiro para uma chave Pix" }] },
@@ -131,7 +142,7 @@ const FINANCE_NAV: NavItem[] = [
       { id: "contas-bancarias", label: "Contas e Chaves", icon: Landmark },
     ],
   },
-  { id: "chargebacks-root", label: "Chargebacks", icon: Activity, subItems: [{ id: "cobrancas-chargebacks", label: "Chargebacks", icon: Activity }] },
+  { id: "chargebacks-root", label: "Contestações", icon: Activity, subItems: [{ id: "cobrancas-chargebacks", label: "Contestações", icon: Activity }] },
   {
     id: "fiscal-root",
     label: "NFS-e",
@@ -158,10 +169,19 @@ const SIDEBAR_WIDTH_TRANSITION = { type: "spring", stiffness: 360, damping: 40, 
 const getInitialFinanceView = (pathname: string, search: string): FinanceView => {
   const searchParams = new URLSearchParams(search);
   const viewParam = searchParams.get("view") as FinanceView;
+  if (viewParam === "pix-receber" || viewParam === "pix") return "extrato";
   if (viewParam) return viewParam;
 
   const shouldOpenNeuroFinance = pathname.includes("/neurofinance") || BANKING_QUERY_KEYS.some((key) => searchParams.has(key));
   return shouldOpenNeuroFinance ? "conta-digital" : "gestao-visao-geral";
+};
+
+const getInitialStatementPixPreset = (search: string) => {
+  const searchParams = new URLSearchParams(search);
+  return (
+    ["pix-receber", "pix"].includes(searchParams.get("view") || "") ||
+    searchParams.get("filter") === "pix-recebidos"
+  );
 };
 
 const getInitialStatementTab = (search: string): "realizado" | "futuro" | "assinaturas" => {
@@ -450,6 +470,7 @@ const DesktopFinanceiro = () => {
               futureTransactions={futureTransactions}
               subscriptionTransactions={subscriptionTransactions}
               isNbStatementLoading={isNbStatementLoading || isNbFutureLoading}
+              statementPixReceivedPreset={getInitialStatementPixPreset(location.search)}
             />
           </AnimatePresence>
         </div>

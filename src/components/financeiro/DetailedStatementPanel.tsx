@@ -32,7 +32,9 @@ import {
     countDetailedStatementFilters,
     emptyDetailedStatementFilters,
     filterDetailedStatementTransactions,
+    isPixReceivedStatementPreset,
     sortStatementTransactions,
+    togglePixReceivedStatementPreset,
     type DetailedStatementFilters,
     type StatementOriginFilter,
     type StatementPaymentMethodFilter,
@@ -58,6 +60,7 @@ interface DetailedStatementPanelProps {
     tab: DetailedStatementTab;
     onTabChange: (tab: DetailedStatementTab) => void;
     onSelectTransaction: (transaction: Transaction) => void;
+    initialPixReceivedFilter?: boolean;
 }
 
 const paymentMethodOptions: { id: StatementPaymentMethodFilter; label: string }[] = [
@@ -67,14 +70,14 @@ const paymentMethodOptions: { id: StatementPaymentMethodFilter; label: string }[
     { id: "cash", label: "Dinheiro" },
     { id: "convenio", label: "Convênio" },
     { id: "external_transfer", label: "Transferência externa" },
-    { id: "manual", label: "Manual" },
+    { id: "manual", label: "Lançamento gerencial" },
     { id: "other", label: "Outro" },
 ];
 
 const originOptions: { id: StatementOriginFilter; label: string }[] = [
     { id: "neurofinance", label: "NeuroFinance" },
-    { id: "manual", label: "Manual" },
-    { id: "agenda", label: "Agenda com dinheiro real" },
+    { id: "manual", label: "Lançamento gerencial" },
+    { id: "agenda", label: "Agenda" },
 ];
 
 const transferMethodOptions: { id: StatementTransferMethodFilter; label: string }[] = [
@@ -139,8 +142,13 @@ export function DetailedStatementPanel({
     tab,
     onTabChange,
     onSelectTransaction,
+    initialPixReceivedFilter = false,
 }: DetailedStatementPanelProps) {
-    const [filters, setFilters] = useState<DetailedStatementFilters>(() => emptyDetailedStatementFilters());
+    const [filters, setFilters] = useState<DetailedStatementFilters>(() =>
+        initialPixReceivedFilter
+            ? togglePixReceivedStatementPreset(emptyDetailedStatementFilters())
+            : emptyDetailedStatementFilters(),
+    );
     const [sortOrder, setSortOrder] = useState<StatementSortOrder>("desc");
     const [showValues, setShowValues] = useState(true);
     const [page, setPage] = useState(1);
@@ -214,7 +222,9 @@ export function DetailedStatementPanel({
     }, [pageCount]);
 
     const activeFilters = countDetailedStatementFilters(filters);
-    const isLoading = transactionsQuery.isLoading || statementQuery.isLoading;
+    const isLoading = allTransactions.length === 0 &&
+        (transactionsQuery.isLoading || statementQuery.isLoading);
+    const pixReceivedFilterActive = isPixReceivedStatementPreset(filters);
 
     const updateFilter = <K extends keyof DetailedStatementFilters>(key: K, value: DetailedStatementFilters[K]) => {
         setFilters((current) => ({ ...current, [key]: value }));
@@ -262,6 +272,24 @@ export function DetailedStatementPanel({
                             {item.label}
                         </button>
                     ))}
+                    <button
+                        type="button"
+                        aria-pressed={pixReceivedFilterActive}
+                        onClick={() => {
+                            const willEnable = !pixReceivedFilterActive;
+                            setFilters((current) => togglePixReceivedStatementPreset(current));
+                            if (willEnable) onTabChange("realizado");
+                        }}
+                        className={cn(
+                            "flex h-10 items-center gap-2 rounded-[14px] px-4 text-[10px] font-black uppercase tracking-[0.12em] transition-all",
+                            pixReceivedFilterActive
+                                ? "bg-zinc-950 text-white shadow-md dark:bg-white dark:text-zinc-950"
+                                : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950 dark:hover:bg-white/[0.06] dark:hover:text-white",
+                        )}
+                    >
+                        <ArrowDownLeft className="h-3.5 w-3.5" />
+                        Pix recebidos
+                    </button>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">

@@ -31,7 +31,8 @@ export interface RequestPayoutParams {
     description?: string;
     purpose?: "payout" | "transfer";
     destination?: {
-        type: "saved_bank" | "manual_bank" | "pix_key";
+        type: "saved_bank" | "saved_pix" | "manual_bank" | "pix_key";
+        recipient_id?: string;
         pix_key?: string;
         bank_code?: string;
         bank_name?: string;
@@ -46,7 +47,7 @@ export interface RequestPayoutParams {
 }
 
 export interface PayoutDestination extends Record<string, unknown> {
-    type?: "saved_bank" | "pix_key";
+    type?: "saved_bank" | "saved_pix" | "pix_key";
     pix_key?: string;
     pix_key_type?: string;
     bank_code?: string;
@@ -61,6 +62,28 @@ export interface PayoutDestination extends Record<string, unknown> {
     validation_source?: string;
 }
 
+export interface SavedPayoutDestinations {
+    bank: {
+        type: "saved_bank";
+        label: string;
+        summary: string;
+        holderName?: string | null;
+        bankName?: string | null;
+        agency?: string | null;
+        accountLast4?: string | null;
+    } | null;
+    pix: Array<{
+        id: string;
+        label: string;
+        keyType: string;
+        maskedKey: string;
+        summary: string;
+        holderName?: string | null;
+        holderDocument?: string | null;
+        bankName?: string | null;
+    }>;
+}
+
 export interface PayoutConsultation {
     id: string;
     kind: "pix_transfer" | "payout_pix" | "payout_bank";
@@ -72,16 +95,12 @@ export interface PayoutConsultation {
     destination: PayoutDestination;
     destinationType: "saved_bank" | "pix_key";
     expiresAt: string;
-    providerOperationId?: string | null;
-    providerStatus?: string | null;
     receiptUrl?: string | null;
-    payoutId?: string | null;
 }
 
 export interface PayoutExecution {
     success: boolean;
     request: PayoutConsultation;
-    transfer: Record<string, unknown>;
     status?: string;
     receiptUrl?: string | null;
     idempotent?: boolean;
@@ -123,17 +142,21 @@ export const useSecurePayout = () => {
             }),
         onError: (error: Error) => {
             const friendlyError = toUserFacingError(error, "transfer");
-            toast.error(friendlyError.title, { description: error.message || friendlyError.message });
+            toast.error(friendlyError.title, { description: friendlyError.message });
         },
     });
 
     const authorize = useMutation({
-        mutationFn: ({ requestId, pin }: { requestId: string; pin: string }) =>
+        mutationFn: ({ requestId, pin, saveRecipient = false }: { requestId: string; pin: string; saveRecipient?: boolean }) =>
             invokeEdgeFunction<{ success: boolean; consultation: PayoutConsultation }>("asaas-payout", {
                 action: "authorize",
                 requestId,
                 pin,
+                saveRecipient,
             }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["neurofinance-payout-destinations"] });
+        },
     });
 
     const execute = useMutation({
@@ -148,7 +171,7 @@ export const useSecurePayout = () => {
         },
         onError: (error) => {
             const friendlyError = toUserFacingError(error, "transfer");
-            toast.error(friendlyError.title, { description: error.message || friendlyError.message });
+            toast.error(friendlyError.title, { description: friendlyError.message });
         },
     });
 
@@ -161,4 +184,20 @@ export const useSecurePayout = () => {
     });
 
     return { consult, authorize, execute, receipt };
+};
+
+export const usePayoutDestinations = (purpose: "payout" | "transfer") => {
+    const { user } = useAuth();
+    return useQuery<SavedPayoutDestinations, Error>({
+        queryKey: ["neurofinance-payout-destinations", user?.id, purpose],
+        enabled: Boolean(user?.id),
+        staleTime: 5 * 60 * 1000,
+        queryFn: async () => {
+            const response = await invokeEdgeFunction<{
+                success: boolean;
+                destinations: SavedPayoutDestinations;
+            }>("asaas-payout", { action: "list_destinations", purpose });
+            return response.destinations;
+        },
+    });
 };

@@ -514,36 +514,33 @@
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.035) 34%, rgba(24, 24, 24, 0.018));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.5),
-      0 24px 68px -52px rgba(24, 24, 24, 0.38),
-      0 12px 34px -28px rgba(104, 104, 104, 0.14);
+      0 24px 68px -52px rgba(24, 24, 24, 0.3);
   }
 
   .dark .finance-frame,
   .dark .finance-sidebar-surface {
-    border-color: rgba(255, 255, 255, 0.038) !important;
+    border-color: rgba(0, 0, 0, 0.76) !important;
     background-color: rgba(8, 8, 8, 0.84) !important;
     background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.028), rgba(255, 255, 255, 0.009) 38%, rgba(0, 0, 0, 0.08));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.025),
       inset 0 -1px 0 rgba(0, 0, 0, 0.5),
-      0 34px 92px -66px rgba(0, 0, 0, 0.98),
-      0 18px 48px -42px rgba(148, 148, 148, 0.14) !important;
+      0 34px 92px -66px rgba(0, 0, 0, 0.98) !important;
   }
 
   .dark .finance-panel {
-    border-color: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(0, 0, 0, 0.72) !important;
     background-color: rgba(18, 18, 18, 0.9) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.036), rgba(255, 255, 255, 0.012) 46%, rgba(0, 0, 0, 0.08));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.032),
       inset 0 -1px 0 rgba(0, 0, 0, 0.42),
-      0 22px 58px -48px rgba(0, 0, 0, 0.94),
-      0 12px 34px -30px rgba(146, 146, 146, 0.1) !important;
+      0 22px 58px -48px rgba(0, 0, 0, 0.94) !important;
   }
 
   .dark .finance-inset,
   .dark .finance-kpi {
-    border-color: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.68) !important;
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.034), rgba(255, 255, 255, 0.012) 48%, rgba(0, 0, 0, 0.08));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.026),
@@ -578,22 +575,61 @@
   }
 
   .dark .finance-modal-surface {
-    border-color: rgba(255, 255, 255, 0.055) !important;
+    border-color: rgba(0, 0, 0, 0.78) !important;
     background-color: rgba(12, 12, 12, 0.96) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012) 42%, rgba(0, 0, 0, 0.1));
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.04),
       inset 0 -1px 0 rgba(0, 0, 0, 0.56),
-      0 42px 110px -48px rgba(0, 0, 0, 0.98),
-      0 18px 48px -38px rgba(148, 148, 148, 0.12) !important;
+      0 42px 110px -48px rgba(0, 0, 0, 0.98) !important;
+  }
+
+  /* Financial surfaces use depth, never a pale glow below light blocks. */
+  .finance-desktop :where(.finance-frame, .finance-panel, .finance-inset, .finance-kpi, .finance-modal-surface)[class*="shadow-"] {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.38),
+      0 22px 64px -54px rgba(24, 24, 24, 0.32) !important;
+  }
+
+  .dark .finance-desktop :where(.finance-frame, .finance-panel, .finance-inset, .finance-kpi, .finance-modal-surface)[class*="shadow-"] {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.026),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.48),
+      0 26px 72px -54px rgba(0, 0, 0, 0.98) !important;
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .finance-frame,
+    .finance-sidebar-surface,
+    .finance-panel,
+    .finance-inset,
+    .finance-kpi,
+    .finance-modal-surface,
+    .desktop-retina-panel,
+    .desktop-retina-inset,
+    .desktop-retina-modal,
+    .app-dialog-surface {
+      background-image: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+      background-color: hsl(var(--background)) !important;
+    }
+
+    .finance-panel,
+    .finance-inset,
+    .finance-kpi,
+    .desktop-retina-panel,
+    .desktop-retina-inset {
+      background-color: hsl(var(--card)) !important;
+    }
   }
 
   .dark .finance-separator {
-    border-color: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(0, 0, 0, 0.72) !important;
   }
 
   .dark .finance-modal-form :where(input, textarea, button[role="combobox"]) {
-    border-color: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(0, 0, 0, 0.7) !important;
     background-color: rgba(20, 20, 20, 0.86) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(0, 0, 0, 0.06));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
@@ -678,7 +714,7 @@
 
   .dark .desktop-retina-frame,
   .dark .global-retina-navbar {
-    border-color: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.76) !important;
     background-color: rgba(8, 8, 8, 0.86) !important;
     background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.009) 42%, rgba(0, 0, 0, 0.08));
     box-shadow:
@@ -689,7 +725,7 @@
   }
 
   .dark .desktop-retina-panel {
-    border-color: rgba(255, 255, 255, 0.046) !important;
+    border-color: rgba(0, 0, 0, 0.72) !important;
     background-color: rgba(18, 18, 18, 0.91) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.011) 48%, rgba(0, 0, 0, 0.09));
     box-shadow:
@@ -700,7 +736,7 @@
   }
 
   .dark .desktop-retina-inset {
-    border-color: rgba(255, 255, 255, 0.042) !important;
+    border-color: rgba(0, 0, 0, 0.68) !important;
     background-color: rgba(21, 21, 21, 0.82) !important;
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.031), rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.08));
     box-shadow:
@@ -711,7 +747,7 @@
 
   .dark .desktop-retina-modal,
   .dark .app-dialog-surface {
-    border-color: rgba(255, 255, 255, 0.058) !important;
+    border-color: rgba(0, 0, 0, 0.78) !important;
     background-color: rgba(12, 12, 12, 0.97) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.012) 44%, rgba(0, 0, 0, 0.1));
     box-shadow:
@@ -723,7 +759,7 @@
   }
 
   .dark .desktop-retina-form :where(input, textarea, button[role="combobox"]) {
-    border-color: rgba(255, 255, 255, 0.046) !important;
+    border-color: rgba(0, 0, 0, 0.7) !important;
     background-color: rgba(20, 20, 20, 0.88) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(0, 0, 0, 0.06));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
@@ -790,17 +826,17 @@
   }
 
   .dark .app-dialog-surface :where(input, textarea, button[role="combobox"]) {
-    border-color: rgba(255, 255, 255, 0.046) !important;
+    border-color: rgba(0, 0, 0, 0.7) !important;
     background-color: rgba(20, 20, 20, 0.88) !important;
   }
 
   .dark .settings-desktop-shell {
-    border-color: rgba(255, 255, 255, 0.04) !important;
+    border-color: rgba(0, 0, 0, 0.76) !important;
     background-color: rgba(7, 7, 7, 0.84) !important;
   }
 
   .dark .settings-sidebar-surface {
-    border-color: rgba(255, 255, 255, 0.042) !important;
+    border-color: rgba(0, 0, 0, 0.72) !important;
     background:
       linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.004)),
       rgba(5, 5, 5, 0.78);
@@ -808,12 +844,12 @@
   }
 
   .dark .settings-detail-surface {
-    border-color: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(0, 0, 0, 0.72) !important;
     background-color: rgba(17, 17, 17, 0.9) !important;
   }
 
   .dark .settings-detail-surface :where(input, textarea, button[role="combobox"]) {
-    border-color: rgba(255, 255, 255, 0.045) !important;
+    border-color: rgba(0, 0, 0, 0.7) !important;
     background-color: rgba(21, 21, 21, 0.86) !important;
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018), inset 0 -1px 0 rgba(0, 0, 0, 0.42);
   }
@@ -828,7 +864,7 @@
 
   .dark .agenda-desktop-shell,
   .dark .patient-record-shell {
-    border-color: rgba(255, 255, 255, 0.042) !important;
+    border-color: rgba(0, 0, 0, 0.78) !important;
     background-color: rgba(7, 7, 7, 0.9) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.022), rgba(255, 255, 255, 0.006) 48%, rgba(0, 0, 0, 0.12));
     box-shadow:
@@ -839,14 +875,14 @@
 
   .dark .agenda-desktop-shell .desktop-retina-panel,
   .dark .patient-record-content {
-    border-color: rgba(255, 255, 255, 0.047) !important;
+    border-color: rgba(0, 0, 0, 0.72) !important;
     background-color: rgba(14, 14, 14, 0.93) !important;
     background-image: linear-gradient(155deg, rgba(255, 255, 255, 0.032), rgba(255, 255, 255, 0.009) 52%, rgba(0, 0, 0, 0.1));
   }
 
   .dark .agenda-desktop-shell .desktop-retina-inset,
   .dark .patient-record-shell .desktop-retina-inset {
-    border-color: rgba(255, 255, 255, 0.042) !important;
+    border-color: rgba(0, 0, 0, 0.68) !important;
     background-color: rgba(19, 19, 19, 0.86) !important;
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.007) 54%, rgba(0, 0, 0, 0.08));
   }
@@ -1890,25 +1926,43 @@
   }
 
   .synapse-launcher {
-    border-color: hsl(var(--border) / 0.62);
+    isolation: isolate;
+    border-color: hsl(var(--border) / 0.54);
     background:
-      linear-gradient(155deg, hsl(var(--background) / 0.94), hsl(var(--card) / 0.88)),
-      hsl(var(--card));
+      radial-gradient(circle at 22% -24%, hsl(var(--background) / 0.98), transparent 48%),
+      linear-gradient(155deg, hsl(var(--background) / 0.9), hsl(var(--card) / 0.76)),
+      hsl(var(--card) / 0.88);
     box-shadow:
-      0 24px 64px -42px hsl(var(--foreground) / 0.62),
-      inset 0 1px 0 hsl(var(--background) / 0.76);
-    backdrop-filter: blur(24px) saturate(1.08);
-    -webkit-backdrop-filter: blur(24px) saturate(1.08);
+      0 30px 82px -44px hsl(var(--foreground) / 0.58),
+      0 10px 30px -26px hsl(var(--foreground) / 0.28),
+      inset 0 1px 0 hsl(var(--background) / 0.84),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.016);
+    backdrop-filter: blur(30px) saturate(1.16);
+    -webkit-backdrop-filter: blur(30px) saturate(1.16);
   }
 
   .dark .synapse-launcher {
-    border-color: rgba(255, 255, 255, 0.075);
+    border-color: rgba(255, 255, 255, 0.065);
     background:
-      linear-gradient(155deg, rgba(24, 24, 25, 0.94), rgba(7, 7, 8, 0.95)),
-      #09090a;
+      radial-gradient(circle at 22% -24%, rgba(255, 255, 255, 0.09), transparent 46%),
+      linear-gradient(155deg, rgba(25, 25, 26, 0.9), rgba(5, 5, 6, 0.92)),
+      rgba(8, 8, 9, 0.94);
     box-shadow:
-      0 28px 72px -42px rgba(0, 0, 0, 0.98),
-      inset 0 1px 0 rgba(255, 255, 255, 0.055);
+      0 34px 92px -44px rgba(0, 0, 0, 1),
+      0 12px 34px -26px rgba(0, 0, 0, 0.92),
+      inset 0 1px 0 rgba(255, 255, 255, 0.065),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.012);
+  }
+
+  .synapse-launcher-brand {
+    color: hsl(var(--foreground));
+    background: linear-gradient(145deg, hsl(var(--foreground) / 0.045), transparent 72%);
+    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.48);
+  }
+
+  .dark .synapse-launcher-brand {
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 72%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
   }
 
   .synapse-launcher-divider {
@@ -1920,35 +1974,50 @@
   }
 
   .synapse-launcher-action {
+    border: 1px solid transparent;
     color: hsl(var(--muted-foreground));
-    transition: color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+    background: transparent;
+    box-shadow: inset 0 1px 0 transparent;
+    transition: color 180ms ease, border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
   }
 
   .synapse-launcher-action:hover:not(:disabled) {
     color: hsl(var(--foreground));
-    background: hsl(var(--foreground) / 0.055);
+    border-color: hsl(var(--border) / 0.56);
+    background: hsl(var(--foreground) / 0.048);
+    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.58);
   }
 
   .dark .synapse-launcher-action:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.055);
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.045);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
 
   .synapse-presence-orb {
     isolation: isolate;
     border: 0;
-    background: transparent;
+    background:
+      radial-gradient(circle at 32% 20%, hsl(var(--background) / 0.74), transparent 28%),
+      hsl(var(--card) / 0.2);
     box-shadow:
-      0 20px 42px -24px hsl(var(--foreground) / 0.58),
-      0 0 0 1px hsl(var(--foreground) / 0.08);
+      0 24px 54px -28px hsl(var(--foreground) / 0.64),
+      0 8px 18px -14px hsl(var(--foreground) / 0.36),
+      0 0 0 1px hsl(var(--foreground) / 0.09),
+      inset 0 1px 0 hsl(var(--background) / 0.58);
     transform: translateZ(0);
+    will-change: transform;
   }
 
   .dark .synapse-presence-orb {
-    background: transparent;
+    background:
+      radial-gradient(circle at 32% 20%, rgba(255, 255, 255, 0.09), transparent 30%),
+      rgba(8, 8, 9, 0.32);
     box-shadow:
-      0 24px 52px -26px rgba(0, 0, 0, 0.98),
-      0 0 28px -14px rgba(236, 241, 255, 0.62),
-      0 0 0 1px rgba(255, 255, 255, 0.055);
+      0 28px 64px -28px rgba(0, 0, 0, 1),
+      0 0 34px -18px rgba(236, 241, 255, 0.7),
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
 
   .synapse-liquid-orb {
@@ -2034,10 +2103,40 @@
       drop-shadow(0 0 10px rgba(205, 221, 255, 0.16));
   }
 
+  [data-synapse-presence-state="listening"] .synapse-presence-orb {
+    animation: synapse-voice-presence-breathe 2.8s cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  }
+
+  [data-synapse-presence-state="speaking"] .synapse-presence-orb {
+    box-shadow:
+      0 28px 62px -28px hsl(var(--foreground) / 0.68),
+      0 0 32px -17px hsl(var(--foreground) / 0.34),
+      0 0 0 1px hsl(var(--foreground) / 0.11),
+      inset 0 1px 0 hsl(var(--background) / 0.64);
+  }
+
   @keyframes synapse-liquid-caustic {
     0% { transform: rotate(0deg) scale(0.96); }
     50% { transform: rotate(180deg) scale(1.05); }
     100% { transform: rotate(360deg) scale(0.96); }
+  }
+
+  @keyframes synapse-voice-presence-breathe {
+    0%, 100% {
+      filter: brightness(0.98);
+      box-shadow:
+        0 24px 54px -28px hsl(var(--foreground) / 0.62),
+        0 0 0 1px hsl(var(--foreground) / 0.08),
+        inset 0 1px 0 hsl(var(--background) / 0.58);
+    }
+    50% {
+      filter: brightness(1.04);
+      box-shadow:
+        0 28px 62px -28px hsl(var(--foreground) / 0.66),
+        0 0 30px -17px hsl(var(--foreground) / 0.27),
+        0 0 0 1px hsl(var(--foreground) / 0.11),
+        inset 0 1px 0 hsl(var(--background) / 0.64);
+    }
   }
 
   .synapse-presence-status {
@@ -2064,7 +2163,8 @@
 
   @media (prefers-reduced-transparency: reduce) {
     .synapse-launcher,
-    .synapse-presence-status {
+    .synapse-presence-status,
+    .synapse-desktop-shell {
       background: hsl(var(--background));
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
@@ -2090,31 +2190,32 @@
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border-color: hsl(var(--border) / 0.45);
+    border-color: hsl(var(--border) / 0.48);
     background:
-      linear-gradient(155deg, hsl(var(--background) / 0.82), hsl(var(--card) / 0.72)),
-      hsl(var(--card) / 0.82);
+      radial-gradient(circle at 18% -10%, hsl(var(--background) / 0.86), transparent 42%),
+      linear-gradient(155deg, hsl(var(--background) / 0.8), hsl(var(--card) / 0.68)),
+      hsl(var(--card) / 0.8);
     box-shadow:
       0 22px 90px -76px hsl(var(--foreground) / 0.7),
       inset 0 1px 0 hsl(var(--background) / 0.18);
-    backdrop-filter: blur(30px) saturate(1.16);
-    -webkit-backdrop-filter: blur(30px) saturate(1.16);
+    backdrop-filter: blur(34px) saturate(1.18);
+    -webkit-backdrop-filter: blur(34px) saturate(1.18);
   }
 
   .synapse-desktop-shell.synapse-chat-panel {
     position: fixed;
     z-index: 90;
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(12px, env(safe-area-inset-bottom));
+    right: max(16px, env(safe-area-inset-right));
+    bottom: max(16px, env(safe-area-inset-bottom));
     left: auto;
     translate: none;
-    height: clamp(390px, 56dvh, 570px);
-    max-height: calc(100dvh - var(--desktop-navbar-clearance) - 1.5rem);
+    height: clamp(430px, 64dvh, 660px);
+    max-height: calc(100dvh - var(--desktop-navbar-clearance) - 2rem);
     min-height: 0;
     box-shadow:
-      0 32px 92px -46px hsl(var(--foreground) / 0.62),
-      0 10px 28px -22px hsl(var(--foreground) / 0.36),
-      inset 0 1px 0 hsl(var(--background) / 0.42),
+      0 38px 108px -48px hsl(var(--foreground) / 0.62),
+      0 12px 32px -24px hsl(var(--foreground) / 0.34),
+      inset 0 1px 0 hsl(var(--background) / 0.5),
       inset 0 0 0 1px hsl(var(--foreground) / 0.018);
   }
 
@@ -2165,8 +2266,9 @@
   .dark .synapse-desktop-shell {
     border-color: rgba(255, 255, 255, 0.055);
     background:
-      linear-gradient(155deg, rgba(24, 24, 25, 0.79), rgba(6, 6, 7, 0.84)),
-      rgba(8, 8, 9, 0.86);
+      radial-gradient(circle at 18% -10%, rgba(255, 255, 255, 0.055), transparent 42%),
+      linear-gradient(155deg, rgba(24, 24, 25, 0.76), rgba(5, 5, 6, 0.82)),
+      rgba(8, 8, 9, 0.84);
     box-shadow:
       0 22px 90px -76px rgba(0, 0, 0, 0.96),
       inset 0 1px 0 rgba(255, 255, 255, 0.025);
@@ -2187,7 +2289,9 @@
 
   .synapse-desktop-chrome {
     border-bottom: 1px solid hsl(var(--border) / 0.52);
-    background: linear-gradient(180deg, hsl(var(--background) / 0.18), transparent);
+    background:
+      linear-gradient(180deg, hsl(var(--background) / 0.3), transparent),
+      hsl(var(--card) / 0.12);
   }
 
   .synapse-desktop-toolbar {
@@ -2195,14 +2299,16 @@
   }
 
   .synapse-desktop-tabs {
-    flex: 0 0 auto;
-    width: max-content;
+    flex: 1 1 auto;
+    width: auto;
     max-width: 100%;
   }
 
   .dark .synapse-desktop-chrome {
     border-bottom-color: rgba(255, 255, 255, 0.055);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.016), transparent);
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.022), transparent),
+      rgba(255, 255, 255, 0.005);
   }
 
   .synapse-desktop-control {
@@ -2229,22 +2335,32 @@
   .synapse-history-segment {
     border: 1px solid hsl(var(--border) / 0.56);
     border-radius: 17px;
-    background: hsl(var(--foreground) / 0.026);
-    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
+    background:
+      linear-gradient(145deg, hsl(var(--background) / 0.42), transparent 58%),
+      hsl(var(--foreground) / 0.026);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.3),
+      0 12px 30px -28px hsl(var(--foreground) / 0.24);
   }
 
   .dark .synapse-desktop-tabs,
   .dark .synapse-history-segment {
     border-color: rgba(255, 255, 255, 0.055);
-    background: rgba(255, 255, 255, 0.018);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 58%),
+      rgba(255, 255, 255, 0.014);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.025),
+      0 14px 34px -28px rgba(0, 0, 0, 0.76);
   }
 
   .synapse-desktop-tab-active,
   .synapse-history-segment-active {
-    border: 1px solid hsl(var(--foreground) / 0.86);
+    border: 1px solid hsl(var(--foreground) / 0.82);
     background: hsl(var(--foreground));
-    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.16);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.2),
+      0 8px 20px -16px hsl(var(--foreground) / 0.46);
   }
 
   .synapse-history-segment-active {
@@ -3386,7 +3502,11 @@
     .desktop-tactile,
     .dashboard-tactile,
     .dashboard-segment-trigger,
-    .desktop-content-scroll {
+    .desktop-content-scroll,
+    .synapse-launcher-action,
+    .synapse-desktop-control,
+    .synapse-desktop-tabs > button,
+    .synapse-desktop-composer-control {
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
@@ -3399,6 +3519,7 @@
     .dashboard-schedule-orbit,
     .dashboard-schedule-scan,
     .synapse-liquid-orb-caustic,
+    .synapse-presence-orb,
     .synapse-message-enter {
       animation: none !important;
       transition: none !important;

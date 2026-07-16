@@ -911,7 +911,7 @@ export const CustomOnboardingFlow = ({
                 const newAccountId = (onboardingResult as any)?.asaas_account_id;
                 
                 if (!newAccountId) {
-                    throw new Error("Não foi possível criar a subconta.");
+                    throw new Error("Não foi possível criar a conta NeuroFinance.");
                 }
                 
                 // Immediately attempt to upload documents if provided
@@ -991,7 +991,7 @@ export const CustomOnboardingFlow = ({
                         {(isSubmitting || accountLoading || isPolling) && (
                             <div className="flex w-fit items-center gap-2 rounded-full border border-black/10 bg-black/[0.03] px-3 py-1.5 text-xs text-zinc-600 backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-300">
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                {isPolling ? "Validando com Asaas..." : "Processando"}
+                                {isPolling ? "Validando seus dados..." : "Processando"}
                             </div>
                         )}
                     </div>
@@ -1208,7 +1208,7 @@ export const CustomOnboardingFlow = ({
                     {step === "business" && (
                         <GlassCard
                             title="Dados comerciais"
-                            subtitle="Informações para cadastro da sua subconta."
+                            subtitle="Informações para cadastro da sua conta NeuroFinance."
                             icon={<Briefcase className="h-5 w-5" />}
                         >
                             <div className="space-y-5">

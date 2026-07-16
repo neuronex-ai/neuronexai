@@ -21,6 +21,7 @@ import {
     normalizeNbPaymentRow,
 } from "@/lib/neurofinance-safe-selects";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
+import { invokeEdgeFunction } from "@/lib/invoke-edge-function";
 
 // ─── Types ────────────────────────────────────────────────────────
 
@@ -61,6 +62,13 @@ export interface CreatePixCobVencimentoParams {
 // Re-export for compatibility
 export type PixCharge = NeuroFinancePayment;
 export type PixRecebido = NeuroFinancePayment;
+
+export interface PixKeyDto {
+    id: string;
+    key: string;
+    type: string;
+    status: string;
+}
 
 // ─── PIX Operations Hook ──────────────────────────────────────────
 
@@ -186,24 +194,22 @@ export function usePixKeys() {
     const query = useQuery({
         queryKey: ['NeuroFinance-pix-keys'],
         queryFn: async () => {
-            const response = await supabase.functions.invoke('asaas-pix', {
-                body: { action: 'list_keys' },
+            const response = await invokeEdgeFunction<{ keys?: PixKeyDto[] }>('asaas-pix', {
+                action: 'list_keys',
             });
-            if (response.error) throw new Error(response.error.message);
-            if (response.data?.error) throw new Error(response.data.error);
-            return response.data?.keys || response.data?.data || [];
+            return response.keys || [];
         },
         staleTime: 30_000,
     });
 
     const createKey = useMutation({
-        mutationFn: async () => {
-            const response = await supabase.functions.invoke('asaas-pix', {
-                body: { action: 'create_key', consent: true },
+        mutationFn: async ({ pin, idempotencyKey }: { pin: string; idempotencyKey: string }) => {
+            return invokeEdgeFunction<{ key: PixKeyDto }>('asaas-pix', {
+                action: 'create_key',
+                consent: true,
+                pin,
+                idempotencyKey,
             });
-            if (response.error) throw new Error(response.error.message);
-            if (response.data?.error) throw new Error(response.data.error);
-            return response.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['NeuroFinance-pix-keys'] });
@@ -213,13 +219,13 @@ export function usePixKeys() {
     });
 
     const deleteKey = useMutation({
-        mutationFn: async (id: string) => {
-            const response = await supabase.functions.invoke('asaas-pix', {
-                body: { action: 'delete_key', id },
+        mutationFn: async ({ id, pin, idempotencyKey }: { id: string; pin: string; idempotencyKey: string }) => {
+            return invokeEdgeFunction<{ removed: true }>('asaas-pix', {
+                action: 'delete_key',
+                id,
+                pin,
+                idempotencyKey,
             });
-            if (response.error) throw new Error(response.error.message);
-            if (response.data?.error) throw new Error(response.data.error);
-            return response.data;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['NeuroFinance-pix-keys'] });

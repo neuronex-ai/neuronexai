@@ -43,11 +43,18 @@ describe('Synapse voice presence', () => {
         const launcher = screen.getByRole('toolbar', { name: 'Conversar com o Synapse' });
         expect(launcher).toBeInTheDocument();
 
-        fireEvent.click(screen.getByRole('button', { name: 'Abrir conversa por texto com o Synapse' }));
+        const textAction = screen.getByRole('button', { name: 'Abrir conversa por texto com o Synapse' });
+        const voiceAction = screen.getByRole('button', { name: 'Iniciar conversa por voz com o Synapse' });
+        expect(textAction).toHaveAttribute('aria-controls', 'synapse-panel');
+        expect(textAction).toHaveAttribute('data-synapse-action', 'text');
+        expect(voiceAction).toHaveAttribute('aria-pressed', 'false');
+        expect(voiceAction).toHaveAttribute('data-synapse-action', 'voice');
+
+        fireEvent.click(textAction);
         expect(mocks.setActiveTab).toHaveBeenCalledWith('chat');
         expect(mocks.setShellState).toHaveBeenCalledWith('compact');
 
-        fireEvent.click(screen.getByRole('button', { name: 'Iniciar conversa por voz com o Synapse' }));
+        fireEvent.click(voiceAction);
         expect(mocks.setShellState).toHaveBeenCalledWith('pill');
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
         expect(screen.queryByTestId('liquid-orb')).not.toBeInTheDocument();

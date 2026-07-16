@@ -41,8 +41,6 @@ export interface FinancialOverviewSnapshot {
 
 export interface AccountMovement {
   id: string;
-  user_id: string;
-  financial_account_id: string;
   overview_group: "income" | "receivable" | "outflow";
   item_type: string;
   description: string;
@@ -51,9 +49,10 @@ export interface AccountMovement {
   status: string;
   payment_method: string | null;
   occurred_at: string;
-  reference_id: string | null;
   patient_name: string | null;
-  metadata: Record<string, unknown>;
+  receipt_url: string | null;
+  invoice_url: string | null;
+  bank_slip_url: string | null;
 }
 
 export interface TariffRule {
@@ -83,6 +82,7 @@ export interface TariffRule {
 export type UserFacingErrorCode =
   | "NETWORK_UNAVAILABLE"
   | "SESSION_EXPIRED"
+  | "SECURITY_VERIFICATION_REQUIRED"
   | "PERMISSION_DENIED"
   | "VALIDATION_ERROR"
   | "CONFLICT"

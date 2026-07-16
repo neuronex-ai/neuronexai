@@ -109,6 +109,29 @@ export function validatePixQrConsultation(consultation: ReturnType<typeof normal
     return missing;
 }
 
+function maskDocument(value: unknown) {
+    const digits = String(value || "").replace(/\D/g, "");
+    if (digits.length === 11) return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-**`;
+    if (digits.length === 14) return `**.${digits.slice(2, 5)}.${digits.slice(5, 8)}/****-${digits.slice(-2)}`;
+    return "Não informado";
+}
+
+function publicDestination(value: unknown) {
+    const destination = value && typeof value === "object"
+        ? value as Record<string, unknown>
+        : {};
+    return {
+        type: destination.type || null,
+        bank_code: destination.bank_code || null,
+        bank_name: destination.bank_name || null,
+        agency: destination.agency || null,
+        account_last4: String(destination.account || "").replace(/\D/g, "").slice(-4) || null,
+        holder_name: destination.holder_name || null,
+        holder_document: maskDocument(destination.holder_document),
+        summary: destination.summary || null,
+    };
+}
+
 export function outgoingResponse(record: any) {
     return {
         id: record.id,
@@ -120,11 +143,8 @@ export function outgoingResponse(record: any) {
             ? null
             : Number(record.available_balance_at_review) / 100,
         destinationSummary: record.destination_summary,
-        destination: record.destination_payload || {},
+        destination: publicDestination(record.destination_payload),
         expiresAt: record.consultation_expires_at,
-        providerOperationId: record.provider_operation_id,
-        providerStatus: record.provider_status,
         receiptUrl: record.receipt_url,
-        payoutId: record.payout_id,
     };
 }

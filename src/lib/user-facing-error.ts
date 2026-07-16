@@ -34,6 +34,18 @@ function rawMessage(error: unknown) {
   return "";
 }
 
+function structuredEdgeError(error: unknown) {
+  if (!error || typeof error !== "object") return null;
+  const value = error as Record<string, unknown>;
+  if (value.name !== "EdgeFunctionInvocationError") return null;
+  return {
+    message: typeof value.message === "string" ? value.message : "",
+    code: typeof value.code === "string" ? value.code : "",
+    status: typeof value.status === "number" ? value.status : null,
+    kind: typeof value.kind === "string" ? value.kind : "unknown",
+  };
+}
+
 function createSupportReference() {
   const time = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -47,6 +59,19 @@ function classify(message: string): {
   retryable: boolean;
 } {
   const normalized = message.toLowerCase();
+
+  if (
+    normalized.includes("validação de segurança") ||
+    normalized.includes("duplo fator") ||
+    normalized.includes("código de segurança")
+  ) {
+    return {
+      code: "SECURITY_VERIFICATION_REQUIRED",
+      title: "Validação de segurança necessária",
+      message,
+      retryable: true,
+    };
+  }
 
   if (
     normalized.includes("failed to fetch") ||
@@ -66,9 +91,10 @@ function classify(message: string): {
   if (
     normalized.includes("jwt") ||
     normalized.includes("session") ||
-    normalized.includes("token") ||
     normalized.includes("não autenticado") ||
-    normalized.includes("unauthorized")
+    normalized.includes("unauthorized") ||
+    normalized.includes("token expirado") ||
+    normalized.includes("expired token")
   ) {
     return {
       code: "SESSION_EXPIRED",
@@ -141,6 +167,25 @@ export function toUserFacingError(
   error: unknown,
   context: ErrorContext = "generic",
 ): UserFacingError {
+  const edge = structuredEdgeError(error);
+  if (edge) {
+    const classification = classify(edge.message);
+    const code = edge.code === "FINANCIAL_SECURITY_VERIFICATION_REQUIRED"
+      ? "SECURITY_VERIFICATION_REQUIRED"
+      : classification.code;
+    const title = code === "SECURITY_VERIFICATION_REQUIRED"
+      ? "Validação de segurança necessária"
+      : classification.title;
+    const message = edge.message || classification.message || contextMessages[context];
+    return {
+      code,
+      title,
+      message,
+      retryable: edge.kind !== "http" || edge.status === null || edge.status >= 500 || edge.status === 409 || edge.status === 429,
+      supportReference: createSupportReference(),
+    };
+  }
+
   const classification = classify(rawMessage(error));
   return {
     code: classification.code,

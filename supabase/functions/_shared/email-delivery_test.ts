@@ -1,4 +1,9 @@
-import { assertEmailAddress, buildRawEmail } from "./email-delivery.ts";
+import {
+  assertEmailAddress,
+  buildRawEmail,
+  googleTokenNeedsRefresh,
+  hasGmailSendScope,
+} from "./email-delivery.ts";
 
 function assert(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
@@ -122,4 +127,37 @@ Deno.test("buildRawEmail prevents email-header injection", () => {
     rejected = true;
   }
   assert(rejected, "An address containing an injected header must be rejected");
+});
+
+Deno.test("Gmail delivery requires the send scope when Google recorded scopes", () => {
+  assert(
+    hasGmailSendScope(
+      "openid https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/gmail.send",
+    ),
+    "The gmail.send scope must be accepted",
+  );
+  assert(
+    !hasGmailSendScope("openid https://www.googleapis.com/auth/calendar"),
+    "A connection without gmail.send must require reconnection",
+  );
+  assert(
+    hasGmailSendScope(null),
+    "Legacy token rows without a recorded scope must remain compatible",
+  );
+});
+
+Deno.test("Google tokens refresh before expiry and when expiry is invalid", () => {
+  const now = new Date("2026-07-16T00:00:00.000Z").getTime();
+  assert(
+    googleTokenNeedsRefresh("2026-07-16T00:00:30.000Z", now),
+    "A token expiring within one minute must refresh",
+  );
+  assert(
+    !googleTokenNeedsRefresh("2026-07-16T00:10:00.000Z", now),
+    "A token with enough lifetime must be reused",
+  );
+  assert(
+    googleTokenNeedsRefresh("invalid", now),
+    "An invalid expiry must never be treated as a usable token",
+  );
 });

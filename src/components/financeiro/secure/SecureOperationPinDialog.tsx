@@ -11,7 +11,7 @@ interface SecureOperationPinDialogProps {
   onOpenChange: (open: boolean) => void;
   onConfirm: (pin: string) => Promise<void>;
   recipient?: string | null;
-  value: number;
+  value?: number;
   actionLabel?: string;
   isLoading: boolean;
   errorMessage?: string | null;
@@ -28,6 +28,8 @@ export function SecureOperationPinDialog({
   errorMessage,
 }: SecureOperationPinDialogProps) {
   const [pin, setPin] = useState("");
+  const valueFragment = typeof value === "number" ? ` de ${formatCurrency(value)}` : "";
+  const recipientFragment = recipient ? ` para ${recipient}` : "";
 
   useEffect(() => {
     if (open || errorMessage) setPin("");
@@ -39,10 +41,10 @@ export function SecureOperationPinDialog({
       onOpenChange={(nextOpen) => !isLoading && onOpenChange(nextOpen)}
       preventClose={isLoading}
       size="sm"
-      eyebrow="Assinatura digital"
-      title="Autorizar operação"
-      description={`Digite seu PIN de 6 digitos para autorizar ${actionLabel} de ${formatCurrency(value)} para ${recipient || "o destino revisado"}.`}
-      heroIcon={<ModalHeroIcon icon={isLoading ? Loader2 : LockKeyhole} state={isLoading ? "loading" : errorMessage ? "error" : "neutral"} tone="status" ariaLabel="Confirmacao por PIN" />}
+      eyebrow="Confirmação protegida"
+      title="Confirme com seu PIN"
+      description={`Digite seu PIN de 6 dígitos para confirmar ${actionLabel}${valueFragment}${recipientFragment}.`}
+      heroIcon={<ModalHeroIcon icon={isLoading ? Loader2 : LockKeyhole} state={isLoading ? "loading" : errorMessage ? "error" : "neutral"} tone="status" ariaLabel="Confirmação por PIN" />}
       footer={
         <div className="grid gap-3 sm:grid-cols-[1fr_1.15fr]">
           <Button
@@ -60,14 +62,14 @@ export function SecureOperationPinDialog({
             onClick={() => onConfirm(pin)}
             className="h-12 rounded-[17px] bg-foreground text-[10px] font-black uppercase tracking-widest text-background hover:bg-foreground/90"
           >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Autorizar"}
+            {isLoading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" /> : "Confirmar"}
           </Button>
         </div>
       }
     >
       <div className="mx-auto flex w-full max-w-[23rem] flex-col items-center">
         <div className={cn("flex w-full justify-center rounded-[22px] border bg-muted/35 px-2 py-5 transition-colors sm:px-4", errorMessage ? "border-destructive/35" : "border-border/60")}>
-          <InputOTP maxLength={6} value={pin} onChange={setPin} disabled={isLoading} autoFocus containerClassName="justify-center">
+          <InputOTP maxLength={6} value={pin} onChange={setPin} disabled={isLoading} autoFocus aria-label="PIN financeiro de seis dígitos" aria-invalid={Boolean(errorMessage)} containerClassName="justify-center">
             <InputOTPGroup className="gap-1.5 sm:gap-2">
               {Array.from({ length: 6 }).map((_, index) => (
                 <InputOTPSlot
@@ -84,7 +86,7 @@ export function SecureOperationPinDialog({
         </div>
         <div className="mt-3 min-h-5 text-center">
           {errorMessage ? (
-            <p className="text-[10px] font-bold text-destructive">{errorMessage}</p>
+            <p role="alert" className="text-[10px] font-bold text-destructive">{errorMessage}</p>
           ) : (
             <p className="flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-muted-foreground">
               <ShieldCheck className="h-3 w-3" />

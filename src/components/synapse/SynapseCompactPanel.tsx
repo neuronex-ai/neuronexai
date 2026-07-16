@@ -351,17 +351,17 @@ export const SynapseCompactPanel = () => {
                 }}
                 id="synapse-panel"
                 className={cn(
-                    'synapse-desktop-shell synapse-chat-panel flex min-h-0 w-[min(430px,calc(100vw-24px))] flex-col overflow-hidden rounded-[28px] border',
+                    'synapse-desktop-shell synapse-chat-panel flex min-h-0 w-[min(468px,calc(100vw-32px))] flex-col overflow-hidden rounded-[30px] border',
                 )}
                 role="complementary"
                 aria-label="Assistente Synapse"
                 data-synapse-shell="true"
-                data-synapse-shell-placement="bottom-center"
+                data-synapse-shell-placement="bottom-right"
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
                         <header className="synapse-desktop-chrome shrink-0">
-                            <div className="synapse-desktop-toolbar flex min-h-[54px] items-center gap-2 px-2.5">
+                            <div className="synapse-desktop-toolbar flex min-h-16 items-center gap-2.5 px-3">
                                 <nav className="synapse-desktop-tabs flex min-w-0 flex-1 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
                                     {PANEL_TABS.map((tab, index) => {
                                         const Icon = tab.icon;
@@ -381,7 +381,7 @@ export const SynapseCompactPanel = () => {
                                                 onClick={() => handleTabChange(tab.id)}
                                                 onKeyDown={(event) => handleTabKeyDown(event, index)}
                                                 className={cn(
-                                                    'relative flex h-11 min-w-11 shrink-0 items-center justify-center gap-1.5 overflow-hidden rounded-[13px] px-2.5 text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
+                                                    'relative flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-[13px] px-2 text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
                                                     'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                                                     isActive ? 'text-foreground' : 'text-muted-foreground',
                                                 )}
@@ -397,22 +397,10 @@ export const SynapseCompactPanel = () => {
                                                 <span className="relative z-10 shrink-0">
                                                     <Icon className="h-3.5 w-3.5" />
                                                 </span>
-                                                <AnimatePresence initial={false}>
-                                                    {isActive ? (
-                                                        <motion.span
-                                                            key={`${tab.id}-label`}
-                                                            initial={shouldReduceMotion ? false : { opacity: 0, width: 0, x: -3 }}
-                                                            animate={{ opacity: 1, width: 'auto', x: 0 }}
-                                                            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0, x: -2 }}
-                                                            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 480, damping: 42 }}
-                                                            className="relative z-10 hidden whitespace-nowrap min-[390px]:inline-block"
-                                                            aria-hidden="true"
-                                                        >
-                                                            {tab.label}
-                                                        </motion.span>
-                                                    ) : null}
-                                                </AnimatePresence>
-                                                <span className="sr-only">{tab.label}</span>
+                                                <span className="relative z-10 hidden min-w-0 truncate whitespace-nowrap min-[390px]:inline-block" aria-hidden="true">
+                                                    {tab.label}
+                                                </span>
+                                                <span className="sr-only min-[390px]:hidden">{tab.label}</span>
                                             </button>
                                         );
                                     })}
@@ -458,7 +446,7 @@ export const SynapseCompactPanel = () => {
                         role="tabpanel"
                         aria-labelledby={`synapse-tab-${displayedTab}`}
                         className={cn(
-                            'synapse-desktop-viewport relative min-h-0 flex-1 overflow-y-auto px-3.5',
+                            'synapse-desktop-viewport relative min-h-0 flex-1 overflow-y-auto px-4',
                             'scrollbar-thin scrollbar-track-transparent scrollbar-thumb-foreground/20 dark:scrollbar-thumb-white/15',
                         )}
                     >
@@ -623,7 +611,7 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -3 }}
                                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="synapse-chat-view min-h-full py-2.5"
+                                    className="synapse-chat-view min-h-full py-3.5"
                                 >
                                     <div className="synapse-context-pill mx-1 flex w-fit items-center px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
                                         <span>{ctxInfo.label}</span>

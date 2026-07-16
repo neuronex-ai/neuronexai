@@ -28,6 +28,7 @@ import {
     requireEntitlementForUser,
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+import { toNeurofinanceOperationError } from "../_shared/neurofinance-operation-error.ts";
 
 const CONSULTATION_TTL_MS = 10 * 60 * 1000;
 const webhookCheckedAccounts = new Set<string>();
@@ -94,6 +95,17 @@ function consultationPayload(record: any) {
         recommendedMode: scheduling.recommendedMode,
         defaultScheduleDate: scheduling.defaultScheduleDate,
         paymentMode: record.payment_mode,
+    };
+}
+
+function billExecutionRecordPayload(record: any) {
+    return {
+        id: record.id,
+        status: record.status,
+        amount: Number(record.amount || 0),
+        payment_mode: record.payment_mode,
+        scheduled_date: record.scheduled_date,
+        receipt_url: record.receipt_url,
     };
 }
 
@@ -165,17 +177,12 @@ Deno.serve(async (req: Request) => {
             "neurofinance",
         );
         const body = await req.json().catch(() => ({}));
-        const action = String(body.action || "list");
+        const action = String(body.action || "");
         const account = await getFinancialAccount(user.id);
         const apiKey = await getFinancialAccountAsaasApiKey(account);
 
         if (!account || !apiKey) {
             return errorResponse("Sua conta ainda não está pronta para pagar contas.", 403, { code: "ACCOUNT_NOT_READY" });
-        }
-
-        if (action === "list") {
-            const result = await asaasRequest("/bill?limit=100&offset=0", "GET", undefined, apiKey);
-            return jsonResponse({ success: true, ...(result as Record<string, unknown>) });
         }
 
         if (action === "receipt") {
@@ -388,8 +395,7 @@ Deno.serve(async (req: Request) => {
             if (["scheduled", "processing", "paid"].includes(record.status) && record.provider_bill_id) {
                 return jsonResponse({
                     success: true,
-                    bill: record.provider_payload?.execution || record.provider_payload,
-                    record,
+                    record: billExecutionRecordPayload(record),
                     status: record.status,
                     receiptUrl: record.receipt_url,
                     idempotent: true,
@@ -399,7 +405,7 @@ Deno.serve(async (req: Request) => {
                 return errorResponse(
                     "Este pagamento não pode ser reenviado. Faça uma nova consulta para tentar novamente.",
                     409,
-                    { code: "BILL_NOT_RETRYABLE", record },
+                    { code: "BILL_NOT_RETRYABLE" },
                 );
             }
             if (record.status === "submitting" || record.status === "submission_unknown") {
@@ -420,34 +426,17 @@ Deno.serve(async (req: Request) => {
                 });
             }
 
-            let preparedRecord = record;
             if (record.payment_mode === "now") {
-                const simulation = normalizeAsaasBillSimulation(simulationPayload(record));
                 const balance = await availableBalanceForReview(account.id, apiKey);
                 const totalCents = Number(record.amount || 0) + Number(record.fee_amount || 0);
                 if (balance.cents == null || balance.cents < totalCents) {
-                    const today = dateInTimeZone();
-                    const fallbackDate = record.due_date;
-                    const availability = evaluateBillScheduling({
-                        availableBalanceCents: balance.cents,
-                        totalCents,
-                        minimumScheduleDate: simulation.minimumScheduleDate,
-                        dueDate: fallbackDate,
-                        today,
-                    });
-                    if (!availability.canSchedule || !fallbackDate) {
-                        return errorResponse(
-                            "O saldo ficou insuficiente e este boleto não possui uma data futura válida para agendamento.",
-                            409,
-                            { code: "INSUFFICIENT_BALANCE" },
-                        );
-                    }
-
-                    const { data: scheduledRecord, error: scheduleError } = await supabaseAdmin
+                    const { error: reviewError } = await supabaseAdmin
                         .from("neurofinance_bill_payments")
                         .update({
-                            payment_mode: "scheduled",
-                            scheduled_date: fallbackDate,
+                            status: "consulted",
+                            payment_mode: null,
+                            scheduled_date: null,
+                            authorized_at: null,
                             available_balance_at_review: balance.cents,
                             balance_source: balance.source,
                             updated_at: new Date().toISOString(),
@@ -455,15 +444,17 @@ Deno.serve(async (req: Request) => {
                         .eq("id", record.id)
                         .eq("user_id", user.id)
                         .eq("status", "authorized")
-                        .select()
-                        .single();
-                    if (scheduleError) throw scheduleError;
-                    preparedRecord = scheduledRecord;
+                        .eq("authorized_at", record.authorized_at);
+                    if (reviewError) throw reviewError;
+
+                    return errorResponse(
+                        "O saldo disponível mudou depois da confirmação. Revise novamente quando pagar e confirme com um novo PIN.",
+                        409,
+                        { code: "BILL_REVIEW_REQUIRED" },
+                    );
                 }
             }
 
-            const autoScheduled = preparedRecord.payment_mode === "scheduled" &&
-                record.payment_mode === "now";
             const submittedAt = new Date().toISOString();
             const { data: claimed, error: claimError } = await supabaseAdmin
                 .from("neurofinance_bill_payments")
@@ -472,7 +463,7 @@ Deno.serve(async (req: Request) => {
                     submitted_at: submittedAt,
                     updated_at: submittedAt,
                 })
-                .eq("id", preparedRecord.id)
+                .eq("id", record.id)
                 .eq("user_id", user.id)
                 .eq("status", "authorized")
                 .select()
@@ -543,20 +534,22 @@ Deno.serve(async (req: Request) => {
                     return errorResponse(
                         "A instituição bancária não confirmou o pagamento. Nenhum débito foi confirmado.",
                         422,
-                        { code: "BILL_REJECTED", record: updated },
+                        { code: "BILL_REJECTED" },
                     );
                 }
 
                 return jsonResponse({
                     success: true,
-                    bill: result,
-                    record: updated,
+                    record: billExecutionRecordPayload(updated),
                     status,
                     receiptUrl,
-                    autoScheduled,
-                });
+            });
             } catch (error: any) {
                 const statusCode = Number(error?.status || 500);
+                const operationError = toNeurofinanceOperationError(
+                    error,
+                    "Não conseguimos processar este boleto.",
+                );
                 const failedStatus = statusCode >= 500 ? "submission_unknown" : "failed";
                 await supabaseAdmin
                     .from("neurofinance_bill_payments")
@@ -572,9 +565,9 @@ Deno.serve(async (req: Request) => {
                 return errorResponse(
                     statusCode >= 500
                         ? "O pagamento foi enviado, mas ainda não recebemos a confirmação bancária. Não tente novamente agora."
-                        : error?.message || "Não conseguimos processar este boleto.",
-                    statusCode,
-                    { code: statusCode >= 500 ? "BILL_SUBMISSION_UNKNOWN" : "BILL_SUBMISSION_FAILED" },
+                        : operationError.message,
+                    operationError.status,
+                    { code: statusCode >= 500 ? "BILL_SUBMISSION_UNKNOWN" : operationError.code },
                 );
             }
         }
@@ -590,8 +583,12 @@ Deno.serve(async (req: Request) => {
         const accessResponse = subscriptionAccessErrorResponse(error);
         if (accessResponse) return accessResponse;
         console.error("asaas-bill-payment error:", error);
-        return errorResponse(error?.message || "Não conseguimos processar este boleto agora.", error?.status || 500, {
-            code: error?.code || "BILL_PAYMENT_FAILED",
+        const operationError = toNeurofinanceOperationError(
+            error,
+            "Não conseguimos processar este boleto agora.",
+        );
+        return errorResponse(operationError.message, operationError.status, {
+            code: operationError.code,
         });
     }
 });

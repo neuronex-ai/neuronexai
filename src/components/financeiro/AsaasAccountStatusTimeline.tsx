@@ -1,8 +1,8 @@
 "use client";
 
 import type { ElementType } from "react";
-import { AlertTriangle, Check, Clock3, HelpCircle, RefreshCw, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { AlertTriangle, Check, Clock3, ExternalLink, Headphones, HelpCircle, RefreshCw, X } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
@@ -13,7 +13,7 @@ import {
   type AsaasApprovalStage,
   type AsaasApprovalTone,
 } from "@/lib/asaas-account-status";
-import { getNeuroFinanceSyncErrorMessage } from "@/lib/neurofinance-support";
+import { buildNeuroFinanceSupportUrl, getNeuroFinanceSyncErrorMessage } from "@/lib/neurofinance-support";
 
 const toneStyles: Record<AsaasApprovalTone, { pill: string; dot: string; line: string; icon: ElementType }> = {
   approved: {
@@ -64,6 +64,13 @@ export function AsaasAccountStatusTimeline({
   const { account, syncAccount, lastSyncError } = useFinancialAccount();
   const stages = buildAsaasApprovalStages(account);
   const situation = getAsaasAccountSituation(account);
+  const reduceMotion = Boolean(useReducedMotion());
+  const supportUrl = buildNeuroFinanceSupportUrl({
+    userId: account?.user_id,
+    accountId: account?.id,
+    error: lastSyncError,
+    occurredAt: account?.updated_at,
+  });
 
   return (
     <div
@@ -79,13 +86,13 @@ export function AsaasAccountStatusTimeline({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.28em] text-zinc-400">
-              Análise cadastral Asaas
+              Análise cadastral NeuroFinance
             </p>
             <h3 className={cn("mt-2 font-black tracking-tight text-zinc-950 dark:text-white", compact ? "text-lg" : "text-2xl")}>
               {situation}
             </h3>
             <p className="mt-1 text-xs font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">
-              Status sincronizado pela API da Asaas. Use atualizar para consultar a situação mais recente.
+              Acompanhe a análise e use Atualizar para consultar a situação mais recente.
             </p>
           </div>
 
@@ -105,7 +112,7 @@ export function AsaasAccountStatusTimeline({
               disabled={syncAccount.isPending}
               className="h-10 rounded-xl border-black/10 bg-white/60 px-4 text-[9px] font-black uppercase tracking-[0.18em] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04]"
             >
-              <RefreshCw className={cn("mr-2 h-3.5 w-3.5", syncAccount.isPending && "animate-spin")} />
+              <RefreshCw className={cn("mr-2 h-3.5 w-3.5", syncAccount.isPending && "animate-spin motion-reduce:animate-none")} />
               Atualizar
             </Button>
           </div>
@@ -119,9 +126,23 @@ export function AsaasAccountStatusTimeline({
 
         <div className="relative space-y-3">
           {stages.map((stage, index) => (
-            <TimelineRow key={stage.id} stage={stage} isLast={index === stages.length - 1} compact={compact} />
+            <TimelineRow key={stage.id} stage={stage} isLast={index === stages.length - 1} compact={compact} reduceMotion={reduceMotion} />
           ))}
         </div>
+
+        {!compact ? (
+          <div className="flex flex-col gap-3 rounded-[20px] border border-border/55 bg-background/45 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black text-foreground">Precisa de ajuda com uma pendência?</p>
+              <p className="mt-1 text-[10px] font-medium text-muted-foreground">A equipe NeuroNex acompanha sua conta e orienta os próximos passos.</p>
+            </div>
+            <Button asChild variant="outline" className="h-10 rounded-xl text-[9px] font-black uppercase tracking-[0.14em]">
+              <a href={supportUrl} target="_blank" rel="noreferrer">
+                <Headphones className="mr-2 h-3.5 w-3.5" /> Suporte NeuroNex <ExternalLink className="ml-2 h-3 w-3" />
+              </a>
+            </Button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -131,17 +152,19 @@ const TimelineRow = ({
   stage,
   isLast,
   compact,
+  reduceMotion,
 }: {
   stage: AsaasApprovalStage;
   isLast: boolean;
   compact: boolean;
+  reduceMotion: boolean;
 }) => {
   const styles = toneStyles[stage.tone];
   const Icon = styles.icon;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 8 }}
+      initial={reduceMotion ? false : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       className={cn(
         "relative grid items-center gap-4 rounded-2xl border border-zinc-200/75 bg-zinc-50/80 px-4 shadow-[0_10px_30px_-26px_rgba(24,24,27,0.5)] dark:border-white/[0.07] dark:bg-white/[0.025]",
@@ -166,11 +189,6 @@ const TimelineRow = ({
         <div className={cn("rounded-full border px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em]", styles.pill)}>
           {stage.statusLabel}
         </div>
-        {!compact ? (
-          <span className="hidden min-w-[92px] text-right font-mono text-[9px] font-black uppercase tracking-[0.12em] text-zinc-300 dark:text-zinc-700 sm:block">
-            {stage.rawStatus}
-          </span>
-        ) : null}
         <span className={cn("flex h-8 w-8 items-center justify-center rounded-full", styles.dot)}>
           <Icon className="h-4 w-4" />
         </span>

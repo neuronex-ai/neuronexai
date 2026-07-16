@@ -973,10 +973,10 @@ const NeuroFinanceWidget = ({
 
   return (
     <div className="grid h-[328px] grid-cols-2 grid-rows-2 gap-3">
-      <FinanceMetricCard label="Saldo" value={financialConnected ? formatCurrency(balance.balance) : "Ativar"} accent={financialConnected} onClick={() => navigate("/financeiro/neurofinance")} />
-      <FinanceMetricCard label="Vai cair" value={formatCurrency(balance.pending)} />
-      <FinanceMetricCard label="Quanto entrou" value={formatCurrency(balance.totalReceived)} />
-      <FinanceMetricCard label="Quanto saiu" value={formatCurrency(balance.paidOut)} onClick={() => navigate("/financeiro/neurofinance?view=extrato")} />
+      <FinanceMetricCard label="Saldo" value={financialConnected ? formatCurrency(balance.balance) : "Ativar"} accent={financialConnected} onClick={() => navigate("/financeiro?view=conta-digital")} />
+      <FinanceMetricCard label="Vai cair" value={formatCurrency(balance.pending)} onClick={() => navigate("/financeiro?view=extrato&subview=futuro")} />
+      <FinanceMetricCard label="Quanto entrou" value={formatCurrency(balance.totalReceived)} onClick={() => navigate("/financeiro?view=extrato&subview=realizado")} />
+      <FinanceMetricCard label="Quanto saiu" value={formatCurrency(balance.paidOut)} onClick={() => navigate("/financeiro?view=extrato&subview=andamento")} />
     </div>
   );
 };

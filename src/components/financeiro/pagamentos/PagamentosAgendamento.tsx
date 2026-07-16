@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   FileUp,
   Landmark,
@@ -26,12 +26,22 @@ import {
 } from "@/hooks/use-neurofinance-bill-payments";
 import { formatBoletoValue, normalizeBoletoInput } from "@/lib/boleto";
 import { cn, formatCurrency } from "@/lib/utils";
+import { EdgeFunctionInvocationError } from "@/lib/invoke-edge-function";
 
 type BillStep = "input" | "review" | "processing" | "success";
 
-const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+function billStatusLabel(value?: string | null) {
+  const status = String(value || "").toLowerCase();
+  if (["paid", "completed", "processed"].includes(status)) return "Pago";
+  if (["scheduled"].includes(status)) return "Agendado";
+  if (["processing", "submitting", "submission_unknown"].includes(status)) return "Em processamento";
+  if (["cancelled", "canceled", "refunded"].includes(status)) return "Cancelado";
+  if (["failed", "error"].includes(status)) return "Não concluído";
+  return "Em acompanhamento";
+}
 
 export function PagamentosAgendamento() {
+  const shouldReduceMotion = useReducedMotion();
   const [step, setStep] = useState<BillStep>("input");
   const [input, setInput] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -103,18 +113,13 @@ export function PagamentosAgendamento() {
       setPinOpen(false);
       setStep("processing");
 
-      const [result] = await Promise.all([
-        execute.mutateAsync(consultation.id),
-        wait(3400),
-      ]);
+      const result = await execute.mutateAsync(consultation.id);
 
       setExecution(result);
       setStep("success");
       toast.success(
         result.record.payment_mode === "scheduled" || result.status === "scheduled"
-          ? result.autoScheduled
-            ? "O saldo mudou e o boleto foi agendado com segurança."
-            : "Pagamento agendado com sucesso."
+          ? "Pagamento agendado com sucesso."
           : result.status === "paid"
             ? "Pagamento confirmado."
             : "Pagamento enviado para processamento.",
@@ -124,6 +129,19 @@ export function PagamentosAgendamento() {
       if (!wasAuthorized) {
         setPinError(message);
         return;
+      }
+
+      if (error instanceof EdgeFunctionInvocationError && error.code === "BILL_REVIEW_REQUIRED") {
+        try {
+          const refreshed = await consult.mutateAsync({ input });
+          setConsultation(refreshed.consultation);
+          setExecution(null);
+          setDecision(null);
+          setStep("review");
+          return;
+        } catch {
+          // The consultation hook already provides safe feedback.
+        }
       }
 
       setStep("input");
@@ -139,9 +157,9 @@ export function PagamentosAgendamento() {
             {step === "input" && (
               <motion.div
                 key="input"
-                initial={{ opacity: 0, y: 8 }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
+                exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}
                 className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(360px,0.8fr)]"
               >
                 <section className="rounded-[28px] border border-zinc-200/70 bg-white/72 p-6 shadow-[0_24px_70px_-55px_rgba(0,0,0,0.35)] backdrop-blur-3xl dark:border-white/[0.08] dark:bg-[#0b0b0d]/76">
@@ -230,7 +248,7 @@ export function PagamentosAgendamento() {
             )}
 
             {step === "review" && consultation && (
-              <motion.div key="review" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}>
+              <motion.div key="review" initial={shouldReduceMotion ? false : { opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={shouldReduceMotion ? undefined : { opacity: 0, y: -8 }}>
                 <BillPaymentReviewCard
                   consultation={consultation}
                   onBack={() => {
@@ -248,13 +266,13 @@ export function PagamentosAgendamento() {
             )}
 
             {step === "processing" && (
-              <motion.div key="processing" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <motion.div key="processing" initial={shouldReduceMotion ? false : { opacity: 0 }} animate={{ opacity: 1 }} exit={shouldReduceMotion ? undefined : { opacity: 0 }}>
                 <BillPaymentProcessing />
               </motion.div>
             )}
 
             {step === "success" && consultation && execution && (
-              <motion.div key="success" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
+              <motion.div key="success" initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}>
                 <BillPaymentSuccess consultation={consultation} execution={execution} onNewPayment={resetFlow} />
               </motion.div>
             )}
@@ -294,7 +312,7 @@ export function PagamentosAgendamento() {
                   </span>
                 </div>
                 <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-[8px] font-black uppercase tracking-wider text-zinc-500 dark:bg-white/5">
-                  {item.status}
+                  {billStatusLabel(item.status)}
                 </span>
               </motion.div>
             ))}

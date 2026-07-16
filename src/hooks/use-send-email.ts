@@ -1,5 +1,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  EdgeFunctionInvocationError,
+  normalizeEdgeFunctionError,
+} from "@/lib/invoke-edge-function";
 import { toast } from "sonner";
 
 interface SendDocumentEmailParams {
@@ -38,7 +42,7 @@ export const useSendEmail = () =>
       const {
         data: { session },
       } = await supabase.auth.getSession();
-      if (!session) throw new Error("Não autenticado");
+      if (!session) throw new Error("Sua sessão expirou. Entre novamente para enviar o e-mail.");
 
       const functionName =
         type === "document"
@@ -49,7 +53,12 @@ export const useSendEmail = () =>
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw await normalizeEdgeFunctionError(
+          error,
+          "Não foi possível enviar o e-mail. Tente novamente em instantes.",
+        );
+      }
       if (data?.error) throw new Error(data.error);
       return data as { provider?: "gmail" | "resend"; idempotentReplay?: boolean };
     },
@@ -75,8 +84,11 @@ export const useSendEmail = () =>
       });
     },
     onError: (error: Error) => {
-      console.error("Erro ao enviar email:", error);
-      toast.error("Erro ao enviar email", {
+      const diagnostic = error instanceof EdgeFunctionInvocationError
+        ? { kind: error.kind, status: error.status, code: error.code }
+        : { kind: "unknown" };
+      console.error("Erro ao enviar e-mail:", diagnostic);
+      toast.error("Erro ao enviar e-mail", {
         description: error.message || "Tente novamente mais tarde.",
       });
     },

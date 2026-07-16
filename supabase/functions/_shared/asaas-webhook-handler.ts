@@ -412,8 +412,8 @@ function asaasNotificationDescriptor(event: string, resource: any, context: Asaa
         ? ` no valor de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(amountCents / 100)}`
         : '';
     const base = {
-        title: 'Atualizacao do NeuroFinance',
-        message: `Evento ${compactEventLabel(event)} recebido pela Asaas${amountText}.`,
+        title: 'Atualização do NeuroFinance',
+        message: `Uma movimentação financeira foi atualizada${amountText}.`,
         severity: 'info',
         priority: 'normal',
         requiresAction: false,
@@ -423,93 +423,93 @@ function asaasNotificationDescriptor(event: string, resource: any, context: Asaa
     const viewedAt = context.eventTimestampLabel ? ` em ${context.eventTimestampLabel}` : '';
 
     const table: Record<string, Partial<typeof base>> = {
-        PAYMENT_AUTHORIZED: { title: 'Pagamento autorizado', message: `Uma cobranca foi autorizada${amountText}.`, severity: 'success' },
-        PAYMENT_CREATED: { title: 'Cobranca criada', message: `Uma cobranca foi criada no NeuroFinance${amountText}.` },
-        PAYMENT_UPDATED: { title: 'Cobranca atualizada', message: `Uma cobranca foi atualizada pela Asaas${amountText}.` },
+        PAYMENT_AUTHORIZED: { title: 'Pagamento autorizado', message: `Uma cobrança foi autorizada${amountText}.`, severity: 'success' },
+        PAYMENT_CREATED: { title: 'Cobrança criada', message: `Uma cobrança foi criada no NeuroFinance${amountText}.` },
+        PAYMENT_UPDATED: { title: 'Cobrança atualizada', message: `Uma cobrança foi atualizada no NeuroFinance${amountText}.` },
         PAYMENT_CONFIRMED: { title: 'Pagamento confirmado', message: `Um pagamento foi confirmado${amountText}.`, severity: 'success' },
-        PAYMENT_RECEIVED: { title: 'Pagamento recebido', message: `Um pagamento ficou disponivel no NeuroFinance${amountText}.`, severity: 'success' },
-        PAYMENT_ANTICIPATED: { title: 'Pagamento antecipado', message: `Uma cobranca foi antecipada${amountText}.`, severity: 'success' },
-        PAYMENT_OVERDUE: { title: 'Pagamento vencido', message: `Uma cobranca venceu e precisa de acompanhamento${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PAYMENT_DELETED: { title: 'Cobranca removida', message: `Uma cobranca foi removida/cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        PAYMENT_RESTORED: { title: 'Cobranca restaurada', message: `Uma cobranca foi restaurada${amountText}.`, severity: 'success' },
+        PAYMENT_RECEIVED: { title: 'Pagamento recebido', message: `Um pagamento ficou disponível no NeuroFinance${amountText}.`, severity: 'success' },
+        PAYMENT_ANTICIPATED: { title: 'Pagamento antecipado', message: `Uma cobrança foi antecipada${amountText}.`, severity: 'success' },
+        PAYMENT_OVERDUE: { title: 'Pagamento vencido', message: `Uma cobrança venceu e precisa de acompanhamento${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_DELETED: { title: 'Cobrança removida', message: `Uma cobrança foi removida${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        PAYMENT_RESTORED: { title: 'Cobrança restaurada', message: `Uma cobrança foi restaurada${amountText}.`, severity: 'success' },
         PAYMENT_REFUNDED: { title: 'Pagamento estornado', message: `Um pagamento foi estornado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
         PAYMENT_PARTIALLY_REFUNDED: { title: 'Pagamento parcialmente estornado', message: `Um pagamento teve estorno parcial${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        PAYMENT_REFUND_IN_PROGRESS: { title: 'Estorno em processamento', message: `Um estorno esta em processamento${amountText}.`, severity: 'info' },
-        PAYMENT_REFUND_DENIED: { title: 'Estorno negado', message: `A Asaas negou uma solicitacao de estorno${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_REFUND_IN_PROGRESS: { title: 'Estorno em processamento', message: `Um estorno está em processamento${amountText}.`, severity: 'info' },
+        PAYMENT_REFUND_DENIED: { title: 'Estorno negado', message: `Uma solicitação de estorno não foi aprovada${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
         PAYMENT_RECEIVED_IN_CASH_UNDONE: { title: 'Baixa em dinheiro desfeita', message: `Uma baixa manual de pagamento foi desfeita${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        PAYMENT_AWAITING_RISK_ANALYSIS: { title: 'Pagamento em analise de risco', message: `Uma cobranca entrou em analise de risco${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        PAYMENT_APPROVED_BY_RISK_ANALYSIS: { title: 'Analise de risco aprovada', message: `Uma cobranca foi aprovada na analise de risco${amountText}.`, severity: 'success' },
-        PAYMENT_REPROVED_BY_RISK_ANALYSIS: { title: 'Analise de risco reprovada', message: `Uma cobranca foi reprovada na analise de risco${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PAYMENT_CREDIT_CARD_CAPTURE_REFUSED: { title: 'Cartao recusado', message: `A captura do cartao foi recusada${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PAYMENT_CHARGEBACK_REQUESTED: { title: 'Chargeback solicitado', message: `Uma contestacao foi solicitada${amountText}.`, severity: 'destructive', priority: 'urgent', requiresAction: true, nativePushEligible: true },
-        PAYMENT_CHARGEBACK_DISPUTE: { title: 'Chargeback em disputa', message: `Uma contestacao entrou em disputa${amountText}.`, severity: 'destructive', priority: 'urgent', requiresAction: true, nativePushEligible: true },
-        PAYMENT_AWAITING_CHARGEBACK_REVERSAL: { title: 'Chargeback aguardando reversao', message: `Uma contestacao aguarda reversao${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PAYMENT_DUNNING_REQUESTED: { title: 'Recuperacao de cobranca solicitada', message: `Uma recuperacao de cobranca foi solicitada${amountText}.`, severity: 'info' },
-        PAYMENT_DUNNING_RECEIVED: { title: 'Recuperacao de cobranca recebida', message: `Uma recuperacao de cobranca foi recebida${amountText}.`, severity: 'success' },
+        PAYMENT_AWAITING_RISK_ANALYSIS: { title: 'Pagamento em análise', message: `Uma cobrança entrou em análise de segurança${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        PAYMENT_APPROVED_BY_RISK_ANALYSIS: { title: 'Análise aprovada', message: `Uma cobrança foi aprovada na análise de segurança${amountText}.`, severity: 'success' },
+        PAYMENT_REPROVED_BY_RISK_ANALYSIS: { title: 'Análise não aprovada', message: `Uma cobrança não foi aprovada na análise de segurança${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_CREDIT_CARD_CAPTURE_REFUSED: { title: 'Cartão recusado', message: `O pagamento no cartão foi recusado${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_CHARGEBACK_REQUESTED: { title: 'Contestação solicitada', message: `Uma contestação foi solicitada${amountText}.`, severity: 'destructive', priority: 'urgent', requiresAction: true, nativePushEligible: true },
+        PAYMENT_CHARGEBACK_DISPUTE: { title: 'Contestação em análise', message: `Uma contestação entrou em análise${amountText}.`, severity: 'destructive', priority: 'urgent', requiresAction: true, nativePushEligible: true },
+        PAYMENT_AWAITING_CHARGEBACK_REVERSAL: { title: 'Contestação aguardando reversão', message: `Uma contestação aguarda reversão${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_DUNNING_REQUESTED: { title: 'Recuperação de cobrança solicitada', message: `Uma recuperação de cobrança foi solicitada${amountText}.`, severity: 'info' },
+        PAYMENT_DUNNING_RECEIVED: { title: 'Recuperação de cobrança recebida', message: `Uma recuperação de cobrança foi recebida${amountText}.`, severity: 'success' },
         PAYMENT_BANK_SLIP_CANCELLED: { title: 'Boleto cancelado', message: `Um boleto foi cancelado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
         PAYMENT_BANK_SLIP_VIEWED: { title: 'Boleto visualizado', message: `${patientLabel} visualizou o boleto${viewedAt}.`, severity: 'info', priority: 'low' },
-        PAYMENT_CHECKOUT_VIEWED: { title: 'Cobranca visualizada', message: `${patientLabel} visualizou a cobranca${viewedAt}.`, severity: 'info', priority: 'low' },
-        PAYMENT_SPLIT_CANCELLED: { title: 'Split cancelado', message: `O split de uma cobranca foi cancelado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        PAYMENT_SPLIT_DIVERGENCE_BLOCK: { title: 'Divergencia de split bloqueada', message: `Uma divergencia de split bloqueou uma cobranca${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED: { title: 'Divergencia de split resolvida', message: `O bloqueio de divergencia de split foi finalizado${amountText}.`, severity: 'success' },
-        TRANSFER_CREATED: { title: 'Transferencia criada', message: `Uma transferencia foi criada${amountText}.` },
-        TRANSFER_PENDING: { title: 'Transferencia pendente', message: `Uma transferencia esta pendente${amountText}.`, severity: 'info' },
-        TRANSFER_IN_BANK_PROCESSING: { title: 'Transferencia em processamento', message: `Uma transferencia entrou em processamento bancario${amountText}.`, severity: 'info' },
-        TRANSFER_DONE: { title: 'Transferencia concluida', message: `Uma transferencia foi concluida${amountText}.`, severity: 'success' },
-        TRANSFER_FAILED: { title: 'Transferencia falhou', message: `Uma transferencia falhou${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        TRANSFER_CANCELLED: { title: 'Transferencia cancelada', message: `Uma transferencia foi cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        TRANSFER_BLOCKED: { title: 'Transferencia bloqueada', message: `Uma transferencia foi bloqueada pela Asaas${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_CHECKOUT_VIEWED: { title: 'Cobrança visualizada', message: `${patientLabel} visualizou a cobrança${viewedAt}.`, severity: 'info', priority: 'low' },
+        PAYMENT_SPLIT_CANCELLED: { title: 'Divisão cancelada', message: `A divisão de uma cobrança foi cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        PAYMENT_SPLIT_DIVERGENCE_BLOCK: { title: 'Divisão bloqueada', message: `Uma divergência na divisão bloqueou uma cobrança${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PAYMENT_SPLIT_DIVERGENCE_BLOCK_FINISHED: { title: 'Divisão regularizada', message: `A divergência na divisão foi resolvida${amountText}.`, severity: 'success' },
+        TRANSFER_CREATED: { title: 'Transferência criada', message: `Uma transferência foi criada${amountText}.` },
+        TRANSFER_PENDING: { title: 'Transferência pendente', message: `Uma transferência está pendente${amountText}.`, severity: 'info' },
+        TRANSFER_IN_BANK_PROCESSING: { title: 'Transferência em processamento', message: `Uma transferência entrou em processamento bancário${amountText}.`, severity: 'info' },
+        TRANSFER_DONE: { title: 'Transferência concluída', message: `Uma transferência foi concluída${amountText}.`, severity: 'success' },
+        TRANSFER_FAILED: { title: 'Transferência não concluída', message: `Uma transferência não foi concluída${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        TRANSFER_CANCELLED: { title: 'Transferência cancelada', message: `Uma transferência foi cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        TRANSFER_BLOCKED: { title: 'Transferência bloqueada', message: `Uma transferência foi bloqueada por segurança${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
         BILL_CREATED: { title: 'Conta criada', message: `Um pagamento de conta foi criado${amountText}.` },
-        BILL_PENDING: { title: 'Conta pendente', message: `Um pagamento de conta esta pendente${amountText}.`, severity: 'info' },
-        BILL_BANK_PROCESSING: { title: 'Conta em processamento', message: `Um pagamento de conta entrou em processamento bancario${amountText}.`, severity: 'info' },
+        BILL_PENDING: { title: 'Conta pendente', message: `Um pagamento de conta está pendente${amountText}.`, severity: 'info' },
+        BILL_BANK_PROCESSING: { title: 'Conta em processamento', message: `Um pagamento de conta entrou em processamento bancário${amountText}.`, severity: 'info' },
         BILL_PAID: { title: 'Conta paga', message: `Um pagamento de conta foi confirmado${amountText}.`, severity: 'success' },
         BILL_FAILED: { title: 'Pagamento de conta falhou', message: `Um pagamento de conta falhou${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
         BILL_CANCELLED: { title: 'Pagamento de conta cancelado', message: `Um pagamento de conta foi cancelado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
         BILL_REFUNDED: { title: 'Pagamento de conta estornado', message: `Um pagamento de conta foi estornado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        RECEIVABLE_ANTICIPATION_PENDING: { title: 'Antecipacao pendente', message: `Uma antecipacao esta pendente${amountText}.`, severity: 'info' },
-        RECEIVABLE_ANTICIPATION_SCHEDULED: { title: 'Antecipacao agendada', message: `Uma antecipacao foi agendada${amountText}.`, severity: 'info' },
-        RECEIVABLE_ANTICIPATION_CREDITED: { title: 'Antecipacao creditada', message: `Uma antecipacao foi creditada${amountText}.`, severity: 'success' },
-        RECEIVABLE_ANTICIPATION_DEBITED: { title: 'Antecipacao debitada', message: `Uma antecipacao foi debitada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        RECEIVABLE_ANTICIPATION_DENIED: { title: 'Antecipacao negada', message: `Uma antecipacao foi negada${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        RECEIVABLE_ANTICIPATION_CANCELLED: { title: 'Antecipacao cancelada', message: `Uma antecipacao foi cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        RECEIVABLE_ANTICIPATION_OVERDUE: { title: 'Antecipacao vencida', message: `Uma antecipacao ficou vencida${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true, nativePushEligible: true },
-        INVOICE_CREATED: { title: 'NFS-e criada', message: 'Uma NFS-e foi criada na Asaas.', severity: 'info' },
-        INVOICE_UPDATED: { title: 'NFS-e atualizada', message: 'Uma NFS-e foi atualizada pela Asaas.', severity: 'info' },
+        RECEIVABLE_ANTICIPATION_PENDING: { title: 'Antecipação pendente', message: `Uma antecipação está pendente${amountText}.`, severity: 'info' },
+        RECEIVABLE_ANTICIPATION_SCHEDULED: { title: 'Antecipação agendada', message: `Uma antecipação foi agendada${amountText}.`, severity: 'info' },
+        RECEIVABLE_ANTICIPATION_CREDITED: { title: 'Antecipação creditada', message: `Uma antecipação foi creditada${amountText}.`, severity: 'success' },
+        RECEIVABLE_ANTICIPATION_DEBITED: { title: 'Antecipação debitada', message: `Uma antecipação foi debitada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        RECEIVABLE_ANTICIPATION_DENIED: { title: 'Antecipação não aprovada', message: `Uma antecipação não foi aprovada${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        RECEIVABLE_ANTICIPATION_CANCELLED: { title: 'Antecipação cancelada', message: `Uma antecipação foi cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        RECEIVABLE_ANTICIPATION_OVERDUE: { title: 'Antecipação vencida', message: `Uma antecipação ficou vencida${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true, nativePushEligible: true },
+        INVOICE_CREATED: { title: 'NFS-e criada', message: 'Uma NFS-e foi criada no NeuroFinance.', severity: 'info' },
+        INVOICE_UPDATED: { title: 'NFS-e atualizada', message: 'Uma NFS-e foi atualizada no NeuroFinance.', severity: 'info' },
         INVOICE_SYNCHRONIZED: { title: 'NFS-e sincronizada', message: 'Uma NFS-e foi sincronizada com a prefeitura.', severity: 'success' },
-        INVOICE_AUTHORIZED: { title: 'Nota fiscal autorizada', message: 'Uma NFS-e foi autorizada pela Asaas.', severity: 'success' },
-        INVOICE_PROCESSING_CANCELLATION: { title: 'Cancelamento de NFS-e em processamento', message: 'O cancelamento de uma NFS-e esta em processamento.', severity: 'warning', priority: 'high', requiresAction: true },
-        INVOICE_CANCELED: { title: 'NFS-e cancelada', message: 'Uma NFS-e foi cancelada pela Asaas.', severity: 'warning', priority: 'high', requiresAction: true },
-        INVOICE_ERROR: { title: 'Erro na nota fiscal', message: 'A Asaas retornou erro em uma NFS-e.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        INVOICE_CANCELLATION_DENIED: { title: 'Cancelamento de NFS-e negado', message: 'A Asaas negou o cancelamento de uma NFS-e.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        INVOICE_AUTHORIZED: { title: 'Nota fiscal autorizada', message: 'Uma NFS-e foi autorizada.', severity: 'success' },
+        INVOICE_PROCESSING_CANCELLATION: { title: 'Cancelamento de NFS-e em processamento', message: 'O cancelamento de uma NFS-e está em processamento.', severity: 'warning', priority: 'high', requiresAction: true },
+        INVOICE_CANCELED: { title: 'NFS-e cancelada', message: 'Uma NFS-e foi cancelada.', severity: 'warning', priority: 'high', requiresAction: true },
+        INVOICE_ERROR: { title: 'Erro na nota fiscal', message: 'Uma NFS-e precisa de revisão.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        INVOICE_CANCELLATION_DENIED: { title: 'Cancelamento de NFS-e não aprovado', message: 'O cancelamento de uma NFS-e não foi aprovado.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
         SUBSCRIPTION_CREATED: { title: 'Assinatura criada', message: `Uma assinatura foi criada${amountText}.` },
         SUBSCRIPTION_UPDATED: { title: 'Assinatura atualizada', message: `Uma assinatura foi atualizada${amountText}.` },
         SUBSCRIPTION_INACTIVATED: { title: 'Assinatura inativada', message: `Uma assinatura foi inativada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
         SUBSCRIPTION_DELETED: { title: 'Assinatura removida', message: `Uma assinatura foi removida${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK: { title: 'Divergencia de split na assinatura', message: 'Uma assinatura foi bloqueada por divergencia de split.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED: { title: 'Divergencia de split resolvida', message: 'A divergencia de split da assinatura foi resolvida.', severity: 'success' },
-        SUBSCRIPTION_SPLIT_DISABLED: { title: 'Split desativado na assinatura', message: 'O split de uma assinatura foi desativado.', severity: 'warning', priority: 'high', requiresAction: true },
-        CHECKOUT_CREATED: { title: 'Checkout criado', message: `Um checkout foi criado${amountText}.` },
-        CHECKOUT_CANCELED: { title: 'Checkout cancelado', message: `Um checkout foi cancelado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        CHECKOUT_EXPIRED: { title: 'Checkout expirado', message: `Um checkout expirou${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        CHECKOUT_PAID: { title: 'Checkout pago', message: `Um checkout foi pago${amountText}.`, severity: 'success' },
+        SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK: { title: 'Divisão da assinatura bloqueada', message: 'Uma assinatura foi bloqueada por divergência na divisão.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        SUBSCRIPTION_SPLIT_DIVERGENCE_BLOCK_FINISHED: { title: 'Divisão da assinatura regularizada', message: 'A divergência na divisão da assinatura foi resolvida.', severity: 'success' },
+        SUBSCRIPTION_SPLIT_DISABLED: { title: 'Divisão desativada na assinatura', message: 'A divisão de uma assinatura foi desativada.', severity: 'warning', priority: 'high', requiresAction: true },
+        CHECKOUT_CREATED: { title: 'Link de pagamento criado', message: `Um link de pagamento foi criado${amountText}.` },
+        CHECKOUT_CANCELED: { title: 'Link de pagamento cancelado', message: `Um link de pagamento foi cancelado${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        CHECKOUT_EXPIRED: { title: 'Link de pagamento expirado', message: `Um link de pagamento expirou${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
+        CHECKOUT_PAID: { title: 'Link de pagamento recebido', message: `Um link de pagamento foi pago${amountText}.`, severity: 'success' },
         BALANCE_VALUE_BLOCKED: { title: 'Saldo bloqueado', message: `Um valor foi bloqueado no saldo NeuroFinance${amountText}.`, severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
         BALANCE_VALUE_UNBLOCKED: { title: 'Saldo desbloqueado', message: `Um valor foi desbloqueado no saldo NeuroFinance${amountText}.`, severity: 'success' },
-        INTERNAL_TRANSFER_CREDIT: { title: 'Transferencia interna recebida', message: `Uma transferencia interna creditou sua conta${amountText}.`, severity: 'success' },
-        INTERNAL_TRANSFER_DEBIT: { title: 'Transferencia interna enviada', message: `Uma transferencia interna debitou sua conta${amountText}.`, severity: 'info' },
-        MOBILE_PHONE_RECHARGE_PENDING: { title: 'Recarga pendente', message: `Uma recarga esta pendente${amountText}.`, severity: 'info' },
+        INTERNAL_TRANSFER_CREDIT: { title: 'Transferência interna recebida', message: `Uma transferência interna creditou sua conta${amountText}.`, severity: 'success' },
+        INTERNAL_TRANSFER_DEBIT: { title: 'Transferência interna enviada', message: `Uma transferência interna debitou sua conta${amountText}.`, severity: 'info' },
+        MOBILE_PHONE_RECHARGE_PENDING: { title: 'Recarga pendente', message: `Uma recarga está pendente${amountText}.`, severity: 'info' },
         MOBILE_PHONE_RECHARGE_CANCELLED: { title: 'Recarga cancelada', message: `Uma recarga foi cancelada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
         MOBILE_PHONE_RECHARGE_CONFIRMED: { title: 'Recarga confirmada', message: `Uma recarga foi confirmada${amountText}.`, severity: 'success' },
         MOBILE_PHONE_RECHARGE_REFUNDED: { title: 'Recarga estornada', message: `Uma recarga foi estornada${amountText}.`, severity: 'warning', priority: 'high', requiresAction: true },
-        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CREATED: { title: 'Pix Automatico criado', message: 'Uma autorizacao de Pix Automatico foi criada.', severity: 'info' },
-        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED: { title: 'Pix Automatico ativado', message: 'Uma autorizacao de Pix Automatico foi ativada.', severity: 'success' },
-        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CANCELLED: { title: 'Pix Automatico cancelado', message: 'Uma autorizacao de Pix Automatico foi cancelada.', severity: 'warning', priority: 'high', requiresAction: true },
-        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_EXPIRED: { title: 'Pix Automatico expirado', message: 'Uma autorizacao de Pix Automatico expirou.', severity: 'warning', priority: 'high', requiresAction: true },
-        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_REFUSED: { title: 'Pix Automatico recusado', message: 'Uma autorizacao de Pix Automatico foi recusada pelo banco.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_CREATED: { title: 'Instrucao Pix criada', message: 'Uma instrucao de pagamento Pix Automatico foi criada.', severity: 'info' },
-        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_SCHEDULED: { title: 'Instrucao Pix agendada', message: 'Uma instrucao de pagamento Pix Automatico foi agendada.', severity: 'info' },
-        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_REFUSED: { title: 'Instrucao Pix recusada', message: 'Uma instrucao de pagamento Pix Automatico foi recusada.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
-        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_CANCELLED: { title: 'Instrucao Pix cancelada', message: 'Uma instrucao de pagamento Pix Automatico foi cancelada.', severity: 'warning', priority: 'high', requiresAction: true },
-        PIX_AUTOMATIC_RECURRING_ELIGIBILITY_UPDATED: { title: 'Elegibilidade Pix atualizada', message: 'A elegibilidade da subconta para Pix Automatico foi atualizada.', severity: 'info' },
+        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CREATED: { title: 'Pix Automático criado', message: 'Uma autorização de Pix Automático foi criada.', severity: 'info' },
+        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_ACTIVATED: { title: 'Pix Automático ativado', message: 'Uma autorização de Pix Automático foi ativada.', severity: 'success' },
+        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_CANCELLED: { title: 'Pix Automático cancelado', message: 'Uma autorização de Pix Automático foi cancelada.', severity: 'warning', priority: 'high', requiresAction: true },
+        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_EXPIRED: { title: 'Pix Automático expirado', message: 'Uma autorização de Pix Automático expirou.', severity: 'warning', priority: 'high', requiresAction: true },
+        PIX_AUTOMATIC_RECURRING_AUTHORIZATION_REFUSED: { title: 'Pix Automático recusado', message: 'Uma autorização de Pix Automático foi recusada pelo banco.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_CREATED: { title: 'Instrução Pix criada', message: 'Uma instrução de pagamento Pix Automático foi criada.', severity: 'info' },
+        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_SCHEDULED: { title: 'Instrução Pix agendada', message: 'Uma instrução de pagamento Pix Automático foi agendada.', severity: 'info' },
+        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_REFUSED: { title: 'Instrução Pix recusada', message: 'Uma instrução de pagamento Pix Automático foi recusada.', severity: 'destructive', priority: 'high', requiresAction: true, nativePushEligible: true },
+        PIX_AUTOMATIC_RECURRING_PAYMENT_INSTRUCTION_CANCELLED: { title: 'Instrução Pix cancelada', message: 'Uma instrução de pagamento Pix Automático foi cancelada.', severity: 'warning', priority: 'high', requiresAction: true },
+        PIX_AUTOMATIC_RECURRING_ELIGIBILITY_UPDATED: { title: 'Elegibilidade Pix atualizada', message: 'A elegibilidade da conta para Pix Automático foi atualizada.', severity: 'info' },
     };
 
     const descriptor = { ...base, ...(table[event] || {}) };
@@ -518,8 +518,8 @@ function asaasNotificationDescriptor(event: string, resource: any, context: Asaa
         if (event.endsWith('_REJECTED')) {
             return {
                 ...descriptor,
-                title: 'Cadastro Asaas requer atencao',
-                message: 'A Asaas rejeitou uma etapa de cadastro da subconta NeuroFinance.',
+                title: 'Cadastro requer atenção',
+                message: 'Uma etapa de cadastro da conta NeuroFinance precisa de revisão.',
                 severity: 'destructive',
                 priority: 'high',
                 requiresAction: true,
@@ -529,16 +529,16 @@ function asaasNotificationDescriptor(event: string, resource: any, context: Asaa
         if (event.endsWith('_APPROVED')) {
             return {
                 ...descriptor,
-                title: 'Cadastro Asaas aprovado',
-                message: 'Uma etapa de cadastro da subconta NeuroFinance foi aprovada.',
+                title: 'Cadastro aprovado',
+                message: 'Uma etapa de cadastro da conta NeuroFinance foi aprovada.',
                 severity: 'success',
             };
         }
         if (event.endsWith('_EXPIRING_SOON') || event.endsWith('_EXPIRED')) {
             return {
                 ...descriptor,
-                title: 'Dados comerciais precisam de revisao',
-                message: 'Os dados comerciais da subconta Asaas precisam ser revisados.',
+                title: 'Dados comerciais precisam de revisão',
+                message: 'Os dados comerciais da conta NeuroFinance precisam ser revisados.',
                 severity: 'warning',
                 priority: 'high',
                 requiresAction: true,
@@ -575,7 +575,7 @@ async function emitAsaasNotification(args: {
         p_severity: descriptor.severity,
         p_title: descriptor.title,
         p_message: descriptor.message,
-        p_action_url: args.actionUrl || '/financeiro',
+        p_action_url: args.actionUrl || '/financeiro?view=conta-digital',
         p_priority: descriptor.priority,
         p_data: {
             sourceModule: 'financeiro',
@@ -790,7 +790,9 @@ async function handlePaymentEvent(payment: any, event: string, webhookAccount?: 
         event,
         resource: payment,
         objectType: 'payment',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: event.includes('CHARGEBACK')
+            ? '/financeiro?view=cobrancas-chargebacks'
+            : '/financeiro?view=cobrancas-historia',
         context: await buildPaymentNotificationContext(nbPayment, payment, event),
     });
 
@@ -951,7 +953,7 @@ async function markAutomaticNfseFailure(nbPayment: any, payment: any, error: any
         p_severity: 'destructive',
         p_title: 'Erro na nota fiscal',
         p_message: 'A emissao automatica de NFS-e falhou. Revise os dados fiscais no NeuroFinance.',
-        p_action_url: '/financeiro?tab=neurofinance',
+        p_action_url: '/financeiro?view=fiscal-lista',
         p_priority: 'high',
         p_data: {
             sourceModule: 'financeiro',
@@ -1201,7 +1203,7 @@ async function handleReceivableAnticipationEvent(anticipation: any, event: strin
         event,
         resource: anticipation,
         objectType: 'anticipation',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=antecipacoes-lista',
     });
 }
 
@@ -1285,7 +1287,7 @@ async function handleBillEvent(bill: any, event: string) {
         event,
         resource: bill,
         objectType: 'bill',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=pagamentos-agendados',
     });
     console.log(`[asaas-webhook] Bill synchronized (${event}): ${record.id}`);
 }
@@ -1348,7 +1350,7 @@ async function handleTransferPending(transfer: any, event = 'TRANSFER_PENDING') 
         event,
         resource: transfer,
         objectType: 'transfer',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=transferencias',
     });
 }
 
@@ -1422,7 +1424,7 @@ async function handleTransferDone(transfer: any) {
         event: 'TRANSFER_DONE',
         resource: transfer,
         objectType: 'transfer',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=transferencias',
     });
 
     console.log(`[asaas-webhook] Transfer completed: ${payout.id}`);
@@ -1462,7 +1464,7 @@ async function handleTransferFailed(transfer: any, event: string) {
         event,
         resource: transfer,
         objectType: 'transfer',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=transferencias',
     });
 
     console.log(`[asaas-webhook] Transfer ${status}: ${payout.id}`);
@@ -1489,7 +1491,7 @@ async function handleAccountStatus(accountStatusPayload: any, event: string) {
         event,
         resource: accountStatusPayload,
         objectType: 'account_status',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=saude-conta',
     });
 
     console.log(`[asaas-webhook] Account status synced (${event}): ${financialAccount.id}`);
@@ -1541,7 +1543,7 @@ async function handleInvoiceEvent(invoice: any, event: string, webhookAccount?: 
         event,
         resource: invoice,
         objectType: 'invoice',
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: '/financeiro?view=fiscal-lista',
         context: {
             patientId: nbPayment?.patient_id || null,
         },
@@ -1568,7 +1570,13 @@ async function handleGenericAsaasEvent(body: any, resource: any, event: string, 
         event,
         resource: resource || body,
         objectType: inferProviderObjectType(body),
-        actionUrl: '/financeiro?tab=neurofinance',
+        actionUrl: event.startsWith('TRANSFER_')
+            ? '/financeiro?view=transferencias'
+            : event.startsWith('BILL_')
+                ? '/financeiro?view=pagamentos-agendados'
+                : event.startsWith('PAYMENT_')
+                    ? '/financeiro?view=cobrancas-historia'
+                    : '/financeiro?view=conta-digital',
     });
 }
 

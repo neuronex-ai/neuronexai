@@ -29,9 +29,11 @@ import {
     requireEntitlementForUser,
     subscriptionAccessErrorResponse,
 } from "../_shared/subscription-access.ts";
+import { toNeurofinanceOperationError } from "../_shared/neurofinance-operation-error.ts";
 
 type Destination = {
-    type?: "saved_bank" | "pix_key";
+    type?: "saved_bank" | "saved_pix" | "pix_key";
+    recipient_id?: string;
     pix_key?: string;
     pix_key_type?: "CPF" | "CNPJ" | "EMAIL" | "PHONE" | "EVP";
     bank_code?: string;
@@ -46,6 +48,141 @@ type Destination = {
     validation_source?: string;
     provider_lookup?: Record<string, unknown>;
 };
+
+async function pixKeyFingerprint(value: string) {
+    const digest = await crypto.subtle.digest(
+        "SHA-256",
+        new TextEncoder().encode(value.trim().toLocaleLowerCase("pt-BR")),
+    );
+    return Array.from(new Uint8Array(digest))
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+function maskPixKey(value: unknown) {
+    const key = String(value || "").trim();
+    if (!key) return "";
+    if (key.includes("@")) {
+        const [name, domain] = key.split("@");
+        return `${name.slice(0, 2)}***@${domain}`;
+    }
+    const digits = key.replace(/\D/g, "");
+    if (digits.length >= 11) return `***${digits.slice(-4)}`;
+    return `${key.slice(0, 4)}••••${key.slice(-4)}`;
+}
+
+async function findSavedPixRecipient(userId: string, recipientId: string, account: any) {
+    if (recipientId === "legacy-pix") {
+        const pix = account?.metadata?.destinations?.pix;
+        if (!pix?.key) return null;
+        return {
+            id: recipientId,
+            pix_key: pix.normalizedKey || pix.key,
+            pix_key_type: pix.type || undefined,
+            destination_summary: `Pix salvo · ${maskPixKey(pix.key)}`,
+        };
+    }
+
+    const { data, error } = await supabaseAdmin
+        .from("neurofinance_saved_pix_recipients")
+        .select("*")
+        .eq("id", recipientId)
+        .eq("user_id", userId)
+        .eq("active", true)
+        .maybeSingle();
+    if (error) throw error;
+    return data;
+}
+
+async function listSavedDestinations(
+    userId: string,
+    account: any,
+    purpose: "payout" | "transfer",
+) {
+    let savedRecipients: any[] = [];
+    if (purpose === "transfer") {
+        const { data, error } = await supabaseAdmin
+            .from("neurofinance_saved_pix_recipients")
+            .select("id,label,pix_key_type,destination_summary,holder_name,holder_document_masked,bank_name,updated_at")
+            .eq("user_id", userId)
+            .eq("active", true)
+            .order("updated_at", { ascending: false })
+            .limit(50);
+        if (error) throw error;
+        savedRecipients = data || [];
+    }
+
+    const bank = purpose === "payout" ? savedBankDestination(account) : null;
+    const legacyPix = account?.metadata?.destinations?.pix;
+    return {
+        bank: bank
+            ? {
+                type: "saved_bank",
+                label: "Conta bancária cadastrada",
+                summary: bank.summary,
+                holderName: bank.holder_name,
+                bankName: bank.bank_name,
+                agency: bank.agency,
+                accountLast4: String(bank.account || "").replace(/\D/g, "").slice(-4),
+            }
+            : null,
+        pix: [
+            ...(purpose === "payout" && legacyPix?.key
+                ? [{
+                    id: "legacy-pix",
+                    label: "Pix cadastrado para saque",
+                    keyType: legacyPix.type || "Pix",
+                    maskedKey: maskPixKey(legacyPix.key),
+                    summary: `Pix cadastrado · ${maskPixKey(legacyPix.key)}`,
+                    holderName: null,
+                    bankName: null,
+                }]
+                : []),
+            ...savedRecipients.map((item: any) => ({
+                id: item.id,
+                label: item.label,
+                keyType: item.pix_key_type,
+                maskedKey: item.destination_summary?.split(" · ").pop() || "Chave protegida",
+                summary: item.destination_summary,
+                holderName: item.holder_name,
+                holderDocument: item.holder_document_masked,
+                bankName: item.bank_name,
+            })),
+        ],
+    };
+}
+
+async function saveRecipientFromRequest(userId: string, accountId: string, record: any) {
+    if (record.kind !== "pix_transfer") return null;
+    const destination = (record.destination_payload || {}) as Destination;
+    if (!destination.pix_key || !destination.pix_key_type) return null;
+    const fingerprint = await pixKeyFingerprint(destination.pix_key);
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseAdmin
+        .from("neurofinance_saved_pix_recipients")
+        .upsert({
+            user_id: userId,
+            financial_account_id: accountId,
+            label: destination.holder_name || "Destinatário Pix",
+            pix_key: destination.pix_key,
+            pix_key_type: destination.pix_key_type,
+            key_fingerprint: fingerprint,
+            destination_summary: `${destination.holder_name || "Destinatário"} · ${maskPixKey(destination.pix_key)}`,
+            holder_name: destination.holder_name || null,
+            holder_document_masked: destination.holder_document
+                ? `***${sanitizeDigits(destination.holder_document).slice(-4)}`
+                : null,
+            bank_name: destination.bank_name || null,
+            bank_code: destination.bank_code || null,
+            active: true,
+            last_used_at: now,
+            updated_at: now,
+        }, { onConflict: "user_id,key_fingerprint" })
+        .select("id,label,destination_summary")
+        .single();
+    if (error) throw error;
+    return data;
+}
 
 function savedBankDestination(account: any): Destination | null {
     if (!account?.bank_code || !account?.bank_agency || !account?.bank_account) return null;
@@ -73,6 +210,22 @@ function payoutResponse(record: any) {
         ...outgoingResponse(record),
         destinationType: ["pix_transfer", "payout_pix"].includes(record.kind) ? "pix_key" : "saved_bank",
     };
+}
+
+function operationWords(record: any) {
+    return record?.kind === "pix_transfer"
+        ? {
+            definite: "a transferência",
+            demonstrative: "esta transferência",
+            sent: "enviada",
+            processing: "processada",
+        }
+        : {
+            definite: "o saque",
+            demonstrative: "este saque",
+            sent: "enviado",
+            processing: "processado",
+        };
 }
 
 async function findRequest(userId: string, id: string) {
@@ -139,29 +292,85 @@ Deno.serve(async (req: Request) => {
         const account = await getFinancialAccount(user.id);
         const apiKey = await getFinancialAccountAsaasApiKey(account);
         if (!account || !apiKey) {
-            return errorResponse("Sua conta financeira ainda não está pronta para saques.", 403, { code: "ACCOUNT_NOT_READY" });
+            return errorResponse("Sua conta financeira ainda não está pronta para movimentações.", 403, { code: "ACCOUNT_NOT_READY" });
+        }
+
+        if (action === "list_destinations") {
+            const purpose = String(body.purpose || "payout") === "transfer" ? "transfer" : "payout";
+            return jsonResponse({
+                success: true,
+                destinations: await listSavedDestinations(user.id, account, purpose),
+            });
         }
 
         if (action === "consult") {
             const amount = Math.round(Number(body.amount || 0));
             const purpose = String(body.purpose || "payout") === "transfer" ? "transfer" : "payout";
             if (!Number.isFinite(amount) || amount <= 0) {
-                return errorResponse("Digite um valor válido para sacar.", 400, { code: "INVALID_AMOUNT" });
+                return errorResponse(
+                    purpose === "transfer"
+                        ? "Digite um valor válido para transferir."
+                        : "Digite um valor válido para sacar.",
+                    400,
+                    { code: "INVALID_AMOUNT" },
+                );
             }
             const balance = await liveBalance(apiKey);
             if (amount > balance) {
-                return errorResponse("Saldo insuficiente para este saque.", 422, {
+                return errorResponse(
+                    purpose === "transfer"
+                        ? "Saldo insuficiente para esta transferência."
+                        : "Saldo insuficiente para este saque.",
+                    422,
+                    {
                     code: "INSUFFICIENT_BALANCE",
                     availableBalance: balance / 100,
-                });
+                    },
+                );
             }
 
             const requestedDestination = (body.destination || {}) as Destination;
             let destination: Destination | null = null;
             let kind: "pix_transfer" | "payout_pix" | "payout_bank";
-            if (requestedDestination.type === "pix_key") {
-                const keyType = detectPixKeyType(requestedDestination.pix_key);
-                const pixKey = normalizePixKeyForProvider(requestedDestination.pix_key, keyType);
+            if (purpose === "payout" && requestedDestination.type === "pix_key") {
+                return errorResponse(
+                    "Para sua segurança, saques só podem usar a conta ou a chave Pix cadastrada no NeuroFinance.",
+                    403,
+                    { code: "PAYOUT_DESTINATION_NOT_REGISTERED" },
+                );
+            }
+
+            if (["pix_key", "saved_pix"].includes(String(requestedDestination.type))) {
+                if (
+                    purpose === "transfer" &&
+                    requestedDestination.type === "saved_pix" &&
+                    requestedDestination.recipient_id === "legacy-pix"
+                ) {
+                    return errorResponse("Este destinatário não está salvo para transferências.", 404, {
+                        code: "SAVED_RECIPIENT_NOT_FOUND",
+                    });
+                }
+                if (
+                    purpose === "payout" &&
+                    !(requestedDestination.type === "saved_pix" && requestedDestination.recipient_id === "legacy-pix")
+                ) {
+                    return errorResponse(
+                        "Este destino não está cadastrado para saques no NeuroFinance.",
+                        403,
+                        { code: "PAYOUT_DESTINATION_NOT_REGISTERED" },
+                    );
+                }
+                const savedRecipient = requestedDestination.type === "saved_pix"
+                    ? await findSavedPixRecipient(user.id, String(requestedDestination.recipient_id || ""), account)
+                    : null;
+                if (requestedDestination.type === "saved_pix" && !savedRecipient) {
+                    return errorResponse("Este destinatário salvo não está mais disponível.", 404, {
+                        code: "SAVED_RECIPIENT_NOT_FOUND",
+                    });
+                }
+                const rawKey = savedRecipient?.pix_key || requestedDestination.pix_key;
+                const keyType = detectPixKeyType(rawKey);
+                const pixKey = normalizePixKeyForProvider(rawKey, keyType);
                 if (!pixKey) return errorResponse("Informe a chave Pix de destino.", 400, { code: "PIX_KEY_REQUIRED" });
                 const lookup = await asaasRequest<any>(
                     `/pix/addressKeys/external?type=${encodeURIComponent(keyType)}&key=${encodeURIComponent(pixKey)}`,
@@ -226,46 +435,60 @@ Deno.serve(async (req: Request) => {
 
         if (action === "authorize") {
             const record = await findRequest(user.id, String(body.requestId || ""));
-            if (!record) return errorResponse("Esta revisão de saque não foi encontrada.", 404, { code: "CONSULTATION_NOT_FOUND" });
+            if (!record) return errorResponse("Esta revisão de movimentação não foi encontrada.", 404, { code: "CONSULTATION_NOT_FOUND" });
+            const words = operationWords(record);
             if (isExpired(record)) {
                 await supabaseAdmin.from("neurofinance_outgoing_requests").update({ status: "expired", updated_at: new Date().toISOString() }).eq("id", record.id);
-                return errorResponse("A revisão expirou. Confira o saque novamente.", 410, { code: "CONSULTATION_EXPIRED" });
+                return errorResponse(`A revisão expirou. Confira ${words.definite} novamente.`, 410, { code: "CONSULTATION_EXPIRED" });
             }
             if (!["review_pending", "authorized"].includes(record.status)) {
-                return errorResponse("Este saque não está disponível para autorização.", 409, { code: "CONSULTATION_NOT_AUTHORIZABLE" });
+                return errorResponse(`${words.demonstrative[0].toUpperCase()}${words.demonstrative.slice(1)} não está disponível para autorização.`, 409, { code: "CONSULTATION_NOT_AUTHORIZABLE" });
             }
             const pinResult = await verifyFinancialPin(user.id, String(body.pin || ""));
             if (!pinResult.isValid) return errorResponse(pinResult.message || "PIN incorreto.", 403, { code: pinResult.code || "INVALID_PIN" });
             const balance = await liveBalance(apiKey);
             if (balance < Number(record.amount || 0)) {
-                return errorResponse("Seu saldo mudou e agora é insuficiente para este saque.", 422, { code: "INSUFFICIENT_BALANCE" });
+                return errorResponse(`Seu saldo mudou e agora é insuficiente para ${words.demonstrative}.`, 422, { code: "INSUFFICIENT_BALANCE" });
             }
             const authorizedAt = new Date().toISOString();
+            const shouldSaveRecipient = body.saveRecipient === true && record.kind === "pix_transfer";
             const { data: authorized, error } = await supabaseAdmin.from("neurofinance_outgoing_requests").update({
                 status: "authorized",
                 available_balance_at_review: balance,
                 authorized_at: authorizedAt,
+                provider_payload: {
+                    ...(record.provider_payload || {}),
+                    review: {
+                        ...(record.provider_payload?.review || {}),
+                        saveRecipient: shouldSaveRecipient,
+                    },
+                },
                 updated_at: authorizedAt,
             }).eq("id", record.id).eq("user_id", user.id).in("status", ["review_pending", "authorized"]).select().single();
             if (error) throw error;
-            return jsonResponse({ success: true, consultation: payoutResponse(authorized) });
+            return jsonResponse({
+                success: true,
+                consultation: payoutResponse(authorized),
+                recipientWillBeSaved: shouldSaveRecipient,
+            });
         }
 
         if (action === "execute") {
             const record = await findRequest(user.id, String(body.requestId || ""));
-            if (!record) return errorResponse("Esta revisão de saque não foi encontrada.", 404, { code: "CONSULTATION_NOT_FOUND" });
+            if (!record) return errorResponse("Esta revisão de movimentação não foi encontrada.", 404, { code: "CONSULTATION_NOT_FOUND" });
+            const words = operationWords(record);
             if (record.provider_operation_id && ["pending", "in_transit", "paid"].includes(record.status)) {
-                return jsonResponse({ success: true, request: payoutResponse(record), transfer: record.provider_payload?.execution || {}, status: record.status, receiptUrl: record.receipt_url, idempotent: true });
+                return jsonResponse({ success: true, request: payoutResponse(record), status: record.status, receiptUrl: record.receipt_url, idempotent: true });
             }
             if (["submitting", "submission_unknown"].includes(record.status)) {
-                return errorResponse("Este saque já foi enviado e aguarda confirmação bancária.", 409, { code: "PAYOUT_ALREADY_SUBMITTED" });
+                return errorResponse(`${words.demonstrative[0].toUpperCase()}${words.demonstrative.slice(1)} já foi ${words.sent} e aguarda confirmação bancária.`, 409, { code: "PAYOUT_ALREADY_SUBMITTED" });
             }
             if (record.status !== "authorized" || !record.authorized_at) {
-                return errorResponse("Confirme este saque com seu PIN antes de continuar.", 403, { code: "PIN_AUTH_REQUIRED" });
+                return errorResponse(`Confirme ${words.demonstrative} com seu PIN antes de continuar.`, 403, { code: "PIN_AUTH_REQUIRED" });
             }
-            if (isExpired(record)) return errorResponse("A autorização expirou. Confira o saque novamente.", 410, { code: "CONSULTATION_EXPIRED" });
+            if (isExpired(record)) return errorResponse(`A autorização expirou. Confira ${words.definite} novamente.`, 410, { code: "CONSULTATION_EXPIRED" });
             if (await liveBalance(apiKey) < Number(record.amount || 0)) {
-                return errorResponse("Seu saldo mudou e agora é insuficiente para este saque.", 422, { code: "INSUFFICIENT_BALANCE" });
+                return errorResponse(`Seu saldo mudou e agora é insuficiente para ${words.demonstrative}.`, 422, { code: "INSUFFICIENT_BALANCE" });
             }
 
             const submittedAt = new Date().toISOString();
@@ -275,7 +498,7 @@ Deno.serve(async (req: Request) => {
                 updated_at: submittedAt,
             }).eq("id", record.id).eq("user_id", user.id).eq("status", "authorized").select().maybeSingle();
             if (claimError) throw claimError;
-            if (!claimed) return errorResponse("Este saque já está sendo processado.", 409, { code: "PAYOUT_ALREADY_SUBMITTED" });
+            if (!claimed) return errorResponse(`${words.demonstrative[0].toUpperCase()}${words.demonstrative.slice(1)} já está sendo ${words.processing}.`, 409, { code: "PAYOUT_ALREADY_SUBMITTED" });
 
             try {
                 const transfer = await createAsaasTransfer(apiKey, transferParams(claimed));
@@ -327,28 +550,39 @@ Deno.serve(async (req: Request) => {
                     updated_at: new Date().toISOString(),
                 }).eq("id", claimed.id).select().single();
                 if (error) throw error;
-                return jsonResponse({ success: true, request: payoutResponse(updated), transfer, status, receiptUrl });
+                if (claimed.kind === "pix_transfer" && claimed.provider_payload?.review?.saveRecipient === true) {
+                    try {
+                        await saveRecipientFromRequest(user.id, account.id, claimed);
+                    } catch (saveError) {
+                        console.error("asaas-payout recipient save error:", saveError);
+                    }
+                }
+                return jsonResponse({ success: true, request: payoutResponse(updated), status, receiptUrl });
             } catch (error: any) {
                 const statusCode = Number(error?.status || 500);
+                const operationError = toNeurofinanceOperationError(
+                    error,
+                    "Não foi possível concluir esta movimentação.",
+                );
                 await supabaseAdmin.from("neurofinance_outgoing_requests").update({
                     status: statusCode >= 500 ? "submission_unknown" : "failed",
                     error_code: String(error?.code || "PAYOUT_SUBMISSION_FAILED"),
-                    error_message: String(error?.message || "Falha ao enviar saque."),
+                    error_message: String(error?.message || "Falha ao enviar movimentação."),
                     updated_at: new Date().toISOString(),
                 }).eq("id", claimed.id);
                 return errorResponse(
                     statusCode >= 500
-                        ? "O saque foi enviado, mas ainda não recebemos a confirmação bancária. Não tente novamente agora."
-                        : error?.message || "Não foi possível concluir este saque.",
-                    statusCode,
-                    { code: statusCode >= 500 ? "PAYOUT_SUBMISSION_UNKNOWN" : "PAYOUT_SUBMISSION_FAILED" },
+                        ? "A movimentação foi enviada, mas ainda não recebemos a confirmação bancária. Não tente novamente agora."
+                        : operationError.message,
+                    operationError.status,
+                    { code: statusCode >= 500 ? "PAYOUT_SUBMISSION_UNKNOWN" : operationError.code },
                 );
             }
         }
 
         if (action === "receipt") {
             const record = await findRequest(user.id, String(body.requestId || ""));
-            if (!record?.provider_operation_id) return errorResponse("O comprovante deste saque ainda não está disponível.", 404, { code: "PAYOUT_RECEIPT_NOT_AVAILABLE" });
+            if (!record?.provider_operation_id) return errorResponse("O comprovante desta movimentação ainda não está disponível.", 404, { code: "PAYOUT_RECEIPT_NOT_AVAILABLE" });
             const transfer = await asaasRequest<any>(`/transfers/${encodeURIComponent(record.provider_operation_id)}`, "GET", undefined, apiKey);
             const receiptUrl = providerReceiptUrl(transfer) || record.receipt_url;
             const status = normalizeTransferStatus(transfer?.status);
@@ -384,15 +618,19 @@ Deno.serve(async (req: Request) => {
             return jsonResponse({ success: true, receiptUrl, status });
         }
 
-        return errorResponse("Consulte e confirme os dados do saque com seu PIN antes de enviar.", 400, {
+        return errorResponse("Consulte e confirme os dados da movimentação com seu PIN antes de enviar.", 400, {
             code: "PAYOUT_CONSULTATION_REQUIRED",
         });
     } catch (error: any) {
         const accessResponse = subscriptionAccessErrorResponse(error);
         if (accessResponse) return accessResponse;
         console.error("asaas-payout error:", error);
-        return errorResponse(error?.message || "Não foi possível processar este saque agora.", error?.status || 500, {
-            code: error?.code || "PAYOUT_FAILED",
+        const operationError = toNeurofinanceOperationError(
+            error,
+            "Não foi possível processar esta movimentação agora.",
+        );
+        return errorResponse(operationError.message, operationError.status, {
+            code: operationError.code,
         });
     }
 });

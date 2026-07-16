@@ -215,12 +215,15 @@ const financeNavigation = (destination: SynapseDestination): SynapseDestinationN
     [, subview] = view.split(".");
     view = "extrato";
   } else if (view.startsWith("pix-receber.")) {
-    [, subview] = view.split(".");
-    view = "pix-receber";
+    view = "extrato";
+    subview = "realizado";
+  } else if (view.startsWith("antecipacoes")) {
+    view = "antecipacoes-solicitar";
   }
 
   const query = new URLSearchParams({ view });
   if (subview) query.set("subview", subview);
+  if (destination.startsWith("finance.pix-receber.")) query.set("filter", "pix-recebidos");
   return {
     path: `/financeiro?${query.toString()}`,
     selector: `[data-synapse-target='finance-workspace'][data-synapse-finance-view='${view}']`,

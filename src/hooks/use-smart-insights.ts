@@ -94,7 +94,7 @@ const fetchSmartInsights = async (userId: string): Promise<SmartInsight[]> => {
         message: `${unbilledCount} sessão(ões) concluída(s) sem lançamento financeiro nos últimos 2 meses.`,
         icon: 'dollar',
         actionLabel: 'Ver Financeiro',
-        actionLink: '/financeiro',
+        actionLink: '/financeiro?view=gestao-cobrancas',
       });
     }
   }

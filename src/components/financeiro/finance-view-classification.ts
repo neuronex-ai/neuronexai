@@ -5,6 +5,8 @@ export const MANAGEMENT_FINANCE_VIEWS: FinanceView[] = [
   "gestao-lancamentos",
   "gestao-cobrancas",
   "gestao-recebimentos",
+  "gestao-repasses-convenio",
+  "gestao-recorrencia",
   "gestao-planejamento",
 ];
 

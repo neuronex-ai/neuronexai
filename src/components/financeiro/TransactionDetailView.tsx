@@ -21,6 +21,10 @@ import { ReceiptModal } from "@/components/financeiro/ReceiptModal";
 import { motion, useReducedMotion } from "framer-motion";
 import { toast } from "sonner";
 import { managementOriginOf } from "@/lib/financial-management-model";
+import {
+    getStatementPaymentMethodLabel,
+    getStatementStatusPresentation,
+} from "@/components/financeiro/statement/statement-utils";
 
 interface TransactionDetailViewProps {
     transaction: Transaction;
@@ -45,10 +49,20 @@ const openDocument = (url: string, unavailableMessage: string) => {
     window.open(url, "_blank", "noopener,noreferrer");
 };
 
+const categoryLabel = (value?: string | null) => {
+    const raw = String(value || "").trim();
+    const normalized = raw.toLowerCase();
+    if (!raw || normalized === "general" || normalized === "geral") return "Geral";
+    if (["session", "sessao", "sessão"].includes(normalized)) return "Sessão";
+    if (["insurance", "convenio", "convênio"].includes(normalized)) return "Convênio";
+    if (/^[A-Z0-9_]+$/.test(raw)) return "Outros";
+    return raw;
+};
+
 const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewProps) => {
     const shouldReduceMotion = useReducedMotion();
     const isIncome = transaction.type === "income";
-    const metadata=((transaction as any).metadata||{})as Record<string,any>;const financialStatus=String(metadata.financial_entry_status||transaction.status||"pending").toLowerCase();const isPaid=financialStatus==="paid"||transaction.status==="completed";const isCancelled=["cancelled","canceled"].includes(financialStatus);const isNeuro=Boolean(transaction.origin==="gateway_auto"||metadata.neurofinance_charge_id||metadata.neurofinance_transaction_id||metadata.provider_payment_id||metadata.asaas_payment_id);const isReconciled=Boolean(metadata.neurofinance_transaction_id||metadata.reconciliation_id||metadata.reconciliation_status==="matched");
+    const metadata=((transaction as any).metadata||{})as Record<string,any>;const statusPresentation=getStatementStatusPresentation(transaction);const isPaid=statusPresentation.kind==="completed";const isNeuro=Boolean(transaction.origin==="gateway_auto"||metadata.neurofinance_charge_id||metadata.neurofinance_transaction_id||metadata.provider_payment_id||metadata.asaas_payment_id);const isReconciled=Boolean(metadata.neurofinance_transaction_id||metadata.reconciliation_id||metadata.reconciliation_status==="matched");
     const patientName = (transaction as any).patient_name || (transaction as any).patients?.name;
     const invoiceUrl = getDocumentUrl(transaction, "invoice");
     const patientEmail = (transaction as any).patient_email || (transaction as any).patients?.email;
@@ -120,7 +134,7 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                 <InfoRow
                     icon={ShieldCheck}
                     label="Status da operação"
-                    value={isCancelled?"Cancelado":isPaid?"Efetivado":financialStatus==="overdue"?"Vencido":"Pendente"}
+                    value={statusPresentation.label}
                     subValue={isNeuro?(isReconciled?"Conciliado no NeuroFinance":"Vinculado ao NeuroFinance"):"Registro da gestão financeira"}
                 />
                 {patientName && <InfoRow icon={User} label="Paciente vinculado" value={patientName} />}
@@ -128,12 +142,12 @@ const TransactionDetailView = ({ transaction, onBack }: TransactionDetailViewPro
                     icon={Landmark}
                     label={isIncome ? "Origem" : "Destino"}
                     value={managementOriginOf(transaction)}
-                    subValue={transaction.category?.toUpperCase() || "Geral"}
+                    subValue={categoryLabel(transaction.category)}
                 />
                 <InfoRow
                     icon={CreditCard}
                     label="Forma de pagamento"
-                    value={transaction.payment_method?.toUpperCase() || (transaction as any).method?.toUpperCase() || "Não especificado"}
+                    value={getStatementPaymentMethodLabel(transaction)}
                     subValue={(transaction as any).installments ? `${(transaction as any).installments} parcelas` : "À vista"}
                 />
             </div>
