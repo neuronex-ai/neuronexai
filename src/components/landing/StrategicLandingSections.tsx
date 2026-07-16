@@ -3,8 +3,9 @@
 import type { ElementType } from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
+  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   BarChart3,
@@ -14,6 +15,7 @@ import {
   ChevronDown,
   ClipboardList,
   CreditCard,
+  ExternalLink,
   FileCheck2,
   FileText,
   Fingerprint,
@@ -380,7 +382,7 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, NeuroNex e Synapse para comunicacao supervisionada." },
+  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, NeuroNex e Synapse para comunicação supervisionada." },
   { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroPulse, NeuroFlow, NeuroScan e NeuroFinance expõem contexto estruturado para o agente." },
 ];
 
@@ -440,7 +442,7 @@ const neuroZapFlows = [
   },
   {
     title: "WhatsApp com responsabilidade",
-    text: "WhatsApp Business, permissoes, historico e confirmacao assistida evitam automacao invisivel em conversas sensiveis.",
+    text: "WhatsApp Business, permissões, histórico e confirmação assistida evitam automação invisível em conversas sensíveis.",
   },
 ];
 
@@ -547,6 +549,208 @@ export const LandingPlanComparisonSection = () => (
     </div>
   </section>
 );
+
+const publicLandingCarouselItems = [
+  {
+    eyebrow: "NeuroZap",
+    title: "WhatsApp Business com contexto e aprovação humana.",
+    description: "Cobrança, no-show, lembretes e follow-up conectados ao Synapse AI, NeuroFinance e rotina real da clínica.",
+    href: "/neurozap-para-psicologos",
+    image: "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+    accent: "Comunicação",
+    icon: MessageCircle,
+  },
+  {
+    eyebrow: "Teleconsulta",
+    title: "Sessão online dentro do sistema operacional clínico.",
+    description: "Agenda, pré-sala, vídeo, prontuário, transcrição autorizada e resumo revisável pelo Synapse.",
+    href: "/teleconsulta-para-psicologos",
+    image: "/landing/screenshots/mobile/light/26-mobile-teleconsulta-white.webp",
+    accent: "Atendimento",
+    icon: MonitorPlay,
+  },
+  {
+    eyebrow: "Pacientes",
+    title: "Cadastro, prontuário, portal e IA clínica no mesmo contexto.",
+    description: "A jornada do paciente vira base operacional para NeuroScan, NeuroView, NeuroPulse e continuidade entre sessões.",
+    href: "/pacientes-para-psicologos",
+    image: "/landing/screenshots/desktop/dark/12-paciente-prontuario-grafico-tendencia-humor-minicards-dark.webp",
+    accent: "Continuidade",
+    icon: Users,
+  },
+  {
+    eyebrow: "NeuroBox",
+    title: "NeuroView, Flow, Pulse, Scan e Finance intermediados pelo Synapse.",
+    description: "Ferramentas de IA profunda para transformar notas, sintomas, fluxos e finanças em metadados acionáveis.",
+    href: "/neurobox",
+    image: "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp",
+    accent: "IA profunda",
+    icon: BrainCircuit,
+  },
+  {
+    eyebrow: "NeuroFinance",
+    title: "Core banking e previsibilidade financeira para psicólogos.",
+    description: "Conta digital, Área Pix, boletos, NFS-e/RPS, recebíveis e capital de giro preditivo no fluxo da clínica.",
+    href: "/neurofinance",
+    image: "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp",
+    accent: "Financeiro",
+    icon: WalletCards,
+  },
+  {
+    eyebrow: "Agenda",
+    title: "A agenda como início do fluxo, não como calendário isolado.",
+    description: "Compromissos conectam pacientes, teleconsulta, confirmações, no-show, cobrança e próximos passos.",
+    href: "/agenda-para-psicologos",
+    image: "/landing/screenshots/desktop/dark/nova remessa/9-agenda-mensal-dark.webp",
+    accent: "Operação",
+    icon: CalendarDays,
+  },
+];
+
+const wrapIndex = (index: number, total: number) => (index + total) % total;
+
+export const LandingPublicPagesCarouselSection = () => {
+  const shouldReduceMotion = useReducedMotion();
+  const [[activeIndex, direction], setActive] = useState<[number, number]>([0, 1]);
+  const activeItem = publicLandingCarouselItems[activeIndex];
+
+  const navigate = (nextDirection: number) => {
+    setActive(([current]) => [
+      wrapIndex(current + nextDirection, publicLandingCarouselItems.length),
+      nextDirection,
+    ]);
+  };
+
+  const goTo = (index: number) => {
+    if (index === activeIndex) return;
+    setActive([index, index > activeIndex ? 1 : -1]);
+  };
+
+  return (
+    <section id="landings-publicas" className="relative overflow-hidden bg-background px-5 py-20 md:px-8 md:py-28">
+      <div className="relative z-10 mx-auto max-w-[1320px]">
+        <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
+          <SectionHeader
+            align="left"
+            eyebrow="Páginas públicas"
+            title={<>Uma vitrine viva para cada parte da <span className="text-muted-foreground/35">Clínica Autônoma.</span></>}
+            description="Cada landing agora explica uma camada do ecossistema: comunicação, teleconsulta, pacientes, IA profunda, financeiro e operação."
+          />
+          <div className="flex items-center justify-start gap-3 lg:justify-end">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-card/75 text-foreground transition hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white/[0.035] dark:hover:bg-white dark:hover:text-zinc-950"
+              aria-label="Ver landing anterior"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate(1)}
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-foreground text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white dark:text-zinc-950"
+              aria-label="Ver próxima landing"
+            >
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-14 grid gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
+          <div className="relative min-h-[620px] overflow-hidden rounded-[36px] border border-border/45 bg-card shadow-[0_38px_120px_-86px_rgba(0,0,0,0.8)] dark:border-white/10 dark:bg-[#08090b] md:min-h-[560px]">
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--foreground)/0.06),transparent_32%,hsl(var(--foreground)/0.025))]" />
+            <AnimatePresence initial={false} mode="wait" custom={direction}>
+              <motion.article
+                key={activeItem.href}
+                custom={direction}
+                drag={shouldReduceMotion ? false : "x"}
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.12}
+                onDragEnd={(_, info) => {
+                  const swipe = info.offset.x + info.velocity.x * 0.18;
+                  if (swipe < -90) navigate(1);
+                  if (swipe > 90) navigate(-1);
+                }}
+                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction > 0 ? 120 : -120 }}
+                animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction > 0 ? -120 : 120 }}
+                transition={{ duration: shouldReduceMotion ? 0.12 : 0.42, ease: [0.22, 1, 0.36, 1] }}
+                className="relative z-10 grid h-full min-h-[620px] cursor-grab grid-rows-[minmax(0,1fr)_auto] active:cursor-grabbing md:min-h-[560px] lg:grid-cols-[1fr_0.74fr] lg:grid-rows-1"
+                aria-live="polite"
+              >
+                <div className="relative min-h-[310px] overflow-hidden lg:min-h-full">
+                  <img
+                    src={activeItem.image}
+                    alt={`Prévia da landing ${activeItem.eyebrow}`}
+                    width={1280}
+                    height={720}
+                    loading={activeIndex === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                    className="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,hsl(var(--background)/0.86)_100%)] lg:bg-[linear-gradient(90deg,transparent_45%,hsl(var(--card))_100%)] dark:lg:bg-[linear-gradient(90deg,transparent_45%,#08090b_100%)]" />
+                  <div className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-xl">
+                    {activeItem.accent}
+                  </div>
+                </div>
+
+                <div className="flex min-h-[310px] flex-col justify-between p-7 md:p-9 lg:min-h-full lg:p-10">
+                  <div>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground text-background dark:bg-white dark:text-zinc-950">
+                      <activeItem.icon className="h-5 w-5" />
+                    </div>
+                    <p className="mt-8 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">{activeItem.eyebrow}</p>
+                    <h3 className="mt-4 text-balance text-4xl font-black leading-[0.92] tracking-[-0.055em] text-foreground md:text-5xl">
+                      {activeItem.title}
+                    </h3>
+                    <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/72 md:text-base">
+                      {activeItem.description}
+                    </p>
+                  </div>
+
+                  <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <Button asChild className="h-14 rounded-2xl bg-foreground px-6 text-[10px] font-black uppercase tracking-[0.18em] text-background dark:bg-white dark:text-zinc-950">
+                      <Link to={activeItem.href}>
+                        Abrir landing <ExternalLink className="ml-2 h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/58">
+                      Arraste para navegar
+                    </p>
+                  </div>
+                </div>
+              </motion.article>
+            </AnimatePresence>
+          </div>
+
+          <div className="grid content-start gap-2">
+            {publicLandingCarouselItems.map((item, index) => (
+              <button
+                key={item.href}
+                type="button"
+                onClick={() => goTo(index)}
+                className={cn(
+                  "group flex min-h-16 items-center gap-4 rounded-[22px] border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  index === activeIndex
+                    ? "border-foreground/20 bg-foreground text-background shadow-[0_20px_70px_-48px_rgba(0,0,0,0.8)] dark:bg-white dark:text-zinc-950"
+                    : "border-border/42 bg-card/68 text-muted-foreground hover:border-foreground/18 hover:bg-foreground/[0.045] hover:text-foreground dark:border-white/10 dark:bg-white/[0.03]",
+                )}
+                aria-current={index === activeIndex ? "true" : undefined}
+              >
+                <item.icon className="h-4 w-4 shrink-0 opacity-70" />
+                <span className="min-w-0">
+                  <span className="block text-[9px] font-black uppercase tracking-[0.18em]">{item.eyebrow}</span>
+                  <span className={cn("mt-1 block truncate text-xs font-bold", index === activeIndex ? "opacity-70" : "opacity-60")}>{item.accent}</span>
+                </span>
+                <ArrowRight className={cn("ml-auto h-3.5 w-3.5 transition", index === activeIndex ? "opacity-60" : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-35")} />
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+};
 
 const faqs = [
   { q: "O NeuroNex substitui minha agenda e meu prontuário atual?", a: "A proposta é centralizar a operação clínica. Agenda, pacientes, prontuário, teleconsulta, portal, financeiro e IA passam a conversar no mesmo fluxo." },

@@ -45,64 +45,64 @@ const mobilePatientImage = "/landing/screenshots/mobile/dark/23-mobile-paciente-
 const capabilities: Capability[] = [
   {
     icon: Users,
-    title: "Cadastro como nucleo operacional",
-    text: "Paciente, contatos, historico, agenda, documentos e financeiro partem de uma identidade unica, com permissoes e contexto rastreaveis.",
+    title: "Cadastro como núcleo operacional",
+    text: "Paciente, contatos, histórico, agenda, documentos e financeiro partem de uma identidade única, com permissões e contexto rastreáveis.",
   },
   {
     icon: ClipboardList,
-    title: "Prontuario vivo",
-    text: "Registros, evolucao, anexos e observacoes ficam proximos da jornada do paciente e prontos para revisao profissional.",
+    title: "Prontuário vivo",
+    text: "Registros, evolução, anexos e observações ficam próximos da jornada do paciente e prontos para revisão profissional.",
   },
   {
     icon: HeartPulse,
     title: "Humor e continuidade",
-    text: "Dados compartilhados pelo paciente, como diario e indicadores de humor, podem enriquecer a leitura entre sessoes.",
+    text: "Dados compartilhados pelo paciente, como diário e indicadores de humor, podem enriquecer a leitura entre sessões.",
   },
   {
     icon: ScanText,
     title: "NeuroScan",
-    text: "Anamnese e documentos entram em estruturacao assistida para reduzir digitacao e manter revisao humana.",
+    text: "Anamnese e documentos entram em estruturação assistida para reduzir digitação e manter revisão humana.",
   },
   {
     icon: Network,
     title: "NeuroView",
-    text: "Sintomas, eventos, notas e hipoteses podem alimentar grafos 2D/3D para leitura clinica sistemica.",
+    text: "Sintomas, eventos, notas e hipóteses podem alimentar grafos 2D/3D para leitura clínica sistêmica.",
   },
   {
     icon: LockKeyhole,
-    title: "Separacao de acessos",
-    text: "Interface profissional, Portal do Paciente e dados administrativos preservam finalidades, limites e superficies diferentes.",
+    title: "Separação de acessos",
+    text: "Interface profissional, Portal do Paciente e dados administrativos preservam finalidades, limites e superfícies diferentes.",
   },
 ];
 
 const journey: JourneyStep[] = [
   {
     title: "Entrada",
-    text: "Cadastro, anamnese, documentos e consentimentos estruturam o comeco do acompanhamento.",
+    text: "Cadastro, anamnese, documentos e consentimentos estruturam o começo do acompanhamento.",
   },
   {
     title: "Agenda",
-    text: "Cada compromisso preserva paciente, contexto e proximos passos operacionais.",
+    text: "Cada compromisso preserva paciente, contexto e próximos passos operacionais.",
   },
   {
     title: "Atendimento",
-    text: "Teleconsulta, prontuario e notas se conectam sem misturar canal de paciente com area profissional.",
+    text: "Teleconsulta, prontuário e notas se conectam sem misturar canal de paciente com área profissional.",
   },
   {
-    title: "Entre sessoes",
-    text: "Portal, diario e humor criam continuidade autorizada para o acompanhamento.",
+    title: "Entre sessões",
+    text: "Portal, diário e humor criam continuidade autorizada para o acompanhamento.",
   },
   {
-    title: "IA clinica",
-    text: "Synapse, NeuroView, NeuroPulse e NeuroFlow consomem metadados claros para apoiar revisao e planejamento.",
+    title: "IA clínica",
+    text: "Synapse, NeuroView, NeuroPulse e NeuroFlow consomem metadados claros para apoiar revisão e planejamento.",
   },
 ];
 
 const operationalStates = [
-  { title: "Sem pacientes ainda", text: "Empty state orienta primeiro cadastro, convite ao portal e criacao do fluxo inicial." },
-  { title: "Carregando historico", text: "Skeletons preservam dimensoes para evitar saltos enquanto prontuario e graficos carregam." },
-  { title: "Erro de permissao", text: "A interface explica limite de acesso em vez de expor dado parcial ou confuso." },
-  { title: "Plano atingido", text: "Travamento de vinculos ou recursos mostra caminho de upgrade sem quebrar a rotina." },
+  { title: "Sem pacientes ainda", text: "Empty state orienta primeiro cadastro, convite ao portal e criação do fluxo inicial." },
+  { title: "Carregando histórico", text: "Skeletons preservam dimensões para evitar saltos enquanto prontuário e gráficos carregam." },
+  { title: "Erro de permissão", text: "A interface explica limite de acesso em vez de expor dado parcial ou confuso." },
+  { title: "Plano atingido", text: "Travamento de vínculos ou recursos mostra caminho de upgrade sem quebrar a rotina." },
 ];
 
 const BrowserFrame = ({
@@ -169,7 +169,7 @@ const PatientOperationsLanding = () => {
                 transition={{ delay: 0.08 }}
                 className="mt-8 text-5xl font-black leading-none text-foreground sm:text-6xl md:text-7xl lg:text-8xl"
               >
-                O paciente como centro da operacao clinica.
+                O paciente como centro da operação clínica.
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 16 }}
@@ -177,7 +177,7 @@ const PatientOperationsLanding = () => {
                 transition={{ delay: 0.16 }}
                 className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl"
               >
-                Cadastro, prontuario, agenda, teleconsulta, portal, diario, humor, documentos, financeiro e Synapse AI se conectam sem transformar o paciente em uma ficha isolada.
+                Cadastro, prontuário, agenda, teleconsulta, portal, diário, humor, documentos, financeiro e Synapse AI se conectam sem transformar o paciente em uma ficha isolada.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -187,7 +187,7 @@ const PatientOperationsLanding = () => {
               >
                 <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
                   <Link to="/create-account">
-                    Comecar gratis <ArrowRight className="ml-2 h-4 w-4" />
+                    Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button
@@ -208,7 +208,7 @@ const PatientOperationsLanding = () => {
               className="mt-16 grid gap-5 lg:grid-cols-[1.05fr_0.95fr] lg:items-start"
             >
               <BrowserFrame src={patientListImage} alt="Lista de pacientes na NeuroNex" label="Lista de pacientes" eager />
-              <BrowserFrame src={patientChartImage} alt="Prontuario com grafico de tendencia de humor" label="Prontuario e humor" eager />
+              <BrowserFrame src={patientChartImage} alt="Prontuário com gráfico de tendência de humor" label="Prontuário e humor" eager />
             </motion.div>
           </div>
         </section>
@@ -219,7 +219,7 @@ const PatientOperationsLanding = () => {
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Continuidade do cuidado</p>
               <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Cada paciente carrega uma rede de contexto.</h2>
               <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
-                A NeuroNex organiza o que costuma se espalhar por agenda, mensagens, documentos, planilhas e anotacoes soltas.
+                A NeuroNex organiza o que costuma se espalhar por agenda, mensagens, documentos, planilhas e anotações soltas.
               </p>
             </div>
             <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -239,9 +239,9 @@ const PatientOperationsLanding = () => {
             <div>
               <BadgeCheck className="h-7 w-7 opacity-55" />
               <p className="mt-8 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Jornada conectada</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Do primeiro contato ao grafo clinico.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Do primeiro contato ao grafo clínico.</h2>
               <p className="mt-6 text-base font-medium leading-relaxed opacity-64">
-                Pacientes e prontuario sao a base para que NeuroView, NeuroPulse, NeuroFlow e Synapse raciocinem com origem, permissao e finalidade.
+                Pacientes e prontuário são a base para que NeuroView, NeuroPulse, NeuroFlow e Synapse raciocinem com origem, permissão e finalidade.
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -272,12 +272,12 @@ const PatientOperationsLanding = () => {
             <article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03] md:p-10">
               <MessageCircle className="h-7 w-7 text-muted-foreground" />
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Portal do Paciente</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">A continuidade entre sessoes ganha um canal proprio.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">A continuidade entre sessões ganha um canal próprio.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/70 md:text-base">
-                O Portal do Paciente e uma superficie separada da area profissional. Ele aproxima diario, humor, orientacoes e acompanhamento sem abrir o workspace clinico do psicologo.
+                O Portal do Paciente é uma superfície separada da área profissional. Ele aproxima diário, humor, orientações e acompanhamento sem abrir o workspace clínico do psicólogo.
               </p>
               <div className="mt-8 grid gap-2 sm:grid-cols-2">
-                {["Diario autorizado", "Humor e tendencias", "Convites e vinculos", "Experiencia mobile"].map((item) => (
+                {["Diário autorizado", "Humor e tendências", "Convites e vínculos", "Experiência mobile"].map((item) => (
                   <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.03] px-4 py-3 text-[9px] font-black uppercase tracking-[0.14em] text-foreground/70 dark:border-white/10 dark:bg-white/[0.035]">
                     {item}
                   </div>
@@ -292,9 +292,9 @@ const PatientOperationsLanding = () => {
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <ShieldCheck className="h-7 w-7 opacity-55" />
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Estados e limites</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Paciente completo tambem significa estados claros.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Paciente completo também significa estados claros.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                A experiencia precisa explicar ausencia de dados, carregamento, erro, permissao e travas de plano com o mesmo cuidado da tela principal.
+                A experiência precisa explicar ausência de dados, carregamento, erro, permissão e travas de plano com o mesmo cuidado da tela principal.
               </p>
             </article>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -312,14 +312,14 @@ const PatientOperationsLanding = () => {
         <section className="px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto max-w-[1180px] rounded-[42px] bg-foreground p-8 text-center text-background dark:bg-white dark:text-zinc-950 md:p-12">
             <BrainCircuit className="mx-auto h-7 w-7 opacity-55" />
-            <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">Quando o paciente vira contexto, a clinica deixa de operar no escuro.</h2>
+            <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">Quando o paciente vira contexto, a clínica deixa de operar no escuro.</h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed opacity-64">
-              Cadastre, acompanhe, convide para o portal, atenda online e alimente a inteligencia clinica com dados revisaveis.
+              Cadastre, acompanhe, convide para o portal, atenda online e alimente a inteligência clínica com dados revisáveis.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white">
                 <Link to="/create-account">
-                  Comecar agora <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">

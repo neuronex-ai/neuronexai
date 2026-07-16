@@ -43,63 +43,63 @@ const capabilities: Capability[] = [
   {
     icon: CalendarCheck,
     title: "Agenda, sala e paciente no mesmo caminho",
-    text: "A sessao online nasce do compromisso agendado, preserva paciente, horario, status e proximos passos sem criar uma ilha fora do prontuario.",
+    text: "A sessão online nasce do compromisso agendado, preserva paciente, horário, status e próximos passos sem criar uma ilha fora do prontuário.",
   },
   {
     icon: Captions,
-    title: "Transcricao incremental com Deepgram",
-    text: "Audio autorizado pode alimentar transcricao incremental, resumo assistido e trilha de revisao para reduzir retrabalho depois da chamada.",
+    title: "Transcrição incremental NeuroNex",
+    text: "Áudio autorizado pode alimentar transcrição incremental, resumo assistido e trilha de revisão sob responsabilidade operacional da NeuroNex.",
   },
   {
     icon: BrainCircuit,
-    title: "Synapse transforma sessao em contexto",
-    text: "O agente organiza pontos-chave, pendencias e sugerencias operacionais, sempre com revisao do psicologo antes de virar registro.",
+    title: "Synapse transforma sessão em contexto",
+    text: "O agente organiza pontos-chave, pendências e sugestões operacionais, sempre com revisão do psicólogo antes de virar registro.",
   },
   {
     icon: ClipboardList,
-    title: "Prontuario conectado",
-    text: "Notas, anexos, evolucao, diario do paciente e proximos atendimentos ficam proximos, com finalidades e permissoes separadas.",
+    title: "Prontuário conectado",
+    text: "Notas, anexos, evolução, diário do paciente e próximos atendimentos ficam próximos, com finalidades e permissões separadas.",
   },
   {
     icon: LockKeyhole,
-    title: "Limites por plano visiveis",
-    text: "A interface pode travar minutos, sessoes ou transcricoes quando o plano ou a elegibilidade nao comporta o uso.",
+    title: "Limites por plano visíveis",
+    text: "A interface pode travar minutos, sessões ou transcrições quando o plano ou a elegibilidade não comporta o uso.",
   },
   {
     icon: ShieldCheck,
     title: "Privacidade operacional",
-    text: "Estados de espera, erro, sala vazia, permissao e encerramento sao tratados como parte do fluxo, nao como excecao improvisada.",
+    text: "Estados de espera, erro, sala vazia, permissão e encerramento são tratados como parte do fluxo, não como exceção improvisada.",
   },
 ];
 
 const flow: FlowStep[] = [
   {
     title: "1. Agenda",
-    text: "A sessao comeca vinculada ao paciente, horario e tipo de atendimento.",
+    text: "A sessão começa vinculada ao paciente, horário e tipo de atendimento.",
   },
   {
     title: "2. Pre-sala",
-    text: "O paciente entra por um acesso orientado, enquanto o profissional revisa contexto e permissao.",
+    text: "O paciente entra por um acesso orientado, enquanto o profissional revisa contexto e permissão.",
   },
   {
     title: "3. Atendimento",
-    text: "Video, anotacoes e sinais operacionais ficam no mesmo workspace clinico.",
+    text: "Vídeo, anotações e sinais operacionais ficam no mesmo workspace clínico.",
   },
   {
-    title: "4. Transcricao",
-    text: "Quando autorizada, a captura de audio gera material incremental para revisao.",
+    title: "4. Transcrição",
+    text: "Quando autorizada, a captura de áudio gera material incremental para revisão.",
   },
   {
     title: "5. Registro",
-    text: "O Synapse prepara resumo, pendencias e proximos passos para aprovacao humana.",
+    text: "O Synapse prepara resumo, pendências e próximos passos para aprovação humana.",
   },
 ];
 
 const statusCards = [
-  { title: "Sala vazia", text: "Estado claro quando o paciente ainda nao entrou, com retorno para agenda e orientacao de espera." },
-  { title: "Carregando audio", text: "Indicadores de captura e processamento evitam a sensacao de sistema travado." },
-  { title: "Transcricao indisponivel", text: "Fallback honesto quando permissao, plano, rede ou minutos bloqueiam a captura." },
-  { title: "Limite atingido", text: "Trava de plano mostra o que esta bloqueado e qual caminho resolve a pendencia." },
+  { title: "Sala vazia", text: "Estado claro quando o paciente ainda não entrou, com retorno para agenda e orientação de espera." },
+  { title: "Carregando áudio", text: "Indicadores de captura e processamento evitam a sensação de sistema travado." },
+  { title: "Transcrição indisponível", text: "Fallback honesto quando permissão, plano, rede ou minutos bloqueiam a captura." },
+  { title: "Limite atingido", text: "Trava de plano mostra o que está bloqueado e qual caminho resolve a pendência." },
 ];
 
 const PhoneFrame = ({
@@ -162,9 +162,9 @@ const TeleconsultaLanding = () => {
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.08 }}
-                className="mt-8 max-w-4xl text-5xl font-black leading-none text-foreground sm:text-6xl md:text-7xl lg:text-8xl"
+                className="mt-8 max-w-4xl text-balance text-[2.85rem] font-black leading-[0.9] tracking-[-0.055em] text-foreground sm:text-[3.55rem] md:text-[4.55rem] md:leading-[0.94] lg:text-[5.45rem] xl:text-[5.95rem]"
               >
-                A sessao online dentro do sistema operacional clinico.
+                A sessão online dentro do sistema operacional clínico.
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 16 }}
@@ -172,7 +172,7 @@ const TeleconsultaLanding = () => {
                 transition={{ delay: 0.16 }}
                 className="mt-7 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl"
               >
-                A teleconsulta deixa de ser uma chamada solta: agenda, paciente, video, transcricao, prontuario e Synapse AI compartilham o mesmo contexto autorizado.
+                A teleconsulta deixa de ser uma chamada solta: agenda, paciente, vídeo, transcrição, prontuário e Synapse AI compartilham o mesmo contexto autorizado.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -182,7 +182,7 @@ const TeleconsultaLanding = () => {
               >
                 <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
                   <Link to="/create-account">
-                    Comecar gratis <ArrowRight className="ml-2 h-4 w-4" />
+                    Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button
@@ -202,9 +202,9 @@ const TeleconsultaLanding = () => {
               transition={{ delay: 0.26 }}
               className="grid justify-items-center gap-5 sm:grid-cols-2 lg:justify-items-end"
             >
-              <PhoneFrame src={prejoinImage} alt="Tela de pre-entrada da teleconsulta NeuroNex" label="Pre-sala" eager />
+              <PhoneFrame src={prejoinImage} alt="Tela de pré-entrada da teleconsulta NeuroNex" label="Pré-sala" eager />
               <div className="sm:mt-16">
-                <PhoneFrame src={teleconsultaImage} alt="Tela de teleconsulta mobile da NeuroNex" label="Sessao ativa" eager />
+                <PhoneFrame src={teleconsultaImage} alt="Tela de teleconsulta mobile da NeuroNex" label="Sessão ativa" eager />
               </div>
             </motion.div>
           </div>
@@ -213,10 +213,10 @@ const TeleconsultaLanding = () => {
         <section id="workspace-teleconsulta" className="px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1320px]">
             <div className="mx-auto max-w-5xl text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Workspace clinico</p>
-              <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Video, transcricao e prontuario no mesmo ambiente.</h2>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Workspace clínico</p>
+              <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Vídeo, transcrição e prontuário no mesmo ambiente.</h2>
               <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
-                O objetivo nao e competir com chamada generica; e transformar a sessao online em continuidade clinica, com captura autorizada e revisao profissional.
+                O objetivo não é competir com chamada genérica; é transformar a sessão online em continuidade clínica, com captura autorizada e revisão profissional.
               </p>
             </div>
             <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -236,7 +236,7 @@ const TeleconsultaLanding = () => {
             <div className="max-w-4xl">
               <BadgeCheck className="h-7 w-7 opacity-55" />
               <p className="mt-8 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Da agenda ao registro</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">A sessao vira dado util sem tirar o psicologo do comando.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">A sessão vira dado útil sem tirar o psicólogo do comando.</h2>
             </div>
             <div className="mt-12 grid gap-3 lg:grid-cols-5">
               {flow.map((item) => (
@@ -253,13 +253,13 @@ const TeleconsultaLanding = () => {
           <div className="mx-auto grid max-w-[1280px] gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
             <article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03] md:p-10">
               <Mic2 className="h-7 w-7 text-muted-foreground" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Deepgram + Synapse</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Transcricao assistida para reduzir o pos-sessao manual.</h2>
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">NeuroNex + Synapse</p>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Transcrição assistida para reduzir o pós-sessão manual.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/70 md:text-base">
-                O audio autorizado pode alimentar transcricao incremental. O Synapse organiza o material em resumo, pendencias e pontos de revisao, sem substituir julgamento clinico.
+                O áudio autorizado pode alimentar transcrição incremental dentro da NeuroNex. O Synapse organiza o material em resumo, pendências e pontos de revisão, sem substituir julgamento clínico.
               </p>
               <div className="mt-8 grid gap-2 sm:grid-cols-2">
-                {["Captura autorizada", "Resumo revisavel", "Metadados para NeuroPulse", "Registro sob controle humano"].map((item) => (
+                {["Captura autorizada", "Resumo revisável", "Metadados para NeuroPulse", "Registro sob controle humano"].map((item) => (
                   <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.03] px-4 py-3 text-[9px] font-black uppercase tracking-[0.14em] text-foreground/70 dark:border-white/10 dark:bg-white/[0.035]">
                     {item}
                   </div>
@@ -283,12 +283,12 @@ const TeleconsultaLanding = () => {
             <MonitorPlay className="mx-auto h-7 w-7 opacity-55" />
             <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">Atender online, registrar melhor e manter o caso em continuidade.</h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed opacity-64">
-              Teleconsulta, agenda, Portal do Paciente e prontuario trabalham juntos para que a sessao remota faca parte da clinica, nao de uma aba perdida.
+              Teleconsulta, agenda, Portal do Paciente e prontuário trabalham juntos para que a sessão remota faça parte da clínica, não de uma aba perdida.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white">
                 <Link to="/create-account">
-                  Comecar agora <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">

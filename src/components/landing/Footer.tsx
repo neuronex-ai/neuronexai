@@ -27,6 +27,7 @@ export const Footer = () => {
       { label: "Contato", path: "/contato" },
     ],
     legal: [
+      { label: "Documentos legais", path: "/documentos-legais" },
       { label: "Termos de Uso", path: "/termos-de-uso" },
       { label: "Privacidade", path: "/politica-de-privacidade" },
       { label: "Cookies", path: "/configuracoes-de-cookies" },

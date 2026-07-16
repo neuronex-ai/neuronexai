@@ -19,6 +19,7 @@ import {
     LandingNeuroZapSection,
     LandingOperatingSystemSection,
     LandingPlanComparisonSection,
+    LandingPublicPagesCarouselSection,
     LandingProblemSection,
     LandingTrustAndFAQSection,
 } from "@/components/landing/StrategicLandingSections";
@@ -49,6 +50,7 @@ const DesktopIndex = () => {
                 <WaitlistSection />
                 <LandingPlanComparisonSection />
                 <LandingTrustAndFAQSection />
+                <LandingPublicPagesCarouselSection />
                 <DesktopAppCTA />
                 <LandingFinalCTASection />
             </main>

@@ -43,79 +43,79 @@ const synapseImage = "/landing/screenshots/desktop/dark/15-synapse-chat-dark.web
 const capabilities: Capability[] = [
   {
     icon: ReceiptText,
-    title: "Reguas de cobranca com contexto",
-    text: "Sessao realizada, valor, vencimento, paciente e historico financeiro entram no rascunho antes de qualquer envio.",
+    title: "Réguas de cobrança com contexto",
+    text: "Sessão realizada, valor, vencimento, paciente e histórico financeiro entram no rascunho antes de qualquer envio.",
   },
   {
     icon: CalendarClock,
     title: "No-show com resposta operacional",
-    text: "Faltas, atrasos e reagendamentos podem gerar lembretes, follow-ups e proximos passos sem depender de memoria manual.",
+    text: "Faltas, atrasos e reagendamentos podem gerar lembretes, follow-ups e próximos passos sem depender de memória manual.",
   },
   {
     icon: BrainCircuit,
     title: "Synapse prepara, o profissional aprova",
-    text: "O agente sugere mensagem, tom, contexto e acao associada. O psicologo mantem controle e responsabilidade.",
+    text: "O agente sugere mensagem, tom, contexto e ação associada. O psicólogo mantém controle e responsabilidade.",
   },
   {
     icon: WalletCards,
     title: "NeuroFinance no mesmo fluxo",
-    text: "Cobrancas, Pix, boletos, recibos e conciliacao ficam proximos das mensagens operacionais.",
+    text: "Cobranças, Pix, boletos, recibos e conciliação ficam próximos das mensagens operacionais.",
   },
   {
     icon: LockKeyhole,
-    title: "Travas por plano e permissao",
-    text: "Automacoes avancadas, volume, canais e acoes sensiveis podem exigir plano elegivel, configuracao ativa e confirmacao.",
+    title: "Travas por plano e permissão",
+    text: "Automações avançadas, volume, canais e ações sensíveis podem exigir plano elegível, configuração ativa e confirmação.",
   },
   {
     icon: ShieldCheck,
-    title: "Historico e auditoria",
-    text: "Cada rascunho, aprovacao, envio e bloqueio precisa deixar rastro compreensivel para a operacao da clinica.",
+    title: "Histórico e auditoria",
+    text: "Cada rascunho, aprovação, envio e bloqueio precisa deixar rastro compreensível para a operação da clínica.",
   },
 ];
 
 const flow: FlowStep[] = [
   {
     title: "NeuroNex entende o evento",
-    text: "Agenda, paciente, financeiro e status da sessao indicam o que precisa de acao.",
+    text: "Agenda, paciente, financeiro e status da sessão indicam o que precisa de ação.",
   },
   {
     title: "Synapse monta o rascunho",
     text: "O agente cria mensagem, contexto, valor, prazo ou proposta de reagendamento.",
   },
   {
-    title: "Psicologo aprova",
-    text: "A mensagem e revisada antes do envio, com travas para situacoes sensiveis.",
+    title: "Psicólogo aprova",
+    text: "A mensagem é revisada antes do envio, com travas para situações sensíveis.",
   },
   {
     title: "WhatsApp Business envia",
-    text: "A conversa acontece pelo canal do consultorio, preservando o fluxo operacional.",
+    text: "A conversa acontece pelo canal do consultório, preservando o fluxo operacional.",
   },
   {
-    title: "Retorno vira proximo passo",
-    text: "Pagamento, reagendamento, resposta ou silencio alimentam a proxima decisao da clinica.",
+    title: "Retorno vira próximo passo",
+    text: "Pagamento, reagendamento, resposta ou silêncio alimentam a próxima decisão da clínica.",
   },
 ];
 
 const conversation = [
   {
     from: "Synapse AI",
-    text: "Sessao de hoje esta pendente. Posso preparar uma cobranca cordial com Pix e prazo para aprovacao?",
+    text: "Sessão de hoje está pendente. Posso preparar uma cobrança cordial com Pix e prazo para aprovação?",
   },
   {
-    from: "Psicologo",
-    text: "Prepare a mensagem, mas mantenha tom acolhedor e sem expor dado clinico.",
+    from: "Psicólogo",
+    text: "Prepare a mensagem, mas mantenha tom acolhedor e sem expor dado clínico.",
   },
   {
     from: "NeuroZap",
-    text: "Rascunho pronto. Valor, vencimento e link financeiro conferidos. Aguardando sua aprovacao.",
+    text: "Rascunho pronto. Valor, vencimento e link financeiro conferidos. Aguardando sua aprovação.",
   },
 ];
 
 const safetyStates = [
-  { title: "Rascunho", text: "Mensagem criada sem envio automatico." },
-  { title: "Aprovacao", text: "Revisao humana antes de tocar o paciente." },
-  { title: "Bloqueio", text: "Plano, canal, permissao ou dado sensivel podem interromper o fluxo." },
-  { title: "Auditoria", text: "Historico de acao para rastrear o que foi preparado, aprovado e enviado." },
+  { title: "Rascunho", text: "Mensagem criada sem envio automático." },
+  { title: "Aprovação", text: "Revisão humana antes de tocar o paciente." },
+  { title: "Bloqueio", text: "Plano, canal, permissão ou dado sensível podem interromper o fluxo." },
+  { title: "Auditoria", text: "Histórico de ação para rastrear o que foi preparado, aprovado e enviado." },
 ];
 
 const BrowserFrame = ({
@@ -157,7 +157,7 @@ const ConversationMock = () => (
             <p className="text-base font-black">NeuroZap + Synapse AI</p>
           </div>
         </div>
-        <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Aprovacao humana</span>
+        <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Aprovação humana</span>
       </div>
 
       <div className="mt-8 grid gap-3">
@@ -213,9 +213,9 @@ const NeuroZapLanding = () => {
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.08 }}
-                className="mt-8 max-w-5xl text-5xl font-black leading-none text-foreground sm:text-6xl md:text-7xl lg:text-8xl"
+                className="mt-8 max-w-5xl text-balance text-[2.75rem] font-black leading-[0.9] tracking-[-0.055em] text-foreground sm:text-[3.45rem] md:text-[4.45rem] md:leading-[0.94] lg:text-[5.3rem] xl:text-[5.85rem]"
               >
-                WhatsApp Business com contexto, cobranca e aprovacao humana.
+                WhatsApp Business com contexto, cobrança e aprovação humana.
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 16 }}
@@ -223,7 +223,7 @@ const NeuroZapLanding = () => {
                 transition={{ delay: 0.16 }}
                 className="mt-7 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl"
               >
-                NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para reduzir inadimplencia, no-show e follow-up manual sem automatizar conversas sensiveis no escuro.
+                NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para reduzir inadimplência, no-show e follow-up manual sem automatizar conversas sensíveis no escuro.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -233,7 +233,7 @@ const NeuroZapLanding = () => {
               >
                 <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
                   <Link to="/create-account">
-                    Comecar gratis <ArrowRight className="ml-2 h-4 w-4" />
+                    Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button
@@ -260,10 +260,10 @@ const NeuroZapLanding = () => {
         <section className="px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1320px]">
             <div className="mx-auto max-w-5xl text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Automacao com responsabilidade</p>
-              <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Cobranca, lembrete e no-show no mesmo raciocinio da clinica.</h2>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Automação com responsabilidade</p>
+              <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Cobrança, lembrete e no-show no mesmo raciocínio da clínica.</h2>
               <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
-                O NeuroZap nasce para resolver uma dor objetiva: comunicar o que precisa ser comunicado sem perder tom, contexto, permissao e supervisao.
+                O NeuroZap nasce para resolver uma dor objetiva: comunicar o que precisa ser comunicado sem perder tom, contexto, permissão e supervisão.
               </p>
             </div>
             <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -283,7 +283,7 @@ const NeuroZapLanding = () => {
             <div className="max-w-4xl">
               <BadgeCheck className="h-7 w-7 opacity-55" />
               <p className="mt-8 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Fluxo NeuroZap</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Do evento clinico-financeiro ate a conversa aprovada.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Do evento clínico-financeiro até a conversa aprovada.</h2>
             </div>
             <div className="mt-12 grid gap-3 lg:grid-cols-5">
               {flow.map((item, index) => (
@@ -303,12 +303,12 @@ const NeuroZapLanding = () => {
             <article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03] md:p-10">
               <MessageCircle className="h-7 w-7 text-muted-foreground" />
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">WhatsApp Business + NeuroNex</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">O canal conversa com a operacao, nao apenas com uma lista de contatos.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">O canal conversa com a operação, não apenas com uma lista de contatos.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/70 md:text-base">
-                O diferencial esta no contexto: agenda, paciente, financeiro e historico operacional ajudam o Synapse a preparar a mensagem certa para revisao.
+                O diferencial está no contexto: agenda, paciente, financeiro e histórico operacional ajudam o Synapse a preparar a mensagem certa para revisão.
               </p>
               <div className="mt-8 grid gap-2 sm:grid-cols-2">
-                {["Cobranca cordial", "Reagendamento", "Lembretes", "Follow-up supervisionado"].map((item) => (
+                {["Cobrança cordial", "Reagendamento", "Lembretes", "Follow-up supervisionado"].map((item) => (
                   <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.03] px-4 py-3 text-[9px] font-black uppercase tracking-[0.14em] text-foreground/70 dark:border-white/10 dark:bg-white/[0.035]">
                     {item}
                   </div>
@@ -322,10 +322,10 @@ const NeuroZapLanding = () => {
           <div className="mx-auto grid max-w-[1280px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <UserCheck className="h-7 w-7 opacity-55" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Seguranca e tom</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Automacao sensivel precisa parecer assistida, nao escondida.</h2>
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Segurança e tom</p>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Automação sensível precisa parecer assistida, não escondida.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                Mensagens passam por rascunho, aprovacao, bloqueio quando necessario e historico. O objetivo e reduzir atrito sem apagar o julgamento humano.
+                Mensagens passam por rascunho, aprovação, bloqueio quando necessário e histórico. O objetivo é reduzir atrito sem apagar o julgamento humano.
               </p>
             </article>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -343,14 +343,14 @@ const NeuroZapLanding = () => {
         <section className="px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto max-w-[1180px] rounded-[42px] bg-foreground p-8 text-center text-background dark:bg-white dark:text-zinc-950 md:p-12">
             <CreditCard className="mx-auto h-7 w-7 opacity-55" />
-            <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">O jeito menos desgastante de cobrar, lembrar e recuperar presenca.</h2>
+            <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">O jeito menos desgastante de cobrar, lembrar e recuperar presença.</h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed opacity-64">
-              WhatsApp Business, Synapse AI, NeuroFinance e NeuroNex trabalham juntos para transformar comunicacao operacional em fluxo seguro.
+              WhatsApp Business, Synapse AI, NeuroFinance e NeuroNex trabalham juntos para transformar comunicação operacional em fluxo seguro.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white">
                 <Link to="/create-account">
-                  Comecar agora <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">

@@ -26,8 +26,8 @@ const PLATFORM_FEATURES = [
   "NeuroView: mapeamento de sintomas, eventos e evolução clínica do paciente em grafos 2D e 3D Universe.",
   "NeuroPulse: tradução de texto clínico em diagramas Mermaid baseados em abordagens como TCC, Psicanálise e formulação de caso.",
   "NeuroFlow: canvas para fluxos clínicos, operacionais e financeiros conectados ao prontuário e ao RAG do Synapse.",
-  "NeuroZap: automacao por WhatsApp Business, NeuroNex e Synapse AI para cobranca, no-show, lembretes e contexto operacional supervisionado.",
-  "Workspace de Teleconsulta: prontuário integrado com captação incremental de áudio e transcrição via Deepgram.",
+  "NeuroZap: automação por WhatsApp Business, NeuroNex e Synapse AI para cobrança, no-show, lembretes e contexto operacional supervisionado.",
+  "Workspace de Teleconsulta: prontuário integrado com captação incremental de áudio, transcrição autorizada e revisão profissional sob responsabilidade da NeuroNex.",
 ];
 
 const organizationId = `${PUBLIC_SITE_URL}/#organization`;
@@ -258,13 +258,13 @@ function routeStructuredData(page) {
       provider: { "@id": organizationId },
       isPartOf: { "@id": softwareId },
       description:
-        "NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para cobrancas, lembretes, no-show e follow-up com contexto operacional, aprovacao humana e trilha de auditoria.",
+        "NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para cobranças, lembretes, no-show e follow-up com contexto operacional, aprovação humana e trilha de auditoria.",
       featureList: [
-        "Rascunhos de cobranca com contexto financeiro",
+        "Rascunhos de cobrança com contexto financeiro",
         "Lembretes e no-show supervisionados",
         "Aprovacao humana antes do envio",
-        "Integracao com Synapse AI e NeuroFinance",
-        "Travas por plano, permissao e auditoria",
+        "Integração com Synapse AI e NeuroFinance",
+        "Travas por plano, permissão e auditoria",
       ],
     });
   }
@@ -281,11 +281,11 @@ function routeStructuredData(page) {
       provider: { "@id": organizationId },
       isPartOf: { "@id": softwareId },
       description:
-        "Workspace de teleconsulta para psicologos com agenda, pre-sala, video, prontuario, transcricao incremental via Deepgram e apoio do Synapse AI.",
+        "Workspace de teleconsulta para psicólogos com agenda, pré-sala, vídeo, prontuário, transcrição incremental autorizada e apoio do Synapse AI sob responsabilidade da NeuroNex.",
       featureList: [
         "Sala online vinculada a agenda e paciente",
-        "Transcricao incremental via Deepgram",
-        "Resumo e proximos passos revisaveis pelo psicologo",
+        "Transcrição incremental autorizada",
+        "Resumo e próximos passos revisáveis pelo psicólogo",
         "Estados de sala vazia, carregamento, erro e limite de plano",
       ],
     });
@@ -303,11 +303,11 @@ function routeStructuredData(page) {
       provider: { "@id": organizationId },
       isPartOf: { "@id": softwareId },
       description:
-        "Superficie de pacientes da NeuroNex com cadastro, prontuario vivo, Portal do Paciente, diario, humor, documentos, NeuroScan, NeuroView e Synapse AI.",
+        "Superfície de pacientes da NeuroNex com cadastro, prontuário vivo, Portal do Paciente, diário, humor, documentos, NeuroScan, NeuroView e Synapse AI.",
       featureList: [
-        "Cadastro e prontuario conectados",
-        "Portal do Paciente separado da area profissional",
-        "Diario, humor e continuidade entre sessoes",
+        "Cadastro e prontuário conectados",
+        "Portal do Paciente separado da área profissional",
+        "Diário, humor e continuidade entre sessões",
         "NeuroScan, NeuroView, NeuroPulse e Synapse AI",
         "Permissoes, estados vazios, carregamento, erro e travas por plano",
       ],
