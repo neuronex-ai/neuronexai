@@ -191,7 +191,7 @@ export default function SecureConfirmAppointment() {
 
   const appointment = context?.appointment;
   const professional = context?.professional;
-  const rescheduleRequest = context?.rescheduleRequest;
+  const rescheduleRequest = context?.rescheduleRequest ?? null;
   const policyTimeZone = context?.policy?.timezone || "America/Sao_Paulo";
 
   const loadAppointment = useCallback(async (silent = false) => {
