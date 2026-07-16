@@ -12,7 +12,15 @@ export const Footer = () => {
       { label: "Plataforma", path: "/#produto" },
       { label: "NeuroFinance", path: "/neurofinance" },
       { label: "NeuroBox", path: "/neurobox" },
+      { label: "NeuroZap", path: "/neurozap-para-psicologos" },
       { label: "Synapse AI", path: "/synapse" },
+    ],
+    operacao: [
+      { label: "Teleconsulta", path: "/teleconsulta-para-psicologos" },
+      { label: "Pacientes", path: "/pacientes-para-psicologos" },
+      { label: "Portal do Paciente", path: "/portal-do-paciente" },
+      { label: "Prontuario", path: "/prontuario-para-psicologos" },
+      { label: "Agenda", path: "/agenda-para-psicologos" },
     ],
     recursos: [
       { label: "Central de Ajuda", path: "/ajuda" },
@@ -29,7 +37,7 @@ export const Footer = () => {
     <footer className="relative overflow-hidden bg-background pb-16 pt-32 font-sans">
       <div className="absolute left-1/2 top-0 h-px w-full max-w-7xl -translate-x-1/2 bg-gradient-to-r from-transparent via-border/50 to-transparent" />
       <div className="container relative z-10">
-        <div className="mb-24 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-6 lg:gap-8">
+        <div className="mb-24 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-7 lg:gap-8">
           <div className="space-y-8 lg:col-span-2">
             <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex items-center" onClick={() => navigate("/")}>
               <Logo className="h-8 w-8" />
@@ -38,7 +46,7 @@ export const Footer = () => {
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground/70">Sistema operacional para psicólogos: gestão clínica, inteligência contextual e financeiro conectado.</p>
           </div>
 
-          {[{ title: "Produto", links: footerLinks.produto }, { title: "Recursos", links: footerLinks.recursos }, { title: "Jurídico", links: footerLinks.legal }].map((section) => (
+          {[{ title: "Produto", links: footerLinks.produto }, { title: "Operacao", links: footerLinks.operacao }, { title: "Recursos", links: footerLinks.recursos }, { title: "Jurídico", links: footerLinks.legal }].map((section) => (
             <div key={section.title} className="space-y-6 lg:col-span-1">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/40">{section.title}</h4>
               <ul className="space-y-4">

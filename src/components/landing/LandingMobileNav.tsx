@@ -31,6 +31,7 @@ export const LandingMobileNav = () => {
             const prefetchQueue = [
                 () => import("@/pages/Index"),
                 () => import("@/pages/FinanceLanding"),
+                () => import("@/pages/public/NeuroZapLanding"),
             ];
             if ('requestIdleCallback' in window) {
                 window.requestIdleCallback(() => {
@@ -63,6 +64,9 @@ export const LandingMobileNav = () => {
         { label: "Início", type: "route", path: "/" },
         { label: "Diferenciais", type: "anchor", target: "diferenciais" },
         { label: "Produto", type: "anchor", target: "produto" },
+        { label: "NeuroFinance", type: "route", path: "/neurofinance" },
+        { label: "NeuroZap", type: "route", path: "/neurozap-para-psicologos" },
+        { label: "Teleconsulta", type: "route", path: "/teleconsulta-para-psicologos" },
         { label: "Planos", type: "anchor", target: "waitlist" },
         { label: "Segurança", type: "anchor", target: "seguranca" },
     ];

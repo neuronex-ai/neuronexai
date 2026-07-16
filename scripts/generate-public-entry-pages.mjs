@@ -26,7 +26,7 @@ const PLATFORM_FEATURES = [
   "NeuroView: mapeamento de sintomas, eventos e evolução clínica do paciente em grafos 2D e 3D Universe.",
   "NeuroPulse: tradução de texto clínico em diagramas Mermaid baseados em abordagens como TCC, Psicanálise e formulação de caso.",
   "NeuroFlow: canvas para fluxos clínicos, operacionais e financeiros conectados ao prontuário e ao RAG do Synapse.",
-  "NeuroZap: automação por WhatsApp com Evolution API para cobrança, no-show, lembretes e contexto operacional supervisionado.",
+  "NeuroZap: automacao por WhatsApp Business, NeuroNex e Synapse AI para cobranca, no-show, lembretes e contexto operacional supervisionado.",
   "Workspace de Teleconsulta: prontuário integrado com captação incremental de áudio e transcrição via Deepgram.",
 ];
 
@@ -60,6 +60,9 @@ const publicNavigation = [
   ["Synapse", "/synapse"],
   ["NeuroFinance", "/neurofinance"],
   ["NeuroBox", "/neurobox"],
+  ["NeuroZap", "/neurozap-para-psicologos"],
+  ["Teleconsulta", "/teleconsulta-para-psicologos"],
+  ["Pacientes", "/pacientes-para-psicologos"],
   ["Ajuda", "/ajuda"],
   ["Contato", "/contato"],
   ["Privacidade", "/politica-de-privacidade"],
@@ -164,6 +167,7 @@ function routeStructuredData(page) {
         { "@id": `${PUBLIC_SITE_URL}/synapse#software` },
         { "@id": `${PUBLIC_SITE_URL}/neurofinance#financial-product` },
         { "@id": `${PUBLIC_SITE_URL}/neurobox#software` },
+        { "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#software` },
       ],
     },
     {
@@ -238,6 +242,74 @@ function routeStructuredData(page) {
         "NeuroFlow: canvas de fluxos clínicos e operacionais",
         "NeuroScan: estruturação assistida de fichas de anamnese",
         "Synapse: agente de voz e texto com agência assistida",
+      ],
+    });
+  }
+
+  if (page.route === "/neurozap-para-psicologos") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#software`,
+      name: "NeuroZap",
+      url,
+      applicationCategory: ["BusinessApplication", "MedicalApplication"],
+      applicationSubCategory: "WhatsApp Business automation for psychology clinics",
+      operatingSystem: ["Web", "Windows"],
+      provider: { "@id": organizationId },
+      isPartOf: { "@id": softwareId },
+      description:
+        "NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para cobrancas, lembretes, no-show e follow-up com contexto operacional, aprovacao humana e trilha de auditoria.",
+      featureList: [
+        "Rascunhos de cobranca com contexto financeiro",
+        "Lembretes e no-show supervisionados",
+        "Aprovacao humana antes do envio",
+        "Integracao com Synapse AI e NeuroFinance",
+        "Travas por plano, permissao e auditoria",
+      ],
+    });
+  }
+
+  if (page.route === "/teleconsulta-para-psicologos") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${PUBLIC_SITE_URL}/teleconsulta-para-psicologos#software`,
+      name: "Teleconsulta NeuroNex",
+      url,
+      applicationCategory: "MedicalApplication",
+      applicationSubCategory: "Telehealth workspace for psychologists",
+      operatingSystem: ["Web", "iOS", "Android"],
+      provider: { "@id": organizationId },
+      isPartOf: { "@id": softwareId },
+      description:
+        "Workspace de teleconsulta para psicologos com agenda, pre-sala, video, prontuario, transcricao incremental via Deepgram e apoio do Synapse AI.",
+      featureList: [
+        "Sala online vinculada a agenda e paciente",
+        "Transcricao incremental via Deepgram",
+        "Resumo e proximos passos revisaveis pelo psicologo",
+        "Estados de sala vazia, carregamento, erro e limite de plano",
+      ],
+    });
+  }
+
+  if (page.route === "/pacientes-para-psicologos") {
+    graph.push({
+      "@type": "SoftwareApplication",
+      "@id": `${PUBLIC_SITE_URL}/pacientes-para-psicologos#software`,
+      name: "Pacientes NeuroNex",
+      url,
+      applicationCategory: "MedicalApplication",
+      applicationSubCategory: "Patient operations and clinical record workspace",
+      operatingSystem: ["Web", "iOS", "Android"],
+      provider: { "@id": organizationId },
+      isPartOf: { "@id": softwareId },
+      description:
+        "Superficie de pacientes da NeuroNex com cadastro, prontuario vivo, Portal do Paciente, diario, humor, documentos, NeuroScan, NeuroView e Synapse AI.",
+      featureList: [
+        "Cadastro e prontuario conectados",
+        "Portal do Paciente separado da area profissional",
+        "Diario, humor e continuidade entre sessoes",
+        "NeuroScan, NeuroView, NeuroPulse e Synapse AI",
+        "Permissoes, estados vazios, carregamento, erro e travas por plano",
       ],
     });
   }

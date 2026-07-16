@@ -46,7 +46,7 @@ const PLATFORM_FEATURES = [
   "NeuroView: mapeamento de sintomas, eventos e evolução clínica do paciente em grafos 2D e 3D Universe.",
   "NeuroPulse: tradução de texto clínico em diagramas Mermaid baseados em abordagens como TCC, Psicanálise e formulação de caso.",
   "NeuroFlow: canvas para fluxos clínicos, operacionais e financeiros conectados ao prontuário e ao RAG do Synapse.",
-  "NeuroZap: automação por WhatsApp com Evolution API para cobrança, no-show, lembretes e contexto operacional supervisionado.",
+  "NeuroZap: automacao por WhatsApp Business, NeuroNex e Synapse AI para cobranca, no-show, lembretes e contexto operacional supervisionado.",
   "Workspace de Teleconsulta: prontuário integrado com captação incremental de áudio e transcrição via Deepgram.",
 ];
 
@@ -78,7 +78,13 @@ export function getPublicSeoConfig(pathname: string): PublicSeoConfig {
         ? "Tela do NeuroFinance com conta, saldo e movimentações financeiras"
         : publicConfig.route === "/neurobox"
           ? "Tela do NeuroView com grafo clínico no NeuroBox"
-          : "Interface da plataforma NeuroNex AI",
+          : publicConfig.route === "/neurozap-para-psicologos"
+            ? "NeuroZap com WhatsApp Business, Synapse AI e aprovação humana"
+            : publicConfig.route === "/teleconsulta-para-psicologos"
+              ? "Teleconsulta NeuroNex com sala online e transcrição"
+              : publicConfig.route === "/pacientes-para-psicologos"
+                ? "Prontuário e acompanhamento de pacientes na NeuroNex"
+                : "Interface da plataforma NeuroNex AI",
       pageType: "website",
     };
   }
@@ -205,6 +211,7 @@ const buildPlatformSoftwareNode = (): JsonLdNode => ({
     { "@id": `${PUBLIC_SITE_URL}/synapse#software` },
     { "@id": `${PUBLIC_SITE_URL}/neurofinance#financial-product` },
     { "@id": `${PUBLIC_SITE_URL}/neurobox#software` },
+    { "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#software` },
   ],
   isAccessibleForFree: false,
 });
@@ -360,10 +367,94 @@ const buildNeuroBoxNodes = (): JsonLdNode[] => [
   },
 ];
 
+const buildNeuroZapNodes = (): JsonLdNode[] => [
+  {
+    "@type": "SoftwareApplication",
+    "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#software`,
+    name: "NeuroZap",
+    url: absolutePublicUrl("/neurozap-para-psicologos"),
+    applicationCategory: ["BusinessApplication", "MedicalApplication"],
+    applicationSubCategory: "WhatsApp Business automation for psychology clinics",
+    operatingSystem: ["Web", "Windows"],
+    creator: { "@id": organizationId },
+    provider: { "@id": organizationId },
+    isPartOf: { "@id": softwareId },
+    description:
+      "NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para cobrancas, lembretes, no-show e follow-up com contexto operacional, aprovacao humana e trilha de auditoria.",
+    featureList: [
+      "Rascunhos de cobranca com contexto financeiro",
+      "Lembretes e no-show supervisionados",
+      "Aprovacao humana antes do envio",
+      "Integração com Synapse AI e NeuroFinance",
+      "Travas por plano, permissao e auditoria",
+    ],
+  },
+  {
+    "@type": "Service",
+    "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#service`,
+    name: "Automacao de WhatsApp Business para clinicas de psicologia",
+    serviceType: "Operational communication automation",
+    provider: { "@id": organizationId },
+    areaServed: "BR",
+    description:
+      "Servico da NeuroNex para preparar mensagens de cobranca, lembrete, reagendamento e follow-up com Synapse AI e aprovacao do profissional.",
+  },
+];
+
+const buildTeleconsultaNodes = (): JsonLdNode[] => [
+  {
+    "@type": "SoftwareApplication",
+    "@id": `${PUBLIC_SITE_URL}/teleconsulta-para-psicologos#software`,
+    name: "Teleconsulta NeuroNex",
+    url: absolutePublicUrl("/teleconsulta-para-psicologos"),
+    applicationCategory: "MedicalApplication",
+    applicationSubCategory: "Telehealth workspace for psychologists",
+    operatingSystem: ["Web", "iOS", "Android"],
+    creator: { "@id": organizationId },
+    provider: { "@id": organizationId },
+    isPartOf: { "@id": softwareId },
+    description:
+      "Workspace de teleconsulta para psicologos com agenda, pre-sala, video, prontuario, transcricao incremental via Deepgram e apoio do Synapse AI.",
+    featureList: [
+      "Sala online vinculada a agenda e paciente",
+      "Transcricao incremental via Deepgram",
+      "Resumo e proximos passos revisaveis pelo psicologo",
+      "Estados de sala vazia, carregamento, erro e limite de plano",
+    ],
+  },
+];
+
+const buildPatientOperationsNodes = (): JsonLdNode[] => [
+  {
+    "@type": "SoftwareApplication",
+    "@id": `${PUBLIC_SITE_URL}/pacientes-para-psicologos#software`,
+    name: "Pacientes NeuroNex",
+    url: absolutePublicUrl("/pacientes-para-psicologos"),
+    applicationCategory: "MedicalApplication",
+    applicationSubCategory: "Patient operations and clinical record workspace",
+    operatingSystem: ["Web", "iOS", "Android"],
+    creator: { "@id": organizationId },
+    provider: { "@id": organizationId },
+    isPartOf: { "@id": softwareId },
+    description:
+      "Superficie de pacientes da NeuroNex com cadastro, prontuario vivo, Portal do Paciente, diario, humor, documentos, NeuroScan, NeuroView e Synapse AI.",
+    featureList: [
+      "Cadastro e prontuario conectados",
+      "Portal do Paciente separado da area profissional",
+      "Diario, humor e continuidade entre sessoes",
+      "NeuroScan, NeuroView, NeuroPulse e Synapse AI",
+      "Permissoes, estados vazios, carregamento, erro e travas por plano",
+    ],
+  },
+];
+
 const buildPageSpecificNodes = (canonicalPath: string): JsonLdNode[] => {
   if (canonicalPath === "/neurofinance") return buildNeuroFinanceNodes();
   if (canonicalPath === "/synapse") return buildSynapseNodes();
   if (canonicalPath === "/neurobox") return buildNeuroBoxNodes();
+  if (canonicalPath === "/neurozap-para-psicologos") return buildNeuroZapNodes();
+  if (canonicalPath === "/teleconsulta-para-psicologos") return buildTeleconsultaNodes();
+  if (canonicalPath === "/pacientes-para-psicologos") return buildPatientOperationsNodes();
   return [];
 };
 

@@ -394,7 +394,7 @@ const FinanceLanding = () => {
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap Desktop Beta</p>
               <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Cobrança e no-show sem desgaste humano.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                Com Evolution API, WhatsApp Business e Synapse, a clínica pode preparar réguas de cobrança, lembretes e follow-ups com contexto. O profissional aprova antes do envio.
+                Com WhatsApp Business, NeuroNex e Synapse, a clínica pode preparar réguas de cobrança, lembretes e follow-ups com contexto. O profissional aprova antes do envio.
               </p>
             </article>
             <div className="rounded-[38px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03]">

@@ -66,6 +66,9 @@ const ConfiguracoesDeCookies = lazy(() => import("@/pages/legal/ConfiguracoesDeC
 const FinanceLanding = lazy(() => import("@/pages/FinanceLanding"));
 const SynapseLanding = lazy(() => import("@/pages/SynapseLanding"));
 const NeuroBoxLanding = lazy(() => import("@/pages/public/NeuroBoxLanding"));
+const NeuroZapLanding = lazy(() => import("@/pages/public/NeuroZapLanding"));
+const PatientOperationsLanding = lazy(() => import("@/pages/public/PatientOperationsLanding"));
+const TeleconsultaLanding = lazy(() => import("@/pages/public/TeleconsultaLanding"));
 const ProductLanding = lazy(() => import("@/pages/public/ProductLanding"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
@@ -154,8 +157,10 @@ const SharedRoutes = () => {
         <Route path="/neurofinance" element={<FinanceLanding />} />
         <Route path="/synapse" element={<SynapseLanding />} />
         <Route path="/neurobox" element={<NeuroBoxLanding />} />
+        <Route path="/neurozap-para-psicologos" element={<NeuroZapLanding />} />
+        <Route path="/pacientes-para-psicologos" element={<PatientOperationsLanding />} />
         <Route path="/portal-do-paciente" element={<ProductLanding route="/portal-do-paciente" />} />
-        <Route path="/teleconsulta-para-psicologos" element={<ProductLanding route="/teleconsulta-para-psicologos" />} />
+        <Route path="/teleconsulta-para-psicologos" element={<TeleconsultaLanding />} />
         <Route path="/prontuario-para-psicologos" element={<ProductLanding route="/prontuario-para-psicologos" />} />
         <Route path="/agenda-para-psicologos" element={<ProductLanding route="/agenda-para-psicologos" />} />
 

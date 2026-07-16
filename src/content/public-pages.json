@@ -101,10 +101,60 @@
       "image": "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp"
     },
     {
+      "route": "/neurozap-para-psicologos",
+      "file": "neurozap-para-psicologos.html",
+      "title": "NeuroZap para psicologos | WhatsApp Business, Synapse AI e NeuroFinance",
+      "description": "NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para cobranca, no-show, lembretes e follow-up com aprovacao humana.",
+      "keywords": [
+        "NeuroZap para psicologos",
+        "WhatsApp Business para psicologos",
+        "automacao de cobranca para psicologos",
+        "reducao de no-show em clinicas",
+        "cobranca por WhatsApp com aprovacao humana",
+        "Synapse AI no WhatsApp Business"
+      ],
+      "eyebrow": "NeuroZap",
+      "heading": "WhatsApp Business com contexto, cobranca e aprovacao humana.",
+      "lead": "NeuroZap liga WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para preparar mensagens de cobranca, lembretes, no-show e follow-up com supervisao do profissional.",
+      "highlights": ["WhatsApp Business conectado ao Synapse", "Reguas de cobranca e no-show", "Aprovacao humana antes do envio"],
+      "sections": [
+        { "title": "O evento nasce na NeuroNex", "text": "Agenda, paciente, sessao e financeiro indicam quando uma mensagem precisa ser preparada." },
+        { "title": "Synapse prepara o rascunho", "text": "O agente usa contexto operacional para sugerir tom, valor, prazo, lembrete ou reagendamento." },
+        { "title": "O profissional aprova", "text": "Mensagens sensiveis passam por revisao humana, bloqueios por plano, permissao e trilha de auditoria." },
+        { "title": "WhatsApp Business executa o canal", "text": "A conversa acontece no canal do consultorio, conectada ao retorno financeiro e operacional." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp"
+    },
+    {
+      "route": "/pacientes-para-psicologos",
+      "file": "pacientes-para-psicologos.html",
+      "title": "Pacientes para psicologos | Prontuario, Portal e IA clinica | NeuroNex",
+      "description": "Superficie de pacientes da NeuroNex com cadastro, prontuario vivo, Portal do Paciente, diario, humor, NeuroScan, NeuroView, NeuroPulse e Synapse AI.",
+      "keywords": [
+        "pacientes para psicologos",
+        "gestao de pacientes para psicologia",
+        "portal do paciente para psicologos",
+        "prontuario psicologico com IA",
+        "diario do paciente online",
+        "grafo comportamental 3D do paciente"
+      ],
+      "eyebrow": "Pacientes",
+      "heading": "O paciente como centro da operacao clinica.",
+      "lead": "Cadastro, prontuario, agenda, teleconsulta, portal, diario, humor, documentos, financeiro e Synapse AI se conectam em uma mesma linha operacional.",
+      "highlights": ["Cadastro e prontuario vivo", "Portal do Paciente separado", "NeuroScan, NeuroView e Synapse AI"],
+      "sections": [
+        { "title": "Paciente como identidade operacional", "text": "O mesmo cadastro sustenta agenda, prontuario, documentos, teleconsulta, portal e financeiro com permissoes claras." },
+        { "title": "Continuidade entre sessoes", "text": "Diario, humor e dados autorizados do Portal do Paciente entram como contexto revisavel pelo psicologo." },
+        { "title": "IA clinica com metadados claros", "text": "NeuroScan, NeuroView, NeuroPulse e Synapse consomem origem, estado e permissao para apoiar o acompanhamento." },
+        { "title": "Estados completos", "text": "A experiencia considera sem pacientes, carregamento, erro, limites de plano e bloqueios de permissao." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-grafico-tendencia-humor-minicards-dark.webp"
+    },
+    {
       "route": "/portal-do-paciente",
       "file": "portal-do-paciente.html",
       "title": "Portal do Paciente para psicólogos | NeuroNex",
-      "description": "Mantenha o vínculo entre sessões com um Portal do Paciente conectado à rotina e às permissões definidas pelo psicólogo.",
+      "description": "Portal do Paciente conectado ao prontuario, diario, humor, teleconsulta e continuidade entre sessoes, com acesso separado da area profissional.",
       "keywords": [
         "portal do paciente para psicólogos",
         "continuidade entre sessões de psicoterapia",
@@ -113,18 +163,21 @@
       ],
       "eyebrow": "Portal do Paciente",
       "heading": "Continuidade entre sessões, dentro do mesmo cuidado.",
-      "lead": "O Portal aproxima informações compartilhadas pelo paciente da rotina profissional, preservando limites de acesso e a responsabilidade do psicólogo.",
-      "highlights": ["Vínculo autorizado", "Continuidade entre sessões", "Contexto dentro da NeuroNex"],
+      "lead": "O Portal aproxima diario, humor, orientacoes e vinculos autorizados da rotina profissional, preservando acesso separado e responsabilidade do psicologo.",
+      "highlights": ["Diario e humor autorizados", "Experiencia mobile do paciente", "Contexto revisavel pelo psicologo"],
       "sections": [
         { "title": "Um espaço próprio para o paciente", "text": "O Portal é uma aplicação voltada ao paciente e permanece separado da interface profissional, com acesso e permissões próprios." },
-        { "title": "Limites por plano", "text": "O Essential permite até cinco vínculos ativos; o Profissional permite até 250 vínculos ativos." }
-      ]
+        { "title": "Diario, humor e continuidade", "text": "Entradas autorizadas podem enriquecer o acompanhamento entre sessoes sem abrir o workspace clinico do psicologo." },
+        { "title": "Limites por plano", "text": "O Essential permite ate cinco vinculos ativos; o Profissional permite ate 250 vinculos ativos." },
+        { "title": "Contexto para Synapse", "text": "Dados compartilhados podem virar metadados revisaveis para resumo, planejamento e leitura longitudinal." }
+      ],
+      "image": "/landing/screenshots/mobile/dark/23-mobile-paciente-dark.webp"
     },
     {
       "route": "/teleconsulta-para-psicologos",
       "file": "teleconsulta-para-psicologos.html",
       "title": "Teleconsulta para psicólogos | NeuroNex",
-      "description": "Realize teleconsultas conectadas à agenda e ao contexto operacional da NeuroNex, com limites transparentes por plano.",
+      "description": "Teleconsulta para psicologos com agenda, pre-sala, video, prontuario integrado, transcricao Deepgram, Synapse AI e limites transparentes por plano.",
       "keywords": [
         "teleconsulta para psicólogos",
         "teleconsulta com transcrição Deepgram",
@@ -132,19 +185,22 @@
         "prontuário integrado à teleconsulta"
       ],
       "eyebrow": "Teleconsulta",
-      "heading": "A sessão online dentro do fluxo da sua prática.",
-      "lead": "Agenda, acesso à sala e continuidade operacional permanecem no mesmo ambiente, sem transformar a chamada em uma ferramenta isolada.",
-      "highlights": ["Conectada à agenda", "Fluxo do atendimento", "Limites transparentes"],
+      "heading": "A sessao online dentro do sistema operacional clinico.",
+      "lead": "Agenda, paciente, pre-sala, video, transcricao, prontuario e Synapse AI compartilham o mesmo contexto autorizado para reduzir retrabalho depois do atendimento.",
+      "highlights": ["Agenda, sala e prontuario", "Transcricao Deepgram", "Resumo revisavel pelo Synapse"],
       "sections": [
-        { "title": "Essential", "text": "Cinco sessões e até 150 minutos totais de teleconsulta por mês." },
-        { "title": "Profissional", "text": "Até 80 sessões e 20 pacientes distintos por mês, além de 300 minutos mensais de transcrição." }
-      ]
+        { "title": "Da agenda a sala", "text": "A sessao nasce do compromisso agendado e preserva paciente, horario, status, link e continuidade operacional." },
+        { "title": "Transcricao assistida", "text": "Audio autorizado pode alimentar transcricao incremental via Deepgram e material revisavel pelo psicologo." },
+        { "title": "Essential", "text": "Cinco sessoes e ate 150 minutos totais de teleconsulta por mes." },
+        { "title": "Profissional", "text": "Ate 80 sessoes e 20 pacientes distintos por mes, alem de 300 minutos mensais de transcricao." }
+      ],
+      "image": "/landing/screenshots/mobile/light/26-mobile-teleconsulta-white.webp"
     },
     {
       "route": "/prontuario-para-psicologos",
       "file": "prontuario-para-psicologos.html",
       "title": "Prontuário para psicólogos | NeuroNex",
-      "description": "Organize registros, documentos e fichas de anamnese em um prontuário conectado à rotina do psicólogo.",
+      "description": "Prontuario para psicologos com registros, documentos, anamnese, NeuroScan, NeuroView, NeuroPulse e metadados clinicos para Synapse AI.",
       "keywords": [
         "prontuário para psicólogos",
         "prontuário psicológico com IA",
@@ -152,19 +208,22 @@
         "ficha de anamnese com IA"
       ],
       "eyebrow": "Prontuário",
-      "heading": "Registros organizados no contexto do atendimento.",
-      "lead": "O prontuário reúne informações necessárias ao acompanhamento profissional e se conecta às demais áreas da NeuroNex dentro das permissões aplicáveis.",
-      "highlights": ["Registros e documentos", "Fichas de anamnese", "Contexto autorizado"],
+      "heading": "Prontuario vivo para registros, grafos e diagramas clinicos.",
+      "lead": "O prontuario reune registros, documentos, anamnese, evolucao e metadados para NeuroScan, NeuroView, NeuroPulse e Synapse AI dentro de permissoes claras.",
+      "highlights": ["Registros e documentos", "NeuroScan e anamnese", "NeuroView e NeuroPulse"],
       "sections": [
-        { "title": "NeuroScan no prontuário", "text": "O NeuroScan auxilia a transcrever fichas de anamnese, reduzindo a repetição manual sem retirar do psicólogo a revisão final." },
-        { "title": "Organização sem mistura de acessos", "text": "Conteúdo profissional, informações compartilhadas e dados administrativos mantêm finalidades e permissões próprias." }
-      ]
+        { "title": "NeuroScan no prontuario", "text": "O NeuroScan auxilia a transcrever fichas de anamnese, reduzindo repeticao manual sem retirar do psicologo a revisao final." },
+        { "title": "NeuroView", "text": "Sintomas, eventos, notas e hipoteses podem virar nos e arestas em grafos 2D/3D para leitura sistemica." },
+        { "title": "NeuroPulse", "text": "Notas podem alimentar diagramas Mermaid e mapas clinicos revisaveis para formulacao de caso." },
+        { "title": "Organizacao sem mistura de acessos", "text": "Conteudo profissional, informacoes compartilhadas e dados administrativos mantem finalidades e permissoes proprias." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-historico-dark.webp"
     },
     {
       "route": "/agenda-para-psicologos",
       "file": "agenda-para-psicologos.html",
       "title": "Agenda para psicólogos | NeuroNex",
-      "description": "Organize horários, pacientes e compromissos em uma agenda conectada ao restante da operação NeuroNex.",
+      "description": "Agenda para psicologos conectada a pacientes, teleconsulta, NeuroZap, cobrancas, no-show, Synapse AI e proximos passos operacionais.",
       "keywords": [
         "agenda para psicólogos",
         "agenda clínica com IA",
@@ -172,13 +231,16 @@
         "confirmação de consultas por WhatsApp"
       ],
       "eyebrow": "Agenda",
-      "heading": "A agenda como início do fluxo, não como ferramenta isolada.",
-      "lead": "Compromissos se relacionam com pacientes, teleconsulta e próximos passos operacionais no mesmo ambiente.",
-      "highlights": ["Horários e pacientes", "Teleconsulta conectada", "Próximos passos organizados"],
+      "heading": "A agenda como inicio do fluxo, nao como calendario isolado.",
+      "lead": "Compromissos se relacionam com pacientes, teleconsulta, NeuroZap, cobrancas, confirmacoes, no-show e proximos passos no mesmo ambiente.",
+      "highlights": ["Pacientes e horarios", "Teleconsulta e confirmacoes", "No-show e cobranca com Synapse"],
       "sections": [
-        { "title": "Uma visão clara da rotina", "text": "Dia, semana e mês ajudam o psicólogo a localizar compromissos e continuar o trabalho na área correta." },
-        { "title": "Regras complexas serão definidas separadamente", "text": "Automações de cobrança, pacotes, fiscal e comunicação só serão consolidadas depois do mapeamento completo de cenários." }
-      ]
+        { "title": "Uma visao clara da rotina", "text": "Dia, semana e mes ajudam o psicologo a localizar compromissos e continuar o trabalho na area correta." },
+        { "title": "Teleconsulta conectada", "text": "O horario online preserva sala, paciente e contexto de prontuario para reduzir alternancia entre ferramentas." },
+        { "title": "No-show e cobranca", "text": "Eventos da agenda podem alimentar NeuroZap, Synapse e NeuroFinance para lembretes, follow-up e cobranca supervisionada." },
+        { "title": "Estados operacionais", "text": "A agenda precisa explicar carregamento, vazio, erro, limite de plano e conflito de horario com clareza." }
+      ],
+      "image": "/landing/screenshots/desktop/dark/nova remessa/9-agenda-mensal-dark.webp"
     },
     {
       "route": "/ajuda",

@@ -1,5 +1,6 @@
 "use client";
 
+import type { ElementType } from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -34,7 +35,7 @@ import { FadeIn } from "@/components/animations/FadeIn";
 import { PUBLIC_PLAN_COMPARISON } from "@/content/public-plan-catalog";
 import { cn } from "@/lib/utils";
 
-const SectionBadge = ({ children, icon: Icon = Sparkles }: { children: React.ReactNode; icon?: any }) => (
+const SectionBadge = ({ children, icon: Icon = Sparkles }: { children: React.ReactNode; icon?: ElementType<{ className?: string }> }) => (
   <div className="inline-flex items-center gap-2.5 rounded-full border border-border/40 bg-foreground/[0.035] px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.26em] text-muted-foreground backdrop-blur-sm dark:border-white/10 dark:bg-white/[0.045] dark:text-white/42">
     <Icon className="h-3.5 w-3.5" />
     {children}
@@ -379,7 +380,7 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, Evolution API e Synapse para comunicação supervisionada." },
+  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, NeuroNex e Synapse para comunicacao supervisionada." },
   { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroPulse, NeuroFlow, NeuroScan e NeuroFinance expõem contexto estruturado para o agente." },
 ];
 
@@ -439,7 +440,7 @@ const neuroZapFlows = [
   },
   {
     title: "WhatsApp com responsabilidade",
-    text: "Evolution API, permissões, histórico e confirmação assistida evitam automação invisível em conversas sensíveis.",
+    text: "WhatsApp Business, permissoes, historico e confirmacao assistida evitam automacao invisivel em conversas sensiveis.",
   },
 ];
 
@@ -455,8 +456,8 @@ export const LandingNeuroZapSection = () => (
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
-              <Link to="/synapse">
-                Ver Synapse <ArrowRight className="ml-2 h-4 w-4" />
+              <Link to="/neurozap-para-psicologos">
+                Ver NeuroZap <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
             <Button asChild variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]">
@@ -472,7 +473,7 @@ export const LandingNeuroZapSection = () => (
               <div className="flex items-center gap-3">
                 <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" width={36} height={36} className="h-9 w-9 rounded-xl object-contain" loading="lazy" decoding="async" />
                 <div>
-                  <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Evolution API</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">WhatsApp Business</p>
                   <p className="text-base font-black">NeuroZap + Synapse</p>
                 </div>
               </div>

@@ -53,6 +53,8 @@
     { "source": "/synapse", "destination": "/public-pages/synapse.html" },
     { "source": "/neurofinance", "destination": "/public-pages/neurofinance.html" },
     { "source": "/neurobox", "destination": "/public-pages/neurobox.html" },
+    { "source": "/neurozap-para-psicologos", "destination": "/public-pages/neurozap-para-psicologos.html" },
+    { "source": "/pacientes-para-psicologos", "destination": "/public-pages/pacientes-para-psicologos.html" },
     { "source": "/portal-do-paciente", "destination": "/public-pages/portal-do-paciente.html" },
     { "source": "/teleconsulta-para-psicologos", "destination": "/public-pages/teleconsulta-para-psicologos.html" },
     { "source": "/prontuario-para-psicologos", "destination": "/public-pages/prontuario-para-psicologos.html" },
@@ -100,7 +102,16 @@
       ]
     },
     {
-      "source": "/(auth|email-confirmed|reset-password|create-account|account-created|google-connection-success|initial-settings|pwa-intent|dashboard|agenda|pacientes|notas|financeiro|ajustes|teleconsulta|neurozap|synapse-ai|portal|join|confirmar-agendamento|anamnese-externa|payment|id|404)(.*)",
+      "source": "/(auth|email-confirmed|reset-password|create-account|account-created|google-connection-success|initial-settings|pwa-intent|dashboard|agenda|pacientes|notas|financeiro|ajustes|teleconsulta|neurozap|synapse-ai|portal|join|confirmar-agendamento|anamnese-externa|payment|id|404)",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/(auth|email-confirmed|reset-password|create-account|account-created|google-connection-success|initial-settings|pwa-intent|dashboard|agenda|pacientes|notas|financeiro|ajustes|teleconsulta|neurozap|synapse-ai|portal|join|confirmar-agendamento|anamnese-externa|payment|id|404)/(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",
