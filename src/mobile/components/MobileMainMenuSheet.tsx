@@ -52,7 +52,7 @@ const PRIVATE_MENU: MenuItem[] = [
 
 const PUBLIC_MENU: MenuItem[] = [
   { label: "Início", href: "/", icon: LayoutDashboard },
-  { label: "Preços", href: "/pricing", icon: DollarSign },
+  { label: "Preços", href: "/precos", icon: DollarSign },
   { label: "Contato", href: "/contato", icon: Zap },
 ];
 

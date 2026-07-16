@@ -60,38 +60,6 @@
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap"
     rel="stylesheet" />
 
-  <!-- Structured Data for Google Search (Logo + Organization) -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Organization",
-    "@id": "https://www.neuronexai.com.br/#organization",
-    "name": "NeuroNex AI",
-    "url": "https://www.neuronexai.com.br/",
-    "logo": "https://www.neuronexai.com.br/pwa-512.png",
-    "description": "Sistema Operacional Clínico com IA e Core Banking integrado para psicólogos, com NeuroFinance, NeuroBox, NeuroZap e Synapse AI.",
-    "sameAs": [],
-    "contactPoint": {
-      "@type": "ContactPoint",
-      "contactType": "customer service",
-      "url": "https://www.neuronexai.com.br/contato"
-    }
-  }
-  </script>
-
-  <!-- WebSite structured data for search box -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": "https://www.neuronexai.com.br/#website",
-    "name": "NeuroNex AI",
-    "url": "https://www.neuronexai.com.br/",
-    "publisher": { "@id": "https://www.neuronexai.com.br/#organization" },
-    "inLanguage": "pt-BR"
-  }
-  </script>
-
   <script id="neuronex-route-structured-data" type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -176,30 +144,6 @@
 </head>
 
 <body>
-  <noscript>
-  <main id="static-public-shell" style="min-height:100vh;padding:64px 24px;background:#050506;color:#f7f7f8;font-family:Inter,Arial,sans-serif;">
-    <div style="max-width:900px;margin:0 auto;">
-      <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;">NeuroNex AI</p>
-      <h1 style="max-width:800px;font-size:clamp(42px,8vw,76px);line-height:.94;letter-spacing:-.055em;">Sistema Operacional Clínico com IA e Core Banking Integrado.</h1>
-      <p style="max-width:740px;font-size:19px;line-height:1.65;color:#d4d4d8;">A NeuroNex conecta prontuário, agenda, teleconsulta, NeuroBox, NeuroZap, financeiro, fiscal e Synapse AI para aproximar o consultório da Clínica Autônoma.</p>
-      <ul style="max-width:740px;display:grid;gap:10px;margin:30px 0 0;padding:0;list-style:none;">
-        <li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">Synapse AI com agência assistida</li>
-        <li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">NeuroFinance com core banking integrado</li>
-        <li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">NeuroBox clínico com grafos, fluxos e diagramas</li>
-      </ul>
-      <nav aria-label="Páginas públicas" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;">
-        <a href="/" style="color:#fff;">Início</a>
-        <a href="/synapse" style="color:#fff;">Synapse</a>
-        <a href="/neurofinance" style="color:#fff;">NeuroFinance</a>
-        <a href="/neurobox" style="color:#fff;">NeuroBox</a>
-        <a href="/ajuda" style="color:#fff;">Ajuda</a>
-        <a href="/contato" style="color:#fff;">Contato</a>
-        <a href="/politica-de-privacidade" style="color:#fff;">Privacidade</a>
-      </nav>
-      <p style="margin-top:40px;color:#a1a1aa;">A interface completa e os recursos interativos ficam disponíveis com JavaScript habilitado.</p>
-    </div>
-  </main>
-  </noscript>
   <div id="root"></div>
   <script type="module" src="/src/main.tsx"></script>
 </body>

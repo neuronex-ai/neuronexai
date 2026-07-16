@@ -132,7 +132,7 @@ const faqs: FaqItem[] = [
   {
     question: "Onde entram NeuroZap e no-show?",
     answer:
-      "O NeuroZap conecta WhatsApp Business e Synapse para lembretes, régua de cobrança e recuperação de no-show com aprovação humana, preservando contexto e reduzindo atrito de cobrança.",
+      "O NeuroZap conecta e sincroniza o WhatsApp Business em Desktop Beta. Inbox, etiquetas e ações contextuais para cobrança e no-show continuam em evolução.",
   },
 ];
 
@@ -394,7 +394,7 @@ const FinanceLanding = () => {
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap Desktop Beta</p>
               <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Cobrança e no-show sem desgaste humano.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                Com WhatsApp Business, NeuroNex e Synapse, a clínica pode preparar réguas de cobrança, lembretes e follow-ups com contexto. O profissional aprova antes do envio.
+                Conexão e sincronização do WhatsApp Business estão em Beta. Inbox, etiquetas, consentimento e ações contextuais com o Synapse ainda estão em evolução.
               </p>
             </article>
             <div className="rounded-[38px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03]">

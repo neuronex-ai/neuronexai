@@ -63,12 +63,14 @@ export const LandingMobileNav = () => {
     const extendedNavItems = [
         { label: "Início", type: "route", path: "/" },
         { label: "Diferenciais", type: "anchor", target: "diferenciais" },
-        { label: "Produto", type: "anchor", target: "produto" },
+        { label: "Produto", type: "route", path: "/produto" },
         { label: "NeuroFinance", type: "route", path: "/neurofinance" },
         { label: "NeuroZap", type: "route", path: "/neurozap-para-psicologos" },
         { label: "Teleconsulta", type: "route", path: "/teleconsulta-para-psicologos" },
-        { label: "Planos", type: "anchor", target: "waitlist" },
-        { label: "Segurança", type: "anchor", target: "seguranca" },
+        { label: "Planos", type: "route", path: "/precos" },
+        { label: "Segurança", type: "route", path: "/seguranca-e-etica" },
+        { label: "Blog", type: "route", path: "/blog" },
+        { label: "Novidades", type: "route", path: "/novidades" },
     ];
 
     return (

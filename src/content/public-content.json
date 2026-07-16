@@ -1,0 +1,1236 @@
+{
+  "site": {
+    "url": "https://www.neuronexai.com.br",
+    "defaultImage": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+    "lastModified": "2026-07-16",
+    "organization": {
+      "name": "NeuroNex AI",
+      "legalName": "NEURONEX AI LTDA",
+      "email": "contato@neuronexai.com.br",
+      "telephone": "+55-47-98873-0611",
+      "logo": "/pwa-512.png",
+      "description": "Plataforma brasileira de inteligência artificial e infraestrutura clínica para psicólogos, com gestão, prontuário, teleconsulta, NeuroFinance, NeuroBox, NeuroZap e Synapse AI."
+    },
+    "offers": [
+      {
+        "name": "Plano Essential",
+        "price": 0,
+        "priceCurrency": "BRL",
+        "url": "/create-account?plan=essential"
+      },
+      {
+        "name": "Plano Profissional",
+        "price": 229.9,
+        "priceCurrency": "BRL",
+        "url": "/create-account?plan=professional"
+      }
+    ]
+  },
+  "authors": [
+    {
+      "id": "equipe-neuronex",
+      "name": "Equipe NeuroNex",
+      "type": "Organization",
+      "role": "Produto, engenharia clínica e conteúdo educativo",
+      "url": "/produto"
+    }
+  ],
+  "pages": [
+    {
+      "route": "/",
+      "file": null,
+      "kind": "home",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "NeuroNex AI | Sistema Operacional Clínico com IA e Core Banking",
+      "description": "Sistema Operacional Clínico com IA e Core Banking integrado para psicólogos: prontuário vivo, teleconsulta, Portal do Paciente, NeuroBox, NeuroZap e NeuroFinance.",
+      "keywords": [
+        "sistema operacional clínico com IA",
+        "plataforma de IA com core banking para psicólogos",
+        "software para psicólogos com inteligência artificial",
+        "prontuário com grafo comportamental 3D",
+        "automação de fluxo de caixa para clínicas",
+        "clínica autônoma para psicólogos"
+      ],
+      "eyebrow": "NeuroNex AI",
+      "heading": "Sistema Operacional Clínico com IA e Core Banking Integrado.",
+      "lead": "Agenda, prontuário, teleconsulta, Portal do Paciente, NeuroBox, NeuroZap, gestão financeira, conta integrada e Synapse AI trabalham como uma operação única.",
+      "highlights": [
+        "Synapse AI com agência assistida",
+        "NeuroFinance e gestão financeira conectados",
+        "Prontuário vivo, Portal do Paciente e NeuroBox"
+      ],
+      "sections": [
+        {
+          "title": "Uma clínica organizada como sistema",
+          "text": "A NeuroNex conecta atendimento, paciente, documentos, comunicação, financeiro e inteligência operacional sem transformar o psicólogo em operador de ferramentas isoladas.",
+          "bullets": [
+            "NeuroNex Professional para desktop e tablet",
+            "Fluxos profissionais no celular em evolução",
+            "Portal do Paciente com experiência própria",
+            "Jornadas públicas seguras por links externos"
+          ]
+        },
+        {
+          "title": "Do prontuário ao Portal do Paciente",
+          "text": "Sessões, anamneses, humor, metas, tarefas, documentos e financeiro podem formar uma linha de continuidade com permissões claras entre profissional e paciente."
+        },
+        {
+          "title": "IA operacional com limites visíveis",
+          "text": "O Synapse diferencia leitura, rascunho, ação pendente e execução confirmada. Operações sensíveis exigem permissão, elegibilidade e confirmação humana."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O NeuroNex é apenas um software de gestão para psicólogos?",
+          "answer": "Não. A proposta é operar a clínica como um sistema conectado, reunindo atendimento, paciente, financeiro, fiscal, comunicação e inteligência operacional."
+        },
+        {
+          "question": "O Synapse toma decisões clínicas?",
+          "answer": "Não. O Synapse organiza contexto e prepara ações. A interpretação e a decisão clínica permanecem sob responsabilidade do psicólogo."
+        },
+        {
+          "question": "Qual é a diferença entre Gestão Financeira e NeuroFinance?",
+          "answer": "A Gestão Financeira registra, projeta e analisa receitas e despesas. O NeuroFinance adiciona conta, Pix, pagamentos, cobranças, saques e outras movimentações reais sujeitas à elegibilidade."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Painel de comando da NeuroNex com agenda, pacientes e visão financeira",
+      "related": [
+        { "label": "Conheça o ecossistema NeuroNex", "href": "/produto" },
+        { "label": "Entenda o Synapse AI", "href": "/synapse" },
+        { "label": "Veja os planos", "href": "/precos" }
+      ]
+    },
+    {
+      "route": "/produto",
+      "file": "produto.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Produto NeuroNex | Ecossistema clínico, financeiro e de IA",
+      "description": "Conheça o ecossistema NeuroNex: Professional, fluxos mobile, Portal do Paciente, jornadas públicas, Synapse AI, NeuroFinance e NeuroBox.",
+      "keywords": [
+        "ecossistema NeuroNex",
+        "sistema completo para psicólogos",
+        "plataforma clínica desktop mobile e portal do paciente",
+        "sistema operacional para clínica de psicologia"
+      ],
+      "eyebrow": "Ecossistema NeuroNex",
+      "heading": "Quatro experiências. Uma mesma operação clínica.",
+      "lead": "A NeuroNex separa cada público e contexto de uso sem fragmentar os dados autorizados que sustentam a rotina do psicólogo.",
+      "highlights": [
+        "Professional desktop e tablet",
+        "Experiência profissional mobile em evolução",
+        "Portal do Paciente e jornadas públicas próprias"
+      ],
+      "sections": [
+        {
+          "title": "NeuroNex Professional",
+          "text": "O produto principal do psicólogo reúne Painel, Agenda, Teleconsulta, Pacientes, Prontuário, Notas, NeuroBox, Financeiro, Synapse e Ajustes.",
+          "bullets": [
+            "Morning Command Panel e fila de atenção",
+            "Agenda clínica e políticas",
+            "Prontuário vivo e documentos",
+            "Gestão Financeira e NeuroFinance"
+          ]
+        },
+        {
+          "title": "Fluxos profissionais no celular",
+          "text": "A experiência mobile prioriza próxima sessão, reagendamento, cobrança, nota rápida, teleconsulta e Synapse. Ela está em evolução e não é apresentada como um desktop reduzido."
+        },
+        {
+          "title": "Portal do Paciente",
+          "text": "Uma aplicação separada para sessões, humor, documentos, anamneses, tarefas, progresso, pacotes e cobranças autorizadas."
+        },
+        {
+          "title": "Jornadas públicas",
+          "text": "Perfil profissional, confirmação de agenda, convite de teleconsulta, anamnese externa, ajuda, contato e documentos legais permanecem fora do workspace profissional."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O Portal do Paciente é o mesmo aplicativo usado pelo psicólogo?",
+          "answer": "Não. O Portal possui acesso, navegação e permissões próprias, sem abrir a interface operacional do profissional."
+        },
+        {
+          "question": "A versão mobile copia a interface desktop?",
+          "answer": "Não. A direção é mobile-first, priorizando ações de campo e fluxos curtos. Recursos em evolução são comunicados com status explícito."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Ecossistema profissional da NeuroNex em desktop",
+      "related": [
+        { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
+        { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
+        { "label": "Novidades do produto", "href": "/novidades" }
+      ]
+    },
+    {
+      "route": "/synapse",
+      "file": "synapse.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Synapse AI | Agente operacional por voz e texto para psicólogos",
+      "description": "Synapse AI organiza agenda, pacientes, contexto clínico, financeiro, documentos e navegação com política de risco, confirmação e auditoria.",
+      "keywords": [
+        "agente de IA para psicólogos",
+        "assistente por voz para clínica de psicologia",
+        "RAG clínico para psicólogos",
+        "IA operacional com confirmação humana"
+      ],
+      "eyebrow": "Synapse AI",
+      "heading": "Uma inteligência operacional para cada parte da clínica.",
+      "lead": "Por texto ou voz, o Synapse consulta contexto autorizado, prepara ações, navega pelo produto e aplica confirmações proporcionais ao risco.",
+      "highlights": [
+        "Agenda, pacientes e contexto clínico",
+        "Financeiro, documentos e conhecimento",
+        "Leitura, rascunho, ação pendente e execução confirmada"
+      ],
+      "sections": [
+        {
+          "title": "Agenda e navegação",
+          "text": "Consulta compromissos, busca horários, prepara agendamentos, remarcações e cancelamentos, abre pacientes, teleconsulta e áreas do NeuroBox."
+        },
+        {
+          "title": "Pacientes e inteligência clínica",
+          "text": "Busca histórico autorizado, prepara notas, relatórios e insights, sinaliza risco e abre NeuroView, NeuroFlow ou NeuroPulse para revisão."
+        },
+        {
+          "title": "Financeiro e documentos",
+          "text": "Consulta métricas e transações, prepara cobranças, registros financeiros, documentos oficiais, PDFs e comunicações antes da confirmação."
+        },
+        {
+          "title": "Política de risco",
+          "text": "Leituras e navegação são de menor risco. Alterações, exclusões e operações financeiras exigem confirmação ou bloqueio conforme contexto, permissão e elegibilidade.",
+          "bullets": [
+            "Leitura: consulta sem alteração",
+            "Rascunho: material preparado para revisão",
+            "Ação pendente: intenção validada, ainda não executada",
+            "Execução confirmada: resultado registrado e auditável"
+          ]
+        }
+      ],
+      "faq": [
+        {
+          "question": "O Synapse é apenas um chat?",
+          "answer": "Não. Ele também navega, organiza contexto, prepara ações e usa ferramentas da NeuroNex dentro das permissões disponíveis."
+        },
+        {
+          "question": "O Synapse pode movimentar dinheiro sozinho?",
+          "answer": "Não. Operações sensíveis exigem elegibilidade, confirmação explícita e os controles financeiros aplicáveis."
+        },
+        {
+          "question": "A IA substitui o julgamento do psicólogo?",
+          "answer": "Não. O Synapse apoia organização, documentação e operação; decisões clínicas continuam com o profissional."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+      "imageAlt": "Synapse AI em conversa operacional dentro da NeuroNex",
+      "related": [
+        { "label": "Segurança e política de risco", "href": "/seguranca-e-etica" },
+        { "label": "Ferramentas NeuroBox", "href": "/neurobox" },
+        { "label": "IA para psicólogos com ética", "href": "/blog/ia-para-psicologos-com-etica-e-controle" }
+      ]
+    },
+    {
+      "route": "/neurofinance",
+      "file": "neurofinance.html",
+      "kind": "financial",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "NeuroFinance | Conta, Pix e core banking para psicólogos",
+      "description": "NeuroFinance integra conta, saldo, Pix, pagamentos, cobranças, saques, recebíveis, NFS-e/RPS e segurança financeira à rotina clínica.",
+      "keywords": [
+        "core banking para psicólogos",
+        "conta digital para psicólogos",
+        "Área Pix para psicólogos",
+        "pagamento de boletos para clínicas",
+        "NFS-e RPS para consultórios"
+      ],
+      "eyebrow": "NeuroFinance",
+      "heading": "Movimentação financeira real dentro do fluxo da clínica.",
+      "lead": "Conta e saldo, extrato, Pix, pagamentos, cobranças, saques, recebíveis e fiscal operam próximos da agenda, do paciente e do Synapse.",
+      "highlights": [
+        "Conta, saldo, extrato e Pix",
+        "Pagamentos, cobranças e saques",
+        "PIN, idempotência e confirmação humana"
+      ],
+      "sections": [
+        {
+          "title": "Conta, saldo e extrato",
+          "text": "Acompanhe saldo, movimentações realizadas, futuras ou pendentes, assinaturas e pagamentos agendados em uma visão própria."
+        },
+        {
+          "title": "Área Pix e transferências",
+          "text": "Pagar, transferir, gerar QR Code, consultar recebimentos, gerenciar chaves, limites e destinos cadastrados com confirmação."
+        },
+        {
+          "title": "Pagamentos e cobranças bancárias",
+          "text": "Boletos, agendamentos, grupos de pagamento, cobranças, regras, simulações e contestações permanecem rastreáveis."
+        },
+        {
+          "title": "Recebíveis e fiscal",
+          "text": "Antecipação possui pontos em evolução. Dados fiscais, RPS, emissão e histórico de NFS-e são liberados conforme elegibilidade e disponibilidade operacional."
+        },
+        {
+          "title": "Segurança financeira",
+          "text": "Operações críticas combinam PIN, saldo, limites, status da conta, idempotência, confirmação e trilha de auditoria."
+        }
+      ],
+      "faq": [
+        {
+          "question": "A Gestão Financeira depende da conta NeuroFinance?",
+          "answer": "Não. A gestão gerencial funciona separadamente para registrar, projetar e analisar a clínica."
+        },
+        {
+          "question": "O Synapse executa pagamentos sem confirmação?",
+          "answer": "Não. Ele pode preparar e contextualizar uma ação, mas a movimentação real exige os controles e confirmações aplicáveis."
+        },
+        {
+          "question": "Todos os recursos são liberados automaticamente?",
+          "answer": "Não. Recursos financeiros dependem do plano, da aprovação da conta, de limites, saldo e elegibilidade operacional."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp",
+      "imageAlt": "Conta, saldo e movimentações no NeuroFinance",
+      "related": [
+        { "label": "Gestão financeira para psicólogos", "href": "/gestao-financeira-para-psicologos" },
+        { "label": "Planos NeuroNex", "href": "/precos" },
+        { "label": "Guia de gestão financeira", "href": "/blog/gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance" }
+      ]
+    },
+    {
+      "route": "/gestao-financeira-para-psicologos",
+      "file": "gestao-financeira-para-psicologos.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Gestão financeira para psicólogos | NeuroNex",
+      "description": "Organize receitas, despesas, lançamentos, cobranças, recebimentos, convênios, recorrência, planejamento e metas financeiras sem planilhas dispersas.",
+      "keywords": [
+        "gestão financeira para psicólogos",
+        "fluxo de caixa para clínica de psicologia",
+        "controle de inadimplência para psicólogos",
+        "planejamento financeiro de consultório",
+        "convênios e repasses para psicólogos"
+      ],
+      "eyebrow": "Gestão Financeira",
+      "heading": "Planejar, registrar e decidir antes de movimentar dinheiro.",
+      "lead": "A Gestão Financeira organiza o desempenho econômico da clínica. O NeuroFinance é a camada separada para movimentações bancárias reais.",
+      "highlights": [
+        "Visão geral e lançamentos",
+        "Recebimentos, convênios e recorrência",
+        "Planejamento, metas e lucro desejado"
+      ],
+      "sections": [
+        {
+          "title": "Visão geral",
+          "text": "Resultado, valores recebidos, despesas pagas, contas a receber, regime de caixa ou competência e movimentações recentes em um mesmo período."
+        },
+        {
+          "title": "Lançamentos e cobranças manuais",
+          "text": "Receitas, despesas, categorias, paciente opcional, forma de pagamento, situação, baixa manual, filtros e exportação."
+        },
+        {
+          "title": "Recebimentos, convênios e repasses",
+          "text": "Acompanhe valores abertos ou vencidos, calendário de recebíveis e cobranças vinculadas a convênios."
+        },
+        {
+          "title": "Recorrência e planejamento",
+          "text": "Organize entradas e saídas periódicas, meta de receita, limite de despesas, lucro desejado e notas por período."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Gestão Financeira e NeuroFinance são a mesma coisa?",
+          "answer": "Não. A gestão registra e analisa. O NeuroFinance movimenta dinheiro real quando a conta está ativa e elegível."
+        },
+        {
+          "question": "Posso usar a gestão sem abrir uma conta financeira?",
+          "answer": "Sim. Lançamentos, planejamento, recebimentos e análises gerenciais permanecem disponíveis conforme o plano."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/04-financeiro-visao-geral-dark.webp",
+      "imageAlt": "Visão geral da gestão financeira NeuroNex",
+      "related": [
+        { "label": "Conheça o NeuroFinance", "href": "/neurofinance" },
+        { "label": "Automação de cobrança NeuroZap", "href": "/neurozap-para-psicologos" },
+        { "label": "Artigo sobre gestão financeira", "href": "/blog/gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance" }
+      ]
+    },
+    {
+      "route": "/neurobox",
+      "file": "neurobox.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "NeuroBox | NeuroView, NeuroFlow, NeuroPulse, NeuroScan e NeuroDrive",
+      "description": "NeuroBox reúne grafos clínicos, fluxos, diagramas, estruturação de anamneses e documentos revisáveis, conectados ao Synapse AI.",
+      "keywords": [
+        "NeuroView grafo clínico 3D",
+        "NeuroPulse diagramas Mermaid para psicólogos",
+        "NeuroFlow canvas clínico",
+        "NeuroScan anamnese com IA",
+        "NeuroDrive para psicólogos"
+      ],
+      "eyebrow": "NeuroBox",
+      "heading": "Raciocínio clínico visual, revisável e conectado.",
+      "lead": "NeuroView, NeuroFlow, NeuroPulse, NeuroScan e NeuroDrive transformam notas, relações, documentos e fluxos em estruturas que o psicólogo pode revisar.",
+      "highlights": [
+        "NeuroView em grafos 2D e 3D",
+        "NeuroFlow e NeuroPulse",
+        "NeuroScan, NeuroDrive e Synapse"
+      ],
+      "sections": [
+        {
+          "title": "NeuroView",
+          "text": "Mapeia notas, sintomas, eventos e hipóteses em grafos 2D ou 3D, com busca, foco, escopos e análise de conexões."
+        },
+        {
+          "title": "NeuroFlow",
+          "text": "Organiza fluxos clínicos e operacionais em um cofre com canvas, edição, prévia e navegação a partir do Synapse."
+        },
+        {
+          "title": "NeuroPulse",
+          "text": "Converte texto clínico em diagramas Mermaid por lentes como TCC, Psicanálise, Sistêmica, Humanista, Gestalt, Junguiana e Neuropsicologia."
+        },
+        {
+          "title": "NeuroScan e NeuroDrive",
+          "text": "Estrutura anamneses e documentos para revisão, enquanto o NeuroDrive organiza arquivos próprios e arquivos vinculados a pacientes."
+        },
+        {
+          "title": "Autoria preservada",
+          "text": "A IA prepara estruturas e relações; o psicólogo revisa, corrige, salva e decide como usar o material."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O NeuroView cria um diagnóstico automático?",
+          "answer": "Não. Ele organiza relações e metadados para leitura visual. Formulação e decisão clínica continuam com o psicólogo."
+        },
+        {
+          "question": "O NeuroPulse altera o prontuário sem revisão?",
+          "answer": "Não. Diagramas e sínteses são materiais revisáveis antes de serem salvos ou utilizados."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp",
+      "imageAlt": "NeuroView exibindo um grafo clínico em 3D",
+      "related": [
+        { "label": "Prontuário vivo", "href": "/prontuario-para-psicologos" },
+        { "label": "Synapse AI", "href": "/synapse" },
+        { "label": "Artigo sobre raciocínio clínico com IA", "href": "/blog/ia-para-psicologos-com-etica-e-controle" }
+      ]
+    },
+    {
+      "route": "/neurozap-para-psicologos",
+      "file": "neurozap-para-psicologos.html",
+      "kind": "product",
+      "status": "Beta",
+      "modifiedAt": "2026-07-16",
+      "title": "NeuroZap para psicólogos | WhatsApp Business conectado à NeuroNex",
+      "description": "NeuroZap Desktop Beta conecta WhatsApp Business à NeuroNex para sincronização, organização de conversas e evolução futura com ações assistidas pelo Synapse.",
+      "keywords": [
+        "NeuroZap para psicólogos",
+        "WhatsApp Business para psicólogos",
+        "inbox de WhatsApp para clínica",
+        "automação de cobrança para psicólogos",
+        "redução de no-show em clínicas"
+      ],
+      "eyebrow": "NeuroZap Desktop Beta",
+      "heading": "WhatsApp Business conectado à operação da clínica.",
+      "lead": "A fase Beta cobre conexão segura e sincronização. Inbox, etiquetas, consentimento, auditoria e ações contextuais com o Synapse avançam por etapas.",
+      "highlights": [
+        "Conexão e sincronização em Beta",
+        "Inbox e identidade do paciente em evolução",
+        "Ações assistidas pelo Synapse em evolução"
+      ],
+      "sections": [
+        {
+          "title": "O que está em Beta",
+          "text": "Conexão autorizada do WhatsApp Business e sincronização dos estados necessários para a superfície Desktop Beta."
+        },
+        {
+          "title": "Inbox operacional",
+          "text": "Organização de conversas, etiquetas, histórico e resolução segura da identidade do paciente estão em evolução."
+        },
+        {
+          "title": "Synapse e contexto",
+          "text": "Resumos, sugestões e ações assistidas com contexto clínico-financeiro são evolução planejada e não são apresentadas como automação autônoma disponível."
+        },
+        {
+          "title": "Consentimento e auditoria",
+          "text": "Mensagens sensíveis devem respeitar consentimento, finalidade, permissão, revisão humana e trilha de auditoria."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O NeuroZap já envia cobranças automaticamente?",
+          "answer": "Não como uma automação autônoma. A conexão e sincronização estão em Beta; ações contextuais e fluxos de aprovação avançam em etapas."
+        },
+        {
+          "question": "O NeuroZap substitui o WhatsApp Business?",
+          "answer": "Não. Ele conecta o canal do consultório à operação NeuroNex para organizar contexto, estados e futuras ações assistidas."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+      "imageAlt": "NeuroZap Desktop Beta conectado ao contexto operacional da NeuroNex",
+      "related": [
+        { "label": "Novidades e status", "href": "/novidades" },
+        { "label": "Gestão financeira", "href": "/gestao-financeira-para-psicologos" },
+        { "label": "Segurança e ética", "href": "/seguranca-e-etica" }
+      ]
+    },
+    {
+      "route": "/pacientes-para-psicologos",
+      "file": "pacientes-para-psicologos.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Gestão de pacientes para psicólogos | NeuroNex",
+      "description": "Cadastro, prontuário vivo, agenda, teleconsulta, Portal do Paciente, documentos, financeiro e IA clínica conectados por paciente.",
+      "keywords": [
+        "gestão de pacientes para psicólogos",
+        "prontuário psicológico com IA",
+        "portal do paciente para psicólogos",
+        "acompanhamento longitudinal de pacientes"
+      ],
+      "eyebrow": "Pacientes NeuroNex",
+      "heading": "O paciente como centro da operação clínica.",
+      "lead": "Uma identidade única conecta cadastro, agenda, prontuário, teleconsulta, portal, documentos, financeiro e contexto longitudinal.",
+      "highlights": [
+        "Cadastro e prontuário vivo",
+        "Portal do Paciente separado",
+        "NeuroInteligência e Synapse"
+      ],
+      "sections": [
+        {
+          "title": "Cadastro completo",
+          "text": "Dados pessoais, contato, endereço, responsável, diagnóstico, observações e configuração financeira sustentam os demais fluxos."
+        },
+        {
+          "title": "Prontuário como fonte única",
+          "text": "Resumo, sessões, anamneses, humor, metas, planos, financeiro, arquivos e documentos oficiais permanecem conectados."
+        },
+        {
+          "title": "Continuidade entre sessões",
+          "text": "Portal, diário, humor, tarefas e progresso entram como contexto compartilhado e revisável, sem abrir notas clínicas privadas."
+        },
+        {
+          "title": "Contexto longitudinal",
+          "text": "NeuroView, NeuroFlow, NeuroPulse, NeuroScan e Synapse usam origem, permissão e estado para apoiar o acompanhamento."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Os dados do Portal entram automaticamente no prontuário?",
+          "answer": "Somente dados autorizados e destinados ao acompanhamento podem entrar como contexto revisável pelo psicólogo."
+        },
+        {
+          "question": "O plano Essential possui limite de pacientes?",
+          "answer": "Sim. O limite público atual é de cinco pacientes ativos; a interface orienta o upgrade quando necessário."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-grafico-tendencia-humor-minicards-dark.webp",
+      "imageAlt": "Prontuário de paciente com tendência de humor e resumo clínico",
+      "related": [
+        { "label": "Prontuário para psicólogos", "href": "/prontuario-para-psicologos" },
+        { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
+        { "label": "Teleconsulta integrada", "href": "/teleconsulta-para-psicologos" }
+      ]
+    },
+    {
+      "route": "/portal-do-paciente",
+      "file": "portal-do-paciente.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Portal do Paciente para psicólogos | NeuroNex",
+      "description": "Portal do Paciente com sessões, políticas, humor, NeuroDrive, anamneses, tarefas, progresso, missões, pacotes e pagamentos.",
+      "keywords": [
+        "portal do paciente para psicólogos",
+        "continuidade entre sessões de psicoterapia",
+        "tarefas terapêuticas online",
+        "diário de humor para pacientes",
+        "pagamentos no portal do paciente"
+      ],
+      "eyebrow": "Portal do Paciente",
+      "heading": "Continuidade clínica com um espaço próprio para o paciente.",
+      "lead": "Sessões, humor, documentos, anamneses, notas pessoais, tarefas, progresso e financeiro ficam em uma aplicação separada da área profissional.",
+      "highlights": [
+        "Sessões e direitos do paciente",
+        "Humor, NeuroDrive e tarefas",
+        "Progresso, missões e financeiro"
+      ],
+      "sections": [
+        {
+          "title": "Sessões e políticas claras",
+          "text": "O paciente consulta próximos atendimentos e histórico, confirma, remarca ou cancela conforme a política versionada do profissional."
+        },
+        {
+          "title": "Humor e notas pessoais",
+          "text": "Registro diário, escala, gráfico e notas ajudam a criar continuidade sem misturar o espaço pessoal com notas clínicas privadas."
+        },
+        {
+          "title": "NeuroDrive do paciente",
+          "text": "Documentos liberados, anamneses compartilhadas, notas pessoais e tarefas possuem permissões e finalidades próprias."
+        },
+        {
+          "title": "Progresso e missões",
+          "text": "Metas, tarefas terapêuticas, sessões, pacotes, humor recente e marcos compartilhados organizam o acompanhamento entre encontros."
+        },
+        {
+          "title": "Financeiro",
+          "text": "Pacotes, sessões, cobranças, pagamentos, Pix, boleto, documentos financeiros e recibos ficam disponíveis conforme vínculo e permissão."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O paciente vê todo o prontuário profissional?",
+          "answer": "Não. O Portal mostra somente informações e documentos explicitamente destinados ao paciente."
+        },
+        {
+          "question": "O paciente pode cancelar fora da política?",
+          "answer": "As ações respeitam a política versionada configurada pelo profissional e apresentam as consequências antes da confirmação."
+        }
+      ],
+      "image": "/landing/screenshots/mobile/dark/23-mobile-paciente--prontuario-metas-dark.webp",
+      "imageAlt": "Portal do Paciente com prontuário compartilhado, metas e continuidade",
+      "related": [
+        { "label": "Gestão de pacientes", "href": "/pacientes-para-psicologos" },
+        { "label": "Agenda e políticas", "href": "/agenda-para-psicologos" },
+        { "label": "Artigo sobre sistema operacional clínico", "href": "/blog/sistema-operacional-para-clinica-de-psicologia" }
+      ]
+    },
+    {
+      "route": "/teleconsulta-para-psicologos",
+      "file": "teleconsulta-para-psicologos.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Teleconsulta para psicólogos | NeuroNex",
+      "description": "Teleconsulta com agenda, pré-sala, consentimento, vídeo, transcrição NeuroNex, notas, contexto do paciente, alertas e revisão pós-sessão.",
+      "keywords": [
+        "teleconsulta para psicólogos",
+        "teleconsulta com transcrição autorizada",
+        "workspace de teleconsulta para psicologia",
+        "prontuário integrado à teleconsulta"
+      ],
+      "eyebrow": "Teleconsulta NeuroNex",
+      "heading": "A sessão online dentro do sistema operacional clínico.",
+      "lead": "A teleconsulta conecta agenda, paciente, pré-entrada, sessão, transcrição autorizada, notas, alertas, revisão e prontuário.",
+      "highlights": [
+        "Agenda, pré-sala e consentimento",
+        "Transcrição NeuroNex e notas",
+        "Revisão pós-sessão e prontuário"
+      ],
+      "sections": [
+        {
+          "title": "Antes da sessão",
+          "text": "O lobby organiza próximas sessões, seleção do atendimento, checagem de mídia, convite e preparação do ambiente."
+        },
+        {
+          "title": "Durante o atendimento",
+          "text": "Vídeo, controles, chat, anexos, notas, contexto do paciente e alertas de risco permanecem no mesmo workspace."
+        },
+        {
+          "title": "Transcrição sob responsabilidade da NeuroNex",
+          "text": "Com autorização, o áudio pode gerar transcrição incremental e material revisável. Nenhum registro substitui a revisão profissional."
+        },
+        {
+          "title": "Depois da sessão",
+          "text": "A revisão pós-sessão organiza notas, resumo, pendências e conclusão antes de alimentar o prontuário."
+        },
+        {
+          "title": "Consentimento e modo degradado",
+          "text": "Permissão, indisponibilidade, falha de mídia, sala vazia, limite de plano e encerramento precisam de estados claros e recuperáveis."
+        }
+      ],
+      "faq": [
+        {
+          "question": "A transcrição é obrigatória?",
+          "answer": "Não. Ela depende de autorização, elegibilidade e disponibilidade. O atendimento pode continuar sem transcrição."
+        },
+        {
+          "question": "O resumo entra automaticamente no prontuário?",
+          "answer": "Não. O material precisa ser revisado pelo psicólogo antes de se tornar registro clínico."
+        }
+      ],
+      "image": "/landing/screenshots/mobile/light/26-mobile-teleconsulta-white.webp",
+      "imageAlt": "Teleconsulta NeuroNex com sessão online e workspace clínico",
+      "related": [
+        { "label": "Agenda para psicólogos", "href": "/agenda-para-psicologos" },
+        { "label": "Prontuário vivo", "href": "/prontuario-para-psicologos" },
+        { "label": "Segurança e consentimento", "href": "/seguranca-e-etica" }
+      ]
+    },
+    {
+      "route": "/prontuario-para-psicologos",
+      "file": "prontuario-para-psicologos.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Prontuário para psicólogos com IA | NeuroNex",
+      "description": "Prontuário vivo com resumo, sessões, anamneses, humor, metas, planos, financeiro, arquivos, documentos oficiais, NeuroView e Synapse AI.",
+      "keywords": [
+        "prontuário para psicólogos",
+        "prontuário psicológico com IA",
+        "prontuário com grafo comportamental 3D",
+        "anamnese online para psicólogos",
+        "documentos psicológicos em PDF"
+      ],
+      "eyebrow": "Prontuário vivo",
+      "heading": "O caso clínico como uma linha contínua, não uma pasta de textos.",
+      "lead": "Resumo, sessões, anamneses, humor, metas, planos, financeiro, arquivos e documentos oficiais trabalham como uma fonte única para o acompanhamento.",
+      "highlights": [
+        "Resumo e sessões",
+        "Anamneses, humor, metas e planos",
+        "Arquivos, documentos e NeuroInteligência"
+      ],
+      "sections": [
+        {
+          "title": "Resumo longitudinal",
+          "text": "Risco, sessões concluídas, próxima sessão, revisões pendentes, arquivos, metas, plano terapêutico, valores a receber e humor recente em uma visão."
+        },
+        {
+          "title": "Sessões e revisão",
+          "text": "Histórico clínico, linha do tempo, eventos e resumos pendentes preservam o que foi registrado e o que ainda precisa de revisão."
+        },
+        {
+          "title": "Anamneses, humor e metas",
+          "text": "Criação por modelo, importação, link externo, preenchimento em tempo real, tendência de humor, metas e acompanhamento."
+        },
+        {
+          "title": "Planos e financeiro por paciente",
+          "text": "Pacotes, sessões usadas ou reservadas, saldo, movimentações, cobranças e NFS-e permanecem próximos do contexto administrativo correto."
+        },
+        {
+          "title": "Arquivos e documentos oficiais",
+          "text": "Upload, prévia, download, links seguros, modelos de documentos, geração de PDF, impressão e envio assistido."
+        },
+        {
+          "title": "NeuroInteligência",
+          "text": "NeuroScan, NeuroView, NeuroFlow, NeuroPulse e Synapse transformam dados autorizados em estruturas revisáveis sem retirar autoria clínica."
+        }
+      ],
+      "faq": [
+        {
+          "question": "A IA escreve o prontuário sem o psicólogo?",
+          "answer": "Não. Ela pode preparar resumos, diagramas e estruturas, mas o profissional revisa e decide o que se torna registro."
+        },
+        {
+          "question": "Arquivos do paciente ficam disponíveis no Portal?",
+          "answer": "Somente arquivos explicitamente liberados e destinados ao paciente podem aparecer no Portal."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-historico-dark.webp",
+      "imageAlt": "Histórico do prontuário vivo de um paciente na NeuroNex",
+      "related": [
+        { "label": "NeuroBox e grafos clínicos", "href": "/neurobox" },
+        { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
+        { "label": "IA com ética e controle", "href": "/blog/ia-para-psicologos-com-etica-e-controle" }
+      ]
+    },
+    {
+      "route": "/agenda-para-psicologos",
+      "file": "agenda-para-psicologos.html",
+      "kind": "product",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Agenda para psicólogos com recorrência e políticas | NeuroNex",
+      "description": "Agenda clínica em dia, semana e mês com recorrência, conflitos, políticas versionadas, confirmação, pacotes, financeiro, teleconsulta e Synapse.",
+      "keywords": [
+        "agenda para psicólogos",
+        "agenda clínica com IA",
+        "recorrência de consultas com conflitos",
+        "política de cancelamento para psicólogos",
+        "agenda integrada ao financeiro"
+      ],
+      "eyebrow": "Agenda NeuroNex",
+      "heading": "A agenda como início do fluxo clínico e financeiro.",
+      "lead": "Dia, semana, mês, recorrência, políticas, confirmação, pacotes, teleconsulta, cobrança e prontuário se conectam desde o agendamento.",
+      "highlights": [
+        "Dia, semana e mês",
+        "Recorrência e conflitos",
+        "Políticas, pacotes e financeiro"
+      ],
+      "sections": [
+        {
+          "title": "Visões para a rotina real",
+          "text": "Agenda diária, semanal e mensal, filtros, busca, métricas de presença e acesso rápido ao detalhe de cada compromisso."
+        },
+        {
+          "title": "Recorrência inteligente",
+          "text": "Séries semanais, quinzenais ou mensais apresentam quantidade de ocorrências e prévia de conflitos antes da criação."
+        },
+        {
+          "title": "Política e direitos do paciente",
+          "text": "Cancelamento, remarcação, resposta do paciente, consequências, crédito de pacote, cobrança, fiscal e fuso horário seguem política versionada."
+        },
+        {
+          "title": "Agenda e financeiro em um fluxo",
+          "text": "O novo agendamento detecta pacote ativo, reserva ou débito de sessão e permite criar lançamento manual sem gerar cobranças automáticas escondidas."
+        },
+        {
+          "title": "Detalhe e histórico",
+          "text": "Status, modalidade, local, recorrência, pacote, cobrança, notas, confirmações e alterações ficam em uma linha do tempo."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Criar um agendamento gera cobrança automaticamente?",
+          "answer": "Não. O fluxo pode reservar pacote ou criar lançamento manual, mas cobranças e documentos fiscais exigem ações próprias."
+        },
+        {
+          "question": "O paciente pode remarcar pelo link?",
+          "answer": "Sim, quando a ação estiver disponível e dentro da política versionada configurada pelo profissional."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/nova remessa/9-agenda-mensal-dark.webp",
+      "imageAlt": "Agenda mensal da NeuroNex para psicólogos",
+      "related": [
+        { "label": "Teleconsulta integrada", "href": "/teleconsulta-para-psicologos" },
+        { "label": "Portal e direitos do paciente", "href": "/portal-do-paciente" },
+        { "label": "Synapse na agenda", "href": "/synapse" }
+      ]
+    },
+    {
+      "route": "/seguranca-e-etica",
+      "file": "seguranca-e-etica.html",
+      "kind": "trust",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Segurança, LGPD e IA responsável para psicólogos | NeuroNex",
+      "description": "Conheça os controles de acesso, MFA, PIN financeiro, consentimento, auditoria, políticas de risco, privacidade e limites da IA na NeuroNex.",
+      "keywords": [
+        "LGPD para psicólogos",
+        "segurança de prontuário psicológico",
+        "IA responsável para psicólogos",
+        "MFA para sistema clínico",
+        "PIN financeiro para clínica"
+      ],
+      "eyebrow": "Segurança e ética",
+      "heading": "Controle técnico para uma rotina clínica sensível.",
+      "lead": "Dados clínicos, operações financeiras e ações de IA exigem finalidade, acesso proporcional, confirmação, rastreabilidade e responsabilidade humana.",
+      "highlights": [
+        "LGPD, acesso e privacidade",
+        "MFA, PIN e controles de sessão",
+        "Consentimento, risco e auditoria"
+      ],
+      "sections": [
+        {
+          "title": "Acesso e autenticação",
+          "text": "Login, controles de sessão, MFA/TOTP, autenticador e separação entre profissional e paciente reduzem exposição indevida."
+        },
+        {
+          "title": "Dados clínicos e privacidade",
+          "text": "Finalidade, permissão, compartilhamento explícito, links seguros, arquivo e controles de dados orientam o uso das informações."
+        },
+        {
+          "title": "PIN e segurança financeira",
+          "text": "Pix, pagamentos, saques, reembolsos e outras operações sensíveis combinam PIN, saldo, limites, confirmação e idempotência."
+        },
+        {
+          "title": "Consentimento em teleconsulta",
+          "text": "Captura e transcrição dependem de autorização e revisão. Falhas de mídia, permissão ou plano possuem caminho degradado claro."
+        },
+        {
+          "title": "IA como apoio",
+          "text": "O Synapse prepara contexto, documentos e ações, mas não substitui decisão clínica, consentimento ou responsabilidade profissional."
+        },
+        {
+          "title": "Trilha de auditoria",
+          "text": "Ações relevantes devem deixar origem, estado, confirmação e resultado compreensíveis para revisão e suporte."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O Synapse acessa qualquer dado da clínica?",
+          "answer": "Não. O acesso depende do usuário, da rota, da permissão e do contexto autorizado para a ação."
+        },
+        {
+          "question": "Uma ação financeira pode ser duplicada por clique repetido?",
+          "answer": "Os fluxos críticos devem aplicar idempotência e confirmação para impedir duplicações e resultados ambíguos."
+        },
+        {
+          "question": "A IA substitui orientação clínica ou jurídica?",
+          "answer": "Não. A NeuroNex oferece apoio operacional e informacional; decisões profissionais permanecem com as pessoas responsáveis."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
+      "imageAlt": "Synapse por voz com controles de confirmação e segurança",
+      "related": [
+        { "label": "Política de Privacidade", "href": "/politica-de-privacidade" },
+        { "label": "Documentos legais", "href": "/documentos-legais" },
+        { "label": "IA para psicólogos com ética", "href": "/blog/ia-para-psicologos-com-etica-e-controle" }
+      ]
+    },
+    {
+      "route": "/precos",
+      "file": "precos.html",
+      "kind": "pricing",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Planos e preços NeuroNex | Essential e Profissional",
+      "description": "Compare os planos Essential e Profissional da NeuroNex, limites de pacientes, teleconsulta, Synapse, NeuroDrive, NeuroBox, NeuroFinance e NeuroZap.",
+      "keywords": [
+        "preço de sistema para psicólogos",
+        "planos NeuroNex",
+        "software grátis para psicólogos",
+        "plano profissional para clínica de psicologia"
+      ],
+      "eyebrow": "Planos NeuroNex",
+      "heading": "Comece com o essencial. Cresça com a operação completa.",
+      "lead": "O Essential organiza o começo da prática. O Profissional amplia escala, inteligência contextual, NeuroBox, NeuroFinance e comunicação conectada.",
+      "highlights": [
+        "Essential gratuito",
+        "Profissional com 7 dias grátis",
+        "Limites e elegibilidade transparentes"
+      ],
+      "sections": [
+        {
+          "title": "Essential",
+          "text": "Até cinco pacientes e vínculos ativos no Portal, teleconsulta básica, Synapse com limites, agenda, prontuário, financeiro manual e NeuroDrive."
+        },
+        {
+          "title": "Profissional",
+          "text": "Até 250 pacientes, maior volume de teleconsulta e Synapse, NeuroBox, NeuroFinance, fiscal, integrações e recursos de comunicação conforme disponibilidade."
+        },
+        {
+          "title": "Recursos condicionados",
+          "text": "Conta financeira, canais, integrações e operações sensíveis dependem de plano, aprovação, elegibilidade e controles aplicáveis."
+        }
+      ],
+      "faq": [
+        {
+          "question": "O plano Essential é gratuito?",
+          "answer": "Sim. O catálogo público atual apresenta o Essential por R$ 0, com os limites descritos na comparação."
+        },
+        {
+          "question": "O Profissional possui teste grátis?",
+          "answer": "Sim. A condição pública atual prevê sete dias de teste, com limitações específicas para recursos financeiros e canais durante o período."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Painel NeuroNex representando os planos Essential e Profissional",
+      "related": [
+        { "label": "Criar conta gratuita", "href": "/create-account?plan=essential" },
+        { "label": "Conhecer o produto", "href": "/produto" },
+        { "label": "Falar com a equipe", "href": "/contato" }
+      ]
+    },
+    {
+      "route": "/blog",
+      "file": "blog.html",
+      "kind": "blog",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Blog NeuroNex | Psicologia, operação clínica e inteligência artificial",
+      "description": "Conteúdo educativo sobre IA para psicólogos, sistema operacional clínico, gestão financeira, teleconsulta, prontuário e continuidade do paciente.",
+      "keywords": [
+        "blog para psicólogos",
+        "IA para psicólogos",
+        "gestão de clínica de psicologia",
+        "tecnologia para psicólogos"
+      ],
+      "eyebrow": "Conteúdo NeuroNex",
+      "heading": "Psicologia, operação e IA explicadas com profundidade.",
+      "lead": "Artigos educativos conectam problemas reais da clínica a práticas operacionais, limites éticos e decisões de tecnologia.",
+      "highlights": [
+        "IA com ética e controle",
+        "Sistema operacional clínico",
+        "Gestão financeira para psicólogos"
+      ],
+      "sections": [
+        {
+          "title": "Conteúdo original e revisável",
+          "text": "Cada artigo possui autoria, data, fontes e relação transparente com os recursos da NeuroNex."
+        }
+      ],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/17-neuroview-2d-com-nota-aberta-dark.webp",
+      "imageAlt": "Nota clínica conectada ao NeuroView como base de conteúdo educativo",
+      "related": [
+        { "label": "Produto NeuroNex", "href": "/produto" },
+        { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
+        { "label": "Novidades", "href": "/novidades" }
+      ]
+    },
+    {
+      "route": "/novidades",
+      "file": "novidades.html",
+      "kind": "updates",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Novidades e status do produto | NeuroNex",
+      "description": "Acompanhe o estado público do NeuroNex Professional, módulos clínicos e financeiros, NeuroZap Desktop Beta e experiência profissional mobile.",
+      "keywords": [
+        "novidades NeuroNex",
+        "status NeuroZap Beta",
+        "atualizações NeuroNex",
+        "roadmap público NeuroNex"
+      ],
+      "eyebrow": "Transparência de produto",
+      "heading": "O que está disponível, em Beta e em evolução.",
+      "lead": "A NeuroNex comunica maturidade de produto sem transformar planos internos em promessa comercial.",
+      "highlights": [
+        "Professional disponível",
+        "NeuroZap Desktop Beta",
+        "Experiência mobile em evolução"
+      ],
+      "sections": [
+        {
+          "title": "Disponível",
+          "text": "Professional desktop/tablet, Agenda, Pacientes, Prontuário, Teleconsulta, Notas, NeuroBox, Gestão Financeira, recursos centrais do NeuroFinance, Portal do Paciente e Synapse."
+        },
+        {
+          "title": "Beta",
+          "text": "NeuroZap Desktop com conexão e sincronização autorizadas, sujeito a ajustes de experiência, disponibilidade e limites."
+        },
+        {
+          "title": "Em evolução",
+          "text": "Inbox e ações contextuais do NeuroZap, pontos de antecipação e fiscal, paridade mobile e aprofundamento de auditoria e automação."
+        }
+      ],
+      "faq": [
+        {
+          "question": "Beta significa que o recurso está concluído?",
+          "answer": "Não. Significa que existe uma superfície funcional em validação, ainda sujeita a ajustes e disponibilidade controlada."
+        },
+        {
+          "question": "Em evolução é uma data de lançamento?",
+          "answer": "Não. É um estado de produto e não representa compromisso de data."
+        }
+      ],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Painel NeuroNex representando o estado atual do produto",
+      "related": [
+        { "label": "Conhecer o produto", "href": "/produto" },
+        { "label": "NeuroZap Desktop Beta", "href": "/neurozap-para-psicologos" },
+        { "label": "Planos NeuroNex", "href": "/precos" }
+      ]
+    },
+    {
+      "route": "/ajuda",
+      "file": "ajuda.html",
+      "kind": "support",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Central de Ajuda NeuroNex",
+      "description": "Orientações sobre agenda, pacientes, prontuário, teleconsulta, financeiro, Synapse, Portal do Paciente e configurações da NeuroNex.",
+      "keywords": ["central de ajuda NeuroNex", "suporte NeuroFinance", "ajuda Synapse AI"],
+      "eyebrow": "Central de Ajuda",
+      "heading": "Encontre orientação para cada área da NeuroNex.",
+      "lead": "Consulte respostas sobre acesso, agenda, pacientes, prontuário, teleconsulta, financeiro, Portal do Paciente, Synapse e configurações.",
+      "highlights": ["Dúvidas por área", "Privacidade e segurança", "Contato com a equipe"],
+      "sections": [],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Central de ajuda da plataforma NeuroNex",
+      "related": [
+        { "label": "Contato", "href": "/contato" },
+        { "label": "Documentos legais", "href": "/documentos-legais" }
+      ]
+    },
+    {
+      "route": "/contato",
+      "file": "contato.html",
+      "kind": "support",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Contato | NeuroNex",
+      "description": "Fale com a NeuroNex sobre suporte, planos, NeuroFinance, privacidade, LGPD e adoção da plataforma.",
+      "keywords": ["contato NeuroNex", "suporte NeuroNex AI", "planos para psicólogos"],
+      "eyebrow": "Contato",
+      "heading": "Converse com a equipe NeuroNex.",
+      "lead": "Use os canais oficiais para falar sobre suporte, planos, NeuroFinance, privacidade, LGPD ou adoção da plataforma.",
+      "highlights": ["Suporte ao produto", "Planos NeuroNex", "Privacidade e LGPD"],
+      "sections": [],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Interface NeuroNex associada aos canais de contato",
+      "related": [
+        { "label": "Central de Ajuda", "href": "/ajuda" },
+        { "label": "Planos e preços", "href": "/precos" }
+      ]
+    },
+    {
+      "route": "/documentos-legais",
+      "file": "documentos-legais.html",
+      "kind": "legal",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Documentos legais | NeuroNex",
+      "description": "Acesse Termos de Uso, Política de Privacidade e informações sobre cookies e armazenamento local da NeuroNex.",
+      "keywords": ["documentos legais NeuroNex", "LGPD para plataforma clínica", "termos NeuroNex"],
+      "eyebrow": "Documentos legais",
+      "heading": "Regras claras para usar a NeuroNex.",
+      "lead": "Termos de Uso, Política de Privacidade e informações sobre cookies ficam em endereços públicos próprios.",
+      "highlights": ["Termos de Uso", "Política de Privacidade", "Cookies e dados locais"],
+      "sections": [],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Documentos legais da plataforma NeuroNex",
+      "related": [
+        { "label": "Termos de Uso", "href": "/termos-de-uso" },
+        { "label": "Política de Privacidade", "href": "/politica-de-privacidade" },
+        { "label": "Cookies", "href": "/configuracoes-de-cookies" }
+      ]
+    },
+    {
+      "route": "/termos-de-uso",
+      "file": "termos-de-uso.html",
+      "kind": "legal",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Termos de Uso | NeuroNex",
+      "description": "Consulte condições de uso, responsabilidades, planos, integrações e serviços financeiros da plataforma NeuroNex.",
+      "keywords": ["termos de uso NeuroNex", "regras da plataforma NeuroNex"],
+      "eyebrow": "Termos de Uso",
+      "heading": "Condições de uso da plataforma NeuroNex.",
+      "lead": "Consulte responsabilidades, regras de conta, planos, integrações, serviços financeiros, disponibilidade e encerramento.",
+      "highlights": ["Responsabilidades", "Planos e integrações", "Serviços financeiros"],
+      "sections": [],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Termos de uso da NeuroNex",
+      "related": [
+        { "label": "Documentos legais", "href": "/documentos-legais" },
+        { "label": "Privacidade", "href": "/politica-de-privacidade" }
+      ]
+    },
+    {
+      "route": "/politica-de-privacidade",
+      "file": "politica-de-privacidade.html",
+      "kind": "legal",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Política de Privacidade e LGPD | NeuroNex",
+      "description": "Entenda como a NeuroNex coleta, utiliza, protege, retém e trata solicitações sobre dados pessoais e integrações autorizadas.",
+      "keywords": ["política de privacidade NeuroNex", "LGPD para psicólogos", "dados clínicos"],
+      "eyebrow": "Privacidade e LGPD",
+      "heading": "Como a NeuroNex trata e protege dados.",
+      "lead": "Conheça finalidades, bases de tratamento, medidas de proteção, direitos do titular e regras de integrações autorizadas.",
+      "highlights": ["Direitos do titular", "Proteção de dados", "Integrações autorizadas"],
+      "sections": [],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Política de privacidade e LGPD da NeuroNex",
+      "related": [
+        { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
+        { "label": "Documentos legais", "href": "/documentos-legais" }
+      ]
+    },
+    {
+      "route": "/configuracoes-de-cookies",
+      "file": "configuracoes-de-cookies.html",
+      "kind": "legal",
+      "status": "Disponível",
+      "modifiedAt": "2026-07-16",
+      "title": "Cookies e armazenamento local | NeuroNex",
+      "description": "Entenda quais cookies e dados locais a NeuroNex usa, suas finalidades e como revisar escolhas disponíveis.",
+      "keywords": ["cookies NeuroNex", "armazenamento local NeuroNex", "configurações de cookies"],
+      "eyebrow": "Cookies e dados locais",
+      "heading": "Entenda o uso de cookies e armazenamento local.",
+      "lead": "Veja o que é essencial ao funcionamento, quais medições podem existir e como revisar escolhas oferecidas.",
+      "highlights": ["Funcionamento essencial", "Armazenamento local", "Medição e marketing"],
+      "sections": [],
+      "faq": [],
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Configurações de cookies da NeuroNex",
+      "related": [
+        { "label": "Política de Privacidade", "href": "/politica-de-privacidade" },
+        { "label": "Documentos legais", "href": "/documentos-legais" }
+      ]
+    }
+  ],
+  "articles": [
+    {
+      "slug": "ia-para-psicologos-com-etica-e-controle",
+      "route": "/blog/ia-para-psicologos-com-etica-e-controle",
+      "file": "blog/ia-para-psicologos-com-etica-e-controle.html",
+      "bodyFile": "ia-para-psicologos-com-etica-e-controle.md",
+      "title": "IA para psicólogos com ética, contexto e controle humano",
+      "description": "Entenda como usar inteligência artificial na operação clínica sem substituir julgamento profissional, consentimento, autoria ou responsabilidade.",
+      "excerpt": "Um guia sobre diferença entre chat genérico e IA operacional, política de risco, revisão humana, rastreabilidade e limites clínicos.",
+      "category": "IA na clínica",
+      "keywords": ["IA para psicólogos", "ética em inteligência artificial", "IA clínica responsável"],
+      "authorId": "equipe-neuronex",
+      "reviewer": "Equipe NeuroNex",
+      "publishedAt": "2026-07-16T09:00:00-03:00",
+      "modifiedAt": "2026-07-16T09:00:00-03:00",
+      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
+      "imageAlt": "Synapse AI por voz com revisão e controle humano",
+      "related": [
+        { "label": "Synapse AI", "href": "/synapse" },
+        { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
+        { "label": "NeuroBox", "href": "/neurobox" }
+      ]
+    },
+    {
+      "slug": "sistema-operacional-para-clinica-de-psicologia",
+      "route": "/blog/sistema-operacional-para-clinica-de-psicologia",
+      "file": "blog/sistema-operacional-para-clinica-de-psicologia.html",
+      "bodyFile": "sistema-operacional-para-clinica-de-psicologia.md",
+      "title": "Como montar um sistema operacional para uma clínica de psicologia",
+      "description": "Veja como agenda, prontuário, teleconsulta, portal, documentos, financeiro e IA formam uma operação clínica contínua.",
+      "excerpt": "Uma estrutura prática para abandonar o mosaico de ferramentas e organizar a clínica em fluxos conectados.",
+      "category": "Operação clínica",
+      "keywords": ["sistema operacional para clínica", "gestão clínica para psicólogos", "software completo para psicólogos"],
+      "authorId": "equipe-neuronex",
+      "reviewer": "Equipe NeuroNex",
+      "publishedAt": "2026-07-16T09:10:00-03:00",
+      "modifiedAt": "2026-07-16T09:10:00-03:00",
+      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "imageAlt": "Painel de comando de uma clínica organizada pela NeuroNex",
+      "related": [
+        { "label": "Ecossistema NeuroNex", "href": "/produto" },
+        { "label": "Agenda para psicólogos", "href": "/agenda-para-psicologos" },
+        { "label": "Portal do Paciente", "href": "/portal-do-paciente" }
+      ]
+    },
+    {
+      "slug": "gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance",
+      "route": "/blog/gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance",
+      "file": "blog/gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance.html",
+      "bodyFile": "gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance.md",
+      "title": "Gestão financeira para psicólogos: do fluxo de caixa ao NeuroFinance",
+      "description": "Aprenda a separar gestão gerencial de movimentação bancária e organizar receitas, despesas, recebíveis, cobrança, planejamento e fiscal.",
+      "excerpt": "Um mapa financeiro para clínicas que precisam de previsibilidade sem misturar planilha, cobrança e conta bancária.",
+      "category": "Gestão financeira",
+      "keywords": ["gestão financeira para psicólogos", "fluxo de caixa clínica", "NeuroFinance"],
+      "authorId": "equipe-neuronex",
+      "reviewer": "Equipe NeuroNex",
+      "publishedAt": "2026-07-16T09:20:00-03:00",
+      "modifiedAt": "2026-07-16T09:20:00-03:00",
+      "image": "/landing/screenshots/desktop/dark/04-financeiro-visao-geral-dark.webp",
+      "imageAlt": "Visão geral financeira da NeuroNex para psicólogos",
+      "related": [
+        { "label": "Gestão Financeira", "href": "/gestao-financeira-para-psicologos" },
+        { "label": "NeuroFinance", "href": "/neurofinance" },
+        { "label": "NeuroZap", "href": "/neurozap-para-psicologos" }
+      ]
+    }
+  ],
+  "updates": [
+    {
+      "date": "2026-07-16",
+      "status": "Disponível",
+      "title": "NeuroNex Professional",
+      "text": "Painel, Agenda, Pacientes, Prontuário, Teleconsulta, Notas, Gestão Financeira, recursos centrais do NeuroFinance, Portal do Paciente, NeuroBox e Synapse estão representados publicamente."
+    },
+    {
+      "date": "2026-07-16",
+      "status": "Beta",
+      "title": "NeuroZap Desktop",
+      "text": "Conexão e sincronização autorizadas compõem a fase Beta. Inbox, etiquetas, consentimento, auditoria e ações contextuais avançam em etapas."
+    },
+    {
+      "date": "2026-07-16",
+      "status": "Em evolução",
+      "title": "Experiência profissional mobile",
+      "text": "A direção mobile-first prioriza próxima sessão, reagendamento, cobrança, nota rápida, teleconsulta e Synapse sem copiar a interface desktop."
+    }
+  ]
+}

@@ -43,23 +43,23 @@ const synapseImage = "/landing/screenshots/desktop/dark/15-synapse-chat-dark.web
 const capabilities: Capability[] = [
   {
     icon: ReceiptText,
-    title: "Réguas de cobrança com contexto",
-    text: "Sessão realizada, valor, vencimento, paciente e histórico financeiro entram no rascunho antes de qualquer envio.",
+    title: "Conexão autorizada em Beta",
+    text: "A fase atual conecta o WhatsApp Business à NeuroNex e sincroniza os estados necessários para validar a superfície Desktop Beta.",
   },
   {
     icon: CalendarClock,
-    title: "No-show com resposta operacional",
-    text: "Faltas, atrasos e reagendamentos podem gerar lembretes, follow-ups e próximos passos sem depender de memória manual.",
+    title: "Inbox e etiquetas em evolução",
+    text: "Organização de conversas, etiquetas, histórico e resolução segura da identidade do paciente avançam por etapas.",
   },
   {
     icon: BrainCircuit,
-    title: "Synapse prepara, o profissional aprova",
-    text: "O agente sugere mensagem, tom, contexto e ação associada. O psicólogo mantém controle e responsabilidade.",
+    title: "Synapse em evolução",
+    text: "Resumos, sugestões e ações assistidas com contexto são uma próxima camada do produto e continuam sujeitas a revisão humana.",
   },
   {
     icon: WalletCards,
-    title: "NeuroFinance no mesmo fluxo",
-    text: "Cobranças, Pix, boletos, recibos e conciliação ficam próximos das mensagens operacionais.",
+    title: "Contexto financeiro em evolução",
+    text: "A ligação entre conversa, cobrança e retorno financeiro será liberada apenas quando identidade, permissão e auditoria estiverem validadas.",
   },
   {
     icon: LockKeyhole,
@@ -75,47 +75,47 @@ const capabilities: Capability[] = [
 
 const flow: FlowStep[] = [
   {
-    title: "NeuroNex entende o evento",
-    text: "Agenda, paciente, financeiro e status da sessão indicam o que precisa de ação.",
+    title: "Conexão autorizada",
+    text: "O consultório conecta seu WhatsApp Business à superfície Desktop Beta.",
   },
   {
-    title: "Synapse monta o rascunho",
-    text: "O agente cria mensagem, contexto, valor, prazo ou proposta de reagendamento.",
+    title: "Sincronização",
+    text: "Conversas e estados necessários são sincronizados para validação operacional.",
   },
   {
-    title: "Psicólogo aprova",
-    text: "A mensagem é revisada antes do envio, com travas para situações sensíveis.",
+    title: "Identidade segura",
+    text: "O vínculo entre conversa e paciente precisa ser resolvido sem associação ambígua.",
   },
   {
-    title: "WhatsApp Business envia",
-    text: "A conversa acontece pelo canal do consultório, preservando o fluxo operacional.",
+    title: "Inbox em evolução",
+    text: "Etiquetas, histórico, consentimento e auditoria avançam como próxima etapa.",
   },
   {
-    title: "Retorno vira próximo passo",
-    text: "Pagamento, reagendamento, resposta ou silêncio alimentam a próxima decisão da clínica.",
+    title: "Synapse em evolução",
+    text: "Resumos e ações assistidas entram somente depois das proteções anteriores.",
   },
 ];
 
 const conversation = [
   {
     from: "Synapse AI",
-    text: "Sessão de hoje está pendente. Posso preparar uma cobrança cordial com Pix e prazo para aprovação?",
+    text: "Visão de evolução: uma conversa poderá receber contexto operacional somente depois da resolução segura de identidade.",
   },
   {
     from: "Psicólogo",
-    text: "Prepare a mensagem, mas mantenha tom acolhedor e sem expor dado clínico.",
+    text: "O profissional continuará responsável por revisar tom, finalidade e qualquer ação sugerida.",
   },
   {
     from: "NeuroZap",
-    text: "Rascunho pronto. Valor, vencimento e link financeiro conferidos. Aguardando sua aprovação.",
+    text: "Conexão e sincronização estão em Beta. Inbox, etiquetas e ações contextuais permanecem em evolução.",
   },
 ];
 
 const safetyStates = [
-  { title: "Rascunho", text: "Mensagem criada sem envio automático." },
-  { title: "Aprovação", text: "Revisão humana antes de tocar o paciente." },
-  { title: "Bloqueio", text: "Plano, canal, permissão ou dado sensível podem interromper o fluxo." },
-  { title: "Auditoria", text: "Histórico de ação para rastrear o que foi preparado, aprovado e enviado." },
+  { title: "Beta", text: "Conexão e sincronização autorizadas formam o escopo público atual." },
+  { title: "Em evolução", text: "Inbox, etiquetas, identidade e ações contextuais ainda estão sendo validadas." },
+  { title: "Bloqueio", text: "Plano, canal, permissão ou identidade ambígua devem interromper o fluxo." },
+  { title: "Auditoria", text: "O histórico precisa existir antes de qualquer ampliação de automação." },
 ];
 
 const BrowserFrame = ({
@@ -154,10 +154,10 @@ const ConversationMock = () => (
           <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" width={38} height={38} className="h-10 w-10 rounded-xl object-contain" loading="eager" decoding="async" />
           <div>
             <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">WhatsApp Business</p>
-            <p className="text-base font-black">NeuroZap + Synapse AI</p>
+            <p className="text-base font-black">NeuroZap Desktop Beta</p>
           </div>
         </div>
-        <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Aprovação humana</span>
+        <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Visão em evolução</span>
       </div>
 
       <div className="mt-8 grid gap-3">
@@ -167,7 +167,7 @@ const ConversationMock = () => (
             <p className="mt-2 text-sm font-medium leading-relaxed opacity-72">{message.text}</p>
             {index === conversation.length - 1 ? (
               <div className="mt-4 flex flex-wrap gap-2">
-                {["Aprovar", "Editar", "Bloquear"].map((label) => (
+                {["Beta", "Em evolução", "Revisão humana"].map((label) => (
                   <span key={label} className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.14em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
                     {label}
                   </span>
@@ -215,7 +215,7 @@ const NeuroZapLanding = () => {
                 transition={{ delay: 0.08 }}
                 className="mt-8 max-w-5xl text-balance text-[2.75rem] font-black leading-[0.9] tracking-[-0.055em] text-foreground sm:text-[3.45rem] md:text-[4.45rem] md:leading-[0.94] lg:text-[5.3rem] xl:text-[5.85rem]"
               >
-                WhatsApp Business com contexto, cobrança e aprovação humana.
+                WhatsApp Business conectado à operação da clínica.
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0, y: 16 }}
@@ -223,7 +223,7 @@ const NeuroZapLanding = () => {
                 transition={{ delay: 0.16 }}
                 className="mt-7 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl"
               >
-                NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para reduzir inadimplência, no-show e follow-up manual sem automatizar conversas sensíveis no escuro.
+                A fase Beta cobre conexão autorizada e sincronização. Inbox, etiquetas, consentimento, auditoria e ações contextuais com o Synapse avançam por etapas.
               </motion.p>
               <motion.div
                 initial={{ opacity: 0, y: 16 }}
@@ -260,10 +260,10 @@ const NeuroZapLanding = () => {
         <section className="px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1320px]">
             <div className="mx-auto max-w-5xl text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Automação com responsabilidade</p>
-              <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Cobrança, lembrete e no-show no mesmo raciocínio da clínica.</h2>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Beta com responsabilidade</p>
+              <h2 className="mt-6 text-4xl font-black leading-none md:text-6xl lg:text-7xl">Conectar primeiro. Contextualizar somente com segurança.</h2>
               <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
-                O NeuroZap nasce para resolver uma dor objetiva: comunicar o que precisa ser comunicado sem perder tom, contexto, permissão e supervisão.
+                A evolução do NeuroZap parte da conexão e da identidade correta antes de qualquer automação, resumo ou ação assistida.
               </p>
             </div>
             <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -283,7 +283,7 @@ const NeuroZapLanding = () => {
             <div className="max-w-4xl">
               <BadgeCheck className="h-7 w-7 opacity-55" />
               <p className="mt-8 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Fluxo NeuroZap</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Do evento clínico-financeiro até a conversa aprovada.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Da conexão Beta até uma operação contextual e auditável.</h2>
             </div>
             <div className="mt-12 grid gap-3 lg:grid-cols-5">
               {flow.map((item, index) => (
@@ -303,12 +303,12 @@ const NeuroZapLanding = () => {
             <article className="rounded-[38px] border border-border/40 bg-card/75 p-8 dark:border-white/10 dark:bg-white/[0.03] md:p-10">
               <MessageCircle className="h-7 w-7 text-muted-foreground" />
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">WhatsApp Business + NeuroNex</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">O canal conversa com a operação, não apenas com uma lista de contatos.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">A conexão prepara a base para uma inbox operacional.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/70 md:text-base">
-                O diferencial está no contexto: agenda, paciente, financeiro e histórico operacional ajudam o Synapse a preparar a mensagem certa para revisão.
+                Identidade do paciente, consentimento, histórico, etiquetas e auditoria precisam estar corretos antes que o Synapse participe de qualquer ação contextual.
               </p>
               <div className="mt-8 grid gap-2 sm:grid-cols-2">
-                {["Cobrança cordial", "Reagendamento", "Lembretes", "Follow-up supervisionado"].map((item) => (
+                {["Conexão autorizada", "Sincronização", "Identidade segura", "Inbox em evolução"].map((item) => (
                   <div key={item} className="rounded-2xl border border-border/40 bg-foreground/[0.03] px-4 py-3 text-[9px] font-black uppercase tracking-[0.14em] text-foreground/70 dark:border-white/10 dark:bg-white/[0.035]">
                     {item}
                   </div>
@@ -323,9 +323,9 @@ const NeuroZapLanding = () => {
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <UserCheck className="h-7 w-7 opacity-55" />
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Segurança e tom</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Automação sensível precisa parecer assistida, não escondida.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Evolução sensível precisa ser explícita, não escondida.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                Mensagens passam por rascunho, aprovação, bloqueio quando necessário e histórico. O objetivo é reduzir atrito sem apagar o julgamento humano.
+                A página separa o que já está em Beta do que ainda está em evolução. O objetivo é validar cada proteção antes de ampliar o escopo.
               </p>
             </article>
             <div className="grid gap-3 sm:grid-cols-2">
@@ -343,9 +343,9 @@ const NeuroZapLanding = () => {
         <section className="px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto max-w-[1180px] rounded-[42px] bg-foreground p-8 text-center text-background dark:bg-white dark:text-zinc-950 md:p-12">
             <CreditCard className="mx-auto h-7 w-7 opacity-55" />
-            <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">O jeito menos desgastante de cobrar, lembrar e recuperar presença.</h2>
+            <h2 className="mx-auto mt-8 max-w-4xl text-4xl font-black leading-none md:text-6xl">Uma base segura para comunicação operacional conectada.</h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed opacity-64">
-              WhatsApp Business, Synapse AI, NeuroFinance e NeuroNex trabalham juntos para transformar comunicação operacional em fluxo seguro.
+              Conexão e sincronização estão em Beta. Inbox, consentimento, auditoria e ações assistidas continuam em evolução.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="h-14 rounded-2xl bg-background px-7 text-[10px] font-black uppercase tracking-[0.2em] text-foreground dark:bg-zinc-950 dark:text-white">
@@ -358,7 +358,7 @@ const NeuroZapLanding = () => {
               </Button>
             </div>
             <div className="mx-auto mt-8 grid max-w-3xl gap-2 sm:grid-cols-3">
-              {["WhatsApp Business", "Synapse AI", "NeuroFinance"].map((item) => (
+              {["WhatsApp Business", "NeuroNex", "Desktop Beta"].map((item) => (
                 <div key={item} className="flex items-center justify-center gap-2 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[9px] font-black uppercase tracking-[0.14em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
                   <Check className="h-4 w-4" />
                   {item}

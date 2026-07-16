@@ -832,7 +832,7 @@ export const HeroVisual = () => {
       action: "Gerar Sumário",
     },
     {
-      text: "O Rodrigo não aparece há 2 semanas. Mando um lembrete gentil por WhatsApp?",
+      text: "O Rodrigo não aparece há 2 semanas. Preparo um lembrete gentil para revisão?",
       action: "Enviar Lembrete",
     },
     {

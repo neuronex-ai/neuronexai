@@ -47,7 +47,7 @@ export const WaitlistSection = () => {
 
                     <FadeIn delay={0.3}>
                         <p className="mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/60 md:text-xl">
-                            Comece gratuitamente ou avance para uma operação mais ampla com Synapse, NeuroBox, NeuroFinance e WhatsApp conectados.
+                            Comece gratuitamente ou avance para uma operação mais ampla com Synapse, NeuroBox, NeuroFinance e NeuroZap Desktop Beta.
                         </p>
                     </FadeIn>
                 </div>

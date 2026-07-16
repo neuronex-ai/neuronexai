@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PUBLIC_PLAN_CARDS, PUBLIC_PLAN_COMPARISON } from "@/content/public-plan-catalog";
 import { cn } from "@/lib/utils";
+import { MobileAuthoritySections } from "@/components/landing/LandingAuthoritySections";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowRight,
@@ -77,13 +78,13 @@ const diffRows = [
   { title: "Teleconsulta", old: "Vídeo sem documentação estruturada.", neo: "Sala HD com transcrição e resumo por IA." },
   { title: "Financeiro", old: "Pix, boleto e planilha separados.", neo: "Gestão Financeira e NeuroFinance com papéis claros." },
   { title: "Fiscal", old: "NFS-e e recibos fora do fluxo.", neo: "Dados fiscais organizados perto da cobrança." },
-  { title: "IA", old: "Chat genérico, sem contexto.", neo: "Synapse com texto, voz, WhatsApp e NeuroBox." },
+  { title: "IA", old: "Chat genérico, sem contexto.", neo: "Synapse com texto, voz, NeuroBox e política de risco." },
 ];
 
 const operatingCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos e teleconsulta." },
   { icon: BrainCircuit, title: "IA contextual", text: "Synapse, voz, texto, NeuroBox e apoio operacional." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, WhatsApp, lembretes e continuidade." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap Desktop Beta e continuidade." },
   { icon: CreditCard, title: "Financeiro", text: "Gestão, cobranças, Pix, boletos, extrato e saques." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais organizados; emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional para decisão." },
@@ -286,6 +287,7 @@ export const MobileIndex = () => {
         <ProblemMobile />
         <DifferentiatorMobile />
         <MobileRealProductShowcase />
+        <MobileAuthoritySections />
         <OperatingSystemMobile />
         <MobileRealSynapseSection />
         <MobileRealFinanceSection />

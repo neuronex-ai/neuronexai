@@ -9,8 +9,9 @@ export const Footer = () => {
 
   const footerLinks = {
     produto: [
-      { label: "Plataforma", path: "/#produto" },
+      { label: "Produto", path: "/produto" },
       { label: "NeuroFinance", path: "/neurofinance" },
+      { label: "Gestão Financeira", path: "/gestao-financeira-para-psicologos" },
       { label: "NeuroBox", path: "/neurobox" },
       { label: "NeuroZap", path: "/neurozap-para-psicologos" },
       { label: "Synapse AI", path: "/synapse" },
@@ -23,6 +24,10 @@ export const Footer = () => {
       { label: "Agenda", path: "/agenda-para-psicologos" },
     ],
     recursos: [
+      { label: "Planos e preços", path: "/precos" },
+      { label: "Segurança e ética", path: "/seguranca-e-etica" },
+      { label: "Blog", path: "/blog" },
+      { label: "Novidades", path: "/novidades" },
       { label: "Central de Ajuda", path: "/ajuda" },
       { label: "Contato", path: "/contato" },
     ],

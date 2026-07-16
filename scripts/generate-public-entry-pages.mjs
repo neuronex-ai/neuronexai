@@ -2,37 +2,37 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import publicPageCatalog from "../src/content/public-pages.json" with { type: "json" };
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
-export const PUBLIC_SITE_URL = publicPageCatalog.siteUrl;
+import {
+  PUBLIC_SITE_URL,
+  absolutePublicUrl,
+  buildPublicStructuredData,
+  getPublicSeoConfig,
+  publicContent,
+  validatePublicContentCatalog,
+} from "../src/lib/public-schema.mjs";
+
 export const PUBLIC_ENTRY_DIRECTORY = "public-pages";
-export const publicPages = publicPageCatalog.pages;
+export const PUBLIC_LAST_MODIFIED = publicContent.site.lastModified;
+
+const articleEntries = publicContent.articles.map((article) => ({
+  ...article,
+  kind: "article",
+  status: "Disponível",
+  eyebrow: article.category,
+  heading: article.title,
+  lead: article.excerpt,
+  highlights: [],
+  sections: [],
+  faq: [],
+}));
+
+export const publicPages = [...publicContent.pages, ...articleEntries];
 export const publicEntryPages = publicPages.filter((page) => page.file);
-export const PUBLIC_LAST_MODIFIED = publicPageCatalog.lastModified;
-
-const DEFAULT_IMAGE = publicPageCatalog.defaultImage;
-const DEFAULT_KEYWORDS = [
-  "sistema para psicólogos",
-  "software para psicólogos",
-  "sistema operacional clínico com IA",
-  "plataforma de IA com core banking para psicólogos",
-  "prontuário psicológico com IA",
-  "gestão financeira para clínicas de psicologia",
-];
-
-const PLATFORM_FEATURES = [
-  "Synapse AI: agente operacional por voz, texto e WhatsApp para comandos clínicos, administrativos e financeiros com confirmação assistida.",
-  "NeuroFinance: core banking integrado com conta digital, Área Pix, cobranças, boletos, antecipação de recebíveis, conciliação e NFS-e/RPS.",
-  "NeuroView: mapeamento de sintomas, eventos e evolução clínica do paciente em grafos 2D e 3D Universe.",
-  "NeuroPulse: tradução de texto clínico em diagramas Mermaid baseados em abordagens como TCC, Psicanálise e formulação de caso.",
-  "NeuroFlow: canvas para fluxos clínicos, operacionais e financeiros conectados ao prontuário e ao RAG do Synapse.",
-  "NeuroZap: automação por WhatsApp Business, NeuroNex e Synapse AI para cobrança, no-show, lembretes e contexto operacional supervisionado.",
-  "Workspace de Teleconsulta: prontuário integrado com captação incremental de áudio, transcrição autorizada e revisão profissional sob responsabilidade da NeuroNex.",
-];
-
-const organizationId = `${PUBLIC_SITE_URL}/#organization`;
-const websiteId = `${PUBLIC_SITE_URL}/#website`;
-const softwareId = `${PUBLIC_SITE_URL}/#software`;
 
 const escapeHtml = (value) =>
   String(value)
@@ -42,351 +42,342 @@ const escapeHtml = (value) =>
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 
-const absoluteUrl = (resourcePath) =>
-  new URL(resourcePath, `${PUBLIC_SITE_URL}/`).toString();
+const staticStyle = {
+  page:
+    "min-height:100vh;padding:48px 24px 80px;background:#050506;color:#f7f7f8;font-family:Inter,Arial,sans-serif;",
+  container: "max-width:1040px;margin:0 auto;",
+  eyebrow:
+    "font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;",
+  h1:
+    "max-width:920px;font-size:clamp(42px,8vw,78px);line-height:.94;letter-spacing:-.055em;margin:22px 0;",
+  lead:
+    "max-width:780px;font-size:19px;line-height:1.65;color:#d4d4d8;margin:0;",
+  nav:
+    "display:flex;flex-wrap:wrap;gap:14px;margin:0 0 44px;padding-bottom:24px;border-bottom:1px solid #27272a;",
+  section: "padding:42px 0;border-top:1px solid #27272a;",
+  h2:
+    "max-width:820px;font-size:clamp(28px,5vw,46px);line-height:1.04;letter-spacing:-.035em;margin:0;",
+  paragraph:
+    "max-width:780px;font-size:17px;line-height:1.7;color:#d4d4d8;margin:16px 0 0;",
+  list:
+    "max-width:780px;display:grid;gap:10px;margin:24px 0 0;padding:0;list-style:none;",
+  item:
+    "border-top:1px solid #27272a;padding:14px 0;font-size:15px;line-height:1.5;",
+  related:
+    "display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin-top:24px;",
+  relatedItem:
+    "display:block;border:1px solid #3f3f46;border-radius:8px;padding:16px;color:#fff;text-decoration:none;",
+};
 
-export function renderPublicSitemap(pages = publicPages) {
-  const urls = pages
+const publicNavigation = [
+  ["Início", "/"],
+  ["Produto", "/produto"],
+  ["Synapse", "/synapse"],
+  ["NeuroFinance", "/neurofinance"],
+  ["NeuroBox", "/neurobox"],
+  ["Pacientes", "/pacientes-para-psicologos"],
+  ["Teleconsulta", "/teleconsulta-para-psicologos"],
+  ["Preços", "/precos"],
+  ["Blog", "/blog"],
+  ["Novidades", "/novidades"],
+  ["Segurança", "/seguranca-e-etica"],
+];
+
+const renderNavigation = () =>
+  publicNavigation
     .map(
-      (page) => `  <url>\n    <loc>${escapeHtml(absoluteUrl(page.route))}</loc>\n    <lastmod>${escapeHtml(PUBLIC_LAST_MODIFIED)}</lastmod>\n  </url>`,
+      ([label, href]) =>
+        `<a href="${href}" style="color:#fff;text-decoration:none;">${escapeHtml(label)}</a>`,
     )
+    .join("");
+
+const renderHighlights = (highlights = []) => {
+  if (!highlights.length) return "";
+  return `<ul style="${staticStyle.list}">${highlights
+    .map((item) => `<li style="${staticStyle.item}">${escapeHtml(item)}</li>`)
+    .join("")}</ul>`;
+};
+
+const renderSections = (sections = []) =>
+  sections
+    .map((section) => {
+      const bullets = section.bullets?.length
+        ? `<ul style="${staticStyle.list}">${section.bullets
+            .map(
+              (bullet) =>
+                `<li style="${staticStyle.item}">${escapeHtml(bullet)}</li>`,
+            )
+            .join("")}</ul>`
+        : "";
+
+      return `<section style="${staticStyle.section}">
+        <h2 style="${staticStyle.h2}">${escapeHtml(section.title)}</h2>
+        <p style="${staticStyle.paragraph}">${escapeHtml(section.text)}</p>
+        ${bullets}
+      </section>`;
+    })
+    .join("");
+
+const renderFaq = (faq = []) => {
+  if (!faq.length) return "";
+  return `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Dúvidas frequentes</h2>
+    ${faq
+      .map(
+        (item) => `<article style="padding:22px 0;border-top:1px solid #27272a;">
+          <h3 style="font-size:19px;line-height:1.35;margin:0;">${escapeHtml(item.question)}</h3>
+          <p style="${staticStyle.paragraph}">${escapeHtml(item.answer)}</p>
+        </article>`,
+      )
+      .join("")}
+  </section>`;
+};
+
+const renderRelated = (related = []) => {
+  if (!related.length) return "";
+  return `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Continue explorando</h2>
+    <div style="${staticStyle.related}">
+      ${related
+        .map(
+          (link) =>
+            `<a href="${escapeHtml(link.href)}" style="${staticStyle.relatedItem}">${escapeHtml(link.label)}</a>`,
+        )
+        .join("")}
+    </div>
+  </section>`;
+};
+
+const readArticleBody = async (entry) =>
+  readFile(
+    path.resolve("src/content/articles", entry.bodyFile),
+    "utf8",
+  );
+
+const renderArticleBody = (body) =>
+  renderToStaticMarkup(
+    React.createElement(
+      ReactMarkdown,
+      {
+        remarkPlugins: [remarkGfm],
+        components: {
+          h2: ({ children }) =>
+            React.createElement("h2", { style: staticStyle.h2 }, children),
+          h3: ({ children }) =>
+            React.createElement(
+              "h3",
+              { style: "font-size:24px;line-height:1.2;margin:32px 0 0;" },
+              children,
+            ),
+          p: ({ children }) =>
+            React.createElement("p", { style: staticStyle.paragraph }, children),
+          ul: ({ children }) =>
+            React.createElement("ul", { style: staticStyle.list }, children),
+          ol: ({ children }) =>
+            React.createElement(
+              "ol",
+              {
+                style:
+                  "max-width:780px;display:grid;gap:10px;margin:24px 0 0;padding-left:24px;",
+              },
+              children,
+            ),
+          li: ({ children }) =>
+            React.createElement("li", { style: staticStyle.item }, children),
+          a: ({ children, href }) =>
+            React.createElement(
+              "a",
+              {
+                href,
+                style: "color:#fff;text-decoration:underline;",
+              },
+              children,
+            ),
+          strong: ({ children }) =>
+            React.createElement("strong", { style: "color:#fff;" }, children),
+        },
+      },
+      body.replace(/^# .+\r?\n+/u, ""),
+    ),
+  );
+
+const renderBlogCards = () =>
+  `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Artigos em destaque</h2>
+    <div style="${staticStyle.related}">
+      ${publicContent.articles
+        .map(
+          (article) =>
+            `<article style="border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+              <p style="${staticStyle.eyebrow}">${escapeHtml(article.category)}</p>
+              <h3 style="font-size:22px;line-height:1.2;margin:12px 0;">${escapeHtml(article.title)}</h3>
+              <p style="font-size:15px;line-height:1.6;color:#d4d4d8;">${escapeHtml(article.excerpt)}</p>
+              <a href="${article.route}" style="color:#fff;">Ler artigo</a>
+            </article>`,
+        )
+        .join("")}
+    </div>
+  </section>`;
+
+const renderUpdates = () =>
+  `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Estado atual do produto</h2>
+    ${publicContent.updates
+      .map(
+        (update) =>
+          `<article style="padding:24px 0;border-top:1px solid #27272a;">
+            <p style="${staticStyle.eyebrow}">${escapeHtml(update.status)} · ${escapeHtml(update.date)}</p>
+            <h3 style="font-size:24px;line-height:1.2;margin:12px 0 0;">${escapeHtml(update.title)}</h3>
+            <p style="${staticStyle.paragraph}">${escapeHtml(update.text)}</p>
+          </article>`,
+      )
+      .join("")}
+  </section>`;
+
+export async function renderPublicStaticShell(entry) {
+  const isArticle = entry.kind === "article";
+  const articleBody = isArticle
+    ? await renderArticleBody(await readArticleBody(entry))
+    : "";
+  const pageExtras =
+    entry.kind === "blog"
+      ? renderBlogCards()
+      : entry.kind === "updates"
+        ? renderUpdates()
+        : "";
+
+  return `<main id="static-public-shell" style="${staticStyle.page}">
+    <div style="${staticStyle.container}">
+      <nav aria-label="Páginas públicas" style="${staticStyle.nav}">${renderNavigation()}</nav>
+      <header style="padding:24px 0 48px;">
+        <p style="${staticStyle.eyebrow}">${escapeHtml(entry.eyebrow)} · ${escapeHtml(entry.status || "Disponível")}</p>
+        <h1 style="${staticStyle.h1}">${escapeHtml(entry.heading)}</h1>
+        <p style="${staticStyle.lead}">${escapeHtml(entry.lead)}</p>
+        ${renderHighlights(entry.highlights)}
+      </header>
+      ${
+        isArticle
+          ? `<article style="${staticStyle.section}">${articleBody}</article>`
+          : `${pageExtras}${renderSections(entry.sections)}${renderFaq(entry.faq)}`
+      }
+      ${renderRelated(entry.related)}
+      <section style="${staticStyle.section}">
+        <h2 style="${staticStyle.h2}">Conheça a NeuroNex</h2>
+        <p style="${staticStyle.paragraph}">Crie uma conta ou compare os planos para entender quais recursos atendem à sua rotina.</p>
+        <div style="${staticStyle.related}">
+          <a href="/create-account" style="${staticStyle.relatedItem}">Começar grátis</a>
+          <a href="/precos" style="${staticStyle.relatedItem}">Comparar planos</a>
+        </div>
+      </section>
+    </div>
+  </main>`;
+}
+
+export function renderPublicSitemap(entries = publicPages) {
+  const urls = entries
+    .map((entry) => {
+      const lastModified = entry.modifiedAt || PUBLIC_LAST_MODIFIED;
+      return `  <url>\n    <loc>${escapeHtml(absolutePublicUrl(entry.route))}</loc>\n    <lastmod>${escapeHtml(lastModified.slice(0, 10))}</lastmod>\n  </url>`;
+    })
     .join("\n");
 
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`;
 }
 
-const publicNavigation = [
-  ["Início", "/"],
-  ["Synapse", "/synapse"],
-  ["NeuroFinance", "/neurofinance"],
-  ["NeuroBox", "/neurobox"],
-  ["NeuroZap", "/neurozap-para-psicologos"],
-  ["Teleconsulta", "/teleconsulta-para-psicologos"],
-  ["Pacientes", "/pacientes-para-psicologos"],
-  ["Ajuda", "/ajuda"],
-  ["Contato", "/contato"],
-  ["Privacidade", "/politica-de-privacidade"],
-];
-
-export function renderPublicStaticShell(page) {
-  const highlights = page.highlights
-    .map(
-      (item) =>
-        `<li style="border:1px solid #27272a;border-radius:16px;padding:14px 16px;">${escapeHtml(item)}</li>`,
-    )
-    .join("");
-  const navigation = publicNavigation
-    .map(([label, href]) => `<a href="${href}" style="color:#fff;">${label}</a>`)
-    .join("");
-
-  return `<main id="static-public-shell" style="min-height:100vh;padding:64px 24px;background:#050506;color:#f7f7f8;font-family:Inter,Arial,sans-serif;">
-    <div style="max-width:900px;margin:0 auto;">
-      <p style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;">${escapeHtml(page.eyebrow)}</p>
-      <h1 style="max-width:800px;font-size:clamp(42px,8vw,76px);line-height:.94;letter-spacing:-.055em;">${escapeHtml(page.heading)}</h1>
-      <p style="max-width:740px;font-size:19px;line-height:1.65;color:#d4d4d8;">${escapeHtml(page.lead)}</p>
-      <ul style="max-width:740px;display:grid;gap:10px;margin:30px 0 0;padding:0;list-style:none;">${highlights}</ul>
-      <nav aria-label="Páginas públicas" style="display:flex;flex-wrap:wrap;gap:16px;margin-top:36px;">${navigation}</nav>
-      <p style="margin-top:40px;color:#a1a1aa;">A interface completa e os recursos interativos ficam disponíveis com JavaScript habilitado.</p>
-    </div>
-  </main>`;
-}
-
-function routeStructuredData(page) {
-  const url = absoluteUrl(page.route);
-  const image = absoluteUrl(page.image || DEFAULT_IMAGE);
-  const keywords = [...new Set([...(page.keywords || []), ...DEFAULT_KEYWORDS])];
-  const graph = [
-    {
-      "@type": "Organization",
-      "@id": organizationId,
-      name: "NeuroNex AI",
-      legalName: "NEURONEX AI LTDA",
-      url: `${PUBLIC_SITE_URL}/`,
-      logo: absoluteUrl("/pwa-512.png"),
-      image: absoluteUrl(DEFAULT_IMAGE),
-      slogan: "Sistema Operacional Clínico com IA e Core Banking Integrado.",
-      description:
-        "Plataforma brasileira de inteligência artificial e infraestrutura clínica para psicólogos, com gestão, prontuário, teleconsulta, NeuroFinance, NeuroBox, NeuroZap e Synapse AI.",
-      contactPoint: {
-        "@type": "ContactPoint",
-        contactType: "customer service",
-        email: "contato@neuronexai.com.br",
-        telephone: "+55-47-98873-0611",
-        areaServed: "BR",
-        availableLanguage: ["pt-BR"],
-        url: absoluteUrl("/contato"),
-      },
-    },
-    {
-      "@type": "WebSite",
-      "@id": websiteId,
-      name: "NeuroNex AI",
-      url: `${PUBLIC_SITE_URL}/`,
-      publisher: { "@id": organizationId },
-      inLanguage: "pt-BR",
-      about: { "@id": softwareId },
-    },
-    {
-      "@type": "SoftwareApplication",
-      "@id": softwareId,
-      name: "NeuroNex AI",
-      alternateName: "Sistema Operacional Clínico NeuroNex",
-      url: `${PUBLIC_SITE_URL}/`,
-      applicationCategory: ["MedicalApplication", "BusinessApplication", "FinancialApplication"],
-      applicationSubCategory: "Clinical Operating System with AI and integrated core banking",
-      operatingSystem: ["Web", "Windows", "iOS", "Android"],
-      browserRequirements: "Requires HTML5 compatible browser.",
-      softwareVersion: "2.0-beta",
-      inLanguage: "pt-BR",
-      countriesSupported: "BR",
-      creator: { "@id": organizationId },
-      provider: { "@id": organizationId },
-      audience: {
-        "@type": "Audience",
-        audienceType: "Psicólogos e clínicas de psicologia",
-        geographicArea: { "@type": "Country", name: "Brasil" },
-      },
-      offers: {
-        "@type": "AggregateOffer",
-        priceCurrency: "BRL",
-        offerCount: 2,
-        availability: "https://schema.org/OnlineOnly",
-        url: `${PUBLIC_SITE_URL}/#waitlist`,
-        offers: [
-          { "@type": "Offer", name: "Plano Essential", category: "Subscription", url: `${PUBLIC_SITE_URL}/#waitlist` },
-          { "@type": "Offer", name: "Plano Profissional", category: "Subscription", url: `${PUBLIC_SITE_URL}/#waitlist` },
-        ],
-      },
-      featureList: PLATFORM_FEATURES,
-      screenshot: [
-        absoluteUrl("/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp"),
-        absoluteUrl("/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp"),
-        absoluteUrl("/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp"),
-      ],
-      softwareAddOn: [
-        { "@id": `${PUBLIC_SITE_URL}/synapse#software` },
-        { "@id": `${PUBLIC_SITE_URL}/neurofinance#financial-product` },
-        { "@id": `${PUBLIC_SITE_URL}/neurobox#software` },
-        { "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#software` },
-      ],
-    },
-    {
-      "@type": "WebPage",
-      "@id": `${url}#webpage`,
-      url,
-      name: page.title,
-      headline: page.title,
-      description: page.description,
-      keywords,
-      inLanguage: "pt-BR",
-      isPartOf: { "@id": websiteId },
-      publisher: { "@id": organizationId },
-      about: [{ "@id": softwareId }],
-      primaryImageOfPage: {
-        "@type": "ImageObject",
-        url: image,
-        caption: "Interface da plataforma NeuroNex AI",
-      },
-    },
-  ];
-
-  if (page.route === "/neurofinance") {
-    graph.push({
-      "@type": "FinancialProduct",
-      "@id": `${PUBLIC_SITE_URL}/neurofinance#financial-product`,
-      name: "NeuroFinance por NeuroNex",
-      url,
-      category: "Core banking e gestão financeira para psicólogos",
-      description:
-        "Infraestrutura financeira integrada ao consultório de psicologia para conta digital, Área Pix, cobranças, boletos, pagamentos, saques, conciliação, NFS-e/RPS, antecipação de recebíveis e capital de giro preditivo pela Synapse AI.",
-      provider: { "@id": organizationId },
-      feesAndCommissionsSpecification: absoluteUrl("/termos-de-uso"),
-      termsOfService: absoluteUrl("/termos-de-uso"),
-      areaServed: { "@type": "Country", name: "Brasil" },
-      isRelatedTo: { "@id": softwareId },
-    });
-  }
-
-  if (page.route === "/synapse") {
-    graph.push({
-      "@type": "SoftwareApplication",
-      "@id": `${PUBLIC_SITE_URL}/synapse#software`,
-      name: "Synapse AI",
-      url,
-      applicationCategory: "BusinessApplication",
-      applicationSubCategory: "Agente operacional por voz e texto para psicólogos",
-      operatingSystem: ["Web", "Windows", "iOS", "Android"],
-      provider: { "@id": organizationId },
-      isPartOf: { "@id": softwareId },
-      description:
-        "Agente operacional da NeuroNex com voz, texto, WhatsApp, RAG clínico, permissões, confirmação por PIN ou validação de voz assistida e trilha de auditoria.",
-    });
-  }
-
-  if (page.route === "/neurobox") {
-    graph.push({
-      "@type": "SoftwareApplication",
-      "@id": `${PUBLIC_SITE_URL}/neurobox#software`,
-      name: "NeuroBox",
-      url,
-      applicationCategory: ["MedicalApplication", "BusinessApplication"],
-      applicationSubCategory: "Clinical AI toolkit for psychologists",
-      operatingSystem: ["Web", "Windows", "iOS", "Android"],
-      provider: { "@id": organizationId },
-      isPartOf: { "@id": softwareId },
-      description:
-        "Conjunto de ferramentas de IA profunda da NeuroNex com NeuroView, NeuroFlow, NeuroPulse, NeuroScan, NeuroFinance e intermediação em tempo real pelo Synapse.",
-      featureList: [
-        "NeuroView: grafos clínicos 2D e 3D Universe",
-        "NeuroPulse: diagramas Mermaid para formulação clínica",
-        "NeuroFlow: canvas de fluxos clínicos e operacionais",
-        "NeuroScan: estruturação assistida de fichas de anamnese",
-        "Synapse: agente de voz e texto com agência assistida",
-      ],
-    });
-  }
-
-  if (page.route === "/neurozap-para-psicologos") {
-    graph.push({
-      "@type": "SoftwareApplication",
-      "@id": `${PUBLIC_SITE_URL}/neurozap-para-psicologos#software`,
-      name: "NeuroZap",
-      url,
-      applicationCategory: ["BusinessApplication", "MedicalApplication"],
-      applicationSubCategory: "WhatsApp Business automation for psychology clinics",
-      operatingSystem: ["Web", "Windows"],
-      provider: { "@id": organizationId },
-      isPartOf: { "@id": softwareId },
-      description:
-        "NeuroZap conecta WhatsApp Business, NeuroNex, Synapse AI e NeuroFinance para cobranças, lembretes, no-show e follow-up com contexto operacional, aprovação humana e trilha de auditoria.",
-      featureList: [
-        "Rascunhos de cobrança com contexto financeiro",
-        "Lembretes e no-show supervisionados",
-        "Aprovacao humana antes do envio",
-        "Integração com Synapse AI e NeuroFinance",
-        "Travas por plano, permissão e auditoria",
-      ],
-    });
-  }
-
-  if (page.route === "/teleconsulta-para-psicologos") {
-    graph.push({
-      "@type": "SoftwareApplication",
-      "@id": `${PUBLIC_SITE_URL}/teleconsulta-para-psicologos#software`,
-      name: "Teleconsulta NeuroNex",
-      url,
-      applicationCategory: "MedicalApplication",
-      applicationSubCategory: "Telehealth workspace for psychologists",
-      operatingSystem: ["Web", "iOS", "Android"],
-      provider: { "@id": organizationId },
-      isPartOf: { "@id": softwareId },
-      description:
-        "Workspace de teleconsulta para psicólogos com agenda, pré-sala, vídeo, prontuário, transcrição incremental autorizada e apoio do Synapse AI sob responsabilidade da NeuroNex.",
-      featureList: [
-        "Sala online vinculada a agenda e paciente",
-        "Transcrição incremental autorizada",
-        "Resumo e próximos passos revisáveis pelo psicólogo",
-        "Estados de sala vazia, carregamento, erro e limite de plano",
-      ],
-    });
-  }
-
-  if (page.route === "/pacientes-para-psicologos") {
-    graph.push({
-      "@type": "SoftwareApplication",
-      "@id": `${PUBLIC_SITE_URL}/pacientes-para-psicologos#software`,
-      name: "Pacientes NeuroNex",
-      url,
-      applicationCategory: "MedicalApplication",
-      applicationSubCategory: "Patient operations and clinical record workspace",
-      operatingSystem: ["Web", "iOS", "Android"],
-      provider: { "@id": organizationId },
-      isPartOf: { "@id": softwareId },
-      description:
-        "Superfície de pacientes da NeuroNex com cadastro, prontuário vivo, Portal do Paciente, diário, humor, documentos, NeuroScan, NeuroView e Synapse AI.",
-      featureList: [
-        "Cadastro e prontuário conectados",
-        "Portal do Paciente separado da área profissional",
-        "Diário, humor e continuidade entre sessões",
-        "NeuroScan, NeuroView, NeuroPulse e Synapse AI",
-        "Permissoes, estados vazios, carregamento, erro e travas por plano",
-      ],
-    });
-  }
-
-  return {
-    "@context": "https://schema.org",
-    "@graph": graph,
-  };
-}
-
 function replaceMeta(html, attribute, key, content) {
   const expression = new RegExp(`<meta\\s+${attribute}="${key}"[^>]*>`, "i");
-  return html.replace(
-    expression,
-    `<meta ${attribute}="${key}" content="${escapeHtml(content)}" />`,
-  );
+  const replacement = `<meta ${attribute}="${key}" content="${escapeHtml(content)}" />`;
+  return expression.test(html)
+    ? html.replace(expression, replacement)
+    : html.replace("</head>", `  ${replacement}\n</head>`);
 }
 
-export function buildPublicEntryHtml(template, page) {
-  const canonical = absoluteUrl(page.route);
-  const image = absoluteUrl(page.image || DEFAULT_IMAGE);
+const replaceRootContent = (html, shell) => {
+  const emptyRoot = /<div\s+id="root"\s*>\s*<\/div>/i;
+  if (!emptyRoot.test(html)) {
+    throw new Error(
+      "[NeuroNex Public] O template precisa conter <div id=\"root\"></div>.",
+    );
+  }
+  return html.replace(emptyRoot, `<div id="root">${shell}</div>`);
+};
+
+export async function buildPublicEntryHtml(template, entry) {
+  const config = getPublicSeoConfig(entry.route);
+  const canonical = absolutePublicUrl(entry.route);
+  const image = absolutePublicUrl(entry.image || publicContent.site.defaultImage);
+  const structuredData = buildPublicStructuredData(config);
+  const shell = await renderPublicStaticShell(entry);
   let html = template;
 
   html = html.replace(
-    /\s*<style id="neuronex-entry-visibility-style">[\s\S]*?<\/style>/i,
+    /\s*<noscript>[\s\S]*?id="static-public-shell"[\s\S]*?<\/noscript>/iu,
     "",
   );
   html = html.replace(
-    /\s*<script id="neuronex-entry-visibility-script">[\s\S]*?<\/script>/i,
-    "",
+    /<title>[\s\S]*?<\/title>/i,
+    `<title>${escapeHtml(config.title)}</title>`,
   );
-  html = html.replace(/<title>[\s\S]*?<\/title>/i, `<title>${escapeHtml(page.title)}</title>`);
-  html = replaceMeta(html, "name", "title", page.title);
-  html = replaceMeta(html, "name", "description", page.description);
+  html = replaceMeta(html, "name", "title", config.title);
+  html = replaceMeta(html, "name", "description", config.description);
+  html = replaceMeta(html, "name", "keywords", config.keywords.join(", "));
   html = replaceMeta(
     html,
     "name",
-    "keywords",
-    [...new Set([...(page.keywords || []), ...DEFAULT_KEYWORDS])].join(", "),
+    "robots",
+    "index, follow, max-image-preview:large",
   );
-  html = replaceMeta(html, "name", "robots", "index, follow, max-image-preview:large");
+  html = replaceMeta(html, "property", "og:type", config.pageType);
   html = replaceMeta(html, "property", "og:url", canonical);
-  html = replaceMeta(html, "property", "og:title", page.title);
-  html = replaceMeta(html, "property", "og:description", page.description);
+  html = replaceMeta(html, "property", "og:title", config.title);
+  html = replaceMeta(html, "property", "og:description", config.description);
   html = replaceMeta(html, "property", "og:image", image);
+  html = replaceMeta(html, "property", "og:image:alt", config.imageAlt);
   html = replaceMeta(html, "name", "twitter:url", canonical);
-  html = replaceMeta(html, "name", "twitter:title", page.title);
-  html = replaceMeta(html, "name", "twitter:description", page.description);
+  html = replaceMeta(html, "name", "twitter:title", config.title);
+  html = replaceMeta(html, "name", "twitter:description", config.description);
   html = replaceMeta(html, "name", "twitter:image", image);
+  html = replaceMeta(html, "name", "twitter:image:alt", config.imageAlt);
   html = html.replace(
     /<link\s+rel="canonical"[^>]*>/i,
     `<link rel="canonical" href="${escapeHtml(canonical)}" />`,
   );
   html = html.replace(
     /<script id="neuronex-route-structured-data"[\s\S]*?<\/script>/i,
-    `<script id="neuronex-route-structured-data" type="application/ld+json">${JSON.stringify(routeStructuredData(page)).replaceAll("<", "\\u003c")}</script>`,
+    `<script id="neuronex-route-structured-data" type="application/ld+json">${JSON.stringify(structuredData).replaceAll("<", "\\u003c")}</script>`,
   );
-  html = html.replace(
-    /<main id="static-public-shell"[\s\S]*?<\/main>/i,
-    renderPublicStaticShell(page),
-  );
+  html = replaceRootContent(html, shell);
 
   return html;
 }
 
 export async function generatePublicEntryPages(outputRoot = path.resolve("dist")) {
+  validatePublicContentCatalog();
   const template = await readFile(path.join(outputRoot, "index.html"), "utf8");
   const targetDirectory = path.join(outputRoot, PUBLIC_ENTRY_DIRECTORY);
   await mkdir(targetDirectory, { recursive: true });
 
   await Promise.all(
-    publicEntryPages.map((page) =>
-      writeFile(path.join(targetDirectory, page.file), buildPublicEntryHtml(template, page), "utf8"),
-    ),
+    publicEntryPages.map(async (entry) => {
+      const target = path.join(targetDirectory, entry.file);
+      await mkdir(path.dirname(target), { recursive: true });
+      await writeFile(target, await buildPublicEntryHtml(template, entry), "utf8");
+    }),
   );
 
-  await writeFile(path.join(outputRoot, "sitemap.xml"), renderPublicSitemap(), "utf8");
+  const home = publicContent.pages.find((page) => page.route === "/");
+  if (!home) throw new Error("[NeuroNex Public] Home ausente no catálogo.");
+
+  await writeFile(
+    path.join(outputRoot, "index.html"),
+    await buildPublicEntryHtml(template, home),
+    "utf8",
+  );
+  await writeFile(
+    path.join(outputRoot, "sitemap.xml"),
+    renderPublicSitemap(),
+    "utf8",
+  );
 }
 
 const isDirectExecution =
@@ -395,5 +386,7 @@ const isDirectExecution =
 if (isDirectExecution) {
   await generatePublicEntryPages();
   await writeFile(path.resolve("public/sitemap.xml"), renderPublicSitemap(), "utf8");
-  console.log(`[NeuroNex] ${publicEntryPages.length} public entry pages generated.`);
+  console.log(
+    `[NeuroNex] ${publicEntryPages.length} entradas públicas e a home foram geradas.`,
+  );
 }

@@ -47,11 +47,15 @@
     { "source": "/contact", "destination": "/contato", "permanent": true },
     { "source": "/legal", "destination": "/documentos-legais", "permanent": true },
     { "source": "/neurobank", "destination": "/neurofinance", "permanent": true },
-    { "source": "/funcionalidades", "destination": "/", "permanent": true }
+    { "source": "/funcionalidades", "destination": "/produto", "permanent": true },
+    { "source": "/pricing", "destination": "/precos", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/produto", "destination": "/public-pages/produto.html" },
+    { "source": "/precos", "destination": "/public-pages/precos.html" },
     { "source": "/synapse", "destination": "/public-pages/synapse.html" },
     { "source": "/neurofinance", "destination": "/public-pages/neurofinance.html" },
+    { "source": "/gestao-financeira-para-psicologos", "destination": "/public-pages/gestao-financeira-para-psicologos.html" },
     { "source": "/neurobox", "destination": "/public-pages/neurobox.html" },
     { "source": "/neurozap-para-psicologos", "destination": "/public-pages/neurozap-para-psicologos.html" },
     { "source": "/pacientes-para-psicologos", "destination": "/public-pages/pacientes-para-psicologos.html" },
@@ -59,6 +63,10 @@
     { "source": "/teleconsulta-para-psicologos", "destination": "/public-pages/teleconsulta-para-psicologos.html" },
     { "source": "/prontuario-para-psicologos", "destination": "/public-pages/prontuario-para-psicologos.html" },
     { "source": "/agenda-para-psicologos", "destination": "/public-pages/agenda-para-psicologos.html" },
+    { "source": "/seguranca-e-etica", "destination": "/public-pages/seguranca-e-etica.html" },
+    { "source": "/blog", "destination": "/public-pages/blog.html" },
+    { "source": "/blog/:slug", "destination": "/public-pages/blog/:slug.html" },
+    { "source": "/novidades", "destination": "/public-pages/novidades.html" },
     { "source": "/ajuda", "destination": "/public-pages/ajuda.html" },
     { "source": "/contato", "destination": "/public-pages/contato.html" },
     {

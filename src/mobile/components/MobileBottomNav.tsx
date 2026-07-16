@@ -16,7 +16,7 @@ export const MobileBottomNav = () => {
     const location = useLocation();
     const { user } = useAuth();
 
-    const publicRoutes = ["/", "/auth", "/pricing", "/sobre", "/contato"];
+    const publicRoutes = ["/", "/auth", "/precos", "/contato"];
     const publicMode = publicRoutes.includes(location.pathname) || !user;
 
     const isActive = (href: string) => {

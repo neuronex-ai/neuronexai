@@ -37,8 +37,9 @@ export const Navbar = () => {
 
   const navItems = [
     { id: 'diferenciais', label: 'Diferenciais' },
-    { id: 'produto', label: 'Produto' },
-    { id: 'waitlist', label: 'Planos' },
+    { id: '/produto', label: 'Produto' },
+    { id: '/precos', label: 'Planos' },
+    { id: '/blog', label: 'Conteúdo' },
   ];
 
   return (

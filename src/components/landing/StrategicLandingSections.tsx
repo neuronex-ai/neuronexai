@@ -136,7 +136,7 @@ const comparisonRows = [
   {
     title: "Usar inteligência artificial",
     old: "IA genérica, sem memória operacional e sem conexão com a rotina do consultório.",
-    neo: "Synapse com texto, voz, WhatsApp, NeuroBox e contexto real da clínica.",
+    neo: "Synapse com texto, voz, NeuroBox, política de risco e contexto real da clínica.",
     bold: "IA operacional",
   },
 ];
@@ -349,7 +349,7 @@ export const LandingProductShowcase = () => {
 const systemCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos, teleconsulta e evolução clínica." },
   { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, WhatsApp, lembretes e continuidade entre sessões." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap Desktop Beta e continuidade entre sessões." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
@@ -382,7 +382,7 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, NeuroNex e Synapse para comunicação supervisionada." },
+  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta e sincroniza o WhatsApp Business em Beta; ações com Synapse seguem em evolução." },
   { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroPulse, NeuroFlow, NeuroScan e NeuroFinance expõem contexto estruturado para o agente." },
 ];
 
@@ -433,16 +433,16 @@ export const LandingSynapseSection = () => (
 
 const neuroZapFlows = [
   {
-    title: "Cobrança sem atrito",
-    text: "O Synapse identifica sessões pendentes, prepara mensagem, valor, contexto e canal. O psicólogo aprova antes do envio.",
+    title: "Conexão em Beta",
+    text: "O consultório autoriza o WhatsApp Business e valida a sincronização com a superfície Desktop Beta.",
   },
   {
-    title: "No-show em régua contínua",
-    text: "Lembretes, reagendamento e follow-up podem seguir uma régua operacional para reduzir ausência e retrabalho.",
+    title: "Inbox em evolução",
+    text: "Conversas, etiquetas, histórico e resolução segura de identidade avançam como próxima etapa.",
   },
   {
-    title: "WhatsApp com responsabilidade",
-    text: "WhatsApp Business, permissões, histórico e confirmação assistida evitam automação invisível em conversas sensíveis.",
+    title: "Synapse em evolução",
+    text: "Resumos e ações contextuais só entram depois de consentimento, auditoria e revisão humana estarem validados.",
   },
 ];
 
@@ -452,9 +452,9 @@ export const LandingNeuroZapSection = () => (
       <FadeIn>
         <div>
           <SectionBadge icon={MessageCircle}>NeuroZap Desktop Beta</SectionBadge>
-          <h2 className="mt-8 text-5xl font-black leading-[0.9] text-foreground md:text-7xl">Cobrança e no-show com WhatsApp, contexto e aprovação humana.</h2>
+          <h2 className="mt-8 text-5xl font-black leading-[0.9] text-foreground md:text-7xl">WhatsApp Business conectado à NeuroNex, com evolução por etapas.</h2>
           <p className="mt-7 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">
-            NeuroZap é a ponte de growth: WhatsApp Business, Synapse e NeuroFinance trabalham para reduzir inadimplência e ausência sem transformar cobrança em desgaste humano.
+            Conexão e sincronização estão em Beta. Inbox, identidade do paciente, consentimento, auditoria e ações com Synapse permanecem em evolução.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
@@ -476,10 +476,10 @@ export const LandingNeuroZapSection = () => (
                 <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" width={36} height={36} className="h-9 w-9 rounded-xl object-contain" loading="lazy" decoding="async" />
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">WhatsApp Business</p>
-                  <p className="text-base font-black">NeuroZap + Synapse</p>
+                  <p className="text-base font-black">NeuroZap Desktop Beta</p>
                 </div>
               </div>
-              <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Aprovação humana</span>
+              <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Beta explícito</span>
             </div>
             <div className="mt-8 grid gap-3">
               {neuroZapFlows.map((flow) => (
@@ -553,8 +553,8 @@ export const LandingPlanComparisonSection = () => (
 const publicLandingCarouselItems = [
   {
     eyebrow: "NeuroZap",
-    title: "WhatsApp Business com contexto e aprovação humana.",
-    description: "Cobrança, no-show, lembretes e follow-up conectados ao Synapse AI, NeuroFinance e rotina real da clínica.",
+    title: "WhatsApp Business conectado à NeuroNex em Desktop Beta.",
+    description: "Conexão e sincronização disponíveis em Beta; inbox, auditoria e ações contextuais seguem em evolução.",
     href: "/neurozap-para-psicologos",
     image: "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
     accent: "Comunicação",

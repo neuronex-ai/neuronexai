@@ -25,6 +25,11 @@ import {
 } from "@/components/landing/StrategicLandingSections";
 import { WaitlistSection } from "@/components/landing/WaitlistSection";
 import { useLandingSynapse } from "@/hooks/use-landing-synapse";
+import {
+    LandingContinuityAuthoritySection,
+    LandingEcosystemAuthoritySection,
+    LandingKnowledgeAuthoritySection,
+} from "@/components/landing/LandingAuthoritySections";
 
 const DesktopIndex = () => {
     const sdr = useLandingSynapse();
@@ -37,6 +42,8 @@ const DesktopIndex = () => {
                 <LandingProblemSection />
                 <LandingDifferentiatorTable />
                 <LandingRealProductShowcase />
+                <LandingEcosystemAuthoritySection />
+                <LandingContinuityAuthoritySection />
                 <section className="bg-transparent px-6 pb-12">
                     <div className="mx-auto flex max-w-[1320px] flex-col justify-center gap-3 rounded-[28px] border border-border/40 bg-card/70 p-5 sm:flex-row dark:border-white/10 dark:bg-white/[0.03]">
                         <Link to="/neurofinance" className="inline-flex h-12 items-center justify-center rounded-2xl bg-foreground px-6 text-[9px] font-black uppercase tracking-[0.18em] text-background">Conhecer o NeuroFinance <ArrowRight className="ml-2 h-4 w-4" /></Link>
@@ -50,6 +57,7 @@ const DesktopIndex = () => {
                 <WaitlistSection />
                 <LandingPlanComparisonSection />
                 <LandingTrustAndFAQSection />
+                <LandingKnowledgeAuthoritySection />
                 <LandingPublicPagesCarouselSection />
                 <DesktopAppCTA />
                 <LandingFinalCTASection />

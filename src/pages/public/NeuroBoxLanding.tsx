@@ -116,7 +116,7 @@ const tools: NeuroBoxTool[] = [
     title: "Agente de voz e texto intermediando tudo",
     eyebrow: "Agência assistida",
     description:
-      "O Synapse lê metadados autorizados, prepara comandos e exige confirmação para actions sensíveis em tempo real, no painel, por voz e por WhatsApp.",
+      "O Synapse lê metadados autorizados, prepara comandos e exige confirmação para ações sensíveis em tempo real, no painel e por voz.",
     bullets: ["Voz e texto", "Contexto autorizado", "Auditoria de actions"],
     icon: Bot,
     dark: "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
