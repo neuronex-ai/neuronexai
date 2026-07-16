@@ -99,10 +99,10 @@ const productModules: ProductModule[] = [
   {
     key: "neurofinance",
     label: "NeuroFinance",
-    title: "Conta e movimentação real",
+    title: "Core banking integrado",
     eyebrow: "Banking transacional",
-    description: "Saldo, Pix, boletos, cobranças, pagamentos e saques dentro do fluxo operacional do consultório.",
-    bullets: ["Conta e saldo", "Pix e boletos", "Pagamentos e saques"],
+    description: "Conta digital, Área Pix, boletos, pagamentos, saques, antecipação e previsibilidade dentro do fluxo operacional do consultório.",
+    bullets: ["Conta e saldo", "Pix e boletos", "Capital preditivo"],
     icon: CreditCard,
     dark: `${DARK_NEW_BATCH}/08-neurofinance-conta-saldo-dark.webp`,
     light: `${LIGHT_NEW_BATCH}/08-neurofinance-conta-saldo-white.webp`,
@@ -447,7 +447,7 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
   {
     title: "Gestão Financeira",
     eyebrow: "Planejar e decidir",
-    description: "Resultado, receitas, despesas, recebíveis, inadimplência e planejamento sem depender de uma conta bancária ativa.",
+    description: "Resultado, receitas, despesas, recebíveis, inadimplência, capital de giro e planejamento sem depender de uma conta bancária ativa.",
     icon: BarChart3,
     items: ["Fluxo de caixa", "Planejamento", "Relatórios"],
     dark: `${SCREENSHOT_ROOT}/desktop/dark/04-financeiro-visao-geral-dark.webp`,
@@ -456,7 +456,7 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
   {
     title: "NeuroFinance",
     eyebrow: "Movimentar dinheiro real",
-    description: "Conta, saldo, Pix, boletos, pagamentos, transferências e saques preservados em uma camada bancária própria.",
+    description: "Conta digital, saldo, Área Pix, boletos, pagamentos, transferências, saques e antecipação preservados em uma camada bancária própria.",
     icon: WalletCards,
     items: ["Conta e saldo", "Pix e boletos", "Pagamentos"],
     dark: `${DARK_NEW_BATCH}/08-neurofinance-conta-saldo-dark.webp`,
@@ -466,7 +466,7 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
   {
     title: "Preparação fiscal",
     eyebrow: "Dados fiscais e evolução da NFS-e",
-    description: "Dados fiscais, paciente, cobrança e emissão de NFS-e permanecem conectados ao mesmo fluxo financeiro.",
+    description: "Dados fiscais, paciente, cobrança, RPS e emissão de NFS-e permanecem conectados ao mesmo fluxo financeiro.",
     icon: FileCheck2,
     items: ["Dados fiscais", "Emissão de NFS-e", "Automação fiscal"],
     dark: `${SCREENSHOT_ROOT}/desktop/dark/13-fiscal-dados-nfse-dark.webp`,
@@ -481,7 +481,7 @@ export const LandingRealFinanceFiscalSection = () => (
       <SectionHeading
         eyebrow="Financeiro sem confusão"
         title={<>Gestão para decidir. <span className="text-muted-foreground/35">NeuroFinance para movimentar.</span></>}
-        description="Duas camadas com papéis claros, conectadas à rotina clínica e às obrigações fiscais do consultório."
+        description="Duas camadas com papéis claros: gestão preditiva para decidir, core banking para movimentar e fiscal conectado ao consultório."
       />
       <div className="mt-14 grid gap-5 lg:grid-cols-3">
         {financeCards.map((card, index) => (

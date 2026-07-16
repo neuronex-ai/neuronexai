@@ -379,8 +379,8 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "Uma camada conversacional para comunicação e automações com limites profissionais." },
-  { icon: BrainCircuit, title: "NeuroBox", text: "Biblioteca de IAs especializadas para tarefas clínicas, administrativas e financeiras." },
+  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, Evolution API e Synapse para comunicação supervisionada." },
+  { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroPulse, NeuroFlow, NeuroScan e NeuroFinance expõem contexto estruturado para o agente." },
 ];
 
 export const LandingSynapseSection = () => (
@@ -424,6 +424,71 @@ export const LandingSynapseSection = () => (
           </FadeIn>
         ))}
       </div>
+    </div>
+  </section>
+);
+
+const neuroZapFlows = [
+  {
+    title: "Cobrança sem atrito",
+    text: "O Synapse identifica sessões pendentes, prepara mensagem, valor, contexto e canal. O psicólogo aprova antes do envio.",
+  },
+  {
+    title: "No-show em régua contínua",
+    text: "Lembretes, reagendamento e follow-up podem seguir uma régua operacional para reduzir ausência e retrabalho.",
+  },
+  {
+    title: "WhatsApp com responsabilidade",
+    text: "Evolution API, permissões, histórico e confirmação assistida evitam automação invisível em conversas sensíveis.",
+  },
+];
+
+export const LandingNeuroZapSection = () => (
+  <section id="neurozap" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+    <div className="relative z-10 mx-auto grid max-w-[1240px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+      <FadeIn>
+        <div>
+          <SectionBadge icon={MessageCircle}>NeuroZap Desktop Beta</SectionBadge>
+          <h2 className="mt-8 text-5xl font-black leading-[0.9] text-foreground md:text-7xl">Cobrança e no-show com WhatsApp, contexto e aprovação humana.</h2>
+          <p className="mt-7 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">
+            NeuroZap é a ponte de growth: WhatsApp Business, Synapse e NeuroFinance trabalham para reduzir inadimplência e ausência sem transformar cobrança em desgaste humano.
+          </p>
+          <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
+              <Link to="/synapse">
+                Ver Synapse <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+            <Button asChild variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]">
+              <Link to="/neurofinance">Ver NeuroFinance</Link>
+            </Button>
+          </div>
+        </div>
+      </FadeIn>
+      <FadeIn delay={0.12}>
+        <div className="rounded-[40px] border border-border/40 bg-card/80 p-5 shadow-[0_38px_120px_-78px_rgba(0,0,0,0.78)] dark:border-white/10 dark:bg-white/[0.03]">
+          <div className="rounded-[30px] bg-foreground p-6 text-background dark:bg-white dark:text-zinc-950">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" width={36} height={36} className="h-9 w-9 rounded-xl object-contain" loading="lazy" decoding="async" />
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">Evolution API</p>
+                  <p className="text-base font-black">NeuroZap + Synapse</p>
+                </div>
+              </div>
+              <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Aprovação humana</span>
+            </div>
+            <div className="mt-8 grid gap-3">
+              {neuroZapFlows.map((flow) => (
+                <article key={flow.title} className="rounded-2xl border border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
+                  <h3 className="text-lg font-black leading-tight">{flow.title}</h3>
+                  <p className="mt-2 text-sm font-medium leading-relaxed opacity-64">{flow.text}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+      </FadeIn>
     </div>
   </section>
 );

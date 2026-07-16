@@ -11,6 +11,7 @@ export const Footer = () => {
     produto: [
       { label: "Plataforma", path: "/#produto" },
       { label: "NeuroFinance", path: "/neurofinance" },
+      { label: "NeuroBox", path: "/neurobox" },
       { label: "Synapse AI", path: "/synapse" },
     ],
     recursos: [

@@ -65,6 +65,7 @@ const PoliticaDePrivacidade = lazy(() => import("@/pages/legal/PoliticaDePrivaci
 const ConfiguracoesDeCookies = lazy(() => import("@/pages/legal/ConfiguracoesDeCookies"));
 const FinanceLanding = lazy(() => import("@/pages/FinanceLanding"));
 const SynapseLanding = lazy(() => import("@/pages/SynapseLanding"));
+const NeuroBoxLanding = lazy(() => import("@/pages/public/NeuroBoxLanding"));
 const ProductLanding = lazy(() => import("@/pages/public/ProductLanding"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
@@ -152,7 +153,7 @@ const SharedRoutes = () => {
         <Route path="/configuracoes-de-cookies" element={<ConfiguracoesDeCookies />} />
         <Route path="/neurofinance" element={<FinanceLanding />} />
         <Route path="/synapse" element={<SynapseLanding />} />
-        <Route path="/neurobox" element={<ProductLanding route="/neurobox" />} />
+        <Route path="/neurobox" element={<NeuroBoxLanding />} />
         <Route path="/portal-do-paciente" element={<ProductLanding route="/portal-do-paciente" />} />
         <Route path="/teleconsulta-para-psicologos" element={<ProductLanding route="/teleconsulta-para-psicologos" />} />
         <Route path="/prontuario-para-psicologos" element={<ProductLanding route="/prontuario-para-psicologos" />} />

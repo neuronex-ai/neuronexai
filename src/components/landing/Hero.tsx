@@ -40,19 +40,19 @@ export const Hero = () => {
             >
                 <FadeIn delay={0.3}>
                     <div className="inline-flex items-center gap-2 bg-foreground/[0.03] border border-border/10 rounded-full px-5 py-1.5 mb-8 backdrop-blur-sm">
-                        <span className="text-[11px] uppercase tracking-[0.25em] font-black text-foreground/80">Sistema operacional para psicólogos</span>
+                        <span className="text-[11px] uppercase tracking-[0.25em] font-black text-foreground/80">Clínica Autônoma para psicólogos</span>
                     </div>
                 </FadeIn>
 
                 <div className="mb-4 md:mb-6 pb-2">
                     <TextReveal stagger={0.08} className="text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-tight text-foreground leading-[0.9] md:leading-[0.95] select-none text-center">
-                        Sua clínica inteira organizada por IA
+                        Sistema Operacional Clínico com IA e Core Banking
                     </TextReveal>
                 </div>
 
                 <FadeIn delay={0.6}>
                     <p className="text-base md:text-xl lg:text-2xl text-muted-foreground/70 font-medium max-w-4xl mx-auto leading-relaxed md:leading-[1.5] tracking-tight mb-8 md:mb-10 lg:mb-12 px-2">
-                        Prontuário, agenda, teleconsulta, financeiro, NFS-e, portal do paciente e Synapse em uma única experiência para psicólogos.
+                        NeuroNex conecta prontuário, agenda, teleconsulta, NeuroBox, NeuroZap, NeuroFinance, NFS-e/RPS e Synapse AI em uma infraestrutura clínica e financeira única.
                     </p>
                 </FadeIn>
 

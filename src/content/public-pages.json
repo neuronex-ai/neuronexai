@@ -98,7 +98,7 @@
         { "title": "NeuroFlow e NeuroScan", "text": "Organizam fluxos de raciocínio e transformam fichas de anamnese em dados estruturados revisáveis pelo psicólogo." },
         { "title": "Synapse em tempo real", "text": "O agente de voz e texto intermedeia cada ferramenta com contexto, permissões, confirmação assistida e trilha operacional." }
       ],
-      "image": "/landing/screenshots/desktop/dark/17-neuroview-dark.webp"
+      "image": "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp"
     },
     {
       "route": "/portal-do-paciente",

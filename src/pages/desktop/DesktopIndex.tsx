@@ -16,6 +16,7 @@ import {
 import {
     LandingDifferentiatorTable,
     LandingFinalCTASection,
+    LandingNeuroZapSection,
     LandingOperatingSystemSection,
     LandingPlanComparisonSection,
     LandingProblemSection,
@@ -43,6 +44,7 @@ const DesktopIndex = () => {
                 </section>
                 <LandingOperatingSystemSection />
                 <LandingRealSynapseSection />
+                <LandingNeuroZapSection />
                 <LandingRealFinanceFiscalSection />
                 <WaitlistSection />
                 <LandingPlanComparisonSection />
