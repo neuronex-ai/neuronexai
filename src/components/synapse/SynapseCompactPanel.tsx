@@ -584,7 +584,7 @@ export const SynapseCompactPanel = () => {
                                     {historyQuery.isError ? (
                                         <div className="synapse-empty-state flex flex-col items-center gap-3 py-16 text-center text-muted-foreground" role="alert">
                                             <History className="h-7 w-7 opacity-60" aria-hidden="true" />
-                                            <p className="max-w-64 text-[12px] font-medium">NÃ£o foi possÃ­vel carregar o histÃ³rico.</p>
+                                            <p className="max-w-64 text-[12px] font-medium">Não foi possível carregar o histórico.</p>
                                             <button
                                                 type="button"
                                                 onClick={() => void historyQuery.refetch()}

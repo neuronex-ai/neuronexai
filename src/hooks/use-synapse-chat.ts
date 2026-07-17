@@ -141,6 +141,7 @@ export const useSynapseChat = () => {
                     sessionId = newSession.id;
                     setActiveSessionId(sessionId);
                 }
+                if (!sessionId) throw new Error('Não foi possível iniciar a conversa.');
 
                 sendMessage.mutate(
                 {
