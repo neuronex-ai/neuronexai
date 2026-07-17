@@ -3317,7 +3317,7 @@
     bottom: max(16px, env(safe-area-inset-bottom));
     left: auto;
     translate: none;
-    height: clamp(460px, 68dvh, 700px);
+    height: clamp(472px, 69.5dvh, 716px);
     max-height: calc(100dvh - var(--desktop-navbar-clearance) - 2rem);
     min-height: 0;
     box-shadow:
@@ -3396,7 +3396,9 @@
   }
 
   .synapse-liquid-toolbar,
-  .synapse-liquid-menu {
+  .synapse-liquid-menu,
+  .notification-liquid-toolbar,
+  .notification-liquid-menu {
     position: relative;
     isolation: isolate;
     border: 1px solid hsl(var(--border) / 0.56);
@@ -3412,12 +3414,15 @@
     -webkit-backdrop-filter: blur(24px) saturate(1.32);
   }
 
-  .synapse-liquid-toolbar {
+  .synapse-liquid-toolbar,
+  .notification-liquid-toolbar {
     border-radius: 999px;
   }
 
   .dark .synapse-liquid-toolbar,
-  .dark .synapse-liquid-menu {
+  .dark .synapse-liquid-menu,
+  .dark .notification-liquid-toolbar,
+  .dark .notification-liquid-menu {
     border-color: rgba(255, 255, 255, 0.08);
     background:
       linear-gradient(145deg, rgba(255, 255, 255, 0.085), transparent 56%),
@@ -3429,27 +3434,32 @@
       inset 0 -1px 0 rgba(255, 255, 255, 0.025);
   }
 
-  .synapse-liquid-control {
+  .synapse-liquid-control,
+  .notification-liquid-control {
     border: 1px solid transparent;
     background: transparent;
     transition: color 150ms ease, border-color 150ms ease, background-color 150ms ease, transform 150ms ease;
   }
 
-  .synapse-liquid-control:hover:not(:disabled) {
+  .synapse-liquid-control:hover:not(:disabled),
+  .notification-liquid-control:hover:not(:disabled) {
     border-color: hsl(var(--border) / 0.56);
     background: hsl(var(--background) / 0.38);
   }
 
-  .synapse-liquid-control:active:not(:disabled) {
+  .synapse-liquid-control:active:not(:disabled),
+  .notification-liquid-control:active:not(:disabled) {
     transform: translateY(1px) scale(0.96);
   }
 
-  .dark .synapse-liquid-control:hover:not(:disabled) {
+  .dark .synapse-liquid-control:hover:not(:disabled),
+  .dark .notification-liquid-control:hover:not(:disabled) {
     border-color: rgba(255, 255, 255, 0.08);
     background: rgba(255, 255, 255, 0.055);
   }
 
-  .synapse-liquid-tab-active {
+  .synapse-liquid-tab-active,
+  .notification-liquid-tab-active {
     border: 1px solid hsl(var(--border) / 0.72);
     background:
       linear-gradient(145deg, hsl(var(--background) / 0.82), hsl(var(--card) / 0.54));
@@ -3460,7 +3470,8 @@
     -webkit-backdrop-filter: blur(10px) saturate(1.22);
   }
 
-  .dark .synapse-liquid-tab-active {
+  .dark .synapse-liquid-tab-active,
+  .dark .notification-liquid-tab-active {
     border-color: rgba(255, 255, 255, 0.095);
     background:
       linear-gradient(145deg, rgba(255, 255, 255, 0.115), rgba(255, 255, 255, 0.045));
@@ -3469,7 +3480,8 @@
       inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
 
-  .synapse-liquid-menu-item[data-disabled] {
+  .synapse-liquid-menu-item[data-disabled],
+  .notification-liquid-menu-item[data-disabled] {
     cursor: not-allowed;
   }
 
@@ -4271,7 +4283,10 @@
     .synapse-liquid-toolbar,
     .synapse-liquid-menu,
     .synapse-liquid-tab-active,
-    .synapse-history-channel-dock {
+    .synapse-history-channel-dock,
+    .notification-liquid-toolbar,
+    .notification-liquid-menu,
+    .notification-liquid-tab-active {
       background: hsl(var(--card));
       backdrop-filter: none;
       -webkit-backdrop-filter: none;
@@ -4288,7 +4303,11 @@
     .synapse-liquid-menu,
     .synapse-liquid-control,
     .synapse-liquid-tab-active,
-    .synapse-history-channel-dock {
+    .synapse-history-channel-dock,
+    .notification-liquid-toolbar,
+    .notification-liquid-menu,
+    .notification-liquid-control,
+    .notification-liquid-tab-active {
       border: 1px solid CanvasText;
       background: Canvas;
       color: CanvasText;
@@ -4801,19 +4820,74 @@
   }
 
   .notification-popover-surface {
+    position: relative;
+    isolation: isolate;
     border-color: hsl(var(--foreground) / 0.1) !important;
     background:
-      linear-gradient(160deg, hsl(var(--background) / 0.985), hsl(var(--card) / 0.975)),
-      hsl(var(--background)) !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
+      radial-gradient(circle at 18% -12%, hsl(var(--background) / 0.84), transparent 42%),
+      linear-gradient(155deg, hsl(var(--background) / 0.8), hsl(var(--card) / 0.72)),
+      hsl(var(--card) / 0.82) !important;
+    box-shadow:
+      0 38px 108px -48px hsl(var(--foreground) / 0.6),
+      0 12px 32px -24px hsl(var(--foreground) / 0.3),
+      inset 0 1px 0 hsl(var(--background) / 0.54),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.018) !important;
+    backdrop-filter: blur(34px) saturate(1.18) !important;
+    -webkit-backdrop-filter: blur(34px) saturate(1.18) !important;
+  }
+
+  .notification-popover-surface::before,
+  .notification-popover-surface::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  .notification-popover-surface::before {
+    background:
+      linear-gradient(180deg, hsl(var(--foreground) / 0.05) 0%, hsl(var(--foreground) / 0.015) 15%, transparent 34%),
+      linear-gradient(112deg, transparent 0%, hsl(var(--foreground) / 0.014) 46%, transparent 70%);
+  }
+
+  .notification-popover-surface::after {
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.18),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.018),
+      inset 0 -42px 72px -64px hsl(var(--foreground) / 0.22);
+  }
+
+  .notification-popover-surface > * {
+    position: relative;
+    z-index: 1;
   }
 
   .dark .notification-popover-surface {
-    border-color: rgba(255, 255, 255, 0.06) !important;
+    border-color: rgba(255, 255, 255, 0.07) !important;
     background:
-      linear-gradient(160deg, rgba(20, 20, 20, 0.99), rgba(8, 8, 8, 0.99)),
-      #0a0a0a !important;
+      radial-gradient(circle at 18% -12%, rgba(255, 255, 255, 0.045), transparent 42%),
+      linear-gradient(155deg, rgba(22, 22, 24, 0.82), rgba(6, 6, 7, 0.87)),
+      rgba(8, 8, 9, 0.88) !important;
+    box-shadow:
+      0 40px 112px -48px rgba(0, 0, 0, 0.98),
+      0 12px 34px -24px rgba(0, 0, 0, 0.88),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.014) !important;
+  }
+
+  .dark .notification-popover-surface::before {
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.045) 0%, rgba(255, 255, 255, 0.014) 15%, transparent 34%),
+      linear-gradient(112deg, transparent 0%, rgba(255, 255, 255, 0.012) 46%, transparent 70%);
+  }
+
+  .dark .notification-popover-surface::after {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.014),
+      inset 0 -42px 72px -64px rgba(0, 0, 0, 0.72);
   }
 
   .notification-panel-header {
@@ -4828,6 +4902,30 @@
       #0b0b0b;
   }
 
+  .notification-liquid-header {
+    filter: drop-shadow(0 16px 28px hsl(var(--foreground) / 0.11));
+  }
+
+  .dark .notification-liquid-header {
+    filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.58));
+  }
+
+  .dark .notification-liquid-toolbar,
+  .dark .notification-liquid-menu {
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.068), transparent 56%),
+      linear-gradient(180deg, rgba(24, 24, 26, 0.64), rgba(7, 7, 8, 0.52));
+  }
+
+  .notification-unread-badge {
+    border: 1.5px solid hsl(var(--background) / 0.9);
+    color: white;
+    background: hsl(0 78% 56%);
+    box-shadow:
+      0 4px 12px -5px hsl(0 78% 42% / 0.72),
+      inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  }
+
   .notification-card {
     box-shadow:
       0 18px 48px -42px hsl(var(--foreground) / 0.38),
@@ -4838,10 +4936,145 @@
       border-color 180ms ease;
   }
 
+  .notification-card-liquid {
+    background:
+      linear-gradient(145deg, hsl(var(--background) / 0.48), transparent 58%),
+      linear-gradient(180deg, hsl(var(--card) / 0.54), hsl(var(--background) / 0.28));
+    box-shadow:
+      0 18px 46px -38px hsl(var(--foreground) / 0.32),
+      inset 0 1px 0 hsl(var(--background) / 0.7),
+      inset 0 -1px 0 hsl(var(--foreground) / 0.025);
+  }
+
+  .notification-card-unread {
+    background:
+      radial-gradient(circle at 14% -18%, hsl(var(--background) / 0.72), transparent 48%),
+      linear-gradient(145deg, hsl(var(--background) / 0.58), hsl(var(--card) / 0.42));
+    box-shadow:
+      0 22px 52px -40px hsl(var(--foreground) / 0.44),
+      inset 0 1px 0 hsl(var(--background) / 0.82),
+      inset 0 0 0 1px hsl(var(--foreground) / 0.018);
+  }
+
+  .notification-liquid-icon {
+    border: 1px solid hsl(var(--border) / 0.48);
+    background:
+      linear-gradient(145deg, hsl(var(--background) / 0.58), hsl(var(--card) / 0.36));
+    box-shadow:
+      0 10px 24px -19px hsl(var(--foreground) / 0.4),
+      inset 0 1px 0 hsl(var(--background) / 0.76);
+  }
+
+  .notification-card-primary,
+  .notification-card-menu-control {
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .notification-card-primary:hover:not(:disabled),
+  .notification-card-menu-control:hover:not(:disabled) {
+    background: hsl(var(--background) / 0.34);
+  }
+
+  .notification-card-primary:active:not(:disabled),
+  .notification-card-menu-control:active:not(:disabled) {
+    transform: scale(0.985);
+  }
+
   .dark .notification-card {
     box-shadow:
       0 18px 48px -42px rgba(0, 0, 0, 0.92),
       inset 0 1px 0 rgba(255, 255, 255, 0.026);
+  }
+
+  .dark .notification-card-liquid {
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.042), transparent 58%),
+      linear-gradient(180deg, rgba(24, 24, 26, 0.58), rgba(8, 8, 9, 0.42));
+    box-shadow:
+      0 18px 48px -42px rgba(0, 0, 0, 0.92),
+      inset 0 1px 0 rgba(255, 255, 255, 0.048),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.012);
+  }
+
+  .dark .notification-card-unread {
+    background:
+      radial-gradient(circle at 14% -18%, rgba(255, 255, 255, 0.075), transparent 48%),
+      linear-gradient(145deg, rgba(31, 31, 34, 0.74), rgba(10, 10, 11, 0.58));
+    box-shadow:
+      0 24px 54px -40px rgba(0, 0, 0, 0.96),
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.012);
+  }
+
+  .dark .notification-liquid-icon {
+    border-color: rgba(255, 255, 255, 0.06);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.065), rgba(255, 255, 255, 0.018));
+    box-shadow:
+      0 12px 26px -20px rgba(0, 0, 0, 0.96),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  }
+
+  .dark .notification-card-primary:hover:not(:disabled),
+  .dark .notification-card-menu-control:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.035);
+  }
+
+  .notification-clear-dialog {
+    border-color: hsl(var(--border) / 0.58);
+    background:
+      radial-gradient(circle at 18% -18%, hsl(var(--background) / 0.88), transparent 46%),
+      linear-gradient(155deg, hsl(var(--background) / 0.92), hsl(var(--card) / 0.86)),
+      hsl(var(--background) / 0.94);
+    box-shadow:
+      0 40px 110px -52px hsl(var(--foreground) / 0.62),
+      inset 0 1px 0 hsl(var(--background) / 0.72);
+    backdrop-filter: blur(30px) saturate(1.16);
+    -webkit-backdrop-filter: blur(30px) saturate(1.16);
+  }
+
+  .dark .notification-clear-dialog {
+    border-color: rgba(255, 255, 255, 0.075);
+    background:
+      radial-gradient(circle at 18% -18%, rgba(255, 255, 255, 0.05), transparent 46%),
+      linear-gradient(155deg, rgba(24, 24, 26, 0.94), rgba(7, 7, 8, 0.94)),
+      #09090a;
+    box-shadow:
+      0 42px 112px -50px rgba(0, 0, 0, 0.98),
+      inset 0 1px 0 rgba(255, 255, 255, 0.065);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .notification-popover-surface,
+    .notification-liquid-toolbar,
+    .notification-liquid-menu,
+    .notification-liquid-tab-active,
+    .notification-card-liquid,
+    .notification-liquid-icon,
+    .notification-clear-dialog {
+      background: hsl(var(--card)) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .notification-popover-surface,
+    .notification-liquid-toolbar,
+    .notification-liquid-menu,
+    .notification-liquid-control,
+    .notification-liquid-tab-active,
+    .notification-card,
+    .notification-liquid-icon,
+    .notification-clear-dialog {
+      border: 1px solid CanvasText !important;
+      color: CanvasText;
+      background: Canvas !important;
+      box-shadow: none !important;
+    }
   }
 
   .synapse-conversation-row {
@@ -4882,7 +5115,11 @@
     .desktop-content-scroll,
     .synapse-launcher-action,
     .synapse-liquid-control,
-    .synapse-desktop-composer-control {
+    .synapse-desktop-composer-control,
+    .notification-liquid-control,
+    .notification-card,
+    .notification-card-primary,
+    .notification-card-menu-control {
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }

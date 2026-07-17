@@ -153,6 +153,26 @@ export const useNotifications = ({ enableRealtime = false, syncBadge = false }: 
     },
     onError: (_error, _id, context) => client.setQueryData(key, context?.previous),
   });
+  const dismissAll = useMutation({
+    mutationFn: async () => {
+      if (!userId) return;
+      const dismissedAt = new Date().toISOString();
+      const result = await supabase
+        .from('notifications')
+        .update({ dismissed_at: dismissedAt })
+        .eq('user_id', userId)
+        .is('dismissed_at', null);
+      if (result.error) throw result.error;
+    },
+    onMutate: async () => {
+      await client.cancelQueries({ queryKey: key });
+      const previous = client.getQueryData<AppNotification[]>(key);
+      updateCachedNotifications(() => EMPTY_NOTIFICATIONS);
+      return { previous };
+    },
+    onSuccess: invalidate,
+    onError: (_error, _variables, context) => client.setQueryData(key, context?.previous),
+  });
   const restore = useMutation({
     mutationFn: (id: string) => update({ dismissed_at: null })(id),
     onMutate: async (id) => {
@@ -177,7 +197,7 @@ export const useNotifications = ({ enableRealtime = false, syncBadge = false }: 
     if (syncBadge) void setPwaBadge(unreadCount);
   }, [syncBadge, unreadCount]);
 
-  return { ...query, notifications, unreadCount, markAsRead: markRead.mutateAsync, markAllAsRead: markAll.mutateAsync, dismiss: dismiss.mutateAsync, restore: restore.mutateAsync, isMutating: markRead.isPending || markAll.isPending || dismiss.isPending || restore.isPending, refresh: query.refetch };
+  return { ...query, notifications, unreadCount, markAsRead: markRead.mutateAsync, markAllAsRead: markAll.mutateAsync, dismiss: dismiss.mutateAsync, dismissAll: dismissAll.mutateAsync, restore: restore.mutateAsync, isMutating: markRead.isPending || markAll.isPending || dismiss.isPending || dismissAll.isPending || restore.isPending, refresh: query.refetch };
 };
 
 export const useUnreadNotificationCount = () => {
