@@ -4,6 +4,7 @@ import { useAuth } from '@/components/auth/SessionContextProvider';
 import { toast } from 'sonner';
 import { Message } from '@/types';
 import { edgeFunctionUrl } from '@/lib/supabase-config';
+import { resolveSynapseHistoryChannel } from '@/lib/synapse-history';
 
 // --- Types ---
 export interface ChatSession {
@@ -26,7 +27,10 @@ export interface ChatSession {
 
 export type ChatHistoryChannel = 'text' | 'voice' | 'whatsapp';
 
-const CHAT_HISTORY_PAGE_SIZE = 48;
+// History is classified client-side so it remains compatible with the legacy
+// remote schema. A larger page avoids a channel appearing empty merely because
+// the first small database page contains sessions from another channel.
+const CHAT_HISTORY_PAGE_SIZE = 160;
 const CHAT_MESSAGE_RENDER_LIMIT = 160;
 
 const SYNAPSE_CHAT_URL = edgeFunctionUrl("synapse-text-fallback");
@@ -143,26 +147,48 @@ export const useChatSessionHistory = (channel: ChatHistoryChannel, enabled = tru
     refetchOnWindowFocus: false,
     queryFn: async ({ pageParam }) => {
       const offset = Number(pageParam || 0);
-      let query = supabase
+      const { data, error } = await supabase
         .from('chat_sessions')
-        .select('id,title,created_at,updated_at,context_state,origin_channel,last_channel,last_message_at,messages!inner(id)')
+        .select('id,title,created_at,updated_at,context_state,messages!inner(id)')
         .eq('user_id', user!.id)
         .in('messages.role', ['user', 'assistant'])
         .neq('messages.content', '')
-        .limit(1, { referencedTable: 'messages' });
-
-      query = channel === 'text'
-        ? query.eq('origin_channel', 'panel')
-        : query.eq('origin_channel', channel);
-
-      const { data, error } = await query
+        .limit(1, { referencedTable: 'messages' })
         .order('updated_at', { ascending: false })
         .range(offset, offset + CHAT_HISTORY_PAGE_SIZE - 1);
 
       if (error) throw error;
 
       const batch = (data || []) as ChatSession[];
-      const sessions = batch.filter((session) => !session.title.startsWith('NeuroPulse Analysis'));
+      const conversationIds = batch.map((session) => session.id);
+      const voiceConversationIds = new Set<string>();
+
+      if (conversationIds.length) {
+        const voiceResult = await supabase
+          .from('synapse_voice_sessions')
+          .select('conversation_id')
+          .eq('user_id', user!.id)
+          .in('conversation_id', conversationIds);
+
+        // Voice provenance is additive. If an older environment does not expose
+        // the audit table, text and WhatsApp history still remain usable.
+        if (!voiceResult.error) {
+          for (const row of voiceResult.data || []) {
+            if (row.conversation_id) voiceConversationIds.add(row.conversation_id);
+          }
+        }
+      }
+
+      const sessions = batch
+        .filter((session) => !session.title?.startsWith('NeuroPulse Analysis'))
+        .map((session) => {
+          const resolvedChannel = resolveSynapseHistoryChannel(session, voiceConversationIds);
+          return {
+            ...session,
+            origin_channel: resolvedChannel === 'text' ? 'panel' : resolvedChannel,
+          } as ChatSession;
+        })
+        .filter((session) => resolveSynapseHistoryChannel(session, voiceConversationIds) === channel);
 
       return {
         sessions,

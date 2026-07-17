@@ -63,6 +63,12 @@ const PANEL_TABS: Array<{ id: SynapseActiveTab; label: string; icon: React.Eleme
     { id: 'timeline', label: 'Atividade', icon: Activity },
 ];
 
+const HISTORY_CHANNELS = [
+    { id: 'text' as const, label: 'Conversas por texto', icon: Keyboard },
+    { id: 'voice' as const, label: 'Conversas por voz', icon: Mic },
+    { id: 'whatsapp' as const, label: 'Conversas do WhatsApp', icon: Smartphone },
+];
+
 const TIMELINE_RENDER_LIMIT = 80;
 
 type ActivityCopy = {
@@ -388,7 +394,7 @@ export const SynapseCompactPanel = () => {
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
-                        <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-3">
+                        <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex flex-col items-center px-3">
                             <div
                                 className="synapse-liquid-toolbar pointer-events-auto flex items-center gap-1 p-1"
                                 role="toolbar"
