@@ -188,6 +188,7 @@ export const useCreateChatSession = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatSessions'] });
+      queryClient.invalidateQueries({ queryKey: ['chatSessionHistory'] });
     }
   });
 };
@@ -208,6 +209,7 @@ export const useDeleteChatSession = () => {
     mutationFn: deleteChatSession,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['chatSessions'] });
+      queryClient.invalidateQueries({ queryKey: ['chatSessionHistory'] });
       toast.success("Conversa excluída.");
     },
     onError: () => toast.error("Erro ao excluir conversa.")

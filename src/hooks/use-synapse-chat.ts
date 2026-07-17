@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 import { useSynapse } from '@/context/SynapseContext';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useAI } from '@/context/AIContext';
@@ -259,11 +260,25 @@ export const useSynapseChat = () => {
         });
     }, [activeSessionId, deleteSession, setActiveSessionId]);
 
+    const startNewSession = useCallback(async () => {
+        if (createSession.isPending) return null;
+        try {
+            const newSession = await createSession.mutateAsync('Nova conversa');
+            setActiveSessionId(newSession.id);
+            return newSession;
+        } catch {
+            toast.error('Não foi possível iniciar uma nova conversa.');
+            return null;
+        }
+    }, [createSession, setActiveSessionId]);
+
     return {
         send,
         clearSession,
+        startNewSession,
         messages: (messages || []) as Message[],
         isSending: sendMessage.isPending,
+        isStartingSession: createSession.isPending,
         progressEvent,
         messagesLoading,
         sessionReady: !!activeSessionId,

@@ -84,6 +84,44 @@ describe('SynapseConversation', () => {
         expect(screen.queryByText(/create_session_note/i)).not.toBeInTheDocument();
         expect(screen.getByText(/Posso registrar uma nota de sessao para voce/i)).toBeInTheDocument();
     });
+
+    it('preserves GFM structure and renders multiple Synapse widgets', () => {
+        render(
+            <SynapseConversation
+                messages={[{
+                    ...messages[1],
+                    id: 'assistant-markdown',
+                    content: [
+                        '## Próximos passos',
+                        '',
+                        '- [x] Revisar agenda',
+                        '- [ ] Confirmar paciente',
+                        '',
+                        '| Horário | Paciente |',
+                        '| --- | --- |',
+                        '| 14:00 | Ana |',
+                        '',
+                        '```json',
+                        '{"__actionType":"get_calendar","data":{"appointments":[]}}',
+                        '```',
+                        '',
+                        '```widget',
+                        '{"type":"list_patients","data":{"patients":[]}}',
+                        '```',
+                    ].join('\n'),
+                }]}
+                isSending={false}
+                quickActions={[]}
+                shouldReduceMotion
+                onQuickAction={() => undefined}
+            />,
+        );
+
+        expect(screen.getByRole('heading', { name: 'Próximos passos' })).toBeInTheDocument();
+        expect(screen.getByRole('table')).toBeInTheDocument();
+        expect(screen.getAllByRole('checkbox')).toHaveLength(2);
+        expect(screen.getAllByTestId('synapse-widget')).toHaveLength(2);
+    });
 });
 
 describe('SynapseComposer', () => {

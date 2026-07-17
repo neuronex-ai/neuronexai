@@ -62,6 +62,25 @@ export const sanitizeSynapseDisplayText = (value: unknown, fallback = "Ação do
   return cleaned || fallback;
 };
 
+const MARKDOWN_LITERAL_RE = /(```[\s\S]*?```|~~~[\s\S]*?~~~|`[^`\n]+`|\]\([^)]+\)|<https?:\/\/[^>]+>)/g;
+
+export const sanitizeSynapseMarkdown = (value: unknown) =>
+  String(value ?? "")
+    .split(MARKDOWN_LITERAL_RE)
+    .map((segment, index) => {
+      if (index % 2 === 1) return segment;
+      return segment
+        .replace(UUID_RE, " ")
+        .replace(TECHNICAL_TOKEN_RE, " ")
+        .replace(SNAKE_CASE_RE, " ")
+        .replace(/\(\s*\)/g, "")
+        .replace(/[ \t]+([,.;:!?])/g, "$1")
+        .replace(/[ \t]{2,}/g, " ")
+        .replace(/[ \t]+$/gm, "");
+    })
+    .join("")
+    .trim();
+
 export const humanizeSynapseWidgetTitle = (title: unknown, type?: string | null) => {
   const fallback = humanizeSynapseActionType(type);
   const cleaned = sanitizeSynapseDisplayText(title, fallback);

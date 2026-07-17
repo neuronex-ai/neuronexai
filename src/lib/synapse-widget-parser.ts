@@ -51,9 +51,9 @@ export const unwrapSynapseToolResponse = (value: unknown): SynapseWidgetData | n
   };
 };
 
-export const parseSynapseWidgetFromContent = (content: string): {
+export const parseSynapseWidgetsFromContent = (content: string): {
   cleanContent: string;
-  widgetData: SynapseWidgetData | null;
+  widgetData: SynapseWidgetData[];
 } => {
   const trimmed = content.trim();
 
@@ -66,16 +66,17 @@ export const parseSynapseWidgetFromContent = (content: string): {
     }
   })();
 
-  if (fromRawJson) return { cleanContent: "", widgetData: fromRawJson };
+  if (fromRawJson) return { cleanContent: "", widgetData: [fromRawJson] };
 
-  const fencePattern = /```(?:json)?\s*([\s\S]*?)```/gi;
-  let widgetData: SynapseWidgetData | null = null;
+  const fencePattern = /```(?:json|synapse|widget)?\s*([\s\S]*?)```/gi;
+  const widgetData: SynapseWidgetData[] = [];
   const cleanContent = content
     .replace(fencePattern, (fullMatch, jsonCandidate) => {
-      if (widgetData) return fullMatch;
       try {
-        widgetData = unwrapSynapseToolResponse(JSON.parse(String(jsonCandidate).trim()));
-        return widgetData ? "" : fullMatch;
+        const parsedWidget = unwrapSynapseToolResponse(JSON.parse(String(jsonCandidate).trim()));
+        if (!parsedWidget) return fullMatch;
+        widgetData.push(parsedWidget);
+        return "";
       } catch {
         return fullMatch;
       }
@@ -83,6 +84,14 @@ export const parseSynapseWidgetFromContent = (content: string): {
     .trim();
 
   return { cleanContent, widgetData };
+};
+
+export const parseSynapseWidgetFromContent = (content: string): {
+  cleanContent: string;
+  widgetData: SynapseWidgetData | null;
+} => {
+  const parsed = parseSynapseWidgetsFromContent(content);
+  return { cleanContent: parsed.cleanContent, widgetData: parsed.widgetData[0] || null };
 };
 
 export const normalizeSynapseDataArray = (rawData: unknown): unknown[] => {

@@ -2,10 +2,10 @@ import React, {
   forwardRef,
   memo,
   useCallback,
-    useLayoutEffect,
-    useRef,
-    useState,
-    type KeyboardEvent,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUp, Check, Copy, Loader2, Mic, Sparkles } from 'lucide-react';
@@ -13,8 +13,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
 import { cn } from '@/lib/utils';
-import { sanitizeSynapseDisplayText } from '@/lib/synapse-humanize';
-import { parseSynapseWidgetFromContent } from '@/lib/synapse-widget-parser';
+import { sanitizeSynapseMarkdown } from '@/lib/synapse-humanize';
+import { parseSynapseWidgetsFromContent } from '@/lib/synapse-widget-parser';
 import type { Message } from '@/types';
 
 import { SynapseWidgetRenderer } from './SynapseWidgetRenderer';
@@ -25,6 +25,8 @@ type MarkdownCodeProps = React.ComponentPropsWithoutRef<'code'> & {
     inline?: boolean;
     className?: string;
 };
+type MarkdownAnchorProps = React.ComponentPropsWithoutRef<'a'> & { node?: unknown };
+type MarkdownTableProps = React.ComponentPropsWithoutRef<'table'> & { node?: unknown };
 
 type QuickAction = {
     id: string;
@@ -71,10 +73,7 @@ const formatMessageTime = (value: string) => {
 };
 
 const formatAssistantContent = (content: string) =>
-    sanitizeSynapseDisplayText(content, '')
-        .replace(/\(\s*\)/g, '')
-        .replace(/\s+([,.;:!?])/g, '$1')
-        .trim();
+    sanitizeSynapseMarkdown(content);
 
 const SynapseMessageMark = ({ className }: { className?: string }) => (
     <span
@@ -86,8 +85,8 @@ const SynapseMessageMark = ({ className }: { className?: string }) => (
 );
 
 const SynapseMarkdownMessage = memo(function SynapseMarkdownMessage({ content }: { content: string }) {
-    const parsedMessage = parseSynapseWidgetFromContent(content);
-    const cleanContent = parsedMessage.cleanContent || (parsedMessage.widgetData ? '' : content);
+    const parsedMessage = parseSynapseWidgetsFromContent(content);
+    const cleanContent = parsedMessage.cleanContent || (parsedMessage.widgetData.length > 0 ? '' : content);
     const displayContent = formatAssistantContent(cleanContent);
 
     return (
@@ -97,32 +96,43 @@ const SynapseMarkdownMessage = memo(function SynapseMarkdownMessage({ content }:
                     remarkPlugins={[remarkGfm]}
                     components={{
                         pre({ children, ...props }: MarkdownPreProps) {
-                            const childArray = React.Children.toArray(children);
-                            const isWidget = childArray.some((child) => {
-                                if (!React.isValidElement<{ className?: string; children?: React.ReactNode }>(child)) return false;
-                                return child.props.className?.includes('language-json') && String(child.props.children).includes('__actionType');
-                            });
-                            if (isWidget) return <div className="not-prose">{children}</div>;
                             return <pre {...props}>{children}</pre>;
                         },
-                        code({ inline, className, children, ...props }: MarkdownCodeProps) {
-                            const match = /language-(\w+)/.exec(className || '');
-                            if (!inline && match?.[1] === 'json' && String(children).includes('__actionType')) {
-                                try {
-                                    const widgetData = JSON.parse(String(children));
-                                    return <SynapseWidgetRenderer widgetData={widgetData} compact />;
-                                } catch (error) {
-                                    console.error('Widget render error:', error);
-                                }
-                            }
+                        code({ className, children, ...props }: MarkdownCodeProps) {
                             return <code className={className} {...props}>{children}</code>;
+                        },
+                        a({ href, children, ...props }: MarkdownAnchorProps) {
+                            const isExternal = /^https?:\/\//i.test(href || '');
+                            return (
+                                <a
+                                    href={href}
+                                    target={isExternal ? '_blank' : undefined}
+                                    rel={isExternal ? 'noreferrer noopener' : undefined}
+                                    {...props}
+                                >
+                                    {children}
+                                </a>
+                            );
+                        },
+                        table({ children, ...props }: MarkdownTableProps) {
+                            return (
+                                <div className="synapse-markdown-table-scroll">
+                                    <table {...props}>{children}</table>
+                                </div>
+                            );
                         },
                     }}
                 >
                     {displayContent}
                 </ReactMarkdown>
             ) : null}
-            {parsedMessage.widgetData ? <SynapseWidgetRenderer widgetData={parsedMessage.widgetData} compact /> : null}
+            {parsedMessage.widgetData.map((widget, index) => (
+                <SynapseWidgetRenderer
+                    key={`${widget.__actionType || widget.type || 'synapse-widget'}-${index}`}
+                    widgetData={widget}
+                    compact
+                />
+            ))}
         </>
     );
 });

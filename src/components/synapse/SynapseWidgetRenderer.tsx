@@ -293,7 +293,7 @@ export const SynapseWidgetRenderer = ({ widgetData, compact = false }: SynapseWi
   })();
 
   return (
-    <section className={cn("my-3 bg-transparent", compact && "my-2")}>
+    <section className={cn("my-3 w-full min-w-0 bg-transparent", compact && "my-2")}>
       <div
         className={cn(
           "overflow-hidden rounded-[22px] border border-zinc-950/[0.085] bg-white/72 shadow-[0_18px_55px_-45px_rgba(24,24,27,0.58),inset_0_1px_0_rgba(255,255,255,0.78)] backdrop-blur-2xl",

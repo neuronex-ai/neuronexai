@@ -12,6 +12,12 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useSynapse, type SynapseActiveTab } from '@/context/SynapseContext';
 import { useAI } from '@/context/AIContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
@@ -31,6 +37,8 @@ import {
     Trash2,
     ChevronRight,
     MessageSquare,
+    MoreHorizontal,
+    Plus,
     Smartphone,
 } from 'lucide-react';
 import { SynapseComposer, SynapseConversation } from './SynapseConversation';
@@ -159,7 +167,16 @@ export const SynapseCompactPanel = () => {
         setActiveSessionId,
     } = useSynapse();
     const { currentContext } = useAI();
-    const { send, messages, isSending, progressEvent, sessionReady, clearSession } = useSynapseChat();
+    const {
+        send,
+        messages,
+        isSending,
+        progressEvent,
+        sessionReady,
+        clearSession,
+        startNewSession,
+        isStartingSession,
+    } = useSynapseChat();
     const inputRef = useRef<HTMLTextAreaElement>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
     const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -315,6 +332,14 @@ export const SynapseCompactPanel = () => {
         setActiveTab(tab);
     };
 
+    const handleNewConversation = async () => {
+        const newSession = await startNewSession();
+        if (!newSession) return;
+        setInputDraft('');
+        setActiveTab('chat');
+        window.requestAnimationFrame(() => inputRef.current?.focus());
+    };
+
     const focusTabAt = (index: number) => {
         const normalizedIndex = (index + PANEL_TABS.length) % PANEL_TABS.length;
         const nextTab = PANEL_TABS[normalizedIndex];
@@ -360,84 +385,116 @@ export const SynapseCompactPanel = () => {
             >
                 <div className="relative z-10 flex h-full min-h-0 flex-col">
                     <TooltipProvider delayDuration={300}>
-                        <header className="synapse-desktop-chrome shrink-0">
-                            <div className="synapse-desktop-toolbar flex min-h-16 items-center gap-2.5 px-3">
-                                <nav className="synapse-desktop-tabs flex min-w-0 flex-1 items-center gap-0.5 p-1" role="tablist" aria-label="Modos do Synapse">
+                        <div className="pointer-events-none absolute inset-x-0 top-3 z-30 flex justify-center px-3">
+                            <div
+                                className="synapse-liquid-toolbar pointer-events-auto flex items-center gap-1 p-1"
+                                role="toolbar"
+                                aria-label="Navegação e ações do Synapse"
+                            >
+                                <nav className="flex items-center gap-0.5" role="tablist" aria-label="Modos do Synapse">
                                     {PANEL_TABS.map((tab, index) => {
                                         const Icon = tab.icon;
                                         const isActive = displayedTab === tab.id;
                                         return (
-                                            <button
-                                                key={tab.id}
-                                                ref={(node) => { tabRefs.current[index] = node; }}
-                                                id={`synapse-tab-${tab.id}`}
-                                                type="button"
-                                                role="tab"
-                                                aria-selected={isActive}
-                                                aria-controls="synapse-tabpanel"
-                                                aria-label={tab.label}
-                                                title={tab.label}
-                                                tabIndex={isActive ? 0 : -1}
-                                                onClick={() => handleTabChange(tab.id)}
-                                                onKeyDown={(event) => handleTabKeyDown(event, index)}
-                                                className={cn(
-                                                    'relative flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-[13px] px-2 text-[10px] font-semibold transition-[color,transform] duration-150 active:translate-y-px',
-                                                    'hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                                                    isActive ? 'text-foreground' : 'text-muted-foreground',
-                                                )}
-                                            >
-                                                {isActive ? (
-                                                    <motion.span
-                                                        layoutId="synapse-active-tab"
-                                                        className="synapse-desktop-tab-active absolute inset-0 rounded-[12px]"
-                                                        transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
-                                                        aria-hidden="true"
-                                                    />
-                                                ) : null}
-                                                <span className="relative z-10 shrink-0">
-                                                    <Icon className="h-3.5 w-3.5" />
-                                                </span>
-                                                <span className="relative z-10 hidden min-w-0 truncate whitespace-nowrap min-[390px]:inline-block" aria-hidden="true">
-                                                    {tab.label}
-                                                </span>
-                                                <span className="sr-only min-[390px]:hidden">{tab.label}</span>
-                                            </button>
+                                            <Tooltip key={tab.id}>
+                                                <TooltipTrigger asChild>
+                                                    <button
+                                                        ref={(node) => { tabRefs.current[index] = node; }}
+                                                        id={`synapse-tab-${tab.id}`}
+                                                        type="button"
+                                                        role="tab"
+                                                        aria-selected={isActive}
+                                                        aria-controls="synapse-tabpanel"
+                                                        aria-label={tab.label}
+                                                        tabIndex={isActive ? 0 : -1}
+                                                        onClick={() => handleTabChange(tab.id)}
+                                                        onKeyDown={(event) => handleTabKeyDown(event, index)}
+                                                        className={cn(
+                                                            'synapse-liquid-control relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full transition-[color,transform] duration-150',
+                                                            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                                            isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
+                                                        )}
+                                                    >
+                                                        {isActive ? (
+                                                            <motion.span
+                                                                layoutId="synapse-active-tab"
+                                                                className="synapse-liquid-tab-active absolute inset-0 rounded-full"
+                                                                transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 460, damping: 38 }}
+                                                                aria-hidden="true"
+                                                            />
+                                                        ) : null}
+                                                        <Icon className="relative z-10 h-[17px] w-[17px]" aria-hidden="true" />
+                                                        <span className="sr-only">{tab.label}</span>
+                                                    </button>
+                                                </TooltipTrigger>
+                                                <TooltipContent side="bottom" sideOffset={8}>{tab.label}</TooltipContent>
+                                            </Tooltip>
                                         );
                                     })}
                                 </nav>
 
-                                <div className="ml-auto flex shrink-0 items-center gap-0.5">
-                                    {messages.length > 0 ? (
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setConfirmClearOpen(true)}
-                                                    className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                    aria-label="Limpar conversa"
-                                                >
-                                                    <Trash2 className="h-3.5 w-3.5" />
-                                                </button>
-                                            </TooltipTrigger>
-                                            <TooltipContent side="bottom">Limpar conversa</TooltipContent>
-                                        </Tooltip>
-                                    ) : null}
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <button
-                                                type="button"
-                                                onClick={() => setShellState('pill')}
-                                                className="synapse-desktop-control flex h-11 w-11 items-center justify-center text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                                aria-label="Recolher Synapse"
-                                            >
-                                                <X className="h-3.5 w-3.5" />
-                                            </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent side="bottom">Recolher</TooltipContent>
-                                    </Tooltip>
-                                </div>
+                                <span className="mx-0.5 h-5 w-px bg-border/70 dark:bg-white/10" aria-hidden="true" />
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleNewConversation()}
+                                            disabled={isStartingSession || isSending}
+                                            className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            aria-label="Nova conversa"
+                                        >
+                                            {isStartingSession
+                                                ? <Loader2 className="h-[17px] w-[17px] animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                                                : <Plus className="h-[18px] w-[18px]" aria-hidden="true" />}
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" sideOffset={8}>Nova conversa</TooltipContent>
+                                </Tooltip>
+
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <button
+                                            type="button"
+                                            className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            aria-label="Mais opções"
+                                            title="Mais opções"
+                                        >
+                                            <MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" />
+                                        </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                        align="end"
+                                        side="bottom"
+                                        sideOffset={10}
+                                        className="synapse-liquid-menu min-w-52 rounded-[18px] p-1.5"
+                                    >
+                                        <DropdownMenuItem
+                                            disabled={messages.length === 0}
+                                            onSelect={() => setConfirmClearOpen(true)}
+                                            className="synapse-liquid-menu-item min-h-11 cursor-pointer gap-3 rounded-[13px] px-3 text-[12px] font-semibold text-destructive focus:bg-destructive/10 focus:text-destructive"
+                                        >
+                                            <Trash2 className="h-4 w-4" aria-hidden="true" />
+                                            Excluir conversa
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            type="button"
+                                            onClick={() => setShellState('pill')}
+                                            className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-full text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            aria-label="Recolher Synapse"
+                                        >
+                                            <X className="h-[17px] w-[17px]" aria-hidden="true" />
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent side="bottom" sideOffset={8}>Recolher</TooltipContent>
+                                </Tooltip>
                             </div>
-                        </header>
+                        </div>
                     </TooltipProvider>
 
                     <div
@@ -458,7 +515,7 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -3 }}
                                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="flex flex-col gap-3 py-4"
+                                    className="flex flex-col gap-3 pb-4 pt-20"
                                 >
                                     <div className="flex min-h-11 items-center justify-between px-2">
                                         <h3 className="text-[12px] font-semibold text-foreground">Conversas recentes</h3>
@@ -582,7 +639,7 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -3 }}
                                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="flex flex-col gap-4 py-4"
+                                    className="flex flex-col gap-4 pb-4 pt-20"
                                 >
                                     {visibleTimeline.length === 0 ? (
                                         <div className="synapse-empty-state mt-10 text-center text-[11px] text-muted-foreground">Nenhuma atividade registrada.</div>
@@ -611,7 +668,7 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -3 }}
                                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="synapse-chat-view min-h-full py-3.5"
+                                    className="synapse-chat-view min-h-full pb-3.5 pt-20"
                                 >
                                     <div className="synapse-context-pill mx-1 flex w-fit items-center px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
                                         <span>{ctxInfo.label}</span>
