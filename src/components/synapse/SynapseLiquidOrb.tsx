@@ -75,15 +75,25 @@ void main() {
   float inputRms = smoothstep(0.018, 0.8, u_input.x);
   float outputRms = smoothstep(0.012, 0.72, u_output.x);
   float voice = max(inputRms, outputRms);
-  float low = clamp(u_input.y + u_output.y, 0.0, 1.0);
-  float mid = clamp(u_input.z + u_output.z, 0.0, 1.0);
+  float inputLow = clamp(u_input.y, 0.0, 1.0);
+  float inputMid = clamp(u_input.z, 0.0, 1.0);
+  float outputLow = clamp(u_output.y, 0.0, 1.0);
+  float outputMid = clamp(u_output.z, 0.0, 1.0);
+  float low = clamp(inputLow + outputLow, 0.0, 1.0);
+  float mid = clamp(inputMid + outputMid, 0.0, 1.0);
   float high = clamp(u_input.w + u_output.w, 0.0, 1.0);
   float vitality = clamp(u_energy + voice * 0.55, 0.0, 1.0);
   float time = u_time * (0.72 + vitality * 0.3);
 
   float edgeField = fbm3(vec3(p * 2.3, time * 0.13));
+  float polar = atan(p.y, p.x);
+  float inputContour = sin(polar * 3.0 - time * 4.1 + inputMid * 2.4) * inputRms;
+  float outputContour = sin(polar * 4.0 + time * 3.25 + outputMid * 2.8) * outputRms;
   float breath = sin(time * 1.17) * 0.008 + sin(time * 0.41 + 1.8) * 0.006;
-  float radius = 0.89 + breath + (edgeField - 0.5) * (0.018 + low * 0.024);
+  float radius = 0.89 + breath
+    + (edgeField - 0.5) * (0.018 + low * 0.024)
+    + inputContour * (0.008 + inputLow * 0.013)
+    + outputContour * (0.01 + outputLow * 0.016);
   float distanceToCenter = length(p);
   float antialias = max(fwidth(distanceToCenter) * 1.45, 0.0025);
   float silhouette = 1.0 - smoothstep(radius - antialias, radius + antialias, distanceToCenter);
@@ -101,16 +111,18 @@ void main() {
   float filaments = 0.0;
   for (int stepIndex = 0; stepIndex < 18; stepIndex++) {
     vec3 samplePoint = vec3(p, z);
-    float swirlAngle = time * 0.16 + z * 0.78 + fbm3(samplePoint * 1.35) * 1.25;
+    float voiceTorque = inputRms * sin(z * 3.4 + time * 2.1) - outputRms * cos(z * 2.8 - time * 1.8);
+    float swirlAngle = time * 0.16 + z * 0.78 + fbm3(samplePoint * 1.35) * 1.25 + voiceTorque * 0.22;
     mat2 swirl = mat2(cos(swirlAngle), -sin(swirlAngle), sin(swirlAngle), cos(swirlAngle));
     vec3 flowPoint = vec3(swirl * samplePoint.xy, samplePoint.z);
     float broad = fbm3(flowPoint * 2.05 + vec3(time * 0.12, -time * 0.09, time * 0.07));
     float detail = fbm3(flowPoint * 5.1 + vec3(-time * 0.16, time * 0.11, 9.4));
-    float ribbon = pow(max(0.0, 1.0 - abs(sin((flowPoint.x - flowPoint.y * 0.72 + broad * 1.8) * 4.2 - time * 0.34))), 7.0);
+    float ribbon = pow(max(0.0, 1.0 - abs(sin((flowPoint.x - flowPoint.y * 0.72 + broad * 1.8) * 4.2 - time * (0.34 + outputRms * 0.42)))), 7.0);
+    float voiceRibbon = pow(max(0.0, 1.0 - abs(sin((flowPoint.y + flowPoint.x * 0.46 + detail * 1.4) * 5.4 + time * 0.48))), 9.0) * voice;
     float radial = 1.0 - smoothstep(0.12, radius, length(samplePoint));
     float localDensity = smoothstep(0.43, 0.82, broad * 0.72 + detail * 0.38) * radial;
     density += localDensity * stepSize;
-    filaments += ribbon * radial * stepSize;
+    filaments += (ribbon + voiceRibbon * 0.46) * radial * stepSize;
     luminous += pow(max(0.0, detail - 0.54), 3.0) * radial * stepSize;
     z += stepSize;
   }
@@ -122,6 +134,8 @@ void main() {
   vec3 rimLight = normalize(vec3(0.75, -0.48, 0.5));
   float specular = pow(max(dot(reflect(-keyLight, normal), viewDirection), 0.0), 92.0);
   float rimSpecular = pow(max(dot(reflect(-rimLight, normal), viewDirection), 0.0), 38.0);
+  float innerDepth = pow(clamp(1.0 - distanceToCenter / max(radius, 0.001), 0.0, 1.0), 1.6);
+  float voiceCaustic = pow(max(0.0, sin(polar * 3.0 + time * (1.2 + outputRms * 1.8)) * 0.5 + 0.5), 8.0) * innerDepth * voice;
 
   vec3 darkCore = mix(vec3(0.16, 0.17, 0.19), vec3(0.018, 0.021, 0.026), u_dark);
   vec3 smoke = mix(vec3(0.31, 0.32, 0.35), vec3(0.37, 0.39, 0.43), u_dark);
@@ -132,6 +146,7 @@ void main() {
   color += silver * filaments * (0.43 + vitality * 0.42 + mid * 0.26);
   color += pearl * luminous * (0.56 + high * 0.52);
   color += pearl * (specular * 0.95 + rimSpecular * 0.28);
+  color += pearl * voiceCaustic * (0.16 + high * 0.28);
   color = mix(color, silver, fresnel * (0.62 + voice * 0.13));
   color += pearl * pow(fresnel, 5.0) * 0.36;
 

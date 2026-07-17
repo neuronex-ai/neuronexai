@@ -40,8 +40,11 @@ import {
     MoreHorizontal,
     Plus,
     Smartphone,
+    Keyboard,
+    Mic,
 } from 'lucide-react';
-import { SynapseComposer, SynapseConversation } from './SynapseConversation';
+import { SynapseComposer, SynapseConversation, SynapseMarkdownContent } from './SynapseConversation';
+import { parseSynapseWidgetsFromContent } from '@/lib/synapse-widget-parser';
 
 const CONTEXT_LABELS: Record<string, { icon: React.ReactNode; label: string }> = {
     dashboard: { icon: <TrendingUp className="h-3.5 w-3.5" />, label: 'Dashboard' },
@@ -184,7 +187,7 @@ export const SynapseCompactPanel = () => {
 
     const [isListening, setIsListening] = useState(false);
     const [confirmClearOpen, setConfirmClearOpen] = useState(false);
-    const [historyChannel, setHistoryChannel] = useState<'neuronex' | 'whatsapp'>('neuronex');
+    const [historyChannel, setHistoryChannel] = useState<'text' | 'voice' | 'whatsapp'>('text');
     const displayedTab: Exclude<SynapseActiveTab, 'voice'> = activeTab === 'voice' ? 'chat' : activeTab;
     const historyQuery = useChatSessionHistory(historyChannel, shellState === 'compact' && displayedTab === 'history');
     const sessions = useMemo(() => {
@@ -323,7 +326,7 @@ export const SynapseCompactPanel = () => {
     if (shellState !== 'compact') return null;
 
     const handleSend = () => {
-        if (!inputDraft.trim() || !sessionReady) return;
+        if (!inputDraft.trim() || !sessionReady || isSending) return;
         send(inputDraft.trim());
         setInputDraft('');
     };
@@ -333,8 +336,8 @@ export const SynapseCompactPanel = () => {
     };
 
     const handleNewConversation = async () => {
-        const newSession = await startNewSession();
-        if (!newSession) return;
+        const didStart = await startNewSession();
+        if (!didStart) return;
         setInputDraft('');
         setActiveTab('chat');
         window.requestAnimationFrame(() => inputRef.current?.focus());
@@ -522,66 +525,69 @@ export const SynapseCompactPanel = () => {
                                         {historyQuery.isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
                                     </div>
 
-                                    <div className="synapse-history-segment grid grid-cols-2 p-1 text-[11px] font-medium text-muted-foreground">
-                                        <button
-                                            type="button"
-                                            onClick={() => setHistoryChannel('neuronex')}
-                                            className={cn(
-                                                "relative isolate h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                historyChannel === 'neuronex'
-                                                    ? "text-background"
-                                                    : "hover:text-foreground"
-                                            )}
-                                        >
-                                            {historyChannel === 'neuronex' ? (
-                                                <motion.span
-                                                    layoutId="synapse-history-channel"
-                                                    className="synapse-history-segment-active absolute inset-0 -z-10 rounded-[10px]"
-                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
-                                                    aria-hidden="true"
-                                                />
-                                            ) : null}
-                                            <span className="relative z-10">NeuroNex</span>
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={() => setHistoryChannel('whatsapp')}
-                                            className={cn(
-                                                "relative isolate h-11 rounded-[10px] px-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                historyChannel === 'whatsapp'
-                                                    ? "text-background"
-                                                    : "hover:text-foreground"
-                                            )}
-                                        >
-                                            {historyChannel === 'whatsapp' ? (
-                                                <motion.span
-                                                    layoutId="synapse-history-channel"
-                                                    className="synapse-history-segment-active absolute inset-0 -z-10 rounded-[10px]"
-                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
-                                                    aria-hidden="true"
-                                                />
-                                            ) : null}
-                                            <span className="relative z-10">WhatsApp Business</span>
-                                        </button>
+                                    <div
+                                        className="synapse-history-segment mx-auto grid w-fit grid-cols-3 gap-1 p-1 text-muted-foreground"
+                                        role="tablist"
+                                        aria-label="Canal das conversas"
+                                    >
+                                        {([
+                                            { id: 'text' as const, label: 'Conversas por texto', icon: Keyboard },
+                                            { id: 'voice' as const, label: 'Conversas por voz', icon: Mic },
+                                            { id: 'whatsapp' as const, label: 'Conversas do WhatsApp', icon: Smartphone },
+                                        ]).map((channel) => {
+                                            const Icon = channel.icon;
+                                            const isActive = historyChannel === channel.id;
+                                            return (
+                                                <button
+                                                    key={channel.id}
+                                                    type="button"
+                                                    role="tab"
+                                                    aria-selected={isActive}
+                                                    aria-label={channel.label}
+                                                    title={channel.label}
+                                                    onClick={() => setHistoryChannel(channel.id)}
+                                                    className={cn(
+                                                        "relative isolate flex h-11 w-11 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                                        isActive ? "text-background" : "hover:text-foreground",
+                                                    )}
+                                                >
+                                                    {isActive ? (
+                                                        <motion.span
+                                                            layoutId="synapse-history-channel"
+                                                            className="synapse-history-segment-active absolute inset-0 -z-10 rounded-full"
+                                                            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
+                                                            aria-hidden="true"
+                                                        />
+                                                    ) : null}
+                                                    <Icon className="relative z-10 h-4 w-4" aria-hidden="true" />
+                                                    <span className="sr-only">{channel.label}</span>
+                                                </button>
+                                            );
+                                        })}
                                     </div>
 
                                     {sessions.length === 0 && !historyQuery.isLoading ? (
                                         <div className="synapse-empty-state flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
                                             <MessageSquare className="h-7 w-7 opacity-60" />
                                             <p className="text-[12px] font-medium">
-                                                {historyChannel === 'whatsapp' ? 'Nenhuma conversa WhatsApp' : 'Nenhuma conversa salva'}
+                                                {historyChannel === 'whatsapp'
+                                                    ? 'Nenhuma conversa do WhatsApp'
+                                                    : historyChannel === 'voice'
+                                                        ? 'Nenhuma conversa por voz'
+                                                        : 'Nenhuma conversa por texto'}
                                             </p>
                                         </div>
                                     ) : (
                                         <div className="divide-y divide-border/60 dark:divide-white/[0.07]">
                                             {sessions.map((session) => {
-                                                const isWpp = session.context_state?.source === 'whatsapp';
+                                                const isWpp = session.origin_channel === 'whatsapp' || session.context_state?.source === 'whatsapp';
+                                                const isVoice = session.origin_channel === 'voice';
                                                 const isPsychologist = session.context_state?.conversation_kind === 'psychologist';
                                                 const title = isWpp
                                                     ? isPsychologist
                                                         ? 'Você e Synapse'
                                                         : session.context_state?.pushName || session.title?.replace(/^WhatsApp Business\s*-\s*/i, '') || session.context_state?.phoneNumber || 'Paciente'
-                                                    : session.title || 'Conversa sem título';
+                                                    : session.title || (isVoice ? 'Conversa por voz' : 'Conversa com o Synapse');
                                                 return (
                                                     <button
                                                         key={session.id}
@@ -597,7 +603,11 @@ export const SynapseCompactPanel = () => {
                                                                 "synapse-history-row-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-[11px]",
                                                                 isWpp ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400" : "bg-muted/65 text-muted-foreground"
                                                             )}>
-                                                                {isWpp ? <Smartphone className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
+                                                                {isWpp
+                                                                    ? <Smartphone className="h-4 w-4" />
+                                                                    : isVoice
+                                                                        ? <Mic className="h-4 w-4" />
+                                                                        : <Keyboard className="h-4 w-4" />}
                                                             </div>
                                                             <div className="min-w-0 flex-1">
                                                                 <div className="flex min-w-0 items-center gap-2">
@@ -644,18 +654,31 @@ export const SynapseCompactPanel = () => {
                                     {visibleTimeline.length === 0 ? (
                                         <div className="synapse-empty-state mt-10 text-center text-[11px] text-muted-foreground">Nenhuma atividade registrada.</div>
                                     ) : (
-                                        visibleTimeline.map((entry, idx) => (
-                                            <div key={entry.id} className="synapse-timeline-row flex gap-4">
-                                                <div className="flex flex-col items-center">
-                                                    <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground/28 dark:bg-white/[0.18] mt-1" />
-                                                    {idx !== visibleTimeline.length - 1 && <div className="w-[1px] h-full bg-border/60 dark:bg-white/[0.05] mt-1" />}
+                                        visibleTimeline.map((entry, idx) => {
+                                            const label = parseSynapseWidgetsFromContent(entry.label).cleanContent || 'Atividade do Synapse';
+                                            const detail = entry.detail
+                                                ? parseSynapseWidgetsFromContent(entry.detail).cleanContent
+                                                : '';
+                                            return (
+                                                <div key={entry.id} className="synapse-timeline-row flex min-w-0 gap-4">
+                                                    <div className="flex flex-col items-center">
+                                                        <div className="mt-1 h-2.5 w-2.5 rounded-full bg-muted-foreground/28 dark:bg-white/[0.18]" />
+                                                        {idx !== visibleTimeline.length - 1 && <div className="mt-1 h-full w-px bg-border/60 dark:bg-white/[0.05]" />}
+                                                    </div>
+                                                    <div className="flex min-w-0 flex-1 flex-col pb-4">
+                                                        <span className="mb-1 text-[10px] font-mono text-muted-foreground">{new Date(entry.timestamp).toLocaleTimeString('pt-BR')}</span>
+                                                        <div className="synapse-desktop-prose synapse-timeline-prose min-w-0 text-[13px] font-medium text-foreground">
+                                                            <SynapseMarkdownContent content={label} renderWidgets={false} />
+                                                        </div>
+                                                        {detail ? (
+                                                            <div className="synapse-desktop-prose synapse-timeline-detail mt-1 min-w-0 text-[10px] text-muted-foreground">
+                                                                <SynapseMarkdownContent content={detail} renderWidgets={false} />
+                                                            </div>
+                                                        ) : null}
+                                                    </div>
                                                 </div>
-                                                <div className="flex flex-col flex-1 pb-4">
-                                                    <span className="text-[10px] font-mono text-muted-foreground mb-0.5">{new Date(entry.timestamp).toLocaleTimeString('pt-BR')}</span>
-                                                    <span className="text-[13px] text-foreground font-medium">{entry.label}</span>
-                                                </div>
-                                            </div>
-                                        ))
+                                            );
+                                        })
                                     )}
                                     {timeline.length > TIMELINE_RENDER_LIMIT ? (
                                         <p className="px-1 text-center text-[10px] text-muted-foreground">Exibindo as últimas {TIMELINE_RENDER_LIMIT} atividades.</p>
@@ -668,7 +691,7 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -3 }}
                                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="synapse-chat-view min-h-full pb-3.5 pt-20"
+                                    className="synapse-chat-view flex min-h-full flex-col pb-3.5 pt-20"
                                 >
                                     <div className="synapse-context-pill mx-1 flex w-fit items-center px-3 py-1.5 text-[10px] font-medium text-muted-foreground">
                                         <span>{ctxInfo.label}</span>

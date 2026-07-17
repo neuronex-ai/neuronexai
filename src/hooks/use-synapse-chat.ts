@@ -5,7 +5,6 @@ import { useSynapse } from '@/context/SynapseContext';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { useAI } from '@/context/AIContext';
 import {
-    useChatSessions,
     useCreateChatSession,
     useSessionMessages,
     useDeleteChatSession,
@@ -29,7 +28,17 @@ import {
 // Text and voice share sessions, memory, tools and the same structured
 // interface-action executor. Only their presentation differs.
 
-const SYNAPSE_SESSION_TITLE = 'Synapse Global';
+const conversationTitleFromPrompt = (prompt: string) => {
+    const title = prompt
+        .replace(/```[\s\S]*?```/g, ' ')
+        .replace(/[*_~`>#()]|\[|\]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/[.!?;:,]+$/g, '')
+        .slice(0, 72)
+        .trim();
+    return title || 'Conversa com o Synapse';
+};
 
 const INTERFACE_TARGET_LABELS: Record<string, string> = {
     dashboard: 'Dashboard',
@@ -96,13 +105,11 @@ export const useSynapseChat = () => {
     } = useSynapse();
     const { currentContext, contextSummary, activePatientId } = useAI();
 
-    const { data: sessions } = useChatSessions();
     const createSession = useCreateChatSession();
     const sendMessage = useSendChatMessage();
     const { data: messages, isLoading: messagesLoading } = useSessionMessages(activeSessionId);
     const [progressEvent, setProgressEvent] = useState<SynapseProgressEvent | null>(null);
 
-    const isInitializing = useRef(false);
     const lastPatientIdRef = useRef<string | null>(null);
     const activeLifecycleIdRef = useRef<string | null>(null);
 
@@ -110,32 +117,10 @@ export const useSynapseChat = () => {
         if (activePatientId) lastPatientIdRef.current = activePatientId;
     }, [activePatientId]);
 
-    useEffect(() => {
-        if (!user || isInitializing.current || activeSessionId) return;
-
-        if (sessions) {
-            const existing = sessions.find((session) => session.title === SYNAPSE_SESSION_TITLE);
-            if (existing) {
-                setActiveSessionId(existing.id);
-                return;
-            }
-
-            isInitializing.current = true;
-            createSession.mutate(SYNAPSE_SESSION_TITLE, {
-                onSuccess: (newSession) => {
-                    setActiveSessionId(newSession.id);
-                    isInitializing.current = false;
-                },
-                onError: () => {
-                    isInitializing.current = false;
-                },
-            });
-        }
-    }, [user, sessions, activeSessionId, setActiveSessionId, createSession]);
-
     const send = useCallback(
         (message: string) => {
-            if (!activeSessionId || !message.trim()) return;
+            const cleanMessage = message.trim();
+            if (!user || !cleanMessage) return;
 
             setExecState('thinking');
             setProgressEvent({
@@ -144,15 +129,23 @@ export const useSynapseChat = () => {
                 detail: 'Enviando contexto ao Synapse',
             });
             addTimelineEntry({
-                label: message,
+                label: cleanMessage,
                 state: 'thinking',
                 detail: `Contexto: ${currentContext}`,
             });
 
-            sendMessage.mutate(
+            const dispatch = async () => {
+                let sessionId = activeSessionId;
+                if (!sessionId) {
+                    const newSession = await createSession.mutateAsync(conversationTitleFromPrompt(cleanMessage));
+                    sessionId = newSession.id;
+                    setActiveSessionId(sessionId);
+                }
+
+                sendMessage.mutate(
                 {
-                    message,
-                    sessionId: activeSessionId,
+                    message: cleanMessage,
+                    sessionId,
                     context: {
                         route: currentContext,
                         summary: contextSummary,
@@ -236,9 +229,22 @@ export const useSynapseChat = () => {
                         window.setTimeout(() => setExecState('idle'), 3000);
                     },
                 },
-            );
+                );
+            };
+
+            void dispatch().catch(() => {
+                setExecState('error');
+                setProgressEvent(null);
+                addTimelineEntry({
+                    label: 'Não foi possível iniciar a conversa',
+                    state: 'error',
+                });
+                toast.error('Não foi possível iniciar a conversa.');
+                window.setTimeout(() => setExecState('idle'), 3000);
+            });
         },
         [
+            user,
             activeSessionId,
             currentContext,
             contextSummary,
@@ -248,6 +254,8 @@ export const useSynapseChat = () => {
             sendMessage,
             navigate,
             setActionExperience,
+            createSession,
+            setActiveSessionId,
         ],
     );
 
@@ -261,26 +269,22 @@ export const useSynapseChat = () => {
     }, [activeSessionId, deleteSession, setActiveSessionId]);
 
     const startNewSession = useCallback(async () => {
-        if (createSession.isPending) return null;
-        try {
-            const newSession = await createSession.mutateAsync('Nova conversa');
-            setActiveSessionId(newSession.id);
-            return newSession;
-        } catch {
-            toast.error('Não foi possível iniciar uma nova conversa.');
-            return null;
-        }
-    }, [createSession, setActiveSessionId]);
+        if (createSession.isPending || sendMessage.isPending) return false;
+        setActiveSessionId(null);
+        setProgressEvent(null);
+        setExecState('idle');
+        return true;
+    }, [createSession.isPending, sendMessage.isPending, setActiveSessionId, setExecState]);
 
     return {
         send,
         clearSession,
         startNewSession,
         messages: (messages || []) as Message[],
-        isSending: sendMessage.isPending,
+        isSending: sendMessage.isPending || createSession.isPending,
         isStartingSession: createSession.isPending,
         progressEvent,
         messagesLoading,
-        sessionReady: !!activeSessionId,
+        sessionReady: Boolean(user),
     };
 };

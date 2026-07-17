@@ -61,6 +61,7 @@ describe('SynapseConversation', () => {
         expect(screen.getByText('Como está minha agenda?')).toBeInTheDocument();
         expect(screen.getByText('Hoje')).toBeInTheDocument();
         expect(screen.getByRole('status')).toHaveTextContent('Processando solicitação');
+        expect(screen.getByText('Analisando')).toBeInTheDocument();
 
         fireEvent.click(screen.getByRole('button', { name: 'Copiar mensagem' }));
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('**Hoje** você tem três atendimentos.');
@@ -118,7 +119,7 @@ describe('SynapseConversation', () => {
         );
 
         expect(screen.getByRole('heading', { name: 'Próximos passos' })).toBeInTheDocument();
-        expect(screen.getByRole('table')).toBeInTheDocument();
+        expect(screen.getByRole('table').closest('.synapse-markdown-table-scroll')).toBeInTheDocument();
         expect(screen.getAllByRole('checkbox')).toHaveLength(2);
         expect(screen.getAllByTestId('synapse-widget')).toHaveLength(2);
     });

@@ -84,7 +84,13 @@ const SynapseMessageMark = ({ className }: { className?: string }) => (
     </span>
 );
 
-const SynapseMarkdownMessage = memo(function SynapseMarkdownMessage({ content }: { content: string }) {
+export const SynapseMarkdownContent = memo(function SynapseMarkdownContent({
+    content,
+    renderWidgets = true,
+}: {
+    content: string;
+    renderWidgets?: boolean;
+}) {
     const parsedMessage = parseSynapseWidgetsFromContent(content);
     const cleanContent = parsedMessage.cleanContent || (parsedMessage.widgetData.length > 0 ? '' : content);
     const displayContent = formatAssistantContent(cleanContent);
@@ -126,13 +132,13 @@ const SynapseMarkdownMessage = memo(function SynapseMarkdownMessage({ content }:
                     {displayContent}
                 </ReactMarkdown>
             ) : null}
-            {parsedMessage.widgetData.map((widget, index) => (
+            {renderWidgets ? parsedMessage.widgetData.map((widget, index) => (
                 <SynapseWidgetRenderer
                     key={`${widget.__actionType || widget.type || 'synapse-widget'}-${index}`}
                     widgetData={widget}
                     compact
                 />
-            ))}
+            )) : null}
         </>
     );
 });
@@ -143,7 +149,7 @@ const SynapseEmptyConversation = ({
 }: Pick<SynapseConversationProps, 'quickActions' | 'shouldReduceMotion' | 'onQuickAction'>) => (
     <div
         key="empty"
-        className="flex min-h-full flex-col items-center justify-center px-2 py-8 text-center"
+        className="flex min-h-[330px] flex-1 flex-col items-center justify-center px-2 py-6 text-center"
     >
         <div
             className="synapse-desktop-empty-mark flex h-12 w-12 items-center justify-center"
@@ -189,7 +195,9 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
     const [copied, setCopied] = useState(false);
     const isUser = message.role === 'user';
     const messageTime = formatMessageTime(message.created_at);
-    const copyContent = isUser ? message.content : formatAssistantContent(message.content);
+    const copyContent = isUser
+        ? message.content
+        : formatAssistantContent(parseSynapseWidgetsFromContent(message.content).cleanContent);
 
     const handleCopy = async () => {
         try {
@@ -230,7 +238,7 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
                     ) : null}
 
                     <div className={cn('synapse-desktop-prose break-words', isUser && 'synapse-desktop-prose-user')}>
-                        {isUser ? message.content : <SynapseMarkdownMessage content={message.content} />}
+                        {isUser ? message.content : <SynapseMarkdownContent content={message.content} />}
                     </div>
                 </div>
 
@@ -261,7 +269,7 @@ export const SynapseConversation = ({
     const processingActive = isProcessing ?? isSending;
 
     return (
-        <div className="min-h-full" aria-busy={processingActive}>
+        <div className="flex min-h-0 flex-1 flex-col" aria-busy={processingActive}>
             <span className="sr-only" role="status" aria-live="polite">
                 {processingActive ? activityLabel : ''}
             </span>
@@ -300,36 +308,40 @@ export const SynapseConversation = ({
                                     className="flex items-end gap-2.5"
                                 >
                                     <SynapseMessageMark />
-                                    <div className="synapse-desktop-thinking flex min-h-[54px] max-w-[315px] flex-col justify-center gap-2 px-4 py-2.5" data-activity={activityMode}>
-                                        <span className="text-[11px] font-semibold leading-4 text-foreground/82">
-                                            {activityLabel}
+                                    <div className="synapse-desktop-thinking flex min-h-[58px] max-w-[324px] items-center gap-3 px-3 py-2.5" data-activity={activityMode}>
+                                        <span className="synapse-thinking-signal flex h-9 w-9 shrink-0 items-center justify-center gap-[3px] rounded-full" aria-hidden="true">
+                                            {[0, 1, 2].map((index) => (
+                                                <motion.span
+                                                    key={index}
+                                                    className="synapse-thinking-signal-bar block w-[2px] rounded-full"
+                                                    animate={shouldReduceMotion ? undefined : {
+                                                        height: activityMode === 'responding'
+                                                            ? [4, index === 1 ? 11 : 8, 4]
+                                                            : [5, index === 1 ? 13 : 10, 5],
+                                                        opacity: [0.34, 0.96, 0.34],
+                                                    }}
+                                                    transition={shouldReduceMotion ? { duration: 0 } : {
+                                                        repeat: Infinity,
+                                                        duration: activityMode === 'executing' ? 0.82 : 1.06,
+                                                        delay: index * 0.12,
+                                                        ease: [0.32, 0.72, 0, 1],
+                                                    }}
+                                                />
+                                            ))}
                                         </span>
-                                        <div className="flex items-center gap-2">
-                                            {activityMode === 'responding' ? (
-                                                <span className="relative h-1.5 w-14 overflow-hidden rounded-full bg-foreground/[0.08] text-muted-foreground" aria-hidden="true">
-                                                    <motion.span
-                                                        className="absolute inset-y-0 left-0 w-5 rounded-full bg-current"
-                                                        animate={shouldReduceMotion ? undefined : { x: [0, 36, 0], opacity: [0.35, 0.9, 0.35] }}
-                                                        transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 1.35, ease: [0.32, 0.72, 0, 1] }}
-                                                    />
+                                        <div className="min-w-0 flex-1">
+                                            <span className="block truncate text-[11px] font-semibold leading-4 text-foreground/86">
+                                                {activityLabel}
+                                            </span>
+                                            <div className="mt-1 flex min-w-0 items-center gap-1.5">
+                                                <span className="synapse-thinking-phase shrink-0 text-[9px] font-semibold uppercase tracking-[0.11em] text-muted-foreground">
+                                                    {activityMode === 'executing' ? 'Executando' : activityMode === 'responding' ? 'Digitando' : 'Analisando'}
                                                 </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5 text-muted-foreground" aria-hidden="true">
-                                                    {[0, 0.18, 0.36].map((delay) => (
-                                                        <motion.span
-                                                            key={delay}
-                                                            animate={shouldReduceMotion ? undefined : { y: [0, -2.5, 0], scale: [0.86, 1.06, 0.86], opacity: [0.3, 0.92, 0.3] }}
-                                                            transition={shouldReduceMotion ? { duration: 0 } : { repeat: Infinity, duration: 1.1, delay, ease: [0.32, 0.72, 0, 1] }}
-                                                            className="h-1.5 w-1.5 rounded-full bg-current"
-                                                        />
-                                                    ))}
+                                                <span className="synapse-thinking-separator h-0.5 w-0.5 shrink-0 rounded-full" aria-hidden="true" />
+                                                <span className="min-w-0 truncate text-[10px] font-medium text-muted-foreground">
+                                                    {activityDetail || 'Organizando a melhor resposta'}
                                                 </span>
-                                            )}
-                                            {activityDetail ? (
-                                                <span className="truncate text-[10px] font-medium text-muted-foreground">
-                                                    {activityDetail}
-                                                </span>
-                                            ) : null}
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>

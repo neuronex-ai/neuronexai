@@ -1437,32 +1437,44 @@ export type Database = {
       }
       chat_sessions: {
         Row: {
+          channel_state: Json
           context_state: Json
           created_at: string
           id: string
+          last_channel: string
+          last_message_at: string | null
           memory_summary: string | null
           memory_updated_at: string | null
-          title: string | null
+          origin_channel: string
+          title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          channel_state?: Json
           context_state?: Json
           created_at?: string
           id?: string
+          last_channel?: string
+          last_message_at?: string | null
           memory_summary?: string | null
           memory_updated_at?: string | null
-          title?: string | null
+          origin_channel?: string
+          title?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          channel_state?: Json
           context_state?: Json
           created_at?: string
           id?: string
+          last_channel?: string
+          last_message_at?: string | null
           memory_summary?: string | null
           memory_updated_at?: string | null
-          title?: string | null
+          origin_channel?: string
+          title?: string
           updated_at?: string
           user_id?: string
         }
@@ -2457,36 +2469,51 @@ export type Database = {
       }
       messages: {
         Row: {
+          actor_kind: string | null
           attachments: Json | null
           content: string
           created_at: string
           embedding: string | null
           id: string
+          idempotency_key: string | null
+          metadata: Json
           remoteJid: string | null
           role: string
           session_id: string
+          source_channel: string
+          source_event_id: string | null
           user_id: string | null
         }
         Insert: {
+          actor_kind?: string | null
           attachments?: Json | null
           content: string
           created_at?: string
           embedding?: string | null
           id?: string
+          idempotency_key?: string | null
+          metadata?: Json
           remoteJid?: string | null
           role: string
           session_id: string
+          source_channel?: string
+          source_event_id?: string | null
           user_id?: string | null
         }
         Update: {
+          actor_kind?: string | null
           attachments?: Json | null
           content?: string
           created_at?: string
           embedding?: string | null
           id?: string
+          idempotency_key?: string | null
+          metadata?: Json
           remoteJid?: string | null
           role?: string
           session_id?: string
+          source_channel?: string
+          source_event_id?: string | null
           user_id?: string | null
         }
         Relationships: [

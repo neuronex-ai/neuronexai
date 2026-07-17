@@ -126,25 +126,38 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
     }
 
     return (
-        <div className="relative flex w-full flex-col items-center gap-3" data-synapse-presence-state={presenceState}>
+        <div className="relative flex w-full items-center justify-center" data-synapse-presence-state={presenceState}>
             <span className="sr-only" role="status" aria-live="polite" aria-atomic="true">
                 {statusText}
             </span>
 
-            <AnimatePresence initial={false}>
-                {showStatus ? (
-                    <motion.p
-                        key={`${presenceState}-${actionExperience?.id || voiceActivityLabel || "presence"}`}
-                        initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.985 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 4, scale: 0.99 }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 390, damping: 38, mass: 0.72 }}
-                        className="synapse-presence-status pointer-events-none max-w-[320px] truncate rounded-full border px-4 py-2 text-center text-[11px] font-medium text-foreground"
-                    >
-                        {statusText}
-                    </motion.p>
-                ) : null}
-            </AnimatePresence>
+            <div className="pointer-events-none absolute bottom-[calc(100%+12px)] left-1/2 flex h-9 w-[min(320px,calc(100vw-32px))] -translate-x-1/2 items-center justify-center">
+                <AnimatePresence initial={false}>
+                    {showStatus ? (
+                        <motion.p
+                            key="synapse-presence-status"
+                            initial={{ opacity: 0, scale: shouldReduceMotion ? 1 : 0.985 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: shouldReduceMotion ? 1 : 0.99 }}
+                            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 390, damping: 38, mass: 0.72 }}
+                            className="synapse-presence-status max-w-[320px] truncate rounded-full border px-4 py-2 text-center text-[11px] font-medium text-foreground"
+                        >
+                            <AnimatePresence initial={false} mode="wait">
+                                <motion.span
+                                    key={statusText}
+                                    initial={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, filter: "blur(3px)" }}
+                                    animate={{ opacity: 1, filter: "blur(0px)" }}
+                                    exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, filter: "blur(2px)" }}
+                                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                                    className="block truncate"
+                                >
+                                    {statusText}
+                                </motion.span>
+                            </AnimatePresence>
+                        </motion.p>
+                    ) : null}
+                </AnimatePresence>
+            </div>
 
             <motion.button
                 type="button"

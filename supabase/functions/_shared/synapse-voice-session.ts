@@ -1,5 +1,14 @@
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 
+export const voiceConversationTitle = (value: unknown) =>
+  clean(value, 5000)
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/[*_~`>#()]|\[|\]/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/[.!?;:,]+$/g, "")
+    .trim()
+    .slice(0, 72) || "Conversa por voz";
+
 export interface VoiceSessionMetadata {
   provider?: string;
   sttProvider?: string;
@@ -28,11 +37,26 @@ export async function ensureVoiceConversation(
     throw new Error("Conversa de voz não encontrada para este usuário.");
   }
 
-  const { data, error } = await admin
+  const voiceInsert = await admin
     .from("chat_sessions")
-    .insert({ user_id: userId, title: "Conversa por voz" })
+    .insert({
+      user_id: userId,
+      title: "Conversa por voz",
+      origin_channel: "voice",
+      last_channel: "voice",
+    })
     .select("id")
     .single();
+  let { data, error } = voiceInsert;
+  if (error && ["42703", "PGRST204"].includes(String(error.code || ""))) {
+    const compatibilityInsert = await admin
+      .from("chat_sessions")
+      .insert({ user_id: userId, title: "Conversa por voz" })
+      .select("id")
+      .single();
+    data = compatibilityInsert.data;
+    error = compatibilityInsert.error;
+  }
   if (error || !data?.id) throw error || new Error("Não foi possível criar a conversa por voz.");
   return data.id as string;
 }
@@ -134,6 +158,30 @@ export async function updateVoiceSession(
     .eq("id", voiceSessionId)
     .eq("user_id", userId);
   if (error) throw error;
+
+  if (["ended", "error", "cancelled"].includes(patch.status || "")) {
+    const { data: voiceSession } = await admin
+      .from("synapse_voice_sessions")
+      .select("conversation_id")
+      .eq("id", voiceSessionId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (voiceSession?.conversation_id) {
+      const { data: message } = await admin
+        .from("messages")
+        .select("id")
+        .eq("session_id", voiceSession.conversation_id)
+        .limit(1)
+        .maybeSingle();
+      if (!message?.id) {
+        await admin
+          .from("chat_sessions")
+          .delete()
+          .eq("id", voiceSession.conversation_id)
+          .eq("user_id", userId);
+      }
+    }
+  }
 }
 
 export async function assertVoiceSessionOwnership(

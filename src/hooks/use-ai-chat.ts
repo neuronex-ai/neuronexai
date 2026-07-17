@@ -11,6 +11,10 @@ export interface ChatSession {
   title: string;
   created_at: string;
   updated_at: string;
+  origin_channel?: 'panel' | 'voice' | 'whatsapp' | 'system';
+  last_channel?: 'panel' | 'voice' | 'whatsapp' | 'system';
+  last_message_at?: string | null;
+  messages?: Array<{ id: string }>;
   context_state?: {
     source?: string | null;
     remoteJid?: string | null;
@@ -20,7 +24,7 @@ export interface ChatSession {
   } | null;
 }
 
-export type ChatHistoryChannel = 'neuronex' | 'whatsapp';
+export type ChatHistoryChannel = 'text' | 'voice' | 'whatsapp';
 
 const CHAT_HISTORY_PAGE_SIZE = 48;
 const CHAT_MESSAGE_RENDER_LIMIT = 160;
@@ -139,21 +143,26 @@ export const useChatSessionHistory = (channel: ChatHistoryChannel, enabled = tru
     refetchOnWindowFocus: false,
     queryFn: async ({ pageParam }) => {
       const offset = Number(pageParam || 0);
-      const { data, error } = await supabase
+      let query = supabase
         .from('chat_sessions')
-        .select('id,title,created_at,updated_at,context_state')
+        .select('id,title,created_at,updated_at,context_state,origin_channel,last_channel,last_message_at,messages!inner(id)')
         .eq('user_id', user!.id)
+        .in('messages.role', ['user', 'assistant'])
+        .neq('messages.content', '')
+        .limit(1, { referencedTable: 'messages' });
+
+      query = channel === 'text'
+        ? query.eq('origin_channel', 'panel')
+        : query.eq('origin_channel', channel);
+
+      const { data, error } = await query
         .order('updated_at', { ascending: false })
         .range(offset, offset + CHAT_HISTORY_PAGE_SIZE - 1);
 
       if (error) throw error;
 
       const batch = (data || []) as ChatSession[];
-      const sessions = batch.filter((session) => {
-        if (session.title?.startsWith('NeuroPulse Analysis')) return false;
-        const isWhatsApp = session.context_state?.source === 'whatsapp';
-        return channel === 'whatsapp' ? isWhatsApp : !isWhatsApp;
-      });
+      const sessions = batch.filter((session) => !session.title.startsWith('NeuroPulse Analysis'));
 
       return {
         sessions,
@@ -167,9 +176,10 @@ export const useChatSessionHistory = (channel: ChatHistoryChannel, enabled = tru
 
 // --- Create Session ---
 const createChatSession = async (userId: string, title: string = "Nova Conversa") => {
+  const safeTitle = title.trim().replace(/\s+/g, ' ').slice(0, 72) || 'Conversa com o Synapse';
   const { data, error } = await supabase
     .from('chat_sessions')
-    .insert({ user_id: userId, title })
+    .insert({ user_id: userId, title: safeTitle })
     .select()
     .single();
 
@@ -222,6 +232,7 @@ const fetchMessages = async (sessionId: string): Promise<Message[]> => {
     .from('messages')
     .select('id,content,role,created_at,user_id,session_id,attachments')
     .eq('session_id', sessionId)
+    .in('role', ['user', 'assistant'])
     .order('created_at', { ascending: false })
     .limit(CHAT_MESSAGE_RENDER_LIMIT);
 

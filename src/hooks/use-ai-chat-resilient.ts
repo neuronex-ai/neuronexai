@@ -137,6 +137,7 @@ export const useSendChatMessage = () => {
         );
       }
       queryClient.invalidateQueries({ queryKey: ["chatSessions"] });
+      queryClient.invalidateQueries({ queryKey: ["chatSessionHistory"] });
     },
     onError: (error, variables, mutationContext) => {
       toast.error(`Erro: ${error.message}`);

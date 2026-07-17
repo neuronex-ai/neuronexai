@@ -86,10 +86,23 @@ describe('Synapse voice presence', () => {
             },
             execState: 'executing',
         };
-        render(<SynapsePill mode="voice-presence" />);
+        const { rerender } = render(<SynapsePill mode="voice-presence" />);
 
-        expect(document.querySelector('.synapse-presence-status')).toHaveTextContent('Conectando a análise ao mapa clínico');
+        const status = document.querySelector('.synapse-presence-status');
+        expect(status).toHaveTextContent('Conectando a análise ao mapa clínico');
         expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
         expect(document.querySelector('.synapse-presence-status svg')).not.toBeInTheDocument();
+
+        mocks.context = {
+            ...mocks.context,
+            actionExperience: {
+                id: 'action-2',
+                phase: 'navigating',
+                label: 'Abrindo NeuroView',
+                message: 'Abrindo NeuroView',
+            },
+        };
+        rerender(<SynapsePill mode="voice-presence" />);
+        expect(document.querySelector('.synapse-presence-status')).toBe(status);
     });
 });

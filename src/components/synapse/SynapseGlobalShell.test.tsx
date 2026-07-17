@@ -22,6 +22,10 @@ vi.mock('./SynapseCompactPanel', () => ({
     SynapseCompactPanel: () => <div data-testid="compact-panel" />,
 }));
 
+vi.mock('@/components/appointments/AppointmentPlanReviewDialog', () => ({
+    AppointmentPlanReviewDialog: () => null,
+}));
+
 describe('SynapseGlobalShell desktop experience', () => {
     beforeEach(() => {
         vi.clearAllMocks();

@@ -29,8 +29,16 @@ export const normalizeSynapseWidgetType = (type?: string) =>
 export const unwrapSynapseToolResponse = (value: unknown): SynapseWidgetData | null => {
   if (!isRecord(value)) return null;
 
-  const directType = firstString(value.__actionType, value.type);
-  if (directType) return value as SynapseWidgetData;
+  const directType = firstString(
+    value.__actionType,
+    value.__action_type,
+    value.actionType,
+    value.action_type,
+    value.widgetType,
+    value.widget_type,
+    value.type,
+  );
+  if (directType) return { ...value, __actionType: directType } as SynapseWidgetData;
 
   const responseEntry = Object.entries(value).find(([key]) => key.endsWith("_response"));
   if (!responseEntry) return null;
@@ -51,6 +59,91 @@ export const unwrapSynapseToolResponse = (value: unknown): SynapseWidgetData | n
   };
 };
 
+const TECHNICAL_OBJECT_RE = /["']?(?:__action_?type|action_?type|widget_?type|tool_?name|user_id|patient_id|appointment_id|session_id|created_at|updated_at|last_session|risk_score|emergency_contact)["']?\s*:/i;
+
+const inferWidgetFromPayload = (value: unknown): SynapseWidgetData | null => {
+  if (!isRecord(value)) return null;
+  const direct = unwrapSynapseToolResponse(value);
+  if (direct) return direct;
+
+  const payload = isRecord(value.data) ? value.data : value;
+  if (Array.isArray(payload.patients)) {
+    return { __actionType: "patient_list", data: payload, title: firstString(value.title, value.message) };
+  }
+  if (Array.isArray(payload.appointments)) {
+    return { __actionType: "appointment_list", data: payload, title: firstString(value.title, value.message) };
+  }
+  if (Array.isArray(payload.transactions) || Array.isArray(payload.invoices)) {
+    return { __actionType: "financial_summary", data: payload, title: firstString(value.title, value.message) };
+  }
+  return null;
+};
+
+const parseWidgetCandidate = (candidate: string) => {
+  try {
+    return inferWidgetFromPayload(JSON.parse(candidate.trim()));
+  } catch {
+    return null;
+  }
+};
+
+const stripEmbeddedTechnicalObjects = (
+  content: string,
+  widgets: SynapseWidgetData[],
+) => {
+  let result = "";
+  let cursor = 0;
+  let index = 0;
+
+  while (index < content.length) {
+    if (content[index] !== "{") {
+      index += 1;
+      continue;
+    }
+
+    const start = index;
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+    let end = -1;
+
+    for (; index < content.length; index += 1) {
+      const char = content[index];
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (char === "\\") escaped = true;
+        else if (char === '"') inString = false;
+        continue;
+      }
+      if (char === '"') {
+        inString = true;
+        continue;
+      }
+      if (char === "{") depth += 1;
+      else if (char === "}") {
+        depth -= 1;
+        if (depth === 0) {
+          end = index + 1;
+          break;
+        }
+      }
+    }
+
+    if (end < 0) break;
+    const candidate = content.slice(start, end);
+    const widget = parseWidgetCandidate(candidate);
+    const shouldHide = Boolean(widget) || TECHNICAL_OBJECT_RE.test(candidate);
+    if (shouldHide) {
+      result += content.slice(cursor, start);
+      if (widget) widgets.push(widget);
+      cursor = end;
+    }
+    index = end;
+  }
+
+  return `${result}${content.slice(cursor)}`;
+};
+
 export const parseSynapseWidgetsFromContent = (content: string): {
   cleanContent: string;
   widgetData: SynapseWidgetData[];
@@ -59,28 +152,27 @@ export const parseSynapseWidgetsFromContent = (content: string): {
 
   const fromRawJson = (() => {
     if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return null;
-    try {
-      return unwrapSynapseToolResponse(JSON.parse(trimmed));
-    } catch {
-      return null;
-    }
+    return parseWidgetCandidate(trimmed);
   })();
 
   if (fromRawJson) return { cleanContent: "", widgetData: [fromRawJson] };
 
   const fencePattern = /```(?:json|synapse|widget)?\s*([\s\S]*?)```/gi;
   const widgetData: SynapseWidgetData[] = [];
-  const cleanContent = content
+  const withoutTechnicalFences = content
     .replace(fencePattern, (fullMatch, jsonCandidate) => {
-      try {
-        const parsedWidget = unwrapSynapseToolResponse(JSON.parse(String(jsonCandidate).trim()));
-        if (!parsedWidget) return fullMatch;
+      const candidate = String(jsonCandidate).trim();
+      const parsedWidget = parseWidgetCandidate(candidate);
+      if (parsedWidget) {
         widgetData.push(parsedWidget);
         return "";
-      } catch {
-        return fullMatch;
       }
+      return TECHNICAL_OBJECT_RE.test(candidate) ? "" : fullMatch;
     })
+    .trim();
+
+  const cleanContent = stripEmbeddedTechnicalObjects(withoutTechnicalFences, widgetData)
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
   return { cleanContent, widgetData };

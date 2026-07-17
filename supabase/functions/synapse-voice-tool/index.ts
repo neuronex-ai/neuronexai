@@ -20,6 +20,7 @@ import {
   assertVoiceSessionOwnership,
   recordVoiceTurn,
   updateVoiceSession,
+  voiceConversationTitle,
 } from "../_shared/synapse-voice-session.ts";
 import { SYNAPSE_VOICE_DISPATCH_TOOL_NAME } from "../_shared/synapse-voice-toolset.ts";
 
@@ -169,11 +170,23 @@ async function saveMessage(
   }
   if (error) throw error;
 
-  await admin
+  const sessionPatch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (role === "user") sessionPatch.title = voiceConversationTitle(text);
+  let sessionUpdate = admin
     .from("chat_sessions")
-    .update({ updated_at: new Date().toISOString() })
+    .update(sessionPatch)
     .eq("id", sessionId)
     .eq("user_id", userId);
+  if (role === "user") {
+    sessionUpdate = sessionUpdate.in("title", [
+      "Conversa por voz",
+      "Nova conversa",
+      "Nova Conversa",
+      "Synapse Global",
+      "Conversa com o Synapse",
+    ]);
+  }
+  await sessionUpdate;
 }
 
 function functionContent(payload: Record<string, unknown>) {

@@ -2987,6 +2987,10 @@
     pointer-events: none;
   }
 
+  .synapse-presence-layer[data-synapse-shell-placement="bottom-center"] {
+    translate: -50% 0;
+  }
+
   .synapse-presence-layer > * {
     pointer-events: auto;
   }
@@ -3275,7 +3279,7 @@
     bottom: max(16px, env(safe-area-inset-bottom));
     left: auto;
     translate: none;
-    height: clamp(430px, 64dvh, 660px);
+    height: clamp(460px, 68dvh, 700px);
     max-height: calc(100dvh - var(--desktop-navbar-clearance) - 2rem);
     min-height: 0;
     box-shadow:
@@ -3528,6 +3532,22 @@
     min-height: 54px;
   }
 
+  .synapse-timeline-prose,
+  .synapse-timeline-detail {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .synapse-timeline-prose > :first-child,
+  .synapse-timeline-detail > :first-child {
+    margin-top: 0;
+  }
+
+  .synapse-timeline-prose > :last-child,
+  .synapse-timeline-detail > :last-child {
+    margin-bottom: 0;
+  }
+
   .synapse-status-badge {
     border: 1px solid hsl(var(--border) / 0.58);
     border-radius: 999px;
@@ -3664,6 +3684,9 @@
   }
 
   .synapse-desktop-message {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
     overflow-wrap: anywhere;
     letter-spacing: 0;
   }
@@ -3695,6 +3718,8 @@
   }
 
   .synapse-desktop-prose {
+    min-width: 0;
+    max-width: 100%;
     font-size: 13.5px;
     font-weight: 450;
     line-height: 1.58;
@@ -3787,8 +3812,15 @@
   }
 
   .synapse-markdown-table-scroll {
+    display: block;
+    width: 100%;
+    min-width: 0;
     max-width: 100%;
     overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-inline: contain;
+    scrollbar-gutter: stable;
+    contain: inline-size;
     margin: 0.68em 0;
     border: 1px solid hsl(var(--foreground) / 0.09);
     border-radius: 12px;
@@ -3803,9 +3835,13 @@
 
   .synapse-desktop-prose th,
   .synapse-desktop-prose td {
+    max-width: 14rem;
     border-bottom: 1px solid hsl(var(--foreground) / 0.1);
     padding: 0.45rem 0.6rem;
     text-align: left;
+    vertical-align: top;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 
   .synapse-desktop-prose th {
@@ -3839,6 +3875,9 @@
   }
 
   .synapse-desktop-thinking {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
     border: 1px solid hsl(var(--border) / 0.58);
     border-radius: 20px 20px 20px 8px;
     color: hsl(var(--foreground) / 0.68);
@@ -3848,7 +3887,50 @@
     box-shadow:
       0 16px 44px -34px hsl(var(--foreground) / 0.38),
       inset 0 1px 0 hsl(var(--background) / 0.16);
-    backdrop-filter: none;
+    backdrop-filter: blur(22px) saturate(1.22);
+    -webkit-backdrop-filter: blur(22px) saturate(1.22);
+  }
+
+  .synapse-desktop-thinking::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(circle at 18% -32%, hsl(var(--background) / 0.72), transparent 44%),
+      linear-gradient(115deg, transparent 18%, hsl(var(--background) / 0.16) 48%, transparent 70%);
+  }
+
+  .synapse-thinking-signal {
+    border: 1px solid hsl(var(--border) / 0.62);
+    color: hsl(var(--foreground) / 0.68);
+    background:
+      linear-gradient(145deg, hsl(var(--background) / 0.56), transparent 62%),
+      hsl(var(--foreground) / 0.028);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--background) / 0.58),
+      0 9px 22px -18px hsl(var(--foreground) / 0.42);
+    backdrop-filter: blur(14px) saturate(1.16);
+    -webkit-backdrop-filter: blur(14px) saturate(1.16);
+  }
+
+  .synapse-thinking-signal-bar {
+    height: 5px;
+    background: currentColor;
+    transform-origin: center;
+  }
+
+  .synapse-thinking-separator {
+    background: hsl(var(--muted-foreground) / 0.54);
+  }
+
+  .synapse-desktop-thinking[data-activity="responding"] .synapse-thinking-signal {
+    color: hsl(var(--foreground) / 0.88);
+  }
+
+  .synapse-desktop-thinking[data-activity="executing"] .synapse-thinking-signal {
+    color: hsl(var(--foreground) / 0.78);
   }
 
   .dark .synapse-desktop-thinking {
@@ -3859,6 +3941,16 @@
     box-shadow:
       0 18px 48px -34px rgba(0, 0, 0, 0.86),
       inset 0 1px 0 rgba(255, 255, 255, 0.026);
+  }
+
+  .dark .synapse-thinking-signal {
+    border-color: rgba(255, 255, 255, 0.065);
+    background:
+      linear-gradient(145deg, rgba(255, 255, 255, 0.055), transparent 62%),
+      rgba(255, 255, 255, 0.018);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.065),
+      0 10px 24px -18px rgba(0, 0, 0, 0.9);
   }
 
   .synapse-desktop-composer-dock {
@@ -4050,6 +4142,8 @@
     }
 
     .synapse-desktop-message-assistant,
+    .synapse-desktop-thinking,
+    .synapse-thinking-signal,
     .synapse-desktop-composer,
     .synapse-desktop-composer-control,
     .synapse-liquid-toolbar,
@@ -4629,6 +4723,8 @@
   }
 
   .synapse-conversation-row {
+    width: 100%;
+    max-width: 100%;
     contain: layout style;
   }
 

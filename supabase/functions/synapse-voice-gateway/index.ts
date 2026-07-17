@@ -929,10 +929,12 @@ class EdgeSynapseVoiceSession {
     ws.onclose = (event) => {
       if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
       const closeReason = clean(event.reason || this.lastProviderEvent?.message || "", 500);
-      void this.updateVoiceSession(this.settingsApplied ? "ended" : "error", {
-        closeCode: event.code,
-        closeReason,
-      });
+      void this.persistQueue.finally(() =>
+        this.updateVoiceSession(this.settingsApplied ? "ended" : "error", {
+          closeCode: event.code,
+          closeReason,
+        })
+      );
       this.sendClient({
         type: "gateway_status",
         status: "deepgram_closed",
@@ -1180,9 +1182,11 @@ class EdgeSynapseVoiceSession {
     if (this.closed) return;
     this.closed = true;
     if (this.keepAliveTimer) clearInterval(this.keepAliveTimer);
-    void this.updateVoiceSession(this.settingsApplied ? "ended" : "cancelled", {
-      closeReason: "client_closed",
-    });
+    void this.persistQueue.finally(() =>
+      this.updateVoiceSession(this.settingsApplied ? "ended" : "cancelled", {
+        closeReason: "client_closed",
+      })
+    );
     if (isOpen(this.deepgram)) this.deepgram?.close(1000, "client_closed");
     if (isOpen(this.client)) this.client.close(1000, "session_closed");
   }
