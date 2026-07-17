@@ -145,7 +145,7 @@ function validateAgentSettings(settings: Record<string, unknown>) {
 
   const speakChain = Array.isArray(agent.speak) ? agent.speak : [agent.speak];
   if (speakChain.length !== 2 || speakChain.some((item) => !item || typeof item !== "object")) {
-    throw new Error("Settings de voz inválidos: cadeia Azure/Cartesia ausente.");
+    throw new Error("Settings de voz inválidos: cadeia Azure/ElevenLabs ausente.");
   }
   const azureSpeak = speakChain[0] as Record<string, unknown>;
   const fallbackSpeak = speakChain[1] as Record<string, unknown>;
@@ -153,6 +153,8 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   const azureEndpoint = azureSpeak.endpoint as Record<string, unknown> | undefined;
   const azureHeaders = azureEndpoint?.headers as Record<string, unknown> | undefined;
   const fallbackProvider = fallbackSpeak.provider as Record<string, unknown> | undefined;
+  const fallbackEndpoint = fallbackSpeak.endpoint as Record<string, unknown> | undefined;
+  const fallbackHeaders = fallbackEndpoint?.headers as Record<string, unknown> | undefined;
   if (
     azureProvider?.type !== "open_ai" ||
     !clean(azureEndpoint?.url, 1000).includes("/functions/v1/synapse-voice-azure-tts") ||
@@ -160,8 +162,13 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   ) {
     throw new Error("Settings de voz inválidos: adaptador Azure Speech incompleto.");
   }
-  if (fallbackProvider?.type !== "cartesia" || fallbackSpeak.endpoint) {
-    throw new Error("Settings de voz inválidos: fallback Cartesia gerenciado ausente.");
+  if (
+    fallbackProvider?.type !== "eleven_labs" ||
+    clean(fallbackProvider?.language_code, 40).toLowerCase() !== "pt-br" ||
+    !clean(fallbackEndpoint?.url, 1000).includes("api.elevenlabs.io/v1/text-to-speech/") ||
+    !clean(fallbackHeaders?.["xi-api-key"], 8000)
+  ) {
+    throw new Error("Settings de voz inválidos: fallback ElevenLabs pt-BR ausente.");
   }
   agent.speak = speakChain;
   return settings;
@@ -1201,12 +1208,12 @@ Deno.serve((request) => {
       ok: true,
       service: "synapse-voice-gateway",
       runtime: "supabase-edge",
-      voicePath: "deepgram-managed-gpt54mini-azure-speech-cartesia-fallback",
+      voicePath: "deepgram-managed-gpt54mini-azure-speech-elevenlabs-pt-br-fallback",
       thinkPrimary: "open_ai/gpt-5.4-mini",
       thinkFallback: "google/gemini-3.5-flash",
       thinkLastResort: "anthropic/claude-haiku-4-5",
       speakPrimary: "azure-speech",
-      speakFallback: "deepgram-managed-cartesia",
+      speakFallback: "deepgram-managed-elevenlabs-pt-br",
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
       supabaseConfigured: Boolean(Deno.env.get("SUPABASE_URL") && anonKey()),
       gatewaySecretConfigured: Boolean(gatewaySecret()),

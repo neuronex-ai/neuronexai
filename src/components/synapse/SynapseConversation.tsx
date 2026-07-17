@@ -308,24 +308,17 @@ export const SynapseConversation = ({
                                     className="flex items-end gap-2.5"
                                 >
                                     <SynapseMessageMark />
-                                    <div className="synapse-desktop-thinking flex min-h-[58px] max-w-[324px] items-center gap-3 px-3 py-2.5" data-activity={activityMode}>
+                                    <div
+                                        className="synapse-desktop-thinking flex min-h-[58px] max-w-[324px] items-center gap-3 px-3 py-2.5"
+                                        data-activity={activityMode}
+                                        data-reduced-motion={shouldReduceMotion ? 'true' : undefined}
+                                    >
                                         <span className="synapse-thinking-signal flex h-9 w-9 shrink-0 items-center justify-center gap-[3px] rounded-full" aria-hidden="true">
                                             {[0, 1, 2].map((index) => (
-                                                <motion.span
+                                                <span
                                                     key={index}
                                                     className="synapse-thinking-signal-bar block w-[2px] rounded-full"
-                                                    animate={shouldReduceMotion ? undefined : {
-                                                        height: activityMode === 'responding'
-                                                            ? [4, index === 1 ? 11 : 8, 4]
-                                                            : [5, index === 1 ? 13 : 10, 5],
-                                                        opacity: [0.34, 0.96, 0.34],
-                                                    }}
-                                                    transition={shouldReduceMotion ? { duration: 0 } : {
-                                                        repeat: Infinity,
-                                                        duration: activityMode === 'executing' ? 0.82 : 1.06,
-                                                        delay: index * 0.12,
-                                                        ease: [0.32, 0.72, 0, 1],
-                                                    }}
+                                                    style={{ animationDelay: `${index * -120}ms` }}
                                                 />
                                             ))}
                                         </span>

@@ -55,16 +55,37 @@ describe('SynapseConversation', () => {
     });
 
     it('renders both roles, exposes the activity state and copies assistant content', async () => {
-        render(<SynapseConversation messages={messages} isSending quickActions={[]} shouldReduceMotion onQuickAction={() => undefined} />);
+        const { container } = render(<SynapseConversation messages={messages} isSending quickActions={[]} shouldReduceMotion onQuickAction={() => undefined} />);
 
         expect(screen.getByRole('log', { name: 'Conversa com o Synapse' })).toBeInTheDocument();
         expect(screen.getByText('Como está minha agenda?')).toBeInTheDocument();
         expect(screen.getByText('Hoje')).toBeInTheDocument();
         expect(screen.getByRole('status')).toHaveTextContent('Processando solicitação');
         expect(screen.getByText('Analisando')).toBeInTheDocument();
+        expect(container.querySelector('.synapse-desktop-thinking')).toHaveAttribute('data-reduced-motion', 'true');
 
         fireEvent.click(screen.getByRole('button', { name: 'Copiar mensagem' }));
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('**Hoje** você tem três atendimentos.');
+    });
+
+    it('uses a continuously staggered processing signal when motion is enabled', () => {
+        const { container } = render(
+            <SynapseConversation
+                messages={messages}
+                isSending
+                activityMode='responding'
+                quickActions={[]}
+                shouldReduceMotion={false}
+                onQuickAction={() => undefined}
+            />,
+        );
+
+        const indicator = container.querySelector('.synapse-desktop-thinking');
+        const bars = [...container.querySelectorAll<HTMLElement>('.synapse-thinking-signal-bar')];
+        expect(indicator).toHaveAttribute('data-activity', 'responding');
+        expect(indicator).not.toHaveAttribute('data-reduced-motion');
+        expect(bars).toHaveLength(3);
+        expect(bars.map((bar) => bar.style.animationDelay)).toEqual(['0ms', '-120ms', '-240ms']);
     });
 
     it('does not expose internal tool identifiers from historical assistant messages', () => {

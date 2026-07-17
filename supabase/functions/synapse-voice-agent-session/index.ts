@@ -35,8 +35,9 @@ const AZURE_TTS_ADAPTER_PATH = "/functions/v1/synapse-voice-azure-tts";
 const OPENAI_COMPATIBLE_TTS_MODEL = "tts-1";
 const OPENAI_COMPATIBLE_TTS_VOICE = "alloy";
 const DEFAULT_AZURE_TTS_VOICE = "pt-BR-MacerioMultilingualNeural";
-const DEFAULT_CARTESIA_MODEL_ID = "sonic-2";
-const DEFAULT_CARTESIA_VOICE_ID = "a167e0f3-df7e-4d52-a9c3-f949145efdab";
+const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
+const DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID = "NQ10OlqJ7vYH6XwegHSW";
+const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -55,6 +56,12 @@ const isLocalDevelopmentHost = (host: string) =>
 function ttsAdapterSecret() {
   const value = clean(Deno.env.get("SYNAPSE_VOICE_TTS_ADAPTER_SECRET"), 8000);
   if (!value) throw new Error("SYNAPSE_VOICE_TTS_ADAPTER_SECRET não configurado para o Synapse de voz.");
+  return value;
+}
+
+function elevenLabsApiKey() {
+  const value = clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000);
+  if (!value) throw new Error("Chave da ElevenLabs não configurada para o fallback de voz.");
   return value;
 }
 
@@ -195,7 +202,19 @@ async function loadRecentAgentContext(admin: any, userId: string, conversationId
 
 function buildSpeakConfig() {
   const azureVoice = clean(Deno.env.get("AZURE_SPEECH_VOICE") || DEFAULT_AZURE_TTS_VOICE, 160);
-  const cartesiaVoice = clean(Deno.env.get("CARTESIA_FALLBACK_VOICE_ID") || DEFAULT_CARTESIA_VOICE_ID, 160);
+  const elevenLabsVoice = clean(
+    Deno.env.get("SYNAPSE_VOICE_TTS_PT_BR_VOICE_ID") ||
+      DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
+    160,
+  );
+  const elevenLabsModel = clean(
+    Deno.env.get("SYNAPSE_VOICE_TTS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID,
+    120,
+  );
+  const elevenLabsLanguage = clean(
+    Deno.env.get("SYNAPSE_VOICE_TTS_LANGUAGE_CODE") || DEFAULT_ELEVENLABS_LANGUAGE_CODE,
+    40,
+  );
   return {
     speak: [
       {
@@ -211,14 +230,17 @@ function buildSpeakConfig() {
       },
       {
         provider: {
-          type: "cartesia",
-          model_id: clean(Deno.env.get("CARTESIA_FALLBACK_MODEL_ID") || DEFAULT_CARTESIA_MODEL_ID, 120),
-          voice: { mode: "id", id: cartesiaVoice },
-          speed: "normal",
+          type: "eleven_labs",
+          model_id: elevenLabsModel,
+          language_code: elevenLabsLanguage,
+        },
+        endpoint: {
+          url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(elevenLabsVoice)}/multi-stream-input`,
+          headers: { "xi-api-key": elevenLabsApiKey() },
         },
       },
     ],
-    ttsProvider: "azure-speech+deepgram-cartesia-fallback",
+    ttsProvider: "azure-speech+deepgram-elevenlabs-pt-br-fallback",
     ttsVoice: azureVoice,
   };
 }

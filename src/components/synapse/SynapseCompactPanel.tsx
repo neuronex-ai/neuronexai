@@ -503,6 +503,56 @@ export const SynapseCompactPanel = () => {
                                     <TooltipContent side="bottom" sideOffset={8}>Recolher</TooltipContent>
                                 </Tooltip>
                             </div>
+
+                            <AnimatePresence initial={false}>
+                                {displayedTab === 'history' ? (
+                                    <motion.div
+                                        key="history-channel-dock"
+                                        initial={shouldReduceMotion ? false : { opacity: 0, y: -4, scale: 0.98 }}
+                                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                                        exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -3, scale: 0.985 }}
+                                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
+                                        className="synapse-history-channel-dock pointer-events-auto -mt-0.5 grid grid-cols-3 p-0.5 text-muted-foreground"
+                                        role="tablist"
+                                        aria-label="Canal das conversas"
+                                    >
+                                        {HISTORY_CHANNELS.map((channel) => {
+                                            const Icon = channel.icon;
+                                            const isActive = historyChannel === channel.id;
+                                            return (
+                                                <Tooltip key={channel.id}>
+                                                    <TooltipTrigger asChild>
+                                                        <button
+                                                            type="button"
+                                                            role="tab"
+                                                            aria-selected={isActive}
+                                                            aria-label={channel.label}
+                                                            onClick={() => setHistoryChannel(channel.id)}
+                                                            className={cn(
+                                                                'relative isolate flex h-11 w-11 items-center justify-center rounded-full transition-colors',
+                                                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                                                                isActive ? 'text-background' : 'hover:text-foreground',
+                                                            )}
+                                                        >
+                                                            {isActive ? (
+                                                                <motion.span
+                                                                    layoutId="synapse-history-channel"
+                                                                    className="synapse-history-segment-active absolute inset-1 -z-10 rounded-full"
+                                                                    transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
+                                                                    aria-hidden="true"
+                                                                />
+                                                            ) : null}
+                                                            <Icon className="relative z-10 h-[15px] w-[15px]" aria-hidden="true" />
+                                                            <span className="sr-only">{channel.label}</span>
+                                                        </button>
+                                                    </TooltipTrigger>
+                                                    <TooltipContent side="right" sideOffset={8}>{channel.label}</TooltipContent>
+                                                </Tooltip>
+                                            );
+                                        })}
+                                    </motion.div>
+                                ) : null}
+                            </AnimatePresence>
                         </div>
                     </TooltipProvider>
 
@@ -524,55 +574,26 @@ export const SynapseCompactPanel = () => {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -3 }}
                                     transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16, ease: [0.22, 1, 0.36, 1] }}
-                                    className="flex flex-col gap-3 pb-4 pt-20"
+                                    className="flex flex-col gap-3 pb-4 pt-[124px]"
                                 >
                                     <div className="flex min-h-11 items-center justify-between px-2">
                                         <h3 className="text-[12px] font-semibold text-foreground">Conversas recentes</h3>
                                         {historyQuery.isLoading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" />}
                                     </div>
 
-                                    <div
-                                        className="synapse-history-segment mx-auto grid w-fit grid-cols-3 gap-1 p-1 text-muted-foreground"
-                                        role="tablist"
-                                        aria-label="Canal das conversas"
-                                    >
-                                        {([
-                                            { id: 'text' as const, label: 'Conversas por texto', icon: Keyboard },
-                                            { id: 'voice' as const, label: 'Conversas por voz', icon: Mic },
-                                            { id: 'whatsapp' as const, label: 'Conversas do WhatsApp', icon: Smartphone },
-                                        ]).map((channel) => {
-                                            const Icon = channel.icon;
-                                            const isActive = historyChannel === channel.id;
-                                            return (
-                                                <button
-                                                    key={channel.id}
-                                                    type="button"
-                                                    role="tab"
-                                                    aria-selected={isActive}
-                                                    aria-label={channel.label}
-                                                    title={channel.label}
-                                                    onClick={() => setHistoryChannel(channel.id)}
-                                                    className={cn(
-                                                        "relative isolate flex h-11 w-11 items-center justify-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                                        isActive ? "text-background" : "hover:text-foreground",
-                                                    )}
-                                                >
-                                                    {isActive ? (
-                                                        <motion.span
-                                                            layoutId="synapse-history-channel"
-                                                            className="synapse-history-segment-active absolute inset-0 -z-10 rounded-full"
-                                                            transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 500, damping: 42 }}
-                                                            aria-hidden="true"
-                                                        />
-                                                    ) : null}
-                                                    <Icon className="relative z-10 h-4 w-4" aria-hidden="true" />
-                                                    <span className="sr-only">{channel.label}</span>
-                                                </button>
-                                            );
-                                        })}
-                                    </div>
-
-                                    {sessions.length === 0 && !historyQuery.isLoading ? (
+                                    {historyQuery.isError ? (
+                                        <div className="synapse-empty-state flex flex-col items-center gap-3 py-16 text-center text-muted-foreground" role="alert">
+                                            <History className="h-7 w-7 opacity-60" aria-hidden="true" />
+                                            <p className="max-w-64 text-[12px] font-medium">NÃ£o foi possÃ­vel carregar o histÃ³rico.</p>
+                                            <button
+                                                type="button"
+                                                onClick={() => void historyQuery.refetch()}
+                                                className="synapse-history-retry min-h-11 rounded-full px-4 text-[11px] font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                            >
+                                                Tentar novamente
+                                            </button>
+                                        </div>
+                                    ) : sessions.length === 0 && !historyQuery.isLoading ? (
                                         <div className="synapse-empty-state flex flex-col items-center gap-3 py-20 text-center text-muted-foreground">
                                             <MessageSquare className="h-7 w-7 opacity-60" />
                                             <p className="text-[12px] font-medium">
