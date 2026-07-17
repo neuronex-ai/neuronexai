@@ -1,7 +1,7 @@
 "use client";
 
 import { Link } from "react-router-dom";
-import { ArrowRight, CheckCircle2, Sparkles, Star, Zap } from "lucide-react";
+import { ArrowRight, CheckCircle2, Star, Zap } from "lucide-react";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,23 +17,13 @@ const planIcons: Record<PublicPlanName, typeof Star> = {
 
 export const WaitlistSection = () => {
     return (
-        <section id="waitlist" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
-            <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute inset-0 premium-noise opacity-[0.025] mix-blend-overlay" />
-                <div className="absolute left-[12%] top-[8%] h-[620px] w-[820px] rounded-full bg-foreground/[0.03] blur-[170px]" />
-                <div className="absolute bottom-[6%] right-[10%] h-[520px] w-[620px] rounded-full bg-foreground/[0.025] blur-[150px]" />
-                <div className="absolute inset-0 bg-gradient-to-b from-background via-transparent to-background" />
-            </div>
-
+        <section id="waitlist" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
             <div className="relative z-10 mx-auto max-w-[1240px]">
                 <div className="mx-auto mb-12 max-w-5xl text-center md:mb-16">
                     <FadeIn delay={0.1}>
-                        <div className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-border/20 bg-foreground/[0.03] px-4 py-1.5 backdrop-blur-md">
-                            <Sparkles className="h-3.5 w-3.5 text-foreground/40" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-foreground/40">
-                                Planos NeuroNex
-                            </span>
-                        </div>
+                        <p className="mb-8 font-mono text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                            Planos NeuroNex
+                        </p>
                     </FadeIn>
 
                     <FadeIn delay={0.2}>
@@ -47,7 +37,7 @@ export const WaitlistSection = () => {
 
                     <FadeIn delay={0.3}>
                         <p className="mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/60 md:text-xl">
-                            Comece gratuitamente ou avance para uma operação mais ampla com Synapse, NeuroBox, NeuroFinance e NeuroZap Desktop Beta.
+                            Comece gratuitamente ou avance para uma operação mais ampla com Synapse, NeuroBox, NeuroFinance e NeuroZap.
                         </p>
                     </FadeIn>
                 </div>
@@ -68,14 +58,7 @@ export const WaitlistSection = () => {
                                     <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_0%,rgba(255,255,255,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.055),transparent_32%)] opacity-70" />
 
                                     <div className="relative z-10 flex items-start justify-between gap-5">
-                                        <div className={cn(
-                                            "flex h-14 w-14 items-center justify-center rounded-[20px] border transition-transform duration-500 group-hover:scale-105",
-                                            plan.featured
-                                                ? "border-background/15 bg-background text-foreground"
-                                                : "border-border/15 bg-foreground/[0.045] text-foreground"
-                                        )}>
-                                            <Icon className="h-6 w-6" strokeWidth={1.7} />
-                                        </div>
+                                        <Icon className={cn("h-7 w-7 transition-transform duration-500 group-hover:scale-105", plan.featured ? "text-background/76" : "text-muted-foreground")} strokeWidth={1.7} />
                                         <span className={cn(
                                             "rounded-full border px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.22em]",
                                             plan.featured
@@ -105,7 +88,7 @@ export const WaitlistSection = () => {
                                     </div>
 
                                     <Button asChild className={cn(
-                                        "relative z-10 mt-9 h-14 rounded-2xl text-[10px] font-black uppercase tracking-[0.22em] transition-all duration-500 active:scale-[0.98]",
+                                        "public-tactile relative z-10 mt-9 h-14 rounded-full font-mono text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-500 active:scale-[0.98]",
                                         plan.featured
                                             ? "bg-background text-foreground hover:bg-background/90"
                                             : "bg-foreground text-background hover:bg-foreground/90"

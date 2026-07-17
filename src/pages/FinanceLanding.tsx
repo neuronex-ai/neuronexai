@@ -29,6 +29,11 @@ import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
 import { Button } from "@/components/ui/button";
+import {
+  PublicProductHero,
+  PublicRouteBreadcrumbs,
+} from "@/components/public/PublicPageShell";
+import { getPublicPage } from "@/content/public-content";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 
@@ -132,7 +137,7 @@ const faqs: FaqItem[] = [
   {
     question: "Onde entram NeuroZap e no-show?",
     answer:
-      "O NeuroZap conecta e sincroniza o WhatsApp Business em Desktop Beta. Inbox, etiquetas e ações contextuais para cobrança e no-show continuam em evolução.",
+      "O NeuroZap conecta o WhatsApp Business à agenda e às pendências da clínica. O Synapse prepara confirmações e cobranças para o psicólogo revisar antes do envio.",
   },
 ];
 
@@ -167,12 +172,15 @@ const BrowserFrame = ({
 );
 
 const FinanceLanding = () => {
+  const page = getPublicPage("/neurofinance");
   const { theme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
   const [openFaq, setOpenFaq] = useState(0);
   const accountScreenshot = theme === "light" ? accountImage.light : accountImage.dark;
   const pixScreenshot = theme === "light" ? pixImage.light : pixImage.dark;
   const fiscalScreenshot = theme === "light" ? fiscalImage.light : fiscalImage.dark;
+
+  if (!page) return null;
 
   const scrollToCapabilities = () => {
     document.getElementById("core-banking-neurofinance")?.scrollIntoView({
@@ -181,88 +189,47 @@ const FinanceLanding = () => {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20">
+    <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/20">
       <div className="hidden md:block">
         <Navbar />
       </div>
       <LandingMobileNav />
 
       <main>
-        <section className="relative overflow-hidden px-5 pb-20 pt-32 md:px-8 md:pb-28 md:pt-44">
-          <div className="relative z-10 mx-auto max-w-[1380px]">
-            <div className="mx-auto max-w-5xl text-center">
-              <motion.div
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-foreground/[0.035] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]"
+        <PublicRouteBreadcrumbs route="/neurofinance" />
+        <PublicProductHero
+          page={page}
+          showImage={false}
+          actions={
+            <>
+              <Button asChild className="public-tactile h-14 rounded-full bg-foreground px-7 font-mono text-[10px] font-black uppercase text-background">
+                <Link to="/create-account">
+                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="public-tactile h-14 rounded-full border-border/70 bg-background/38 px-7 font-mono text-[10px] font-black uppercase backdrop-blur-xl"
+                onClick={scrollToCapabilities}
               >
-                <Sparkles className="h-3.5 w-3.5" />
-                NeuroFinance
-              </motion.div>
-              <motion.h1
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.08 }}
-                className="mt-8 text-5xl font-black leading-none text-foreground sm:text-6xl md:text-7xl lg:text-8xl"
-              >
-                Core banking integrado para a Clínica Autônoma.
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.16 }}
-                className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl"
-              >
-                Conta digital, Área Pix, boletos, NFS-e/RPS, antecipação de recebíveis e capital de giro preditivo operando perto da agenda, do prontuário e do Synapse.
-              </motion.p>
-              <motion.div
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.24 }}
-                className="mt-9 flex flex-col justify-center gap-3 sm:flex-row"
-              >
-                <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
-                  <Link to="/create-account">
-                    Começar agora <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]"
-                  onClick={scrollToCapabilities}
-                >
-                  Ver core banking
-                </Button>
-              </motion.div>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.32 }}
-              className="mt-16"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={accountScreenshot}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                >
-                  <BrowserFrame
-                    src={accountScreenshot}
-                    alt="Conta digital e saldo do NeuroFinance"
-                    label="Conta digital integrada"
-                    eager
-                  />
-                </motion.div>
-              </AnimatePresence>
-            </motion.div>
+                Ver recursos
+              </Button>
+            </>
+          }
+        />
+        <section className="public-product-media-band px-5 py-16 md:px-8 md:py-20">
+          <div className="mx-auto max-w-[1240px]">
+            <BrowserFrame
+              src={accountScreenshot}
+              alt="Conta digital e saldo do NeuroFinance"
+              label="Conta digital integrada"
+              eager
+            />
           </div>
         </section>
 
-        <section className="border-y border-border/35 bg-foreground text-background dark:bg-white dark:text-zinc-950">
+        <section className="public-section-stage public-inverted-section border-y border-border/35 text-background dark:text-zinc-950">
           <div className="mx-auto grid max-w-[1380px] gap-px bg-background/10 md:grid-cols-3">
             {[
               { icon: WalletCards, label: "Gestão Financeira", title: "Planejar e decidir", text: "Receitas, despesas, inadimplência, recebíveis e fluxo projetado." },
@@ -279,7 +246,7 @@ const FinanceLanding = () => {
           </div>
         </section>
 
-        <section id="core-banking-neurofinance" className="bg-background px-5 py-20 md:px-8 md:py-28">
+        <section id="core-banking-neurofinance" className="public-section-stage bg-background px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Fintechização real</p>
@@ -292,7 +259,7 @@ const FinanceLanding = () => {
             </div>
             <div className="mt-12 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {capabilities.map((item) => (
-                <article key={item.title} className="rounded-[28px] border border-border/40 bg-card/72 p-6 dark:border-white/10 dark:bg-white/[0.03]">
+                <article key={item.title} className="public-neurox-card rounded-[28px] p-6">
                   <item.icon className="h-5 w-5 text-muted-foreground" />
                   <h3 className="mt-8 text-xl font-black">{item.title}</h3>
                   <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground/68">{item.text}</p>
@@ -302,7 +269,7 @@ const FinanceLanding = () => {
           </div>
         </section>
 
-        <section className="px-5 pb-20 md:px-8 md:pb-28">
+        <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.92fr_1.08fr]">
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <LockKeyhole className="h-7 w-7 opacity-55" />
@@ -328,12 +295,12 @@ const FinanceLanding = () => {
                 label="Área Pix + Synapse"
               />
               <div className="grid gap-3 sm:grid-cols-2">
-                <article className="rounded-[28px] border border-border/40 bg-card/75 p-6 dark:border-white/10 dark:bg-white/[0.03]">
+                <article className="public-neurox-card rounded-[28px] p-6">
                   <Mic2 className="h-5 w-5 text-muted-foreground" />
                   <h3 className="mt-7 text-2xl font-black leading-tight">Voz assistida para revisar antes de confirmar.</h3>
                   <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">Ação crítica passa por leitura de contexto, checagem de intenção e confirmação explícita.</p>
                 </article>
-                <article className="rounded-[28px] border border-border/40 bg-card/75 p-6 dark:border-white/10 dark:bg-white/[0.03]">
+                <article className="public-neurox-card rounded-[28px] p-6">
                   <ShieldCheck className="h-5 w-5 text-muted-foreground" />
                   <h3 className="mt-7 text-2xl font-black leading-tight">PIN, plano, saldo e limites no mesmo portão.</h3>
                   <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">A aprovação não depende só do comando: depende da elegibilidade operacional inteira.</p>
@@ -343,7 +310,7 @@ const FinanceLanding = () => {
           </div>
         </section>
 
-        <section className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
+        <section className="public-section-stage public-inverted-section px-5 py-20 text-background dark:text-zinc-950 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1280px]">
             <div className="max-w-4xl">
               <BadgeCheck className="h-7 w-7 opacity-55" />
@@ -362,7 +329,7 @@ const FinanceLanding = () => {
           </div>
         </section>
 
-        <section className="px-5 py-20 md:px-8 md:py-28">
+        <section className="public-section-stage px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-[1320px] gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
             <BrowserFrame
               src={fiscalScreenshot}
@@ -387,14 +354,14 @@ const FinanceLanding = () => {
           </div>
         </section>
 
-        <section className="px-5 pb-20 md:px-8 md:pb-28">
+        <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <MessageCircle className="h-7 w-7 opacity-55" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap Desktop Beta</p>
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap</p>
               <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Cobrança e no-show sem desgaste humano.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                Conexão e sincronização do WhatsApp Business estão em Beta. Inbox, etiquetas, consentimento e ações contextuais com o Synapse ainda estão em evolução.
+                O WhatsApp Business encontra a agenda e as pendências da clínica. O Synapse prepara a próxima mensagem; você mantém o tom e a decisão.
               </p>
             </article>
             <div className="rounded-[38px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03]">
@@ -436,19 +403,19 @@ const FinanceLanding = () => {
           </div>
         </section>
 
-        <section className="px-5 pb-20 md:px-8 md:pb-28">
-          <div className="mx-auto max-w-[1200px] rounded-[42px] border border-border/40 bg-card/75 p-8 text-center dark:border-white/10 dark:bg-white/[0.03] md:p-12">
+        <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
+          <div className="public-closing-neutral mx-auto max-w-[1200px] rounded-[42px] p-8 text-center md:p-12">
             <h2 className="mx-auto max-w-4xl text-4xl font-black leading-none md:text-6xl">Gestão para decidir. NeuroFinance para movimentar.</h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70">
               Ative recursos bancários conforme plano, aprovação cadastral, elegibilidade da conta e validações de segurança.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
+              <Button asChild className="public-tactile h-14 rounded-full bg-foreground px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-background">
                 <Link to="/create-account">
                   Começar agora <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]">
+              <Button asChild variant="outline" className="public-tactile h-14 rounded-full px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em]">
                 <Link to="/contato">Falar com a equipe</Link>
               </Button>
             </div>

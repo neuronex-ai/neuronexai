@@ -16,6 +16,8 @@ import {
   validatePublicContentCatalog,
 } from "../src/lib/public-schema.mjs";
 
+export { PUBLIC_SITE_URL };
+
 export const PUBLIC_ENTRY_DIRECTORY = "public-pages";
 export const PUBLIC_LAST_MODIFIED = publicContent.site.lastModified;
 
@@ -49,14 +51,14 @@ const staticStyle = {
   eyebrow:
     "font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:#a1a1aa;",
   h1:
-    "max-width:920px;font-size:clamp(42px,8vw,78px);line-height:.94;letter-spacing:-.055em;margin:22px 0;",
+    "max-width:920px;font-size:clamp(42px,8vw,78px);line-height:.94;letter-spacing:0;margin:22px 0;",
   lead:
     "max-width:780px;font-size:19px;line-height:1.65;color:#d4d4d8;margin:0;",
   nav:
     "display:flex;flex-wrap:wrap;gap:14px;margin:0 0 44px;padding-bottom:24px;border-bottom:1px solid #27272a;",
   section: "padding:42px 0;border-top:1px solid #27272a;",
   h2:
-    "max-width:820px;font-size:clamp(28px,5vw,46px);line-height:1.04;letter-spacing:-.035em;margin:0;",
+    "max-width:820px;font-size:clamp(28px,5vw,46px);line-height:1.04;letter-spacing:0;margin:0;",
   paragraph:
     "max-width:780px;font-size:17px;line-height:1.7;color:#d4d4d8;margin:16px 0 0;",
   list:
@@ -69,6 +71,46 @@ const staticStyle = {
     "display:block;border:1px solid #3f3f46;border-radius:8px;padding:16px;color:#fff;text-decoration:none;",
 };
 
+const markdownStyle = {
+  h2: {
+    maxWidth: 820,
+    fontSize: 42,
+    lineHeight: 1.04,
+    margin: "38px 0 0",
+  },
+  h3: {
+    fontSize: 24,
+    lineHeight: 1.2,
+    margin: "32px 0 0",
+  },
+  paragraph: {
+    maxWidth: 780,
+    fontSize: 17,
+    lineHeight: 1.7,
+    color: "#d4d4d8",
+    margin: "16px 0 0",
+  },
+  list: {
+    maxWidth: 780,
+    display: "grid",
+    gap: 10,
+    margin: "24px 0 0",
+    paddingLeft: 24,
+  },
+  item: {
+    padding: "4px 0",
+    fontSize: 15,
+    lineHeight: 1.5,
+  },
+  link: {
+    color: "#fff",
+    textDecoration: "underline",
+  },
+  strong: {
+    color: "#fff",
+  },
+};
+
 const publicNavigation = [
   ["Início", "/"],
   ["Produto", "/produto"],
@@ -77,8 +119,8 @@ const publicNavigation = [
   ["NeuroBox", "/neurobox"],
   ["Pacientes", "/pacientes-para-psicologos"],
   ["Teleconsulta", "/teleconsulta-para-psicologos"],
-  ["Preços", "/precos"],
-  ["Blog", "/blog"],
+  ["Download", "/download"],
+  ["NeuroX", "/blog"],
   ["Novidades", "/novidades"],
   ["Segurança", "/seguranca-e-etica"],
 ];
@@ -162,39 +204,40 @@ const renderArticleBody = (body) =>
         remarkPlugins: [remarkGfm],
         components: {
           h2: ({ children }) =>
-            React.createElement("h2", { style: staticStyle.h2 }, children),
+            React.createElement("h2", { style: markdownStyle.h2 }, children),
           h3: ({ children }) =>
             React.createElement(
               "h3",
-              { style: "font-size:24px;line-height:1.2;margin:32px 0 0;" },
+              { style: markdownStyle.h3 },
               children,
             ),
           p: ({ children }) =>
-            React.createElement("p", { style: staticStyle.paragraph }, children),
-          ul: ({ children }) =>
-            React.createElement("ul", { style: staticStyle.list }, children),
-          ol: ({ children }) =>
             React.createElement(
-              "ol",
-              {
-                style:
-                  "max-width:780px;display:grid;gap:10px;margin:24px 0 0;padding-left:24px;",
-              },
+              "p",
+              { style: markdownStyle.paragraph },
               children,
             ),
+          ul: ({ children }) =>
+            React.createElement("ul", { style: markdownStyle.list }, children),
+          ol: ({ children }) =>
+            React.createElement("ol", { style: markdownStyle.list }, children),
           li: ({ children }) =>
-            React.createElement("li", { style: staticStyle.item }, children),
+            React.createElement("li", { style: markdownStyle.item }, children),
           a: ({ children, href }) =>
             React.createElement(
               "a",
               {
                 href,
-                style: "color:#fff;text-decoration:underline;",
+                style: markdownStyle.link,
               },
               children,
             ),
           strong: ({ children }) =>
-            React.createElement("strong", { style: "color:#fff;" }, children),
+            React.createElement(
+              "strong",
+              { style: markdownStyle.strong },
+              children,
+            ),
         },
       },
       body.replace(/^# .+\r?\n+/u, ""),
@@ -203,7 +246,7 @@ const renderArticleBody = (body) =>
 
 const renderBlogCards = () =>
   `<section style="${staticStyle.section}">
-    <h2 style="${staticStyle.h2}">Artigos em destaque</h2>
+    <h2 style="${staticStyle.h2}">Edições em destaque</h2>
     <div style="${staticStyle.related}">
       ${publicContent.articles
         .map(
@@ -212,7 +255,7 @@ const renderBlogCards = () =>
               <p style="${staticStyle.eyebrow}">${escapeHtml(article.category)}</p>
               <h3 style="font-size:22px;line-height:1.2;margin:12px 0;">${escapeHtml(article.title)}</h3>
               <p style="font-size:15px;line-height:1.6;color:#d4d4d8;">${escapeHtml(article.excerpt)}</p>
-              <a href="${article.route}" style="color:#fff;">Ler artigo</a>
+              <a href="${article.route}" style="color:#fff;">Ler edição</a>
             </article>`,
         )
         .join("")}
@@ -263,10 +306,10 @@ export async function renderPublicStaticShell(entry) {
       ${renderRelated(entry.related)}
       <section style="${staticStyle.section}">
         <h2 style="${staticStyle.h2}">Conheça a NeuroNex</h2>
-        <p style="${staticStyle.paragraph}">Crie uma conta ou compare os planos para entender quais recursos atendem à sua rotina.</p>
+        <p style="${staticStyle.paragraph}">Crie uma conta ou instale a NeuroNex no Windows para começar a organizar sua rotina.</p>
         <div style="${staticStyle.related}">
           <a href="/create-account" style="${staticStyle.relatedItem}">Começar grátis</a>
-          <a href="/precos" style="${staticStyle.relatedItem}">Comparar planos</a>
+          <a href="/download" style="${staticStyle.relatedItem}">Baixar para Windows</a>
         </div>
       </section>
     </div>

@@ -84,7 +84,7 @@ const diffRows = [
 const operatingCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos e teleconsulta." },
   { icon: BrainCircuit, title: "IA contextual", text: "Synapse, voz, texto, NeuroBox e apoio operacional." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap Desktop Beta e continuidade." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap e continuidade." },
   { icon: CreditCard, title: "Financeiro", text: "Gestão, cobranças, Pix, boletos, extrato e saques." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais organizados; emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional para decisão." },

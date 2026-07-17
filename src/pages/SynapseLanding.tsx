@@ -1,5 +1,11 @@
-import { CatalogLanding } from "@/pages/public/CatalogLanding";
+import { PublicPageShell } from "@/components/public/PublicPageShell";
+import { getPublicPage } from "@/content/public-content";
 
-const SynapseLanding = () => <CatalogLanding route="/synapse" />;
+const SynapseLanding = () => {
+  const page = getPublicPage("/synapse");
+  if (!page) return null;
+
+  return <PublicPageShell page={page} />;
+};
 
 export default SynapseLanding;

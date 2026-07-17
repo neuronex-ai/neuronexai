@@ -25,7 +25,7 @@ export function normalizePublicPath(pathname) {
 }
 
 export function absolutePublicUrl(path = "/") {
-  return new URL(path, `${PUBLIC_SITE_URL}/`).toString();
+  return new globalThis.URL(path, `${PUBLIC_SITE_URL}/`).toString();
 }
 
 const pageByRoute = new Map(
@@ -232,9 +232,9 @@ const publicOffers = () =>
   publicContent.site.offers.map((offer) => ({
     "@type": "Offer",
     name: offer.name,
-    price: offer.price.toFixed(2),
+    price: offer.price,
     priceCurrency: offer.priceCurrency,
-    availability: "https://schema.org/OnlineOnly",
+    availability: "https://schema.org/InStock",
     url: absolutePublicUrl(offer.url),
     category: "Subscription",
   }));
@@ -293,7 +293,7 @@ const breadcrumbItemsFor = (config, url) => {
     items.push({
       "@type": "ListItem",
       position: 2,
-      name: "Blog",
+      name: "NeuroX",
       item: absolutePublicUrl("/blog"),
     });
   }
@@ -429,7 +429,7 @@ const buildFaqNode = (config, url) => ({
 const buildBlogIndexNode = (url) => ({
   "@type": "Blog",
   "@id": `${url}#blog`,
-  name: "Blog NeuroNex",
+  name: "NeuroX",
   url,
   publisher: { "@id": organizationId },
   inLanguage: "pt-BR",
@@ -480,11 +480,7 @@ const buildArticleNode = (config, url, image) => {
     publisher: { "@id": organizationId },
     isPartOf: { "@id": `${absolutePublicUrl("/blog")}#blog` },
     mainEntityOfPage: { "@id": `${url}#webpage` },
-    image: [
-      image,
-      `${image}?ratio=4x3`,
-      `${image}?ratio=1x1`,
-    ],
+    image: [image],
   };
 };
 
@@ -550,7 +546,7 @@ export function buildPublicStructuredData(config) {
     if (config.contentKind === "blog") {
       graph.push(
         buildBlogIndexNode(url),
-        buildItemListNode(url, publicContent.articles, "Artigos NeuroNex"),
+        buildItemListNode(url, publicContent.articles, "Edições NeuroX"),
       );
     }
 

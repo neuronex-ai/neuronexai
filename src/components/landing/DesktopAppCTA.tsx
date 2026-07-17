@@ -12,7 +12,7 @@ const storeBenefits = [
 
 export const DesktopAppCTA = () => {
     return (
-        <section id="downloads" className="relative overflow-hidden bg-background px-6 py-24 md:py-40">
+        <section id="downloads" className="public-section-stage relative overflow-hidden bg-background px-6 py-24 md:py-32">
             <div className="pointer-events-none absolute inset-0 premium-noise opacity-[0.03]" />
 
             <div className="relative z-10 mx-auto max-w-[1120px]">
@@ -50,7 +50,7 @@ export const DesktopAppCTA = () => {
                     </div>
 
                     <FadeIn delay={0.45} className="mt-10 flex flex-col items-center gap-3">
-                        <Button asChild size="lg" className="h-14 rounded-2xl px-7 text-sm font-bold">
+                        <Button asChild size="lg" className="public-tactile h-14 rounded-full px-7 text-sm font-bold">
                             <a
                                 href="https://apps.microsoft.com/detail/9PKGGSPS44CD?hl=pt-BR&gl=BR"
                                 target="_blank"

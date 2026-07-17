@@ -48,11 +48,12 @@
     { "source": "/legal", "destination": "/documentos-legais", "permanent": true },
     { "source": "/neurobank", "destination": "/neurofinance", "permanent": true },
     { "source": "/funcionalidades", "destination": "/produto", "permanent": true },
-    { "source": "/pricing", "destination": "/precos", "permanent": true }
+    { "source": "/precos", "destination": "/download", "permanent": true },
+    { "source": "/pricing", "destination": "/download", "permanent": true }
   ],
   "rewrites": [
     { "source": "/produto", "destination": "/public-pages/produto.html" },
-    { "source": "/precos", "destination": "/public-pages/precos.html" },
+    { "source": "/download", "destination": "/public-pages/download.html" },
     { "source": "/synapse", "destination": "/public-pages/synapse.html" },
     { "source": "/neurofinance", "destination": "/public-pages/neurofinance.html" },
     { "source": "/gestao-financeira-para-psicologos", "destination": "/public-pages/gestao-financeira-para-psicologos.html" },

@@ -55,6 +55,16 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      opacity: {
+        48: "0.48",
+        58: "0.58",
+        62: "0.62",
+        64: "0.64",
+        66: "0.66",
+        68: "0.68",
+        72: "0.72",
+        78: "0.78",
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",

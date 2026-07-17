@@ -71,12 +71,11 @@ export const Hero = () => {
 
                         <Magnetic strength={0.2} className="w-full sm:w-auto">
                             <Button
-                                type="button"
+                                asChild
                                 variant="ghost"
-                                onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
                                 className="w-full sm:w-auto h-14 sm:h-16 px-6 sm:px-10 rounded-full text-foreground/70 hover:text-foreground hover:bg-foreground/5 text-[11px] sm:text-[12px] font-black uppercase tracking-[0.25em] transition-all duration-500 border border-border/10 hover:border-primary/20 backdrop-blur-xl hover:scale-105 active:scale-[0.98]"
                             >
-                                Ver planos
+                                <Link to="/download">Baixar para Windows</Link>
                             </Button>
                         </Magnetic>
                     </div>

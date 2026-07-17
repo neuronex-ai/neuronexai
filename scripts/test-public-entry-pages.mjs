@@ -15,20 +15,24 @@ const template = `<!doctype html><html><head>
   <title>Home</title>
   <meta name="title" content="Home" />
   <meta name="description" content="Home" />
+  <meta name="keywords" content="" />
   <meta name="robots" content="index, follow" />
+  <meta property="og:type" content="website" />
   <meta property="og:url" content="https://example.test/" />
   <meta property="og:title" content="Home" />
   <meta property="og:description" content="Home" />
   <meta property="og:image" content="https://example.test/image.png" />
+  <meta property="og:image:alt" content="Home" />
   <meta name="twitter:url" content="https://example.test/" />
   <meta name="twitter:title" content="Home" />
   <meta name="twitter:description" content="Home" />
   <meta name="twitter:image" content="https://example.test/image.png" />
+  <meta name="twitter:image:alt" content="Home" />
   <link rel="canonical" href="https://example.test/" />
   <script id="neuronex-route-structured-data" type="application/ld+json">[]</script>
-</head><body><noscript><main id="static-public-shell">Home</main></noscript><div id="root"></div></body></html>`;
+</head><body><div id="root"></div></body></html>`;
 
-test("each public route generates unique static metadata and visible content", () => {
+test("each public route generates unique metadata and a complete initial HTML", async () => {
   const routes = new Set();
   const files = new Set();
 
@@ -38,25 +42,39 @@ test("each public route generates unique static metadata and visible content", (
     routes.add(page.route);
     files.add(page.file);
 
-    const html = buildPublicEntryHtml(template, page);
-    assert.match(html, new RegExp(`<title>${page.title.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}</title>`));
+    const html = await buildPublicEntryHtml(template, page);
+    const expectedTitle =
+      page.kind === "article" ? `${page.title} | NeuroNex` : page.title;
+
+    assert.ok(html.includes(`<title>${expectedTitle}</title>`), page.route);
     assert.ok(html.includes(`href="${PUBLIC_SITE_URL}${page.route}"`));
+    assert.ok(html.includes(`<h1`));
     assert.ok(html.includes(page.heading));
-    assert.ok(html.includes("<noscript>"));
+    assert.ok(html.includes("<h2"));
+    assert.ok(html.includes('id="static-public-shell"'));
+    assert.ok(html.includes('href="/download"'));
     assert.ok(html.includes('id="neuronex-route-structured-data"'));
-    assert.equal(html.includes("neuronex-entry-visibility-script"), false);
-    assert.equal(html.includes("neuronex-entry-visibility-style"), false);
+    assert.equal(html.includes("<noscript>"), false);
+    assert.equal(html.includes('id="root"></div>'), false);
   }
 });
 
-test("sitemap and Vercel rewrites cover every generated public entry", async () => {
-  const sitemap = await readFile(new URL("../public/sitemap.xml", import.meta.url), "utf8");
+test("sitemap and Vercel routes cover every public entry", async () => {
+  const sitemap = renderPublicSitemap();
   const vercel = JSON.parse(
     await readFile(new URL("../vercel.json", import.meta.url), "utf8"),
   );
 
-  for (const page of publicEntryPages) {
-    assert.ok(sitemap.includes(`<loc>${PUBLIC_SITE_URL}${page.route}</loc>`), page.route);
+  for (const page of publicPages) {
+    assert.ok(
+      sitemap.includes(`<loc>${PUBLIC_SITE_URL}${page.route}</loc>`),
+      page.route,
+    );
+  }
+
+  for (const page of publicEntryPages.filter(
+    ({ kind }) => kind !== "article",
+  )) {
     assert.ok(
       vercel.rewrites.some(
         (rewrite) =>
@@ -67,29 +85,39 @@ test("sitemap and Vercel rewrites cover every generated public entry", async () 
     );
   }
 
+  assert.ok(
+    vercel.rewrites.some(
+      (rewrite) =>
+        rewrite.source === "/blog/:slug" &&
+        rewrite.destination ===
+          `/${PUBLIC_ENTRY_DIRECTORY}/blog/:slug.html`,
+    ),
+  );
+  assert.ok(
+    vercel.redirects.some(
+      (redirect) =>
+        redirect.source === "/pricing" &&
+        redirect.destination === "/download" &&
+        redirect.permanent === true,
+    ),
+  );
+
   const sitemapRoutes = [...sitemap.matchAll(/<loc>([^<]+)<\/loc>/g)].map(
     ([, url]) => new URL(url).pathname.replace(/\/+$/, "") || "/",
   );
-  const expectedRoutes = publicPages.map(({ route }) => route);
-  assert.deepEqual(new Set(sitemapRoutes), new Set(expectedRoutes));
-  assert.equal(sitemap, renderPublicSitemap());
-
-  const generatedRewriteRoutes = vercel.rewrites
-    .filter(({ destination }) => destination.startsWith(`/${PUBLIC_ENTRY_DIRECTORY}/`))
-    .map(({ source }) => source);
   assert.deepEqual(
-    new Set(generatedRewriteRoutes),
-    new Set(publicEntryPages.map(({ route }) => route)),
+    new Set(sitemapRoutes),
+    new Set(publicPages.map(({ route }) => route)),
   );
 });
 
-test("the home entry uses the same public-page catalog", async () => {
-  const template = await readFile(new URL("../index.html", import.meta.url), "utf8");
+test("the home entry is generated from the same public catalog", async () => {
   const home = publicPages.find(({ route }) => route === "/");
 
   assert.ok(home);
-  assert.ok(template.includes(`<title>${home.title}</title>`));
-  assert.ok(template.includes(home.description));
-  assert.ok(template.includes(home.heading));
-  assert.ok(template.includes(`href="${PUBLIC_SITE_URL}/"`));
+  const html = await buildPublicEntryHtml(template, home);
+  assert.ok(html.includes(`<title>${home.title}</title>`));
+  assert.ok(html.includes(home.description));
+  assert.ok(html.includes(home.heading));
+  assert.ok(html.includes(`href="${PUBLIC_SITE_URL}/"`));
 });

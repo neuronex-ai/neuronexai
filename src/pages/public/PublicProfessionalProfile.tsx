@@ -142,7 +142,7 @@ export default function PublicProfessionalProfile() {
 
   if (profileQuery.isLoading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+      <main className="public-lumen-page flex min-h-screen items-center justify-center bg-background text-foreground">
         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" aria-label="Carregando perfil" />
       </main>
     );
@@ -153,7 +153,7 @@ export default function PublicProfessionalProfile() {
   }
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-background px-5 py-8 text-foreground sm:px-8 sm:py-12">
+    <main className="public-lumen-page relative min-h-screen overflow-hidden bg-background px-5 py-8 text-foreground sm:px-8 sm:py-12">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[42rem] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.09),transparent_58%)] dark:opacity-80" />
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_20%,rgba(127,127,127,0.035)_48%,transparent_72%)]" />
 
@@ -168,7 +168,7 @@ export default function PublicProfessionalProfile() {
               <span className="mt-0.5 block text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Identidade profissional</span>
             </span>
           </Link>
-          <Button variant="outline" onClick={() => void shareProfile()} className="h-11 rounded-2xl px-4 sm:px-5">
+          <Button variant="outline" onClick={() => void shareProfile()} className="public-tactile h-11 rounded-full px-4 sm:px-5">
             <Share2 className="mr-2 h-4 w-4" /> Compartilhar
           </Button>
         </header>
@@ -177,7 +177,7 @@ export default function PublicProfessionalProfile() {
           initial={reduceMotion ? false : { opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: reduceMotion ? 0 : 0.35, ease: [0.22, 1, 0.36, 1] }}
-          className="mt-10 grid overflow-hidden rounded-[38px] border border-border/45 bg-card/70 shadow-[0_36px_100px_-52px_rgba(0,0,0,0.6)] backdrop-blur-[44px] lg:grid-cols-[0.92fr_1.08fr] dark:bg-white/[0.025]"
+          className="public-neurox-card mt-10 grid overflow-hidden rounded-[38px] backdrop-blur-[44px] lg:grid-cols-[0.92fr_1.08fr]"
         >
           <div className="relative flex min-h-[34rem] flex-col items-center justify-center overflow-hidden border-b border-border/40 p-8 text-center lg:border-b-0 lg:border-r lg:p-12">
             <div aria-hidden className="absolute inset-0 bg-[radial-gradient(circle_at_50%_34%,rgba(255,255,255,0.105),transparent_38%)]" />
@@ -199,7 +199,7 @@ export default function PublicProfessionalProfile() {
               </div>
 
               <p className="mt-8 text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">NEUROID</p>
-              <h1 className="mt-3 text-4xl font-black leading-[0.92] tracking-[-0.055em] sm:text-5xl">{profile.display_name}</h1>
+              <h1 className="mt-3 text-4xl font-black leading-[0.94] tracking-normal sm:text-5xl">{profile.display_name}</h1>
               <p className="mt-4 text-sm font-bold text-muted-foreground">{profile.specialty || "Profissional de saúde mental"}</p>
               {profile.crp ? <p className="mt-2 text-[10px] font-black uppercase tracking-[0.17em] text-muted-foreground/75">CRP {profile.crp}</p> : null}
             </div>
@@ -207,7 +207,7 @@ export default function PublicProfessionalProfile() {
 
           <div className="flex flex-col justify-center p-7 sm:p-10 lg:p-12">
             <div className="flex flex-wrap items-center gap-2.5">
-              <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/[0.07] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-emerald-700 dark:text-emerald-300">
+              <span className="public-glass-capsule inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-foreground/72">
                 <ShieldCheck className="h-3.5 w-3.5" /> Perfil profissional
               </span>
               {profile.founder ? (
@@ -237,11 +237,11 @@ export default function PublicProfessionalProfile() {
             </div>
 
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Button onClick={() => void copyProfile()} className="h-12 flex-1 rounded-2xl font-bold">
+              <Button onClick={() => void copyProfile()} className="public-tactile h-12 flex-1 rounded-full font-bold">
                 {copied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
                 {copied ? "Link copiado" : "Copiar link"}
               </Button>
-              <Button asChild variant="outline" className="h-12 flex-1 rounded-2xl font-bold">
+              <Button asChild variant="outline" className="public-tactile h-12 flex-1 rounded-full font-bold">
                 <Link to="/">Conhecer a NeuroNex</Link>
               </Button>
             </div>
@@ -259,9 +259,7 @@ export default function PublicProfessionalProfile() {
 function InfoRow({ icon: Icon, label, value }: { icon: typeof Building2; label: string; value: string }) {
   return (
     <div className="flex items-center gap-4 rounded-[22px] border border-border/40 bg-muted/20 p-4 dark:bg-white/[0.015]">
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/45 bg-card/70">
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </span>
+      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
       <span className="min-w-0">
         <span className="block text-[8px] font-black uppercase tracking-[0.17em] text-muted-foreground">{label}</span>
         <span className="mt-1 block truncate text-sm font-black text-foreground">{value}</span>
@@ -272,14 +270,14 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Building2; label: 
 
 function ProfileUnavailable() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-5 text-foreground">
-      <section className="w-full max-w-md rounded-[32px] border border-border/45 bg-card/70 p-8 text-center shadow-2xl backdrop-blur-xl">
+    <main className="public-lumen-page flex min-h-screen items-center justify-center bg-background px-5 text-foreground">
+      <section className="public-neurox-card w-full max-w-md rounded-[32px] p-8 text-center backdrop-blur-xl">
         <ShieldCheck className="mx-auto h-7 w-7 text-muted-foreground" />
-        <h1 className="mt-5 text-2xl font-black tracking-[-0.035em]">Perfil indisponível</h1>
+        <h1 className="mt-5 text-2xl font-black tracking-normal">Perfil indisponível</h1>
         <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
           Este NEUROID não existe ou ainda não está disponível para compartilhamento.
         </p>
-        <Button asChild variant="outline" className="mt-7 h-11 rounded-2xl px-6">
+        <Button asChild variant="outline" className="public-tactile mt-7 h-11 rounded-full px-6">
           <Link to="/">Voltar para a NeuroNex</Link>
         </Button>
       </section>

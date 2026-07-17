@@ -27,7 +27,7 @@ const BlogArticle = () => {
   const body = getPublicArticleBody(article).replace(/^# .+\r?\n+/u, "");
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="hidden md:block">
         <Navbar />
       </div>
@@ -35,15 +35,16 @@ const BlogArticle = () => {
       <main className="pt-24 md:pt-32">
         <PublicBreadcrumbs articleTitle={article.title} />
         <article>
-          <header className="px-5 pb-14 pt-8 md:px-8 md:pb-20 md:pt-14">
-            <div className="mx-auto max-w-[1120px]">
+          <header className="px-5 pb-10 pt-0 md:px-8 md:pb-14">
+            <div className="public-neurox-hero mx-auto max-w-[1320px] px-8 py-16 md:px-14 md:py-20">
+              <div className="mx-auto max-w-[1120px]">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
                   {article.category}
                 </span>
                 <PublicStatusBadge status="Disponível" />
               </div>
-              <h1 className="mt-8 max-w-5xl text-balance text-[2.8rem] font-black leading-[0.92] tracking-[-0.05em] sm:text-[3.6rem] md:text-[5rem]">
+              <h1 className="public-neurox-title mt-8 max-w-5xl text-balance text-[clamp(3rem,6vw,6.5rem)] font-black leading-[0.9] tracking-normal">
                 {article.title}
               </h1>
               <p className="mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/74 md:text-xl">
@@ -59,11 +60,12 @@ const BlogArticle = () => {
                   Publicado e revisado em 16 de julho de 2026
                 </span>
               </div>
+              </div>
             </div>
           </header>
 
           <div className="px-5 md:px-8">
-            <div className="mx-auto max-w-[1240px] overflow-hidden rounded-lg border border-border/45 bg-card dark:border-white/10">
+            <div className="public-scroll-showcase mx-auto max-w-[1240px] overflow-hidden rounded-[34px] p-3 md:p-4">
               <img
                 src={article.image}
                 alt={article.imageAlt}
@@ -77,7 +79,7 @@ const BlogArticle = () => {
           </div>
 
           <div className="px-5 py-16 md:px-8 md:py-24">
-            <div className="prose prose-zinc mx-auto max-w-[780px] dark:prose-invert prose-headings:scroll-mt-28 prose-headings:font-black prose-headings:tracking-[-0.035em] prose-p:font-medium prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:font-bold prose-a:text-foreground prose-li:text-muted-foreground">
+            <div className="prose prose-zinc mx-auto max-w-[780px] dark:prose-invert prose-headings:scroll-mt-28 prose-headings:font-black prose-headings:tracking-normal prose-p:font-medium prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:font-bold prose-a:text-foreground prose-li:text-muted-foreground">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
             </div>
           </div>

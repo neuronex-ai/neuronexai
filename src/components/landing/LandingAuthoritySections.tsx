@@ -22,59 +22,60 @@ import {
 const ecosystemItems = [
   {
     icon: Monitor,
-    title: "NeuroNex Professional",
+    title: "Professional",
     status: "Disponível" as const,
-    text: "Painel, Agenda, Teleconsulta, Pacientes, Prontuário, Notas, Financeiro, Synapse e Ajustes.",
+    text: "O espaço onde você começa o dia, atende, registra, cobra e decide com contexto.",
   },
   {
     icon: Smartphone,
     title: "Professional mobile",
     status: "Em evolução" as const,
-    text: "Próxima sessão, reagendamento, cobrança, nota rápida, teleconsulta e Synapse em fluxos mobile-first.",
+    text: "A rotina essencial no bolso: próxima sessão, cobrança rápida, nota e Synapse em movimento.",
   },
   {
     icon: UserRound,
     title: "Portal do Paciente",
     status: "Disponível" as const,
-    text: "Sessões, humor, documentos, tarefas, progresso, pacotes e cobranças em uma aplicação própria.",
+    text: "Um lugar próprio para continuidade, humor, tarefas, documentos, pacotes e cobranças.",
   },
   {
     icon: Workflow,
     title: "Jornadas públicas",
     status: "Disponível" as const,
-    text: "Perfil, confirmações, convites, anamneses externas, ajuda, contato e documentos legais.",
+    text: "Perfil, confirmações, convites, anamneses, ajuda, contato e documentos legais sem abrir o produto.",
   },
 ];
 
 export const LandingEcosystemAuthoritySection = () => (
-  <section className="bg-background px-6 py-20 md:py-28">
-    <div className="mx-auto max-w-[1240px]">
+  <section className="public-section-stage bg-background px-5 py-20 md:px-8 md:py-28">
+    <div className="public-neurox-hero mx-auto max-w-[1480px] px-5 py-16 md:px-10 md:py-24">
       <FadeIn>
         <div className="mx-auto max-w-5xl text-center">
-          <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Ecossistema NeuroNex
           </p>
-          <h2 className="mt-6 text-balance text-4xl font-black leading-none md:text-6xl lg:text-7xl">
-            Quatro experiências.{" "}
-            <span className="text-muted-foreground/35">
-              Uma mesma operação clínica.
-            </span>
+          <h2 className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,6.7rem)] font-black leading-[0.84] tracking-normal">
+            Quatro experiências.<br />Uma mesma operação clínica.
           </h2>
-          <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
-            Cada público recebe uma interface própria, enquanto o contexto
-            autorizado permanece conectado aos fluxos corretos.
+          <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
+            Você trabalha em uma experiência própria. Seu paciente acessa outra.
+            O contexto autorizado continua conectado, sem misturar papéis.
           </p>
         </div>
       </FadeIn>
-      <div className="mt-14 grid gap-px overflow-hidden border-y border-border/45 bg-border/45 dark:border-white/10 dark:bg-white/10 md:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-14 grid overflow-hidden rounded-[36px] border border-border/45 dark:border-white/10 md:grid-cols-2 xl:grid-cols-4">
         {ecosystemItems.map((item, index) => (
           <FadeIn key={item.title} delay={index * 0.05}>
-            <article className="h-full bg-background px-6 py-8">
-              <div className="flex items-start justify-between gap-4">
+            <article className="public-ecosystem-node group h-full min-h-[268px] px-6 py-8 md:px-7 md:py-9">
+              <div className="flex items-center justify-between gap-4">
                 <item.icon className="h-6 w-6 text-muted-foreground" />
-                <PublicStatusBadge status={item.status} />
+                {item.status !== "Disponível" ? (
+                  <span className="font-mono text-[8px] font-black uppercase text-muted-foreground/68">
+                    Em evolução
+                  </span>
+                ) : null}
               </div>
-              <h3 className="mt-9 text-2xl font-black leading-tight">
+              <h3 className="mt-10 text-2xl font-black leading-tight">
                 {item.title}
               </h3>
               <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">
@@ -84,10 +85,10 @@ export const LandingEcosystemAuthoritySection = () => (
           </FadeIn>
         ))}
       </div>
-      <div className="mt-8 text-center">
+      <div className="mt-9 text-center">
         <Link
           to="/produto"
-          className="inline-flex min-h-12 items-center text-[10px] font-black uppercase tracking-[0.18em]"
+          className="public-tactile inline-flex min-h-12 items-center rounded-full border border-border/55 bg-background/46 px-6 font-mono text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-xl dark:border-white/10"
         >
           Conhecer o ecossistema{" "}
           <ArrowRight className="ml-2 h-4 w-4" />
@@ -103,11 +104,11 @@ export const LandingContinuityAuthoritySection = () => {
   if (!portalPage || !recordPage) return null;
 
   return (
-    <section className="bg-foreground px-6 py-20 text-background dark:bg-white dark:text-zinc-950 md:py-28">
+    <section className="public-section-stage public-inverted-section px-6 py-20 text-background dark:text-zinc-950 md:py-28">
       <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
         <FadeIn>
           <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.22em] opacity-45">
+            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] opacity-45">
               Duas pontas do cuidado
             </p>
             <h2 className="mt-6 text-balance text-5xl font-black leading-none md:text-7xl">
@@ -121,13 +122,13 @@ export const LandingContinuityAuthoritySection = () => {
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
                 to={recordPage.route}
-                className="inline-flex min-h-12 items-center justify-center rounded-lg bg-background px-5 text-[10px] font-black uppercase tracking-[0.16em] text-foreground dark:bg-zinc-950 dark:text-white"
+                className="public-tactile inline-flex min-h-12 items-center justify-center rounded-full bg-background px-5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-foreground dark:bg-zinc-950 dark:text-white"
               >
                 Ver prontuário <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
               <Link
                 to={portalPage.route}
-                className="inline-flex min-h-12 items-center justify-center rounded-lg border border-background/20 px-5 text-[10px] font-black uppercase tracking-[0.16em] dark:border-zinc-950/20"
+                className="public-tactile inline-flex min-h-12 items-center justify-center rounded-full border border-background/20 px-5 font-mono text-[10px] font-black uppercase tracking-[0.16em] dark:border-zinc-950/20"
               >
                 Ver Portal do Paciente
               </Link>
@@ -143,7 +144,7 @@ export const LandingContinuityAuthoritySection = () => {
               height={720}
               loading="lazy"
               decoding="async"
-              className="aspect-video w-full self-center rounded-lg object-cover sm:col-span-2"
+              className="aspect-video w-full self-center rounded-[28px] border border-background/12 object-cover sm:col-span-2 dark:border-zinc-950/12"
             />
             {[
               "Notas clínicas privadas permanecem na área profissional.",
@@ -166,13 +167,13 @@ export const LandingContinuityAuthoritySection = () => {
 };
 
 export const LandingKnowledgeAuthoritySection = () => (
-  <section className="bg-background px-6 py-20 md:py-28">
+  <section className="public-section-stage bg-background px-6 py-20 md:py-28">
     <div className="mx-auto max-w-[1240px]">
       <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
         <FadeIn>
           <div>
             <BookOpen className="h-7 w-7 text-muted-foreground" />
-            <p className="mt-8 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+            <p className="mt-8 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Conteúdo e transparência
             </p>
             <h2 className="mt-5 text-balance text-5xl font-black leading-none md:text-7xl">
@@ -209,7 +210,7 @@ export const LandingKnowledgeAuthoritySection = () => (
         {PUBLIC_ARTICLES.map((article, index) => (
           <FadeIn key={article.slug} delay={index * 0.05}>
             <article className="group h-full border-t border-border/55 py-6 dark:border-white/10">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
                 {article.category}
               </p>
               <h3 className="mt-5 text-2xl font-black leading-tight">
@@ -237,10 +238,10 @@ export const MobileAuthoritySections = () => (
   <>
     <section className="bg-background px-5 py-16">
       <div className="text-center">
-        <p className="text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+        <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
           Ecossistema NeuroNex
         </p>
-        <h2 className="mt-5 text-[2.55rem] font-black leading-[0.9] tracking-[-0.055em]">
+        <h2 className="mt-5 text-[2.55rem] font-black leading-[0.92] tracking-normal">
           Cada pessoa no espaço certo.
         </h2>
       </div>
@@ -267,10 +268,10 @@ export const MobileAuthoritySections = () => (
     </section>
 
     <section className="bg-foreground px-5 py-16 text-background dark:bg-white dark:text-zinc-950">
-      <p className="text-[8px] font-black uppercase tracking-[0.22em] opacity-45">
+      <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] opacity-45">
         Continuidade
       </p>
-      <h2 className="mt-5 text-[2.55rem] font-black leading-[0.9] tracking-[-0.055em]">
+      <h2 className="mt-5 text-[2.55rem] font-black leading-[0.92] tracking-normal">
         Prontuário vivo de um lado. Portal do Paciente do outro.
       </h2>
       <p className="mt-5 text-sm font-medium leading-relaxed opacity-64">
@@ -295,13 +296,13 @@ export const MobileAuthoritySections = () => (
 
     <section className="bg-background px-5 py-16">
       <BookOpen className="h-6 w-6 text-muted-foreground" />
-      <h2 className="mt-6 text-[2.55rem] font-black leading-[0.9] tracking-[-0.055em]">
+      <h2 className="mt-6 text-[2.55rem] font-black leading-[0.92] tracking-normal">
         Conteúdo para operar melhor.
       </h2>
       <div className="mt-9 divide-y divide-border/45 border-y border-border/45 dark:divide-white/10 dark:border-white/10">
         {PUBLIC_ARTICLES.map((article) => (
           <article key={article.slug} className="py-6">
-            <p className="text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+            <p className="font-mono text-[8px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
               {article.category}
             </p>
             <h3 className="mt-4 text-xl font-black leading-tight">

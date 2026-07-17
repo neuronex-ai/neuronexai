@@ -1,33 +1,28 @@
 import { Navbar } from "@/components/landing/Navbar";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Footer } from "@/components/landing/Footer";
-import { Starfield } from "@/components/ui/starfield";
+import { PublicRouteBreadcrumbs } from "@/components/public/PublicPageShell";
 import { FadeIn } from "@/components/animations/FadeIn";
 import { Cookie, CheckCircle2, XCircle } from "lucide-react";
 
 const ConfiguracoesDeCookies = () => {
     return (
-        <div className="min-h-screen bg-background text-foreground relative overflow-x-hidden font-sans selection:bg-foreground/10">
+        <div className="public-lumen-page min-h-screen bg-background text-foreground relative overflow-x-hidden font-sans selection:bg-foreground/10">
             <Navbar />
             <LandingMobileNav />
-
-            <div className="fixed inset-0 pointer-events-none opacity-20 dark:opacity-10">
-                <Starfield />
-            </div>
+            <PublicRouteBreadcrumbs route="/configuracoes-de-cookies" />
 
             {/* --- Hero --- */}
-            <section className="relative pt-44 pb-20 px-6 overflow-hidden">
+            <section className="relative px-6 pb-16 pt-28 md:pt-36">
                 <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,rgba(0,0,0,0.03),transparent)] dark:bg-[radial-gradient(circle_at_50%_-20%,rgba(255,255,255,0.03),transparent)] pointer-events-none" />
 
-                <div className="max-w-4xl mx-auto text-center relative z-10 space-y-10">
+                <div className="public-neurox-hero max-w-[1180px] mx-auto px-8 py-16 text-center relative z-10 space-y-10 md:px-14 md:py-20">
                     <FadeIn>
-                        <div className="w-20 h-20 mx-auto rounded-[22%] bg-foreground/[0.02] border border-foreground/5 text-foreground/40 flex items-center justify-center mb-8">
-                            <Cookie className="h-10 w-10" strokeWidth={1.5} />
-                        </div>
+                        <Cookie className="mx-auto mb-8 h-10 w-10 text-muted-foreground" strokeWidth={1.5} />
                     </FadeIn>
 
                     <FadeIn delay={0.1}>
-                        <h1 className="text-5xl md:text-7xl font-medium tracking-tight text-foreground leading-[1] select-none">
+                        <h1 className="public-neurox-title text-[clamp(3.5rem,7vw,7.4rem)] font-black tracking-normal leading-[0.9] select-none">
                             Política de Cookies
                         </h1>
                     </FadeIn>
@@ -42,7 +37,7 @@ const ConfiguracoesDeCookies = () => {
                 </div>
             </section>
 
-            <div className="max-w-4xl mx-auto px-6 pb-40 relative z-10 space-y-20">
+            <div className="public-legal-content max-w-4xl mx-auto px-6 pb-40 relative z-10 space-y-20">
                 <FadeIn>
                     <div className="space-y-16">
                         {/* What are Cookies */}

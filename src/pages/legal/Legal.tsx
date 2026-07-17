@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
+import { PublicRouteBreadcrumbs } from "@/components/public/PublicPageShell";
 import { Button } from "@/components/ui/button";
 
 const legalDocuments = [
@@ -41,16 +42,17 @@ const principles = [
 ];
 
 const Legal = () => (
-  <div className="min-h-screen overflow-x-hidden bg-background font-sans text-foreground">
+  <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background font-sans text-foreground">
     <div className="hidden md:block"><Navbar /></div>
     <LandingMobileNav />
+    <PublicRouteBreadcrumbs route="/documentos-legais" />
 
     <main>
-      <section className="relative overflow-hidden px-5 pb-20 pt-32 text-center md:px-8 md:pb-28 md:pt-48">
+      <section className="px-5 pb-16 pt-24 text-center md:px-8 md:pb-24 md:pt-[6.5rem]">
         <div className="pointer-events-none absolute left-1/2 top-0 h-[580px] w-[920px] -translate-x-1/2 rounded-full bg-foreground/[0.04] blur-[170px] dark:bg-white/[0.03]" />
-        <div className="relative z-10 mx-auto max-w-5xl">
+        <div className="public-neurox-hero relative z-10 mx-auto max-w-[1320px] px-8 py-16 md:px-14 md:py-20">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/45 bg-foreground/[0.035] px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]"><LockKeyhole className="h-4 w-4" />Central Jurídica</div>
-          <h1 className="mt-8 text-[clamp(3.4rem,7.4vw,7.5rem)] font-black leading-[0.85] tracking-[-0.075em]">Transparência para uma rotina <span className="text-muted-foreground/35">que exige confiança.</span></h1>
+          <h1 className="public-neurox-title mt-8 text-[clamp(3.5rem,7vw,7.4rem)] font-black leading-[0.88] tracking-normal">Transparência para uma rotina <span className="text-muted-foreground/35">que exige confiança.</span></h1>
           <p className="mx-auto mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">Consulte os documentos canônicos sobre uso da plataforma, privacidade e cookies. Cada tema possui uma página própria para evitar versões duplicadas.</p>
         </div>
       </section>
@@ -58,10 +60,10 @@ const Legal = () => (
       <section className="px-5 pb-20 md:px-8 md:pb-28">
         <div className="mx-auto grid max-w-[1260px] gap-4 lg:grid-cols-3">
           {legalDocuments.map((document) => (
-            <article key={document.title} className="flex min-h-[350px] flex-col rounded-[34px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03] md:p-8">
+            <article key={document.title} className="public-neurox-card flex min-h-[350px] flex-col rounded-[34px] p-7 md:p-8">
               <document.icon className="h-7 w-7 text-muted-foreground" />
               <p className="mt-9 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">{document.eyebrow}</p>
-              <h2 className="mt-3 text-3xl font-black leading-[0.92] tracking-[-0.055em]">{document.title}</h2>
+              <h2 className="mt-3 text-3xl font-black leading-[0.94] tracking-normal">{document.title}</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/70">{document.description}</p>
               <Link to={document.href} className="mt-auto inline-flex items-center pt-8 text-[9px] font-black uppercase tracking-[0.18em] hover:underline">Abrir documento <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </article>
@@ -69,7 +71,7 @@ const Legal = () => (
         </div>
       </section>
 
-      <section className="bg-foreground px-5 py-20 text-background dark:bg-white dark:text-zinc-950 md:px-8 md:py-28">
+      <section className="public-section-stage public-inverted-section px-5 py-20 text-background dark:text-zinc-950 md:px-8 md:py-28">
         <div className="mx-auto grid max-w-[1200px] gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <div>
             <FileText className="h-7 w-7 opacity-55" />

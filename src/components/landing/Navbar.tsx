@@ -1,13 +1,86 @@
-import { useState, useEffect } from "react";
-import { Link, useNavigate, useLocation } from "react-router-dom";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import {
+  ArrowUpRight,
+  CalendarDays,
+  ChevronDown,
+  FileText,
+  Landmark,
+  MessageCircle,
+  Network,
+  Sparkles,
+  UsersRound,
+  Video,
+  WalletCards,
+} from "lucide-react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/Logo";
+import { cn } from "@/lib/utils";
+
+const productLinks = [
+  {
+    to: "/agenda-para-psicologos",
+    label: "Agenda",
+    description: "Sessões, recorrência e políticas.",
+    icon: CalendarDays,
+  },
+  {
+    to: "/pacientes-para-psicologos",
+    label: "Pacientes",
+    description: "Contexto longitudinal em um só lugar.",
+    icon: UsersRound,
+  },
+  {
+    to: "/prontuario-para-psicologos",
+    label: "Prontuário",
+    description: "Registro clínico vivo e conectado.",
+    icon: FileText,
+  },
+  {
+    to: "/teleconsulta-para-psicologos",
+    label: "Teleconsulta",
+    description: "Da sala ao prontuário, sem retrabalho.",
+    icon: Video,
+  },
+  {
+    to: "/synapse",
+    label: "Synapse",
+    description: "Ações por voz e texto, com sua confirmação.",
+    icon: Sparkles,
+  },
+  {
+    to: "/neurobox",
+    label: "NeuroBox",
+    description: "Grafos, fluxos e raciocínio clínico visual.",
+    icon: Network,
+  },
+  {
+    to: "/neurofinance",
+    label: "NeuroFinance",
+    description: "Conta, Pix, pagamentos e recursos fiscais.",
+    icon: Landmark,
+  },
+  {
+    to: "/gestao-financeira-para-psicologos",
+    label: "Gestão financeira",
+    description: "Receitas, despesas e planejamento.",
+    icon: WalletCards,
+  },
+  {
+    to: "/neurozap-para-psicologos",
+    label: "NeuroZap",
+    description: "WhatsApp Business conectado à NeuroNex.",
+    icon: MessageCircle,
+  },
+];
 
 export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const productMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
@@ -18,121 +91,225 @@ export const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleNavClick = (target: string) => {
-    // If it starts with '/', treat as a route link
-    if (target.startsWith('/')) {
-      navigate(target);
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setProductsOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, []);
+
+  useEffect(() => {
+    setProductsOpen(false);
+  }, [location.pathname]);
+
+  const handleSectionClick = (target: string) => {
+    if (location.pathname !== "/") {
+      navigate(`/#${target}`);
       return;
     }
-    // Otherwise treat as anchor section
-    if (location.pathname !== '/') {
-      navigate(`/#${target}`);
-    } else {
-      const element = document.getElementById(target);
-      if (element) {
-        element.scrollIntoView({ behavior: shouldReduceMotion ? 'auto' : 'smooth' });
-      }
-    }
+
+    document.getElementById(target)?.scrollIntoView({
+      behavior: shouldReduceMotion ? "auto" : "smooth",
+    });
   };
 
-  const navItems = [
-    { id: 'diferenciais', label: 'Diferenciais' },
-    { id: '/produto', label: 'Produto' },
-    { id: '/precos', label: 'Planos' },
-    { id: '/blog', label: 'Conteúdo' },
-  ];
-
   return (
-      <motion.nav
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+    <motion.nav
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{
+        duration: shouldReduceMotion ? 0 : 0.6,
+        ease: [0.22, 1, 0.36, 1],
+      }}
+      className={cn(
+        "pointer-events-none fixed inset-x-0 top-0 z-[100] hidden justify-center md:flex",
+        scrolled ? "py-4" : "py-6",
+      )}
+    >
+      <AnimatePresence>
+        {productsOpen ? (
+          <motion.div
+            aria-hidden="true"
+            className="pointer-events-none fixed inset-0 z-[-1] bg-background/34 backdrop-blur-[14px] dark:bg-black/48"
+            initial={shouldReduceMotion ? false : { opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
+          />
+        ) : null}
+      </AnimatePresence>
+      <motion.div
+        layout={!shouldReduceMotion}
+        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-[100] hidden justify-center transition-all duration-700 ease-out-expo pointer-events-none md:flex",
-          scrolled ? "py-4" : "py-8"
+          "public-glass-surface pointer-events-auto relative flex w-[min(980px,calc(100vw-24px))] items-center justify-between gap-4 rounded-full px-4 py-3 xl:gap-8 xl:px-8",
+          scrolled
+            ? "border-border/60 bg-background/78"
+            : "border-border/45 bg-background/64",
+          "dark:border-white/10 dark:bg-black/64",
         )}
       >
         <motion.div
-          layout
-          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className={cn(
-            "px-8 py-3 rounded-full flex items-center justify-between gap-12 min-w-[320px] md:min-w-[800px] transition-all duration-700 ease-out-expo relative overflow-hidden pointer-events-auto",
-            scrolled
-              ? "bg-card/70 backdrop-blur-xl border border-border/50 shadow-glass-lg scale-[0.97]"
-              : "bg-transparent border border-transparent scale-100"
-          )}
+          whileHover={shouldReduceMotion ? undefined : { scale: 1.015 }}
+          whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
         >
-          {/* Shine highlight across top */}
-          <AnimatePresence>
-            {scrolled && (
-              <motion.div
-                initial={{ opacity: 0, scaleX: 0 }}
-                animate={{ opacity: 0.5, scaleX: 1 }}
-                exit={{ opacity: 0, scaleX: 0 }}
-                transition={{ duration: 0.4 }}
-                className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-foreground/30 to-transparent"
-              />
-            )}
-          </AnimatePresence>
-
-          {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className="group/logo"
+          <Link
+            to="/"
+            aria-label="Ir para a página inicial da NeuroNex"
+            className="public-tactile flex min-h-11 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
           >
-            <Link
-              to="/"
-              aria-label="Ir para a página inicial da NeuroNex"
-              className="flex items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
-            >
-              <div className="relative w-7 h-7 flex items-center justify-center">
-                <Logo className="w-full h-full" />
-                <div className="absolute inset-0 border border-primary/20 rounded-full animate-[spin_8s_linear_infinite] opacity-0 group-hover/logo:opacity-100 transition-opacity motion-reduce:animate-none" />
-              </div>
-              <span className="ml-2.5 text-[12px] font-black text-foreground tracking-[0.35em] uppercase transition-all whitespace-nowrap">NeuroNex</span>
-            </Link>
-          </motion.div>
-
-          {/* Nav Links */}
-          <div className={cn(
-            "hidden md:flex gap-8 text-[10px] font-black uppercase tracking-[0.2em] transition-colors duration-500",
-            scrolled ? "text-muted-foreground" : "text-foreground/80"
-          )}>
-            {navItems.map((item) => (
-              <button
-                key={item.id}
-                onClick={() => handleNavClick(item.id)}
-                className="relative py-1 group transition-all duration-300 hover:text-primary"
-              >
-                <span className="relative z-10">{item.label}</span>
-                {/* Underline effect */}
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out-expo origin-left rounded-full" />
-              </button>
-            ))}
-          </div>
-
-          {/* Actions */}
-          <div className="flex items-center gap-4">
-            <ThemeToggle />
-            <Button
-              asChild
-              size="sm"
-              className={cn(
-                "h-10 px-6 rounded-full bg-primary text-primary-foreground hidden md:inline-flex",
-                "hover:opacity-95 text-[10px] font-black uppercase tracking-[0.25em]",
-                "shadow-[0_16px_32px_-8px_rgba(var(--primary-rgb),0.3)]",
-                "transition-all duration-300 ease-apple",
-                "hover:scale-105 hover:shadow-[0_20px_40px_-8px_rgba(var(--primary-rgb),0.4)]",
-                "active:scale-95"
-              )}
-            >
-              <Link to="/auth">
-                Entrar
-              </Link>
-            </Button>
-          </div>
+            <Logo className="h-7 w-7" />
+            <span className="ml-3 whitespace-nowrap font-mono text-[12px] font-bold uppercase tracking-[0.24em] text-foreground">
+              NeuroNex
+            </span>
+          </Link>
         </motion.div>
-      </motion.nav>
+
+        <div className="flex items-center gap-4 font-sans text-[11px] font-semibold uppercase tracking-normal text-muted-foreground xl:gap-7">
+          <button
+            type="button"
+            onClick={() => handleSectionClick("diferenciais")}
+            className="hidden min-h-11 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground xl:block"
+          >
+            Diferenciais
+          </button>
+
+          <div
+            ref={productMenuRef}
+            className="relative"
+            onMouseEnter={() => setProductsOpen(true)}
+            onMouseLeave={() => setProductsOpen(false)}
+            onFocus={() => setProductsOpen(true)}
+            onBlur={(event) => {
+              if (
+                !(event.relatedTarget instanceof Node) ||
+                !productMenuRef.current?.contains(event.relatedTarget)
+              ) {
+                setProductsOpen(false);
+              }
+            }}
+          >
+            <button
+              type="button"
+              aria-expanded={productsOpen}
+              aria-controls="public-product-menu"
+              className="flex min-h-11 items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
+              onClick={() => setProductsOpen((current) => !current)}
+            >
+              Produtos
+              <ChevronDown
+                aria-hidden="true"
+                className={cn(
+                  "h-3.5 w-3.5 transition-transform duration-200",
+                  productsOpen && "rotate-180",
+                )}
+              />
+            </button>
+
+            <AnimatePresence>
+              {productsOpen ? (
+                <motion.div
+                  id="public-product-menu"
+                  aria-label="Produtos NeuroNex"
+                  initial={
+                    shouldReduceMotion
+                      ? false
+                      : { opacity: 0, x: "-50%", y: -6, scale: 0.985 }
+                  }
+                  animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
+                  exit={
+                    shouldReduceMotion
+                      ? { opacity: 0, x: "-50%" }
+                      : {
+                          opacity: 0,
+                          x: "-50%",
+                          y: -4,
+                          scale: 0.99,
+                        }
+                  }
+                  transition={
+                    shouldReduceMotion
+                      ? { duration: 0 }
+                      : { type: "spring", stiffness: 470, damping: 38, mass: 0.72 }
+                  }
+                  className="public-glass-surface public-product-menu-surface absolute left-1/2 top-[calc(100%+9px)] w-[min(660px,calc(100vw-32px))] rounded-[28px] p-2 text-foreground xl:w-[780px]"
+                >
+                  <div className="grid grid-cols-3 gap-1.5" role="list">
+                    {productLinks.map((item, index) => {
+                      const isActive = location.pathname === item.to;
+
+                      return (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          aria-current={isActive ? "page" : undefined}
+                          role="listitem"
+                          className={cn(
+                            "public-product-menu-item public-tactile group relative flex min-h-[86px] gap-3 overflow-hidden rounded-[18px] px-4 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            index === productLinks.length - 1 && "col-span-1",
+                          )}
+                        >
+                          {isActive ? (
+                            <motion.span
+                              layoutId="public-product-active"
+                              className="absolute inset-1 rounded-[14px] bg-foreground/[0.07] dark:bg-white/[0.08]"
+                              transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
+                            />
+                          ) : null}
+                          <item.icon
+                            aria-hidden="true"
+                            className="relative mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
+                          />
+                          <span className="relative min-w-0">
+                            <span className="flex items-center gap-2 font-sans text-sm font-bold normal-case tracking-normal">
+                              {item.label}
+                            </span>
+                            <span className="mt-1.5 block font-sans text-xs font-medium normal-case leading-relaxed tracking-normal text-muted-foreground">
+                              {item.description}
+                            </span>
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                  <Link
+                    to="/produto"
+                    className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[17px] px-4 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground"
+                  >
+                    Ver todo o ecossistema
+                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                  </Link>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
+
+          <Link
+            to="/download"
+            className="flex min-h-11 items-center transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
+          >
+            Download
+          </Link>
+          <Link
+            to="/blog"
+            className="hidden min-h-11 items-center transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground xl:flex"
+          >
+            NeuroX
+          </Link>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <Button
+            asChild
+            size="sm"
+            className="public-tactile hidden h-11 rounded-full bg-foreground px-7 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
+          >
+            <Link to="/auth">Entrar</Link>
+          </Button>
+        </div>
+      </motion.div>
+    </motion.nav>
   );
 };

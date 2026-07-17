@@ -20,13 +20,13 @@ export const Footer = () => {
       { label: "Teleconsulta", path: "/teleconsulta-para-psicologos" },
       { label: "Pacientes", path: "/pacientes-para-psicologos" },
       { label: "Portal do Paciente", path: "/portal-do-paciente" },
-      { label: "Prontuario", path: "/prontuario-para-psicologos" },
+      { label: "Prontuário", path: "/prontuario-para-psicologos" },
       { label: "Agenda", path: "/agenda-para-psicologos" },
     ],
     recursos: [
-      { label: "Planos e preços", path: "/precos" },
+      { label: "Download", path: "/download" },
       { label: "Segurança e ética", path: "/seguranca-e-etica" },
-      { label: "Blog", path: "/blog" },
+      { label: "NeuroX", path: "/blog" },
       { label: "Novidades", path: "/novidades" },
       { label: "Central de Ajuda", path: "/ajuda" },
       { label: "Contato", path: "/contato" },
@@ -52,7 +52,7 @@ export const Footer = () => {
             <p className="max-w-xs text-sm leading-relaxed text-muted-foreground/70">Sistema operacional para psicólogos: gestão clínica, inteligência contextual e financeiro conectado.</p>
           </div>
 
-          {[{ title: "Produto", links: footerLinks.produto }, { title: "Operacao", links: footerLinks.operacao }, { title: "Recursos", links: footerLinks.recursos }, { title: "Jurídico", links: footerLinks.legal }].map((section) => (
+          {[{ title: "Produto", links: footerLinks.produto }, { title: "Operação", links: footerLinks.operacao }, { title: "Recursos", links: footerLinks.recursos }, { title: "Jurídico", links: footerLinks.legal }].map((section) => (
             <div key={section.title} className="space-y-6 lg:col-span-1">
               <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/40">{section.title}</h4>
               <ul className="space-y-4">

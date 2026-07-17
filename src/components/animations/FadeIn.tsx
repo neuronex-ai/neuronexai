@@ -15,8 +15,8 @@ export const FadeIn = ({
   delay = 0,
   className,
   direction = "up",
-  distance = 40,
-  duration = 0.8,
+  distance = 22,
+  duration = 0.62,
 }: FadeInProps) => {
   const ref = useRef(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
@@ -39,7 +39,6 @@ export const FadeIn = ({
               opacity: 0,
               y: directionOffset[direction].y,
               x: directionOffset[direction].x,
-              filter: "blur(8px)",
             }
       }
       animate={
@@ -48,7 +47,6 @@ export const FadeIn = ({
               opacity: 1,
               y: 0,
               x: 0,
-              filter: "blur(0px)",
             }
           : {}
       }

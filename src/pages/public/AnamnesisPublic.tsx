@@ -149,14 +149,14 @@ export default function AnamnesisPublic() {
 
     if (status === 'input' || status === 'verifying') {
         return (
-            <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 bg-white dark:bg-[#050505] selection:bg-zinc-200 dark:selection:bg-zinc-800">
+            <div className="public-lumen-page min-h-screen w-full flex flex-col items-center justify-center bg-background p-4 text-foreground">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.95, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
                     className="w-full max-w-md"
                 >
-                    <GlassCard className="p-10 flex flex-col items-center text-center gap-8 border-zinc-200/50 dark:border-white/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] dark:shadow-[0_32px_64px_-16px_rgba(0,0,0,0.3)] bg-white/70 dark:bg-black/40 backdrop-blur-3xl rounded-[40px] relative overflow-hidden group">
+                    <GlassCard className="public-glass-surface group relative flex flex-col items-center gap-8 overflow-hidden rounded-[40px] p-10 text-center">
                         <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-zinc-900/5 dark:via-white/5 to-transparent" />
                         <div className="mx-auto w-20 h-20 rounded-3xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900 shadow-2xl shadow-zinc-900/20 dark:shadow-white/10 ring-8 ring-zinc-50 dark:ring-white/[0.02] transform transition-transform group-hover:scale-110 duration-700">
                             <Lock className="h-8 w-8" />
@@ -181,7 +181,7 @@ export default function AnamnesisPublic() {
                             <Button
                                 onClick={handleVerify}
                                 disabled={status === 'verifying' || token.length !== 5}
-                                className="w-full h-16 text-sm font-black uppercase tracking-widest bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-500 active:scale-[0.98] gap-3"
+                                className="public-tactile h-16 w-full gap-3 rounded-full bg-foreground font-mono text-sm font-black uppercase tracking-widest text-background"
                             >
                                 {status === 'verifying' ? <Loader2 className="h-5 w-5 animate-spin" /> : <><span>Acessar Ficha</span><ChevronRight className="h-4 w-4" /></>}
                             </Button>
@@ -194,7 +194,7 @@ export default function AnamnesisPublic() {
     }
 
     return (
-        <div className="h-screen w-full bg-[#f8f8f8] dark:bg-[#050505] selection:bg-zinc-200 dark:selection:bg-zinc-800 flex flex-col overflow-hidden">
+        <div className="public-lumen-page flex h-screen w-full flex-col overflow-hidden bg-background text-foreground">
             <header className="bg-white/80 dark:bg-black/60 border-b border-zinc-200/50 dark:border-white/5 z-50 backdrop-blur-2xl">
                 <div className="max-w-6xl mx-auto px-6 sm:px-10 h-24 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-6">
@@ -220,7 +220,7 @@ export default function AnamnesisPublic() {
             </header>
 
             <main className="flex-1 overflow-hidden flex justify-center p-4 sm:p-10 relative">
-                <div className="w-full max-w-4xl h-full bg-white dark:bg-white/[0.02] rounded-[40px] border border-zinc-200/50 dark:border-white/[0.05] shadow-2xl relative overflow-y-auto custom-scrollbar p-8 sm:p-12">
+                <div className="public-scroll-detail custom-scrollbar relative h-full w-full max-w-4xl overflow-y-auto rounded-[40px] p-8 sm:p-12">
                     <div className="absolute top-0 right-0 p-40 bg-zinc-100/50 dark:bg-white/5 rounded-full blur-[100px] pointer-events-none" />
                     <div className="max-w-3xl mx-auto space-y-12 relative z-10">
                         {data.map((item, index) => (

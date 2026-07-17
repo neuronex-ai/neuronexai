@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
+import { PublicRouteBreadcrumbs } from "@/components/public/PublicPageShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -30,27 +31,30 @@ const HelpCenter = () => {
   }, [query]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="hidden md:block"><Navbar /></div>
       <LandingMobileNav />
-      <main className="px-5 pb-20 pt-32 md:px-8 md:pb-28 md:pt-48">
-        <section className="mx-auto max-w-4xl text-center">
+      <PublicRouteBreadcrumbs route="/ajuda" />
+      <main className="px-5 pb-20 pt-24 md:px-8 md:pb-28 md:pt-[6.5rem]">
+        <section className="public-neurox-hero mx-auto max-w-[1320px] px-8 py-16 text-center md:px-14 md:py-20">
+          <div className="mx-auto max-w-4xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/45 px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground"><LifeBuoy className="h-4 w-4" />Central de Ajuda</div>
-          <h1 className="mt-8 text-[clamp(3.2rem,7vw,7rem)] font-black leading-[0.86] tracking-[-0.075em]">Encontre a resposta <span className="text-muted-foreground/35">sem perder tempo.</span></h1>
+          <h1 className="public-neurox-title mt-8 text-[clamp(3.4rem,7vw,7.2rem)] font-black leading-[0.88] tracking-normal">Encontre a resposta <span className="text-muted-foreground/35">sem perder tempo.</span></h1>
           <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">Pesquise orientações sobre as principais áreas do produto.</p>
           <div className="relative mx-auto mt-9 max-w-2xl"><Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input aria-label="Buscar na Central de Ajuda" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar assunto..." className="h-16 rounded-[22px] pl-14 text-base" /></div>
+          </div>
         </section>
 
         <section className="mx-auto mt-12 max-w-4xl space-y-3">
           {results.map((article, index) => (
-            <article key={article.title} className="overflow-hidden rounded-[26px] border border-border/40 bg-card/75 dark:border-white/10 dark:bg-white/[0.03]">
+            <article key={article.title} className="public-neurox-card overflow-hidden rounded-[26px]">
               <button
                 id={`help-article-trigger-${index}`}
                 type="button"
                 aria-expanded={open === article.title}
                 aria-controls={`help-article-panel-${index}`}
                 onClick={() => setOpen(open === article.title ? null : article.title)}
-                className="flex w-full items-start gap-4 p-6 text-left"
+                className="public-tactile flex w-full items-start gap-4 p-6 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 <div className="min-w-0 flex-1"><p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{article.category}</p><h2 className="mt-2 text-lg font-black">{article.title}</h2><p className="mt-2 text-sm font-medium text-muted-foreground/70">{article.summary}</p></div>
                 <ChevronDown aria-hidden="true" className={cn("h-4 w-4 transition-transform", open === article.title && "rotate-180")} />
@@ -61,7 +65,7 @@ const HelpCenter = () => {
           {!results.length ? <div className="rounded-[26px] border border-dashed border-border/50 p-10 text-center text-sm text-muted-foreground">Nenhum artigo encontrado.</div> : null}
         </section>
 
-        <section className="mx-auto mt-8 flex max-w-4xl flex-col items-center justify-between gap-5 rounded-[28px] bg-foreground p-6 text-background dark:bg-white dark:text-zinc-950 md:flex-row"><div><h2 className="text-xl font-black">Ainda precisa de ajuda?</h2><p className="mt-2 text-sm font-medium opacity-60">Utilize o canal oficial da NeuroNex.</p></div><Button asChild className="h-12 rounded-2xl bg-background px-6 text-[9px] font-black uppercase tracking-[0.18em] text-foreground dark:bg-zinc-950 dark:text-white"><Link to="/contato">Abrir contato <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></section>
+        <section className="public-closing-scene mx-auto mt-8 flex max-w-4xl flex-col items-center justify-between gap-5 rounded-[28px] p-6 text-background dark:text-zinc-950 md:flex-row"><div className="relative z-10"><h2 className="text-xl font-black">Ainda precisa de ajuda?</h2><p className="mt-2 text-sm font-medium opacity-60">Utilize o canal oficial da NeuroNex.</p></div><Button asChild className="public-tactile relative z-10 h-12 rounded-full bg-background px-6 font-mono text-[9px] font-black uppercase tracking-[0.18em] text-foreground dark:bg-zinc-950 dark:text-white"><Link to="/contato">Abrir contato <ArrowRight className="ml-2 h-4 w-4" /></Link></Button></section>
       </main>
       <Footer />
     </div>

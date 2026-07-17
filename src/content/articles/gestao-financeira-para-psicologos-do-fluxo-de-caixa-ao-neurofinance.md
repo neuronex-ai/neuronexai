@@ -73,4 +73,4 @@ Registrar o passado é insuficiente. A clínica também precisa definir meta de 
 
 Com agenda, recebíveis e despesas conectados, o Synapse pode organizar leituras e próximos passos sem executar movimentações sozinho.
 
-Conheça a [Gestão Financeira](/gestao-financeira-para-psicologos), o [NeuroFinance](/neurofinance) e o [NeuroZap Desktop Beta](/neurozap-para-psicologos).
+Conheça a [Gestão Financeira](/gestao-financeira-para-psicologos), o [NeuroFinance](/neurofinance) e o [NeuroZap](/neurozap-para-psicologos).

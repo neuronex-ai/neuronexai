@@ -3,9 +3,8 @@
 import type { ElementType } from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   ArrowRight,
   BadgeCheck,
   BarChart3,
@@ -15,7 +14,6 @@ import {
   ChevronDown,
   ClipboardList,
   CreditCard,
-  ExternalLink,
   FileCheck2,
   FileText,
   Fingerprint,
@@ -34,7 +32,6 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/animations/FadeIn";
-import { getPublicPage } from "@/content/public-content";
 import { PUBLIC_PLAN_COMPARISON } from "@/content/public-plan-catalog";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +70,7 @@ const painPoints = [
 ];
 
 export const LandingProblemSection = () => (
-  <section id="problem" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="problem" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       <div className="absolute left-[5%] top-[10%] h-[440px] w-[620px] rounded-full bg-foreground/[0.035] blur-[150px]" />
@@ -143,7 +140,7 @@ const comparisonRows = [
 ];
 
 export const LandingDifferentiatorTable = () => (
-  <section id="diferenciais" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="diferenciais" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1280px]">
       <SectionHeader
         eyebrow="O diferencial"
@@ -316,7 +313,7 @@ export const LandingProductShowcase = () => {
   const active = productModules.find((item) => item.key === activeKey) || productModules[0];
 
   return (
-    <section id="produto" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+    <section id="produto" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
       <div className="relative z-10 mx-auto max-w-[1280px]">
         <SectionHeader
           eyebrow="Por dentro do NeuroNex"
@@ -350,14 +347,14 @@ export const LandingProductShowcase = () => {
 const systemCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos, teleconsulta e evolução clínica." },
   { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap Desktop Beta e continuidade entre sessões." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap e continuidade entre sessões." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
 ];
 
 export const LandingOperatingSystemSection = () => (
-  <section id="sistema" className="relative overflow-hidden bg-foreground px-6 py-20 text-background md:py-28 dark:bg-white dark:text-zinc-950">
+  <section id="sistema" className="public-section-stage public-inverted-section relative overflow-hidden px-6 py-20 text-background md:py-28 dark:text-zinc-950">
     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_36%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.06),transparent_36%,rgba(0,0,0,0.02))]" />
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
@@ -383,12 +380,12 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta e sincroniza o WhatsApp Business em Beta; ações com Synapse seguem em evolução." },
+  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, agenda e pendências para o Synapse preparar ações sob sua revisão." },
   { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroPulse, NeuroFlow, NeuroScan e NeuroFinance expõem contexto estruturado para o agente." },
 ];
 
 export const LandingSynapseSection = () => (
-  <section id="synapse" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="synapse" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <div className="grid gap-10 lg:grid-cols-[1fr_0.88fr] lg:items-center">
         <SectionHeader
@@ -434,57 +431,131 @@ export const LandingSynapseSection = () => (
 
 const neuroZapFlows = [
   {
-    title: "Conexão em Beta",
-    text: "O consultório autoriza o WhatsApp Business e valida a sincronização com a superfície Desktop Beta.",
+    title: "Confirmações no lugar certo",
+    text: "Sessão, horário e paciente acompanham a conversa para reduzir lembretes esquecidos.",
   },
   {
-    title: "Inbox em evolução",
-    text: "Conversas, etiquetas, histórico e resolução segura de identidade avançam como próxima etapa.",
+    title: "Cobrança sem improviso",
+    text: "A pendência vira uma mensagem clara, preparada pelo Synapse e revisada por você.",
   },
   {
-    title: "Synapse em evolução",
-    text: "Resumos e ações contextuais só entram depois de consentimento, auditoria e revisão humana estarem validados.",
+    title: "Contexto sem perder o controle",
+    text: "Identidade, finalidade, consentimento e histórico acompanham cada ação sensível.",
   },
 ];
 
-export const LandingNeuroZapSection = () => (
-  <section id="neurozap" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+export const LandingNeuroZapSection = ({ inverted = false }: { inverted?: boolean }) => (
+  <section
+    id="neurozap"
+    className={cn(
+      "public-section-stage relative overflow-hidden px-6 py-20 md:py-28",
+      inverted
+        ? "public-inverted-section text-background dark:text-zinc-950"
+        : "bg-background",
+    )}
+  >
     <div className="relative z-10 mx-auto grid max-w-[1240px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
       <FadeIn>
         <div>
-          <SectionBadge icon={MessageCircle}>NeuroZap Desktop Beta</SectionBadge>
-          <h2 className="mt-8 text-5xl font-black leading-[0.9] text-foreground md:text-7xl">WhatsApp Business conectado à NeuroNex, com evolução por etapas.</h2>
-          <p className="mt-7 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">
-            Conexão e sincronização estão em Beta. Inbox, identidade do paciente, consentimento, auditoria e ações com Synapse permanecem em evolução.
+          <div className="flex flex-wrap items-center gap-3">
+            {inverted ? (
+              <span className="inline-flex items-center gap-2.5 font-mono text-[9px] font-black uppercase opacity-58">
+                <MessageCircle className="h-4 w-4" /> NeuroZap
+              </span>
+            ) : (
+              <SectionBadge icon={MessageCircle}>NeuroZap</SectionBadge>
+            )}
+            <span
+              className={cn(
+                "font-mono text-[8px] font-bold uppercase",
+                inverted ? "opacity-48" : "text-muted-foreground",
+              )}
+            >
+              Versão beta
+            </span>
+          </div>
+          <h2
+            className={cn(
+              "mt-8 text-5xl font-black leading-[0.9] md:text-7xl",
+              !inverted && "text-foreground",
+            )}
+          >
+            Menos cobrança desconfortável. Menos horário vazio.
+          </h2>
+          <p
+            className={cn(
+              "mt-7 max-w-2xl text-base font-medium leading-relaxed md:text-xl",
+              inverted ? "opacity-68" : "text-muted-foreground/70",
+            )}
+          >
+            O WhatsApp Business entra no mesmo fluxo da agenda e do financeiro. O Synapse prepara confirmações e cobranças; você revisa e decide.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button asChild className="h-14 rounded-2xl bg-foreground px-7 text-[10px] font-black uppercase tracking-[0.2em] text-background">
+            <Button
+              asChild
+              className={cn(
+                "public-tactile h-14 rounded-full px-7 font-mono text-[10px] font-black uppercase",
+                inverted
+                  ? "bg-background text-foreground dark:bg-zinc-950 dark:text-white"
+                  : "bg-foreground text-background",
+              )}
+            >
               <Link to="/neurozap-para-psicologos">
                 Ver NeuroZap <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild variant="outline" className="h-14 rounded-2xl px-7 text-[10px] font-black uppercase tracking-[0.2em]">
+            <Button
+              asChild
+              variant="outline"
+              className={cn(
+                "public-tactile h-14 rounded-full bg-transparent px-7 font-mono text-[10px] font-black uppercase",
+                inverted &&
+                  "border-background/20 text-background dark:border-zinc-950/20 dark:text-zinc-950",
+              )}
+            >
               <Link to="/neurofinance">Ver NeuroFinance</Link>
             </Button>
           </div>
         </div>
       </FadeIn>
       <FadeIn delay={0.12}>
-        <div className="rounded-[40px] border border-border/40 bg-card/80 p-5 shadow-[0_38px_120px_-78px_rgba(0,0,0,0.78)] dark:border-white/10 dark:bg-white/[0.03]">
-          <div className="rounded-[30px] bg-foreground p-6 text-background dark:bg-white dark:text-zinc-950">
+        <div
+          className={cn(
+            "rounded-[40px] border p-5 shadow-[0_38px_120px_-78px_rgba(0,0,0,0.78)]",
+            inverted
+              ? "border-background/12 bg-background/[0.06] dark:border-zinc-950/12 dark:bg-zinc-950/[0.045]"
+              : "border-border/40 bg-card/80 dark:border-white/10 dark:bg-white/[0.03]",
+          )}
+        >
+          <div
+            className={cn(
+              "rounded-[30px] p-6",
+              inverted
+                ? "bg-background text-foreground dark:bg-zinc-950 dark:text-white"
+                : "bg-foreground text-background dark:bg-white dark:text-zinc-950",
+            )}
+          >
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <img src="/whatsapp-business-logo.png" alt="WhatsApp Business" width={36} height={36} className="h-9 w-9 rounded-xl object-contain" loading="lazy" decoding="async" />
                 <div>
                   <p className="text-[9px] font-black uppercase tracking-[0.24em] opacity-45">WhatsApp Business</p>
-                  <p className="text-base font-black">NeuroZap Desktop Beta</p>
+                  <p className="text-base font-black">NeuroZap</p>
                 </div>
               </div>
-              <span className="rounded-full border border-background/10 bg-background/[0.08] px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] opacity-70 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">Beta explícito</span>
+              <ShieldCheck aria-label="Ações sensíveis exigem confirmação" className="h-5 w-5 opacity-45" />
             </div>
             <div className="mt-8 grid gap-3">
               {neuroZapFlows.map((flow) => (
-                <article key={flow.title} className="rounded-2xl border border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
+                <article
+                  key={flow.title}
+                  className={cn(
+                    "rounded-2xl border p-4",
+                    inverted
+                      ? "border-foreground/10 bg-foreground/[0.04] dark:border-white/10 dark:bg-white/[0.04]"
+                      : "border-background/10 bg-background/[0.07] dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]",
+                  )}
+                >
                   <h3 className="text-lg font-black leading-tight">{flow.title}</h3>
                   <p className="mt-2 text-sm font-medium leading-relaxed opacity-64">{flow.text}</p>
                 </article>
@@ -498,7 +569,7 @@ export const LandingNeuroZapSection = () => (
 );
 
 export const LandingFinanceFiscalSection = () => (
-  <section id="financeiro" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="financeiro" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <div className="grid gap-8 lg:grid-cols-2">
         <FadeIn>
@@ -527,7 +598,7 @@ export const LandingFinanceFiscalSection = () => (
 );
 
 export const LandingPlanComparisonSection = () => (
-  <section id="comparativo" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="comparativo" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <SectionHeader eyebrow="Comparativo" title={<>Veja o que muda <span className="text-muted-foreground/35">em cada plano.</span></>} description="O Essential organiza o começo da prática. O Profissional amplia escala, contexto, automação e operação financeira." />
       <FadeIn delay={0.2}>
@@ -551,196 +622,77 @@ export const LandingPlanComparisonSection = () => (
   </section>
 );
 
-const publicLandingCarouselSpecs = [
+const publicJourneyItems = [
   {
-    href: "/neurozap-para-psicologos",
-    accent: "Comunicação",
-    icon: MessageCircle,
-  },
-  {
-    href: "/teleconsulta-para-psicologos",
-    accent: "Atendimento",
-    icon: MonitorPlay,
-  },
-  {
-    href: "/pacientes-para-psicologos",
-    accent: "Continuidade",
-    icon: Users,
-  },
-  {
-    href: "/neurobox",
-    accent: "IA profunda",
-    icon: BrainCircuit,
-  },
-  {
-    href: "/neurofinance",
-    accent: "Financeiro",
-    icon: WalletCards,
-  },
-  {
-    href: "/agenda-para-psicologos",
-    accent: "Operação",
     icon: CalendarDays,
+    title: "Antes da sessão",
+    text: "Agenda e Teleconsulta colocam horário, paciente, sala e consentimento no mesmo caminho.",
+    href: "/agenda-para-psicologos",
+    label: "Ver Agenda",
+  },
+  {
+    icon: Users,
+    title: "Entre sessões",
+    text: "Pacientes e Portal sustentam humor, tarefas, progresso e vínculo sem abrir o prontuário profissional.",
+    href: "/portal-do-paciente",
+    label: "Ver Portal",
+  },
+  {
+    icon: WalletCards,
+    title: "Quando chega a hora de cobrar",
+    text: "Financeiro e comunicação entram com contexto para reduzir cobrança desconfortável e baixa manual.",
+    href: "/neurofinance",
+    label: "Ver NeuroFinance",
+  },
+  {
+    icon: BrainCircuit,
+    title: "Quando o caso precisa de leitura",
+    text: "Synapse e NeuroBox conectam sinais, relatos e decisões que antes ficavam espalhados.",
+    href: "/synapse",
+    label: "Ver Synapse",
   },
 ];
 
-const publicLandingCarouselItems = publicLandingCarouselSpecs.flatMap((spec) => {
-  const page = getPublicPage(spec.href);
-  if (!page) return [];
-  return [{
-    ...spec,
-    eyebrow: page.eyebrow,
-    title: page.heading,
-    description: page.lead,
-    image: page.image,
-    status: page.status,
-  }];
-});
-
-const wrapIndex = (index: number, total: number) => (index + total) % total;
-
-export const LandingPublicPagesCarouselSection = () => {
-  const shouldReduceMotion = useReducedMotion();
-  const [[activeIndex, direction], setActive] = useState<[number, number]>([0, 1]);
-  const activeItem = publicLandingCarouselItems[activeIndex];
-
-  const navigate = (nextDirection: number) => {
-    setActive(([current]) => [
-      wrapIndex(current + nextDirection, publicLandingCarouselItems.length),
-      nextDirection,
-    ]);
-  };
-
-  const goTo = (index: number) => {
-    if (index === activeIndex) return;
-    setActive([index, index > activeIndex ? 1 : -1]);
-  };
-
-  return (
-    <section id="landings-publicas" className="relative overflow-hidden bg-background px-5 py-20 md:px-8 md:py-28">
-      <div className="relative z-10 mx-auto max-w-[1320px]">
-        <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
-          <SectionHeader
-            align="left"
-            eyebrow="Páginas públicas"
-            title={<>Uma vitrine viva para cada parte da <span className="text-muted-foreground/35">Clínica Autônoma.</span></>}
-            description="Cada landing agora explica uma camada do ecossistema: comunicação, teleconsulta, pacientes, IA profunda, financeiro e operação."
-          />
-          <div className="flex items-center justify-start gap-3 lg:justify-end">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-card/75 text-foreground transition hover:bg-foreground hover:text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white/[0.035] dark:hover:bg-white dark:hover:text-zinc-950"
-              aria-label="Ver landing anterior"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate(1)}
-              className="flex h-12 w-12 items-center justify-center rounded-full border border-border/50 bg-foreground text-background transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white dark:text-zinc-950"
-              aria-label="Ver próxima landing"
-            >
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-14 grid gap-6 lg:grid-cols-[minmax(0,1fr)_310px]">
-          <div className="relative min-h-[620px] overflow-hidden rounded-[36px] border border-border/45 bg-card shadow-[0_38px_120px_-86px_rgba(0,0,0,0.8)] dark:border-white/10 dark:bg-[#08090b] md:min-h-[560px]">
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,hsl(var(--foreground)/0.06),transparent_32%,hsl(var(--foreground)/0.025))]" />
-            <AnimatePresence initial={false} mode="wait" custom={direction}>
-              <motion.article
-                key={activeItem.href}
-                custom={direction}
-                drag={shouldReduceMotion ? false : "x"}
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.12}
-                onDragEnd={(_, info) => {
-                  const swipe = info.offset.x + info.velocity.x * 0.18;
-                  if (swipe < -90) navigate(1);
-                  if (swipe > 90) navigate(-1);
-                }}
-                initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction > 0 ? 120 : -120 }}
-                animate={shouldReduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
-                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: direction > 0 ? -120 : 120 }}
-                transition={{ duration: shouldReduceMotion ? 0.12 : 0.42, ease: [0.22, 1, 0.36, 1] }}
-                className="relative z-10 grid h-full min-h-[620px] cursor-grab grid-rows-[minmax(0,1fr)_auto] active:cursor-grabbing md:min-h-[560px] lg:grid-cols-[1fr_0.74fr] lg:grid-rows-1"
-                aria-live="polite"
-              >
-                <div className="relative min-h-[310px] overflow-hidden lg:min-h-full">
-                  <img
-                    src={activeItem.image}
-                    alt={`Prévia da landing ${activeItem.eyebrow}`}
-                    width={1280}
-                    height={720}
-                    loading={activeIndex === 0 ? "eager" : "lazy"}
-                    decoding="async"
-                    className="absolute inset-0 h-full w-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_35%,hsl(var(--background)/0.86)_100%)] lg:bg-[linear-gradient(90deg,transparent_45%,hsl(var(--card))_100%)] dark:lg:bg-[linear-gradient(90deg,transparent_45%,#08090b_100%)]" />
-                  <div className="absolute left-5 top-5 rounded-full border border-white/20 bg-black/35 px-4 py-2 text-[9px] font-black uppercase tracking-[0.2em] text-white backdrop-blur-xl">
-                    {activeItem.accent} · {activeItem.status}
-                  </div>
-                </div>
-
-                <div className="flex min-h-[310px] flex-col justify-between p-7 md:p-9 lg:min-h-full lg:p-10">
-                  <div>
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-foreground text-background dark:bg-white dark:text-zinc-950">
-                      <activeItem.icon className="h-5 w-5" />
-                    </div>
-                    <p className="mt-8 text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">{activeItem.eyebrow}</p>
-                    <h3 className="mt-4 text-balance text-4xl font-black leading-[0.92] tracking-[-0.055em] text-foreground md:text-5xl">
-                      {activeItem.title}
-                    </h3>
-                    <p className="mt-5 text-sm font-medium leading-relaxed text-muted-foreground/72 md:text-base">
-                      {activeItem.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <Button asChild className="h-14 rounded-2xl bg-foreground px-6 text-[10px] font-black uppercase tracking-[0.18em] text-background dark:bg-white dark:text-zinc-950">
-                      <Link to={activeItem.href}>
-                        Abrir landing <ExternalLink className="ml-2 h-4 w-4" />
-                      </Link>
-                    </Button>
-                    <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground/58">
-                      Arraste para navegar
-                    </p>
-                  </div>
-                </div>
-              </motion.article>
-            </AnimatePresence>
-          </div>
-
-          <div className="grid content-start gap-2">
-            {publicLandingCarouselItems.map((item, index) => (
-              <button
-                key={item.href}
-                type="button"
-                onClick={() => goTo(index)}
-                className={cn(
-                  "group flex min-h-16 items-center gap-4 rounded-[22px] border px-4 py-3 text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                  index === activeIndex
-                    ? "border-foreground/20 bg-foreground text-background shadow-[0_20px_70px_-48px_rgba(0,0,0,0.8)] dark:bg-white dark:text-zinc-950"
-                    : "border-border/42 bg-card/68 text-muted-foreground hover:border-foreground/18 hover:bg-foreground/[0.045] hover:text-foreground dark:border-white/10 dark:bg-white/[0.03]",
-                )}
-                aria-current={index === activeIndex ? "true" : undefined}
-              >
-                <item.icon className="h-4 w-4 shrink-0 opacity-70" />
-                <span className="min-w-0">
-                  <span className="block text-[9px] font-black uppercase tracking-[0.18em]">{item.eyebrow}</span>
-                  <span className={cn("mt-1 block truncate text-xs font-bold", index === activeIndex ? "opacity-70" : "opacity-60")}>{item.accent}</span>
-                </span>
-                <ArrowRight className={cn("ml-auto h-3.5 w-3.5 transition", index === activeIndex ? "opacity-60" : "-translate-x-1 opacity-0 group-hover:translate-x-0 group-hover:opacity-35")} />
-              </button>
-            ))}
-          </div>
-        </div>
+export const LandingPublicPagesCarouselSection = () => (
+  <section id="landings-publicas" className="public-section-stage relative overflow-hidden bg-background px-5 py-20 md:px-8 md:py-28">
+    <div className="public-neurox-hero mx-auto max-w-[1480px] px-5 py-16 md:px-10 md:py-24">
+      <div className="mx-auto max-w-5xl text-center">
+        <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Páginas públicas
+        </p>
+        <h2 className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,6.7rem)] font-black leading-[0.84] tracking-normal">
+          Uma vitrine viva.<br />Uma relação que começa antes da sessão.
+        </h2>
+        <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
+          Cada página explica uma parte da clínica em linguagem simples, para que você reconheça o caminho antes de escolher uma ferramenta.
+        </p>
       </div>
-    </section>
-  );
-};
+
+      <div className="mt-14 grid overflow-hidden rounded-[36px] border border-border/45 dark:border-white/10 md:grid-cols-2 xl:grid-cols-4">
+        {publicJourneyItems.map((item, index) => (
+          <motion.article
+            key={item.title}
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-80px" }}
+            transition={{ delay: index * 0.05, duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+            className="public-ecosystem-node group h-full min-h-[286px] px-6 py-8 md:px-7 md:py-9"
+          >
+            <item.icon aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
+            <h3 className="mt-10 text-2xl font-black leading-tight text-foreground">{item.title}</h3>
+            <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">{item.text}</p>
+            <Link
+              to={item.href}
+              className="public-tactile mt-8 inline-flex min-h-11 items-center font-mono text-[9px] font-black uppercase tracking-[0.16em] text-foreground"
+            >
+              {item.label} <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </Link>
+          </motion.article>
+        ))}
+      </div>
+    </div>
+  </section>
+);
 
 const faqs = [
   { q: "O NeuroNex substitui minha agenda e meu prontuário atual?", a: "A proposta é centralizar a operação clínica. Agenda, pacientes, prontuário, teleconsulta, portal, financeiro e IA passam a conversar no mesmo fluxo." },
@@ -753,7 +705,7 @@ export const LandingTrustAndFAQSection = () => {
   const [open, setOpen] = useState(0);
 
   return (
-    <section id="seguranca" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+    <section id="seguranca" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
       <div className="relative z-10 mx-auto grid max-w-[1240px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <FadeIn>
           <div className="rounded-[42px] border border-border/40 bg-card/80 p-8 dark:border-white/10 dark:bg-white/[0.035] md:p-10">
@@ -801,7 +753,7 @@ export const LandingTrustAndFAQSection = () => {
 };
 
 export const LandingFinalCTASection = () => (
-  <section id="cta-final" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="cta-final" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px] overflow-hidden rounded-[52px] border border-border/45 bg-foreground p-10 text-center text-background shadow-[0_40px_150px_-82px_rgba(0,0,0,0.9)] dark:bg-white dark:text-zinc-950 md:p-20">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_42%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.055),transparent_42%,rgba(0,0,0,0.02))]" />
       <div className="relative z-10 mx-auto max-w-4xl">
@@ -809,10 +761,10 @@ export const LandingFinalCTASection = () => (
         <h2 className="mt-9 text-5xl font-black leading-[0.88] tracking-[-0.065em] md:text-7xl">A próxima versão da sua clínica começa aqui.</h2>
         <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Entre agora, garanta benefícios Founder e evolua sua operação clínica com IA, financeiro e gestão em um único lugar.</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
-          <Button asChild className="h-14 rounded-2xl bg-background px-8 text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
+          <Button asChild className="public-tactile h-14 rounded-full bg-background px-8 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>
           </Button>
-          <Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 px-8 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">
+          <Button asChild variant="outline" className="public-tactile h-14 rounded-full border-background/20 bg-background/5 px-8 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950">
             <Link to="/contato">Falar com suporte</Link>
           </Button>
         </div>

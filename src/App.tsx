@@ -69,10 +69,12 @@ const NeuroBoxLanding = lazy(() => import("@/pages/public/NeuroBoxLanding"));
 const NeuroZapLanding = lazy(() => import("@/pages/public/NeuroZapLanding"));
 const PatientOperationsLanding = lazy(() => import("@/pages/public/PatientOperationsLanding"));
 const TeleconsultaLanding = lazy(() => import("@/pages/public/TeleconsultaLanding"));
+const AgendaLanding = lazy(() => import("@/pages/public/AgendaLanding"));
+const PatientPortalLanding = lazy(() => import("@/pages/public/PatientPortalLanding"));
 const ProductLanding = lazy(() => import("@/pages/public/ProductLanding"));
 const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
 const BlogArticle = lazy(() => import("@/pages/public/BlogArticle"));
-const PricingLanding = lazy(() => import("@/pages/public/PricingLanding"));
+const DownloadLanding = lazy(() => import("@/pages/public/DownloadLanding"));
 const UpdatesLanding = lazy(() => import("@/pages/public/UpdatesLanding"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
@@ -164,16 +166,16 @@ const SharedRoutes = () => {
         <Route path="/neurozap-para-psicologos" element={<NeuroZapLanding />} />
         <Route path="/pacientes-para-psicologos" element={<PatientOperationsLanding />} />
         <Route path="/produto" element={<ProductLanding route="/produto" />} />
-        <Route path="/precos" element={<PricingLanding />} />
+        <Route path="/download" element={<DownloadLanding />} />
         <Route path="/gestao-financeira-para-psicologos" element={<ProductLanding route="/gestao-financeira-para-psicologos" />} />
         <Route path="/seguranca-e-etica" element={<ProductLanding route="/seguranca-e-etica" />} />
         <Route path="/blog" element={<BlogIndex />} />
         <Route path="/blog/:slug" element={<BlogArticle />} />
         <Route path="/novidades" element={<UpdatesLanding />} />
-        <Route path="/portal-do-paciente" element={<ProductLanding route="/portal-do-paciente" />} />
+        <Route path="/portal-do-paciente" element={<PatientPortalLanding />} />
         <Route path="/teleconsulta-para-psicologos" element={<TeleconsultaLanding />} />
         <Route path="/prontuario-para-psicologos" element={<ProductLanding route="/prontuario-para-psicologos" />} />
-        <Route path="/agenda-para-psicologos" element={<ProductLanding route="/agenda-para-psicologos" />} />
+        <Route path="/agenda-para-psicologos" element={<AgendaLanding />} />
 
         {/* Compatibilidade: URLs antigas migram para páginas públicas canônicas. */}
         <Route path="/help" element={<LegacyHelpRedirect />} />
@@ -181,7 +183,8 @@ const SharedRoutes = () => {
         <Route path="/legal" element={<Navigate to="/documentos-legais" replace />} />
         <Route path="/neurobank" element={<Navigate to="/neurofinance" replace />} />
         <Route path="/funcionalidades" element={<Navigate to="/produto" replace />} />
-        <Route path="/pricing" element={<Navigate to="/precos" replace />} />
+        <Route path="/precos" element={<Navigate to="/download" replace />} />
+        <Route path="/pricing" element={<Navigate to="/download" replace />} />
 
         {/* ─── Protected Professional Routes ──────────────── */}
         <Route path="/synapse-ai" element={<PaidRoute><AIChat /></PaidRoute>} />

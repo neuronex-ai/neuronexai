@@ -1,80 +1,184 @@
 "use client";
 
-import { ArrowRight, BookOpen, CalendarDays } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarDays, Mail, Newspaper } from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 
-import {
-  PublicBreadcrumbs,
-  PublicPageHero,
-} from "@/components/public/PublicPageShell";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
+import { PublicBreadcrumbs } from "@/components/public/PublicPageShell";
+import { Button } from "@/components/ui/button";
 import { PUBLIC_ARTICLES, getPublicPage } from "@/content/public-content";
 
 const BlogIndex = () => {
   const page = getPublicPage("/blog");
+  const shouldReduceMotion = useReducedMotion();
   if (!page) return null;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="hidden md:block">
         <Navbar />
       </div>
       <LandingMobileNav />
-      <main className="pt-24 md:pt-32">
+
+      <main className="pt-24 md:pt-[6.5rem]">
         <PublicBreadcrumbs page={page} />
-        <PublicPageHero page={page} />
-        <section className="px-5 pb-20 md:px-8 md:pb-28">
-          <div className="mx-auto max-w-[1240px]">
-            <div className="grid gap-5 lg:grid-cols-3">
-              {PUBLIC_ARTICLES.map((article) => (
-                <article
-                  key={article.slug}
-                  className="group flex h-full flex-col overflow-hidden rounded-lg border border-border/45 bg-card/70 dark:border-white/10 dark:bg-white/[0.03]"
+
+        <section className="px-5 pb-10 pt-0 md:px-8 md:pb-14">
+          <div className="public-neurox-hero mx-auto flex min-h-[calc(100svh-6rem)] max-w-[1480px] items-center justify-center overflow-hidden px-5 py-20 text-center md:min-h-[calc(100svh-6.5rem)] md:px-10 md:py-24">
+            <div className="relative z-10 mx-auto max-w-5xl">
+              <motion.p
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground"
+              >
+                Newsletter da NeuroNex
+              </motion.p>
+              <motion.h1
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: shouldReduceMotion ? 0 : 0.06 }}
+                className="public-neurox-title mt-7 text-balance text-[clamp(4.25rem,13vw,11.5rem)] font-black leading-[0.82] tracking-normal"
+              >
+                NeuroX.
+              </motion.h1>
+              <motion.p
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: shouldReduceMotion ? 0 : 0.12 }}
+                className="mx-auto mt-8 max-w-3xl text-pretty text-xl font-semibold leading-relaxed text-muted-foreground/82 md:mt-10 md:text-3xl"
+              >
+                Ideias claras sobre IA, clínica, operação e dinheiro. Sem
+                espuma. Só o que ajuda você a decidir melhor.
+              </motion.p>
+              <motion.div
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: shouldReduceMotion ? 0 : 0.18 }}
+                className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              >
+                <Button
+                  asChild
+                  className="public-tactile h-14 min-w-[190px] rounded-full bg-foreground px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-[0_18px_45px_-24px_hsl(var(--foreground)/0.72)]"
                 >
-                  <div className="overflow-hidden">
-                    <img
-                      src={article.image}
-                      alt={article.imageAlt}
-                      width={1280}
-                      height={720}
-                      loading="lazy"
-                      decoding="async"
-                      className="aspect-video w-full object-cover transition-transform duration-500 motion-reduce:transition-none group-hover:scale-[1.02]"
-                    />
-                  </div>
-                  <div className="flex flex-1 flex-col p-6">
-                    <div className="flex items-center justify-between gap-4 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                      <span>{article.category}</span>
-                      <span className="inline-flex items-center gap-2">
-                        <CalendarDays className="h-3.5 w-3.5" />
-                        16 jul. 2026
-                      </span>
-                    </div>
-                    <h2 className="mt-6 text-2xl font-black leading-tight">
-                      {article.title}
-                    </h2>
-                    <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/72">
-                      {article.excerpt}
-                    </p>
-                    <Link
-                      to={article.route}
-                      className="mt-auto inline-flex min-h-11 items-center pt-8 text-[10px] font-black uppercase tracking-[0.16em]"
-                    >
-                      Ler artigo <ArrowRight className="ml-2 h-4 w-4" />
-                    </Link>
-                  </div>
-                </article>
-              ))}
+                  <a href="#edicoes">
+                    Ler edições <ArrowRight className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="public-tactile h-14 min-w-[190px] rounded-full border-border/70 bg-background/46 px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-xl"
+                >
+                  <Link to="/novidades">Ver novidades</Link>
+                </Button>
+              </motion.div>
             </div>
-            <div className="mt-14 flex items-start gap-4 border-y border-border/45 py-8 dark:border-white/10">
-              <BookOpen className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
-              <p className="max-w-3xl text-sm font-medium leading-relaxed text-muted-foreground/72">
-                Os artigos são educativos, identificam autoria e revisão e não
-                substituem orientação clínica, jurídica, fiscal ou regulatória.
+          </div>
+        </section>
+
+        <section id="edicoes" className="px-5 py-16 md:px-8 md:py-24">
+          <div className="mx-auto max-w-[1320px]">
+            <div className="mb-10 flex flex-col justify-between gap-5 border-t border-border/45 pt-8 dark:border-white/10 md:flex-row md:items-end">
+              <div>
+                <p className="font-mono text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                  Edições recentes
+                </p>
+                <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">
+                  Conteúdo para quem opera clínica de verdade.
+                </h2>
+              </div>
+              <p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/72">
+                Cada texto parte de uma dor concreta: agenda que escapa,
+                paciente que some, dinheiro que fica nebuloso, IA que precisa
+                obedecer limites.
               </p>
             </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {PUBLIC_ARTICLES.map((article, index) => (
+                <motion.article
+                  key={article.slug}
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-80px" }}
+                  transition={{ delay: shouldReduceMotion ? 0 : index * 0.06 }}
+                  className="public-neurox-card group overflow-hidden rounded-[28px]"
+                >
+                  <Link to={article.route} className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <div className="overflow-hidden">
+                      <img
+                        src={article.image}
+                        alt={article.imageAlt}
+                        width={640}
+                        height={480}
+                        loading="lazy"
+                        decoding="async"
+                        className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-[1.018] motion-reduce:transition-none"
+                      />
+                    </div>
+                    <div className="flex min-h-[294px] flex-col p-6">
+                      <div className="flex items-center justify-between gap-3 font-mono text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground/78">
+                        <span>{article.category}</span>
+                        <CalendarDays aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+                      </div>
+                      <h3 className="mt-6 text-2xl font-black leading-tight">
+                        {article.title}
+                      </h3>
+                      <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/72">
+                        {article.excerpt}
+                      </p>
+                      <span className="mt-auto inline-flex min-h-11 items-center pt-8 font-mono text-[10px] font-black uppercase tracking-[0.16em]">
+                        Ler edição <ArrowRight className="ml-2 h-4 w-4" />
+                      </span>
+                    </div>
+                  </Link>
+                </motion.article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="public-inverted-section px-5 py-20 text-background dark:text-zinc-950 md:px-8 md:py-28">
+          <div className="mx-auto grid max-w-[1180px] gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-center">
+            <div>
+              <Newspaper className="h-7 w-7 opacity-55" />
+              <p className="mt-8 font-mono text-[9px] font-black uppercase tracking-[0.22em] opacity-45">
+                NeuroX
+              </p>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">
+                Uma newsletter para pensar a clínica antes da próxima ferramenta.
+              </h2>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                "IA com controle profissional",
+                "Operação clínica sem retrabalho",
+                "Financeiro claro para psicólogos",
+                "Continuidade entre sessões",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="min-h-24 border-t border-background/14 py-5 text-lg font-black leading-tight dark:border-zinc-950/14"
+                >
+                  {item}
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-5 py-16 md:px-8 md:py-24">
+          <div className="mx-auto flex max-w-[1180px] flex-col gap-5 border-y border-border/45 py-8 dark:border-white/10 md:flex-row md:items-start">
+            <BookOpen className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
+            <p className="max-w-3xl text-sm font-medium leading-relaxed text-muted-foreground/72">
+              Os textos da NeuroX são educativos, têm autoria e revisão
+              identificadas e não substituem orientação clínica, jurídica,
+              fiscal ou regulatória.
+            </p>
+            <Mail className="ml-auto hidden h-5 w-5 text-muted-foreground md:block" />
           </div>
         </section>
       </main>

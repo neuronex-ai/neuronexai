@@ -17,7 +17,7 @@ const UpdatesLanding = () => {
   if (!page) return null;
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+    <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background text-foreground">
       <div className="hidden md:block">
         <Navbar />
       </div>
@@ -25,12 +25,12 @@ const UpdatesLanding = () => {
       <main className="pt-24 md:pt-32">
         <PublicBreadcrumbs page={page} />
         <PublicPageHero page={page} />
-        <section className="px-5 pb-20 md:px-8 md:pb-28">
+        <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto max-w-[1040px] border-y border-border/45 dark:border-white/10">
             {PUBLIC_UPDATES.map((update) => (
               <article
                 key={`${update.date}-${update.title}`}
-                className="grid gap-6 border-b border-border/45 py-10 last:border-b-0 dark:border-white/10 md:grid-cols-[190px_minmax(0,1fr)]"
+                className="public-tactile grid gap-6 rounded-[28px] border-b border-border/45 px-5 py-10 last:border-b-0 hover:bg-foreground/[0.035] dark:border-white/10 dark:hover:bg-white/[0.04] md:grid-cols-[190px_minmax(0,1fr)] md:px-7"
               >
                 <div>
                   <p className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">

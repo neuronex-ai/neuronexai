@@ -311,7 +311,7 @@ export const LandingRealProductShowcase = () => {
   const active = productModules.find((module) => module.key === activeKey) || productModules[0];
 
   return (
-    <section id="produto" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+    <section id="produto" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
       <div className="pointer-events-none absolute inset-0">
         <div className="absolute left-1/2 top-24 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-foreground/[0.035] blur-[160px] dark:bg-white/[0.025]" />
       </div>
@@ -398,7 +398,7 @@ export const LandingRealSynapseSection = () => {
   const [mode, setMode] = useState(synapseModes[0]);
 
   return (
-    <section id="synapse" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+    <section id="synapse" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
       <div className="relative z-10 mx-auto max-w-[1320px]">
         <div className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-center">
           <div>
@@ -476,7 +476,7 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
 ];
 
 export const LandingRealFinanceFiscalSection = () => (
-  <section id="financeiro" className="relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="financeiro" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1380px]">
       <SectionHeading
         eyebrow="Financeiro sem confusão"

@@ -39,7 +39,7 @@ export const PUBLIC_PLAN_CARDS = [
       "500 ações de texto e 60 minutos de voz no Synapse",
       "NeuroView, NeuroFlow, NeuroPulse e NeuroScan",
       "NeuroFinance e módulo fiscal",
-      "Um número no NeuroZap Desktop Beta",
+      "Um número no NeuroZap",
     ],
   },
 ] as const;
@@ -58,7 +58,7 @@ export const PUBLIC_PLAN_COMPARISON = [
   ["Financeiro manual", "Incluído", "Incluído"],
   ["NeuroFinance", "—", "Incluído, sujeito à aprovação da conta"],
   ["Módulo fiscal", "—", "Incluído; taxas externas separadas"],
-  ["Synapse no WhatsApp", "—", "Em evolução após validação do NeuroZap"],
+  ["Synapse no WhatsApp", "—", "Acesso conforme disponibilidade"],
   ["NeuroZap", "—", "Um número de WhatsApp Business em Beta"],
   ["Mensagens de utilidade", "—", "250 mensagens/mês"],
   ["Suporte", "Padrão", "Prioritário"],

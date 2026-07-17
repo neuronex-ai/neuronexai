@@ -67,9 +67,9 @@ export const LandingMobileNav = () => {
         { label: "NeuroFinance", type: "route", path: "/neurofinance" },
         { label: "NeuroZap", type: "route", path: "/neurozap-para-psicologos" },
         { label: "Teleconsulta", type: "route", path: "/teleconsulta-para-psicologos" },
-        { label: "Planos", type: "route", path: "/precos" },
+        { label: "Download", type: "route", path: "/download" },
         { label: "Segurança", type: "route", path: "/seguranca-e-etica" },
-        { label: "Blog", type: "route", path: "/blog" },
+        { label: "NeuroX", type: "route", path: "/blog" },
         { label: "Novidades", type: "route", path: "/novidades" },
     ];
 
@@ -110,11 +110,6 @@ export const LandingMobileNav = () => {
                     Acesse as áreas públicas da NeuroNex ou entre na plataforma.
                 </DialogDescription>
 
-                <div className="pointer-events-none absolute inset-0">
-                    <div className="absolute left-1/2 top-0 h-[420px] w-[420px] -translate-x-1/2 rounded-full bg-foreground/[0.045] blur-[110px] dark:bg-white/[0.055]" />
-                    <div className="absolute inset-0 premium-noise opacity-[0.025]" />
-                </div>
-
                 <div className="relative z-10 flex items-center justify-between border-b border-border/10 p-5 pb-3 dark:border-white/10">
                     <div className="flex items-center gap-2.5">
                         <img src={faviconSrc} className="h-7 w-7 object-contain" alt="" aria-hidden="true" />
@@ -146,7 +141,7 @@ export const LandingMobileNav = () => {
                                 <button
                                     type="button"
                                     onClick={() => handleAnchorClick(item.target!)}
-                                    className="block min-h-11 text-left text-4xl font-black leading-none tracking-[-0.055em] text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
+                                    className="block min-h-11 text-left text-4xl font-black leading-none tracking-normal text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
                                 >
                                     {item.label}
                                 </button>
@@ -154,7 +149,7 @@ export const LandingMobileNav = () => {
                                 <Link
                                     to={item.path!}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className="flex min-h-11 items-center text-4xl font-black leading-none tracking-[-0.055em] text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
+                                    className="flex min-h-11 items-center text-4xl font-black leading-none tracking-normal text-foreground/82 transition-all hover:text-foreground active:scale-[0.98]"
                                 >
                                     {item.label}
                                 </Link>
@@ -164,7 +159,7 @@ export const LandingMobileNav = () => {
                 </nav>
 
                 <div className="relative z-10 mt-auto space-y-4 border-t border-border/10 p-8 pb-[max(2.5rem,env(safe-area-inset-bottom))] dark:border-white/10">
-                    <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.22em] text-background shadow-premium transition-all active:scale-95">
+                    <Button asChild className="h-14 w-full rounded-2xl bg-foreground font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none transition-all active:scale-95">
                         <Link to="/create-account" onClick={() => setIsMenuOpen(false)}>
                             Começar grátis <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                         </Link>
@@ -174,8 +169,8 @@ export const LandingMobileNav = () => {
                             Entrar no NeuroNex
                         </Link>
                     </Button>
-                    <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-muted-foreground/40">
-                        Sistema operacional financeiro, clínico e inteligente para psicólogos.
+                    <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-muted-foreground/55">
+                        Sua clínica, seu financeiro e sua rotina em uma só experiência.
                     </p>
                 </div>
             </DialogContent>

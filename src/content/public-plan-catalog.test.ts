@@ -33,4 +33,16 @@ describe("public plan catalog", () => {
     expect(row?.[1]).toBe("—");
     expect(row?.[2]).toBe("NeuroView, NeuroFlow, NeuroPulse e NeuroScan");
   });
+
+  it("describes NeuroZap and Synapse no WhatsApp without overpromising access", () => {
+    const neuroZap = PUBLIC_PLAN_COMPARISON.find(
+      ([label]) => label === "NeuroZap",
+    );
+    const synapse = PUBLIC_PLAN_COMPARISON.find(
+      ([label]) => label === "Synapse no WhatsApp",
+    );
+
+    expect(neuroZap?.[2]).toContain("Beta");
+    expect(synapse?.[2]).toBe("Acesso conforme disponibilidade");
+  });
 });
