@@ -109,21 +109,23 @@ export const Navbar = () => {
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 top-0 z-[100] hidden justify-center py-4 md:flex">
-      <div className="public-glass-surface public-liquid-navbar pointer-events-auto relative flex w-[min(980px,calc(100vw-24px))] items-center justify-between gap-4 rounded-full px-4 py-2.5 xl:gap-7 xl:px-6">
-        <div>
+      <div className="global-retina-navbar public-liquid-navbar pointer-events-auto relative flex w-[min(880px,calc(100vw-24px))] items-center justify-between gap-3 rounded-[30px] border border-black/[0.075] bg-white/[0.72] px-2.5 py-2.5 shadow-[0_30px_90px_-46px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-white/40 backdrop-blur-3xl transition-[transform,background-color,border-color,box-shadow] duration-500 ease-apple hover:-translate-y-0.5 hover:bg-white/[0.78] dark:border-white/[0.055] dark:bg-[#080808]/82 dark:ring-white/[0.025] dark:hover:bg-[#0a0a0a]/88 motion-reduce:transform-none motion-reduce:transition-none">
+        <div className="flex items-center gap-2 border-r border-black/[0.055] pr-3 dark:border-white/[0.08]">
           <Link
             to="/"
             aria-label="Ir para a página inicial da NeuroNex"
-            className="public-tactile flex min-h-11 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
+            className="public-tactile group flex min-h-11 items-center gap-3 rounded-[22px] px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
-            <Logo className="h-7 w-7" />
-            <span className="ml-3 whitespace-nowrap font-mono text-[12px] font-bold uppercase tracking-[0.24em] text-foreground">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)] transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-[1.025] dark:border-white/[0.08] dark:bg-white/[0.045] dark:shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+              <Logo className="h-6 w-6" />
+            </span>
+            <span className="whitespace-nowrap font-mono text-[10px] font-black uppercase tracking-[0.24em] text-foreground">
               NeuroNex
             </span>
           </Link>
         </div>
 
-        <div className="flex items-center gap-4 font-sans text-[11px] font-semibold uppercase tracking-normal text-muted-foreground xl:gap-7">
+        <div className="flex flex-1 items-center justify-center gap-3 font-sans text-[10px] font-semibold uppercase tracking-normal text-muted-foreground xl:gap-5">
           <button
             type="button"
             onClick={() => handleSectionClick("diferenciais")}
@@ -254,7 +256,7 @@ export const Navbar = () => {
           </Link>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1 border-l border-black/[0.055] pl-3 dark:border-white/[0.08]">
           <ThemeToggle />
           <Button
             asChild

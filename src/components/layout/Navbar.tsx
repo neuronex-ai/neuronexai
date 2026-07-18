@@ -135,7 +135,7 @@ export const Navbar = () => {
     <nav id="navbar-container" className="fixed top-7 left-0 right-0 z-[60] flex justify-center pointer-events-none px-4">
       <div
         className={cn(
-          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-[transform,background-color,border-color,box-shadow] duration-500 ease-apple hover:-translate-y-0.5 active:scale-[0.99] motion-reduce:transform-none motion-reduce:transition-none",
+          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-[transform,background-color,border-color,box-shadow] duration-500 ease-apple hover:-translate-y-0.5 motion-reduce:transform-none motion-reduce:transition-none",
           isDarkTheme
             ? "border border-white/[0.055] bg-[#080808]/82 ring-1 ring-white/[0.025] hover:bg-[#0a0a0a]/88"
             : "border border-black/[0.075] bg-white/[0.72] shadow-[0_30px_90px_-46px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-white/40 hover:bg-white/[0.78] hover:shadow-[0_42px_112px_-56px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.8)]"

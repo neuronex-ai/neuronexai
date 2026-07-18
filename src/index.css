@@ -842,10 +842,6 @@
     background-color: rgba(255, 255, 255, 0.02);
   }
 
-  .public-home-bridge {
-    background-color: hsl(var(--background));
-  }
-
   .public-home-bridge-nav {
     border-color: hsl(var(--border) / 0.62);
     background-color: hsl(var(--background) / 0.82);

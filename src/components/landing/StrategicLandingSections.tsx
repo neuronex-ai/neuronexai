@@ -705,24 +705,24 @@ export const LandingTrustAndFAQSection = () => {
   const [open, setOpen] = useState(0);
 
   return (
-    <section id="seguranca" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
+    <section id="seguranca" className="public-sensitive-section public-section-stage relative overflow-hidden px-6 py-20 md:py-28">
       <div className="relative z-10 mx-auto grid max-w-[1240px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
         <FadeIn>
-          <div className="rounded-[42px] border border-border/40 bg-card/80 p-8 dark:border-white/10 dark:bg-white/[0.035] md:p-10">
+          <div className="public-sensitive-card rounded-[42px] border p-8 md:p-10">
             <ShieldCheck className="h-8 w-8 text-muted-foreground" />
             <h2 className="mt-10 text-5xl font-black leading-[0.9] tracking-[-0.06em] text-foreground">Construído para uma rotina sensível.</h2>
             <p className="mt-6 text-base font-medium leading-relaxed text-muted-foreground/70">Psicologia exige responsabilidade. O NeuroNex deve tratar dados clínicos com segurança, controle de acesso, rastreabilidade e postura cuidadosa no uso de IA.</p>
             <div className="mt-8 grid gap-3">
               {["LGPD e controle de acesso", "IA como apoio, não substituição", "Rastreabilidade de dados sensíveis"].map((item) => (
-                <div key={item} className="flex items-center gap-3 rounded-2xl border border-border/40 bg-foreground/[0.035] px-4 py-3 text-sm font-bold text-foreground/72 dark:border-white/10 dark:bg-white/[0.04]"><LockKeyhole className="h-4 w-4" />{item}</div>
+                <div key={item} className="public-sensitive-item flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold text-foreground/72"><LockKeyhole className="h-4 w-4" />{item}</div>
               ))}
             </div>
           </div>
         </FadeIn>
         <FadeIn delay={0.1}>
-          <div className="rounded-[42px] border border-border/40 bg-card/80 p-5 dark:border-white/10 dark:bg-white/[0.035] md:p-6">
+          <div className="public-sensitive-card rounded-[42px] border p-5 md:p-6">
             {faqs.map((faq, index) => (
-              <div key={faq.q} className="border-b border-border/35 last:border-b-0 dark:border-white/10">
+              <div key={faq.q} className="public-sensitive-faq-row border-b last:border-b-0">
                 <button
                   id={`landing-faq-trigger-${index}`}
                   type="button"
