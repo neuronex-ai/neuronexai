@@ -714,46 +714,6 @@
 
   .public-liquid-navbar {
     isolation: isolate;
-    border-color: hsl(var(--border) / 0.72);
-    background-color: hsl(var(--background) / 0.89) !important;
-    background-image:
-      radial-gradient(72% 160% at 16% -58%, hsl(var(--foreground) / 0.12), transparent 64%),
-      linear-gradient(155deg, hsl(var(--foreground) / 0.055), transparent 38%, hsl(var(--foreground) / 0.018)),
-      linear-gradient(180deg, hsl(var(--background) / 0.93), hsl(var(--background) / 0.84));
-    box-shadow:
-      inset 0 1px 0 hsl(var(--foreground) / 0.12),
-      inset 0 -1px 0 hsl(var(--foreground) / 0.035),
-      0 24px 70px -48px hsl(var(--foreground) / 0.52);
-    backdrop-filter: blur(34px) saturate(128%);
-    -webkit-backdrop-filter: blur(34px) saturate(128%);
-  }
-
-  .public-liquid-navbar::before {
-    position: absolute;
-    inset: 1px;
-    z-index: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(108deg, hsl(var(--foreground) / 0.055), transparent 24%, transparent 76%, hsl(var(--foreground) / 0.02));
-    content: '';
-  }
-
-  .public-liquid-navbar > * {
-    position: relative;
-    z-index: 1;
-  }
-
-  .dark .public-liquid-navbar {
-    border-color: rgba(255, 255, 255, 0.115);
-    background-color: rgba(8, 8, 9, 0.89) !important;
-    background-image:
-      radial-gradient(72% 160% at 16% -58%, rgba(255, 255, 255, 0.11), transparent 64%),
-      linear-gradient(155deg, rgba(255, 255, 255, 0.052), transparent 40%, rgba(255, 255, 255, 0.012)),
-      linear-gradient(180deg, rgba(14, 14, 15, 0.92), rgba(5, 5, 6, 0.86));
-    box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.085),
-      inset 0 -1px 0 rgba(0, 0, 0, 0.56),
-      0 28px 82px -48px rgba(0, 0, 0, 0.94);
   }
 
   .public-product-menu-surface {
@@ -843,23 +803,64 @@
   }
 
   .public-home-bridge-nav {
-    border-color: hsl(var(--border) / 0.62);
-    background-color: hsl(var(--background) / 0.82);
+    border-color: rgba(255, 255, 255, 0.075);
+    background-color: #09090a !important;
+    background-image: none !important;
     box-shadow:
-      inset 0 1px 0 hsl(var(--foreground) / 0.1),
-      0 22px 58px -46px hsl(var(--foreground) / 0.46);
+      inset 0 1px 0 rgba(255, 255, 255, 0.075),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+      0 22px 58px -46px rgba(0, 0, 0, 0.48);
   }
 
   .dark .public-home-bridge-nav {
-    border-color: rgba(255, 255, 255, 0.095);
-    background-color: rgba(10, 10, 11, 0.82);
+    border-color: rgba(255, 255, 255, 0.075);
+    background-color: #09090a !important;
+  }
+
+  .public-home-page main > .public-home-bridge {
+    background-color: #f9f9f9 !important;
+    background-image: none !important;
+  }
+
+  .public-home-page main > .public-sensitive-section {
+    --background: 0 0% 98%;
+    --foreground: 240 5.9% 4%;
+    --card: 0 0% 100%;
+    --muted-foreground: 240 3.8% 46%;
+    --border: 240 5.9% 88%;
+    color: #09090a;
+    background-color: #f9f9f9 !important;
+    background-image: none !important;
+  }
+
+  .public-sensitive-card {
+    border-color: rgba(9, 9, 10, 0.1) !important;
+    background-color: rgba(255, 255, 255, 0.78) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.92),
+      0 28px 72px -60px rgba(9, 9, 10, 0.3);
+  }
+
+  .public-sensitive-item {
+    border-color: rgba(9, 9, 10, 0.085) !important;
+    background-color: rgba(9, 9, 10, 0.035) !important;
+  }
+
+  .public-sensitive-faq-row {
+    border-color: rgba(9, 9, 10, 0.09) !important;
   }
 
   @media (prefers-reduced-transparency: reduce) {
     .public-liquid-navbar,
-    .public-product-menu-surface,
-    .public-home-bridge-nav {
+    .public-product-menu-surface {
       background-color: hsl(var(--background)) !important;
+      background-image: none !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+
+    .public-home-bridge-nav {
+      background-color: #09090a !important;
       background-image: none !important;
       backdrop-filter: none !important;
       -webkit-backdrop-filter: none !important;
@@ -2029,6 +2030,24 @@
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0.007) 54%, rgba(0, 0, 0, 0.08));
   }
 
+  .dark .agenda-desktop-shell {
+    border-color: rgba(255, 255, 255, 0.055) !important;
+  }
+
+  .dark .agenda-desktop-shell .desktop-retina-panel {
+    border-color: rgba(255, 255, 255, 0.065) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.032),
+      0 22px 58px -48px rgba(0, 0, 0, 0.94) !important;
+  }
+
+  .dark .agenda-desktop-shell .desktop-retina-inset {
+    border-color: rgba(255, 255, 255, 0.052) !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.022),
+      0 14px 34px -30px rgba(0, 0, 0, 0.88) !important;
+  }
+
   .patient-record-header,
   .patient-record-panel,
   .patient-record-card {
@@ -2183,6 +2202,11 @@
   .desktop-retina-interactive:active {
     transform: translateY(0) scale(0.985);
     transition-duration: 140ms;
+  }
+
+  .global-retina-navbar .desktop-retina-interactive:active {
+    transform: translateY(0.5px) scale(0.997);
+    transition-duration: 100ms;
   }
 
   /* Teleconsulta desktop: static Lumen surfaces keep the clinical workspace
