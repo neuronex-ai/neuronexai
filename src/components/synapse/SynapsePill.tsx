@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { MessageSquareText, Mic, Sparkles } from "lucide-react";
+import { AudioLines, MessageCircle } from "lucide-react";
 
+import { Magnetic } from "@/components/animations/Magnetic";
 import { useSynapse } from "@/context/SynapseContext";
 import { SynapseLiquidOrb } from "./SynapseLiquidOrb";
 
@@ -80,48 +81,46 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         };
 
         return (
-            <div
-                className="synapse-launcher flex min-h-16 items-center gap-1.5 rounded-full border p-2 text-foreground"
-                role="toolbar"
-                aria-label="Conversar com o Synapse"
-                data-synapse-launcher="true"
-            >
-                <span className="synapse-launcher-brand flex h-12 items-center gap-2.5 rounded-full pl-3.5 pr-2.5 text-[12px] font-semibold" aria-hidden="true">
-                    <Sparkles className="h-4 w-4" />
-                    <span>Synapse</span>
-                </span>
-                <span className="synapse-launcher-divider h-7 w-px" aria-hidden="true" />
-                <motion.button
-                    type="button"
-                    onClick={openTextConversation}
-                    whileHover={shouldReduceMotion ? undefined : { y: -1, scale: 1.018 }}
-                    whileTap={shouldReduceMotion ? undefined : { y: 0, scale: 0.976 }}
-                    transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
-                    className="synapse-launcher-action flex h-12 min-w-[76px] items-center justify-center gap-2 rounded-full px-3.5 text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-                    aria-label="Abrir conversa por texto com o Synapse"
-                    aria-controls="synapse-panel"
-                    data-synapse-action="text"
+            <Magnetic strength={0.11} className="rounded-full">
+                <div
+                    className="synapse-launcher relative flex h-[56px] w-[128px] items-center rounded-full border p-[5px] text-white"
+                    role="toolbar"
+                    aria-label="Conversar com o Synapse"
+                    data-synapse-launcher="true"
                 >
-                    <MessageSquareText className="h-4 w-4" aria-hidden="true" />
-                    <span>Texto</span>
-                </motion.button>
-                <motion.button
-                    type="button"
-                    onClick={openVoiceConversation}
-                    disabled={voiceStatus === "disconnecting"}
-                    whileHover={shouldReduceMotion ? undefined : { y: -1, scale: 1.018 }}
-                    whileTap={shouldReduceMotion ? undefined : { y: 0, scale: 0.976 }}
-                    transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
-                    className="synapse-launcher-action flex h-12 min-w-[72px] items-center justify-center gap-2 rounded-full px-3.5 text-[12px] font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-wait disabled:opacity-60"
-                    aria-label="Iniciar conversa por voz com o Synapse"
-                    aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
-                    aria-pressed={isVoiceSessionActive}
-                    data-synapse-action="voice"
-                >
-                    <Mic className="h-4 w-4" aria-hidden="true" />
-                    <span>Voz</span>
-                </motion.button>
-            </div>
+                    <motion.button
+                        type="button"
+                        onClick={openVoiceConversation}
+                        disabled={voiceStatus === "disconnecting"}
+                        whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
+                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-full rounded-r-[18px] outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60"
+                        aria-label="Iniciar conversa por voz com o Synapse"
+                        aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
+                        aria-pressed={isVoiceSessionActive}
+                        data-synapse-action="voice"
+                        title="Conversar por voz"
+                    >
+                        <AudioLines className="h-[19px] w-[19px]" strokeWidth={1.75} aria-hidden="true" />
+                    </motion.button>
+                    <span className="synapse-launcher-divider h-8 w-px shrink-0" aria-hidden="true" />
+                    <motion.button
+                        type="button"
+                        onClick={openTextConversation}
+                        whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
+                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-[18px] rounded-r-full outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        aria-label="Abrir conversa por texto com o Synapse"
+                        aria-controls="synapse-panel"
+                        data-synapse-action="text"
+                        title="Conversar por texto"
+                    >
+                        <MessageCircle className="h-[19px] w-[19px]" strokeWidth={1.75} aria-hidden="true" />
+                    </motion.button>
+                </div>
+            </Magnetic>
         );
     }
 

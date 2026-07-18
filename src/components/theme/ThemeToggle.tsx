@@ -1,15 +1,15 @@
 import { cn } from "@/lib/utils";
 import { AnimatePresence, motion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
+import type { MouseEvent } from "react";
 import { useThemeTransition } from "@/hooks/useThemeTransition";
-import { ThemeTransitionOverlay } from "./ThemeTransitionOverlay";
 
 export const ThemeToggle = () => {
-    const { isLight, toggleTheme, isTransitioning, transitionDirection } = useThemeTransition();
+    const { isLight, toggleTheme, isTransitioning } = useThemeTransition();
 
-    const handleToggle = () => {
+    const handleToggle = (event: MouseEvent<HTMLButtonElement>) => {
         if (!isTransitioning) {
-            toggleTheme();
+            toggleTheme(event);
         }
     };
 
@@ -29,14 +29,15 @@ export const ThemeToggle = () => {
                 disabled={isTransitioning}
                 className={cn(
                     "relative p-3 rounded-full flex items-center justify-center border overflow-hidden",
-                    "backdrop-blur-xl transition-all duration-700 haptic-feedback",
+                    "backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] duration-200 haptic-feedback",
                     isLight
                         ? "bg-white/40 border-black/5 text-black/80 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.1)] hover:bg-white/60"
                         : "bg-black/40 border-white/5 text-white/80 shadow-[0_8px_32px_-4px_rgba(255,255,255,0.05)] hover:bg-black/60",
                     isTransitioning && "pointer-events-none scale-95 brightness-110"
                 )}
-                whileTap={{ scale: 0.9 }}
+                whileTap={{ scale: 0.985 }}
                 title={isLight ? "Ativar Modo Escuro" : "Ativar Modo Claro"}
+                aria-label={isLight ? "Ativar modo escuro" : "Ativar modo claro"}
             >
                 {/* Liquid Ripple Overlay */}
                 <AnimatePresence>
@@ -66,7 +67,7 @@ export const ThemeToggle = () => {
                                 animate={{ y: 0, rotate: 0, opacity: 1, filter: "blur(0px)" }}
                                 exit={{ y: -20, rotate: 20, opacity: 0, filter: "blur(4px)" }}
                                 transition={{
-                                    duration: 0.5,
+                                    duration: 0.24,
                                     ease: [0.22, 1, 0.36, 1]
                                 }}
                             >
@@ -79,7 +80,7 @@ export const ThemeToggle = () => {
                                 animate={{ y: 0, rotate: 0, opacity: 1, filter: "blur(0px)" }}
                                 exit={{ y: 20, rotate: -20, opacity: 0, filter: "blur(4px)" }}
                                 transition={{
-                                    duration: 0.5,
+                                    duration: 0.24,
                                     ease: [0.22, 1, 0.36, 1]
                                 }}
                             >
@@ -90,12 +91,6 @@ export const ThemeToggle = () => {
                 </div>
             </motion.button>
 
-            {/* Theme Transition Overlay (Cinematic Switch) */}
-            <AnimatePresence>
-                {isTransitioning && transitionDirection && (
-                    <ThemeTransitionOverlay direction={transitionDirection} />
-                )}
-            </AnimatePresence>
         </div>
     );
 };

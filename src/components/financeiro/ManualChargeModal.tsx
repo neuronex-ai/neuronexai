@@ -67,6 +67,25 @@ const nextBillingDate = (billingDay?: number | null) => {
   return candidate >= today ? candidate : setDate(addMonths(today, 1), clampedDay);
 };
 
+const getManualChargeErrorMessage = (error: unknown) => {
+  const candidate = error as { code?: string; message?: string } | null;
+
+  if (candidate?.code === "23503") {
+    return "O paciente ou agendamento selecionado não está mais disponível. Atualize os dados e tente novamente.";
+  }
+  if (candidate?.code === "42501") {
+    return "Sua sessão não tem permissão para criar esta cobrança. Entre novamente e tente de novo.";
+  }
+  if (candidate?.code === "23505") {
+    return "Esta cobrança já foi registrada. A lista financeira será atualizada sem duplicá-la.";
+  }
+  if (candidate?.message?.includes("Usuário não autenticado")) {
+    return "Sua sessão expirou. Entre novamente para criar a cobrança.";
+  }
+
+  return "Não foi possível concluir a cobrança. Revise os dados e tente novamente.";
+};
+
 export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps) {
   const { data: patients = [] } = usePatients();
   const { data: agreements = [] } = usePatientInsuranceAgreements();
@@ -88,7 +107,11 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const recordDetails = usePatientRecordDetails(patientId || null);
   const activePackages = useActivePatientPackages(patientId || "");
   const createEntry = useCreateFinancialEntry();
-  const transitionEntry=useTransitionFinancialEntry();const generateInvoice=useGenerateInvoice();const consumePackage=useUsePackageSession();const financialAccount=useFinancialAccount();const appointments=useAppointments({patientId:patientId||undefined});
+  const transitionEntry = useTransitionFinancialEntry();
+  const generateInvoice = useGenerateInvoice();
+  const consumePackage = useUsePackageSession();
+  const financialAccount = useFinancialAccount();
+  const appointments = useAppointments({ patientId: patientId || undefined });
 
   const financial = recordDetails.data?.financial || null;
   const responsible = recordDetails.data?.responsible || null;
@@ -98,6 +121,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const isExempt = planType === "exempt";
   const packageConsumesOnly=Boolean(selectedPackage&&(selectedPackage.billing_mode||"upfront")!=="per_session");
   const neurofinanceReady=Boolean(financialAccount.isApproved&&financialAccount.account?.charges_enabled&&patientId&&payerType==="patient");
+  const isSubmitting = createEntry.isPending || transitionEntry.isPending || generateInvoice.isPending || consumePackage.isPending;
 
   const contextCards = useMemo(() => {
     const cards: Array<{ icon: typeof UserRound; label: string; value: string; tone?: "warning" | "success" }> = [];
@@ -146,6 +170,8 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       setPaymentMethod("manual");
       setPackageId("");
       setOverrideExempt(false);
+      setPayerType("patient");
+      setAppointmentId("");
       return;
     }
 
@@ -156,6 +182,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       setAmount(financial.session_value_cents ? String(centsToAmount(financial.session_value_cents).toFixed(2)).replace(".", ",") : "");
       setPaymentMethod("manual");
       setDueDate(formatDateInput(new Date()));
+      setPayerType("patient");
     }
 
     if (financial.plan_type === "monthly") {
@@ -163,6 +190,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       setAmount(financial.monthly_value_cents ? String(centsToAmount(financial.monthly_value_cents).toFixed(2)).replace(".", ",") : "");
       setPaymentMethod("manual");
       setDueDate(formatDateInput(nextBillingDate(financial.billing_day)));
+      setPayerType("patient");
     }
 
     if (financial.plan_type === "insurance") {
@@ -184,6 +212,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
       setAmount("");
       setPaymentMethod("manual");
       setOverrideExempt(false);
+      setPayerType("patient");
     }
   }, [activeAgreement, financial, open, patientId]);
 
@@ -198,8 +227,7 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     setNotes((current) => current || `${remaining} sessão(ões) restantes no pacote selecionado.`);
   }, [selectedPackage]);
 
-  const resetAndClose = () => {
-    onOpenChange(false);
+  const resetForm = () => {
     setPatientId("");
     setDescription("Cobrança manual");
     setAmount("");
@@ -208,11 +236,46 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     setPackageId("");
     setNotes("");
     setOverrideExempt(false);
-    setOverrideReason("");setDestination("management");setPayerType("patient");setAppointmentId("");operationKey.current=crypto.randomUUID();
+    setOverrideReason("");
+    setDestination("management");
+    setPayerType("patient");
+    setAppointmentId("");
+    operationKey.current = crypto.randomUUID();
+  };
+
+  const resetAndClose = () => {
+    resetForm();
+    onOpenChange(false);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && isSubmitting) return;
+    if (!nextOpen) resetForm();
+    onOpenChange(nextOpen);
   };
 
   const handleSubmit = async () => {
-    if(packageConsumesOnly&&selectedPackage&&patientId){if(!appointmentId){toast.error("Selecione o agendamento que possui a reserva do pacote.");return;}try{await consumePackage.mutateAsync({packageId:selectedPackage.id,patientId,appointmentId,idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-package-use",selectedPackage.id,appointmentId]),reason:notes.trim()||"Uso pela Gestão Financeira"});resetAndClose();}catch(error){console.error(error);}return;}
+    if (packageConsumesOnly && selectedPackage && patientId) {
+      if (!appointmentId) {
+        toast.error("Selecione o agendamento que possui a reserva do pacote.");
+        return;
+      }
+      try {
+        await consumePackage.mutateAsync({
+          packageId: selectedPackage.id,
+          patientId,
+          appointmentId,
+          idempotencyKey: buildFinancialEntryIdempotencyKey(["manual-package-use", selectedPackage.id, appointmentId]),
+          reason: notes.trim() || "Uso pela Gestão Financeira",
+        });
+        toast.success("Sessão do pacote utilizada com sucesso.");
+        resetAndClose();
+      } catch (error) {
+        console.error("Falha ao consumir sessão do pacote:", error);
+        toast.error(getManualChargeErrorMessage(error));
+      }
+      return;
+    }
     if (!description.trim()) {
       toast.error("Informe uma descrição para a cobrança.");
       return;
@@ -221,6 +284,11 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     const parsedAmount = parseMoney(amount);
     if (parsedAmount <= 0) {
       toast.error("Informe um valor maior que zero.");
+      return;
+    }
+    const parsedDueDate = dueDate ? new Date(`${dueDate}T12:00:00`) : null;
+    if (!parsedDueDate || Number.isNaN(parsedDueDate.getTime())) {
+      toast.error("Informe uma data de vencimento válida.");
       return;
     }
 
@@ -237,8 +305,8 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
         title: description.trim(),
         description: description.trim(),
         amount: parsedAmount,
-        dueDate: new Date(`${dueDate}T12:00:00`),
-        competenceDate: new Date(`${dueDate}T12:00:00`),
+        dueDate: parsedDueDate,
+        competenceDate: parsedDueDate,
         paidAt: null,
         status: "pending",
         paymentMethod,
@@ -260,17 +328,17 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
         },
       });
       if(destination==="paid")await transitionEntry.mutateAsync({id:entry.id,action:"settle",amount:parsedAmount,effectiveAt:new Date(),paymentMethod,idempotencyKey:buildFinancialEntryIdempotencyKey(["manual-charge-settlement",operationKey.current])});
-      if(destination==="neurofinance")await generateInvoice.mutateAsync({patientId,amount:parsedAmount,description:description.trim(),dueDate:new Date(`${dueDate}T12:00:00`),paymentMethodType:paymentMethod==="boleto"?["boleto"]:paymentMethod==="card"?["card"]:["pix"],financialEntryId:entry.id,operationId:operationKey.current});
+      if(destination==="neurofinance")await generateInvoice.mutateAsync({patientId,amount:parsedAmount,description:description.trim(),dueDate:parsedDueDate,paymentMethodType:paymentMethod==="boleto"?["boleto"]:paymentMethod==="card"?["card"]:["pix"],financialEntryId:entry.id,operationId:operationKey.current});
       toast.success(destination==="paid"?"Recebimento registrado.":destination==="neurofinance"?"Cobrança NeuroFinance criada e vinculada.":"Cobrança criada em aberto.");
       resetAndClose();
     } catch (error) {
       console.error("Falha ao criar cobrança manual:", error);
-      toast.error("Não foi possível criar a cobrança manual.");
+      toast.error(getManualChargeErrorMessage(error));
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent data-synapse-target="new-charge-modal" className="finance-modal-surface desktop-retina-modal desktop-retina-form max-h-[88vh] max-w-4xl overflow-y-auto rounded-[28px] border-border/55 bg-background/96 p-0 shadow-2xl">
         <div className="finance-separator border-b border-zinc-200 px-6 py-5 dark:border-white/10">
           <DialogTitle className="text-xl font-black tracking-tight text-zinc-950 dark:text-white">Nova cobrança manual</DialogTitle>
@@ -420,11 +488,11 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
             {packageConsumesOnly?"Consome uma sessão sem gerar nova receita.":destination==="paid"?"Registra a baixa no histórico.":destination==="neurofinance"?"Cria e vincula a cobrança bancária.":"Salva como cobrança gerencial em aberto."}
           </p>
           <div className="flex gap-2">
-            <Button type="button" variant="outline" onClick={resetAndClose} className="rounded-[14px]">
+            <Button type="button" variant="outline" onClick={resetAndClose} disabled={isSubmitting} className="rounded-[14px]">
               Cancelar
             </Button>
-            <Button type="button" onClick={handleSubmit} disabled={createEntry.isPending||transitionEntry.isPending||generateInvoice.isPending||consumePackage.isPending} className="rounded-[14px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-              {createEntry.isPending||transitionEntry.isPending||generateInvoice.isPending||consumePackage.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+            <Button type="button" onClick={handleSubmit} disabled={isSubmitting} className="rounded-[14px] bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
+              {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
               {packageConsumesOnly?"Usar sessão":destination==="paid"?"Registrar recebimento":"Criar cobrança"}
             </Button>
           </div>

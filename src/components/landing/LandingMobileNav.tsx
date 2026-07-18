@@ -159,17 +159,17 @@ export const LandingMobileNav = () => {
                 </nav>
 
                 <div className="relative z-10 mt-auto space-y-4 border-t border-border/10 p-8 pb-[max(2.5rem,env(safe-area-inset-bottom))] dark:border-white/10">
-                    <Button asChild className="h-14 w-full rounded-2xl bg-foreground font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none transition-all active:scale-95">
+                    <Button asChild className="h-14 w-full rounded-2xl bg-foreground font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none transition-all active:scale-[0.985]">
                         <Link to="/create-account" onClick={() => setIsMenuOpen(false)}>
                             Começar grátis <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
                         </Link>
                     </Button>
-                    <Button asChild variant="ghost" className="h-14 w-full rounded-2xl border border-border/30 bg-foreground/[0.035] text-[10px] font-black uppercase tracking-[0.22em] text-foreground/72 transition-all active:scale-95 dark:border-white/10 dark:bg-white/[0.045]">
+                    <Button asChild variant="ghost" className="h-14 w-full rounded-2xl border border-border/30 bg-foreground/[0.035] font-sans text-[10px] font-black uppercase tracking-[0.22em] text-foreground/72 transition-all active:scale-[0.985] dark:border-white/10 dark:bg-white/[0.045]">
                         <Link to="/auth" onClick={() => setIsMenuOpen(false)}>
                             Entrar no NeuroNex
                         </Link>
                     </Button>
-                    <p className="mt-4 text-center text-[10px] font-medium leading-relaxed text-muted-foreground/55">
+                    <p className="mt-4 text-center text-[10px] font-semibold uppercase leading-relaxed tracking-[0.1em] text-muted-foreground/55">
                         Sua clínica, seu financeiro e sua rotina em uma só experiência.
                     </p>
                 </div>

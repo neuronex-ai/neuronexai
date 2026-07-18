@@ -803,14 +803,35 @@ export function useCreateFinancialEntry() {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        const isIdempotencyConflict = error.code === '23505' && Boolean(idempotencyKey);
+
+        if (isIdempotencyConflict) {
+          const { data: existing, error: existingError } = await supabase
+            .from('financial_entries')
+            .select()
+            .eq('professional_id', user.id)
+            .eq('idempotency_key', idempotencyKey!)
+            .single();
+
+          if (!existingError && existing) return existing as FinancialEntry;
+        }
+
+        throw error;
+      }
       return data as FinancialEntry;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['financialEntries'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['financialMetrics'] });
-      queryClient.invalidateQueries({ queryKey: ['advancedCashFlow'] });
+      [
+        'financialEntries',
+        'transactions',
+        'patientTransactions',
+        'financialMetrics',
+        'advancedCashFlow',
+        'projected-cash-flow-v5',
+        'charges-page',
+        'dashboard-managerial-metrics',
+      ].forEach((key) => queryClient.invalidateQueries({ queryKey: [key] }));
     },
   });
 }

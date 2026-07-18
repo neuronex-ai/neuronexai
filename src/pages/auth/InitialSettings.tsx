@@ -237,7 +237,7 @@ export default function InitialSettings() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { startTour } = useTour();
-  const { theme, setTheme } = useTheme();
+  const { theme, transitionToTheme } = useTheme();
 
   const [step, setStep] = useState<WizardStep>("style");
   const [draft, setDraftState] = useState<InitialSettingsDraft>(() => readStoredDraft(user?.id));
@@ -466,7 +466,7 @@ export default function InitialSettings() {
             </div>
 
             <AnimatePresence mode="wait">
-              {step === "style" ? <StyleStep key="style" draft={draft} mutedPanelClass={mutedPanelClass} activePanelClass={activePanelClass} onTheme={(next) => { setTheme(next); setDraft({ theme: next }); }} /> : null}
+              {step === "style" ? <StyleStep key="style" draft={draft} mutedPanelClass={mutedPanelClass} activePanelClass={activePanelClass} onTheme={(next) => { transitionToTheme(next); setDraft({ theme: next }); }} /> : null}
               {step === "profile" ? <ProfileStep key="profile" draft={draft} inputClass={inputClass} addressSuggestions={addressSuggestions} addressLoading={addressLoading} addressError={addressError} validatingAddressId={validatingAddressId} onSelectAddress={(suggestion) => void selectAddress(suggestion)} onChange={setDraft} /> : null}
             </AnimatePresence>
 

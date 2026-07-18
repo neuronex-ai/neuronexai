@@ -119,19 +119,19 @@ export const Navbar = () => {
             <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)] transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-[1.025] dark:border-white/[0.08] dark:bg-white/[0.045] dark:shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
               <Logo className="h-6 w-6" />
             </span>
-            <span className="whitespace-nowrap font-mono text-[10px] font-black uppercase tracking-[0.24em] text-foreground">
-              NeuroNex
+            <span className="whitespace-nowrap font-sans text-[10px] font-black uppercase tracking-[0.22em] text-foreground">
+              NEURONEX
             </span>
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center gap-3 font-sans text-[10px] font-semibold uppercase tracking-normal text-muted-foreground xl:gap-5">
+        <div className="flex flex-1 items-center justify-center gap-3 font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground xl:gap-5">
           <button
             type="button"
             onClick={() => handleSectionClick("diferenciais")}
             className="hidden min-h-11 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground xl:block"
           >
-            Diferenciais
+            DIFERENCIAIS
           </button>
 
           <div
@@ -156,7 +156,7 @@ export const Navbar = () => {
               className="flex min-h-11 items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
               onClick={() => setProductsOpen((current) => !current)}
             >
-              Produtos
+              PRODUTOS
               <ChevronDown
                 aria-hidden="true"
                 className={cn(
@@ -219,10 +219,10 @@ export const Navbar = () => {
                             className="relative mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
                           />
                           <span className="relative min-w-0">
-                            <span className="flex items-center gap-2 font-sans text-sm font-bold normal-case tracking-normal">
+                            <span className="flex items-center gap-2 font-sans text-[10px] font-bold uppercase tracking-[0.12em]">
                               {item.label}
                             </span>
-                            <span className="mt-1.5 block font-sans text-xs font-medium normal-case leading-relaxed tracking-normal text-muted-foreground">
+                            <span className="mt-1.5 block font-sans text-[9px] font-semibold uppercase leading-relaxed tracking-[0.08em] text-muted-foreground">
                               {item.description}
                             </span>
                           </span>
@@ -232,7 +232,7 @@ export const Navbar = () => {
                   </div>
                   <Link
                     to="/produto"
-                    className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[17px] px-4 font-mono text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground"
+                    className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[17px] px-4 font-sans text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground"
                   >
                     Ver todo o ecossistema
                     <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
@@ -246,13 +246,13 @@ export const Navbar = () => {
             to="/download"
             className="flex min-h-11 items-center transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
           >
-            Download
+            DOWNLOAD
           </Link>
           <Link
             to="/blog"
             className="hidden min-h-11 items-center transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground xl:flex"
           >
-            NeuroX
+            NEUROX
           </Link>
         </div>
 
@@ -261,9 +261,9 @@ export const Navbar = () => {
           <Button
             asChild
             size="sm"
-            className="public-tactile hidden h-11 rounded-full bg-foreground px-7 font-mono text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
+            className="public-tactile hidden h-11 rounded-full bg-foreground px-7 font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
           >
-            <Link to="/auth">Entrar</Link>
+            <Link to="/auth">ENTRAR</Link>
           </Button>
         </div>
       </div>

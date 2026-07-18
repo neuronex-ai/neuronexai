@@ -43,8 +43,8 @@ const DesktopIndex = () => {
                 <LandingContinuityAuthoritySection />
                 <section className="public-home-bridge public-section-stage public-inverted-section px-6 py-10 text-foreground">
                     <div className="public-glass-surface public-home-bridge-nav mx-auto flex max-w-[760px] flex-col justify-center gap-2 rounded-[28px] p-2 sm:flex-row sm:rounded-full">
-                        <Link to="/neurofinance" className="public-tactile inline-flex h-12 items-center justify-center rounded-full bg-[#f9f9f9] px-6 font-mono text-[9px] font-black uppercase text-[#09090a] hover:bg-white">Conhecer o NeuroFinance <ArrowRight className="ml-2 h-4 w-4" /></Link>
-                        <Link to="/synapse" className="public-tactile inline-flex h-12 items-center justify-center rounded-full border border-white/[0.09] bg-[#09090a] px-6 font-mono text-[9px] font-black uppercase text-[#f9f9f9] hover:bg-zinc-900">Conhecer o Synapse <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                        <Link to="/neurofinance" className="public-tactile inline-flex h-12 items-center justify-center rounded-full bg-[#f9f9f9] px-6 font-sans text-[9px] font-black uppercase tracking-[0.12em] text-[#09090a] hover:bg-white">Conhecer o NeuroFinance <ArrowRight className="ml-2 h-4 w-4" /></Link>
+                        <Link to="/synapse" className="public-tactile inline-flex h-12 items-center justify-center rounded-full border border-white/[0.09] bg-[#09090a] px-6 font-sans text-[9px] font-black uppercase tracking-[0.12em] text-[#f9f9f9] hover:bg-zinc-900">Conhecer o Synapse <ArrowRight className="ml-2 h-4 w-4" /></Link>
                     </div>
                 </section>
                 <LandingOperatingSystemSection />

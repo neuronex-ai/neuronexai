@@ -1,5 +1,11 @@
-import { useCallback, useState } from 'react';
-import { useTheme } from 'next-themes';
+import { useCallback, useSyncExternalStore } from 'react';
+import { useTheme } from '@/hooks/use-theme';
+import {
+    getThemeTransitionServerSnapshot,
+    getThemeTransitionSnapshot,
+    subscribeToThemeTransition,
+    type ThemeTransitionOrigin,
+} from '@/lib/theme-transition';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -8,46 +14,26 @@ type ThemeMode = 'light' | 'dark';
  * Creates a smooth "light ascending" or "light descending" effect
  */
 export function useThemeTransition() {
-    const { theme, setTheme, systemTheme } = useTheme();
-    const [isTransitioning, setIsTransitioning] = useState(false);
-    const [transitionDirection, setTransitionDirection] = useState<'to-light' | 'to-dark' | null>(null);
+    const { theme, transitionToTheme } = useTheme();
+    const transitionState = useSyncExternalStore(
+        subscribeToThemeTransition,
+        getThemeTransitionSnapshot,
+        getThemeTransitionServerSnapshot,
+    );
+    const isLight = theme === 'light';
 
-    // Determine current effective theme
-    const currentTheme = theme === 'system' ? systemTheme : theme;
-    const isLight = currentTheme === 'light';
+    const transitionTo = useCallback((targetTheme: ThemeMode, origin?: ThemeTransitionOrigin) => {
+        transitionToTheme(targetTheme, origin);
+    }, [transitionToTheme]);
 
-    const transitionTo = useCallback((targetTheme: ThemeMode) => {
-        const direction = targetTheme === 'light' ? 'to-light' : 'to-dark';
-
-        setTransitionDirection(direction);
-        setIsTransitioning(true);
-
-        const duration = 600; // iOS style fast transition
-        const themeChangeDelay = 300; // Switch exactly halfway
-
-        const themeChangeTimeout = setTimeout(() => {
-            setTheme(targetTheme);
-        }, themeChangeDelay);
-
-        const endTimeout = setTimeout(() => {
-            setIsTransitioning(false);
-            setTransitionDirection(null);
-        }, duration);
-
-        return () => {
-            clearTimeout(themeChangeTimeout);
-            clearTimeout(endTimeout);
-        };
-    }, [setTheme]);
-
-    const toggleTheme = useCallback(() => {
+    const toggleTheme = useCallback((origin?: ThemeTransitionOrigin) => {
         const targetTheme = isLight ? 'dark' : 'light';
-        transitionTo(targetTheme);
+        transitionTo(targetTheme, origin);
     }, [isLight, transitionTo]);
 
     return {
-        isTransitioning,
-        transitionDirection,
+        isTransitioning: transitionState.isTransitioning,
+        transitionDirection: transitionState.direction,
         transitionTo,
         toggleTheme,
         isLight

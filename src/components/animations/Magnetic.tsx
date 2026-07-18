@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 
 interface MagneticProps {
   children: React.ReactNode;
@@ -10,9 +10,10 @@ interface MagneticProps {
 export const Magnetic = ({ children, strength = 0.5, className }: MagneticProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
+  const shouldReduceMotion = Boolean(useReducedMotion());
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!ref.current) return;
+    if (!ref.current || shouldReduceMotion) return;
     const { clientX, clientY } = e;
     const { left, top, width, height } = ref.current.getBoundingClientRect();
     const centerX = left + width / 2;
@@ -31,8 +32,8 @@ export const Magnetic = ({ children, strength = 0.5, className }: MagneticProps)
       ref={ref}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      animate={{ x: position.x, y: position.y }}
-      transition={{ type: "spring", stiffness: 150, damping: 15, mass: 0.1 }}
+      animate={shouldReduceMotion ? { x: 0, y: 0 } : { x: position.x, y: position.y }}
+      transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 180, damping: 18, mass: 0.12 }}
       className={className}
     >
       {children}

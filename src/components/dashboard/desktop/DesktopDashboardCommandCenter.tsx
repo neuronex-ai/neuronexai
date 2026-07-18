@@ -18,6 +18,7 @@ import {
   Clock,
   FileText,
   Plus,
+  ReceiptText,
   Stethoscope,
   Target,
   UserPlus,
@@ -28,8 +29,8 @@ import {
 
 import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
 import { NewAppointmentModal } from "@/components/agenda/NewAppointmentModal";
+import { ManualChargeModal } from "@/components/financeiro/ManualChargeModal";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
-import { SynapseOrbAvatar } from "@/components/synapse/SynapseOrbAvatar";
 import { Button } from "@/components/ui/button";
 import {
   DesktopActionTile,
@@ -40,8 +41,6 @@ import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-con
 import { ReflectionCarousel } from "@/components/ui/reflection-carousel";
 import { useDailyRotationItem } from "@/components/ui/reflection-carousel-rotation";
 import { StableTabViewport } from "@/components/ui/stable-tab-viewport";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useSynapse } from "@/context/SynapseContext";
 import { useAppointmentsByDateRange } from "@/hooks/use-appointments-by-date-range";
 import { useDashboardManagerialMetrics } from "@/hooks/use-dashboard-managerial-metrics";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
@@ -246,10 +245,10 @@ const AppointmentModePill = ({ appointment }: { appointment: Appointment }) => {
 
 const ActionSidebar = ({
   today,
-  openSynapseVoice,
+  openManualCharge,
 }: {
   today: Date;
-  openSynapseVoice: () => void;
+  openManualCharge: () => void;
 }) => (
   <DesktopWorkspacePanel className="dashboard-panel-surface p-2.5">
     <nav aria-label="Atalhos do dashboard" className="flex gap-1.5 overflow-x-auto xl:min-h-[264px] xl:flex-col xl:items-center xl:justify-start xl:overflow-visible">
@@ -259,24 +258,7 @@ const ActionSidebar = ({
       <NewPatientModal>
         <DesktopActionTile icon={UserPlus} label="Paciente" />
       </NewPatientModal>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={openSynapseVoice}
-            aria-label="Abrir Synapse voz"
-            className="group flex w-[86px] shrink-0 flex-col items-center gap-1.5 rounded-[18px] px-2 py-2 transition-all duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.96] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100"
-          >
-            <span className="dashboard-soft-fill relative flex h-12 w-12 items-center justify-center rounded-[20px] text-muted-foreground shadow-sm transition-all duration-300 group-hover:border-foreground/20 group-hover:shadow-md dark:group-hover:border-white/18">
-              <SynapseOrbAvatar active className="h-10 w-10 border-0 bg-transparent shadow-none" />
-            </span>
-            <span className="w-full text-center text-[8px] font-black uppercase leading-tight tracking-[0.1em] text-muted-foreground transition-colors group-hover:text-foreground">
-              Voz
-            </span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent>Synapse voz</TooltipContent>
-      </Tooltip>
+      <DesktopActionTile icon={ReceiptText} label="Cobrança" onClick={openManualCharge} />
     </nav>
   </DesktopWorkspacePanel>
 );
@@ -1300,7 +1282,7 @@ const PendingWorkPanel = ({
 export const DesktopDashboardCommandCenter = () => {
   const today = useMemo(() => new Date(), []);
   const { data: profile } = useProfile();
-  const { setShellState, setActiveTab, toggleVoiceMode } = useSynapse();
+  const [manualChargeOpen, setManualChargeOpen] = useState(false);
   const professionalReflection = useDailyRotationItem(professionalReflections) || professionalReflections[0];
   const firstName = getFirstName(profile);
 
@@ -1330,18 +1312,13 @@ export const DesktopDashboardCommandCenter = () => {
     [activeAppointments, financialConnected, financialLoading, notifications, pendingPatients],
   );
 
-  const openSynapseVoice = () => {
-    setShellState("compact");
-    setActiveTab("voice");
-    toggleVoiceMode();
-  };
-
   return (
-    <div className="desktop-lumen-page desktop-content-offset dashboard-desktop relative min-h-screen w-full bg-transparent pb-24 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
-      <main className="page-spacing relative z-10 flex w-full max-w-[2200px] flex-col gap-4 px-6 md:px-8 lg:px-12 xl:px-16">
+    <>
+      <div className="desktop-lumen-page desktop-content-offset dashboard-desktop relative min-h-screen w-full bg-transparent pb-24 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
+        <main className="page-spacing relative z-10 flex w-full max-w-[2200px] flex-col gap-4 px-6 md:px-8 lg:px-12 xl:px-16">
         <DesktopWorkspaceShell className="dashboard-shell-surface">
           <div className="grid items-start gap-4 xl:grid-cols-[104px_minmax(0,1fr)]">
-            <ActionSidebar today={today} openSynapseVoice={openSynapseVoice} />
+            <ActionSidebar today={today} openManualCharge={() => setManualChargeOpen(true)} />
             <MorningCommandPanel
               today={today}
               firstName={firstName}
@@ -1387,8 +1364,10 @@ export const DesktopDashboardCommandCenter = () => {
             />
           </div>
         </DesktopWorkspaceShell>
-      </main>
-    </div>
+        </main>
+      </div>
+      <ManualChargeModal open={manualChargeOpen} onOpenChange={setManualChargeOpen} />
+    </>
   );
 };
 

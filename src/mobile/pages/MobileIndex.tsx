@@ -281,7 +281,7 @@ const FinalCTAMobile = () => (
 
 export const MobileIndex = () => {
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/30">
+    <div className="public-home-page relative min-h-screen overflow-x-hidden bg-background font-sans text-foreground selection:bg-primary/30">
       <main>
         <HeroMobile />
         <ProblemMobile />
