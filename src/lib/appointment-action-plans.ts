@@ -26,7 +26,23 @@ const toPlan = (value: unknown): AppointmentActionPlan => {
 const rpc = async (name: string, params: Record<string, unknown>) => {
   const database = supabase as any;
   const { data, error } = await database.rpc(name, params);
-  if (error) throw error;
+  if (error) {
+    const details = [error.code, error.message, error.details, error.hint]
+      .filter(Boolean)
+      .map(String)
+      .join(" ");
+    const wrappedError = new Error(`RPC ${name} falhou${details ? `: ${details}` : "."}`) as Error & {
+      code?: string;
+      details?: string;
+      hint?: string;
+      cause?: unknown;
+    };
+    wrappedError.code = error.code;
+    wrappedError.details = error.details;
+    wrappedError.hint = error.hint;
+    wrappedError.cause = error;
+    throw wrappedError;
+  }
   return toPlan(data);
 };
 
