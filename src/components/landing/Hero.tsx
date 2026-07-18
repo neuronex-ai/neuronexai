@@ -2,7 +2,6 @@
 
 // [SWARM] Auditado pelo Agente 1 — Nenhum console.log encontrado
 import { Link } from "react-router-dom";
-import { motion, useScroll, useTransform } from "framer-motion";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FadeIn } from "@/components/animations/FadeIn";
@@ -11,33 +10,17 @@ import { Magnetic } from "@/components/animations/Magnetic";
 import { HeroVisual } from "@/components/landing/HeroVisual";
 
 export const Hero = () => {
-    const { scrollY } = useScroll();
-
-    const heroTextY = useTransform(scrollY, [0, 500], [0, 80]);
-    const heroOpacity = useTransform(scrollY, [0, 430], [1, 0]);
-    const visualY = useTransform(scrollY, [0, 500], [0, -40]);
-    const bgScale = useTransform(scrollY, [0, 1000], [1.05, 1.2]);
-
     return (
         <section className="relative w-full flex flex-col items-center justify-start z-10 min-h-screen overflow-hidden bg-background">
             {/* --- IMMERSIVE BACKGROUND LAYER --- */}
             <div className="absolute inset-0 z-0 overflow-hidden">
-                <motion.div
-                    style={{ scale: bgScale }}
-                    className="relative w-full h-full will-change-transform"
-                >
-                </motion.div>
-
                 <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_40%,hsl(var(--primary)/0.12)_0%,transparent_70%)]" />
                 <div className="absolute inset-0 z-[3] bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
                 <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-[4]" />
             </div>
 
             {/* --- MAIN CONTENT LAYER --- */}
-            <motion.div
-                style={{ y: heroTextY, opacity: heroOpacity, willChange: "transform, opacity" }}
-                className="relative z-10 text-center flex flex-col items-center w-full max-w-6xl mx-auto pt-[16vh] md:pt-[20vh] lg:pt-[23vh] px-4"
-            >
+            <div className="relative z-10 text-center flex flex-col items-center w-full max-w-6xl mx-auto pt-[16vh] md:pt-[20vh] lg:pt-[23vh] px-4">
                 <FadeIn delay={0.3}>
                     <div className="inline-flex items-center gap-2 bg-foreground/[0.03] border border-border/10 rounded-full px-5 py-1.5 mb-8 backdrop-blur-sm">
                         <span className="text-[11px] uppercase tracking-[0.25em] font-black text-foreground/80">Clínica Autônoma para psicólogos</span>
@@ -80,15 +63,15 @@ export const Hero = () => {
                         </Magnetic>
                     </div>
                 </FadeIn>
-            </motion.div>
+            </div>
 
             {/* --- 3D HERO VISUAL LAYER --- */}
             <div className="w-full relative z-20 mt-12 md:mt-20 lg:mt-24 xl:mt-32 flex flex-col items-center">
-                <motion.div style={{ y: visualY }} className="w-full relative gpu-accelerated mb-32">
+                <div className="w-full relative gpu-accelerated mb-32">
                     <FadeIn delay={0.5} direction="up" distance={80} duration={1.5}>
                         <HeroVisual />
                     </FadeIn>
-                </motion.div>
+                </div>
             </div>
         </section>
     );

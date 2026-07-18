@@ -216,8 +216,8 @@ const SectionHeader = ({
 );
 
 const GreetingChip = ({ label, value }: { label: string; value: string | number }) => (
-  <span className="dashboard-inverted-chip inline-flex items-center gap-2 rounded-full px-3.5 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-background/62">
-    {label}
+  <span className="dashboard-inverted-chip inline-flex min-h-10 items-center gap-2.5 rounded-full px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-background/62">
+    <span>{label}</span>
     <strong className="text-sm font-black text-background tabular-nums">{value}</strong>
   </span>
 );
@@ -290,7 +290,7 @@ const ClinicalPrepMetric = ({
   value: string | number;
   detail: string;
 }) => (
-  <div className="dashboard-inverted-metric rounded-[22px] p-3 transition-transform duration-300 hover:-translate-y-0.5 motion-reduce:transition-none motion-reduce:hover:translate-y-0">
+  <div className="dashboard-inverted-metric rounded-[22px] px-4 py-3.5">
     <p className="text-[9px] font-black uppercase tracking-[0.16em] text-background/48">{label}</p>
     <p className="mt-1.5 truncate text-lg font-black tracking-[-0.04em] text-background">{value}</p>
     <p className="mt-1 truncate text-xs font-semibold text-background/58">{detail}</p>
@@ -638,14 +638,13 @@ const MorningCommandPanel = ({
             </h1>
           </div>
 
-          <div className="grid gap-2 lg:grid-cols-3 [&>*:nth-child(2)]:hidden">
+          <div className="grid gap-2.5 lg:grid-cols-3">
             <ClinicalPrepMetric label={getScheduleFocusLabel(nextAppointment)} value={nextPatient} detail={nextTime} />
-            <ClinicalPrepMetric label="Próximo foco" value={nextPatient} detail={nextTime} />
             <ClinicalPrepMetric label="Revisar antes" value={clinicalSignals + appointmentSignals} detail="sinais clínicos e agenda" />
             <ClinicalPrepMetric label="Operação do dia" value={sessionsToday} detail={`${onlineToday} online`} />
           </div>
 
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2.5">
             <GreetingChip label="Hoje" value={remainingToday} />
             <GreetingChip label="Semana" value={weekAppointmentsCount} />
             <GreetingChip label="Pendências" value={attentionItems.length} />

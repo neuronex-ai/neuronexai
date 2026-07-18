@@ -78,18 +78,11 @@ const productLinks = [
 ];
 
 export const Navbar = () => {
-  const [scrolled, setScrolled] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const productMenuRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -110,50 +103,14 @@ export const Navbar = () => {
     }
 
     document.getElementById(target)?.scrollIntoView({
-      behavior: shouldReduceMotion ? "auto" : "smooth",
+      behavior: "auto",
     });
   };
 
   return (
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{
-        duration: shouldReduceMotion ? 0 : 0.6,
-        ease: [0.22, 1, 0.36, 1],
-      }}
-      className={cn(
-        "pointer-events-none fixed inset-x-0 top-0 z-[100] hidden justify-center md:flex",
-        scrolled ? "py-4" : "py-6",
-      )}
-    >
-      <AnimatePresence>
-        {productsOpen ? (
-          <motion.div
-            aria-hidden="true"
-            className="pointer-events-none fixed inset-0 z-[-1] bg-background/34 backdrop-blur-[14px] dark:bg-black/48"
-            initial={shouldReduceMotion ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: shouldReduceMotion ? 0 : 0.18 }}
-          />
-        ) : null}
-      </AnimatePresence>
-      <motion.div
-        layout={!shouldReduceMotion}
-        transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-        className={cn(
-          "public-glass-surface pointer-events-auto relative flex w-[min(980px,calc(100vw-24px))] items-center justify-between gap-4 rounded-full px-4 py-3 xl:gap-8 xl:px-8",
-          scrolled
-            ? "border-border/60 bg-background/78"
-            : "border-border/45 bg-background/64",
-          "dark:border-white/10 dark:bg-black/64",
-        )}
-      >
-        <motion.div
-          whileHover={shouldReduceMotion ? undefined : { scale: 1.015 }}
-          whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
-        >
+    <nav className="pointer-events-none fixed inset-x-0 top-0 z-[100] hidden justify-center py-4 md:flex">
+      <div className="public-glass-surface public-liquid-navbar pointer-events-auto relative flex w-[min(980px,calc(100vw-24px))] items-center justify-between gap-4 rounded-full px-4 py-2.5 xl:gap-7 xl:px-6">
+        <div>
           <Link
             to="/"
             aria-label="Ir para a página inicial da NeuroNex"
@@ -164,7 +121,7 @@ export const Navbar = () => {
               NeuroNex
             </span>
           </Link>
-        </motion.div>
+        </div>
 
         <div className="flex items-center gap-4 font-sans text-[11px] font-semibold uppercase tracking-normal text-muted-foreground xl:gap-7">
           <button
@@ -233,9 +190,9 @@ export const Navbar = () => {
                       ? { duration: 0 }
                       : { type: "spring", stiffness: 470, damping: 38, mass: 0.72 }
                   }
-                  className="public-glass-surface public-product-menu-surface absolute left-1/2 top-[calc(100%+9px)] w-[min(660px,calc(100vw-32px))] rounded-[28px] p-2 text-foreground xl:w-[780px]"
+                  className="public-glass-surface public-product-menu-surface absolute left-1/2 top-[calc(100%+8px)] w-[min(660px,calc(100vw-32px))] rounded-[26px] p-1.5 text-foreground xl:w-[780px]"
                 >
-                  <div className="grid grid-cols-3 gap-1.5" role="list">
+                  <div className="grid grid-cols-3 gap-1" role="list">
                     {productLinks.map((item, index) => {
                       const isActive = location.pathname === item.to;
 
@@ -246,15 +203,13 @@ export const Navbar = () => {
                           aria-current={isActive ? "page" : undefined}
                           role="listitem"
                           className={cn(
-                            "public-product-menu-item public-tactile group relative flex min-h-[86px] gap-3 overflow-hidden rounded-[18px] px-4 py-3.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            "public-product-menu-item public-tactile group relative flex min-h-[80px] gap-3 overflow-hidden rounded-[18px] px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                             index === productLinks.length - 1 && "col-span-1",
                           )}
                         >
                           {isActive ? (
-                            <motion.span
-                              layoutId="public-product-active"
+                            <span
                               className="absolute inset-1 rounded-[14px] bg-foreground/[0.07] dark:bg-white/[0.08]"
-                              transition={{ duration: shouldReduceMotion ? 0 : 0.32, ease: [0.22, 1, 0.36, 1] }}
                             />
                           ) : null}
                           <item.icon
@@ -309,7 +264,7 @@ export const Navbar = () => {
             <Link to="/auth">Entrar</Link>
           </Button>
         </div>
-      </motion.div>
-    </motion.nav>
+      </div>
+    </nav>
   );
 };
