@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Clock, Info, Loader2, Save, Settings, ShieldCheck } from "lucide-react";
+import { AlertTriangle, CalendarRange, Clock, Info, Loader2, Plus, RotateCcw, Save, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { AppModalShell, ModalHeroIcon } from "@/components/ui/app-modal-shell";
@@ -76,6 +77,25 @@ const FISCAL_OPTIONS: Array<{ value: FiscalPolicy; label: string }> = [
 
 type WorkingDayHours = { enabled: boolean; start: string; end: string };
 type WorkingHours = Record<string, WorkingDayHours>;
+type AdditionalWorkingHours = Record<string, Array<{ id: string; start: string; end: string }>>;
+
+interface AvailabilityImpact {
+  valid: boolean;
+  effectiveFrom: string;
+  conflictCount: number;
+  conflicts: Array<{
+    appointmentId: string;
+    patientId: string | null;
+    patientName?: string | null;
+    seriesId: string | null;
+    startTime: string;
+    endTime: string;
+    reasonCode: string;
+  }>;
+}
+
+type AvailabilityStrategy = "keep_exceptions" | "resolve_before_save" | "keep_previous_until";
+type WaitlistMigrationStrategy = "migrate_all" | "keep_previous";
 
 interface EffectiveAppointmentPolicy {
   configured: boolean;
@@ -116,14 +136,43 @@ const effectivePolicyToDraft = (policy: EffectiveAppointmentPolicy): Appointment
   timezone: policy.timezone,
 });
 
-const validateWorkingHours = (hours: WorkingHours) => {
+const validateWorkingHours = (hours: WorkingHours, additional: AdditionalWorkingHours) => {
   for (const day of DAYS_OF_WEEK) {
     const interval = hours[day.id];
     if (!interval?.enabled) continue;
-    if (!interval.start || !interval.end || interval.start >= interval.end) {
-      throw new Error(`Em ${day.label}, o horário final deve ser posterior ao inicial.`);
+    const intervals = [interval, ...(additional[day.id] || [])].sort((left, right) => left.start.localeCompare(right.start));
+    for (const [index, current] of intervals.entries()) {
+      if (!current.start || !current.end || current.start >= current.end) {
+        throw new Error(`Em ${day.label}, o horário final deve ser posterior ao inicial.`);
+      }
+      if (index > 0 && intervals[index - 1].end > current.start) {
+        throw new Error(`Em ${day.label}, existem períodos sobrepostos.`);
+      }
     }
   }
+};
+
+const workingHoursFingerprint = (hours: WorkingHours) => JSON.stringify(
+  Object.fromEntries(Object.entries(hours).sort(([left], [right]) => left.localeCompare(right))),
+);
+
+const availabilityFingerprint = (hours: WorkingHours, additional: AdditionalWorkingHours) =>
+  `${workingHoursFingerprint(hours)}:${JSON.stringify(additional)}`;
+
+const workingHoursToWindows = (hours: WorkingHours, additional: AdditionalWorkingHours) => DAYS_OF_WEEK.flatMap((day) => {
+  const interval = hours[day.id];
+  if (!interval?.enabled) return [];
+  return [interval, ...(additional[day.id] || [])].map((window) => ({
+    weekday: Number(day.id),
+    start_time: window.start,
+    end_time: window.end,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo",
+  }));
+});
+
+const toLocalDateTimeInput = (date: Date) => {
+  const offset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 };
 
 interface PolicyNumberFieldProps {
@@ -213,12 +262,24 @@ const PolicySelectField = <T extends string>({
 
 export const AgendaSettingsModal = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const saveInFlightRef = useRef(false);
   const pendingPolicyIdempotencyKeyRef = useRef<string | null>(null);
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [workingHours, setWorkingHours] = useState<WorkingHours>({ ...DEFAULT_WORKING_HOURS });
+  const [originalWorkingHours, setOriginalWorkingHours] = useState<WorkingHours>({ ...DEFAULT_WORKING_HOURS });
+  const [additionalWorkingHours, setAdditionalWorkingHours] = useState<AdditionalWorkingHours>({});
+  const [originalAdditionalWorkingHours, setOriginalAdditionalWorkingHours] = useState<AdditionalWorkingHours>({});
+  const [originalWorkingHoursFingerprint, setOriginalWorkingHoursFingerprint] = useState(
+    availabilityFingerprint(DEFAULT_WORKING_HOURS, {}),
+  );
+  const [availabilityImpact, setAvailabilityImpact] = useState<AvailabilityImpact | null>(null);
+  const [availabilityStrategy, setAvailabilityStrategy] = useState<AvailabilityStrategy | null>(null);
+  const [waitlistStrategy, setWaitlistStrategy] = useState<WaitlistMigrationStrategy>("migrate_all");
+  const [effectiveFrom, setEffectiveFrom] = useState(() => toLocalDateTimeInput(new Date()));
+  const [availabilityReason, setAvailabilityReason] = useState("");
   const [policyDraft, setPolicyDraft] = useState<AppointmentPolicyDraft>({ ...DEFAULT_APPOINTMENT_POLICY });
   const [originalPolicyFingerprint, setOriginalPolicyFingerprint] = useState(
     appointmentPolicyFingerprint(DEFAULT_APPOINTMENT_POLICY),
@@ -236,6 +297,7 @@ export const AgendaSettingsModal = () => {
     }
   }, [policyDraft]);
   const policyChanged = policyFingerprint === null || policyFingerprint !== originalPolicyFingerprint;
+  const workingHoursChanged = availabilityFingerprint(workingHours, additionalWorkingHours) !== originalWorkingHoursFingerprint;
 
   const updatePolicy = <K extends keyof AppointmentPolicyDraft>(
     field: K,
@@ -249,26 +311,64 @@ export const AgendaSettingsModal = () => {
     if (!user?.id) return;
     setIsLoading(true);
     setPolicyReason("");
+    setAvailabilityImpact(null);
+    setAvailabilityStrategy(null);
+    setWaitlistStrategy("migrate_all");
+    setEffectiveFrom(toLocalDateTimeInput(new Date()));
+    setAvailabilityReason("");
     pendingPolicyIdempotencyKeyRef.current = null;
 
     try {
-      const database = supabase as any;
-      const [profileResult, policyResult] = await Promise.all([
+      const database = supabase;
+      const [profileResult, policyResult, availabilityResult] = await Promise.all([
         database.from("profiles").select("working_hours").eq("id", user.id).single(),
         database.rpc("get_effective_appointment_policy"),
+        database
+          .from("professional_availability_versions")
+          .select("id,professional_availability_windows(weekday,start_time,end_time)")
+          .eq("status", "active")
+          .order("version_number", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
 
-      if (profileResult.error) {
-        console.error("Error loading working hours:", profileResult.error);
-        setWorkingHours({ ...DEFAULT_WORKING_HOURS });
-      } else if (profileResult.data?.working_hours && typeof profileResult.data.working_hours === "object") {
-        setWorkingHours(profileResult.data.working_hours as WorkingHours);
-      } else {
-        setWorkingHours({ ...DEFAULT_WORKING_HOURS });
+      const profileHours = !profileResult.error && profileResult.data?.working_hours && typeof profileResult.data.working_hours === "object"
+        ? profileResult.data.working_hours as WorkingHours
+        : { ...DEFAULT_WORKING_HOURS };
+      let loadedHours = profileHours;
+      const loadedAdditional: AdditionalWorkingHours = {};
+      const versionWindows = availabilityResult.data?.professional_availability_windows as Array<{
+        weekday: number;
+        start_time: string;
+        end_time: string;
+      }> | undefined;
+      if (!availabilityResult.error && versionWindows?.length) {
+        loadedHours = Object.fromEntries(DAYS_OF_WEEK.map((day) => [day.id, {
+          enabled: false,
+          start: profileHours[day.id]?.start || "08:00",
+          end: profileHours[day.id]?.end || "18:00",
+        }])) as WorkingHours;
+        const grouped = new Map<number, typeof versionWindows>();
+        versionWindows
+          .sort((left, right) => left.start_time.localeCompare(right.start_time))
+          .forEach((window) => grouped.set(window.weekday, [...(grouped.get(window.weekday) || []), window]));
+        for (const [weekday, dayWindows] of grouped) {
+          const [first, ...rest] = dayWindows;
+          loadedHours[String(weekday)] = { enabled: true, start: first.start_time.slice(0, 5), end: first.end_time.slice(0, 5) };
+          loadedAdditional[String(weekday)] = rest.map((window) => ({
+            id: crypto.randomUUID(),
+            start: window.start_time.slice(0, 5),
+            end: window.end_time.slice(0, 5),
+          }));
+        }
       }
+      setWorkingHours(loadedHours);
+      setOriginalWorkingHours(loadedHours);
+      setAdditionalWorkingHours(loadedAdditional);
+      setOriginalAdditionalWorkingHours(loadedAdditional);
+      setOriginalWorkingHoursFingerprint(availabilityFingerprint(loadedHours, loadedAdditional));
 
       if (policyResult.error) {
-        console.error("Error loading appointment policy:", policyResult.error);
         setPolicyAvailable(false);
         setPolicyDraft({ ...DEFAULT_APPOINTMENT_POLICY });
         setOriginalPolicyFingerprint(appointmentPolicyFingerprint(DEFAULT_APPOINTMENT_POLICY));
@@ -284,8 +384,11 @@ export const AgendaSettingsModal = () => {
         setPolicyEffectiveAt(policy.effectiveAt);
       }
     } catch (error) {
-      console.error("Error loading agenda settings:", error);
       setWorkingHours({ ...DEFAULT_WORKING_HOURS });
+      setOriginalWorkingHours({ ...DEFAULT_WORKING_HOURS });
+      setAdditionalWorkingHours({});
+      setOriginalAdditionalWorkingHours({});
+      setOriginalWorkingHoursFingerprint(availabilityFingerprint(DEFAULT_WORKING_HOURS, {}));
       setPolicyAvailable(false);
     } finally {
       setIsLoading(false);
@@ -302,7 +405,41 @@ export const AgendaSettingsModal = () => {
     setIsSaving(true);
 
     try {
-      validateWorkingHours(workingHours);
+      validateWorkingHours(workingHours, additionalWorkingHours);
+      const database = supabase;
+      const windows = workingHoursToWindows(workingHours, additionalWorkingHours);
+      let impact = availabilityImpact;
+      let selectedAvailabilityStrategy = availabilityStrategy;
+
+      if (workingHoursChanged) {
+        const effectiveDate = new Date(effectiveFrom);
+        if (Number.isNaN(effectiveDate.getTime())) {
+          throw new Error("Informe quando a nova grade começa a valer.");
+        }
+        const previewResult = await database.rpc("preview_availability_change", {
+          p_windows: windows,
+          p_effective_from: effectiveDate.toISOString(),
+        });
+        if (previewResult.error) {
+          throw new Error(previewResult.error.message || "Não foi possível revisar o impacto da nova grade.");
+        }
+        impact = previewResult.data as AvailabilityImpact;
+        setAvailabilityImpact(impact);
+
+        if (impact.conflictCount > 0 && !selectedAvailabilityStrategy) {
+          toast.info("Revise os agendamentos afetados antes de confirmar a nova grade.");
+          return;
+        }
+        if (selectedAvailabilityStrategy === "resolve_before_save" && impact.conflictCount > 0) {
+          toast.info("Abra o primeiro conflito, ajuste-o e depois volte para salvar a grade.");
+          return;
+        }
+        selectedAvailabilityStrategy ||= "keep_exceptions";
+        if (selectedAvailabilityStrategy === "keep_previous_until" && effectiveDate <= new Date()) {
+          throw new Error("Escolha uma data futura para manter a grade anterior até lá.");
+        }
+      }
+
       let createdPolicyVersion = false;
 
       if (policyChanged) {
@@ -316,7 +453,6 @@ export const AgendaSettingsModal = () => {
           throw new Error("Informe o motivo da nova versão das regras comerciais.");
         }
 
-        const database = supabase as any;
         pendingPolicyIdempotencyKeyRef.current ||= `appointment-policy:${crypto.randomUUID()}`;
         const { data, error } = await database.rpc("create_appointment_policy_version", {
           p_free_cancellation_hours: normalizedPolicy.freeCancellationHours,
@@ -345,18 +481,39 @@ export const AgendaSettingsModal = () => {
         createdPolicyVersion = true;
       }
 
-      const cleanHours = JSON.parse(JSON.stringify(workingHours)) as WorkingHours;
-      const { error } = await supabase.from("profiles").update({ working_hours: cleanHours }).eq("id", user.id);
-      if (error) throw error;
+      let savedAvailability = false;
+      if (workingHoursChanged) {
+        const { data, error } = await database.rpc("save_professional_availability", {
+          p_windows: windows,
+          p_effective_from: new Date(effectiveFrom).toISOString(),
+          p_strategy: selectedAvailabilityStrategy || "keep_exceptions",
+          p_waitlist_strategy: waitlistStrategy,
+          p_waitlist_entry_ids: null,
+          p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo",
+          p_reason: availabilityReason.trim() || "Grade de atendimento atualizada pelo profissional.",
+        });
+        if (error) throw new Error(error.message || "Não foi possível salvar a nova disponibilidade.");
+        setOriginalWorkingHours(workingHours);
+        setOriginalAdditionalWorkingHours(additionalWorkingHours);
+        setOriginalWorkingHoursFingerprint(availabilityFingerprint(workingHours, additionalWorkingHours));
+        setAvailabilityImpact((data?.impact || impact) as AvailabilityImpact);
+        window.dispatchEvent(new CustomEvent("agenda-availability-updated"));
+        savedAvailability = true;
+      }
 
       toast.success(
-        createdPolicyVersion
-          ? "Agenda salva e nova versão das regras criada."
-          : "Horários atualizados com sucesso.",
+        createdPolicyVersion && savedAvailability
+          ? "Nova grade e nova versão comercial salvas."
+          : createdPolicyVersion
+            ? "Nova versão das regras comerciais criada."
+            : savedAvailability
+              ? selectedAvailabilityStrategy === "keep_previous_until"
+                ? "Nova grade programada para a data escolhida."
+                : "Nova grade ativa a partir de agora."
+              : "Nenhuma alteração pendente.",
       );
       setOpen(false);
     } catch (error) {
-      console.error("Save agenda settings error:", error);
       toast.error(error instanceof Error ? error.message : "Erro ao salvar configurações.");
     } finally {
       saveInFlightRef.current = false;
@@ -369,6 +526,8 @@ export const AgendaSettingsModal = () => {
     field: K,
     value: WorkingDayHours[K],
   ) => {
+    setAvailabilityImpact(null);
+    setAvailabilityStrategy(null);
     setWorkingHours((current) => ({
       ...current,
       [dayId]: {
@@ -378,9 +537,45 @@ export const AgendaSettingsModal = () => {
     }));
   };
 
+  const addWorkingPeriod = (dayId: string) => {
+    setAvailabilityImpact(null);
+    setAvailabilityStrategy(null);
+    setAdditionalWorkingHours((current) => ({
+      ...current,
+      [dayId]: [...(current[dayId] || []), { id: crypto.randomUUID(), start: "14:00", end: "18:00" }],
+    }));
+  };
+
+  const updateWorkingPeriod = (dayId: string, periodId: string, field: "start" | "end", value: string) => {
+    setAvailabilityImpact(null);
+    setAvailabilityStrategy(null);
+    setAdditionalWorkingHours((current) => ({
+      ...current,
+      [dayId]: (current[dayId] || []).map((period) => period.id === periodId ? { ...period, [field]: value } : period),
+    }));
+  };
+
+  const removeWorkingPeriod = (dayId: string, periodId: string) => {
+    setAvailabilityImpact(null);
+    setAvailabilityStrategy(null);
+    setAdditionalWorkingHours((current) => ({
+      ...current,
+      [dayId]: (current[dayId] || []).filter((period) => period.id !== periodId),
+    }));
+  };
+
   const formattedEffectiveAt = policyEffectiveAt
     ? new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(policyEffectiveAt))
     : null;
+
+  const handlePrimaryAction = () => {
+    if (availabilityStrategy === "resolve_before_save" && availabilityImpact?.conflicts[0]) {
+      setOpen(false);
+      navigate(`/agenda?appointmentId=${availabilityImpact.conflicts[0].appointmentId}`);
+      return;
+    }
+    void handleSave();
+  };
 
   return (
     <AppModalShell
@@ -404,7 +599,7 @@ export const AgendaSettingsModal = () => {
       }
       footer={
         <Button
-          onClick={() => void handleSave()}
+          onClick={handlePrimaryAction}
           disabled={isSaving || isLoading}
           className="h-12 w-full rounded-2xl bg-foreground text-[10.5px] font-black uppercase tracking-[0.16em] text-background shadow-xl disabled:opacity-50"
         >
@@ -413,7 +608,13 @@ export const AgendaSettingsModal = () => {
           ) : (
             <Save className="mr-2 h-4 w-4" aria-hidden="true" />
           )}
-          {isSaving ? "Salvando..." : "Salvar agenda e regras"}
+          {isSaving
+            ? "Salvando..."
+            : availabilityStrategy === "resolve_before_save" && availabilityImpact?.conflictCount
+              ? "Abrir primeiro conflito"
+              : availabilityImpact?.conflictCount && !availabilityStrategy
+                ? "Escolher como continuar"
+                : "Salvar agenda e regras"}
         </Button>
       }
     >
@@ -497,11 +698,97 @@ export const AgendaSettingsModal = () => {
                         </div>
                       </div>
                     ) : null}
+                    {hours.enabled ? (
+                      <div className="border-t border-border/35 px-3 pb-3 pt-2 sm:px-4">
+                        {(additionalWorkingHours[day.id] || []).map((period, index) => (
+                          <div key={period.id} className="mt-2 flex items-center gap-2">
+                            <span className="w-14 text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground">Período {index + 2}</span>
+                            <Input type="time" value={period.start} onChange={(event) => updateWorkingPeriod(day.id, period.id, "start", event.target.value)} className="h-9 min-w-0 flex-1 rounded-xl border-border/60 bg-background text-center text-xs font-bold" aria-label={`Início do período ${index + 2} em ${day.label}`} />
+                            <span className="text-[9px] font-bold uppercase text-muted-foreground">até</span>
+                            <Input type="time" value={period.end} onChange={(event) => updateWorkingPeriod(day.id, period.id, "end", event.target.value)} className="h-9 min-w-0 flex-1 rounded-xl border-border/60 bg-background text-center text-xs font-bold" aria-label={`Fim do período ${index + 2} em ${day.label}`} />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeWorkingPeriod(day.id, period.id)} className="notification-liquid-control h-9 w-9 rounded-full" aria-label={`Remover período ${index + 2} de ${day.label}`}><Trash2 className="h-3.5 w-3.5" /></Button>
+                          </div>
+                        ))}
+                        <Button type="button" variant="ghost" size="sm" onClick={() => addWorkingPeriod(day.id)} className="notification-liquid-control mt-2 h-9 rounded-full px-3 text-[10px] font-black"><Plus className="mr-1 h-3.5 w-3.5" />Adicionar período</Button>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
             </div>
           </section>
+
+          {workingHoursChanged ? (
+            <section aria-labelledby="availability-change-heading" className="notes-liquid-surface rounded-[26px] border p-4 backdrop-blur-2xl sm:p-5">
+              <div className="flex items-start gap-3">
+                <span className="synapse-chat-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border">
+                  <CalendarRange className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <h3 id="availability-change-heading" className="text-base font-black text-foreground">A partir de agora, sem alterar o passado</h3>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">A nova grade será versionada. Agendamentos anteriores nunca são reescritos.</p>
+                </div>
+              </div>
+
+              {availabilityImpact?.conflictCount ? (
+                <div className="mt-4 space-y-3">
+                  <div className="flex gap-3 rounded-2xl border border-amber-500/25 bg-amber-500/[0.08] p-3.5">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                    <div><p className="text-sm font-black text-foreground">{availabilityImpact.conflictCount} {availabilityImpact.conflictCount === 1 ? "sessão ficará fora" : "sessões ficarão fora"} da nova grade</p><p className="mt-1 text-xs leading-relaxed text-muted-foreground">Escolha conscientemente o que fazer antes de salvar.</p></div>
+                  </div>
+                  <div className="max-h-48 space-y-2 overflow-y-auto pr-1">
+                    {availabilityImpact.conflicts.map((conflict) => (
+                      <div key={conflict.appointmentId} className="synapse-chat-glass flex items-center justify-between gap-3 rounded-[16px] border px-3 py-2.5">
+                        <div className="min-w-0"><p className="truncate text-xs font-black text-foreground">{conflict.patientName || (conflict.seriesId ? "Sessão recorrente" : "Agendamento individual")}</p><p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(conflict.startTime))}{conflict.seriesId ? " · parte de uma série" : ""}</p></div>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); navigate(`/agenda?appointmentId=${conflict.appointmentId}`); }} className="notification-liquid-control h-9 rounded-full px-3 text-[10px] font-black">Abrir</Button>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-2">
+                    {[
+                      { value: "keep_exceptions" as const, title: "Salvar e manter como exceções", description: "A nova grade vale agora; estas sessões continuam nos horários atuais." },
+                      { value: "resolve_before_save" as const, title: "Ajustar conflitos antes", description: "Nada muda até você reencaixar ou editar as sessões listadas." },
+                      { value: "keep_previous_until" as const, title: "Programar a nova grade", description: "A regra atual continua até a data que você escolher." },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        aria-pressed={availabilityStrategy === option.value}
+                        onClick={() => {
+                          setAvailabilityStrategy(option.value);
+                          if (option.value === "keep_previous_until" && new Date(effectiveFrom) <= new Date()) {
+                            const tomorrow = new Date();
+                            tomorrow.setDate(tomorrow.getDate() + 1);
+                            setEffectiveFrom(toLocalDateTimeInput(tomorrow));
+                          }
+                        }}
+                        className={cn("synapse-chat-glass rounded-[18px] border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", availabilityStrategy === option.value && "synapse-liquid-tab-active")}
+                      >
+                        <span className="block text-xs font-black text-foreground">{option.title}</span><span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">{option.description}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {availabilityStrategy === "keep_previous_until" ? (
+                <div className="mt-4 space-y-2"><Label htmlFor="availability-effective-from" className="text-xs font-black">Nova grade começa em</Label><Input id="availability-effective-from" type="datetime-local" value={effectiveFrom} min={toLocalDateTimeInput(new Date())} onChange={(event) => { setEffectiveFrom(event.target.value); setAvailabilityImpact(null); }} className="h-11 rounded-2xl border-border/55 bg-background/62 font-bold" /></div>
+              ) : null}
+
+              <div className="mt-4 space-y-2">
+                <Label className="text-xs font-black">Lista de espera</Label>
+                <Select value={waitlistStrategy} onValueChange={(value) => setWaitlistStrategy(value as WaitlistMigrationStrategy)}>
+                  <SelectTrigger className="h-11 rounded-2xl border-border/55 bg-background/62 font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent className="notification-liquid-menu rounded-[18px] p-1.5"><SelectItem value="migrate_all" className="notification-liquid-menu-item rounded-[13px] py-2.5">Aplicar a nova grade à lista</SelectItem><SelectItem value="keep_previous" className="notification-liquid-menu-item rounded-[13px] py-2.5">Manter as regras antigas da lista</SelectItem></SelectContent>
+                </Select>
+              </div>
+
+              <div className="mt-4 space-y-2"><Label htmlFor="availability-reason" className="text-xs font-black">Motivo (opcional)</Label><Textarea id="availability-reason" value={availabilityReason} onChange={(event) => setAvailabilityReason(event.target.value)} placeholder="Ex.: Novo horário de atendimento no segundo semestre" className="min-h-20 rounded-2xl border-border/55 bg-background/62" /></div>
+
+              <Button type="button" variant="ghost" onClick={() => { setWorkingHours(originalWorkingHours); setAdditionalWorkingHours(originalAdditionalWorkingHours); setAvailabilityImpact(null); setAvailabilityStrategy(null); }} className="notification-liquid-control mt-4 h-10 rounded-full px-4 text-xs font-bold"><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Descartar mudança da grade</Button>
+            </section>
+          ) : null}
 
           <section aria-labelledby="commercial-policy-heading" className="rounded-3xl border border-border/60 bg-muted/20 p-4 sm:p-5">
             <div className="flex items-start gap-3">

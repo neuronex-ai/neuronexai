@@ -79,6 +79,7 @@ const UpdatesLanding = lazy(() => import("@/pages/public/UpdatesLanding"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
 const PublicProfessionalProfile = lazy(() => import("./pages/public/PublicProfessionalProfile"));
+const WaitlistOfferResponse = lazy(() => import("./pages/public/WaitlistOfferResponse"));
 const SynapseGlobalShell = lazy(() => import("@/components/synapse/SynapseGlobalShell").then(m => ({ default: m.SynapseGlobalShell })));
 
 const queryClient = new QueryClient();
@@ -152,6 +153,7 @@ const SharedRoutes = () => {
         <Route path="/payment/callback" element={<PaymentCallback />} />
         <Route path="/anamnese-externa/:id" element={<AnamnesisPublic />} />
         <Route path="/id/:profileId" element={<PublicProfessionalProfile />} />
+        <Route path="/lista-de-espera/oferta" element={<WaitlistOfferResponse />} />
 
         {/* ─── Public Pages ───────────────────────────────── */}
         <Route path="/ajuda" element={<HelpCenter />} />

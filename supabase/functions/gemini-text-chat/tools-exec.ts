@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { generateEmbedding } from './embeddings.ts';
-import { prepareAppointmentActionPlan } from '../_shared/appointment-action-plans.ts';
+import { prepareAgendaActionPlan, prepareAppointmentActionPlan } from '../_shared/appointment-action-plans.ts';
 
 const normalizeIdempotencyPart = (value: unknown) =>
     String(value || '')
@@ -411,26 +411,82 @@ Seja conciso e prático.`;
                     : args.datetime;
                 const start_time = new Date(startTimeStr).toISOString();
                 const end_time = new Date(new Date(startTimeStr).getTime() + (args.duration || 50) * 60000).toISOString();
-                const plan = await prepareAppointmentActionPlan(
-                    planContext,
-                    'create_appointment',
-                    'create',
-                    {
-                        patient_id: args.patientId,
-                        start_time,
-                        end_time,
-                        type: args.type || 'presencial',
-                        notes: args.notes || null,
-                        location: args.location || null,
-                        frequency: args.frequency || (Number(args.occurrenceCount || 1) > 1 ? 'weekly' : 'single'),
-                        occurrence_count: Number(args.occurrenceCount || 1),
-                        package_id: args.packageId || null,
-                        communication: args.communication || { sendConfirmation: true, provider: 'configured' },
-                        financial: args.financial || { mode: args.financialMode || 'none' },
-                        fiscal: args.fiscal || { automationEnabled: false, trigger: 'professional_settings' },
-                    },
-                    buildSynapseEntryIdempotencyKey(ctx, 'prepare_appointment'),
-                );
+                const occurrenceCount = Math.max(1, Math.min(500, Number(args.occurrenceCount || 1)));
+                const useAgendaV2 = occurrenceCount > 1
+                    || Boolean(args.recurrenceKind)
+                    || ['until', 'open'].includes(String(args.terminationKind || ''))
+                    || Array.isArray(args.overrides);
+                const legacyFrequency = String(args.frequency || 'weekly');
+                const recurrenceKind = String(args.recurrenceKind || (legacyFrequency === 'monthly' ? 'monthly' : 'weekly'));
+                const localDate = new Date(startTimeStr);
+                const weekdayLabel = new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', weekday: 'short' }).format(localDate);
+                const weekday = ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[weekdayLabel] ?? 0;
+                const monthDay = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Sao_Paulo', day: 'numeric' }).format(localDate));
+                const recurrenceRule: Record<string, any> = {
+                    kind: recurrenceKind,
+                    interval: Number(args.interval || (legacyFrequency === 'biweekly' ? 2 : 1)),
+                    termination: args.terminationKind === 'open'
+                        ? { kind: 'open' }
+                        : args.terminationKind === 'until'
+                            ? { kind: 'until', until_date: args.untilDate }
+                            : { kind: 'count', count: occurrenceCount },
+                };
+                if (recurrenceKind === 'weekly') recurrenceRule.week_days = args.weekDays?.length ? args.weekDays : [weekday];
+                if (recurrenceKind === 'monthly') recurrenceRule.month_days = args.monthDays?.length ? args.monthDays : [monthDay];
+                if (recurrenceKind === 'custom_dates') recurrenceRule.custom_dates = args.customDates || [];
+                if (recurrenceKind === 'range_distribution') recurrenceRule.until_date = args.distributionUntilDate || args.untilDate;
+
+                const plan = useAgendaV2
+                    ? await prepareAgendaActionPlan(
+                        planContext,
+                        'create_appointment',
+                        {
+                            patient_id: args.patientId,
+                            first_start_time: start_time,
+                            duration_minutes: Number(args.duration || 50),
+                            timezone: 'America/Sao_Paulo',
+                            type: args.type || 'presencial',
+                            notes: args.notes || null,
+                            location: args.location || null,
+                            recurrence_rule: recurrenceRule,
+                            overrides: (args.overrides || []).map((override: any) => ({
+                                occurrence_number: override.occurrenceNumber,
+                                date: override.date,
+                                start_time: override.startTime,
+                                duration_minutes: override.durationMinutes,
+                                modality: override.modality,
+                                location: override.location,
+                                reason: override.reason || 'Personalização solicitada ao Synapse',
+                                source: 'synapse',
+                            })),
+                            default_config: { durationMinutes: Number(args.duration || 50), modality: args.type || 'presencial', location: args.location || null },
+                            metadata: { createdBy: 'synapse', recurrenceSchemaVersion: 2 },
+                            ...(args.financial || args.packageId || args.financialMode
+                                ? { financial: args.financial || { mode: args.packageId ? 'package' : args.financialMode, package_id: args.packageId || null } }
+                                : {}),
+                        },
+                        buildSynapseEntryIdempotencyKey(ctx, 'prepare_agenda_v2'),
+                    )
+                    : await prepareAppointmentActionPlan(
+                        planContext,
+                        'create_appointment',
+                        'create',
+                        {
+                            patient_id: args.patientId,
+                            start_time,
+                            end_time,
+                            type: args.type || 'presencial',
+                            notes: args.notes || null,
+                            location: args.location || null,
+                            frequency: 'single',
+                            occurrence_count: 1,
+                            package_id: args.packageId || null,
+                            communication: args.communication || { sendConfirmation: true, provider: 'configured' },
+                            financial: args.financial || { mode: args.financialMode || 'none' },
+                            fiscal: args.fiscal || { automationEnabled: false, trigger: 'professional_settings' },
+                        },
+                        buildSynapseEntryIdempotencyKey(ctx, 'prepare_appointment'),
+                    );
                 result = {
                     success: true,
                     confirmation_required: plan.status === 'awaiting_confirmation',

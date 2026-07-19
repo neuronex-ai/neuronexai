@@ -4,7 +4,7 @@ import { Appointment } from "@/types";
 import { format, addDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatTimeBrazil } from "@/lib/timezone";
-import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen, UsersRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
@@ -56,15 +56,24 @@ interface CalendarViewProps {
     onViewChange?: (view: 'daily' | 'weekly' | 'monthly') => void;
     sidebarOpen?: boolean;
     setSidebarOpen?: (open: boolean) => void;
+    waitlistOpen?: boolean;
+    onWaitlistOpenChange?: (open: boolean) => void;
+    waitlistCount?: number;
 }
 
 interface WorkingHoursConfig {
     [key: string]: { enabled: boolean; start: string; end: string };
 }
 
+interface AvailabilityWindowConfig {
+    weekday: number;
+    start_time: string;
+    end_time: string;
+}
+
 type AppointmentWithGhost = Appointment & { isGhost?: boolean };
 
-export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen }: CalendarViewProps) => {
+export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen, waitlistOpen, onWaitlistOpenChange, waitlistCount = 0 }: CalendarViewProps) => {
     const shouldReduceMotion = useReducedMotion();
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -77,6 +86,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>();
     const [isMounted, setIsMounted] = useState(false);
     const [workingHours, setWorkingHours] = useState<WorkingHoursConfig | null>(null);
+    const [availabilityWindows, setAvailabilityWindows] = useState<AvailabilityWindowConfig[] | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -84,13 +94,27 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
     // Load working hours from profile
     useEffect(() => {
-        if (user?.id) {
-            supabase.from('profiles').select('working_hours').eq('id', user.id).single()
-                .then(({ data }) => {
-                    if (data?.working_hours) setWorkingHours(data.working_hours as WorkingHoursConfig);
-                });
-        }
-    }, [user]);
+        if (!user?.id) return;
+        const loadAvailability = async () => {
+            const database = supabase;
+            const [profileResult, versionResult] = await Promise.all([
+                database.from('profiles').select('working_hours').eq('id', user.id).single(),
+                database
+                    .from('professional_availability_versions')
+                    .select('professional_availability_windows(weekday,start_time,end_time)')
+                    .eq('status', 'active')
+                    .order('version_number', { ascending: false })
+                    .limit(1)
+                    .maybeSingle(),
+            ]);
+            if (profileResult.data?.working_hours) setWorkingHours(profileResult.data.working_hours as WorkingHoursConfig);
+            const windows = versionResult.data?.professional_availability_windows;
+            setAvailabilityWindows(Array.isArray(windows) ? windows as AvailabilityWindowConfig[] : null);
+        };
+        void loadAvailability();
+        window.addEventListener('agenda-availability-updated', loadAvailability);
+        return () => window.removeEventListener('agenda-availability-updated', loadAvailability);
+    }, [user?.id]);
 
     const weekDays = useMemo(() => {
         const start = startOfWeek(date, { weekStartsOn: 1 });
@@ -186,6 +210,19 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
     // Determine if a specific hour is blocked for a given day
     const isHourBlocked = (day: Date, hour: number): boolean => {
+        if (availabilityWindows) {
+            const slotStart = hour * 60;
+            const slotEnd = slotStart + 50;
+            const fits = availabilityWindows.some((window) => {
+                if (window.weekday !== day.getDay()) return false;
+                const [startHour, startMinute] = window.start_time.split(':').map(Number);
+                const [endHour, endMinute] = window.end_time.split(':').map(Number);
+                const startsAt = startHour * 60 + startMinute;
+                const endsAt = endHour * 60 + endMinute;
+                return startsAt <= slotStart && endsAt >= slotEnd;
+            });
+            return !fits;
+        }
         if (!workingHours) return false;
         const dayId = day.getDay().toString();
         const hw = workingHours[dayId];
@@ -459,6 +496,28 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
                         {/* Settings Button */}
                         <AgendaSettingsModal />
+
+                        {onWaitlistOpenChange ? (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => onWaitlistOpenChange(!waitlistOpen)}
+                                aria-label={`Lista de espera${waitlistCount ? `, ${waitlistCount} pessoas ativas` : ""}`}
+                                aria-pressed={waitlistOpen}
+                                className={cn(
+                                    "notification-liquid-control relative h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground",
+                                    waitlistOpen && "notification-liquid-tab-active text-foreground",
+                                )}
+                            >
+                                <UsersRound className="h-4 w-4" />
+                                {waitlistCount > 0 ? (
+                                    <span className="notification-unread-badge absolute -right-0.5 -top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full px-1 text-[7px] font-black leading-none">
+                                        {Math.min(waitlistCount, 99)}
+                                    </span>
+                                ) : null}
+                            </Button>
+                        ) : null}
 
                         {/* New Appointment Add Button */}
                         <Button

@@ -21,8 +21,7 @@ export const useAgendaRealtime = () => {
                     table: 'appointments',
                     filter: `user_id=eq.${user.id}`,
                 },
-                (payload) => {
-                    console.log('Realtime appointment change:', payload);
+                () => {
                     queryClient.invalidateQueries({ queryKey: ['appointments'] });
                     queryClient.invalidateQueries({ queryKey: ['financial_metrics'] });
                     queryClient.invalidateQueries({ queryKey: ['transactions'] });
@@ -37,10 +36,46 @@ export const useAgendaRealtime = () => {
                     filter: `professional_id=eq.${user.id}`,
                 },
                 () => {
-                    console.log('Realtime financial entry change');
                     queryClient.invalidateQueries({ queryKey: ['transactions'] });
                     queryClient.invalidateQueries({ queryKey: ['appointments'] });
                     queryClient.invalidateQueries({ queryKey: ['financial_metrics'] });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'professional_waitlist_entries',
+                    filter: `professional_id=eq.${user.id}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['professional-waitlist', user.id] });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'professional_waitlist_offers',
+                    filter: `professional_id=eq.${user.id}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['professional-waitlist', user.id] });
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'appointment_series_materialization_conflicts',
+                    filter: `professional_id=eq.${user.id}`,
+                },
+                () => {
+                    queryClient.invalidateQueries({ queryKey: ['appointments'] });
+                    queryClient.invalidateQueries({ queryKey: ['agenda-series-conflicts', user.id] });
                 }
             )
             .subscribe();

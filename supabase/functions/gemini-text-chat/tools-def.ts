@@ -107,7 +107,34 @@ export const tools = [
             datetime: { type: "string", description: "Data/hora local de Brasília SEM offset de fuso (ex: 2024-10-05T14:00:00). O servidor adicionará o fuso -03:00 automaticamente." },
             duration: { type: "number", description: "Minutos" },
             type: { type: "string", enum: ["presencial", "online", "block"] },
-            notes: { type: "string" }
+            notes: { type: "string" },
+            location: { type: "string" },
+            frequency: { type: "string", enum: ["single", "weekly", "biweekly", "monthly"] },
+            occurrenceCount: { type: "integer", minimum: 1, maximum: 500 },
+            recurrenceKind: { type: "string", enum: ["weekly", "monthly", "interval", "custom_dates", "range_distribution"] },
+            interval: { type: "integer", minimum: 1, maximum: 365 },
+            weekDays: { type: "array", items: { type: "integer", minimum: 0, maximum: 6 } },
+            monthDays: { type: "array", items: { type: "integer", minimum: 1, maximum: 31 } },
+            customDates: { type: "array", items: { type: "string" } },
+            terminationKind: { type: "string", enum: ["count", "until", "open"] },
+            untilDate: { type: "string" },
+            distributionUntilDate: { type: "string" },
+            overrides: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  occurrenceNumber: { type: "integer", minimum: 1, maximum: 500 },
+                  date: { type: "string" },
+                  startTime: { type: "string" },
+                  durationMinutes: { type: "integer", minimum: 15, maximum: 240 },
+                  modality: { type: "string", enum: ["presencial", "online"] },
+                  location: { type: "string" },
+                  reason: { type: "string" }
+                },
+                required: ["occurrenceNumber"]
+              }
+            }
           },
           required: ["datetime"]
         }

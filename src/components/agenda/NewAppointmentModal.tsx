@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { useForm } from "react-hook-form";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { useForm, type FieldErrors, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -25,6 +25,9 @@ import {
   Link2,
   StickyNote,
   Plus,
+  Save,
+  Trash2,
+  WandSparkles,
 } from "lucide-react";
 import { differenceInMinutes, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -57,6 +60,16 @@ import { useAddAppointment } from "@/hooks/use-add-appointment";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
 import { useAppointmentSeries } from "@/hooks/use-appointment-series";
+import {
+  useAgendaSeriesTemplates,
+  useAgendaV2,
+  usePatientFinancialResolution,
+  toAgendaV2Overrides,
+  toAgendaV2RecurrenceRule,
+  type AgendaV2PlanInput,
+  type AgendaPlanSmartFitCandidate,
+  type AgendaV2Preview,
+} from "@/hooks/use-agenda-v2";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
@@ -66,10 +79,20 @@ import {
   buildSessionMetadata,
 } from "@/lib/appointment-metadata";
 import {
-  APPOINTMENT_RECURRENCE_LABELS,
-  appointmentSeriesSummary,
-  type AppointmentSeriesPreview,
-} from "@/lib/appointment-recurrence";
+  APPOINTMENT_FORM_ID,
+  findFirstInvalidAppointmentField,
+  getAppointmentFieldStep,
+  getAppointmentStepLabels,
+} from "@/lib/appointment-form-flow";
+import { AdvancedRecurrenceEditor } from "@/components/agenda/AdvancedRecurrenceEditor";
+import {
+  agendaRecurrenceDraftToRule,
+  agendaRuleToRecurrenceDraft,
+  createAgendaRecurrenceDraft,
+  recurrenceRuleSummary,
+  type AgendaRecurrenceDraft,
+  type OccurrenceOverride,
+} from "@/lib/agenda-scheduling";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
@@ -107,7 +130,7 @@ const formSchema = z
     // Recorrência
     recurrence: z.boolean().default(false),
     recurrenceFrequency: z.enum(["weekly", "biweekly", "monthly"]).default("weekly"),
-    recurrenceCount: z.coerce.number().min(1).max(20).optional(),
+    recurrenceCount: z.coerce.number().min(1).max(500).optional(),
   })
   .refine(
     (data) => !data.recurrence || (data.recurrenceCount || 0) >= 2,
@@ -162,12 +185,6 @@ const EVENT_CATEGORIES = [
   { value: "administrativo", label: "Administrativo" },
   { value: "outro", label: "Outro" },
 ];
-
-const RECURRENCE_OPTIONS = [
-  { value: "weekly", label: "Semanal" },
-  { value: "biweekly", label: "Quinzenal" },
-  { value: "monthly", label: "Mensal" },
-] as const;
 
 const addMinutesToTime = (time: string, minutesToAdd: number) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
@@ -265,16 +282,35 @@ export function NewAppointmentModal({
   const onOpenChange = externalOnOpenChange || setInternalIsOpen;
 
   const [step, setStep] = useState(1);
-  const [seriesPreview, setSeriesPreview] = useState<AppointmentSeriesPreview | null>(null);
+  const [seriesPreview, setSeriesPreview] = useState<AgendaV2Preview | null>(null);
   const [seriesPreviewError, setSeriesPreviewError] = useState<string | null>(null);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [recurrenceDraft, setRecurrenceDraft] = useState<AgendaRecurrenceDraft>(() =>
+    createAgendaRecurrenceDraft(selectedDate || initialDate || new Date()),
+  );
+  const [templateName, setTemplateName] = useState("");
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [smartFitSuggestions, setSmartFitSuggestions] = useState<Record<number, AgendaPlanSmartFitCandidate[]>>({});
+  const idempotencyKeyRef = useRef(`agenda-v2-${crypto.randomUUID()}`);
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
   const {
-    previewSeries,
     createSeries,
-    isPreviewingSeries,
     isCreatingSeries,
   } = useAppointmentSeries();
+  const {
+    previewAgendaPlan,
+    createAgendaSeries,
+    isPreviewingAgendaPlan,
+    isCreatingAgendaSeries,
+    suggestAgendaPlanSmartFit,
+    isSuggestingAgendaPlanSmartFit,
+  } = useAgendaV2();
+  const {
+    data: seriesTemplates,
+    saveTemplate,
+    isSavingTemplate,
+  } = useAgendaSeriesTemplates();
 
   const effectiveDate = selectedDate || initialDate;
 
@@ -308,6 +344,13 @@ export function NewAppointmentModal({
   // Atualizar data quando selecionada externamente
   useEffect(() => {
     if (effectiveDate) form.setValue("date", effectiveDate);
+    if (effectiveDate) {
+      setRecurrenceDraft((current) => ({
+        ...current,
+        weekDays: current.overrides.length ? current.weekDays : [effectiveDate.getDay()],
+        monthDays: current.overrides.length ? current.monthDays : [effectiveDate.getDate()],
+      }));
+    }
   }, [effectiveDate, form]);
 
   useEffect(() => {
@@ -318,6 +361,8 @@ export function NewAppointmentModal({
 
   const eventType = form.watch("eventType");
   const selectedPatientId = form.watch("patientId");
+  const { data: resolvedFinancial, isLoading: isResolvingFinancial } =
+    usePatientFinancialResolution(eventType === "session" ? selectedPatientId : null);
   const selectedPackageId = form.watch("packageId");
   const usePackageSwitch = form.watch("usePackage");
   const shouldCreateTransaction = form.watch("shouldCreateTransaction");
@@ -347,7 +392,16 @@ export function NewAppointmentModal({
     selectedEndTime,
     selectedFormDate,
     startTime,
+    recurrenceDraft,
   ]);
+
+  useEffect(() => {
+    form.setValue("recurrenceCount", recurrenceDraft.terminationKind === "count" ? recurrenceDraft.count : 2);
+    form.setValue(
+      "recurrenceFrequency",
+      recurrenceDraft.kind === "monthly" ? "monthly" : recurrenceDraft.interval === 2 ? "biweekly" : "weekly",
+    );
+  }, [form, recurrenceDraft.count, recurrenceDraft.interval, recurrenceDraft.kind, recurrenceDraft.terminationKind]);
 
   // Reset step quando muda de tipo
   useEffect(() => {
@@ -377,28 +431,37 @@ export function NewAppointmentModal({
     : 0;
   const latestPackageIsExpired = !!latestPackage?.end_date && new Date(`${latestPackage.end_date}T23:59:59`) < new Date();
   const projectedUncoveredBalance = latestPackage ? Math.min(latestPackageRemaining - 1, -1) : -1;
-  const isCheckingFinancialRules = isLoadingPackages || isLoadingPatientPackages;
+  const isCheckingFinancialRules = isLoadingPackages || isLoadingPatientPackages || isResolvingFinancial;
   const isSubmitting =
     isCreatingAppointment ||
-    isPreviewingSeries ||
-    isCreatingSeries;
+    isPreviewingAgendaPlan ||
+    isCreatingSeries ||
+    isCreatingAgendaSeries;
 
   // Auto‑ativar pacote quando tem pacotes, ou abrir lançamento quando não tem
   useEffect(() => {
-    if (eventType !== "session" || recurrenceEnabled || step !== 3) return;
+    if (eventType !== "session" || step !== 3) return;
     if (hasActivePackage) {
       form.setValue("usePackage", true);
       if (activePackages && activePackages.length > 0 && !form.getValues("packageId")) {
         form.setValue("packageId", activePackages[0].id);
       }
+    } else if (resolvedFinancial?.planType === "insurance" || resolvedFinancial?.planType === "monthly" || resolvedFinancial?.planType === "exempt") {
+      form.setValue("usePackage", false);
+      form.setValue("shouldCreateTransaction", false);
+      if (resolvedFinancial.sessionValueCents > 0) {
+        form.setValue("transactionAmount", resolvedFinancial.sessionValueCents / 100);
+      }
     } else {
       form.setValue("usePackage", false);
-      form.setValue("shouldCreateTransaction", true);
+      form.setValue("shouldCreateTransaction", resolvedFinancial?.shouldCreateCharge ?? true);
       if (form.getValues("transactionAmount") === 0) {
-        form.setValue("transactionAmount", 150);
+        form.setValue("transactionAmount", resolvedFinancial?.sessionValueCents
+          ? resolvedFinancial.sessionValueCents / 100
+          : 150);
       }
     }
-  }, [hasActivePackage, activePackages, step, eventType, form, recurrenceEnabled]);
+  }, [hasActivePackage, activePackages, step, eventType, form, resolvedFinancial]);
 
   // Zerar valor da transação quando usa pacote
   useEffect(() => {
@@ -409,18 +472,69 @@ export function NewAppointmentModal({
   }, [usePackageSwitch, activePackages, form]);
 
   // ── Número total de passos ─────────────────────────────────────────
-  const totalSteps = recurrenceEnabled ? 3 : eventType === "event" ? 2 : 3;
+  const stepLabels = getAppointmentStepLabels(eventType, recurrenceEnabled);
+  const totalSteps = stepLabels.length;
 
-  const loadSeriesPreview = async (values: FormValues) => {
+  const buildAgendaPlanInput = (
+    values: FormValues,
+    metadata?: ReturnType<typeof buildSessionMetadata> | ReturnType<typeof buildEventMetadata>,
+    recurrence = recurrenceDraft,
+  ): AgendaV2PlanInput => {
     const { startDateTime, endDateTime } = buildAppointmentTimes(values);
+    const recurrenceRule = agendaRecurrenceDraftToRule(recurrence);
+    const sessionLocation = values.modality === "online"
+      ? "Teleconsulta NeuroNex"
+      : values.sessionLocation?.trim() || "Consultório";
+    const eventLocation = values.eventLocation?.trim() || null;
+
+    const financial: AgendaV2PlanInput["financial"] = values.eventType !== "session"
+      ? { mode: "none" }
+      : values.usePackage && (selectedPackage?.id || values.packageId)
+        ? {
+            mode: "package",
+            package_id: selectedPackage?.id || values.packageId || null,
+            charge_mode: "per_occurrence",
+          }
+        : resolvedFinancial?.planType === "insurance" && !values.shouldCreateTransaction
+          ? { mode: "insurance", charge_mode: "per_occurrence" }
+          : values.shouldCreateTransaction
+            ? {
+                mode: "manual",
+                value_per_session: values.transactionAmount || 0,
+                payment_method: values.transactionMethod || "pix",
+                charge_mode: "per_occurrence",
+              }
+            : { mode: "none" };
+
+    return {
+      patient_id: values.eventType === "session" ? values.patientId || null : null,
+      first_start_time: startDateTime.toISOString(),
+      duration_minutes: Math.max(15, differenceInMinutes(endDateTime, startDateTime)),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo",
+      type: values.eventType === "session" ? values.modality : "block",
+      recurrence_rule: toAgendaV2RecurrenceRule(recurrenceRule),
+      overrides: toAgendaV2Overrides(recurrence.overrides),
+      notes: values.notes?.trim() || null,
+      location: values.eventType === "event" ? eventLocation : sessionLocation,
+      metadata,
+      template_version_id: selectedTemplateId
+        ? [...(seriesTemplates?.find((item) => item.id === selectedTemplateId)?.appointment_series_template_versions || [])]
+            .sort((left, right) => right.version_number - left.version_number)[0]?.id || null
+        : null,
+      default_config: {
+        type: values.type,
+        modality: values.modality,
+        durationMinutes: values.duration,
+        location: values.eventType === "event" ? eventLocation : sessionLocation,
+      },
+      financial,
+    };
+  };
+
+  const loadSeriesPreview = async (values: FormValues, recurrence = recurrenceDraft) => {
     setSeriesPreviewError(null);
     try {
-      const preview = await previewSeries({
-        startTime: startDateTime,
-        endTime: endDateTime,
-        frequency: values.recurrenceFrequency,
-        occurrenceCount: values.recurrenceCount || 1,
-      });
+      const preview = await previewAgendaPlan(buildAgendaPlanInput(values, undefined, recurrence));
       setSeriesPreview(preview);
       return preview;
     } catch (error) {
@@ -435,6 +549,7 @@ export function NewAppointmentModal({
 
   // ── Submit ─────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
+    setSubmissionError(null);
     const { startDateTime, endDateTime } = buildAppointmentTimes(values);
 
     let notesStr = values.notes || "";
@@ -493,36 +608,16 @@ export function NewAppointmentModal({
           ? seriesPreview
           : await loadSeriesPreview(values);
         if (!latestPreview?.valid) {
-          setStep(3);
+          setStep(totalSteps);
           toast.error("Revise as datas em conflito antes de criar a série.");
           return;
         }
 
-        const result = await createSeries({
-          patientId: values.eventType === "session" ? values.patientId || null : null,
-          startTime: startDateTime,
-          endTime: endDateTime,
-          frequency: values.recurrenceFrequency,
-          occurrenceCount: values.recurrenceCount || 1,
-          type:
-            values.eventType === "session"
-              ? (values.modality as "presencial" | "online")
-              : "block",
-          notes: notesStr || null,
-          location: values.eventType === "event" ? values.eventLocation || null : locStr,
-          metadata,
-          packageId:
-            values.eventType === "session" && values.usePackage
-              ? selectedPackage?.id || values.packageId || null
-              : null,
+        const result = await createAgendaSeries({
+          input: buildAgendaPlanInput(values, metadata),
+          idempotencyKey: idempotencyKeyRef.current,
         });
-
-        if (!result.success) {
-          if (result.preview) setSeriesPreview(result.preview);
-          setSeriesPreviewError("A disponibilidade mudou. Revise os conflitos encontrados.");
-          toast.error("A disponibilidade mudou. Nenhum agendamento foi criado.");
-          return;
-        }
+        toast.success(result.result.message || "Série criada com segurança.");
       } else if (
         values.eventType === "session"
         && values.usePackage
@@ -569,10 +664,20 @@ export function NewAppointmentModal({
 
       onOpenChange(false);
       form.reset();
+      setRecurrenceDraft(createAgendaRecurrenceDraft(effectiveDate || new Date()));
+      setSelectedTemplateId("");
+      setTemplateName("");
+      idempotencyKeyRef.current = `agenda-v2-${crypto.randomUUID()}`;
       setSeriesPreview(null);
       setSeriesPreviewError(null);
       setStep(1);
     } catch (error: unknown) {
+      const agendaError = error as Error & { preview?: AgendaV2Preview };
+      if (agendaError.preview) {
+        setSeriesPreview(agendaError.preview);
+        setSeriesPreviewError(agendaError.message);
+        setStep(totalSteps);
+      }
       if (createdPrimaryAppointment) {
         toast.warning("Agendamento criado, mas o alinhamento financeiro precisa ser revisado.");
         onOpenChange(false);
@@ -581,9 +686,27 @@ export function NewAppointmentModal({
         return;
       }
 
-      toast.error(
-        error instanceof Error ? error.message : "Não foi possível registrar o agendamento.",
-      );
+      const message = error instanceof Error
+        ? error.message
+        : "Não foi possível registrar o agendamento.";
+      toast.error(message);
+      setSubmissionError(message);
+    }
+  };
+
+  const onInvalid = (errors: FieldErrors<FormValues>) => {
+    const firstField = findFirstInvalidAppointmentField(errors);
+    const targetStep = firstField
+      ? getAppointmentFieldStep(firstField, eventType, recurrenceEnabled)
+      : 1;
+
+    setStep(targetStep);
+    setSubmissionError("Revise o campo destacado para continuar.");
+
+    if (firstField) {
+      window.setTimeout(() => {
+        form.setFocus(firstField as FieldPath<FormValues>);
+      }, 0);
     }
   };
 
@@ -597,6 +720,149 @@ export function NewAppointmentModal({
   const cardBase =
     "rounded-2xl border border-zinc-200 dark:border-border/10 bg-zinc-100/60 dark:bg-secondary/20 p-4 hover:bg-zinc-200/60 dark:hover:bg-secondary/30 transition-all";
   const selectPopover = "bg-white dark:bg-popover/95 backdrop-blur-3xl border-zinc-200 dark:border-border/10 rounded-xl overflow-hidden shadow-2xl z-[9999]";
+
+  const applySeriesTemplate = (templateId: string) => {
+    setSelectedTemplateId(templateId);
+    const template = seriesTemplates?.find((item) => item.id === templateId);
+    const version = [...(template?.appointment_series_template_versions || [])]
+      .sort((left, right) => right.version_number - left.version_number)[0];
+    if (!version) return;
+    const savedDuration = Number(version.default_config?.durationMinutes);
+    if (Number.isFinite(savedDuration) && savedDuration >= 15) {
+      form.setValue("duration", savedDuration);
+    }
+    if (version.default_config?.modality === "presencial" || version.default_config?.modality === "online") {
+      form.setValue("modality", version.default_config.modality);
+    }
+    if (typeof version.default_config?.location === "string") {
+      form.setValue("sessionLocation", version.default_config.location);
+    }
+    const rule = version.recurrence_rule;
+    const termination = rule.termination.kind === "count"
+      ? { kind: "count" as const, count: rule.termination.count || 4 }
+      : rule.termination.kind === "until"
+        ? { kind: "until" as const, untilDate: rule.termination.until_date || "" }
+        : { kind: "open" as const, horizonDays: 90 };
+    setRecurrenceDraft((current) => ({
+      ...agendaRuleToRecurrenceDraft({
+        kind: rule.kind,
+        interval: rule.interval,
+        weekDays: rule.week_days,
+        monthDays: rule.month_days,
+        customDates: rule.kind === "range_distribution"
+          ? [rule.until_date || ""]
+          : rule.custom_dates,
+        missingMonthDay: rule.missing_month_day,
+        termination,
+      }, form.getValues("date")),
+      customizeOccurrences: current.customizeOccurrences,
+      overrides: current.overrides,
+    }));
+    toast.success(`Modelo “${template?.name}” aplicado. Revise o que desejar.`);
+  };
+
+  const handleSaveSeriesTemplate = async () => {
+    const name = templateName.trim();
+    if (!name) {
+      setSubmissionError("Dê um nome curto ao modelo antes de salvar.");
+      return;
+    }
+    try {
+      await saveTemplate({
+        name,
+        recurrenceRule: toAgendaV2RecurrenceRule(agendaRecurrenceDraftToRule(recurrenceDraft)),
+        defaultConfig: {
+          durationMinutes: form.getValues("duration"),
+          modality: form.getValues("modality"),
+          location: form.getValues("sessionLocation") || null,
+        },
+        sourcePatientId: eventType === "session" ? form.getValues("patientId") || null : null,
+      });
+      setTemplateName("");
+      toast.success("Modelo salvo sem copiar dados financeiros do paciente.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível salvar o modelo.";
+      setSubmissionError(message);
+    }
+  };
+
+  const updateOccurrenceOverride = (
+    occurrenceNumber: number,
+    patch: Partial<OccurrenceOverride>,
+  ) => {
+    setRecurrenceDraft((current) => {
+      const previous = current.overrides.find((item) => item.occurrenceNumber === occurrenceNumber);
+      const next = {
+        occurrenceNumber,
+        source: "professional" as const,
+        reason: previous?.reason || "Ajuste individual definido na criação da série.",
+        ...previous,
+        ...patch,
+      };
+      return {
+        ...current,
+        overrides: [
+          ...current.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber),
+          next,
+        ].sort((left, right) => left.occurrenceNumber - right.occurrenceNumber),
+      };
+    });
+  };
+
+  const clearOccurrenceOverride = (occurrenceNumber: number) => {
+    setRecurrenceDraft((current) => ({
+      ...current,
+      overrides: current.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber),
+    }));
+  };
+
+  const requestSmartFit = async (occurrenceNumber: number, allowShorter = false) => {
+    setSubmissionError(null);
+    try {
+      const result = await suggestAgendaPlanSmartFit({
+        input: buildAgendaPlanInput(form.getValues()),
+        occurrenceNumber,
+        allowShorter,
+        minimumDurationMinutes: 30,
+      });
+      setSmartFitSuggestions((current) => ({
+        ...current,
+        [occurrenceNumber]: result.candidates,
+      }));
+      if (!result.candidates.length) {
+        setSubmissionError("Não encontrei uma janela válida nos próximos 14 dias para esta sessão.");
+      }
+    } catch (error) {
+      setSubmissionError(error instanceof Error ? error.message : "Não foi possível sugerir um reencaixe.");
+    }
+  };
+
+  const applySmartFitCandidate = async (
+    occurrenceNumber: number,
+    candidate: AgendaPlanSmartFitCandidate,
+  ) => {
+    const nextOverride: OccurrenceOverride = {
+      occurrenceNumber,
+      date: format(new Date(candidate.startTime), "yyyy-MM-dd"),
+      startTime: format(new Date(candidate.startTime), "HH:mm"),
+      durationMinutes: candidate.durationMinutes,
+      source: "synapse",
+      reason: candidate.keepsFullDuration
+        ? "Reencaixe inteligente confirmado pelo profissional."
+        : "Reencaixe inteligente com duração reduzida, confirmado pelo profissional.",
+    };
+    const nextDraft: AgendaRecurrenceDraft = {
+      ...recurrenceDraft,
+      customizeOccurrences: true,
+      overrides: [
+        ...recurrenceDraft.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber),
+        nextOverride,
+      ].sort((left, right) => left.occurrenceNumber - right.occurrenceNumber),
+    };
+    setRecurrenceDraft(nextDraft);
+    setSmartFitSuggestions((current) => ({ ...current, [occurrenceNumber]: [] }));
+    await loadSeriesPreview(form.getValues(), nextDraft);
+  };
 
   // ─── STEP 1 ───────────────────────────────────────────────────────
 
@@ -877,43 +1143,27 @@ export function NewAppointmentModal({
       />
 
       {form.watch("recurrence") && (
-        <div className="mt-3 grid grid-cols-1 gap-3 animate-in slide-in-from-top-2 sm:grid-cols-[1fr_140px]">
-          <FormField
-            control={form.control}
-            name="recurrenceFrequency"
-            render={({ field }) => (
-              <FormItem className="space-y-2">
-                <FormLabel className={labelBase}>Frequência</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger className={cn(inputBase, "font-medium px-4 shadow-inner")}>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent className={selectPopover}>
-                    {RECURRENCE_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value} className="text-foreground/70 focus:bg-accent focus:text-foreground py-3 px-4 cursor-pointer text-sm">
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="recurrenceCount"
-            render={({ field }) => (
-              <FormItem className="space-y-2">
-                <FormLabel className={labelBase}>{eventType === "event" ? "Ocorrências" : "Sessões"}</FormLabel>
-                <FormControl>
-                  <Input type="number" min={2} max={20} {...field} className={cn(inputBase, "px-4 font-medium")} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="mt-3 space-y-3 animate-in slide-in-from-top-2 motion-reduce:animate-none">
+          {seriesTemplates?.length ? (
+            <div className="notes-liquid-surface rounded-[20px] border p-3 backdrop-blur-2xl">
+              <div className="mb-2 flex items-center gap-2 text-xs font-black text-foreground">
+                <WandSparkles className="h-3.5 w-3.5" /> Usar um modelo salvo
+              </div>
+              <Select value={selectedTemplateId} onValueChange={applySeriesTemplate}>
+                <SelectTrigger className="h-11 rounded-2xl border-border/55 bg-background/62 font-semibold">
+                  <SelectValue placeholder="Escolha um modelo e edite só o necessário" />
+                </SelectTrigger>
+                <SelectContent className="notification-liquid-menu rounded-[18px] p-1.5">
+                  {seriesTemplates.map((template) => (
+                    <SelectItem key={template.id} value={template.id} className="notification-liquid-menu-item rounded-[13px] py-2.5">
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+          <AdvancedRecurrenceEditor value={recurrenceDraft} onChange={setRecurrenceDraft} />
         </div>
       )}
     </div>
@@ -1135,6 +1385,45 @@ export function NewAppointmentModal({
         </div>
       )}
 
+      {!isCheckingFinancialRules && resolvedFinancial ? (
+        <div className="notes-liquid-surface rounded-[22px] border p-4 backdrop-blur-2xl">
+          <div className="flex items-start gap-3">
+            <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
+              {resolvedFinancial.planType === "insurance"
+                ? <Building2 className="h-4 w-4" />
+                : <Sparkles className="h-4 w-4" />}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-foreground">
+                {resolvedFinancial.planType === "insurance"
+                  ? resolvedFinancial.agreement?.name || "Repasse de convênio"
+                  : resolvedFinancial.planType === "monthly"
+                    ? "Mensalidade do paciente"
+                    : resolvedFinancial.planType === "exempt"
+                      ? "Atendimento sem cobrança"
+                      : "Configuração sugerida"}
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                {resolvedFinancial.planType === "insurance" && resolvedFinancial.agreement
+                  ? resolvedFinancial.agreement.repassType === "percentage"
+                    ? `${resolvedFinancial.agreement.repassPercentage || 0}% do repasse · previsão de ${(resolvedFinancial.expectedReceivableCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}. Sem cobrança direta por padrão.`
+                    : `Repasse previsto de ${(resolvedFinancial.expectedReceivableCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}. Sem cobrança direta por padrão.`
+                  : resolvedFinancial.planType === "per_session"
+                    ? `Valor sugerido: ${(resolvedFinancial.sessionValueCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} por sessão.`
+                    : "Esta sessão não gera uma nova cobrança por padrão."}
+              </p>
+              <p className="mt-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground/70">
+                Base: {resolvedFinancial.source === "patient_profile"
+                  ? "configuração do paciente"
+                  : resolvedFinancial.source === "patient_history"
+                    ? "histórico recente"
+                    : "padrão profissional"}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* ── Cenário A: Paciente tem pacote ativo ─────────────── */}
       {!isCheckingFinancialRules && hasActivePackage && (
         <div className="space-y-4 animate-in fade-in-0 duration-300">
@@ -1183,9 +1472,19 @@ export function NewAppointmentModal({
                     onCheckedChange={(val) => {
                       field.onChange(val);
                       if (!val) {
-                        form.setValue("shouldCreateTransaction", true);
+                        form.setValue(
+                          "shouldCreateTransaction",
+                          resolvedFinancial?.planType === "insurance"
+                            ? false
+                            : resolvedFinancial?.shouldCreateCharge ?? true,
+                        );
                         if (form.getValues("transactionAmount") === 0) {
-                          form.setValue("transactionAmount", 150);
+                          form.setValue(
+                            "transactionAmount",
+                            resolvedFinancial?.sessionValueCents
+                              ? resolvedFinancial.sessionValueCents / 100
+                              : 150,
+                          );
                         }
                       }
                     }}
@@ -1354,7 +1653,7 @@ export function NewAppointmentModal({
   );
 
   const renderRecurrencePreview = () => {
-    const frequencyLabel = APPOINTMENT_RECURRENCE_LABELS[recurrenceFrequency];
+    const recurrenceRule = agendaRecurrenceDraftToRule(recurrenceDraft);
     return (
       <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 motion-reduce:animate-none">
         <div className="space-y-1.5">
@@ -1369,20 +1668,20 @@ export function NewAppointmentModal({
           </p>
         </div>
 
-        {isPreviewingSeries ? (
+        {isPreviewingAgendaPlan ? (
           <div className={cn(cardBase, "flex min-h-32 items-center justify-center gap-3")} role="status">
             <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
             <span className="text-sm font-medium text-muted-foreground">Verificando todas as datas...</span>
           </div>
         ) : null}
 
-        {!isPreviewingSeries && seriesPreviewError ? (
+        {!isPreviewingAgendaPlan && seriesPreviewError ? (
           <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.07] p-4 text-sm text-red-600" role="alert">
             {seriesPreviewError}
           </div>
         ) : null}
 
-        {!isPreviewingSeries && seriesPreview ? (
+        {!isPreviewingAgendaPlan && seriesPreview ? (
           <>
             <div
               className={cn(
@@ -1400,7 +1699,7 @@ export function NewAppointmentModal({
                 )}
                 <div>
                   <p className="font-bold text-foreground">
-                    {appointmentSeriesSummary(seriesPreview.frequency, seriesPreview.totalOccurrences)}
+                    {seriesPreview.totalOccurrences} {seriesPreview.totalOccurrences === 1 ? "sessão" : "sessões"} · {recurrenceRuleSummary(recurrenceRule)}
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {seriesPreview.valid
@@ -1413,7 +1712,7 @@ export function NewAppointmentModal({
 
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
-                ["Frequência", frequencyLabel],
+                ["Regra", recurrenceRuleSummary(recurrenceRule)],
                 ["Quantidade total", String(seriesPreview.totalOccurrences)],
                 ["Duração", `${seriesPreview.durationMinutes} min`],
                 ["Horário", format(new Date(seriesPreview.firstStartTime), "HH:mm")],
@@ -1430,35 +1729,179 @@ export function NewAppointmentModal({
             <div className="space-y-2" aria-label="Datas da série">
               <p className={labelBase}>Datas geradas</p>
               <ol className="grid gap-2">
-                {seriesPreview.occurrences.map((occurrence) => (
+                {seriesPreview.occurrences.map((occurrence) => {
+                  const override = recurrenceDraft.overrides.find(
+                    (item) => item.occurrenceNumber === occurrence.occurrenceNumber,
+                  );
+                  return (
                   <li
                     key={`${occurrence.occurrenceNumber}-${occurrence.startTime}`}
                     className={cn(
-                      "flex min-h-12 items-center justify-between gap-3 rounded-2xl border px-4 py-3",
+                      "min-h-12 rounded-2xl border px-4 py-3",
                       occurrence.status === "conflict"
                         ? "border-red-500/25 bg-red-500/[0.06]"
-                        : "border-border/60 bg-muted/20",
+                        : occurrence.occurrenceStatus === "customized"
+                          ? "border-sky-500/25 bg-sky-500/[0.06]"
+                          : "border-border/60 bg-muted/20",
                     )}
                   >
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background text-xs font-bold tabular-nums">
-                        {occurrence.occurrenceNumber}
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-background text-xs font-bold tabular-nums">
+                          {occurrence.occurrenceNumber}
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-foreground">
+                            {format(new Date(occurrence.startTime), "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                          </p>
+                          {occurrence.reason || occurrence.adjustmentReason || occurrence.overrideReason ? (
+                            <p className={cn("mt-0.5 text-xs", occurrence.reason ? "text-red-600" : "text-muted-foreground")}>
+                              {occurrence.reason || occurrence.adjustmentReason || occurrence.overrideReason}
+                            </p>
+                          ) : null}
+                          {occurrence.occurrenceStatus === "customized" ? (
+                            <span className="mt-1 inline-flex rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-black text-sky-600">
+                              Personalizada
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                      <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                        {format(new Date(occurrence.startTime), "HH:mm")} · {occurrence.durationMinutes} min
                       </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold text-foreground">
-                          {format(new Date(occurrence.startTime), "EEEE, dd 'de' MMMM", { locale: ptBR })}
-                        </p>
-                        {occurrence.reason ? (
-                          <p className="mt-0.5 text-xs text-red-600">{occurrence.reason}</p>
+                    </div>
+                    {recurrenceDraft.customizeOccurrences ? (
+                      <div className="mt-3 grid grid-cols-[1fr_100px_90px_40px] gap-2 border-t border-border/45 pt-3">
+                        <Input
+                          type="date"
+                          value={override?.date || format(new Date(occurrence.startTime), "yyyy-MM-dd")}
+                          onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { date: event.target.value })}
+                          className="h-10 rounded-xl border-border/50 bg-background/65 text-xs font-semibold"
+                          aria-label={`Data da sessão ${occurrence.occurrenceNumber}`}
+                        />
+                        <Input
+                          type="time"
+                          value={override?.startTime || format(new Date(occurrence.startTime), "HH:mm")}
+                          onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { startTime: event.target.value })}
+                          className="h-10 rounded-xl border-border/50 bg-background/65 text-xs font-semibold"
+                          aria-label={`Horário da sessão ${occurrence.occurrenceNumber}`}
+                        />
+                        <Input
+                          type="number"
+                          min={15}
+                          max={1440}
+                          value={override?.durationMinutes || occurrence.durationMinutes}
+                          onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { durationMinutes: Number(event.target.value) })}
+                          className="h-10 rounded-xl border-border/50 bg-background/65 text-xs font-semibold"
+                          aria-label={`Duração da sessão ${occurrence.occurrenceNumber}`}
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => clearOccurrenceOverride(occurrence.occurrenceNumber)}
+                          className="notification-liquid-control h-10 w-10 rounded-full"
+                          aria-label={`Restaurar padrão da sessão ${occurrence.occurrenceNumber}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : null}
+                    {occurrence.status === "conflict" ? (
+                      <div className="mt-3 border-t border-red-500/15 pt-3">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => requestSmartFit(occurrence.occurrenceNumber, false)}
+                            disabled={isSuggestingAgendaPlanSmartFit}
+                            className="h-9 rounded-full px-3 text-xs font-black"
+                          >
+                            {isSuggestingAgendaPlanSmartFit
+                              ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                              : <WandSparkles className="mr-1.5 h-3.5 w-3.5" />}
+                            Sugerir reencaixe
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => requestSmartFit(occurrence.occurrenceNumber, true)}
+                            disabled={isSuggestingAgendaPlanSmartFit}
+                            className="notification-liquid-control h-9 rounded-full px-3 text-xs font-bold"
+                          >
+                            Incluir janelas de 30 min
+                          </Button>
+                        </div>
+                        {smartFitSuggestions[occurrence.occurrenceNumber]?.length ? (
+                          <div className="mt-2 grid gap-2">
+                            {smartFitSuggestions[occurrence.occurrenceNumber].map((candidate) => (
+                              <button
+                                key={`${candidate.startTime}-${candidate.durationMinutes}`}
+                                type="button"
+                                onClick={() => applySmartFitCandidate(occurrence.occurrenceNumber, candidate)}
+                                className="synapse-chat-glass flex min-h-11 items-center justify-between rounded-[15px] border px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <span className="text-xs font-black text-foreground">
+                                  {format(new Date(candidate.startTime), "EEE, dd/MM · HH:mm", { locale: ptBR })}
+                                </span>
+                                <span className="text-[10px] font-bold text-muted-foreground">
+                                  {candidate.durationMinutes} min{candidate.keepsFullDuration ? " · duração preservada" : " · duração reduzida"}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
                         ) : null}
                       </div>
-                    </div>
-                    <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
-                      {format(new Date(occurrence.startTime), "HH:mm")}
-                    </span>
+                    ) : null}
                   </li>
-                ))}
+                  );
+                })}
               </ol>
+            </div>
+
+            {recurrenceDraft.customizeOccurrences ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => loadSeriesPreview(form.getValues())}
+                disabled={isPreviewingAgendaPlan}
+                className="notification-liquid-control h-11 w-full rounded-full font-bold"
+              >
+                {isPreviewingAgendaPlan ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Repeat className="mr-2 h-4 w-4" />}
+                Revalidar personalizações
+              </Button>
+            ) : null}
+
+            <div className="notes-liquid-surface rounded-[22px] border p-4 backdrop-blur-2xl">
+              <div className="flex items-start gap-3">
+                <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
+                  <Save className="h-4 w-4" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-black text-foreground">Salvar como modelo</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                    Reutiliza regra, duração e modalidade. Paciente e financeiro nunca são copiados.
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Input
+                  value={templateName}
+                  onChange={(event) => setTemplateName(event.target.value)}
+                  placeholder="Ex.: 4 sessões · terceira de manhã"
+                  className="h-11 rounded-2xl border-border/55 bg-background/62 font-semibold"
+                  aria-label="Nome do modelo de recorrência"
+                />
+                <Button
+                  type="button"
+                  onClick={handleSaveSeriesTemplate}
+                  disabled={isSavingTemplate}
+                  className="h-11 rounded-full px-4 font-bold"
+                >
+                  {isSavingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+                </Button>
+              </div>
             </div>
 
             <p className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
@@ -1475,13 +1918,24 @@ export function NewAppointmentModal({
   const renderProgressDots = () => {
     if (totalSteps <= 1) return null;
     return (
-      <div className="flex items-center gap-2 mt-2">
-        {Array.from({ length: totalSteps }).map((_, i) => (
-          <div
-            key={i}
-            className={cn("h-1.5 rounded-full transition-all duration-500", step >= i + 1 ? "bg-primary w-10" : "bg-primary/20 w-6")}
-          />
-        ))}
+      <div
+        className="mt-2 flex items-center gap-3"
+        aria-label={`Etapa ${step} de ${totalSteps}: ${stepLabels[step - 1]}`}
+      >
+        <span className="text-[11px] font-semibold text-muted-foreground">
+          Etapa {step} de {totalSteps} · {stepLabels[step - 1]}
+        </span>
+        <div className="flex items-center gap-1.5" aria-hidden="true">
+          {stepLabels.map((label, index) => (
+            <span
+              key={label}
+              className={cn(
+                "h-1 rounded-full transition-[width,background-color] duration-200 motion-reduce:transition-none",
+                step >= index + 1 ? "w-8 bg-primary" : "w-4 bg-primary/20",
+              )}
+            />
+          ))}
+        </div>
       </div>
     );
   };
@@ -1511,9 +1965,22 @@ export function NewAppointmentModal({
       if (isValid) nextStep();
     } else if (eventType === "session" && step === 2) {
       const isValid = await form.trigger(["type", "modality", "duration"]);
+      if (isValid) nextStep();
+      else setSubmissionError("Revise o campo destacado para continuar.");
+    } else if (eventType === "session" && recurrenceEnabled && step === 3) {
+      const isValid = await form.trigger([
+        "shouldCreateTransaction",
+        "transactionAmount",
+        "transactionMethod",
+        "installments",
+        "usePackage",
+        "packageId",
+      ]);
       if (isValid) {
-        if (recurrenceEnabled) await loadSeriesPreview(form.getValues());
-        nextStep();
+        const preview = await loadSeriesPreview(form.getValues());
+        if (preview) nextStep();
+      } else {
+        setSubmissionError("Revise o campo destacado para continuar.");
       }
     } else if (eventType === "event" && step === 1) {
       const isValid = await form.trigger([
@@ -1575,10 +2042,30 @@ export function NewAppointmentModal({
         {/* Body */}
         <div className="px-5 py-3 sm:px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+            <form
+              id={APPOINTMENT_FORM_ID}
+              onSubmit={form.handleSubmit(onSubmit, onInvalid)}
+              className="space-y-3"
+            >
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
-              {step === 3 && (recurrenceEnabled ? renderRecurrencePreview() : renderStep3())}
+              {step === 3 && (
+                eventType === "session"
+                  ? renderStep3()
+                  : recurrenceEnabled
+                    ? renderRecurrencePreview()
+                    : null
+              )}
+              {step === 4 && recurrenceEnabled && eventType === "session" && renderRecurrencePreview()}
+              {submissionError ? (
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="rounded-2xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+                >
+                  {submissionError}
+                </div>
+              ) : null}
             </form>
           </Form>
         </div>
@@ -1608,7 +2095,8 @@ export function NewAppointmentModal({
             </Button>
           ) : (
             <Button
-              onClick={form.handleSubmit(onSubmit)}
+              type="submit"
+              form={APPOINTMENT_FORM_ID}
               disabled={isSubmitting || (recurrenceEnabled && !seriesPreview?.valid)}
               className={cn(
                 "rounded-full px-6 h-10 font-bold tracking-wide shadow-lg hover:shadow-xl transition-all active:scale-95",

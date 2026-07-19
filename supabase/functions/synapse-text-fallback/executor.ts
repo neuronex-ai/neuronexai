@@ -11,8 +11,10 @@ import { executeNeuroNotesAgentTool } from "./neuro-notes-tools.ts";
 import {
   appointmentPlanSummary,
   cancelAppointmentActionPlan,
+  executeAgendaActionPlan,
   executeAppointmentActionPlan,
   normalizeAppointmentPlanChannel,
+  prepareAgendaActionPlan,
   prepareAppointmentActionPlan,
 } from "../_shared/appointment-action-plans.ts";
 import {
@@ -255,6 +257,110 @@ const appointmentPlanReference = (args: Record<string, any>) => ({
 const planIdempotencyKey = (context: AgentToolContext, name: string, actionId: string) =>
   `synapse:${context.sessionId}:${context.correlationId || context.toolCallId || actionId}:${name}`.slice(0, 240);
 
+const localDatePart = (value: string, part: "day" | "weekday") => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Sao_Paulo",
+    day: "numeric",
+    weekday: "short",
+  }).formatToParts(new Date(value));
+  const raw = parts.find((item) => item.type === part)?.value || "";
+  if (part === "day") return Number(raw);
+  return ({ Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 } as Record<string, number>)[raw] ?? 0;
+};
+
+const agendaV2Requested = (args: Record<string, any>) => {
+  const count = Number(args.occurrence_count || 1);
+  return count > 1
+    || Boolean(args.recurrence_kind)
+    || ["until", "open"].includes(String(args.termination_kind || ""))
+    || Array.isArray(args.overrides)
+    || Array.isArray(args.custom_dates)
+    || Array.isArray(args.week_days)
+    || Array.isArray(args.month_days);
+};
+
+const normalizedIntegerArray = (value: unknown, minimum: number, maximum: number) => Array.from(new Set(
+  (Array.isArray(value) ? value : [])
+    .map(Number)
+    .filter((item) => Number.isInteger(item) && item >= minimum && item <= maximum),
+));
+
+function agendaV2CreateInput(args: Record<string, any>) {
+  const firstStartTime = brazilIso(args.datetime);
+  const durationMinutes = clamp(args.duration_minutes, 50, 15, 240);
+  const legacyFrequency = cleanText(args.frequency || args.recurrence_frequency || "weekly", 24);
+  const kind = cleanText(args.recurrence_kind || (legacyFrequency === "monthly" ? "monthly" : "weekly"), 32);
+  const terminationKind = cleanText(args.termination_kind || "count", 16);
+  const count = clamp(args.occurrence_count, 1, 1, 500);
+  const rule: Record<string, unknown> = {
+    kind,
+    interval: clamp(args.interval, legacyFrequency === "biweekly" ? 2 : 1, 1, 365),
+    missing_month_day: cleanText(args.missing_month_day || "last_business_day", 40),
+    termination: terminationKind === "open"
+      ? { kind: "open" }
+      : terminationKind === "until"
+        ? { kind: "until", until_date: cleanText(args.until_date, 10) }
+        : { kind: "count", count },
+  };
+
+  if (kind === "weekly") {
+    rule.week_days = normalizedIntegerArray(args.week_days, 0, 6);
+    if (!(rule.week_days as number[]).length) rule.week_days = [localDatePart(firstStartTime, "weekday")];
+  } else if (kind === "monthly") {
+    rule.month_days = normalizedIntegerArray(args.month_days, 1, 31);
+    if (!(rule.month_days as number[]).length) rule.month_days = [localDatePart(firstStartTime, "day")];
+  } else if (kind === "custom_dates") {
+    rule.custom_dates = Array.from(new Set((Array.isArray(args.custom_dates) ? args.custom_dates : [])
+      .map((item) => cleanText(item, 10))
+      .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item))));
+  } else if (kind === "range_distribution") {
+    rule.until_date = cleanText(args.distribution_until_date || args.until_date, 10);
+  }
+
+  const overrides = (Array.isArray(args.overrides) ? args.overrides : []).slice(0, 500).map((item: any) => ({
+    occurrence_number: clamp(item?.occurrence_number, 1, 1, 500),
+    ...(item?.date ? { date: cleanText(item.date, 10) } : {}),
+    ...(item?.start_time ? { start_time: cleanText(item.start_time, 8) } : {}),
+    ...(item?.duration_minutes ? { duration_minutes: clamp(item.duration_minutes, durationMinutes, 15, 240) } : {}),
+    ...(item?.modality ? { modality: cleanText(item.modality, 24) } : {}),
+    ...(item?.location !== undefined ? { location: cleanText(item.location, 300) } : {}),
+    reason: cleanText(item?.reason || "Personalização solicitada ao Synapse", 300),
+    source: "synapse",
+  }));
+
+  const input: Record<string, unknown> = {
+    patient_id: args.patient_id ? cleanId(args.patient_id) : null,
+    first_start_time: firstStartTime,
+    duration_minutes: durationMinutes,
+    timezone: "America/Sao_Paulo",
+    type: cleanText(args.appointment_type || "presencial", 24),
+    location: args.location ? cleanText(args.location, 300) : null,
+    notes: args.notes ? cleanText(args.notes, 3000) : null,
+    recurrence_rule: rule,
+    overrides,
+    default_config: {
+      durationMinutes,
+      modality: cleanText(args.appointment_type || "presencial", 24),
+      location: args.location ? cleanText(args.location, 300) : null,
+    },
+    metadata: { createdBy: "synapse", recurrenceSchemaVersion: 2 },
+  };
+
+  if (args.package_id) {
+    input.financial = { mode: "package", package_id: cleanId(args.package_id) };
+  } else if (args.financial_mode || args.value_per_session !== undefined || args.price !== undefined) {
+    input.financial = {
+      mode: cleanText(args.financial_mode || "manual", 40),
+      value_per_session: Number(args.value_per_session ?? args.price ?? 0),
+      total: Number(args.total ?? 0),
+      charge_mode: cleanText(args.charge_mode || "per_occurrence", 40),
+      create_charge: args.create_charge === true,
+    };
+  }
+
+  return input;
+}
+
 async function prepareAppointmentMutation(
   name: string,
   args: Record<string, any>,
@@ -270,6 +376,59 @@ async function prepareAppointmentMutation(
   let input: Record<string, unknown>;
 
   if (name === "create_appointment") {
+    if (agendaV2Requested(args)) {
+      const plan = await prepareAgendaActionPlan(
+        appointmentPlanContext(context),
+        name,
+        agendaV2CreateInput(args),
+        planIdempotencyKey(context, name, actionId),
+      );
+      const summaryData = plan.summary || {};
+      const total = Number(summaryData.totalOccurrences || args.occurrence_count || 1);
+      const conflictCount = Number(summaryData.conflictCount || 0);
+      const summary = conflictCount > 0
+        ? `Série preparada com ${total} sessões e ${conflictCount} conflito(s) para revisar.`
+        : `Série preparada com ${total} sessões. Confirme esta versão para criar.`;
+      const agendaPendingAction: PendingAction = {
+        kind: "synapse_pending_action",
+        actionId,
+        toolName: name,
+        arguments: {
+          plan_id: plan.planId,
+          plan_version: plan.planVersion,
+          plan_hash: plan.planHash,
+          conversation_id: context.sessionId,
+          agenda_v2: true,
+        },
+        summary,
+        status: "pending",
+        createdAt: plan.createdAt || new Date().toISOString(),
+        expiresAt: plan.expiresAt || new Date(Date.now() + 15 * 60_000).toISOString(),
+      };
+      return {
+        ok: true,
+        grounded: true,
+        pendingAction: agendaPendingAction,
+        message: summary,
+        data: {
+          confirmation_required: plan.status === "awaiting_confirmation",
+          review_required: plan.status === "review_required",
+          status: plan.status,
+          summary: plan.summary,
+        },
+        structuredData: { type: "appointment_plan_prepared", data: { status: plan.status, summary: plan.summary } },
+        clientAction: plan.status === "awaiting_confirmation" ? {
+          type: "review_appointment_plan",
+          data: {
+            planId: plan.planId,
+            planVersion: plan.planVersion,
+            planHash: plan.planHash,
+            conversationId: context.sessionId,
+            originChannel: normalizeAppointmentPlanChannel(context.channel),
+          },
+        } : undefined,
+      };
+    }
     action = "create";
     const start = brazilIso(args.datetime);
     const duration = clamp(args.duration_minutes, 50, 15, 240);
@@ -733,10 +892,10 @@ export async function executeAgentTool(name: string, args: Record<string, any>, 
 export async function executeConfirmedMutation(pending: PendingAction, context: AgentToolContext): Promise<AgentToolResult> {
   if (APPOINTMENT_MUTATION_TOOLS.has(pending.toolName)) {
     try {
-      const plan = await executeAppointmentActionPlan(
-        appointmentPlanContext(context),
-        appointmentPlanReference(pending.arguments as Record<string, any>),
-      );
+      const reference = appointmentPlanReference(pending.arguments as Record<string, any>);
+      const plan = pending.arguments.agenda_v2 === true
+        ? await executeAgendaActionPlan(appointmentPlanContext(context), reference)
+        : await executeAppointmentActionPlan(appointmentPlanContext(context), reference);
       const result = plan.result || {};
       return {
         ok: plan.status === "completed",

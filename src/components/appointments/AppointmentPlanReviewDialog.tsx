@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import {
   cancelAppointmentActionPlan,
+  executeAgendaActionPlan,
   executeAppointmentActionPlan,
   getAppointmentActionPlan,
   type AppointmentActionPlan,
@@ -95,6 +96,7 @@ export function AppointmentPlanReviewDialog() {
   const financial = useMemo(() => recordOf(summary.financial), [summary]);
   const fiscal = useMemo(() => recordOf(summary.fiscal), [summary]);
   const policy = useMemo(() => recordOf(summary.policy), [summary]);
+  const isAgendaV2 = summary.action === "create_series_v2";
   const terminalMessage = plan ? statusMessage(plan.status) : null;
   const canConfirm = plan?.status === "awaiting_confirmation" && !isSubmitting && !error;
 
@@ -136,7 +138,9 @@ export function AppointmentPlanReviewDialog() {
         completed = await getAppointmentActionPlan(plan.planId, plan.planVersion);
         await queryClient.invalidateQueries({ queryKey: ["sessionMessages", reference.conversationId] });
       } else {
-        completed = await executeAppointmentActionPlan(plan);
+        completed = isAgendaV2
+          ? await executeAgendaActionPlan(plan)
+          : await executeAppointmentActionPlan(plan);
       }
 
       if (completed.status !== "completed") {
@@ -207,8 +211,12 @@ export function AppointmentPlanReviewDialog() {
               <ReviewRow
                 icon={CalendarClock}
                 label="Agenda"
-                value={String(agenda.patientName || "Paciente selecionado")}
-                detail={`${formatDateTime(agenda.startTime)} · ${Number(agenda.occurrenceCount || 1)} ocorrência(s)`}
+                value={isAgendaV2
+                  ? `${Number(summary.totalOccurrences || 1)} sessão(ões) na série`
+                  : String(agenda.patientName || "Paciente selecionado")}
+                detail={isAgendaV2
+                  ? `${formatDateTime(summary.firstStartTime)} até ${formatDateTime(summary.lastStartTime)}`
+                  : `${formatDateTime(agenda.startTime)} · ${Number(agenda.occurrenceCount || 1)} ocorrência(s)`}
               />
               <ReviewRow
                 icon={CircleDollarSign}
@@ -216,18 +224,22 @@ export function AppointmentPlanReviewDialog() {
                 value={String(financial.impactMessage || "Sem ajuste externo previsto.")}
                 detail={`Modelo: ${String(financial.mode || "sem financeiro")}`}
               />
-              <ReviewRow
-                icon={FileCheck2}
-                label="Fiscal"
-                value={Boolean(fiscal.automationEnabled) ? "Automação fiscal considerada" : "Sem automação fiscal"}
-                detail={`${Number(fiscal.potentialDocuments || 0)} documento(s) potencial(is)`}
-              />
-              <ReviewRow
-                icon={ShieldCheck}
-                label="Política congelada"
-                value="Direitos e prazos serão revalidados na execução"
-                detail={`Cancelamento: ${String(policy.freeCancellationHours ?? "configurado")}h · Reagendamento: ${String(policy.freeRescheduleHours ?? "configurado")}h`}
-              />
+              {!isAgendaV2 ? (
+                <>
+                  <ReviewRow
+                    icon={FileCheck2}
+                    label="Fiscal"
+                    value={fiscal.automationEnabled ? "Automação fiscal considerada" : "Sem automação fiscal"}
+                    detail={`${Number(fiscal.potentialDocuments || 0)} documento(s) potencial(is)`}
+                  />
+                  <ReviewRow
+                    icon={ShieldCheck}
+                    label="Política congelada"
+                    value="Direitos e prazos serão revalidados na execução"
+                    detail={`Cancelamento: ${String(policy.freeCancellationHours ?? "configurado")}h · Reagendamento: ${String(policy.freeRescheduleHours ?? "configurado")}h`}
+                  />
+                </>
+              ) : null}
             </>
           ) : null}
         </div>

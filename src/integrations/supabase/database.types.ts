@@ -38,6 +38,218 @@ export type Database = {
         }
         Relationships: []
       }
+      appointment_action_plan_events: {
+        Row: {
+          action_origin: string
+          actor_type: string
+          actor_user_id: string | null
+          appointment_id: string | null
+          confirmation_channel: string | null
+          created_at: string
+          event_type: string
+          from_status: string | null
+          id: string
+          idempotency_key: string
+          patient_id: string | null
+          plan_id: string
+          plan_version: number
+          professional_id: string
+          safe_metadata: Json
+          to_status: string | null
+        }
+        Insert: {
+          action_origin: string
+          actor_type: string
+          actor_user_id?: string | null
+          appointment_id?: string | null
+          confirmation_channel?: string | null
+          created_at?: string
+          event_type: string
+          from_status?: string | null
+          id?: string
+          idempotency_key: string
+          patient_id?: string | null
+          plan_id: string
+          plan_version: number
+          professional_id: string
+          safe_metadata?: Json
+          to_status?: string | null
+        }
+        Update: {
+          action_origin?: string
+          actor_type?: string
+          actor_user_id?: string | null
+          appointment_id?: string | null
+          confirmation_channel?: string | null
+          created_at?: string
+          event_type?: string
+          from_status?: string | null
+          id?: string
+          idempotency_key?: string
+          patient_id?: string | null
+          plan_id?: string
+          plan_version?: number
+          professional_id?: string
+          safe_metadata?: Json
+          to_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_action_plan_events_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_action_plan_events_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_action_plan_events_plan_fkey"
+            columns: ["plan_id", "plan_version"]
+            isOneToOne: false
+            referencedRelation: "appointment_action_plans"
+            referencedColumns: ["plan_id", "plan_version"]
+          },
+        ]
+      }
+      appointment_action_plans: {
+        Row: {
+          action: string
+          appointment_id: string | null
+          cancelled_at: string | null
+          completed_at: string | null
+          confirmation_channel: string | null
+          confirmed_at: string | null
+          confirmed_by: string | null
+          conversation_id: string | null
+          correlation_id: string | null
+          created_at: string
+          executing_at: string | null
+          expires_at: string
+          failed_at: string | null
+          id: string
+          idempotency_key: string
+          immutable_snapshot: Json
+          last_error: string | null
+          origin_channel: string
+          patient_id: string | null
+          plan_hash: string
+          plan_id: string
+          plan_version: number
+          professional_id: string
+          result_internal: Json | null
+          result_public: Json | null
+          safe_summary: Json
+          series_id: string | null
+          snapshot_version: number
+          status: string
+          superseded_at: string | null
+          tool_call: string | null
+          updated_at: string
+          voice_session_id: string | null
+          whatsapp_message_id: string | null
+        }
+        Insert: {
+          action: string
+          appointment_id?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          confirmation_channel?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          conversation_id?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          executing_at?: string | null
+          expires_at?: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key: string
+          immutable_snapshot: Json
+          last_error?: string | null
+          origin_channel: string
+          patient_id?: string | null
+          plan_hash: string
+          plan_id?: string
+          plan_version?: number
+          professional_id: string
+          result_internal?: Json | null
+          result_public?: Json | null
+          safe_summary: Json
+          series_id?: string | null
+          snapshot_version?: number
+          status?: string
+          superseded_at?: string | null
+          tool_call?: string | null
+          updated_at?: string
+          voice_session_id?: string | null
+          whatsapp_message_id?: string | null
+        }
+        Update: {
+          action?: string
+          appointment_id?: string | null
+          cancelled_at?: string | null
+          completed_at?: string | null
+          confirmation_channel?: string | null
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          conversation_id?: string | null
+          correlation_id?: string | null
+          created_at?: string
+          executing_at?: string | null
+          expires_at?: string
+          failed_at?: string | null
+          id?: string
+          idempotency_key?: string
+          immutable_snapshot?: Json
+          last_error?: string | null
+          origin_channel?: string
+          patient_id?: string | null
+          plan_hash?: string
+          plan_id?: string
+          plan_version?: number
+          professional_id?: string
+          result_internal?: Json | null
+          result_public?: Json | null
+          safe_summary?: Json
+          series_id?: string | null
+          snapshot_version?: number
+          status?: string
+          superseded_at?: string | null
+          tool_call?: string | null
+          updated_at?: string
+          voice_session_id?: string | null
+          whatsapp_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_action_plans_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_action_plans_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_action_plans_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       appointment_communication_outbox: {
         Row: {
           appointment_end_time: string
@@ -455,6 +667,69 @@ export type Database = {
             columns: ["replaced_by_coverage_id"]
             isOneToOne: false
             referencedRelation: "appointment_financial_coverages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_occurrence_overrides: {
+        Row: {
+          action_plan_id: string | null
+          appointment_id: string | null
+          changed_fields: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          occurrence_number: number
+          original_values: Json
+          override_values: Json
+          professional_id: string
+          reason: string | null
+          series_id: string
+          source: string
+        }
+        Insert: {
+          action_plan_id?: string | null
+          appointment_id?: string | null
+          changed_fields: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          occurrence_number: number
+          original_values?: Json
+          override_values: Json
+          professional_id: string
+          reason?: string | null
+          series_id: string
+          source?: string
+        }
+        Update: {
+          action_plan_id?: string | null
+          appointment_id?: string | null
+          changed_fields?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          occurrence_number?: number
+          original_values?: Json
+          override_values?: Json
+          professional_id?: string
+          reason?: string | null
+          series_id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_occurrence_overrides_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_occurrence_overrides_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
             referencedColumns: ["id"]
           },
         ]
@@ -1027,47 +1302,93 @@ export type Database = {
       appointment_series: {
         Row: {
           appointment_type: string
+          availability_version_id: string | null
           created_at: string
           created_by: string | null
+          default_config: Json
           duration_minutes: number
+          financial_snapshot: Json
           first_start_time: string
           frequency: string
           id: string
-          last_start_time: string
+          last_start_time: string | null
+          materialized_through: string | null
+          next_generation_at: string | null
           patient_id: string | null
           psychologist_id: string
-          total_occurrences: number
+          recurrence_rule: Json
+          revision: number
+          rule_kind: string
+          status: string
+          template_version_id: string | null
+          termination_kind: string
+          timezone: string
+          total_occurrences: number | null
+          until_date: string | null
           updated_at: string
         }
         Insert: {
           appointment_type: string
+          availability_version_id?: string | null
           created_at?: string
           created_by?: string | null
+          default_config?: Json
           duration_minutes: number
+          financial_snapshot?: Json
           first_start_time: string
           frequency: string
           id?: string
-          last_start_time: string
+          last_start_time?: string | null
+          materialized_through?: string | null
+          next_generation_at?: string | null
           patient_id?: string | null
           psychologist_id: string
-          total_occurrences: number
+          recurrence_rule?: Json
+          revision?: number
+          rule_kind?: string
+          status?: string
+          template_version_id?: string | null
+          termination_kind?: string
+          timezone?: string
+          total_occurrences?: number | null
+          until_date?: string | null
           updated_at?: string
         }
         Update: {
           appointment_type?: string
+          availability_version_id?: string | null
           created_at?: string
           created_by?: string | null
+          default_config?: Json
           duration_minutes?: number
+          financial_snapshot?: Json
           first_start_time?: string
           frequency?: string
           id?: string
-          last_start_time?: string
+          last_start_time?: string | null
+          materialized_through?: string | null
+          next_generation_at?: string | null
           patient_id?: string | null
           psychologist_id?: string
-          total_occurrences?: number
+          recurrence_rule?: Json
+          revision?: number
+          rule_kind?: string
+          status?: string
+          template_version_id?: string | null
+          termination_kind?: string
+          timezone?: string
+          total_occurrences?: number | null
+          until_date?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "appointment_series_availability_version_id_fkey"
+            columns: ["availability_version_id"]
+            isOneToOne: false
+            referencedRelation: "professional_availability_versions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "appointment_series_patient_id_fkey"
             columns: ["patient_id"]
@@ -1080,6 +1401,212 @@ export type Database = {
             columns: ["psychologist_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_series_template_version_id_fkey"
+            columns: ["template_version_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series_template_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_series_materialization_conflicts: {
+        Row: {
+          created_at: string
+          id: string
+          occurrence_number: number
+          professional_id: string
+          proposed_end_time: string
+          proposed_start_time: string
+          reason_code: string
+          resolution_action_plan_id: string | null
+          resolved_at: string | null
+          safe_details: Json
+          series_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          occurrence_number: number
+          professional_id: string
+          proposed_end_time: string
+          proposed_start_time: string
+          reason_code: string
+          resolution_action_plan_id?: string | null
+          resolved_at?: string | null
+          safe_details?: Json
+          series_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          occurrence_number?: number
+          professional_id?: string
+          proposed_end_time?: string
+          proposed_start_time?: string
+          reason_code?: string
+          resolution_action_plan_id?: string | null
+          resolved_at?: string | null
+          safe_details?: Json
+          series_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_series_materialization_conflicts_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_series_template_versions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_config: Json
+          id: string
+          professional_id: string
+          recurrence_rule: Json
+          template_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_config?: Json
+          id?: string
+          professional_id: string
+          recurrence_rule: Json
+          template_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_config?: Json
+          id?: string
+          professional_id?: string
+          recurrence_rule?: Json
+          template_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_series_template_versions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_series_templates: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          name: string
+          professional_id: string
+          source_patient_id: string | null
+          source_series_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          name: string
+          professional_id: string
+          source_patient_id?: string | null
+          source_series_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          name?: string
+          professional_id?: string
+          source_patient_id?: string | null
+          source_series_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_series_templates_source_patient_id_fkey"
+            columns: ["source_patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_series_templates_source_series_id_fkey"
+            columns: ["source_series_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      appointment_slot_holds: {
+        Row: {
+          created_at: string
+          ends_at: string
+          expires_at: string
+          id: string
+          idempotency_key: string
+          patient_id: string | null
+          professional_id: string
+          released_at: string | null
+          starts_at: string
+          status: string
+          waitlist_entry_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          ends_at: string
+          expires_at: string
+          id?: string
+          idempotency_key: string
+          patient_id?: string | null
+          professional_id: string
+          released_at?: string | null
+          starts_at: string
+          status?: string
+          waitlist_entry_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string
+          expires_at?: string
+          id?: string
+          idempotency_key?: string
+          patient_id?: string | null
+          professional_id?: string
+          released_at?: string | null
+          starts_at?: string
+          status?: string
+          waitlist_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointment_slot_holds_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointment_slot_holds_waitlist_entry_id_fkey"
+            columns: ["waitlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -1120,6 +1647,7 @@ export type Database = {
           notes: string | null
           occurrence_count: number | null
           occurrence_number: number | null
+          occurrence_status: string
           outcome_review_required: boolean
           package_id: string | null
           patient_action_due_at: string | null
@@ -1127,6 +1655,7 @@ export type Database = {
           patient_right_status: string
           payment_config: Json | null
           payment_status: string
+          personalized_fields: string[]
           policy_snapshot_id: string | null
           previous_status: string | null
           price: number | null
@@ -1135,6 +1664,7 @@ export type Database = {
           reschedule_rejected_at: string | null
           reschedule_requested_at: string | null
           series_id: string | null
+          series_revision: number | null
           start_time: string | null
           status: string | null
           token: string | null
@@ -1179,6 +1709,7 @@ export type Database = {
           notes?: string | null
           occurrence_count?: number | null
           occurrence_number?: number | null
+          occurrence_status?: string
           outcome_review_required?: boolean
           package_id?: string | null
           patient_action_due_at?: string | null
@@ -1186,6 +1717,7 @@ export type Database = {
           patient_right_status?: string
           payment_config?: Json | null
           payment_status?: string
+          personalized_fields?: string[]
           policy_snapshot_id?: string | null
           previous_status?: string | null
           price?: number | null
@@ -1194,6 +1726,7 @@ export type Database = {
           reschedule_rejected_at?: string | null
           reschedule_requested_at?: string | null
           series_id?: string | null
+          series_revision?: number | null
           start_time?: string | null
           status?: string | null
           token?: string | null
@@ -1238,6 +1771,7 @@ export type Database = {
           notes?: string | null
           occurrence_count?: number | null
           occurrence_number?: number | null
+          occurrence_status?: string
           outcome_review_required?: boolean
           package_id?: string | null
           patient_action_due_at?: string | null
@@ -1245,6 +1779,7 @@ export type Database = {
           patient_right_status?: string
           payment_config?: Json | null
           payment_status?: string
+          personalized_fields?: string[]
           policy_snapshot_id?: string | null
           previous_status?: string | null
           price?: number | null
@@ -1253,6 +1788,7 @@ export type Database = {
           reschedule_rejected_at?: string | null
           reschedule_requested_at?: string | null
           series_id?: string | null
+          series_revision?: number | null
           start_time?: string | null
           status?: string | null
           token?: string | null
@@ -1437,44 +1973,32 @@ export type Database = {
       }
       chat_sessions: {
         Row: {
-          channel_state: Json
           context_state: Json
           created_at: string
           id: string
-          last_channel: string
-          last_message_at: string | null
           memory_summary: string | null
           memory_updated_at: string | null
-          origin_channel: string
-          title: string
+          title: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
-          channel_state?: Json
           context_state?: Json
           created_at?: string
           id?: string
-          last_channel?: string
-          last_message_at?: string | null
           memory_summary?: string | null
           memory_updated_at?: string | null
-          origin_channel?: string
-          title?: string
+          title?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
-          channel_state?: Json
           context_state?: Json
           created_at?: string
           id?: string
-          last_channel?: string
-          last_message_at?: string | null
           memory_summary?: string | null
           memory_updated_at?: string | null
-          origin_channel?: string
-          title?: string
+          title?: string | null
           updated_at?: string
           user_id?: string
         }
@@ -2469,51 +2993,36 @@ export type Database = {
       }
       messages: {
         Row: {
-          actor_kind: string | null
           attachments: Json | null
           content: string
           created_at: string
           embedding: string | null
           id: string
-          idempotency_key: string | null
-          metadata: Json
           remoteJid: string | null
           role: string
           session_id: string
-          source_channel: string
-          source_event_id: string | null
           user_id: string | null
         }
         Insert: {
-          actor_kind?: string | null
           attachments?: Json | null
           content: string
           created_at?: string
           embedding?: string | null
           id?: string
-          idempotency_key?: string | null
-          metadata?: Json
           remoteJid?: string | null
           role: string
           session_id: string
-          source_channel?: string
-          source_event_id?: string | null
           user_id?: string | null
         }
         Update: {
-          actor_kind?: string | null
           attachments?: Json | null
           content?: string
           created_at?: string
           embedding?: string | null
           id?: string
-          idempotency_key?: string | null
-          metadata?: Json
           remoteJid?: string | null
           role?: string
           session_id?: string
-          source_channel?: string
-          source_event_id?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -3161,13 +3670,11 @@ export type Database = {
           description: string | null
           financial_account_id: string | null
           id: string
-          idempotency_key: string | null
           operation_type: string
           payload: Json
           provider: string
           provider_operation_id: string | null
           provider_response: Json
-          request_fingerprint: string | null
           status: string
           updated_at: string
           user_id: string
@@ -3178,13 +3685,11 @@ export type Database = {
           description?: string | null
           financial_account_id?: string | null
           id?: string
-          idempotency_key?: string | null
           operation_type: string
           payload?: Json
           provider?: string
           provider_operation_id?: string | null
           provider_response?: Json
-          request_fingerprint?: string | null
           status?: string
           updated_at?: string
           user_id: string
@@ -3195,13 +3700,11 @@ export type Database = {
           description?: string | null
           financial_account_id?: string | null
           id?: string
-          idempotency_key?: string | null
           operation_type?: string
           payload?: Json
           provider?: string
           provider_operation_id?: string | null
           provider_response?: Json
-          request_fingerprint?: string | null
           status?: string
           updated_at?: string
           user_id?: string
@@ -5181,6 +5684,503 @@ export type Database = {
             columns: ["patient_id"]
             isOneToOne: false
             referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_availability_exceptions: {
+        Row: {
+          availability_version_id: string | null
+          created_at: string
+          ends_at: string
+          exception_kind: string
+          id: string
+          professional_id: string
+          reason: string | null
+          source: string
+          starts_at: string
+        }
+        Insert: {
+          availability_version_id?: string | null
+          created_at?: string
+          ends_at: string
+          exception_kind: string
+          id?: string
+          professional_id: string
+          reason?: string | null
+          source?: string
+          starts_at: string
+        }
+        Update: {
+          availability_version_id?: string | null
+          created_at?: string
+          ends_at?: string
+          exception_kind?: string
+          id?: string
+          professional_id?: string
+          reason?: string | null
+          source?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_exceptio_availability_version_id_fkey"
+            columns: ["availability_version_id"]
+            isOneToOne: false
+            referencedRelation: "professional_availability_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_availability_impacts: {
+        Row: {
+          appointment_id: string | null
+          availability_version_id: string
+          created_at: string
+          details: Json
+          id: string
+          impact_kind: string
+          professional_id: string
+          resolution: string
+          resolved_at: string | null
+          waitlist_entry_id: string | null
+        }
+        Insert: {
+          appointment_id?: string | null
+          availability_version_id: string
+          created_at?: string
+          details?: Json
+          id?: string
+          impact_kind: string
+          professional_id: string
+          resolution?: string
+          resolved_at?: string | null
+          waitlist_entry_id?: string | null
+        }
+        Update: {
+          appointment_id?: string | null
+          availability_version_id?: string
+          created_at?: string
+          details?: Json
+          id?: string
+          impact_kind?: string
+          professional_id?: string
+          resolution?: string
+          resolved_at?: string | null
+          waitlist_entry_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_impacts_appointment_id_fkey"
+            columns: ["appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_availability_impacts_availability_version_id_fkey"
+            columns: ["availability_version_id"]
+            isOneToOne: false
+            referencedRelation: "professional_availability_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_availability_impacts_waitlist_fkey"
+            columns: ["waitlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_availability_versions: {
+        Row: {
+          change_strategy: string
+          created_at: string
+          created_by: string | null
+          effective_from: string
+          id: string
+          legacy_snapshot: Json
+          professional_id: string
+          reason: string | null
+          status: string
+          timezone: string
+          version_number: number
+        }
+        Insert: {
+          change_strategy?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from: string
+          id?: string
+          legacy_snapshot?: Json
+          professional_id: string
+          reason?: string | null
+          status?: string
+          timezone?: string
+          version_number: number
+        }
+        Update: {
+          change_strategy?: string
+          created_at?: string
+          created_by?: string | null
+          effective_from?: string
+          id?: string
+          legacy_snapshot?: Json
+          professional_id?: string
+          reason?: string | null
+          status?: string
+          timezone?: string
+          version_number?: number
+        }
+        Relationships: []
+      }
+      professional_availability_windows: {
+        Row: {
+          availability_version_id: string
+          created_at: string
+          end_time: string
+          id: string
+          professional_id: string
+          start_time: string
+          weekday: number
+        }
+        Insert: {
+          availability_version_id: string
+          created_at?: string
+          end_time: string
+          id?: string
+          professional_id: string
+          start_time: string
+          weekday: number
+        }
+        Update: {
+          availability_version_id?: string
+          created_at?: string
+          end_time?: string
+          id?: string
+          professional_id?: string
+          start_time?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_availability_windows_availability_version_id_fkey"
+            columns: ["availability_version_id"]
+            isOneToOne: false
+            referencedRelation: "professional_availability_versions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_waitlist_entries: {
+        Row: {
+          availability_version_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          last_offered_at: string | null
+          location: string | null
+          minimum_duration_minutes: number
+          modality: string | null
+          offer_automatically: boolean
+          offer_count: number
+          patient_id: string
+          preferred_duration_minutes: number
+          priority: number
+          professional_id: string
+          rules_snapshot: Json
+          status: string
+          updated_at: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          availability_version_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_offered_at?: string | null
+          location?: string | null
+          minimum_duration_minutes?: number
+          modality?: string | null
+          offer_automatically?: boolean
+          offer_count?: number
+          patient_id: string
+          preferred_duration_minutes?: number
+          priority?: number
+          professional_id: string
+          rules_snapshot?: Json
+          status?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          availability_version_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          last_offered_at?: string | null
+          location?: string | null
+          minimum_duration_minutes?: number
+          modality?: string | null
+          offer_automatically?: boolean
+          offer_count?: number
+          patient_id?: string
+          preferred_duration_minutes?: number
+          priority?: number
+          professional_id?: string
+          rules_snapshot?: Json
+          status?: string
+          updated_at?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_waitlist_entries_availability_version_id_fkey"
+            columns: ["availability_version_id"]
+            isOneToOne: false
+            referencedRelation: "professional_availability_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_waitlist_entries_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_waitlist_events: {
+        Row: {
+          actor_type: string
+          created_at: string
+          event_type: string
+          id: string
+          offer_id: string | null
+          professional_id: string
+          safe_metadata: Json
+          waitlist_entry_id: string
+        }
+        Insert: {
+          actor_type: string
+          created_at?: string
+          event_type: string
+          id?: string
+          offer_id?: string | null
+          professional_id: string
+          safe_metadata?: Json
+          waitlist_entry_id: string
+        }
+        Update: {
+          actor_type?: string
+          created_at?: string
+          event_type?: string
+          id?: string
+          offer_id?: string | null
+          professional_id?: string
+          safe_metadata?: Json
+          waitlist_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_waitlist_events_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_offers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_waitlist_events_waitlist_entry_id_fkey"
+            columns: ["waitlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_waitlist_offer_outbox: {
+        Row: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          next_attempt_at: string
+          offer_id: string
+          payload: Json
+          professional_id: string
+          provider: string | null
+          provider_message_id: string | null
+          status: string
+          template_key: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          offer_id: string
+          payload?: Json
+          professional_id: string
+          provider?: string | null
+          provider_message_id?: string | null
+          status?: string
+          template_key?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          delivered_at?: string | null
+          id?: string
+          idempotency_key?: string
+          last_error?: string | null
+          lease_expires_at?: string | null
+          lease_token?: string | null
+          next_attempt_at?: string
+          offer_id?: string
+          payload?: Json
+          professional_id?: string
+          provider?: string | null
+          provider_message_id?: string | null
+          status?: string
+          template_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_waitlist_offer_outbox_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_offers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_waitlist_offers: {
+        Row: {
+          accepted_appointment_id: string | null
+          created_at: string
+          expires_at: string
+          hold_id: string
+          id: string
+          offered_end_time: string
+          offered_start_time: string
+          patient_id: string
+          professional_id: string
+          responded_at: string | null
+          status: string
+          token_hash: string
+          waitlist_entry_id: string
+        }
+        Insert: {
+          accepted_appointment_id?: string | null
+          created_at?: string
+          expires_at: string
+          hold_id: string
+          id?: string
+          offered_end_time: string
+          offered_start_time: string
+          patient_id: string
+          professional_id: string
+          responded_at?: string | null
+          status?: string
+          token_hash: string
+          waitlist_entry_id: string
+        }
+        Update: {
+          accepted_appointment_id?: string | null
+          created_at?: string
+          expires_at?: string
+          hold_id?: string
+          id?: string
+          offered_end_time?: string
+          offered_start_time?: string
+          patient_id?: string
+          professional_id?: string
+          responded_at?: string | null
+          status?: string
+          token_hash?: string
+          waitlist_entry_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_waitlist_offers_accepted_appointment_id_fkey"
+            columns: ["accepted_appointment_id"]
+            isOneToOne: false
+            referencedRelation: "appointments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_waitlist_offers_hold_id_fkey"
+            columns: ["hold_id"]
+            isOneToOne: false
+            referencedRelation: "appointment_slot_holds"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_waitlist_offers_patient_id_fkey"
+            columns: ["patient_id"]
+            isOneToOne: false
+            referencedRelation: "patients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_waitlist_offers_waitlist_entry_id_fkey"
+            columns: ["waitlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_waitlist_windows: {
+        Row: {
+          created_at: string
+          end_time: string
+          id: string
+          professional_id: string
+          specific_date: string | null
+          start_time: string
+          waitlist_entry_id: string
+          weekday: number | null
+        }
+        Insert: {
+          created_at?: string
+          end_time: string
+          id?: string
+          professional_id: string
+          specific_date?: string | null
+          start_time: string
+          waitlist_entry_id: string
+          weekday?: number | null
+        }
+        Update: {
+          created_at?: string
+          end_time?: string
+          id?: string
+          professional_id?: string
+          specific_date?: string | null
+          start_time?: string
+          waitlist_entry_id?: string
+          weekday?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_waitlist_windows_waitlist_entry_id_fkey"
+            columns: ["waitlist_entry_id"]
+            isOneToOne: false
+            referencedRelation: "professional_waitlist_entries"
             referencedColumns: ["id"]
           },
         ]
@@ -8859,6 +9859,25 @@ export type Database = {
         }
         Returns: Json
       }
+      cancel_appointment_action_plan: {
+        Args: {
+          p_conversation_id?: string
+          p_plan_hash: string
+          p_plan_id: string
+          p_plan_version: number
+        }
+        Returns: Json
+      }
+      cancel_appointment_action_plan_internal: {
+        Args: {
+          p_actor_user_id: string
+          p_conversation_id?: string
+          p_plan_hash: string
+          p_plan_id: string
+          p_plan_version: number
+        }
+        Returns: Json
+      }
       check_appointment_overlap: {
         Args: {
           p_end_time: string
@@ -8871,6 +9890,33 @@ export type Database = {
       claim_appointment_communication_outbox: {
         Args: { p_limit?: number; p_outbox_id?: string }
         Returns: Json
+      }
+      claim_waitlist_offer_outbox: {
+        Args: { p_limit?: number }
+        Returns: {
+          attempts: number
+          created_at: string
+          delivered_at: string | null
+          id: string
+          idempotency_key: string
+          last_error: string | null
+          lease_expires_at: string | null
+          lease_token: string | null
+          next_attempt_at: string
+          offer_id: string
+          payload: Json
+          professional_id: string
+          provider: string | null
+          provider_message_id: string | null
+          status: string
+          template_key: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "professional_waitlist_offer_outbox"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       cleanup_old_notifications: { Args: never; Returns: number }
       commit_synapse_neuroflow_run: {
@@ -8930,6 +9976,17 @@ export type Database = {
           p_user_id: string
         }
         Returns: Json
+      }
+      complete_waitlist_offer_outbox: {
+        Args: {
+          p_error?: string
+          p_lease_token: string
+          p_outbox_id: string
+          p_provider?: string
+          p_provider_message_id?: string
+          p_success: boolean
+        }
+        Returns: boolean
       }
       consume_patient_package_session: {
         Args: {
@@ -9037,6 +10094,46 @@ export type Database = {
         }
         Returns: Json
       }
+      execute_agenda_action_plan: {
+        Args: {
+          p_confirmation_channel?: string
+          p_plan_hash: string
+          p_plan_id: string
+          p_plan_version: number
+        }
+        Returns: Json
+      }
+      execute_agenda_action_plan_internal: {
+        Args: {
+          p_actor_user_id: string
+          p_confirmation_channel?: string
+          p_plan_hash: string
+          p_plan_id: string
+          p_plan_version: number
+        }
+        Returns: Json
+      }
+      execute_appointment_action_plan: {
+        Args: {
+          p_confirmation_channel?: string
+          p_conversation_id?: string
+          p_plan_hash: string
+          p_plan_id: string
+          p_plan_version: number
+        }
+        Returns: Json
+      }
+      execute_appointment_action_plan_internal: {
+        Args: {
+          p_actor_user_id: string
+          p_confirmation_channel: string
+          p_conversation_id?: string
+          p_plan_hash: string
+          p_plan_id: string
+          p_plan_version: number
+        }
+        Returns: Json
+      }
       execute_package_lifecycle_change_internal: {
         Args: {
           p_action_origin?: string
@@ -9063,6 +10160,18 @@ export type Database = {
         Returns: Json
       }
       export_user_data: { Args: never; Returns: Json }
+      get_appointment_action_plan_status: {
+        Args: { p_plan_id: string; p_plan_version?: number }
+        Returns: Json
+      }
+      get_appointment_action_plan_status_internal: {
+        Args: {
+          p_actor_user_id: string
+          p_plan_id: string
+          p_plan_version?: number
+        }
+        Returns: Json
+      }
       get_asaas_account_api_key_for_edge: {
         Args: { p_financial_account_id: string }
         Returns: string
@@ -9087,29 +10196,6 @@ export type Database = {
         Args: { end_date: string; start_date: string }
         Returns: Json
       }
-      get_neurofinance_overview_items: {
-        Args: {
-          p_end_at?: string | null
-          p_limit?: number
-          p_offset?: number
-          p_start_at?: string | null
-        }
-        Returns: {
-          amount: number
-          bank_slip_url: string | null
-          currency: string
-          description: string
-          id: string
-          invoice_url: string | null
-          item_type: string
-          occurred_at: string
-          overview_group: string
-          patient_name: string | null
-          payment_method: string | null
-          receipt_url: string | null
-          status: string
-        }[]
-      }
       get_patient_complete_appointment_history: {
         Args: { p_limit?: number; p_offset?: number; p_patient_id: string }
         Returns: Json
@@ -9130,6 +10216,7 @@ export type Database = {
           visual_kind: string
         }[]
       }
+      get_waitlist_offer: { Args: { p_token: string }; Returns: Json }
       increment_template_usage: {
         Args: { template_id: string }
         Returns: undefined
@@ -9196,6 +10283,10 @@ export type Database = {
           title: string
         }[]
       }
+      match_professional_waitlist_slot: {
+        Args: { p_ends_at: string; p_modality?: string; p_starts_at: string }
+        Returns: Json
+      }
       neurofinance_normalize_asaas_requirements: {
         Args: {
           account_status?: string
@@ -9225,6 +10316,44 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      prepare_agenda_action_plan: {
+        Args: {
+          p_action: string
+          p_idempotency_key: string
+          p_input: Json
+          p_provenance: Json
+        }
+        Returns: Json
+      }
+      prepare_agenda_action_plan_internal: {
+        Args: {
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_input: Json
+          p_provenance: Json
+        }
+        Returns: Json
+      }
+      prepare_appointment_action_plan: {
+        Args: {
+          p_action: string
+          p_idempotency_key: string
+          p_input: Json
+          p_provenance: Json
+        }
+        Returns: Json
+      }
+      prepare_appointment_action_plan_internal: {
+        Args: {
+          p_action: string
+          p_actor_user_id: string
+          p_idempotency_key: string
+          p_input: Json
+          p_plan_id?: string
+          p_provenance: Json
+        }
+        Returns: Json
       }
       prepare_appointment_invitation: {
         Args: {
@@ -9277,6 +10406,16 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      prepare_waitlist_offer: {
+        Args: {
+          p_ends_at: string
+          p_entry_id: string
+          p_idempotency_key: string
+          p_starts_at: string
+        }
+        Returns: Json
+      }
+      preview_agenda_plan: { Args: { p_input: Json }; Returns: Json }
       preview_appointment_policy_application: {
         Args: { p_appointment_ids: string[]; p_policy_version_id: string }
         Returns: Json
@@ -9289,6 +10428,10 @@ export type Database = {
           p_psychologist_id?: string
           p_start_time: string
         }
+        Returns: Json
+      }
+      preview_availability_change: {
+        Args: { p_effective_from?: string; p_windows: Json }
         Returns: Json
       }
       preview_package_lifecycle_change_internal: {
@@ -9357,6 +10500,14 @@ export type Database = {
         }
         Returns: Json
       }
+      resolve_patient_appointment_financial: {
+        Args: { p_patient_id: string }
+        Returns: Json
+      }
+      respond_waitlist_offer: {
+        Args: { p_response: string; p_token: string }
+        Returns: Json
+      }
       restore_notification: {
         Args: { p_notification_id: string }
         Returns: boolean
@@ -9368,6 +10519,17 @@ export type Database = {
           p_metadata?: Json
           p_reason?: string
           p_request_id: string
+        }
+        Returns: Json
+      }
+      save_appointment_series_template: {
+        Args: {
+          p_default_config?: Json
+          p_name: string
+          p_recurrence_rule: Json
+          p_source_patient_id?: string
+          p_source_series_id?: string
+          p_template_id: string
         }
         Returns: Json
       }
@@ -9384,6 +10546,18 @@ export type Database = {
           workflow: Json
         }[]
       }
+      save_professional_availability: {
+        Args: {
+          p_effective_from: string
+          p_reason?: string
+          p_strategy: string
+          p_timezone?: string
+          p_waitlist_entry_ids?: string[]
+          p_waitlist_strategy?: string
+          p_windows: Json
+        }
+        Returns: Json
+      }
       search_synapse_workspace: {
         Args: { p_entity_types?: string[]; p_limit?: number; p_query: string }
         Returns: {
@@ -9398,6 +10572,10 @@ export type Database = {
           title: string
         }[]
       }
+      set_professional_waitlist_entry_status: {
+        Args: { p_entry_id: string; p_status: string }
+        Returns: Json
+      }
       store_asaas_account_api_key_for_edge: {
         Args: {
           p_api_key: string
@@ -9407,6 +10585,25 @@ export type Database = {
           p_user_id: string
         }
         Returns: undefined
+      }
+      suggest_agenda_plan_smart_fit: {
+        Args: {
+          p_allow_shorter?: boolean
+          p_input: Json
+          p_minimum_duration_minutes?: number
+          p_occurrence_number: number
+          p_search_days?: number
+        }
+        Returns: Json
+      }
+      suggest_appointment_smart_fit: {
+        Args: {
+          p_allow_shorter?: boolean
+          p_appointment_id: string
+          p_minimum_duration_minutes?: number
+          p_search_days?: number
+        }
+        Returns: Json
       }
       transition_financial_entry: {
         Args: {
@@ -9427,6 +10624,10 @@ export type Database = {
       update_public_anamnesis: {
         Args: { p_content: Json; p_id: string; p_token: string }
         Returns: undefined
+      }
+      upsert_professional_waitlist_entry: {
+        Args: { p_input: Json }
+        Returns: Json
       }
       validate_package_lifecycle_progress_internal: {
         Args: {
@@ -9578,3 +10779,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+

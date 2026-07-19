@@ -104,6 +104,20 @@ export async function prepareAppointmentActionPlan(
   });
 }
 
+export async function prepareAgendaActionPlan(
+  context: AppointmentPlanContext,
+  toolName: string,
+  input: Record<string, unknown>,
+  idempotencyKey: string,
+) {
+  return rpc(context.admin, "prepare_agenda_action_plan_internal", {
+    p_actor_user_id: context.userId,
+    p_input: input,
+    p_provenance: provenance(context, toolName),
+    p_idempotency_key: idempotencyKey,
+  });
+}
+
 export async function executeAppointmentActionPlan(
   context: AppointmentPlanContext,
   reference: Pick<AppointmentPlanReference, "planId" | "planVersion" | "planHash">,
@@ -116,6 +130,20 @@ export async function executeAppointmentActionPlan(
     p_plan_hash: reference.planHash.toLowerCase(),
     p_confirmation_channel: normalizeAppointmentPlanChannel(context.channel),
     p_conversation_id: nullableUuid(context.sessionId),
+  });
+}
+
+export async function executeAgendaActionPlan(
+  context: AppointmentPlanContext,
+  reference: Pick<AppointmentPlanReference, "planId" | "planVersion" | "planHash">,
+) {
+  assertReference(reference);
+  return rpc(context.admin, "execute_agenda_action_plan_internal", {
+    p_actor_user_id: context.userId,
+    p_plan_id: reference.planId,
+    p_plan_version: reference.planVersion,
+    p_plan_hash: reference.planHash.toLowerCase(),
+    p_confirmation_channel: normalizeAppointmentPlanChannel(context.channel),
   });
 }
 

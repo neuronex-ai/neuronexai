@@ -24,8 +24,7 @@ const toPlan = (value: unknown): AppointmentActionPlan => {
 };
 
 const rpc = async (name: string, params: Record<string, unknown>) => {
-  const database = supabase as any;
-  const { data, error } = await database.rpc(name, params);
+  const { data, error } = await supabase.rpc(name as any, params as any);
   if (error) {
     const details = [error.code, error.message, error.details, error.hint]
       .filter(Boolean)
@@ -65,6 +64,15 @@ export const executeAppointmentActionPlan = (
   p_plan_hash: plan.planHash,
   p_confirmation_channel: "professional_app",
   p_conversation_id: null,
+});
+
+export const executeAgendaActionPlan = (
+  plan: Pick<AppointmentActionPlan, "planId" | "planVersion" | "planHash">,
+) => rpc("execute_agenda_action_plan", {
+  p_plan_id: plan.planId,
+  p_plan_version: plan.planVersion,
+  p_plan_hash: plan.planHash,
+  p_confirmation_channel: "professional_app",
 });
 
 export const getAppointmentActionPlan = (planId: string, planVersion?: number | null) =>

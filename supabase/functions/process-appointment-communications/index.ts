@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import {
   deliverPatientEmail,
+  escapeHtml,
   renderTemplate,
 } from "../_shared/email-delivery.ts";
 import {
@@ -53,6 +54,146 @@ type AppointmentFacts = {
   end_time: string;
   confirmation_revision: number;
   policy_snapshot_id: string | null;
+};
+
+type WaitlistOutboxRow = {
+  id: string;
+  professional_id: string;
+  offer_id: string;
+  payload: Record<string, unknown>;
+  lease_token: string;
+  lease_expires_at: string;
+};
+
+const formatWaitlistOffer = (value: string) => {
+  const date = new Date(value);
+  return {
+    date: date.toLocaleDateString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      weekday: "long",
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }),
+    time: date.toLocaleTimeString("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+  };
+};
+
+const processWaitlistOfferQueue = async (db: any, limit: number) => {
+  const claimed = await db.rpc("claim_waitlist_offer_outbox", { p_limit: limit });
+  if (claimed.error) return json({ error: "Não foi possível reservar as ofertas pendentes." }, 500);
+
+  const rows = (Array.isArray(claimed.data) ? claimed.data : []) as WaitlistOutboxRow[];
+  let delivered = 0;
+  let failed = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    try {
+      if (!row.lease_token || new Date(row.lease_expires_at) <= new Date()) {
+        skipped += 1;
+        continue;
+      }
+      const offerResult = await db
+        .from("professional_waitlist_offers")
+        .select("id,status,patient_id,professional_id,offered_start_time,offered_end_time,expires_at")
+        .eq("id", row.offer_id)
+        .eq("professional_id", row.professional_id)
+        .maybeSingle();
+      if (offerResult.error) throw offerResult.error;
+      const offer = offerResult.data;
+      if (!offer || offer.status !== "pending" || new Date(offer.expires_at) <= new Date()) {
+        const completed = await db.rpc("complete_waitlist_offer_outbox", {
+          p_outbox_id: row.id,
+          p_lease_token: row.lease_token,
+          p_success: true,
+          p_provider: "not_sent",
+          p_provider_message_id: "offer_not_pending",
+          p_error: null,
+        });
+        if (completed.error) throw completed.error;
+        skipped += 1;
+        continue;
+      }
+
+      const [patientResult, profileResult, accountResult] = await Promise.all([
+        db.from("patients").select("name,email").eq("id", offer.patient_id).eq("user_id", row.professional_id).maybeSingle(),
+        db.from("profiles").select("first_name,last_name,full_name,name,clinic_name").eq("id", row.professional_id).maybeSingle(),
+        db.auth.admin.getUserById(row.professional_id),
+      ]);
+      if (patientResult.error) throw patientResult.error;
+      if (profileResult.error) throw profileResult.error;
+      if (!patientResult.data?.email) throw new Error("O paciente não possui e-mail cadastrado.");
+
+      const professionalName = professionalDisplayName(profileResult.data || {});
+      const senderEmail = accountResult.data.user?.email || "contato@neuronex.site";
+      const patientFirstName = String(patientResult.data.name || "").trim().split(/\s+/)[0] || "Olá";
+      const responsePath = String(row.payload?.responsePath || "");
+      if (!responsePath.startsWith("/lista-de-espera/oferta?token=")) throw new Error("Caminho de resposta inválido.");
+      const responseUrl = `${appPublicUrl().replace(/\/$/, "")}${responsePath}`;
+      const starts = formatWaitlistOffer(offer.offered_start_time);
+      const expires = formatWaitlistOffer(offer.expires_at);
+      const clinic = String(profileResult.data?.clinic_name || "NeuroNex");
+      const subject = `Um horário ficou disponível com ${professionalName}`;
+      const html = `
+        <!doctype html><html lang="pt-BR"><body style="margin:0;background:#f5f5f7;color:#18181b;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:32px 16px">
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#fff;border:1px solid #e4e4e7;border-radius:28px;overflow:hidden">
+              <tr><td style="padding:32px">
+                <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#71717a">Lista de espera segura</p>
+                <h1 style="margin:0;font-size:28px;line-height:1.08">${escapeHtml(patientFirstName)}, abriu um horário</h1>
+                <p style="margin:16px 0 0;color:#52525b;line-height:1.6">${escapeHtml(professionalName)} reservou temporariamente esta vaga para você.</p>
+                <div style="margin:24px 0;padding:18px;border:1px solid #e4e4e7;border-radius:18px;background:#fafafa">
+                  <strong style="display:block;font-size:16px;text-transform:capitalize">${escapeHtml(starts.date)}</strong>
+                  <span style="display:block;margin-top:7px;color:#52525b">${escapeHtml(starts.time)} · ${escapeHtml(clinic)}</span>
+                </div>
+                <a href="${escapeHtml(responseUrl)}" style="display:inline-block;padding:14px 22px;border-radius:999px;background:#18181b;color:#fff;text-decoration:none;font-weight:800">Ver e confirmar horário</a>
+                <p style="margin:20px 0 0;color:#71717a;font-size:12px;line-height:1.55">A reserva expira em ${escapeHtml(expires.date)}, às ${escapeHtml(expires.time)}. Confirmar ou recusar não exige login.</p>
+              </td></tr>
+            </table>
+          </td></tr></table>
+        </body></html>`;
+      const text = `${patientFirstName}, abriu um horário com ${professionalName}: ${starts.date}, ${starts.time}. Confirme ou recuse em ${responseUrl}. A reserva expira às ${expires.time}.`;
+
+      const delivery = await deliverPatientEmail({
+        db,
+        userId: row.professional_id,
+        senderName: professionalName,
+        senderEmail,
+        to: patientResult.data.email,
+        subject,
+        html,
+        text,
+        senderProfile: "operational",
+      });
+      const completed = await db.rpc("complete_waitlist_offer_outbox", {
+        p_outbox_id: row.id,
+        p_lease_token: row.lease_token,
+        p_success: true,
+        p_provider: delivery.provider,
+        p_provider_message_id: delivery.providerMessageId,
+        p_error: null,
+      });
+      if (completed.error || completed.data !== true) throw completed.error || new Error("Lease de entrega expirou.");
+      delivered += 1;
+    } catch (error) {
+      await db.rpc("complete_waitlist_offer_outbox", {
+        p_outbox_id: row.id,
+        p_lease_token: row.lease_token,
+        p_success: false,
+        p_provider: null,
+        p_provider_message_id: null,
+        p_error: error instanceof Error ? error.message : "Falha desconhecida",
+      });
+      failed += 1;
+    }
+  }
+
+  return json({ success: true, queue: "waitlist", claimed: rows.length, delivered, failed, skipped });
 };
 
 const uuidPattern =
@@ -152,6 +293,9 @@ serve(async (request) => {
 
   const body = await request.json().catch(() => ({}));
   const limit = Math.max(1, Math.min(Number(body.limit || 10), 50));
+  if (body.processWaitlist === true) {
+    return processWaitlistOfferQueue(db, limit);
+  }
   const outboxId = body.outboxId ? String(body.outboxId) : null;
   const claimed = await db.rpc("claim_appointment_communication_outbox", {
     p_limit: limit,
