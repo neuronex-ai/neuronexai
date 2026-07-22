@@ -1,4 +1,5 @@
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { FormEvent, ReactNode } from "react";
 import { ArrowRight, Check, Loader2, Mail, Mic2 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
@@ -116,7 +117,7 @@ export function NeuralCastHeader() {
           <Link
             to="/neuralcast"
             className={cn(
-              "text-sm font-semibold text-[#17130f]/65 transition-colors hover:text-[#17130f]",
+              "text-sm font-semibold text-[#17130f]/[0.65] transition-colors hover:text-[#17130f]",
               pathname === "/neuralcast" && "text-[#17130f]",
             )}
           >
@@ -125,7 +126,7 @@ export function NeuralCastHeader() {
           <Link
             to="/neuralcast/newsletter"
             className={cn(
-              "text-sm font-semibold text-[#17130f]/65 transition-colors hover:text-[#17130f]",
+              "text-sm font-semibold text-[#17130f]/[0.65] transition-colors hover:text-[#17130f]",
               pathname.startsWith("/neuralcast/newsletter") && "text-[#17130f]",
             )}
           >
@@ -154,7 +155,7 @@ export function NeuralCastShell({ children }: { children: ReactNode }) {
     <div className="min-h-screen bg-[#ead8b7] font-sans text-[#17130f] selection:bg-[#17130f] selection:text-[#f4e8d1]">
       <NeuralCastHeader />
       <main>{children}</main>
-      <footer className="border-t border-[#f4e8d1]/15 bg-[#17130f] px-5 py-10 text-[#f4e8d1] md:px-8">
+      <footer className="border-t border-[#f4e8d1]/[0.15] bg-[#17130f] px-5 py-10 text-[#f4e8d1] md:px-8">
         <div className="mx-auto flex max-w-[1320px] flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="brightness-0 invert"><NeuralCastMark /></div>
@@ -162,7 +163,7 @@ export function NeuralCastShell({ children }: { children: ReactNode }) {
               Neurociência, comportamento, cultura e liderança traduzidos em ideias aplicáveis para pessoas e organizações.
             </p>
           </div>
-          <div className="text-sm text-[#f4e8d1]/55 md:text-right">
+          <div className="text-sm text-[#f4e8d1]/[0.55] md:text-right">
             <p>Pedro Luiz Pereira</p>
             <p className="mt-1">Uma publicação independente em parceria experimental com NeuroNex / NeuroX.</p>
           </div>
@@ -222,8 +223,8 @@ export function NeuralCastSubscribeForm({ inverted = false }: { inverted?: boole
           className={cn(
             "h-14 rounded-full border px-5 text-sm font-semibold outline-none transition focus:ring-2",
             inverted
-              ? "border-[#f4e8d1]/20 bg-[#f4e8d1]/8 text-[#f4e8d1] placeholder:text-[#f4e8d1]/45 focus:ring-[#f4e8d1]/35"
-              : "border-[#17130f]/15 bg-[#f4e8d1]/65 text-[#17130f] placeholder:text-[#17130f]/45 focus:ring-[#17130f]/20",
+              ? "border-[#f4e8d1]/20 bg-[#f4e8d1]/[0.08] text-[#f4e8d1] placeholder:text-[#f4e8d1]/[0.45] focus:ring-[#f4e8d1]/[0.35]"
+              : "border-[#17130f]/[0.15] bg-[#f4e8d1]/[0.65] text-[#17130f] placeholder:text-[#17130f]/[0.45] focus:ring-[#17130f]/20",
           )}
         />
         <label className="sr-only" htmlFor="neuralcast-email">E-mail</label>
@@ -238,8 +239,8 @@ export function NeuralCastSubscribeForm({ inverted = false }: { inverted?: boole
           className={cn(
             "h-14 rounded-full border px-5 text-sm font-semibold outline-none transition focus:ring-2",
             inverted
-              ? "border-[#f4e8d1]/20 bg-[#f4e8d1]/8 text-[#f4e8d1] placeholder:text-[#f4e8d1]/45 focus:ring-[#f4e8d1]/35"
-              : "border-[#17130f]/15 bg-[#f4e8d1]/65 text-[#17130f] placeholder:text-[#17130f]/45 focus:ring-[#17130f]/20",
+              ? "border-[#f4e8d1]/20 bg-[#f4e8d1]/[0.08] text-[#f4e8d1] placeholder:text-[#f4e8d1]/[0.45] focus:ring-[#f4e8d1]/[0.35]"
+              : "border-[#17130f]/[0.15] bg-[#f4e8d1]/[0.65] text-[#17130f] placeholder:text-[#17130f]/[0.45] focus:ring-[#17130f]/20",
           )}
         />
         <button
@@ -267,7 +268,7 @@ export function NeuralCastSubscribeForm({ inverted = false }: { inverted?: boole
           {message}
         </p>
       ) : null}
-      <p className={cn("mt-4 text-xs leading-relaxed", inverted ? "text-[#f4e8d1]/48" : "text-[#17130f]/48")}>
+      <p className={cn("mt-4 text-xs leading-relaxed", inverted ? "text-[#f4e8d1]/[0.48]" : "text-[#17130f]/[0.48]")}>
         Conteúdo autoral, sem excesso de e-mails. Você poderá sair da lista quando desejar.
       </p>
     </form>
@@ -286,8 +287,8 @@ export function NeuralCastArticleCard({
       className={cn(
         "group flex min-h-[360px] flex-col justify-between rounded-[30px] border p-7 transition-transform duration-300 hover:-translate-y-1 md:p-9",
         inverted
-          ? "border-[#f4e8d1]/16 bg-[#f4e8d1]/[0.045] text-[#f4e8d1]"
-          : "border-[#17130f]/12 bg-[#f4e8d1]/38 text-[#17130f]",
+          ? "border-[#f4e8d1]/[0.16] bg-[#f4e8d1]/[0.045] text-[#f4e8d1]"
+          : "border-[#17130f]/[0.12] bg-[#f4e8d1]/[0.38] text-[#17130f]",
       )}
     >
       <div>
@@ -300,7 +301,7 @@ export function NeuralCastArticleCard({
         </h2>
         <p className="mt-5 text-sm font-medium leading-relaxed opacity-65 md:text-base">{article.excerpt}</p>
       </div>
-      <div className="mt-10 flex items-center justify-between gap-4 border-t border-current/12 pt-5">
+      <div className="mt-10 flex items-center justify-between gap-4 border-t border-current/[0.12] pt-5">
         <span className="text-xs font-semibold opacity-55">{article.publishedAt}</span>
         <Link
           to={`/neuralcast/newsletter/${article.slug}`}
