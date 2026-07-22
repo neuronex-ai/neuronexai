@@ -30,9 +30,9 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
       <NeuralCastShell>
         <section className="px-5 py-28 md:px-8 md:py-40">
           <div className="mx-auto max-w-3xl text-center">
-            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#17130f]/45">Arquivo NeuralCast</p>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#17130f]/[0.45]">Arquivo NeuralCast</p>
             <h1 className="mt-6 text-5xl font-black leading-none tracking-[-0.065em] md:text-7xl">Este artigo ainda não existe.</h1>
-            <p className="mx-auto mt-6 max-w-xl text-lg font-semibold leading-relaxed text-[#17130f]/62">
+            <p className="mx-auto mt-6 max-w-xl text-lg font-semibold leading-relaxed text-[#17130f]/[0.62]">
               O endereço pode ter mudado ou a publicação ainda não foi liberada.
             </p>
             <Link
@@ -72,7 +72,7 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
                 <h1 className="max-w-[12ch] text-balance text-[clamp(4rem,9vw,8.8rem)] font-black leading-[0.84] tracking-[-0.075em]">
                   {article.title}
                 </h1>
-                <p className="mt-8 max-w-3xl text-pretty text-xl font-semibold leading-relaxed text-[#17130f]/64 md:text-2xl">
+                <p className="mt-8 max-w-3xl text-pretty text-xl font-semibold leading-relaxed text-[#17130f]/[0.64] md:text-2xl">
                   {article.excerpt}
                 </p>
               </div>
@@ -93,10 +93,10 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
             {article.sections.map((section, index) => (
               <section
                 key={`${article.slug}-${index}`}
-                className="grid gap-8 border-t border-[#17130f]/15 py-12 first:border-t-0 first:pt-0 lg:grid-cols-[0.72fr_1.28fr] lg:gap-16 md:py-16"
+                className="grid gap-8 border-t border-[#17130f]/[0.15] py-12 first:border-t-0 first:pt-0 lg:grid-cols-[0.72fr_1.28fr] lg:gap-16 md:py-16"
               >
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#17130f]/42">
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#17130f]/[0.42]">
                     {String(index + 1).padStart(2, "0")} · {article.category}
                   </p>
                   {section.heading ? (
@@ -108,7 +108,7 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
                 <div>
                   <div className="space-y-6">
                     {section.paragraphs.map((paragraph) => (
-                      <p key={paragraph} className="text-lg font-medium leading-[1.75] text-[#17130f]/72 md:text-xl">
+                      <p key={paragraph} className="text-lg font-medium leading-[1.75] text-[#17130f]/[0.72] md:text-xl">
                         {paragraph}
                       </p>
                     ))}
@@ -118,7 +118,7 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
                       {section.bullets.map((bullet) => (
                         <li
                           key={bullet}
-                          className="border-t border-[#17130f]/15 py-4 text-sm font-black leading-relaxed"
+                          className="border-t border-[#17130f]/[0.15] py-4 text-sm font-black leading-relaxed"
                         >
                           {bullet}
                         </li>
@@ -151,7 +151,7 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
               </h2>
             </div>
             <div>
-              <p className="text-base font-medium leading-relaxed text-[#f4e8d1]/58">
+              <p className="text-base font-medium leading-relaxed text-[#f4e8d1]/[0.58]">
                 Artigos autorais sobre liderança, comportamento, cultura e relações de trabalho.
               </p>
               <NeuralCastSubscribeForm inverted />
@@ -164,7 +164,7 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
             <div className="mx-auto max-w-[1120px]">
               <div className="flex items-end justify-between gap-5">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#17130f]/45">Continue lendo</p>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#17130f]/[0.45]">Continue lendo</p>
                   <h2 className="mt-5 text-4xl font-black tracking-[-0.055em] md:text-6xl">Outras reflexões.</h2>
                 </div>
                 <Link to="/neuralcast/newsletter" className="hidden items-center text-xs font-black uppercase tracking-[0.12em] md:inline-flex">
@@ -211,14 +211,14 @@ function NeuralCastArchive() {
             <h1 className="max-w-[10ch] text-balance text-[clamp(4.5rem,11vw,10rem)] font-black leading-[0.82] tracking-[-0.08em]">
               Ideias para ler, pensar e aplicar.
             </h1>
-            <p className="max-w-xl text-lg font-semibold leading-relaxed text-[#17130f]/62 md:text-xl">
+            <p className="max-w-xl text-lg font-semibold leading-relaxed text-[#17130f]/[0.62] md:text-xl">
               O arquivo público de Pedro Luiz Pereira sobre liderança, comportamento, cultura, comunicação e desenvolvimento humano.
             </p>
           </div>
         </div>
       </section>
 
-      <section className="border-y border-[#17130f]/12 bg-[#f4e8d1]/28 px-5 py-8 md:px-8">
+      <section className="border-y border-[#17130f]/[0.12] bg-[#f4e8d1]/[0.28] px-5 py-8 md:px-8">
         <div className="mx-auto flex max-w-[1320px] flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap gap-2">
             {NEURALCAST_CATEGORIES.map((item) => (
@@ -230,7 +230,7 @@ function NeuralCastArchive() {
                   "h-10 rounded-full border px-4 text-xs font-black transition-colors",
                   category === item
                     ? "border-[#17130f] bg-[#17130f] text-[#f4e8d1]"
-                    : "border-[#17130f]/15 bg-transparent text-[#17130f]/62 hover:border-[#17130f]/35 hover:text-[#17130f]",
+                    : "border-[#17130f]/[0.15] bg-transparent text-[#17130f]/[0.62] hover:border-[#17130f]/[0.35] hover:text-[#17130f]",
                 )}
               >
                 {item}
@@ -239,12 +239,12 @@ function NeuralCastArchive() {
           </div>
           <label className="relative block w-full lg:max-w-sm">
             <span className="sr-only">Buscar artigos</span>
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#17130f]/42" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#17130f]/[0.42]" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Buscar por tema ou palavra"
-              className="h-12 w-full rounded-full border border-[#17130f]/15 bg-[#ead8b7] pl-11 pr-5 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#17130f]/15"
+              className="h-12 w-full rounded-full border border-[#17130f]/[0.15] bg-[#ead8b7] pl-11 pr-5 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#17130f]/[0.15]"
             />
           </label>
         </div>
@@ -254,7 +254,7 @@ function NeuralCastArchive() {
         <div className="mx-auto max-w-[1320px]">
           <div className="mb-8 flex items-center justify-between gap-4">
             <p className="text-sm font-black">{filteredArticles.length} {filteredArticles.length === 1 ? "artigo encontrado" : "artigos encontrados"}</p>
-            <p className="text-xs font-semibold text-[#17130f]/45">Arquivo em expansão</p>
+            <p className="text-xs font-semibold text-[#17130f]/[0.45]">Arquivo em expansão</p>
           </div>
           {filteredArticles.length ? (
             <div className="grid gap-5 lg:grid-cols-2">
@@ -263,9 +263,9 @@ function NeuralCastArchive() {
               ))}
             </div>
           ) : (
-            <div className="rounded-[32px] border border-[#17130f]/12 bg-[#f4e8d1]/35 px-6 py-20 text-center">
+            <div className="rounded-[32px] border border-[#17130f]/[0.12] bg-[#f4e8d1]/[0.35] px-6 py-20 text-center">
               <h2 className="text-3xl font-black tracking-[-0.045em]">Nenhum texto encontrado.</h2>
-              <p className="mt-3 text-sm font-semibold text-[#17130f]/55">Tente outra palavra ou volte para a categoria “Todos”.</p>
+              <p className="mt-3 text-sm font-semibold text-[#17130f]/[0.55]">Tente outra palavra ou volte para a categoria “Todos”.</p>
             </div>
           )}
         </div>
@@ -280,7 +280,7 @@ function NeuralCastArchive() {
             </h2>
           </div>
           <div>
-            <p className="max-w-2xl text-lg font-medium leading-relaxed text-[#f4e8d1]/58">
+            <p className="max-w-2xl text-lg font-medium leading-relaxed text-[#f4e8d1]/[0.58]">
               Uma seleção autoral, sem ruído e sem excesso de envios.
             </p>
             <NeuralCastSubscribeForm inverted />
