@@ -74,7 +74,10 @@ export function useProfessionalWaitlist() {
         .order("priority", { ascending: true })
         .order("created_at", { ascending: true });
       if (error) throw new Error(errorMessage(error, "Não foi possível carregar a lista de espera."));
-      return (data || []) as ProfessionalWaitlistEntry[];
+      return (data || []).map((row) => ({
+        ...row,
+        patients: Array.isArray(row.patients) ? row.patients[0] || null : row.patients,
+      })) as ProfessionalWaitlistEntry[];
     },
   });
 

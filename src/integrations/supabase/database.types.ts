@@ -10522,6 +10522,10 @@ export type Database = {
         }
         Returns: Json
       }
+      save_agenda_settings_bundle: {
+        Args: { p_availability?: Json; p_policy?: Json }
+        Returns: Json
+      }
       save_appointment_series_template: {
         Args: {
           p_default_config?: Json

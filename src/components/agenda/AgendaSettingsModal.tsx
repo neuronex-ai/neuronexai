@@ -440,8 +440,7 @@ export const AgendaSettingsModal = () => {
         }
       }
 
-      let createdPolicyVersion = false;
-
+      let policyPayload: Record<string, unknown> | null = null;
       if (policyChanged) {
         if (!policyAvailable) {
           throw new Error("As regras comerciais não estão disponíveis. Reabra esta tela e tente novamente.");
@@ -454,51 +453,61 @@ export const AgendaSettingsModal = () => {
         }
 
         pendingPolicyIdempotencyKeyRef.current ||= `appointment-policy:${crypto.randomUUID()}`;
-        const { data, error } = await database.rpc("create_appointment_policy_version", {
-          p_free_cancellation_hours: normalizedPolicy.freeCancellationHours,
-          p_free_reschedule_hours: normalizedPolicy.freeRescheduleHours,
-          p_minimum_patient_reaction_hours: normalizedPolicy.minimumPatientReactionHours,
-          p_professional_response_sla_hours: normalizedPolicy.professionalResponseSlaHours,
-          p_late_cancellation_consequence: normalizedPolicy.lateCancellationConsequence,
-          p_no_show_consequence: normalizedPolicy.noShowConsequence,
-          p_package_credit_policy: normalizedPolicy.packageCreditPolicy,
-          p_charge_policy: normalizedPolicy.chargePolicy,
-          p_fiscal_policy: normalizedPolicy.fiscalPolicy,
-          p_timezone: normalizedPolicy.timezone,
-          p_effective_at: null,
-          p_reason: reason,
-          p_idempotency_key: pendingPolicyIdempotencyKeyRef.current,
-        });
-
-        if (error) throw new Error(error.message || "Não foi possível criar a nova versão das regras.");
-
-        const savedFingerprint = appointmentPolicyFingerprint(policyDraft);
-        setOriginalPolicyFingerprint(savedFingerprint);
-        setPolicyVersion(typeof data?.version === "number" ? data.version : policyVersion);
-        setPolicyEffectiveAt(typeof data?.effectiveAt === "string" ? data.effectiveAt : new Date().toISOString());
-        setPolicyReason("");
-        pendingPolicyIdempotencyKeyRef.current = null;
-        createdPolicyVersion = true;
+        policyPayload = {
+          free_cancellation_hours: normalizedPolicy.freeCancellationHours,
+          free_reschedule_hours: normalizedPolicy.freeRescheduleHours,
+          minimum_patient_reaction_hours: normalizedPolicy.minimumPatientReactionHours,
+          professional_response_sla_hours: normalizedPolicy.professionalResponseSlaHours,
+          late_cancellation_consequence: normalizedPolicy.lateCancellationConsequence,
+          no_show_consequence: normalizedPolicy.noShowConsequence,
+          package_credit_policy: normalizedPolicy.packageCreditPolicy,
+          charge_policy: normalizedPolicy.chargePolicy,
+          fiscal_policy: normalizedPolicy.fiscalPolicy,
+          timezone: normalizedPolicy.timezone,
+          reason,
+          idempotency_key: pendingPolicyIdempotencyKeyRef.current,
+        };
       }
 
-      let savedAvailability = false;
-      if (workingHoursChanged) {
-        const { data, error } = await database.rpc("save_professional_availability", {
-          p_windows: windows,
-          p_effective_from: new Date(effectiveFrom).toISOString(),
-          p_strategy: selectedAvailabilityStrategy || "keep_exceptions",
-          p_waitlist_strategy: waitlistStrategy,
-          p_waitlist_entry_ids: null,
-          p_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo",
-          p_reason: availabilityReason.trim() || "Grade de atendimento atualizada pelo profissional.",
+      const availabilityPayload = workingHoursChanged ? {
+        windows,
+        effective_from: new Date(effectiveFrom).toISOString(),
+        strategy: selectedAvailabilityStrategy || "keep_exceptions",
+        waitlist_strategy: waitlistStrategy,
+        waitlist_entry_ids: null,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo",
+        reason: availabilityReason.trim() || "Grade de atendimento atualizada pelo profissional.",
+      } : null;
+
+      let bundleResult: {
+        availability?: { impact?: AvailabilityImpact };
+        policy?: { version?: number; effectiveAt?: string };
+      } = {};
+      if (availabilityPayload || policyPayload) {
+        const { data, error } = await database.rpc("save_agenda_settings_bundle", {
+          p_availability: availabilityPayload,
+          p_policy: policyPayload,
         });
-        if (error) throw new Error(error.message || "Não foi possível salvar a nova disponibilidade.");
+        if (error) throw new Error(error.message || "Não foi possível salvar as configurações da agenda.");
+        bundleResult = (data || {}) as typeof bundleResult;
+      }
+
+      const createdPolicyVersion = Boolean(policyPayload);
+      if (createdPolicyVersion) {
+        setOriginalPolicyFingerprint(appointmentPolicyFingerprint(policyDraft));
+        setPolicyVersion(typeof bundleResult.policy?.version === "number" ? bundleResult.policy.version : policyVersion);
+        setPolicyEffectiveAt(typeof bundleResult.policy?.effectiveAt === "string" ? bundleResult.policy.effectiveAt : new Date().toISOString());
+        setPolicyReason("");
+        pendingPolicyIdempotencyKeyRef.current = null;
+      }
+
+      const savedAvailability = Boolean(availabilityPayload);
+      if (savedAvailability) {
         setOriginalWorkingHours(workingHours);
         setOriginalAdditionalWorkingHours(additionalWorkingHours);
         setOriginalWorkingHoursFingerprint(availabilityFingerprint(workingHours, additionalWorkingHours));
-        setAvailabilityImpact((data?.impact || impact) as AvailabilityImpact);
+        setAvailabilityImpact((bundleResult.availability?.impact || impact) as AvailabilityImpact);
         window.dispatchEvent(new CustomEvent("agenda-availability-updated"));
-        savedAvailability = true;
       }
 
       toast.success(

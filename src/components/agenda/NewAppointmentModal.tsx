@@ -598,9 +598,18 @@ export function NewAppointmentModal({
       notes: notesStr,
       location: values.eventType === "event" ? values.eventLocation || null : locStr,
       metadata,
+      package_id: null,
+      financial: values.eventType === "session" && values.shouldCreateTransaction
+        ? {
+            mode: "manual" as const,
+            value_per_session: values.transactionAmount || 0,
+            total: values.transactionAmount || 0,
+            charge_mode: "per_occurrence" as const,
+            payment_method: values.transactionMethod || "pix",
+            installments: values.installments || 1,
+          }
+        : { mode: "none" as const, value_per_session: 0, total: 0, charge_mode: "per_occurrence" as const },
     };
-
-    let createdPrimaryAppointment: Awaited<ReturnType<typeof createAppointment>>["newAppointment"] | null = null;
 
     try {
       if (values.recurrence) {
@@ -640,26 +649,7 @@ export function NewAppointmentModal({
           throw new Error("A disponibilidade mudou. Nenhum agendamento foi criado.");
         }
       } else {
-        const result = await createAppointment(appointmentPayload as any);
-        createdPrimaryAppointment = result.newAppointment;
-
-        if (values.eventType === "session" && result.newAppointment) {
-          if (values.shouldCreateTransaction) {
-            await createAppointmentTransaction({
-              appointmentId: result.newAppointment.id,
-              description: `Sessão - ${patients?.find((patient) => patient.id === values.patientId)?.name || "Paciente"}`,
-              amount: values.transactionAmount || 0,
-              type: "income",
-              category: "Sessão",
-              date: startDateTime,
-              payment_method: values.transactionMethod || "pix",
-              installments: values.installments || 1,
-              patient_id: values.patientId || null,
-              package_id: null,
-              status: "pending",
-            });
-          }
-        }
+        await createAppointment(appointmentPayload);
       }
 
       onOpenChange(false);
@@ -678,14 +668,6 @@ export function NewAppointmentModal({
         setSeriesPreviewError(agendaError.message);
         setStep(totalSteps);
       }
-      if (createdPrimaryAppointment) {
-        toast.warning("Agendamento criado, mas o alinhamento financeiro precisa ser revisado.");
-        onOpenChange(false);
-        form.reset();
-        setStep(1);
-        return;
-      }
-
       const message = error instanceof Error
         ? error.message
         : "Não foi possível registrar o agendamento.";

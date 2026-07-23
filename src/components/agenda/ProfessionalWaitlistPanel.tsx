@@ -3,10 +3,10 @@ import { addMinutes, format } from "date-fns";
 import {
   CalendarClock,
   ChevronLeft,
-  Clock3,
   Copy,
   Loader2,
   Pause,
+  Pencil,
   Play,
   Plus,
   Send,
@@ -117,6 +117,34 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
     setMode("list");
   };
 
+  const beginEdit = (entry: ProfessionalWaitlistEntry) => {
+    setFormValue({
+      id: entry.id,
+      patient_id: entry.patient_id,
+      priority: entry.priority,
+      valid_from: entry.valid_from,
+      valid_until: entry.valid_until,
+      minimum_duration_minutes: entry.minimum_duration_minutes,
+      preferred_duration_minutes: entry.preferred_duration_minutes,
+      modality: entry.modality,
+      location: entry.location,
+      offer_automatically: entry.offer_automatically,
+      windows: [],
+      rules_snapshot: {},
+    });
+    setWindows(entry.professional_waitlist_windows.map((item) => ({
+      key: item.id || crypto.randomUUID(),
+      mode: item.specific_date ? "date" : "weekday",
+      weekday: item.weekday ?? 3,
+      specificDate: item.specific_date || "",
+      startTime: item.start_time.slice(0, 5),
+      endTime: item.end_time.slice(0, 5),
+    })));
+    setCreatedOfferPath(null);
+    setOfferingEntryId(null);
+    setMode("form");
+  };
+
   const submitEntry = async () => {
     if (!formValue.patient_id) {
       toast.error("Selecione um paciente.");
@@ -144,7 +172,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
           communication: "A oferta automática sempre exige aceite do paciente.",
         },
       });
-      toast.success("Paciente incluído na lista de espera.");
+      toast.success(formValue.id ? "Regras da espera atualizadas." : "Paciente incluído na lista de espera.");
       resetForm();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível salvar.");
@@ -200,7 +228,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
           )}
           <div className="min-w-0">
             <h2 className="truncate text-sm font-black tracking-[-0.02em] text-foreground">
-              {mode === "form" ? "Adicionar à espera" : "Lista de espera"}
+              {mode === "form" ? formValue.id ? "Editar espera" : "Adicionar à espera" : "Lista de espera"}
             </h2>
             <p className="mt-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
               {mode === "form" ? "Regras simples e precisas" : `${activeCount} ${activeCount === 1 ? "pessoa ativa" : "pessoas ativas"}`}
@@ -270,7 +298,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
                 <div key={windowDraft.key} className="rounded-[18px] border border-border/45 bg-background/45 p-3">
                   <div className="flex items-center gap-2">
                     <Select value={windowDraft.mode} onValueChange={(value) => updateWindow(windowDraft.key, { mode: value as WindowDraft["mode"] })}><SelectTrigger className="h-10 flex-1 rounded-xl border-border/50 bg-background/60 text-xs font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="weekday">Toda semana</SelectItem><SelectItem value="date">Data específica</SelectItem></SelectContent></Select>
-                    <Button type="button" variant="ghost" size="icon" disabled={windows.length === 1} onClick={() => setWindows((current) => current.filter((item) => item.key !== windowDraft.key))} className="notification-liquid-control h-10 w-10 rounded-full" aria-label={`Remover janela ${index + 1}`}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    <Button type="button" variant="ghost" size="icon" onClick={() => setWindows((current) => current.filter((item) => item.key !== windowDraft.key))} className="notification-liquid-control h-10 w-10 rounded-full" aria-label={`Remover janela ${index + 1}`}><Trash2 className="h-3.5 w-3.5" /></Button>
                   </div>
                   <div className="mt-2">
                     {windowDraft.mode === "weekday" ? <Select value={String(windowDraft.weekday)} onValueChange={(weekday) => updateWindow(windowDraft.key, { weekday: Number(weekday) })}><SelectTrigger className="h-10 rounded-xl border-border/50 bg-background/60 text-xs font-bold"><SelectValue /></SelectTrigger><SelectContent>{WEEK_DAYS.map((day) => <SelectItem key={day.value} value={String(day.value)}>{day.label}</SelectItem>)}</SelectContent></Select> : <Input type="date" value={windowDraft.specificDate} onChange={(event) => updateWindow(windowDraft.key, { specificDate: event.target.value })} className="h-10 rounded-xl border-border/50 bg-background/60 text-xs font-bold" />}
@@ -278,6 +306,11 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
                   <div className="mt-2 grid grid-cols-2 gap-2"><Input type="time" value={windowDraft.startTime} onChange={(event) => updateWindow(windowDraft.key, { startTime: event.target.value })} className="h-10 rounded-xl border-border/50 bg-background/60 text-xs font-bold" aria-label={`Início da janela ${index + 1}`} /><Input type="time" value={windowDraft.endTime} onChange={(event) => updateWindow(windowDraft.key, { endTime: event.target.value })} className="h-10 rounded-xl border-border/50 bg-background/60 text-xs font-bold" aria-label={`Fim da janela ${index + 1}`} /></div>
                 </div>
               ))}
+              {!windows.length ? (
+                <p className="rounded-[16px] border border-dashed border-border/55 bg-background/35 px-3 py-3 text-[11px] leading-relaxed text-muted-foreground">
+                  Sem janelas: o paciente pode receber qualquer vaga que respeite a grade profissional.
+                </p>
+              ) : null}
             </div>
           </section>
 
@@ -285,7 +318,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
             <div><p className="text-xs font-black text-foreground">Oferta automática</p><p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Reserva a vaga por 2 horas e pede o aceite.</p></div>
             <Switch checked={formValue.offer_automatically} onCheckedChange={(offer_automatically) => patchForm({ offer_automatically })} aria-label="Ofertar horários automaticamente" />
           </div>
-          <Button type="button" onClick={submitEntry} disabled={isSaving} className="h-12 w-full rounded-full font-black">{isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}Adicionar à lista</Button>
+          <Button type="button" onClick={submitEntry} disabled={isSaving} className="h-12 w-full rounded-full font-black">{isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : formValue.id ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}{formValue.id ? "Salvar regras" : "Adicionar à lista"}</Button>
         </div>
       ) : (
         <div className="notification-scroll-region min-h-0 flex-1 overflow-y-auto px-4 py-4">
@@ -298,7 +331,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
               <article key={entry.id} className={cn("notification-card notification-card-liquid rounded-[20px] border p-3.5", entry.status === "paused" && "opacity-65")}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0"><div className="flex items-center gap-2"><span className={cn("flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[10px] font-black", entry.priority <= 2 ? "bg-amber-500/12 text-amber-600" : "bg-muted text-muted-foreground")}>P{entry.priority}</span><p className="truncate text-sm font-black text-foreground">{entry.patients?.name || "Paciente"}</p></div><p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{entry.professional_waitlist_windows.length ? entry.professional_waitlist_windows.map((item) => `${item.specific_date ? format(new Date(`${item.specific_date}T12:00:00`), "dd/MM") : WEEK_DAYS.find((day) => day.value === item.weekday)?.label}: ${item.start_time.slice(0, 5)}–${item.end_time.slice(0, 5)}`).join(" · ") : "Qualquer horário disponível"}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">Mín. {entry.minimum_duration_minutes} min · {entry.modality || "qualquer modalidade"}{entry.offer_automatically ? " · automático" : ""}</p></div>
-                  <div className="flex shrink-0 gap-1"><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, entry.status === "paused" ? "active" : "paused")} className="notification-liquid-control h-9 w-9 rounded-full" aria-label={entry.status === "paused" ? "Retomar espera" : "Pausar espera"}>{entry.status === "paused" ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}</Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, "removed")} className="notification-liquid-control h-9 w-9 rounded-full hover:text-destructive" aria-label="Remover da lista"><Trash2 className="h-3.5 w-3.5" /></Button></div>
+                  <div className="flex shrink-0 gap-1"><Button type="button" variant="ghost" size="icon" onClick={() => beginEdit(entry)} className="notification-liquid-control h-9 w-9 rounded-full" aria-label="Editar regras da espera"><Pencil className="h-3.5 w-3.5" /></Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, entry.status === "paused" ? "active" : "paused")} className="notification-liquid-control h-9 w-9 rounded-full" aria-label={entry.status === "paused" ? "Retomar espera" : "Pausar espera"}>{entry.status === "paused" ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}</Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, "removed")} className="notification-liquid-control h-9 w-9 rounded-full hover:text-destructive" aria-label="Remover da lista"><Trash2 className="h-3.5 w-3.5" /></Button></div>
                 </div>
                 {entry.status !== "paused" ? <Button type="button" variant="outline" onClick={() => { setOfferingEntryId(offeringEntryId === entry.id ? null : entry.id); setCreatedOfferPath(null); setOfferDuration(entry.preferred_duration_minutes); }} className="notification-liquid-control mt-3 h-10 w-full rounded-full text-xs font-black"><Send className="mr-1.5 h-3.5 w-3.5" />Ofertar uma vaga</Button> : null}
                 {offeringEntryId === entry.id ? (

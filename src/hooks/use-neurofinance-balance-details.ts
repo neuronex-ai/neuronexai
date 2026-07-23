@@ -16,7 +16,7 @@ export type BalanceDetailView = NeuroFinanceBalanceDetailView;
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 100;
 
-export async function fetchNeuroFinanceOverviewItems(userId: string) {
+export async function fetchNeuroFinanceOverviewItems() {
     const items: AccountMovement[] = [];
 
     for (let page = 0; page < MAX_PAGES; page += 1) {
@@ -45,7 +45,7 @@ export const useNeuroFinanceBalanceDetails = (view: BalanceDetailView, enabled =
         queryKey: neuroFinanceOverviewItemsQueryKey(user?.id),
         queryFn: async () => {
             if (!user?.id) return [];
-            return fetchNeuroFinanceOverviewItems(user.id);
+            return fetchNeuroFinanceOverviewItems();
         },
         select: (items) => filterBalanceDetailsByView(items, view)
             .map((item) => mapAccountMovementToTransaction(item, user?.id || "")),

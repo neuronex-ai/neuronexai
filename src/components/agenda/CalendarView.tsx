@@ -71,6 +71,12 @@ interface AvailabilityWindowConfig {
     end_time: string;
 }
 
+interface AvailabilityVersionConfig {
+    effective_from: string;
+    version_number: number;
+    professional_availability_windows: AvailabilityWindowConfig[];
+}
+
 type AppointmentWithGhost = Appointment & { isGhost?: boolean };
 
 export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen, waitlistOpen, onWaitlistOpenChange, waitlistCount = 0 }: CalendarViewProps) => {
@@ -86,7 +92,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>();
     const [isMounted, setIsMounted] = useState(false);
     const [workingHours, setWorkingHours] = useState<WorkingHoursConfig | null>(null);
-    const [availabilityWindows, setAvailabilityWindows] = useState<AvailabilityWindowConfig[] | null>(null);
+    const [availabilityVersions, setAvailabilityVersions] = useState<AvailabilityVersionConfig[] | null>(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -101,15 +107,15 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 database.from('profiles').select('working_hours').eq('id', user.id).single(),
                 database
                     .from('professional_availability_versions')
-                    .select('professional_availability_windows(weekday,start_time,end_time)')
-                    .eq('status', 'active')
-                    .order('version_number', { ascending: false })
-                    .limit(1)
-                    .maybeSingle(),
+                    .select('effective_from,version_number,professional_availability_windows(weekday,start_time,end_time)')
+                    .in('status', ['active', 'scheduled'])
+                    .order('effective_from', { ascending: true })
+                    .order('version_number', { ascending: true }),
             ]);
             if (profileResult.data?.working_hours) setWorkingHours(profileResult.data.working_hours as WorkingHoursConfig);
-            const windows = versionResult.data?.professional_availability_windows;
-            setAvailabilityWindows(Array.isArray(windows) ? windows as AvailabilityWindowConfig[] : null);
+            setAvailabilityVersions(Array.isArray(versionResult.data)
+                ? versionResult.data as AvailabilityVersionConfig[]
+                : null);
         };
         void loadAvailability();
         window.addEventListener('agenda-availability-updated', loadAvailability);
@@ -210,10 +216,18 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
     // Determine if a specific hour is blocked for a given day
     const isHourBlocked = (day: Date, hour: number): boolean => {
-        if (availabilityWindows) {
+        if (availabilityVersions?.length) {
+            const slotDate = setMinutes(setHours(day, hour), 0);
+            const version = [...availabilityVersions]
+                .filter((item) => new Date(item.effective_from) <= slotDate)
+                .sort((left, right) => {
+                    const effectiveDifference = new Date(right.effective_from).getTime() - new Date(left.effective_from).getTime();
+                    return effectiveDifference || right.version_number - left.version_number;
+                })[0];
+            if (!version) return true;
             const slotStart = hour * 60;
             const slotEnd = slotStart + 50;
-            const fits = availabilityWindows.some((window) => {
+            const fits = version.professional_availability_windows.some((window) => {
                 if (window.weekday !== day.getDay()) return false;
                 const [startHour, startMinute] = window.start_time.split(':').map(Number);
                 const [endHour, endMinute] = window.end_time.split(':').map(Number);
