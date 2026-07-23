@@ -22,6 +22,10 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
+import {
+  useAgendaV2,
+  type AgendaPlanSmartFitCandidate,
+} from "@/hooks/use-agenda-v2";
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import type { ProfessionalAppointmentAction } from "@/hooks/use-appointment-professional-action";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
@@ -65,8 +69,10 @@ import {
   QrCode,
   Repeat,
   ShieldCheck,
+  TimerReset,
   User,
   Video,
+  WandSparkles,
   X,
   XCircle,
 } from "lucide-react";
@@ -146,6 +152,8 @@ export const AppointmentDetailModal = ({
   const [sessionType, setSessionType] = useState("follow_up");
   const [modality, setModality] = useState<"presencial" | "online">("presencial");
   const [professionalAction, setProfessionalAction] = useState<ProfessionalAppointmentAction | null>(null);
+  const [smartFitCandidates, setSmartFitCandidates] = useState<AgendaPlanSmartFitCandidate[]>([]);
+  const [allowShorterSmartFit, setAllowShorterSmartFit] = useState(false);
   const loadedAppointmentKeyRef = useRef<string | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyBackButtonRef = useRef<HTMLButtonElement>(null);
@@ -155,6 +163,10 @@ export const AppointmentDetailModal = ({
   const navigate = useNavigate();
   const sendEmail = useSendEmail();
   const updateAppointment = useUpdateAppointment();
+  const {
+    suggestAppointmentSmartFit,
+    isSuggestingAppointmentSmartFit,
+  } = useAgendaV2();
   const open = controlledOpen ?? internalOpen;
   const setOpen = onOpenChange ?? setInternalOpen;
   const shouldReduceMotion = useReducedMotion();
@@ -174,6 +186,8 @@ export const AppointmentDetailModal = ({
     ? LIFECYCLE_LABELS[appointment.lifecycle_status] || "Situação do agendamento atualizada"
     : null;
   const invitationBlockedByPendingRequest = Boolean(lifecycle.pendingRequest);
+  const smartFitAvailable = new Date(appointment.end_time) > new Date()
+    && !["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "");
 
   const loadData = useCallback(async () => {
     setStep(1);
@@ -187,6 +201,8 @@ export const AppointmentDetailModal = ({
     setEventLocation(currentMetadata.eventLocation || appointment.location || "");
     setSessionType(currentMetadata.sessionType || "follow_up");
     setModality(currentMetadata.modality === "online" || appointment.type === "online" ? "online" : "presencial");
+    setSmartFitCandidates([]);
+    setAllowShorterSmartFit(false);
 
     if (appointment.patient_id) {
       const { data: patient } = await supabase
@@ -253,9 +269,13 @@ export const AppointmentDetailModal = ({
   };
 
   const buildTimeUpdates = () => {
-    const datePart = format(new Date(appointment.start_time), "yyyy-MM-dd");
-    const newStart = new Date(`${datePart}T${startTime}:00-03:00`);
-    const newEnd = new Date(`${datePart}T${endTime}:00-03:00`);
+    const sourceDate = new Date(appointment.start_time);
+    const [startHours, startMinutes] = startTime.split(":").map(Number);
+    const [endHours, endMinutes] = endTime.split(":").map(Number);
+    const newStart = new Date(sourceDate);
+    const newEnd = new Date(sourceDate);
+    newStart.setHours(startHours, startMinutes, 0, 0);
+    newEnd.setHours(endHours, endMinutes, 0, 0);
     if (newEnd <= newStart) newEnd.setDate(newEnd.getDate() + 1);
 
     return {
@@ -306,6 +326,45 @@ export const AppointmentDetailModal = ({
 
     toast.success("Agendamento atualizado.");
     setOpen(false);
+  };
+
+  const loadSmartFitCandidates = async () => {
+    setSmartFitCandidates([]);
+    try {
+      const result = await suggestAppointmentSmartFit({
+        appointmentId: appointment.id,
+        allowShorter: allowShorterSmartFit,
+        minimumDurationMinutes: 30,
+      });
+      setSmartFitCandidates(result.candidates);
+      if (!result.candidates.length) {
+        toast.info("Não há encaixe compatível nos próximos 14 dias.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível sugerir um reencaixe.");
+    }
+  };
+
+  const applySmartFitCandidate = async (candidate: AgendaPlanSmartFitCandidate) => {
+    try {
+      await updateAppointment.mutateAsync({
+        id: appointment.id,
+        originChannel: "synapse_text",
+        updates: {
+          start_time: candidate.startTime,
+          end_time: candidate.endTime,
+        },
+      });
+      toast.success(
+        candidate.keepsFullDuration
+          ? "Reencaixe do Synapse aplicado."
+          : "Reencaixe com duração reduzida aplicado e marcado como personalizado.",
+      );
+      setOpen(false);
+    } catch {
+      // The mutation already restores optimistic state and reports the
+      // canonical action-plan error.
+    }
   };
 
   const handleWhatsApp = () => {
@@ -523,8 +582,87 @@ export const AppointmentDetailModal = ({
                   />
                 ) : null}
 
+                {smartFitAvailable ? (
+                  <section className="notes-liquid-surface rounded-[22px] border p-4" aria-labelledby={`smart-fit-${appointment.id}`}>
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
+                          <WandSparkles className="h-4 w-4" aria-hidden="true" />
+                        </span>
+                        <div className="min-w-0">
+                          <h3 id={`smart-fit-${appointment.id}`} className="text-sm font-black text-foreground">
+                            Reencaixe inteligente
+                          </h3>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                            O Synapse prioriza a duração completa e respeita grade, bloqueios e outros compromissos.
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => void loadSmartFitCandidates()}
+                        disabled={isSuggestingAppointmentSmartFit || updateAppointment.isPending}
+                        className="notification-liquid-control min-h-11 shrink-0 rounded-full border-border/45 px-4 text-xs font-black"
+                      >
+                        {isSuggestingAppointmentSmartFit
+                          ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" />
+                          : <WandSparkles className="mr-2 h-4 w-4" />}
+                        Sugerir horários
+                      </Button>
+                    </div>
+
+                    <button
+                      type="button"
+                      aria-pressed={allowShorterSmartFit}
+                      onClick={() => {
+                        setAllowShorterSmartFit((current) => !current);
+                        setSmartFitCandidates([]);
+                      }}
+                      className={cn(
+                        "synapse-chat-glass mt-3 flex min-h-11 w-full items-center justify-between rounded-[15px] border px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                        allowShorterSmartFit && "synapse-liquid-tab-active",
+                      )}
+                    >
+                      <span className="flex items-center gap-2 text-xs font-bold text-foreground">
+                        <TimerReset className="h-3.5 w-3.5" aria-hidden="true" />
+                        Permitir redução somente desta sessão
+                      </span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground">
+                        mínimo 30 min
+                      </span>
+                    </button>
+
+                    {smartFitCandidates.length ? (
+                      <div className="mt-3 grid gap-2" aria-live="polite">
+                        {smartFitCandidates.map((candidate) => (
+                          <button
+                            key={`${candidate.startTime}-${candidate.durationMinutes}`}
+                            type="button"
+                            disabled={updateAppointment.isPending}
+                            onClick={() => void applySmartFitCandidate(candidate)}
+                            className="agenda-choice-card synapse-chat-glass flex min-h-12 items-center justify-between gap-3 rounded-[16px] border px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-xs font-black text-foreground">
+                                {format(new Date(candidate.startTime), "EEE, dd 'de' MMM · HH:mm", { locale: ptBR })}
+                              </span>
+                              <span className="mt-0.5 block text-[10px] font-semibold text-muted-foreground">
+                                {candidate.keepsFullDuration ? "Duração original preservada" : "Exceção personalizada"}
+                              </span>
+                            </span>
+                            <span className="shrink-0 rounded-full bg-foreground/[0.07] px-2.5 py-1 text-[10px] font-black text-foreground">
+                              {candidate.durationMinutes} min
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
+
                 {isEvent && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <FieldShell label="Título" className="sm:col-span-2">
                       <input value={eventTitle} onChange={(e) => setEventTitle(e.target.value)} className={inputClassName} />
                     </FieldShell>

@@ -114,6 +114,14 @@ export interface AgendaPlanSmartFitResult {
   candidates: AgendaPlanSmartFitCandidate[];
 }
 
+export interface AppointmentSmartFitResult {
+  appointmentId: string;
+  originalStartTime: string;
+  originalEndTime: string;
+  requiresConfirmation: true;
+  candidates: Array<AgendaPlanSmartFitCandidate & { reasonCodes?: string[] }>;
+}
+
 export interface AgendaSeriesTemplate {
   id: string;
   name: string;
@@ -264,6 +272,29 @@ export function useAgendaV2() {
     },
   });
 
+  const existingAppointmentSmartFitMutation = useMutation({
+    mutationFn: async ({
+      appointmentId,
+      allowShorter = false,
+      minimumDurationMinutes = 30,
+    }: {
+      appointmentId: string;
+      allowShorter?: boolean;
+      minimumDurationMinutes?: number;
+    }) => {
+      if (!user?.id) throw new Error("Sessão expirada. Entre novamente.");
+      const database = supabase;
+      const { data, error } = await database.rpc("suggest_appointment_smart_fit", {
+        p_appointment_id: appointmentId,
+        p_search_days: 14,
+        p_allow_shorter: allowShorter,
+        p_minimum_duration_minutes: minimumDurationMinutes,
+      });
+      if (error) throw new Error(rpcError(error, "Não foi possível sugerir um reencaixe."));
+      return data as AppointmentSmartFitResult;
+    },
+  });
+
   return {
     previewAgendaPlan: previewMutation.mutateAsync,
     createAgendaSeries: createMutation.mutateAsync,
@@ -271,6 +302,8 @@ export function useAgendaV2() {
     isCreatingAgendaSeries: createMutation.isPending,
     suggestAgendaPlanSmartFit: smartFitMutation.mutateAsync,
     isSuggestingAgendaPlanSmartFit: smartFitMutation.isPending,
+    suggestAppointmentSmartFit: existingAppointmentSmartFitMutation.mutateAsync,
+    isSuggestingAppointmentSmartFit: existingAppointmentSmartFitMutation.isPending,
   };
 }
 

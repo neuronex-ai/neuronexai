@@ -757,7 +757,7 @@ export const AgendaSettingsModal = () => {
                   <div className="grid gap-2">
                     {[
                       { value: "keep_exceptions" as const, title: "Salvar e manter como exceções", description: "A nova grade vale agora; estas sessões continuam nos horários atuais." },
-                      { value: "resolve_before_save" as const, title: "Ajustar conflitos antes", description: "Nada muda até você reencaixar ou editar as sessões listadas." },
+                      { value: "resolve_before_save" as const, title: "Reencaixar com o Synapse antes", description: "Abrimos cada conflito com sugestões compatíveis; nada muda na grade até você terminar." },
                       { value: "keep_previous_until" as const, title: "Programar a nova grade", description: "A regra atual continua até a data que você escolher." },
                     ].map((option) => (
                       <button

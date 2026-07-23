@@ -3,7 +3,10 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { prepareAndExecuteAppointmentAction } from "@/lib/appointment-action-plans";
+import {
+  prepareAndExecuteAppointmentAction,
+  type AppointmentActionOriginChannel,
+} from "@/lib/appointment-action-plans";
 import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 import type { Appointment } from "@/types";
@@ -11,12 +14,17 @@ import type { Appointment } from "@/types";
 interface UpdateAppointmentData {
   id: string;
   updates: Partial<Omit<Appointment, "id" | "user_id" | "created_at">>;
+  originChannel?: AppointmentActionOriginChannel;
 }
 
 const MATERIAL_FIELDS = new Set(["start_time", "end_time", "type", "location"]);
 const DIRECT_CLINICAL_FIELDS = new Set(["notes", "metadata"]);
 
-const updateAppointmentFn = async ({ id, updates }: UpdateAppointmentData, userId: string) => {
+const updateAppointmentFn = async ({
+  id,
+  updates,
+  originChannel = "professional_app",
+}: UpdateAppointmentData, userId: string) => {
   const { data: existingAppointment, error: fetchError } = await supabase
     .from("appointments")
     .select("*")
@@ -48,7 +56,7 @@ const updateAppointmentFn = async ({ id, updates }: UpdateAppointmentData, userI
         template: "appointment_cancelled",
         reminderPolicy: "cancelled",
       },
-    }, `professional-app:cancel:${id}:${crypto.randomUUID()}`);
+    }, `${originChannel}:cancel:${id}:${crypto.randomUUID()}`, originChannel);
     if (!plan.result) throw new Error("O cancelamento não retornou um resultado válido.");
   } else if (hasMaterialChange) {
     const startTime = updates.start_time || existingAppointment.start_time;
@@ -65,7 +73,7 @@ const updateAppointmentFn = async ({ id, updates }: UpdateAppointmentData, userI
         template: "appointment_reconfirmation_required",
         reminderPolicy: "professional_settings",
       },
-    }, `professional-app:reschedule:${id}:${crypto.randomUUID()}`);
+    }, `${originChannel}:reschedule:${id}:${crypto.randomUUID()}`, originChannel);
   }
 
   const directUpdates: Record<string, unknown> = {};

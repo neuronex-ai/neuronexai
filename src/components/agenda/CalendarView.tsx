@@ -173,7 +173,11 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
         const duration = new Date(appointment.end_time).getTime() - oldStart.getTime();
 
         const newStart = new Date(targetDate);
-        newStart.setMinutes(oldStart.getMinutes());
+        if (view === "monthly") {
+            newStart.setHours(oldStart.getHours(), oldStart.getMinutes(), 0, 0);
+        } else {
+            newStart.setMinutes(oldStart.getMinutes(), 0, 0);
+        }
         const newEnd = new Date(newStart.getTime() + duration);
 
         const now = new Date();
@@ -205,8 +209,9 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
             });
             toast.success("Agendamento reagendado");
             refetch();
-        } catch (err) {
-            toast.error("Falha ao mover agendamento");
+        } catch {
+            // useUpdateAppointment restores the optimistic state and exposes the
+            // canonical action-plan error (availability, conflict or policy).
         }
     };
 

@@ -14,6 +14,12 @@ export type AppointmentActionPlan = {
   result?: Record<string, unknown>;
 };
 
+export type AppointmentActionOriginChannel =
+  | "professional_app"
+  | "synapse_text"
+  | "synapse_voice"
+  | "synapse_whatsapp";
+
 const toPlan = (value: unknown): AppointmentActionPlan => {
   if (!value || typeof value !== "object") throw new Error("O servidor não retornou um plano válido.");
   const plan = value as Record<string, unknown>;
@@ -49,20 +55,22 @@ export const prepareAppointmentActionPlan = (
   action: "create" | "reschedule" | "cancel",
   input: Record<string, unknown>,
   idempotencyKey: string,
+  originChannel: AppointmentActionOriginChannel = "professional_app",
 ) => rpc("prepare_appointment_action_plan", {
   p_action: action,
   p_input: input,
-  p_provenance: { origin_channel: "professional_app" },
+  p_provenance: { origin_channel: originChannel },
   p_idempotency_key: idempotencyKey,
 });
 
 export const executeAppointmentActionPlan = (
   plan: Pick<AppointmentActionPlan, "planId" | "planVersion" | "planHash">,
+  confirmationChannel: AppointmentActionOriginChannel = "professional_app",
 ) => rpc("execute_appointment_action_plan", {
   p_plan_id: plan.planId,
   p_plan_version: plan.planVersion,
   p_plan_hash: plan.planHash,
-  p_confirmation_channel: "professional_app",
+  p_confirmation_channel: confirmationChannel,
   p_conversation_id: null,
 });
 
@@ -94,15 +102,16 @@ export const prepareAndExecuteAppointmentAction = async (
   action: "create" | "reschedule" | "cancel",
   input: Record<string, unknown>,
   idempotencyKey: string,
+  originChannel: AppointmentActionOriginChannel = "professional_app",
 ) => {
-  const prepared = await prepareAppointmentActionPlan(action, input, idempotencyKey);
+  const prepared = await prepareAppointmentActionPlan(action, input, idempotencyKey, originChannel);
   if (prepared.status === "review_required") {
     throw new Error("O impacto financeiro ou fiscal precisa de revisão antes desta alteração.");
   }
   if (prepared.status !== "awaiting_confirmation") {
     throw new Error("O plano não está disponível para confirmação. Atualize os dados e tente novamente.");
   }
-  const executed = await executeAppointmentActionPlan(prepared);
+  const executed = await executeAppointmentActionPlan(prepared, originChannel);
   if (executed.status === "completed") return executed;
   if (executed.status === "awaiting_confirmation" || executed.status === "superseded") {
     throw new Error("Os dados mudaram durante a confirmação. Revise o agendamento atualizado e confirme novamente.");

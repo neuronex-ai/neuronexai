@@ -85,4 +85,93 @@ describe("agenda scheduling", () => {
 
     expect(rankSmartFitCandidates(original, [shortened, full])[0]).toEqual(full);
   });
+
+  it("supports several weekdays without losing the first-session pattern", () => {
+    const occurrences = generateAgendaOccurrences({
+      firstStartTime: localDate("2026-07-20"),
+      durationMinutes: 50,
+      rule: {
+        kind: "weekly",
+        weekDays: [1, 3],
+        termination: { kind: "count", count: 5 },
+      },
+    });
+
+    expect(occurrences.map((item) => new Date(item.startTime).getDay())).toEqual([1, 3, 1, 3, 1]);
+    expect(occurrences.every((item) => new Date(item.startTime).getHours() === 9)).toBe(true);
+  });
+
+  it("deduplicates and orders explicit dates inside the configured limit", () => {
+    const occurrences = generateAgendaOccurrences({
+      firstStartTime: localDate("2026-07-20"),
+      durationMinutes: 50,
+      rule: {
+        kind: "custom_dates",
+        customDates: ["2026-08-03", "2026-07-27", "2026-07-27", "2026-07-19"],
+        termination: { kind: "count", count: 4 },
+      },
+    });
+
+    expect(occurrences.map((item) => item.startTime.slice(0, 10))).toEqual([
+      "2026-07-27",
+      "2026-08-03",
+    ]);
+  });
+
+  it("distributes a fixed session count across the complete date range", () => {
+    const occurrences = generateAgendaOccurrences({
+      firstStartTime: localDate("2026-07-20"),
+      durationMinutes: 50,
+      rule: {
+        kind: "range_distribution",
+        customDates: ["2026-08-10"],
+        termination: { kind: "count", count: 4 },
+      },
+    });
+
+    expect(occurrences.map((item) => item.startTime.slice(0, 10))).toEqual([
+      "2026-07-20",
+      "2026-07-27",
+      "2026-08-03",
+      "2026-08-10",
+    ]);
+    expect(occurrences[1].status).toBe("adjusted");
+  });
+
+  it("rejects a final date before the first session", () => {
+    expect(() => generateAgendaOccurrences({
+      firstStartTime: localDate("2026-07-20"),
+      durationMinutes: 50,
+      rule: {
+        kind: "weekly",
+        weekDays: [1],
+        termination: { kind: "until", untilDate: "2026-07-19" },
+      },
+    })).toThrow("A data final precisa ser igual ou posterior");
+  });
+
+  it("marks modality and location as personalized without changing the base time", () => {
+    const occurrences = generateAgendaOccurrences({
+      firstStartTime: localDate("2026-07-20"),
+      durationMinutes: 50,
+      rule: {
+        kind: "weekly",
+        weekDays: [1],
+        termination: { kind: "count", count: 2 },
+      },
+      overrides: [{
+        occurrenceNumber: 2,
+        modality: "online",
+        location: null,
+        reason: "Exceção de modalidade",
+      }],
+    });
+
+    expect(occurrences[1]).toMatchObject({
+      status: "customized",
+      changedFields: ["modality", "location"],
+      overrideReason: "Exceção de modalidade",
+    });
+    expect(new Date(occurrences[1].startTime).getHours()).toBe(9);
+  });
 });

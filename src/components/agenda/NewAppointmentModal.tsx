@@ -594,7 +594,9 @@ export function NewAppointmentModal({
       patient_id: values.eventType === "session" ? values.patientId || null : null,
       start_time: startDateTime,
       end_time: endDateTime,
-      type: values.eventType === "session" ? (values.modality as "presencial" | "online") : "block",
+      type: (values.eventType === "session"
+        ? values.modality
+        : "block") as "presencial" | "online" | "block",
       notes: notesStr,
       location: values.eventType === "event" ? values.eventLocation || null : locStr,
       metadata,
