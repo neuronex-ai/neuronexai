@@ -296,7 +296,7 @@ const Ajustes = () => {
                                                         )}
                                                     >
                                                         <div className="flex aspect-[1.8/1] items-center justify-center overflow-hidden rounded-2xl border border-white/[0.08] bg-gradient-to-br from-zinc-800 via-zinc-950 to-black shadow-inner">
-                                                            <Moon className="h-7 w-7 text-white transition-transform duration-300 group-hover:scale-105" />
+                                                            <Moon className="h-7 w-7 text-white" />
                                                         </div>
                                                         <p className="mt-4 text-sm font-black">Tema escuro</p>
                                                         <p className="mt-1 text-xs font-medium opacity-60">Contraste confortável para ambientes com pouca luz.</p>
@@ -315,7 +315,7 @@ const Ajustes = () => {
                                                         )}
                                                     >
                                                         <div className="flex aspect-[1.8/1] items-center justify-center rounded-2xl border border-zinc-200 bg-gradient-to-br from-white via-zinc-50 to-zinc-200 shadow-inner">
-                                                            <Sun className="h-7 w-7 text-zinc-950 transition-transform duration-300 group-hover:rotate-12" />
+                                                            <Sun className="h-7 w-7 text-zinc-950" />
                                                         </div>
                                                         <p className="mt-4 text-sm font-black">Tema claro</p>
                                                         <p className="mt-1 text-xs font-medium opacity-60">Leitura nítida para ambientes bem iluminados.</p>

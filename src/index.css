@@ -2355,12 +2355,12 @@
 
   .desktop-retina-interactive {
     transition-property: transform, background-color, border-color, box-shadow, opacity;
-    transition-duration: 420ms;
-    transition-timing-function: cubic-bezier(0.32, 0.72, 0, 1);
+    transition-duration: 260ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   .desktop-retina-interactive:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
   }
 
   .desktop-retina-interactive:active {
@@ -2371,6 +2371,70 @@
   .global-retina-navbar .desktop-retina-interactive:active {
     transform: translateY(0.5px) scale(0.997);
     transition-duration: 100ms;
+  }
+
+  [data-neuronex-surface="professional-desktop"] :where(
+    button,
+    a[href],
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"]
+  ):not(:disabled):not([aria-disabled="true"]):not(.desktop-retina-interactive):not(.desktop-tactile):not(.dashboard-tactile):not(.synapse-launcher-action) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, filter, translate, scale;
+    transition-duration: 240ms;
+    transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  [data-neuronex-surface="professional-desktop"] :where(
+    button,
+    a[href],
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"]
+  ):focus-visible {
+    outline-offset: 3px;
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    [data-neuronex-surface="professional-desktop"] :where(
+      button,
+      a[href],
+      [role="button"],
+      [role="tab"],
+      [role="menuitem"]
+    ):not(:disabled):not([aria-disabled="true"]):not(.desktop-retina-interactive):not(.desktop-tactile):not(.dashboard-tactile):not(.synapse-launcher-action):hover {
+      translate: 0 -0.5px;
+      scale: 1.002;
+      filter: brightness(1.018);
+    }
+
+    [data-neuronex-surface="professional-desktop"] :where(
+      button,
+      a[href],
+      [role="button"],
+      [role="tab"],
+      [role="menuitem"]
+    ):not(:disabled):not([aria-disabled="true"]):not(.desktop-retina-interactive):not(.desktop-tactile):not(.dashboard-tactile):not(.synapse-launcher-action):active {
+      translate: 0 0.5px;
+      scale: 0.985;
+      filter: brightness(0.985);
+      transition-duration: 110ms;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    [data-neuronex-surface="professional-desktop"] :where(
+      button,
+      a[href],
+      [role="button"],
+      [role="tab"],
+      [role="menuitem"]
+    ) {
+      translate: none !important;
+      scale: none !important;
+      filter: none !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 
   /* Teleconsulta desktop: static Lumen surfaces keep the clinical workspace

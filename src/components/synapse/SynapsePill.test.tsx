@@ -42,6 +42,8 @@ describe('Synapse voice presence', () => {
 
         const launcher = screen.getByRole('toolbar', { name: 'Conversar com o Synapse' });
         expect(launcher).toBeInTheDocument();
+        expect(launcher).toHaveAttribute('data-theme-adaptive', 'true');
+        expect(launcher).not.toHaveClass('text-white');
 
         const textAction = screen.getByRole('button', { name: 'Abrir conversa por texto com o Synapse' });
         const voiceAction = screen.getByRole('button', { name: 'Iniciar conversa por voz com o Synapse' });
@@ -49,6 +51,8 @@ describe('Synapse voice presence', () => {
         expect(textAction).toHaveAttribute('data-synapse-action', 'text');
         expect(voiceAction).toHaveAttribute('aria-pressed', 'false');
         expect(voiceAction).toHaveAttribute('data-synapse-action', 'voice');
+        expect(textAction.className).not.toContain('ring-white');
+        expect(voiceAction.className).not.toContain('ring-white');
 
         fireEvent.click(textAction);
         expect(mocks.setActiveTab).toHaveBeenCalledWith('chat');
