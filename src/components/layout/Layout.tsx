@@ -28,7 +28,9 @@ export const Layout = ({ children }: LayoutProps) => {
   return (
     <div className={cn(
       "min-h-screen flex flex-col relative bg-background text-foreground"
-    )}>
+    )}
+      data-neuronex-surface={!isMobile ? "professional-desktop" : undefined}
+    >
       {/* Camada global de canvas: todas as telas desktop devem revelar a mesma base. */}
       {!isMobile ? <DesktopLumenBackdrop /> : null}
 

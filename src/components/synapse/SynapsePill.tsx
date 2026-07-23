@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AudioLines, MessageCircle } from "lucide-react";
 
-import { Magnetic } from "@/components/animations/Magnetic";
 import { useSynapse } from "@/context/SynapseContext";
 import { SynapseLiquidOrb } from "./SynapseLiquidOrb";
 
@@ -81,21 +80,21 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         };
 
         return (
-            <Magnetic strength={0.11} className="rounded-full">
-                <div
-                    className="synapse-launcher relative flex h-[56px] w-[128px] items-center rounded-full border p-[5px] text-white"
-                    role="toolbar"
-                    aria-label="Conversar com o Synapse"
-                    data-synapse-launcher="true"
-                >
+            <div
+                className="synapse-launcher relative flex h-[56px] w-[128px] items-center rounded-full border p-[5px]"
+                role="toolbar"
+                aria-label="Conversar com o Synapse"
+                data-synapse-launcher="true"
+                data-theme-adaptive="true"
+            >
                     <motion.button
                         type="button"
                         onClick={openVoiceConversation}
                         disabled={voiceStatus === "disconnecting"}
-                        whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
-                        whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
-                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-full rounded-r-[18px] outline-none focus-visible:ring-2 focus-visible:ring-white/70 disabled:cursor-wait disabled:opacity-60"
+                        whileHover={shouldReduceMotion ? undefined : { y: -0.5, scale: 1.012 }}
+                        whileTap={shouldReduceMotion ? undefined : { y: 0.5, scale: 0.982 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.6 }}
+                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-full rounded-r-[18px] outline-none disabled:cursor-wait disabled:opacity-60"
                         aria-label="Iniciar conversa por voz com o Synapse"
                         aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
                         aria-pressed={isVoiceSessionActive}
@@ -108,10 +107,10 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                     <motion.button
                         type="button"
                         onClick={openTextConversation}
-                        whileHover={shouldReduceMotion ? undefined : { scale: 1.035 }}
-                        whileTap={shouldReduceMotion ? undefined : { scale: 0.985 }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 460, damping: 34 }}
-                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-[18px] rounded-r-full outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+                        whileHover={shouldReduceMotion ? undefined : { y: -0.5, scale: 1.012 }}
+                        whileTap={shouldReduceMotion ? undefined : { y: 0.5, scale: 0.982 }}
+                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.6 }}
+                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-[18px] rounded-r-full outline-none"
                         aria-label="Abrir conversa por texto com o Synapse"
                         aria-controls="synapse-panel"
                         data-synapse-action="text"
@@ -119,8 +118,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                     >
                         <MessageCircle className="h-[19px] w-[19px]" strokeWidth={1.75} aria-hidden="true" />
                     </motion.button>
-                </div>
-            </Magnetic>
+            </div>
         );
     }
 

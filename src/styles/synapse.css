@@ -29,6 +29,22 @@
   --synapse-shadow-raised: 0 28px 84px -52px rgba(17, 17, 17, 0.58);
   --synapse-shadow-focus: 0 0 0 1px var(--synapse-focus-ring), 0 18px 58px -38px var(--synapse-focus-glow);
   --synapse-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  --synapse-launcher-shell: rgba(247, 247, 245, 0.91);
+  --synapse-launcher-border: rgba(17, 17, 19, 0.105);
+  --synapse-launcher-sheen: rgba(255, 255, 255, 0.66);
+  --synapse-launcher-inset: rgba(255, 255, 255, 0.84);
+  --synapse-launcher-edge: rgba(17, 17, 19, 0.045);
+  --synapse-launcher-text: rgba(24, 24, 27, 0.68);
+  --synapse-launcher-text-hover: rgba(12, 12, 14, 0.94);
+  --synapse-launcher-action: rgba(255, 255, 255, 0.32);
+  --synapse-launcher-action-hover: rgba(255, 255, 255, 0.7);
+  --synapse-launcher-action-border: rgba(17, 17, 19, 0.065);
+  --synapse-launcher-action-border-hover: rgba(17, 17, 19, 0.11);
+  --synapse-launcher-divider: rgba(17, 17, 19, 0.13);
+  --synapse-launcher-focus: rgba(17, 17, 19, 0.32);
+  --synapse-launcher-shadow:
+    0 24px 58px -32px rgba(17, 17, 19, 0.46),
+    0 8px 20px -15px rgba(17, 17, 19, 0.24);
 }
 
 .dark {
@@ -62,6 +78,22 @@
   --synapse-shadow-raised: 0 34px 100px -54px rgba(0, 0, 0, 0.98);
   --synapse-shadow-focus: 0 0 0 1px var(--synapse-focus-ring), 0 20px 70px -42px var(--synapse-focus-glow);
   --synapse-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  --synapse-launcher-shell: rgba(7, 7, 8, 0.94);
+  --synapse-launcher-border: rgba(255, 255, 255, 0.075);
+  --synapse-launcher-sheen: rgba(255, 255, 255, 0.038);
+  --synapse-launcher-inset: rgba(255, 255, 255, 0.052);
+  --synapse-launcher-edge: rgba(0, 0, 0, 0.72);
+  --synapse-launcher-text: rgba(226, 226, 230, 0.72);
+  --synapse-launcher-text-hover: rgba(250, 250, 251, 0.96);
+  --synapse-launcher-action: rgba(255, 255, 255, 0.022);
+  --synapse-launcher-action-hover: rgba(255, 255, 255, 0.052);
+  --synapse-launcher-action-border: rgba(255, 255, 255, 0.052);
+  --synapse-launcher-action-border-hover: rgba(255, 255, 255, 0.085);
+  --synapse-launcher-divider: rgba(255, 255, 255, 0.09);
+  --synapse-launcher-focus: rgba(255, 255, 255, 0.46);
+  --synapse-launcher-shadow:
+    0 26px 62px -34px rgba(0, 0, 0, 0.96),
+    0 8px 20px -15px rgba(0, 0, 0, 0.84);
 }
 
 .synapse-canvas {
