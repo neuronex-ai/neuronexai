@@ -5920,18 +5920,6 @@
   -webkit-overflow-scrolling: touch;
 }
 
-.app-dialog-position {
-  /*
-   * Center through the fixed containing block without transforms. This keeps
-   * the dialog visible when browser zoom changes the visual viewport and
-   * avoids collisions with animation utilities.
-   */
-  inset: 0 !important;
-  margin: auto !important;
-  translate: none !important;
-  transform: none !important;
-}
-
 .agenda-viewport-modal {
   box-sizing: border-box;
   height: min(760px, calc(100dvh - 1rem));
@@ -6089,6 +6077,22 @@
   box-shadow:
     0 0 0 3px hsl(var(--ring) / 0.12),
     inset 0 1px 0 hsl(var(--agenda-surface) / 0.72) !important;
+}
+
+.agenda-time-input::-webkit-calendar-picker-indicator {
+  margin-right: 1.35rem;
+  height: 1rem;
+  width: 1rem;
+  cursor: pointer;
+  opacity: 0.18;
+}
+
+.agenda-time-input--start::-webkit-calendar-picker-indicator {
+  opacity: 0.82;
+}
+
+.agenda-time-input--end::-webkit-calendar-picker-indicator {
+  opacity: 0.16;
 }
 
 .agenda-tactile,

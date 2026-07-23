@@ -84,8 +84,11 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
             Regra
           </Label>
           <Select value={value.kind} onValueChange={(kind) => patch({ kind: kind as RecurrenceRuleKind })}>
-            <SelectTrigger id="advanced-recurrence-kind" className="agenda-field h-12 rounded-2xl">
-              <SelectValue />
+            <SelectTrigger
+              id="advanced-recurrence-kind"
+              className="agenda-field h-12 rounded-2xl px-4 text-left [&>span:first-child]:flex [&>span:first-child]:min-w-0 [&>span:first-child]:flex-1 [&>span:first-child]:flex-col [&>span:first-child]:items-start [&>span:first-child]:justify-center [&>span:first-child]:text-left"
+            >
+              <SelectValue className="text-left" />
             </SelectTrigger>
             <SelectContent className="agenda-menu-surface notification-liquid-menu rounded-[18px] p-1.5">
               {KIND_OPTIONS.map((option) => (

@@ -5,23 +5,20 @@ import { describe, expect, it } from "vitest";
 const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf8");
 
 describe("agenda modal layout contract", () => {
-  it("keeps dialog centering independent from transform-based entrance motion", () => {
+  it("centers dialogs through a viewport flex container", () => {
     const dialog = source("src/components/ui/dialog.tsx");
     const alertDialog = source("src/components/ui/alert-dialog.tsx");
-    const styles = source("src/index.css");
 
-    expect(dialog).toContain("app-dialog-position");
-    expect(alertDialog).toContain("app-dialog-position");
+    expect(dialog).toContain("pointer-events-none fixed inset-0 z-[101] flex items-center justify-center");
+    expect(alertDialog).toContain("pointer-events-none fixed inset-0 z-[51] flex items-center justify-center");
+    expect(dialog).toContain("app-dialog-surface pointer-events-auto relative");
+    expect(alertDialog).toContain("pointer-events-auto relative");
+    expect(dialog).not.toContain("app-dialog-position");
+    expect(alertDialog).not.toContain("app-dialog-position");
     expect(dialog).not.toContain("-translate-x-1/2");
     expect(dialog).not.toContain("-translate-y-1/2");
     expect(alertDialog).not.toContain("translate-x-[-50%]");
     expect(alertDialog).not.toContain("translate-y-[-50%]");
-    expect(styles).toContain(".app-dialog-position");
-    expect(dialog).toContain("grid h-fit");
-    expect(alertDialog).toContain("grid h-fit");
-    expect(styles).toContain("inset: 0 !important");
-    expect(styles).toContain("margin: auto !important");
-    expect(styles).toContain("transform: none !important");
     expect(dialog).not.toContain("zoom-in");
     expect(alertDialog).not.toContain("zoom-in");
   });

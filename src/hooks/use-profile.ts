@@ -62,12 +62,42 @@ export const useProfile = () => {
     }
   });
 
+  const rememberAppointmentLocationMutation = useMutation({
+    mutationFn: async (location: string) => {
+      if (!userId) throw new Error("User not authenticated");
+      const normalizedLocation = location.trim();
+      if (!normalizedLocation) return query.data || null;
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .update({
+          address: normalizedLocation,
+          professional_address: {
+            label: normalizedLocation,
+            source: 'appointment',
+            rememberedAt: new Date().toISOString(),
+          },
+        })
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data as Profile;
+    },
+    onSuccess: (profile) => {
+      if (profile) queryClient.setQueryData(['profile', userId], profile);
+    },
+  });
+
   return {
     profile: query.data,
     data: query.data,
     isLoading: query.isLoading,
     updateProfile: mutation.mutate,
+    rememberAppointmentLocation: rememberAppointmentLocationMutation.mutateAsync,
     isUpdating: mutation.isPending,
+    isRememberingAppointmentLocation: rememberAppointmentLocationMutation.isPending,
     refetch: query.refetch,
   };
 };

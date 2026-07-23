@@ -38,22 +38,24 @@ const DialogContent = React.forwardRef<
 >(({ className, children, showCloseButton = true, overlayClassName, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay className={overlayClassName} />
-    <DialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        "app-dialog-position app-dialog-surface fixed z-[101] grid h-fit max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-lg gap-4 overflow-y-auto overscroll-contain rounded-[24px] border bg-background p-4 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-[24px]",
-        className
-      )}
-      {...props}
-    >
-      {children}
-      {showCloseButton ? (
-        <DialogPrimitive.Close className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-foreground/[0.045] opacity-75 ring-offset-background transition-colors hover:bg-secondary/80 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
-          <X className="h-4 w-4" />
-          <span className="sr-only">Fechar</span>
-        </DialogPrimitive.Close>
-      ) : null}
-    </DialogPrimitive.Content>
+    <div className="pointer-events-none fixed inset-0 z-[101] flex items-center justify-center overflow-hidden p-2">
+      <DialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          "app-dialog-surface pointer-events-auto relative grid h-fit max-h-[calc(100dvh-1rem)] w-full max-w-lg gap-4 overflow-y-auto overscroll-contain rounded-[24px] border bg-background p-4 shadow-xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-[24px]",
+          className
+        )}
+        {...props}
+      >
+        {children}
+        {showCloseButton ? (
+          <DialogPrimitive.Close className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center rounded-full bg-foreground/[0.045] opacity-75 ring-offset-background transition-colors hover:bg-secondary/80 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+            <X className="h-4 w-4" />
+            <span className="sr-only">Fechar</span>
+          </DialogPrimitive.Close>
+        ) : null}
+      </DialogPrimitive.Content>
+    </div>
   </DialogPortal>
 ))
 DialogContent.displayName = DialogPrimitive.Content.displayName

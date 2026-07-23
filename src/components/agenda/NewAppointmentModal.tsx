@@ -28,6 +28,10 @@ import {
   Save,
   Trash2,
   WandSparkles,
+  CircleHelp,
+  MapPin,
+  ExternalLink,
+  ReceiptText,
 } from "lucide-react";
 import { differenceInMinutes, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -60,6 +64,11 @@ import { useAddAppointment } from "@/hooks/use-add-appointment";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
 import { useAppointmentSeries } from "@/hooks/use-appointment-series";
+import { useFinancialAccount } from "@/hooks/use-financial-account";
+import { useGenerateInvoice } from "@/hooks/use-generate-invoice";
+import { useNeurofinanceSimulator, type SimulatorMethod } from "@/hooks/use-neurofinance-simulator";
+import { useProfile } from "@/hooks/use-profile";
+import { useSubscription } from "@/context/SubscriptionContext";
 import {
   useAgendaSeriesTemplates,
   useAgendaV2,
@@ -121,8 +130,9 @@ const formSchema = z
 
     // Financeiro
     shouldCreateTransaction: z.boolean().default(false),
+    shouldGenerateNeurofinanceCharge: z.boolean().default(false),
     transactionAmount: z.coerce.number().optional(),
-    transactionMethod: z.enum(["pix", "money", "credit_card", "debit_card", "boleto", "mixed"]).optional(),
+    transactionMethod: z.enum(["patient_choice", "pix", "money", "credit_card", "debit_card", "boleto", "mixed"]).optional(),
     installments: z.coerce.number().min(1).default(1),
     usePackage: z.boolean().default(false),
     packageId: z.string().optional(),
@@ -210,6 +220,31 @@ const buildAppointmentTimes = (values: FormValues) => {
   }
 
   return { startDateTime, endDateTime };
+};
+
+const normalizeFinancialEntryPaymentMethod = (method?: FormValues["transactionMethod"]) => {
+  if (method === "pix" || method === "boleto") return method;
+  if (method === "credit_card" || method === "debit_card") return "card";
+  if (method === "money") return "cash";
+  return "other";
+};
+
+const neurofinancePaymentMethods = (method?: FormValues["transactionMethod"]) => {
+  if (method === "patient_choice") return ["pix", "card", "boleto"];
+  if (method === "credit_card" || method === "debit_card") return ["card"];
+  if (method === "pix" || method === "boleto") return [method];
+  return ["pix", "card", "boleto"];
+};
+
+const professionalLocationFromProfile = (
+  profile?: {
+    address?: string | null;
+    professional_address?: Record<string, unknown> | null;
+  } | null,
+) => {
+  const structuredLabel = profile?.professional_address?.label;
+  if (typeof structuredLabel === "string" && structuredLabel.trim()) return structuredLabel.trim();
+  return profile?.address?.trim() || "";
 };
 
 // ─── Props ────────────────────────────────────────────────────────────
@@ -897,7 +932,7 @@ export function NewAppointmentModal({
                       </FormControl>
                       <SelectContent className={selectPopover}>
                         {patients?.map((p) => (
-                          <SelectItem key={p.id} value={p.id} className="text-foreground/70 focus:bg-accent focus:text-foreground py-3 px-4 cursor-pointer text-sm">
+                          <SelectItem key={p.id} value={p.id} className="cursor-pointer py-3 pr-4 text-sm text-foreground/70 focus:bg-accent focus:text-foreground">
                             {p.name}
                           </SelectItem>
                         ))}
@@ -975,7 +1010,7 @@ export function NewAppointmentModal({
                     </FormControl>
                     <SelectContent className={selectPopover}>
                       {EVENT_CATEGORIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value} className="text-foreground/70 focus:bg-accent focus:text-foreground py-3 px-4 cursor-pointer text-sm">
+                        <SelectItem key={c.value} value={c.value} className="cursor-pointer py-3 pr-4 text-sm text-foreground/70 focus:bg-accent focus:text-foreground">
                           {c.label}
                         </SelectItem>
                       ))}
@@ -998,12 +1033,19 @@ export function NewAppointmentModal({
 
   const renderDateTimeRow = (showEndTime = false) => (
     <div className="grid grid-cols-1 gap-4">
-      <div className={cn("flex gap-3", showEndTime && "flex-wrap")}>
+      <div
+        className={cn(
+          "grid items-start gap-3",
+          showEndTime
+            ? "grid-cols-[minmax(0,1fr)_7.75rem_7.75rem]"
+            : "grid-cols-[minmax(0,1fr)_7.75rem]",
+        )}
+      >
         <FormField
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem className="flex-1 flex flex-col space-y-2 min-w-[140px]">
+            <FormItem className="grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0">
               <FormLabel className={labelBase}>Data</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
@@ -1047,7 +1089,7 @@ export function NewAppointmentModal({
           control={form.control}
           name="startTime"
           render={({ field }) => (
-            <FormItem className="w-[124px] space-y-2">
+            <FormItem className="grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0">
               <FormLabel className={labelBase}>{showEndTime ? "Início" : "Horário"}</FormLabel>
               <FormControl>
                 <div className="relative group">
@@ -1058,7 +1100,7 @@ export function NewAppointmentModal({
                       field.onChange(event);
                       form.setValue("endTime", addMinutesToTime(event.target.value, form.getValues("duration") || 50));
                     }}
-                    className={cn(inputBase, "px-3 text-center font-bold")}
+                    className={cn(inputBase, "agenda-time-input agenda-time-input--start px-3 text-center font-bold")}
                   />
                   <Clock className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/20 pointer-events-none" />
                 </div>
@@ -1073,7 +1115,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="endTime"
             render={({ field }) => (
-              <FormItem className="agenda-step-enter w-[124px] space-y-2">
+              <FormItem className="agenda-step-enter grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0">
                 <FormLabel className={labelBase}>Fim</FormLabel>
                 <FormControl>
                   <div className="relative group">
@@ -1094,9 +1136,9 @@ export function NewAppointmentModal({
                         if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
                         form.setValue("duration", Math.max(15, differenceInMinutes(endDate, startDate)));
                       }}
-                      className={cn(inputBase, "px-3 text-center font-bold")}
+                      className={cn(inputBase, "agenda-time-input agenda-time-input--end px-3 text-center font-bold")}
                     />
-                    <Clock className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/20 pointer-events-none" />
+                    <Clock className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/80" />
                   </div>
                 </FormControl>
                 <FormMessage />
@@ -1182,18 +1224,18 @@ export function NewAppointmentModal({
                 <FormLabel className={labelBase}>Tipo de Sessão</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
-                    <SelectTrigger className={cn(inputBase, "font-medium px-4 shadow-inner")}>
+                    <SelectTrigger className={cn(inputBase, "px-4 text-left font-medium shadow-inner [&>span:first-child]:text-left")}>
                       <SelectValue />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent className={selectPopover}>
-                    <SelectItem value="first_visit" className="text-foreground/70 focus:bg-accent focus:text-foreground py-3 px-4 cursor-pointer text-sm">
+                    <SelectItem value="first_visit" className="cursor-pointer py-3 pr-4 text-sm text-foreground/70 focus:bg-accent focus:text-foreground">
                       Primeira Consulta (Avaliação)
                     </SelectItem>
-                    <SelectItem value="follow_up" className="text-foreground/70 focus:bg-accent focus:text-foreground py-3 px-4 cursor-pointer text-sm">
+                    <SelectItem value="follow_up" className="cursor-pointer py-3 pr-4 text-sm text-foreground/70 focus:bg-accent focus:text-foreground">
                       Sessão de Acompanhamento
                     </SelectItem>
-                    <SelectItem value="emergency" className="text-rose-400 focus:bg-rose-500/10 focus:text-rose-300 py-3 px-4 cursor-pointer text-sm">
+                    <SelectItem value="emergency" className="cursor-pointer py-3 pr-4 text-sm text-rose-400 focus:bg-rose-500/10 focus:text-rose-300">
                       Emergência / Encaixe
                     </SelectItem>
                   </SelectContent>
