@@ -5,6 +5,7 @@ import { BrainCircuit, Pause, Play } from "lucide-react";
 import {
   type ElementType,
   type FocusEvent,
+  type ReactNode,
   useEffect,
   useMemo,
   useState,
@@ -25,6 +26,7 @@ type ReflectionCarouselProps = {
   autoplay?: boolean;
   reducedMotionBehavior?: "manual" | "instant";
   icon?: ElementType<{ className?: string }>;
+  leadingVisual?: ReactNode;
   className?: string;
 };
 
@@ -35,6 +37,7 @@ export const ReflectionCarousel = ({
   autoplay = true,
   reducedMotionBehavior = "manual",
   icon: Icon = BrainCircuit,
+  leadingVisual,
   className,
 }: ReflectionCarouselProps) => {
   const prefersReducedMotion = useReducedMotion();
@@ -121,9 +124,11 @@ export const ReflectionCarousel = ({
               aria-hidden={activeSlide !== index}
               className="flex min-h-[220px] min-w-full flex-col items-center justify-center px-4 md:min-h-[260px]"
             >
-              <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-foreground shadow-sm dark:bg-zinc-950 dark:text-white">
-                <Icon aria-hidden="true" className="h-5 w-5" />
-              </div>
+              {leadingVisual ?? (
+                <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-2xl bg-background text-foreground shadow-sm dark:bg-zinc-950 dark:text-white">
+                  <Icon aria-hidden="true" className="h-5 w-5" />
+                </div>
+              )}
               <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-55">{slide.eyebrow}</p>
               <h2 className="mt-5 max-w-4xl text-3xl font-black leading-[0.96] tracking-tight md:text-5xl">{slide.title}</h2>
               <p className="mx-auto mt-5 max-w-3xl text-sm font-medium leading-relaxed opacity-62 md:text-base">{slide.description}</p>

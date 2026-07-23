@@ -107,6 +107,21 @@ const professionalReflections = [
   "Tecnologia útil é aquela que deixa o vínculo humano em primeiro plano.",
 ] as const;
 
+const NeuroNexReflectionMark = () => (
+  <span aria-hidden="true" className="mb-6 block h-12 w-12">
+    <img
+      src="/favicon-light.png"
+      alt=""
+      className="h-full w-full object-contain dark:hidden"
+    />
+    <img
+      src="/favicon-dark.png"
+      alt=""
+      className="hidden h-full w-full object-contain dark:block"
+    />
+  </span>
+);
+
 const formatAppointmentTime = (appointment?: Appointment | null) =>
   appointment?.start_time ? format(new Date(appointment.start_time), "HH:mm") : "-";
 
@@ -1349,6 +1364,7 @@ export const DesktopDashboardCommandCenter = () => {
           <div className="dashboard-deferred-section mt-4">
             <ReflectionCarousel
               ariaLabel="Reflexões para a prática clínica"
+              leadingVisual={<NeuroNexReflectionMark />}
               slides={[
                 {
                   eyebrow: "Reflexão do dia",

@@ -6,15 +6,19 @@ import {
   subscribeToThemeTransition,
   type ThemeTransitionOrigin,
 } from '@/lib/theme-transition';
+import {
+  beginThemePreferenceChange,
+  finishThemePreferenceChange,
+  shouldApplyPersistedTheme,
+} from '@/lib/theme-preference-coordinator';
 import { useTheme as useNextTheme } from 'next-themes';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 
 export function useTheme() {
   const { theme: currentPreference, setTheme: setNextTheme, resolvedTheme } = useNextTheme();
   const { preferences, updatePreferences } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
-  const pendingTheme = useRef<UserThemePreference | null>(null);
   const transitionState = useSyncExternalStore(
     subscribeToThemeTransition,
     getThemeTransitionSnapshot,
@@ -27,9 +31,7 @@ export function useTheme() {
 
   useEffect(() => {
     if (!mounted || !preferences?.theme) return;
-    if (pendingTheme.current && preferences.theme !== pendingTheme.current) return;
-    if (pendingTheme.current === preferences.theme) pendingTheme.current = null;
-    if (currentPreference !== preferences.theme) {
+    if (shouldApplyPersistedTheme(currentPreference, preferences.theme)) {
       setNextTheme(preferences.theme);
     }
   }, [currentPreference, mounted, preferences?.theme, setNextTheme]);
@@ -39,11 +41,11 @@ export function useTheme() {
       ? theme
       : 'system';
 
-    pendingTheme.current = normalized;
+    beginThemePreferenceChange(normalized, Boolean(preferences));
     setNextTheme(normalized);
     if (preferences) {
       void updatePreferences({ theme: normalized }).catch((error) => {
-        pendingTheme.current = null;
+        finishThemePreferenceChange(normalized);
         console.error('[Theme] Não foi possível persistir a preferência.', error);
       });
     }

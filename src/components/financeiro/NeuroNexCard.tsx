@@ -136,33 +136,33 @@ export const NeuroNexCard = ({
             <div className="relative z-10 px-2 py-1">
               <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-800 dark:text-zinc-800">{bankName}</span>
-                  <span className="text-zinc-300 dark:text-zinc-300">/</span>
-                  <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-500">CONTA CADASTRADA</span>
+                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/90 dark:text-zinc-800">{bankName}</span>
+                  <span className="text-white/45 dark:text-zinc-300">/</span>
+                  <span className="text-[11px] font-medium uppercase tracking-[0.2em] text-white/65 dark:text-zinc-500">CONTA CADASTRADA</span>
                 </div>
-                <ShieldCheck className="w-4 h-4 text-zinc-300 dark:text-zinc-300" />
+                <ShieldCheck className="w-4 h-4 text-white/45 dark:text-zinc-300" />
               </div>
 
               <div className="space-y-7 pl-1">
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-zinc-400 dark:text-zinc-400">Agência</p>
-                    <p className="text-[17px] font-mono font-bold tracking-tight text-zinc-700 dark:text-zinc-700">{agency}</p>
+                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-white/65 dark:text-zinc-500">Agência</p>
+                    <p className="text-[17px] font-mono font-bold tracking-tight text-white/90 dark:text-zinc-800">{agency}</p>
                   </div>
                   <div>
-                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-zinc-400 dark:text-zinc-400">Conta</p>
-                    <p className="text-[17px] font-mono font-bold tracking-tight text-zinc-700 dark:text-zinc-700">{displayAccount}</p>
+                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-white/65 dark:text-zinc-500">Conta</p>
+                    <p className="text-[17px] font-mono font-bold tracking-tight text-white/90 dark:text-zinc-800">{displayAccount}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-8 pt-2">
                   <div>
-                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-zinc-400 dark:text-zinc-400">Tipo</p>
-                    <p className="text-[11px] font-bold tracking-wide text-zinc-600 dark:text-zinc-600">{accountType}</p>
+                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-white/65 dark:text-zinc-500">Tipo</p>
+                    <p className="text-[11px] font-bold tracking-wide text-white/80 dark:text-zinc-700">{accountType}</p>
                   </div>
                   <div>
-                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-zinc-400 dark:text-zinc-400">Banco</p>
-                    <p className="text-[11px] font-mono font-bold tracking-widest text-zinc-600 dark:text-zinc-600">{bankCode || bankName}</p>
+                    <p className="text-[7px] font-bold uppercase tracking-[0.25em] mb-1.5 text-white/65 dark:text-zinc-500">Banco</p>
+                    <p className="text-[11px] font-mono font-bold tracking-widest text-white/80 dark:text-zinc-700">{bankCode || bankName}</p>
                   </div>
                 </div>
               </div>

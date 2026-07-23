@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { addDays, format, parseISO } from "date-fns";
-import { ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarClock, Landmark, Loader2 } from "lucide-react";
+import { ArrowDownLeft, ArrowRight, ArrowUpRight, CalendarClock, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { useBillPaymentsCalendar } from "@/hooks/use-bill-payments-calendar";
@@ -76,14 +76,9 @@ export function NeuroFinanceMovementsTimeline({
   return (
     <section className="finance-panel relative overflow-hidden rounded-[32px] border border-zinc-200/70 bg-white/80 p-6 shadow-[0_22px_70px_-54px_rgba(24,24,27,0.7)] dark:border-black/75 dark:bg-zinc-900/[0.42] dark:shadow-[0_24px_70px_-48px_rgba(0,0,0,0.98)]">
       <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-950 text-white dark:bg-white dark:text-zinc-950">
-            <Landmark className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="text-[9px] font-black uppercase tracking-[0.24em] text-zinc-400">NeuroFinance</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-zinc-950 dark:text-white">Próximos movimentos da conta</h2>
-          </div>
+        <div className="min-w-0">
+          <p className="text-[9px] font-black uppercase tracking-[0.24em] text-zinc-400">NeuroFinance</p>
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-zinc-950 dark:text-white">Próximos movimentos da conta</h2>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={onOpenFutureStatement} className="h-11 rounded-2xl border-zinc-200 bg-white/70 text-[9px] font-black uppercase tracking-[0.16em] dark:border-black/75 dark:bg-black/[0.28]">

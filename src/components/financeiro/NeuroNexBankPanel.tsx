@@ -4,7 +4,6 @@ import { useState, useMemo, useCallback } from "react";
 import type { ElementType, MouseEventHandler } from "react";
 import { cn } from "@/lib/utils";
 import {
-    Wallet,
     ArrowUpRight,
     QrCode,
     Banknote,
@@ -29,6 +28,7 @@ import {
 import { NeuroNexCard } from "@/components/financeiro/NeuroNexCard";
 import { useProfile } from "@/hooks/use-profile";
 import { toast } from "sonner";
+import { getNeuroFinanceProfessionalName } from "./neurofinance-profile-name";
 
 import { NewInvoiceModal } from "./NewInvoiceModal";
 import { NfseGenerateModal } from "./NfseGenerateModal";
@@ -140,12 +140,14 @@ export const NeuroNexBankPanel = ({ transactions = [], isLoadingTransactions = f
         isStale: false,
     }, [balanceData]);
 
-    const cardName = useMemo(() => (
-        account?.bank_holder_name ||
-        account?.holder_name ||
-        (profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() : "") ||
-        "MEMBRO NEURONEX"
-    ).toUpperCase(), [account?.bank_holder_name, account?.holder_name, profile]);
+    const professionalName = useMemo(
+        () => getNeuroFinanceProfessionalName(
+            profile,
+            account?.bank_holder_name || account?.holder_name,
+        ),
+        [account?.bank_holder_name, account?.holder_name, profile],
+    );
+    const cardName = professionalName.toUpperCase();
 
     const cardBankName = account?.bank_name || (account?.bank_code ? `Banco ${account.bank_code}` : "Banco cadastrado");
     const cardAgency = account?.bank_agency || "Não informada";
@@ -547,15 +549,17 @@ export const NeuroNexBankPanel = ({ transactions = [], isLoadingTransactions = f
                 <div className="flex flex-col lg:flex-row items-stretch relative z-10">
                     <div className="flex-[2.5] p-6 md:p-10 flex flex-col justify-center relative z-10">
                         <div className="space-y-6 md:space-y-10">
-                            <div className="flex items-center gap-4 pl-2">
-                                <div className="w-10 h-10 md:w-12 md:h-12 rounded-[18px] bg-zinc-900 dark:bg-white text-white dark:text-black flex items-center justify-center shadow-lg">
-                                    <Wallet className="h-4 w-4 md:h-5 md:w-5" />
-                                </div>
-                                <div className="min-w-0">
+                            <div className="flex items-center gap-3 pl-2">
+                                <div className="min-w-0 flex-1">
                                     <h2 className="text-base md:text-lg font-black text-zinc-900 dark:text-white tracking-[0.1em] uppercase leading-none mb-1">NeuroFinance</h2>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                                        <p className="text-[8px] md:text-[9px] text-zinc-400 font-black uppercase tracking-[0.2em]">Conta PJ Conectada</p>
+                                    <div
+                                        className="flex min-w-0 items-center gap-2"
+                                        aria-label={`Conta NeuroFinance de ${professionalName}`}
+                                    >
+                                        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />
+                                        <p className="truncate text-[9px] font-bold tracking-[0.12em] text-zinc-500 dark:text-zinc-400 md:text-[10px]">
+                                            {professionalName}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="ml-auto flex items-center gap-2">

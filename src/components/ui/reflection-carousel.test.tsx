@@ -56,4 +56,16 @@ describe("ReflectionCarousel", () => {
     act(() => vi.advanceTimersByTime(1_000));
     expect(secondControl).toHaveAttribute("aria-pressed", "true");
   });
+
+  it("replaces the generic icon tile with a supplied brand visual", () => {
+    const { container } = render(
+      <ReflectionCarousel
+        slides={slides}
+        leadingVisual={<img src="/favicon-light.png" alt="" data-testid="brand-mark" />}
+      />,
+    );
+
+    expect(screen.getAllByTestId("brand-mark")).toHaveLength(slides.length);
+    expect(container.querySelector('[data-lucide="brain-circuit"]')).not.toBeInTheDocument();
+  });
 });

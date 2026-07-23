@@ -1,5 +1,11 @@
-import { useMemo } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useMemo, useRef, type PointerEvent } from "react";
+import {
+    AnimatePresence,
+    motion,
+    useMotionValue,
+    useReducedMotion,
+    useSpring,
+} from "framer-motion";
 import { AudioLines, MessageCircle } from "lucide-react";
 
 import { useSynapse } from "@/context/SynapseContext";
@@ -34,6 +40,15 @@ type SynapsePillProps = {
     mode?: "launcher" | "voice-presence";
 };
 
+const clamp = (value: number, min: number, max: number) =>
+    Math.min(Math.max(value, min), max);
+
+const launcherMagneticSpring = {
+    stiffness: 300,
+    damping: 34,
+    mass: 0.5,
+} as const;
+
 export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
     const {
         actionExperience,
@@ -50,6 +65,17 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         voiceStatus,
     } = useSynapse();
     const shouldReduceMotion = Boolean(useReducedMotion());
+    const launcherRef = useRef<HTMLDivElement>(null);
+    const launcherX = useMotionValue(0);
+    const launcherY = useMotionValue(0);
+    const magneticX = useSpring(launcherX, launcherMagneticSpring);
+    const magneticY = useSpring(launcherY, launcherMagneticSpring);
+
+    useEffect(() => {
+        if (!shouldReduceMotion) return;
+        launcherX.set(0);
+        launcherY.set(0);
+    }, [launcherX, launcherY, shouldReduceMotion]);
 
     const presenceState = useMemo<PresenceVisualState>(() => {
         if (voicePhase === "awaiting_confirmation") return "awaiting_confirmation";
@@ -69,6 +95,21 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
     const statusText = actionExperience?.message || actionExperience?.label || voiceActivityLabel || PRESENCE_COPY[presenceState];
 
     if (mode === "launcher") {
+        const resetMagnetism = () => {
+            launcherX.set(0);
+            launcherY.set(0);
+        };
+
+        const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+            if (shouldReduceMotion || event.pointerType === "touch" || !launcherRef.current) return;
+
+            const rect = launcherRef.current.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            launcherX.set(clamp((event.clientX - centerX) * 0.035, -5, 5));
+            launcherY.set(clamp((event.clientY - centerY) * 0.045, -4, 4));
+        };
+
         const openTextConversation = () => {
             setActiveTab("chat");
             setShellState("compact");
@@ -80,12 +121,22 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         };
 
         return (
-            <div
+            <motion.div
+                ref={launcherRef}
                 className="synapse-launcher relative flex h-[56px] w-[128px] items-center rounded-full border p-[5px]"
                 role="toolbar"
                 aria-label="Conversar com o Synapse"
                 data-synapse-launcher="true"
                 data-theme-adaptive="true"
+                data-magnetic-motion={shouldReduceMotion ? "reduced" : "enabled"}
+                onPointerMove={handlePointerMove}
+                onPointerLeave={resetMagnetism}
+                onPointerCancel={resetMagnetism}
+                style={{
+                    x: shouldReduceMotion ? 0 : magneticX,
+                    y: shouldReduceMotion ? 0 : magneticY,
+                    willChange: shouldReduceMotion ? "auto" : "transform",
+                }}
             >
                     <motion.button
                         type="button"
@@ -118,7 +169,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                     >
                         <MessageCircle className="h-[19px] w-[19px]" strokeWidth={1.75} aria-hidden="true" />
                     </motion.button>
-            </div>
+            </motion.div>
         );
     }
 
