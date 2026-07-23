@@ -196,7 +196,7 @@ export function AppModalShell({
               insetInlineEnd: "max(0.75rem, env(safe-area-inset-right))",
               transform: "none",
             }}
-            className="pointer-events-auto z-[1000] flex h-10 w-10 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-white/10 dark:bg-white/[0.07]"
+            className="app-modal-close pointer-events-auto z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-border/45 bg-muted/70 text-muted-foreground shadow-sm backdrop-blur-xl transition-[transform,color,background-color,border-color] hover:bg-muted hover:text-foreground active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none motion-reduce:active:scale-100 dark:border-white/[0.045] dark:bg-white/[0.035]"
             aria-label="Fechar"
           >
             <X className="h-4 w-4" />

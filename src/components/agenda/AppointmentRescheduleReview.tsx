@@ -53,7 +53,7 @@ export function AppointmentRescheduleReview({
 
   return (
     <>
-      <section className="rounded-[22px] border border-amber-500/25 bg-amber-500/[0.07] p-4 sm:p-5" aria-labelledby={headingId}>
+      <section className="agenda-liquid-surface rounded-[22px] border border-amber-500/25 p-4 sm:p-5" aria-labelledby={headingId}>
         <div className="flex items-start gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-500/15 text-amber-600">
             <CalendarClock className="h-5 w-5" aria-hidden="true" />
@@ -65,7 +65,7 @@ export function AppointmentRescheduleReview({
           </div>
         </div>
 
-        <div className="mt-4 grid items-center gap-2 rounded-2xl border border-border/60 bg-background/70 p-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
+        <div className="agenda-liquid-card mt-4 grid items-center gap-2 rounded-2xl border p-3 sm:grid-cols-[1fr_auto_1fr] sm:gap-3">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Horário original</p>
             <p className="mt-1 text-sm font-bold">{dateTime(request.original_start_time)}</p>
@@ -78,7 +78,7 @@ export function AppointmentRescheduleReview({
         </div>
 
         {request.reason ? (
-          <blockquote className="mt-3 rounded-xl border-l-2 border-amber-500/50 bg-background/50 px-3 py-2 text-sm text-muted-foreground">“{request.reason}”</blockquote>
+          <blockquote className="agenda-liquid-card mt-3 rounded-xl border-l-2 border-amber-500/50 px-3 py-2 text-sm text-muted-foreground">“{request.reason}”</blockquote>
         ) : null}
 
         <div className="mt-3 grid gap-2 text-xs sm:grid-cols-2">
@@ -106,21 +106,21 @@ export function AppointmentRescheduleReview({
           <Button
             type="button"
             variant="outline"
-            className="h-11 rounded-xl border-red-500/25 text-red-600 hover:bg-red-500/10 hover:text-red-700"
+            className="agenda-tactile h-11 rounded-xl border-red-500/25 text-red-600 hover:bg-red-500/10 hover:text-red-700"
             disabled={isReviewing}
             onClick={() => setDecision("reject")}
           >
             <X className="mr-2 h-4 w-4" aria-hidden="true" />Recusar
           </Button>
-          <Button type="button" className="h-11 rounded-xl" disabled={isReviewing} onClick={() => setDecision("approve")}>
+          <Button type="button" className="agenda-primary-action agenda-tactile h-11 rounded-xl" disabled={isReviewing} onClick={() => setDecision("approve")}>
             <Check className="mr-2 h-4 w-4" aria-hidden="true" />Aceitar novo horário
           </Button>
         </div> : null}
       </section>
 
       <AlertDialog open={decision !== null} onOpenChange={(open) => { if (!open) closeDialog(); }}>
-        <AlertDialogContent className="desktop-retina-modal z-[220] w-[calc(100%-2rem)] max-w-md gap-0 overflow-hidden rounded-[28px] border-border/70 bg-background/98 p-0 shadow-2xl">
-          <AlertDialogHeader className="space-y-2 p-5 text-left sm:p-6">
+        <AlertDialogContent className="agenda-modal-surface desktop-retina-modal z-[220] w-[calc(100%-2rem)] max-w-md gap-0 overflow-hidden rounded-[28px] p-0">
+          <AlertDialogHeader className="agenda-modal-header space-y-2 p-5 text-left sm:p-6">
             <AlertDialogTitle className="text-xl font-bold tracking-tight">
               {decision === "approve" ? "Aprovar novo horário?" : "Recusar reagendamento?"}
             </AlertDialogTitle>
@@ -136,20 +136,20 @@ export function AppointmentRescheduleReview({
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
                 maxLength={500}
-                className="min-h-24 rounded-xl"
+                className="agenda-field min-h-24 rounded-xl"
                 placeholder={decision === "approve" ? "Novo horário confirmado." : "Informe o motivo, se desejar."}
               />
             </div>
           </AlertDialogHeader>
-          <AlertDialogFooter className="grid grid-cols-1 gap-2 border-t border-border/60 bg-muted/20 p-4 sm:grid-cols-2 sm:space-x-0">
-            <AlertDialogCancel disabled={isReviewing} className="mt-0 h-11 rounded-xl">Voltar</AlertDialogCancel>
+          <AlertDialogFooter className="agenda-modal-footer grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 sm:space-x-0">
+            <AlertDialogCancel disabled={isReviewing} className="agenda-tactile mt-0 h-11 rounded-xl">Voltar</AlertDialogCancel>
             <AlertDialogAction
               disabled={isReviewing}
               onClick={(event) => {
                 event.preventDefault();
                 void confirmDecision();
               }}
-              className={`h-11 rounded-xl ${decision === "reject" ? "bg-red-600 text-white hover:bg-red-700" : ""}`}
+              className={`agenda-tactile h-11 rounded-xl ${decision === "reject" ? "bg-red-600 text-white hover:bg-red-700" : "agenda-primary-action"}`}
             >
               {isReviewing ? <Loader2 className="h-5 w-5 animate-spin" aria-label="Salvando decisão" /> : decision === "approve" ? "Aprovar" : "Recusar"}
             </AlertDialogAction>

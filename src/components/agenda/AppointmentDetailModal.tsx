@@ -446,7 +446,7 @@ export const AppointmentDetailModal = ({
       onOpenChange={setOpen}
       trigger={children}
       showCloseButton={false}
-      className="appointment-detail-shell desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[30px] border border-border/55 bg-background/94 p-0 shadow-2xl backdrop-blur-3xl sm:max-w-[740px]"
+      className="agenda-modal-surface agenda-viewport-modal appointment-detail-shell desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[30px] border p-0 sm:max-w-[740px]"
       drawerClassName="max-h-[92dvh]"
       contentStyle={{ maxHeight: "min(760px, calc(100dvh - 1.5rem))" }}
     >
@@ -454,14 +454,14 @@ export const AppointmentDetailModal = ({
         {activeView === "details" ? (
           <motion.div
             key="appointment-details"
-            initial={shouldReduceMotion ? false : { opacity: 0, x: -48 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, x: -14 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -48 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -14 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             onAnimationComplete={restoreHistoryButtonFocus}
             className="flex min-h-0 flex-1 flex-col bg-transparent"
           >
-        <div className="flex shrink-0 items-center justify-between border-b border-border/40 bg-background/48 px-5 pb-4 pt-5 backdrop-blur-2xl sm:px-6">
+        <div className="agenda-modal-header flex shrink-0 items-center justify-between border-b px-5 pb-4 pt-5 backdrop-blur-2xl sm:px-6">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h2 className="text-xl font-bold text-foreground tracking-tight">
@@ -518,9 +518,9 @@ export const AppointmentDetailModal = ({
             {step === 1 ? (
               <motion.div
                 key="details"
-                initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+                initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -10 }}
+                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -6 }}
                 transition={shouldReduceMotion ? { duration: 0 } : undefined}
                 className="space-y-4"
               >
@@ -540,7 +540,13 @@ export const AppointmentDetailModal = ({
                       </div>
                     </div>
                     {isSession && (
-                      <Button variant="ghost" size="icon" className="appointment-liquid-control h-10 w-10 rounded-xl text-muted-foreground hover:text-foreground" onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="agenda-tactile appointment-liquid-control h-11 w-11 rounded-xl text-muted-foreground hover:text-foreground"
+                        onClick={() => navigate(`/pacientes/${appointment.patient_id}`)}
+                        aria-label={`Abrir prontuário de ${patientData?.name || appointment.patient_name || "paciente"}`}
+                      >
                         <ChevronRight className="h-5 w-5" />
                       </Button>
                     )}
@@ -583,7 +589,7 @@ export const AppointmentDetailModal = ({
                 ) : null}
 
                 {smartFitAvailable ? (
-                  <section className="notes-liquid-surface rounded-[22px] border p-4" aria-labelledby={`smart-fit-${appointment.id}`}>
+                  <section className="agenda-liquid-surface rounded-[22px] border p-4" aria-labelledby={`smart-fit-${appointment.id}`}>
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="flex min-w-0 items-start gap-3">
                         <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
@@ -708,7 +714,7 @@ export const AppointmentDetailModal = ({
                         <SelectTrigger className={inputClassName}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="agenda-menu-surface">
                           {SESSION_TYPES.map((item) => (
                             <SelectItem key={item.value} value={item.value}>
                               {item.label}
@@ -723,7 +729,7 @@ export const AppointmentDetailModal = ({
                         <SelectTrigger className={inputClassName}>
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="agenda-menu-surface">
                           {MODALITY_OPTIONS.map((item) => (
                             <SelectItem key={item.value} value={item.value}>
                               {item.label}
@@ -809,7 +815,7 @@ export const AppointmentDetailModal = ({
             ) : (
               <motion.div
                 key="success"
-                initial={shouldReduceMotion ? false : { scale: 0.95, opacity: 0 }}
+                initial={shouldReduceMotion ? false : { scale: 0.98, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={shouldReduceMotion ? { duration: 0 } : undefined}
                 className="flex flex-col items-center text-center space-y-4 py-8"
@@ -821,14 +827,14 @@ export const AppointmentDetailModal = ({
                   <h2 className="text-2xl font-bold text-foreground">Atualizado</h2>
                   <p className="text-muted-foreground text-sm">As informações foram salvas e sincronizadas quando aplicável.</p>
                 </div>
-                <Button onClick={() => setOpen(false)} className="rounded-full px-6 h-10 bg-primary text-primary-foreground font-bold shadow-lg mt-3">Fechar Ficha</Button>
+                <Button onClick={() => setOpen(false)} className="agenda-primary-action agenda-tactile mt-3 h-11 rounded-full px-6 font-bold">Fechar ficha</Button>
               </motion.div>
             )}
           </AnimatePresence>
         </div>
 
         {step === 1 && (
-          <div className="flex shrink-0 flex-col gap-3 border-t border-border/40 bg-background/54 p-4 backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between">
+          <div className="agenda-modal-footer flex shrink-0 flex-col gap-3 border-t p-4 backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button type="button" variant="ghost" className="appointment-liquid-control min-h-11 rounded-xl border border-border/45 px-4 text-xs font-bold text-muted-foreground hover:text-foreground">
@@ -836,7 +842,7 @@ export const AppointmentDetailModal = ({
                   Ações
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="desktop-retina-modal w-72 rounded-[20px] border-border/55 bg-popover/96 p-2 shadow-xl">
+              <DropdownMenuContent align="start" className="agenda-menu-surface desktop-retina-modal w-72 rounded-[20px] p-2 shadow-xl">
                 <DropdownMenuItem
                   onSelect={() => setProfessionalAction("archive")}
                   className="min-h-11 rounded-[14px] px-3 text-sm font-medium"
@@ -869,7 +875,7 @@ export const AppointmentDetailModal = ({
             <Button
               onClick={() => void saveDetails()}
               disabled={updateAppointment.isPending}
-              className="min-h-11 w-full rounded-xl bg-foreground px-6 font-bold tracking-wide text-background shadow-sm transition-transform active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto"
+              className="agenda-primary-action min-h-11 w-full rounded-xl px-6 font-bold tracking-wide sm:w-auto"
             >
               {updateAppointment.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Salvar e Fechar"}
             </Button>
@@ -880,14 +886,14 @@ export const AppointmentDetailModal = ({
         ) : (
           <motion.div
             key="appointment-history"
-            initial={shouldReduceMotion ? false : { opacity: 0, x: 48 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, x: 14 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 48 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: "easeOut" }}
+            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 14 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             onAnimationComplete={() => historyBackButtonRef.current?.focus()}
             className="flex min-h-0 flex-1 flex-col bg-transparent"
           >
-            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-border/40 bg-background/48 px-5 py-4 backdrop-blur-2xl sm:px-6">
+            <header className="agenda-modal-header flex shrink-0 items-start justify-between gap-3 border-b px-5 py-4 backdrop-blur-2xl sm:px-6">
               <div className="flex min-w-0 items-start gap-3">
                 <Button
                   ref={historyBackButtonRef}
@@ -944,7 +950,7 @@ export const AppointmentDetailModal = ({
 };
 
 const inputClassName =
-  "appointment-liquid-control h-10 w-full rounded-xl border border-border/40 px-3 text-sm font-bold text-foreground outline-none transition-colors focus:border-ring/35 focus:ring-2 focus:ring-ring/15";
+  "agenda-field appointment-liquid-control h-11 w-full rounded-xl px-3 text-sm font-bold text-foreground outline-none";
 
 const FieldShell = ({
   label,

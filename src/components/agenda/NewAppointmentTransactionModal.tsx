@@ -93,17 +93,17 @@ export const NewAppointmentTransactionModal = ({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-md bg-background/95 backdrop-blur-[40px] border border-border/10 p-0 rounded-[32px] overflow-hidden shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)] outline-none [&>button]:hidden z-[9000]">
-        <DialogHeader className="p-8 pb-4">
+      <DialogContent className="agenda-modal-surface z-[9000] overflow-hidden rounded-[32px] p-0 outline-none sm:max-w-md [&>button]:hidden">
+        <DialogHeader className="agenda-modal-header p-8 pb-4">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center border border-primary/20">
+              <div className="synapse-chat-glass flex h-11 w-11 items-center justify-center rounded-[15px] border">
                 <Wallet className="h-5 w-5 text-primary" />
               </div>
               <DialogTitle className="text-lg font-bold tracking-tight">Registrar Transação</DialogTitle>
             </div>
             <DialogClose asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-accent">
+              <Button variant="ghost" size="icon" className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full">
                 <X className="h-4 w-4" />
               </Button>
             </DialogClose>
@@ -123,20 +123,20 @@ export const NewAppointmentTransactionModal = ({
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
-                      defaultValue={field.value}
+                      value={field.value}
                       className="grid grid-cols-2 gap-4"
                     >
                       <FormItem>
                         <RadioGroupItem value="income" id="income" className="peer sr-only" />
-                        <FormLabel htmlFor="income" className="flex flex-col items-center justify-center rounded-[24px] border-2 border-border/10 bg-card/40 p-6 hover:bg-accent/50 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary peer-data-[state=checked]:text-primary-foreground cursor-pointer transition-all duration-300 group shadow-lg">
-                          <TrendingUp className="mb-2 h-6 w-6 group-hover:scale-110 transition-transform" />
+                        <FormLabel htmlFor="income" className="agenda-choice-card agenda-tactile flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-[24px] border p-6 peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary">
+                          <TrendingUp className="mb-2 h-6 w-6" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Receita</span>
                         </FormLabel>
                       </FormItem>
                       <FormItem>
                         <RadioGroupItem value="expense" id="expense" className="peer sr-only" />
-                        <FormLabel htmlFor="expense" className="flex flex-col items-center justify-center rounded-[24px] border-2 border-border/10 bg-card/40 p-6 hover:bg-accent/50 peer-data-[state=checked]:border-destructive peer-data-[state=checked]:bg-destructive peer-data-[state=checked]:text-destructive-foreground cursor-pointer transition-all duration-300 group shadow-lg">
-                          <TrendingDown className="mb-2 h-6 w-6 group-hover:scale-110 transition-transform" />
+                        <FormLabel htmlFor="expense" className="agenda-choice-card agenda-tactile flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-[24px] border p-6 peer-data-[state=checked]:border-destructive peer-data-[state=checked]:bg-destructive/10 peer-data-[state=checked]:text-destructive">
+                          <TrendingDown className="mb-2 h-6 w-6" />
                           <span className="text-[10px] font-black uppercase tracking-[0.2em]">Despesa</span>
                         </FormLabel>
                       </FormItem>
@@ -157,7 +157,7 @@ export const NewAppointmentTransactionModal = ({
                     <FormControl>
                       <div className="relative group">
                         <Tag className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-focus-within:text-primary transition-colors" />
-                        <Input placeholder="Ex: Pagamento da sessão" {...field} className="h-12 bg-card/30 border-border/50 rounded-xl pl-11 focus:ring-0 focus:border-primary/30 transition-all" />
+                        <Input placeholder="Ex: Pagamento da sessão" {...field} className="agenda-field h-12 rounded-xl pl-11" />
                       </div>
                     </FormControl>
                     <FormMessage />
@@ -175,7 +175,7 @@ export const NewAppointmentTransactionModal = ({
                       <FormControl>
                         <div className="relative group">
                           <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50 group-focus-within:text-primary transition-colors" />
-                          <Input type="number" step="0.01" placeholder="0.00" {...field} className="h-12 bg-card/30 border-border/50 rounded-xl pl-11 font-bold focus:ring-0 focus:border-primary/30 transition-all" />
+                          <Input type="number" step="0.01" placeholder="0.00" {...field} className="agenda-field h-12 rounded-xl pl-11 font-bold" />
                         </div>
                       </FormControl>
                       <FormMessage />
@@ -189,7 +189,7 @@ export const NewAppointmentTransactionModal = ({
                     <FormItem>
                       <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground ml-1">Categoria</FormLabel>
                       <FormControl>
-                        <Input placeholder="Ex: Terapia" {...field} className="h-12 bg-card/30 border-border/50 rounded-xl focus:ring-0 focus:border-primary/30 transition-all" />
+                        <Input placeholder="Ex: Terapia" {...field} className="agenda-field h-12 rounded-xl" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -198,7 +198,7 @@ export const NewAppointmentTransactionModal = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-secondary/30 p-3 rounded-2xl border border-border/30">
+            <div className="agenda-liquid-card flex items-center gap-2 rounded-2xl border p-3">
               <Calendar className="h-4 w-4 text-muted-foreground/50" />
               <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                 Registro em {new Date(appointment.start_time).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long' })}
@@ -207,7 +207,7 @@ export const NewAppointmentTransactionModal = ({
 
             <Button
               type="submit"
-              className="w-full h-16 rounded-[20px] bg-primary text-primary-foreground hover:bg-primary/90 font-black uppercase text-[11px] tracking-[0.4em] shadow-lg shadow-primary/20 transition-all duration-500 hover:scale-[1.01] active:scale-95 disabled:opacity-50"
+              className="agenda-primary-action agenda-tactile h-14 w-full rounded-[20px] font-black uppercase text-[11px] tracking-[0.22em] disabled:opacity-50"
               disabled={isPending}
             >
               {isPending && <Loader2 className="mr-3 h-4 w-4 animate-spin" />}

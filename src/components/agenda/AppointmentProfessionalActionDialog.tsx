@@ -95,8 +95,8 @@ export function AppointmentProfessionalActionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="desktop-retina-modal desktop-retina-form z-[220] w-[calc(100%-2rem)] max-w-[560px] gap-0 overflow-hidden rounded-[30px] border border-border/60 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl">
-        <DialogHeader className="border-b border-border/45 px-6 py-5 text-left">
+      <DialogContent className="agenda-modal-surface desktop-retina-modal desktop-retina-form z-[220] w-[calc(100%-2rem)] max-w-[560px] gap-0 overflow-hidden rounded-[30px] border p-0">
+        <DialogHeader className="agenda-modal-header border-b px-6 py-5 text-left">
           <div className="flex items-start gap-4">
             <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border ${isArchive ? "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-300" : "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-300"}`}>
               {isArchive ? <Archive className="h-[18px] w-[18px]" /> : <XCircle className="h-[18px] w-[18px]" />}
@@ -114,7 +114,7 @@ export function AppointmentProfessionalActionDialog({
           </div>
         </DialogHeader>
 
-        <div className="patient-record-scrollbar max-h-[65vh] space-y-4 overflow-y-auto p-6">
+        <div className="agenda-modal-body patient-record-scrollbar max-h-[65vh] space-y-4 overflow-y-auto p-6">
           {preview.isLoading ? (
             <div className="flex min-h-44 items-center justify-center" aria-busy="true" aria-label="Calculando impacto da ação">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground motion-reduce:animate-none" />
@@ -125,7 +125,7 @@ export function AppointmentProfessionalActionDialog({
             </div>
           ) : (
             <>
-              <div className="clinical-inset-surface rounded-[20px] border p-4">
+              <div className="agenda-liquid-card rounded-[20px] border p-4">
                 <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Agendamento</p>
                 <p className="mt-2 text-sm font-bold text-foreground">{patientName}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
@@ -178,7 +178,7 @@ export function AppointmentProfessionalActionDialog({
                     value={reason}
                     onChange={(event) => setReason(event.target.value)}
                     maxLength={1000}
-                    className="min-h-24 resize-none rounded-[18px] border-border/50 bg-muted/30 px-4 py-3 text-sm"
+                    className="agenda-field min-h-24 resize-none rounded-[18px] px-4 py-3 text-sm"
                     placeholder={isArchive ? "Explique por que este item deve sair da agenda…" : "Informe o motivo comunicado ao paciente…"}
                   />
                 </div>
@@ -187,15 +187,15 @@ export function AppointmentProfessionalActionDialog({
           )}
         </div>
 
-        <footer className="flex flex-col-reverse gap-2 border-t border-border/45 bg-muted/18 p-4 sm:flex-row sm:justify-end">
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="min-h-11 rounded-xl px-5">
+        <footer className="agenda-modal-footer flex flex-col-reverse gap-2 border-t p-4 sm:flex-row sm:justify-end">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="agenda-tactile min-h-11 rounded-xl px-5">
             Voltar
           </Button>
           <Button
             type="button"
             disabled={!canConfirm}
             onClick={() => void handleConfirm()}
-            className={`min-h-11 rounded-xl px-5 font-bold ${isArchive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-rose-600 text-white hover:bg-rose-700"}`}
+            className={`agenda-tactile min-h-11 rounded-xl px-5 font-bold ${isArchive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-rose-600 text-white hover:bg-rose-700"}`}
           >
             {execute.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}
             {isArchive ? "Confirmar remoção visual" : "Confirmar cancelamento"}
@@ -208,7 +208,7 @@ export function AppointmentProfessionalActionDialog({
 
 function PreservedFact({ icon: Icon, label, value }: { icon: typeof ShieldCheck; label: string; value: string }) {
   return (
-    <div className="clinical-inset-surface flex items-center gap-3 rounded-[18px] border p-3.5">
+    <div className="agenda-liquid-card flex items-center gap-3 rounded-[18px] border p-3.5">
       <Icon className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
       <div>
         <p className="text-[8px] font-black uppercase tracking-[0.14em] text-muted-foreground">{label}</p>

@@ -69,7 +69,7 @@ export function AppointmentTimelinePanel({
         </div>
       ) : null}
       {!isLoading && !error && events.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+        <div className="agenda-liquid-card rounded-2xl border border-dashed p-6 text-center text-sm text-muted-foreground">
           Nenhum evento registrado.
         </div>
       ) : null}
@@ -93,7 +93,7 @@ export function AppointmentTimelinePanel({
                 >
                   <Icon className="h-4 w-4" aria-hidden="true" />
                 </div>
-                <article className="min-w-0 rounded-2xl border border-border/60 bg-muted/20 p-4">
+                <article className="agenda-liquid-card min-w-0 rounded-2xl border p-4">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
                     <div>
                       <h3 className="text-sm font-bold text-foreground">{event.title}</h3>

@@ -63,7 +63,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
   };
 
   return (
-    <section className="notes-liquid-surface mt-3 rounded-[24px] border p-4 backdrop-blur-2xl" aria-labelledby="recurrence-rules-heading">
+    <section className="agenda-liquid-surface mt-3 rounded-[24px] border p-4" aria-labelledby="recurrence-rules-heading">
       <div className="flex items-start gap-3">
         <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
           <Repeat2 className="h-4 w-4" aria-hidden="true" />
@@ -84,10 +84,10 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
             Regra
           </Label>
           <Select value={value.kind} onValueChange={(kind) => patch({ kind: kind as RecurrenceRuleKind })}>
-            <SelectTrigger id="advanced-recurrence-kind" className="h-12 rounded-2xl border-border/55 bg-background/62 backdrop-blur-xl">
+            <SelectTrigger id="advanced-recurrence-kind" className="agenda-field h-12 rounded-2xl">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="notification-liquid-menu rounded-[18px] p-1.5">
+            <SelectContent className="agenda-menu-surface notification-liquid-menu rounded-[18px] p-1.5">
               {KIND_OPTIONS.map((option) => (
                 <SelectItem key={option.value} value={option.value} className="notification-liquid-menu-item rounded-[13px] py-2.5">
                   <span className="flex flex-col">
@@ -113,7 +113,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                     aria-pressed={selected}
                     onClick={() => toggleWeekDay(day.value)}
                     className={cn(
-                      "synapse-liquid-control relative flex h-10 min-w-10 flex-1 items-center justify-center rounded-full text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      "synapse-liquid-control relative flex h-11 min-w-11 flex-1 items-center justify-center rounded-full text-xs font-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                       selected && "synapse-liquid-tab-active text-foreground",
                     )}
                   >
@@ -135,7 +135,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
               value={value.monthDays.join(", ")}
               onChange={(event) => updateMonthDays(event.target.value)}
               placeholder="Ex.: 5, 12, 26"
-              className="h-12 rounded-2xl border-border/55 bg-background/62 font-semibold backdrop-blur-xl"
+              className="agenda-field h-12 rounded-2xl font-semibold"
             />
             <p className="text-[11px] leading-relaxed text-muted-foreground">
               Se 29, 30 ou 31 não existir, usaremos o último dia útil permitido e marcaremos o ajuste.
@@ -154,7 +154,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                 max={365}
                 value={value.interval}
                 onChange={(event) => patch({ interval: Math.max(1, Number(event.target.value) || 1) })}
-                className="h-12 w-28 rounded-2xl border-border/55 bg-background/62 text-center font-black"
+                className="agenda-field h-12 w-28 rounded-2xl text-center font-black"
               />
               <span className="text-sm font-semibold text-muted-foreground">dias</span>
             </div>
@@ -170,7 +170,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                 variant="ghost"
                 size="sm"
                 onClick={() => patch({ customDates: [...value.customDates, ""] })}
-                className="notification-liquid-control h-9 rounded-full px-3 text-xs font-bold"
+                className="notification-liquid-control h-11 rounded-full px-3 text-xs font-bold"
               >
                 <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar
               </Button>
@@ -182,7 +182,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                     type="date"
                     value={date}
                     onChange={(event) => updateCustomDate(index, event.target.value)}
-                    className="h-11 flex-1 rounded-2xl border-border/55 bg-background/62 font-semibold"
+                    className="agenda-field h-11 flex-1 rounded-2xl font-semibold"
                     aria-label={`Data específica ${index + 1}`}
                   />
                   <Button
@@ -211,7 +211,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
               type="date"
               value={value.distributeUntilDate}
               onChange={(event) => patch({ distributeUntilDate: event.target.value, terminationKind: "count" })}
-              className="h-12 rounded-2xl border-border/55 bg-background/62 font-semibold"
+              className="agenda-field h-12 rounded-2xl font-semibold"
             />
           </div>
         ) : null}
@@ -230,7 +230,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
             ].map((option) => (
               <label
                 key={option.value}
-                className="has-[[data-state=checked]]:synapse-liquid-tab-active synapse-chat-glass flex min-h-11 cursor-pointer items-center justify-center rounded-[15px] border px-2 text-center text-[11px] font-bold text-muted-foreground has-[[data-state=checked]]:text-foreground"
+                className="agenda-choice-card has-[[data-state=checked]]:synapse-liquid-tab-active synapse-chat-glass flex min-h-11 cursor-pointer items-center justify-center rounded-[15px] border px-2 text-center text-[11px] font-bold text-muted-foreground has-[[data-state=checked]]:text-foreground"
               >
                 <RadioGroupItem value={option.value} className="sr-only" />
                 {option.label}
@@ -246,7 +246,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                 max={500}
                 value={value.count}
                 onChange={(event) => patch({ count: Math.max(2, Number(event.target.value) || 2) })}
-                className="h-11 w-28 rounded-2xl border-border/55 bg-background/62 text-center font-black"
+                className="agenda-field h-11 w-28 rounded-2xl text-center font-black"
                 aria-label="Quantidade total de sessões"
               />
               <span className="text-xs text-muted-foreground">incluindo a primeira sessão</span>
@@ -257,7 +257,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
               type="date"
               value={value.untilDate}
               onChange={(event) => patch({ untilDate: event.target.value })}
-              className="h-11 rounded-2xl border-border/55 bg-background/62 font-semibold"
+              className="agenda-field h-11 rounded-2xl font-semibold"
               aria-label="Data final da recorrência"
             />
           ) : null}
@@ -269,7 +269,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
           ) : null}
         </fieldset>
 
-        <div className="flex items-center justify-between gap-4 rounded-[18px] border border-border/45 bg-background/38 p-3.5">
+        <div className="agenda-liquid-card flex items-center justify-between gap-4 rounded-[18px] border p-3.5">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-black text-foreground">
               <Settings2 className="h-3.5 w-3.5" /> Personalizar sessões

@@ -184,11 +184,11 @@ export function AppointmentPlanReviewDialog() {
   return (
     <Dialog open={Boolean(reference)} onOpenChange={(open) => { if (!open) close(); }}>
       <DialogContent
-        className="z-[240] max-w-[620px] gap-0 overflow-hidden rounded-[28px] border-border/60 bg-background/98 p-0 shadow-2xl backdrop-blur-2xl motion-reduce:duration-0"
+        className="agenda-modal-surface z-[240] max-w-[620px] gap-0 overflow-hidden rounded-[28px] border p-0 motion-reduce:duration-0"
         overlayClassName="z-[239] motion-reduce:duration-0"
         aria-busy={isLoading || isSubmitting}
       >
-        <DialogHeader className="border-b border-border/50 px-6 py-5">
+        <DialogHeader className="agenda-modal-header border-b px-6 py-5">
           <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
             {String(summary.title || "Revisar alteração do agendamento")}
           </DialogTitle>
@@ -244,7 +244,7 @@ export function AppointmentPlanReviewDialog() {
           ) : null}
         </div>
 
-        <DialogFooter className="border-t border-border/50 bg-muted/20 p-4">
+        <DialogFooter className="agenda-modal-footer border-t p-4">
           {plan?.status === "awaiting_confirmation" ? (
             <Button
               type="button"
@@ -259,7 +259,7 @@ export function AppointmentPlanReviewDialog() {
           <Button type="button" variant="outline" className="min-h-11 rounded-xl px-5" disabled={isSubmitting} onClick={close}>
             Fechar
           </Button>
-          <Button type="button" className="min-h-11 rounded-xl px-5 font-semibold" disabled={!canConfirm} onClick={() => void confirm()}>
+          <Button type="button" className="agenda-primary-action min-h-11 rounded-xl px-5 font-semibold" disabled={!canConfirm} onClick={() => void confirm()}>
             {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}
             Confirmar esta versão
           </Button>
@@ -281,7 +281,7 @@ function ReviewRow({
   detail: string;
 }) {
   return (
-    <section className="rounded-2xl border border-border/55 bg-muted/25 p-4">
+    <section className="agenda-liquid-card rounded-2xl border p-4">
       <div className="flex gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground shadow-sm">
           <Icon className="h-5 w-5" aria-hidden="true" />

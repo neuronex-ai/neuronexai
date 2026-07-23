@@ -5920,6 +5920,599 @@
   -webkit-overflow-scrolling: touch;
 }
 
+.app-dialog-position {
+  /*
+   * Keep placement independent from utility ordering and animation state.
+   * Viewport units also remain correct when browser zoom changes the visual
+   * viewport. Dialog motion is intentionally opacity-only.
+   */
+  top: 50dvh !important;
+  left: 50dvw !important;
+  translate: none !important;
+  transform: translate3d(-50%, -50%, 0) !important;
+}
+
+.agenda-viewport-modal {
+  box-sizing: border-box;
+  height: min(760px, calc(100dvh - 1rem));
+  min-height: min(34rem, calc(100dvh - 1rem));
+}
+
+@media (max-height: 560px) {
+  .agenda-viewport-modal {
+    border-radius: 20px;
+  }
+}
+
+/* Agenda Desktop — a neutral Liquid Glass material language aligned with the
+   Synapse conversation and notification surfaces. State is communicated by
+   contrast, shape and concise motion instead of decorative color. */
+.agenda-desktop-shell,
+.agenda-modal-surface,
+.appointment-detail-shell {
+  --agenda-edge: 240 6% 10%;
+  --agenda-surface: 0 0% 100%;
+  --agenda-surface-raised: 0 0% 100%;
+  --agenda-surface-inset: 240 5% 96%;
+  --agenda-shadow: 240 6% 10%;
+  --agenda-system-red: 3 100% 59%;
+}
+
+.dark .agenda-desktop-shell,
+.dark .agenda-modal-surface,
+.dark .appointment-detail-shell {
+  --agenda-edge: 240 3% 34%;
+  --agenda-surface: 240 7% 3%;
+  --agenda-surface-raised: 240 5% 7%;
+  --agenda-surface-inset: 240 7% 2%;
+  --agenda-shadow: 0 0% 0%;
+  --agenda-system-red: 3 100% 63%;
+}
+
+.agenda-liquid-surface,
+.agenda-modal-surface,
+.agenda-grid-surface {
+  position: relative;
+  isolation: isolate;
+  border-color: hsl(var(--agenda-edge) / 0.09) !important;
+  background:
+    radial-gradient(80% 64% at 18% -18%, hsl(var(--agenda-surface) / 0.92), transparent 66%),
+    linear-gradient(155deg, hsl(var(--agenda-surface) / 0.78), hsl(var(--agenda-surface-inset) / 0.58)),
+    hsl(var(--agenda-surface) / 0.72) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.86),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.025),
+    0 30px 82px -58px hsl(var(--agenda-shadow) / 0.56) !important;
+  backdrop-filter: blur(28px) saturate(1.16);
+  -webkit-backdrop-filter: blur(28px) saturate(1.16);
+}
+
+.dark .agenda-liquid-surface,
+.dark .agenda-modal-surface,
+.dark .agenda-grid-surface {
+  border-color: rgba(255, 255, 255, 0.032) !important;
+  background: rgba(7, 7, 9, 0.94) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.022),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+    0 34px 92px -54px rgba(0, 0, 0, 0.98) !important;
+  backdrop-filter: blur(30px) saturate(0.94);
+  -webkit-backdrop-filter: blur(30px) saturate(0.94);
+}
+
+.agenda-liquid-surface::before,
+.agenda-modal-surface::before,
+.agenda-grid-surface::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(135deg, hsl(var(--agenda-surface) / 0.34), transparent 38%),
+    linear-gradient(180deg, hsl(var(--agenda-edge) / 0.018), transparent 22%);
+  opacity: 0.58;
+  mix-blend-mode: soft-light;
+}
+
+.dark .agenda-liquid-surface::before,
+.dark .agenda-modal-surface::before,
+.dark .agenda-grid-surface::before {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 18%);
+  opacity: 0.52;
+  mix-blend-mode: normal;
+}
+
+.agenda-liquid-card,
+.agenda-choice-card,
+.agenda-appointment-card,
+.agenda-month-cell {
+  border-color: hsl(var(--agenda-edge) / 0.085) !important;
+  background:
+    linear-gradient(148deg, hsl(var(--agenda-surface) / 0.78), hsl(var(--agenda-surface-inset) / 0.5)),
+    hsl(var(--agenda-surface) / 0.68) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.82),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.025),
+    0 15px 36px -31px hsl(var(--agenda-shadow) / 0.42);
+}
+
+.dark .agenda-liquid-card,
+.dark .agenda-choice-card,
+.dark .agenda-appointment-card,
+.dark .agenda-month-cell {
+  border-color: rgba(255, 255, 255, 0.028) !important;
+  background: rgba(17, 17, 20, 0.78) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.58),
+    0 17px 40px -31px rgba(0, 0, 0, 0.94);
+}
+
+.agenda-field,
+.agenda-modal-surface :where(input, textarea, button[role='combobox']) {
+  border-color: hsl(var(--agenda-edge) / 0.1) !important;
+  background:
+    linear-gradient(150deg, hsl(var(--agenda-surface) / 0.72), hsl(var(--agenda-surface-inset) / 0.5)),
+    hsl(var(--agenda-surface) / 0.7) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.75),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.03);
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.dark .agenda-field,
+.dark .agenda-modal-surface :where(input, textarea, button[role='combobox']) {
+  border-color: rgba(255, 255, 255, 0.035) !important;
+  background: rgba(5, 5, 7, 0.82) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.016),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.64);
+}
+
+.agenda-field:hover:not(:disabled),
+.agenda-modal-surface :where(input, textarea, button[role='combobox']):hover:not(:disabled) {
+  border-color: hsl(var(--agenda-edge) / 0.16) !important;
+}
+
+.agenda-field:focus,
+.agenda-field:focus-visible,
+.agenda-field[data-state='open'],
+.agenda-modal-surface :where(input, textarea, button[role='combobox']):focus,
+.agenda-modal-surface :where(input, textarea, button[role='combobox']):focus-visible,
+.agenda-modal-surface button[role='combobox'][data-state='open'] {
+  border-color: hsl(var(--ring) / 0.48) !important;
+  box-shadow:
+    0 0 0 3px hsl(var(--ring) / 0.12),
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.72) !important;
+}
+
+.agenda-tactile,
+.agenda-choice-card,
+.agenda-month-cell,
+.agenda-appointment-card,
+.agenda-primary-action {
+  transition:
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    color 150ms ease,
+    opacity 150ms ease;
+}
+
+@media (hover: hover) {
+  .agenda-tactile:hover:not(:disabled),
+  .agenda-choice-card:hover:not(:disabled),
+  .agenda-month-cell:hover:not(:disabled),
+  .agenda-appointment-card:hover:not(:disabled) {
+    transform: translateY(-1px);
+    border-color: hsl(var(--agenda-edge) / 0.16) !important;
+    box-shadow:
+      inset 0 1px 0 hsl(var(--agenda-surface) / 0.84),
+      0 19px 42px -32px hsl(var(--agenda-shadow) / 0.52);
+  }
+}
+
+.agenda-tactile:active:not(:disabled),
+.agenda-choice-card:active:not(:disabled),
+.agenda-month-cell:active:not(:disabled),
+.agenda-appointment-card:active:not(:disabled),
+.agenda-primary-action:active:not(:disabled) {
+  transform: translateY(0.5px) scale(0.985);
+  transition-duration: 90ms;
+}
+
+.agenda-choice-card[aria-pressed='true'],
+.agenda-choice-card[data-state='checked'] {
+  border-color: hsl(var(--foreground) / 0.22) !important;
+  background:
+    linear-gradient(148deg, hsl(var(--foreground) / 0.085), hsl(var(--foreground) / 0.025)),
+    hsl(var(--agenda-surface) / 0.78) !important;
+}
+
+.dark .agenda-choice-card[aria-pressed='true'],
+.dark .agenda-choice-card[data-state='checked'] {
+  border-color: rgba(255, 255, 255, 0.085) !important;
+  background: rgba(255, 255, 255, 0.052) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 14px 32px -28px rgba(0, 0, 0, 0.98);
+}
+
+.agenda-month-cell[data-target='true'] {
+  border-color: hsl(var(--foreground) / 0.28) !important;
+  box-shadow:
+    inset 0 0 0 1px hsl(var(--foreground) / 0.13),
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.84),
+    0 18px 44px -34px hsl(var(--agenda-shadow) / 0.5);
+}
+
+.agenda-month-cell[data-dragging='true']:not([data-target='true']) {
+  opacity: 0.82;
+}
+
+.agenda-primary-action {
+  color: hsl(var(--background)) !important;
+  background:
+    linear-gradient(180deg, hsl(var(--foreground) / 0.96), hsl(var(--foreground))) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--background) / 0.18),
+    0 14px 30px -20px hsl(var(--foreground) / 0.62);
+}
+
+.agenda-primary-action:hover:not(:disabled) {
+  background:
+    linear-gradient(180deg, hsl(var(--foreground) / 0.88), hsl(var(--foreground) / 0.94)) !important;
+}
+
+.dark .agenda-primary-action,
+.dark .agenda-primary-action:hover:not(:disabled) {
+  background: hsl(var(--foreground)) !important;
+  background-image: none !important;
+}
+
+.agenda-modal-header {
+  border-color: hsl(var(--agenda-edge) / 0.075);
+  background: linear-gradient(180deg, hsl(var(--agenda-surface) / 0.68), transparent);
+}
+
+.agenda-modal-body {
+  background:
+    radial-gradient(80% 54% at 50% -16%, hsl(var(--agenda-surface) / 0.72), transparent 70%),
+    transparent;
+}
+
+.agenda-modal-footer {
+  border-color: hsl(var(--agenda-edge) / 0.08) !important;
+  background:
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.62), hsl(var(--agenda-surface-inset) / 0.76)) !important;
+  box-shadow: inset 0 1px 0 hsl(var(--agenda-surface) / 0.64);
+}
+
+.dark .agenda-modal-footer {
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(7, 7, 9, 0.96) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.dark .agenda-modal-header {
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(9, 9, 11, 0.94);
+}
+
+.dark .agenda-modal-body {
+  background: rgba(8, 8, 10, 0.72);
+}
+
+.dark .agenda-desktop-shell .notification-liquid-control,
+.dark .agenda-modal-surface .notification-liquid-control,
+.dark .appointment-detail-shell .appointment-liquid-control,
+.dark .agenda-modal-surface .appointment-liquid-control,
+.dark .agenda-modal-surface .app-modal-close {
+  border-color: rgba(255, 255, 255, 0.035) !important;
+  background: rgba(255, 255, 255, 0.025) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.52) !important;
+}
+
+.dark .agenda-desktop-shell .notification-liquid-control:hover:not(:disabled),
+.dark .agenda-modal-surface .notification-liquid-control:hover:not(:disabled),
+.dark .appointment-detail-shell .appointment-liquid-control:hover:not(:disabled),
+.dark .agenda-modal-surface .appointment-liquid-control:hover:not(:disabled),
+.dark .agenda-modal-surface .app-modal-close:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.065) !important;
+  background: rgba(255, 255, 255, 0.052) !important;
+}
+
+.dark .agenda-desktop-shell .synapse-chat-glass,
+.dark .agenda-modal-surface .synapse-chat-glass,
+.dark .appointment-detail-shell .synapse-chat-glass,
+.dark .agenda-desktop-shell .notification-liquid-icon,
+.dark .agenda-modal-surface .notification-liquid-icon {
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(15, 15, 18, 0.76) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.54),
+    0 14px 30px -26px rgba(0, 0, 0, 0.94) !important;
+}
+
+.dark .agenda-desktop-shell :where(.synapse-liquid-toolbar, .notification-liquid-toolbar),
+.dark .agenda-modal-surface :where(.synapse-liquid-toolbar, .notification-liquid-toolbar) {
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(6, 6, 8, 0.82) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.64) !important;
+}
+
+.dark .agenda-desktop-shell :where(.synapse-liquid-tab-active, .notification-liquid-tab-active),
+.dark .agenda-modal-surface :where(.synapse-liquid-tab-active, .notification-liquid-tab-active) {
+  border-color: rgba(255, 255, 255, 0.065) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 22px -18px rgba(0, 0, 0, 0.98) !important;
+}
+
+.dark .agenda-desktop-shell .notification-popover-surface {
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(8, 8, 10, 0.96) !important;
+  background-image: none !important;
+}
+
+.dark .agenda-desktop-shell .notification-popover-surface::before,
+.dark .agenda-desktop-shell .notification-popover-surface::after {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.dark .agenda-waitlist-surface {
+  border-color: rgba(255, 255, 255, 0.032) !important;
+  background: rgba(7, 7, 9, 0.97) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.02),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.72),
+    0 34px 88px -46px rgba(0, 0, 0, 0.98) !important;
+  backdrop-filter: blur(30px) saturate(0.94) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(0.94) !important;
+}
+
+.dark .agenda-waitlist-surface::before,
+.dark .agenda-waitlist-surface::after {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.dark .agenda-waitlist-surface .notification-panel-header {
+  border-color: rgba(255, 255, 255, 0.03) !important;
+  background: rgba(9, 9, 11, 0.97) !important;
+  background-image: none !important;
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.62);
+}
+
+.dark .agenda-waitlist-surface .notification-scroll-region {
+  background: rgba(6, 6, 8, 0.68);
+}
+
+.dark .agenda-waitlist-surface :where(.agenda-liquid-surface, .agenda-liquid-card, .notification-card) {
+  border-color: rgba(255, 255, 255, 0.028) !important;
+  background: rgba(15, 15, 18, 0.78) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.58),
+    0 17px 40px -31px rgba(0, 0, 0, 0.94) !important;
+}
+
+.dark .agenda-waitlist-surface :where(.agenda-field, input, textarea, button[role='combobox']) {
+  border-color: rgba(255, 255, 255, 0.035) !important;
+  background: rgba(5, 5, 7, 0.84) !important;
+  background-image: none !important;
+}
+
+.agenda-menu-surface {
+  border-color: hsl(var(--foreground) / 0.09) !important;
+}
+
+.dark .agenda-menu-surface {
+  border-color: rgba(255, 255, 255, 0.035) !important;
+  background: rgba(8, 8, 10, 0.97) !important;
+  background-image: none !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.68),
+    0 26px 64px -28px rgba(0, 0, 0, 0.98) !important;
+  backdrop-filter: blur(28px) saturate(0.92) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(0.92) !important;
+}
+
+.dark .agenda-menu-surface::before,
+.dark .agenda-menu-surface::after {
+  background: none !important;
+  box-shadow: none !important;
+}
+
+.dark .agenda-menu-surface [role='option'] {
+  color: hsl(var(--foreground) / 0.78);
+}
+
+.dark .agenda-menu-surface [role='option']:focus,
+.dark .agenda-menu-surface [role='option'][data-highlighted] {
+  color: hsl(var(--foreground));
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.agenda-step-enter {
+  animation: agenda-step-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes agenda-step-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(8px, 2px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.agenda-grid-header {
+  border-color: hsl(var(--agenda-edge) / 0.075) !important;
+  background:
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.72), hsl(var(--agenda-surface) / 0.5)) !important;
+  backdrop-filter: blur(18px) saturate(1.08);
+}
+
+.dark .agenda-grid-header {
+  border-color: rgba(255, 255, 255, 0.028) !important;
+  background: rgba(10, 10, 12, 0.94) !important;
+}
+
+.agenda-grid-day,
+.agenda-time-gutter {
+  border-color: hsl(var(--agenda-edge) / 0.055) !important;
+}
+
+.dark .agenda-grid-day,
+.dark .agenda-time-gutter,
+.dark .agenda-grid-slot {
+  border-color: rgba(255, 255, 255, 0.022) !important;
+}
+
+.agenda-grid-today {
+  background:
+    linear-gradient(180deg, hsl(var(--foreground) / 0.035), hsl(var(--foreground) / 0.012)) !important;
+}
+
+.dark .agenda-grid-today {
+  background: rgba(255, 255, 255, 0.018) !important;
+}
+
+.agenda-grid-slot {
+  border-color: hsl(var(--agenda-edge) / 0.045) !important;
+  transition: background-color 130ms ease, box-shadow 130ms ease;
+}
+
+.agenda-grid-slot:not([data-blocked='true']):hover,
+.agenda-grid-slot[data-over='true'] {
+  background: hsl(var(--foreground) / 0.035) !important;
+  box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.025);
+}
+
+.agenda-grid-slot[data-blocked='true'] {
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      hsl(var(--foreground) / 0.022) 0,
+      hsl(var(--foreground) / 0.022) 5px,
+      transparent 5px,
+      transparent 10px
+    ) !important;
+}
+
+.agenda-current-time-dot,
+.agenda-current-time-line {
+  background: hsl(var(--agenda-system-red));
+  box-shadow: 0 0 8px hsl(var(--agenda-system-red) / 0.36);
+}
+
+.agenda-current-time-line {
+  height: 2px;
+}
+
+.agenda-edge-trigger {
+  background:
+    linear-gradient(180deg, transparent, hsl(var(--foreground) / 0.14) 25%, hsl(var(--foreground) / 0.14) 75%, transparent);
+  transition: width 160ms ease, opacity 160ms ease, transform 160ms ease;
+}
+
+.agenda-edge-trigger:hover,
+.agenda-edge-trigger:focus-visible {
+  transform: scaleX(1.08);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .agenda-liquid-surface,
+  .agenda-modal-surface,
+  .agenda-grid-surface,
+  .agenda-liquid-card,
+  .agenda-choice-card,
+  .agenda-field,
+  .agenda-modal-footer,
+  .agenda-grid-header {
+    background: hsl(var(--card)) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .agenda-liquid-surface,
+  .agenda-modal-surface,
+  .agenda-grid-surface,
+  .agenda-liquid-card,
+  .agenda-choice-card,
+  .agenda-field,
+  .agenda-month-cell,
+  .agenda-appointment-card {
+    border: 1px solid CanvasText !important;
+    color: CanvasText;
+    background: Canvas !important;
+    box-shadow: none !important;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .agenda-liquid-surface,
+  .agenda-modal-surface,
+  .agenda-grid-surface,
+  .agenda-liquid-card,
+  .agenda-choice-card,
+  .agenda-field,
+  .agenda-month-cell,
+  .agenda-appointment-card {
+    border-color: hsl(var(--foreground) / 0.34) !important;
+    box-shadow: none;
+  }
+
+  .agenda-field:focus,
+  .agenda-field:focus-visible,
+  .agenda-choice-card:focus-visible,
+  .agenda-tactile:focus-visible {
+    outline: 2px solid hsl(var(--foreground));
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agenda-step-enter {
+    animation: none !important;
+  }
+
+  .agenda-tactile,
+  .agenda-choice-card,
+  .agenda-month-cell,
+  .agenda-appointment-card,
+  .agenda-primary-action,
+  .agenda-grid-slot,
+  .agenda-edge-trigger {
+    transition-duration: 0.01ms !important;
+    transform: none !important;
+  }
+}
+
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }

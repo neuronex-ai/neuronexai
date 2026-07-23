@@ -128,8 +128,7 @@ export default function DesktopAgenda() {
     return (
         <div className="desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-4 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-8 xl:px-10">
-                <div className="agenda-desktop-shell desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border border-border/45 bg-card/44 p-2 md:p-3">
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,hsl(var(--foreground)/0.018),transparent_40%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(155deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
+                <div className="agenda-desktop-shell agenda-liquid-surface desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border p-2 md:p-3">
                 <AnimatePresence>
                     {sidebarOpen && (
                         <>
@@ -142,7 +141,7 @@ export default function DesktopAgenda() {
                                 exit={{ opacity: 0 }}
                                 transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
                                 onClick={() => setSidebarOpen(false)}
-                                className="absolute inset-0 z-30 hidden cursor-default bg-zinc-950/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/20 dark:bg-black/20 dark:focus-visible:ring-white/25 xl:block"
+                                className="absolute inset-0 z-30 hidden cursor-default bg-foreground/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-background/20 xl:block"
                             />
                             <motion.aside
                                 key="sidebar"
@@ -152,8 +151,7 @@ export default function DesktopAgenda() {
                                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
                                 className="absolute inset-y-3 left-3 z-40 hidden min-h-0 w-[324px] flex-col overflow-hidden xl:flex"
                             >
-                                <div className="desktop-retina-panel relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] border border-border/55 bg-card/94 p-2 backdrop-blur-2xl">
-                                    <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[linear-gradient(150deg,hsl(var(--foreground)/0.025),transparent_38%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.02),transparent_42%)]" />
+                                <div className="agenda-liquid-surface relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] border p-2">
                                     <div className="relative z-10 flex h-full min-h-0 flex-col">
                                         <Sidebar
                                             selectedDate={selectedDate}
@@ -184,7 +182,7 @@ export default function DesktopAgenda() {
                                 exit={{ opacity: 0 }}
                                 transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
                                 onClick={() => setWaitlistOpen(false)}
-                                className="absolute inset-0 z-30 cursor-default bg-zinc-950/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-black/20"
+                                className="absolute inset-0 z-30 cursor-default bg-foreground/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-background/20"
                             />
                             <motion.aside
                                 key="agenda-waitlist"
@@ -204,15 +202,14 @@ export default function DesktopAgenda() {
                             onMouseEnter={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
                             onFocus={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
                             onClick={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
-                            className="absolute inset-y-[18%] right-0 z-20 w-2 rounded-l-full bg-foreground/[0.055] opacity-35 transition-[width,opacity] hover:w-3 hover:opacity-100 focus-visible:w-3 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            className="agenda-edge-trigger absolute inset-y-[18%] right-0 z-20 w-2 rounded-l-full opacity-45 hover:w-3 hover:opacity-100 focus-visible:w-3 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             aria-label={`Abrir lista de espera${activeWaitlistCount ? `, ${activeWaitlistCount} pessoas ativas` : ""}`}
                         />
                     )}
                 </AnimatePresence>
 
                 <main className="relative z-10 flex h-full min-w-0 flex-1 flex-col" data-synapse-target="daily-schedule">
-                    <div className="desktop-retina-panel relative min-h-0 flex-1 overflow-hidden rounded-[32px] border border-border/50 bg-card/82">
-                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(155deg,hsl(var(--foreground)/0.014),transparent_38%)] dark:bg-[linear-gradient(155deg,rgba(255,255,255,0.012),transparent_42%)]" />
+                    <div className="agenda-liquid-surface relative min-h-0 flex-1 overflow-hidden rounded-[32px] border">
                         <CalendarView
                             date={selectedDate}
                             onDateChange={setSelectedDate}

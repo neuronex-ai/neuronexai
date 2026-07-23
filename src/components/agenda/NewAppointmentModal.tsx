@@ -239,7 +239,7 @@ function PillToggle({
   ] as const;
 
   return (
-    <div className="flex w-full rounded-[20px] bg-zinc-100 dark:bg-white/[0.04] border border-zinc-200/80 dark:border-white/[0.06] p-1 gap-1 shadow-inner">
+    <div className="synapse-liquid-toolbar flex w-full gap-1 rounded-[20px] p-1">
       {options.map((opt) => {
         const isActive = value === opt.id;
         return (
@@ -248,15 +248,13 @@ function PillToggle({
             type="button"
             onClick={() => onChange(opt.id)}
             className={cn(
-              "relative flex-1 flex items-center justify-center gap-2 py-3 px-2 rounded-[16px] text-[10px] font-black uppercase tracking-[0.12em] transition-all duration-300 select-none",
+              "agenda-tactile synapse-liquid-control relative flex min-h-11 flex-1 select-none items-center justify-center gap-2 rounded-[16px] px-2 py-3 text-[10px] font-black uppercase tracking-[0.12em]",
               isActive
-                ? opt.id === "event"
-                  ? "bg-violet-500 text-white shadow-lg shadow-violet-500/25"
-                  : "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                : "text-muted-foreground hover:text-foreground hover:bg-zinc-200/60 dark:hover:bg-white/[0.06]"
+                ? "synapse-liquid-tab-active text-foreground"
+                : "text-muted-foreground hover:text-foreground"
             )}
           >
-            <opt.icon className={cn("h-3.5 w-3.5 shrink-0 transition-transform duration-300", isActive && "scale-110")} />
+            <opt.icon className="h-3.5 w-3.5 shrink-0" />
             <span className="hidden sm:inline">{opt.label}</span>
             <span className="sm:hidden">{opt.id === "session" ? "Sessão" : "Evento"}</span>
           </button>
@@ -424,7 +422,14 @@ export function NewAppointmentModal({
   const remainingSessions = selectedPackage
     ? selectedPackage.total_sessions - selectedPackage.sessions_used - (selectedPackage.sessions_reserved || 0)
     : 0;
-  const afterDebitSessions = remainingSessions - (recurrenceEnabled ? recurrenceCount : 1);
+  const sessionsToReserve = recurrenceEnabled
+    ? recurrenceDraft.terminationKind === "count"
+      ? recurrenceDraft.count
+      : null
+    : 1;
+  const afterDebitSessions = sessionsToReserve === null
+    ? null
+    : remainingSessions - sessionsToReserve;
   const latestPackage = patientPackages?.[0];
   const latestPackageRemaining = latestPackage
     ? latestPackage.total_sessions - latestPackage.sessions_used - (latestPackage.sessions_reserved || 0)
@@ -699,11 +704,11 @@ export function NewAppointmentModal({
 
   // ─── Style tokens ────────────────────────────────────────────────
   const inputBase =
-    "h-12 bg-zinc-100/60 dark:bg-secondary/20 border-zinc-200 dark:border-border/10 hover:bg-zinc-200/60 dark:hover:bg-secondary/30 focus:bg-zinc-200/60 dark:focus:bg-secondary/30 rounded-2xl text-sm text-foreground transition-all focus:border-border/20 focus:ring-0";
+    "agenda-field h-12 rounded-2xl text-sm text-foreground focus:ring-0";
   const labelBase = "text-[9px] uppercase tracking-[0.14em] font-bold text-muted-foreground ml-1";
   const cardBase =
-    "rounded-2xl border border-zinc-200 dark:border-border/10 bg-zinc-100/60 dark:bg-secondary/20 p-4 hover:bg-zinc-200/60 dark:hover:bg-secondary/30 transition-all";
-  const selectPopover = "bg-white dark:bg-popover/95 backdrop-blur-3xl border-zinc-200 dark:border-border/10 rounded-xl overflow-hidden shadow-2xl z-[9999]";
+    "agenda-liquid-card rounded-2xl border p-4";
+  const selectPopover = "agenda-menu-surface notification-liquid-menu z-[9999] overflow-hidden rounded-[18px] p-1.5";
 
   const applySeriesTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
@@ -852,7 +857,7 @@ export function NewAppointmentModal({
 
   const renderStep1 = () => {
     return (
-      <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+      <div className="agenda-step-enter space-y-4">
         {/* Pill Toggle */}
         <FormField
           control={form.control}
@@ -866,7 +871,7 @@ export function NewAppointmentModal({
 
         {/* ── Sessão Clínica ─────────────────────────── */}
         {eventType === "session" && (
-          <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+          <div className="agenda-step-enter space-y-4">
             <div className="space-y-1.5">
               <h3 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
                 <div className="p-2 rounded-full bg-secondary/20">
@@ -927,11 +932,11 @@ export function NewAppointmentModal({
 
         {/* ── Evento Geral ───────────────────────────── */}
         {eventType === "event" && (
-          <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+          <div className="agenda-step-enter space-y-4">
             <div className="space-y-1.5">
               <h3 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
-                <div className="p-2 rounded-full bg-violet-500/10">
-                  <CalendarPlus className="h-4 w-4 text-violet-500" />
+                <div className="rounded-full bg-primary/10 p-2">
+                  <CalendarPlus className="h-4 w-4 text-primary" />
                 </div>
                 Novo Compromisso
               </h3>
@@ -1014,10 +1019,10 @@ export function NewAppointmentModal({
                   </FormControl>
                 </PopoverTrigger>
                 <PopoverContent
-                  className="w-auto p-0 bg-white dark:bg-popover border-zinc-200 dark:border-border/10 rounded-3xl shadow-[0_0_50px_-10px_rgba(0,0,0,0.15)] dark:shadow-[0_0_50px_-10px_rgba(0,0,0,0.4)] overflow-hidden"
+                  className="agenda-menu-surface notification-popover-surface w-auto overflow-hidden rounded-3xl border p-0"
                   align="start"
                 >
-                  <div className="p-4 bg-zinc-50 dark:bg-secondary/10 backdrop-blur-md">
+                  <div className="p-4">
                     <Calendar
                       mode="single"
                       selected={field.value}
@@ -1068,7 +1073,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="endTime"
             render={({ field }) => (
-              <FormItem className="w-[124px] space-y-2 animate-in fade-in-0 duration-200">
+              <FormItem className="agenda-step-enter w-[124px] space-y-2">
                 <FormLabel className={labelBase}>Fim</FormLabel>
                 <FormControl>
                   <div className="relative group">
@@ -1127,17 +1132,17 @@ export function NewAppointmentModal({
       />
 
       {form.watch("recurrence") && (
-        <div className="mt-3 space-y-3 animate-in slide-in-from-top-2 motion-reduce:animate-none">
+        <div className="agenda-step-enter mt-3 space-y-3">
           {seriesTemplates?.length ? (
-            <div className="notes-liquid-surface rounded-[20px] border p-3 backdrop-blur-2xl">
+            <div className="agenda-liquid-surface rounded-[20px] border p-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-black text-foreground">
                 <WandSparkles className="h-3.5 w-3.5" /> Usar um modelo salvo
               </div>
               <Select value={selectedTemplateId} onValueChange={applySeriesTemplate}>
-                <SelectTrigger className="h-11 rounded-2xl border-border/55 bg-background/62 font-semibold">
+                <SelectTrigger className="agenda-field h-11 rounded-2xl font-semibold">
                   <SelectValue placeholder="Escolha um modelo e edite só o necessário" />
                 </SelectTrigger>
-                <SelectContent className="notification-liquid-menu rounded-[18px] p-1.5">
+                <SelectContent className="agenda-menu-surface notification-liquid-menu rounded-[18px] p-1.5">
                   {seriesTemplates.map((template) => (
                     <SelectItem key={template.id} value={template.id} className="notification-liquid-menu-item rounded-[13px] py-2.5">
                       {template.name}
@@ -1156,7 +1161,7 @@ export function NewAppointmentModal({
   // ─── STEP 2: Details ──────────────────────────────────────────────
 
   const renderStep2 = () => (
-    <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+    <div className="agenda-step-enter space-y-4">
       {eventType === "session" && (
         <>
           <div className="space-y-1.5 mb-4">
@@ -1217,7 +1222,7 @@ export function NewAppointmentModal({
                         </FormControl>
                         <label
                           htmlFor={`modality-${m.id}`}
-                          className="flex flex-col items-center justify-center p-4 rounded-[20px] border border-zinc-200 dark:border-border/10 bg-zinc-100/60 dark:bg-secondary/20 hover:bg-zinc-200/60 dark:hover:bg-secondary/30 peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer transition-all text-muted-foreground active:scale-95"
+                          className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-[20px] border p-4 text-muted-foreground peer-data-[state=checked]:border-foreground/25 peer-data-[state=checked]:text-foreground"
                         >
                           <m.icon className="h-6 w-6 mb-2" />
                           <span className="text-[9px] font-black uppercase tracking-widest">{m.label}</span>
@@ -1298,8 +1303,8 @@ export function NewAppointmentModal({
         <>
           <div className="space-y-1.5 mb-4">
             <h3 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
-              <div className="p-2 rounded-full bg-violet-500/10">
-                <StickyNote className="h-4 w-4 text-violet-500" />
+              <div className="rounded-full bg-primary/10 p-2">
+                <StickyNote className="h-4 w-4 text-primary" />
               </div>
               Detalhes do Evento
             </h3>
@@ -1350,7 +1355,7 @@ export function NewAppointmentModal({
   // ─── STEP 3: Financial Alignment (Session only) ───────────────────
 
   const renderStep3 = () => (
-    <div className="space-y-4 animate-in slide-in-from-right-4 duration-300">
+    <div className="agenda-step-enter space-y-4">
       <div className="space-y-1.5 mb-4">
         <h3 className="text-lg font-bold text-foreground tracking-tight flex items-center gap-2">
           <div className="p-2 rounded-full bg-secondary/20">
@@ -1363,14 +1368,14 @@ export function NewAppointmentModal({
 
       {/* Loading */}
       {isCheckingFinancialRules && (
-        <div className="flex items-center gap-3 p-4 rounded-2xl bg-zinc-100/60 dark:bg-secondary/20 border border-zinc-200 dark:border-border/10">
+        <div className="agenda-liquid-card flex items-center gap-3 rounded-2xl border p-4">
           <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           <span className="text-sm text-muted-foreground font-medium">Verificando planos do paciente...</span>
         </div>
       )}
 
       {!isCheckingFinancialRules && resolvedFinancial ? (
-        <div className="notes-liquid-surface rounded-[22px] border p-4 backdrop-blur-2xl">
+        <div className="agenda-liquid-surface rounded-[22px] border p-4">
           <div className="flex items-start gap-3">
             <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
               {resolvedFinancial.planType === "insurance"
@@ -1410,7 +1415,7 @@ export function NewAppointmentModal({
 
       {/* ── Cenário A: Paciente tem pacote ativo ─────────────── */}
       {!isCheckingFinancialRules && hasActivePackage && (
-        <div className="space-y-4 animate-in fade-in-0 duration-300">
+        <div className="agenda-step-enter space-y-4">
           {/* Info Card – saldo do pacote */}
           <div className="rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/[0.07] border border-emerald-500/20 p-4">
             <div className="flex items-start gap-4">
@@ -1424,8 +1429,10 @@ export function NewAppointmentModal({
                   <span className="font-bold text-emerald-500">{remainingSessions} sessões restantes</span>
                 </p>
                 {usePackageSwitch && (
-                  <p className="text-xs text-muted-foreground/70 mt-1 animate-in fade-in-0 duration-200">
-                    Após reserva: <span className={cn("font-mono font-bold", afterDebitSessions <= 1 ? "text-amber-400" : "text-emerald-400")}>{afterDebitSessions}</span> sessões
+                  <p className="agenda-step-enter mt-1 text-xs text-muted-foreground/70">
+                    {afterDebitSessions === null
+                      ? "O saldo necessário será calculado na revisão de todas as datas."
+                      : <>Após reserva: <span className={cn("font-mono font-bold", afterDebitSessions <= 1 ? "text-amber-500" : "text-emerald-600 dark:text-emerald-400")}>{afterDebitSessions}</span> sessões</>}
                   </p>
                 )}
               </div>
@@ -1485,7 +1492,7 @@ export function NewAppointmentModal({
               control={form.control}
               name="packageId"
               render={({ field }) => (
-                <div className="space-y-3 animate-in slide-in-from-top-2">
+                <div className="agenda-step-enter space-y-3">
                   <RadioGroup onValueChange={field.onChange} defaultValue={field.value || activePackages[0]?.id} className="grid gap-3">
                     {activePackages.map((pkg) => (
                       <div key={pkg.id}>
@@ -1494,7 +1501,7 @@ export function NewAppointmentModal({
                           htmlFor={pkg.id}
                           className={cn(
                             cardBase,
-                            "flex flex-col items-start cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 active:scale-[0.98]"
+                            "agenda-choice-card flex cursor-pointer flex-col items-start peer-data-[state=checked]:border-foreground/25"
                           )}
                         >
                           <div className="flex w-full items-center justify-between">
@@ -1516,7 +1523,7 @@ export function NewAppointmentModal({
 
       {/* ── Cenário B: Sem pacote ativo ──────────────────────── */}
       {!isCheckingFinancialRules && !hasActivePackage && (
-        <div className="space-y-4 animate-in fade-in-0 duration-300">
+        <div className="agenda-step-enter space-y-4">
           {/* Alerta sutil */}
           <div className="rounded-2xl bg-amber-500/5 dark:bg-amber-500/[0.07] border border-amber-500/20 p-4">
             <div className="flex items-start gap-4">
@@ -1544,7 +1551,7 @@ export function NewAppointmentModal({
 
       {/* ── Cenário C: Override / Lançamento Financeiro ──────── */}
       {!isCheckingFinancialRules && (!usePackageSwitch || !hasActivePackage) && (
-        <div className="space-y-4 animate-in fade-in-0 slide-in-from-bottom-2 duration-300">
+        <div className="agenda-step-enter space-y-4">
           <FormField
             control={form.control}
             name="shouldCreateTransaction"
@@ -1565,7 +1572,7 @@ export function NewAppointmentModal({
           />
 
           {shouldCreateTransaction && (
-            <div className="space-y-4 pt-1 animate-in slide-in-from-top-2">
+            <div className="agenda-step-enter space-y-4 pt-1">
               <div className="flex gap-3">
                 <FormField
                   control={form.control}
@@ -1617,7 +1624,7 @@ export function NewAppointmentModal({
                             </FormControl>
                             <label
                               htmlFor={`pay-${m.id}`}
-                              className="flex flex-col items-center justify-center p-3 rounded-2xl border border-zinc-200 dark:border-border/10 bg-zinc-100/60 dark:bg-secondary/20 hover:bg-zinc-200/60 dark:hover:bg-secondary/30 peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:border-primary peer-data-[state=checked]:text-primary cursor-pointer transition-all text-muted-foreground active:scale-95"
+                              className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border p-3 text-muted-foreground peer-data-[state=checked]:border-foreground/25 peer-data-[state=checked]:text-foreground"
                             >
                               <m.icon className="h-6 w-6 mb-2" />
                               <span className="text-[9px] font-black uppercase tracking-widest">{m.label}</span>
@@ -1639,7 +1646,7 @@ export function NewAppointmentModal({
   const renderRecurrencePreview = () => {
     const recurrenceRule = agendaRecurrenceDraftToRule(recurrenceDraft);
     return (
-      <div className="space-y-4 animate-in slide-in-from-right-4 duration-300 motion-reduce:animate-none">
+      <div className="agenda-step-enter space-y-4">
         <div className="space-y-1.5">
           <h3 className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground">
             <span className="rounded-full bg-secondary/20 p-2">
@@ -1721,12 +1728,12 @@ export function NewAppointmentModal({
                   <li
                     key={`${occurrence.occurrenceNumber}-${occurrence.startTime}`}
                     className={cn(
-                      "min-h-12 rounded-2xl border px-4 py-3",
+                      "agenda-liquid-card min-h-12 rounded-2xl border px-4 py-3",
                       occurrence.status === "conflict"
                         ? "border-red-500/25 bg-red-500/[0.06]"
                         : occurrence.occurrenceStatus === "customized"
                           ? "border-sky-500/25 bg-sky-500/[0.06]"
-                          : "border-border/60 bg-muted/20",
+                          : "border-border/60",
                     )}
                   >
                     <div className="flex items-center justify-between gap-3">
@@ -1755,19 +1762,19 @@ export function NewAppointmentModal({
                       </span>
                     </div>
                     {recurrenceDraft.customizeOccurrences ? (
-                      <div className="mt-3 grid grid-cols-[1fr_100px_90px_40px] gap-2 border-t border-border/45 pt-3">
+                      <div className="mt-3 grid grid-cols-[1fr_100px_90px_44px] gap-2 border-t border-border/45 pt-3">
                         <Input
                           type="date"
                           value={override?.date || format(new Date(occurrence.startTime), "yyyy-MM-dd")}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { date: event.target.value })}
-                          className="h-10 rounded-xl border-border/50 bg-background/65 text-xs font-semibold"
+                          className="agenda-field h-11 rounded-xl text-xs font-semibold"
                           aria-label={`Data da sessão ${occurrence.occurrenceNumber}`}
                         />
                         <Input
                           type="time"
                           value={override?.startTime || format(new Date(occurrence.startTime), "HH:mm")}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { startTime: event.target.value })}
-                          className="h-10 rounded-xl border-border/50 bg-background/65 text-xs font-semibold"
+                          className="agenda-field h-11 rounded-xl text-xs font-semibold"
                           aria-label={`Horário da sessão ${occurrence.occurrenceNumber}`}
                         />
                         <Input
@@ -1776,7 +1783,7 @@ export function NewAppointmentModal({
                           max={1440}
                           value={override?.durationMinutes || occurrence.durationMinutes}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { durationMinutes: Number(event.target.value) })}
-                          className="h-10 rounded-xl border-border/50 bg-background/65 text-xs font-semibold"
+                          className="agenda-field h-11 rounded-xl text-xs font-semibold"
                           aria-label={`Duração da sessão ${occurrence.occurrenceNumber}`}
                         />
                         <Button
@@ -1784,7 +1791,7 @@ export function NewAppointmentModal({
                           variant="ghost"
                           size="icon"
                           onClick={() => clearOccurrenceOverride(occurrence.occurrenceNumber)}
-                          className="notification-liquid-control h-10 w-10 rounded-full"
+                          className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full"
                           aria-label={`Restaurar padrão da sessão ${occurrence.occurrenceNumber}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -1799,7 +1806,7 @@ export function NewAppointmentModal({
                             size="sm"
                             onClick={() => requestSmartFit(occurrence.occurrenceNumber, false)}
                             disabled={isSuggestingAgendaPlanSmartFit}
-                            className="h-9 rounded-full px-3 text-xs font-black"
+                            className="agenda-primary-action agenda-tactile min-h-11 rounded-full px-4 text-xs font-black"
                           >
                             {isSuggestingAgendaPlanSmartFit
                               ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
@@ -1812,7 +1819,7 @@ export function NewAppointmentModal({
                             variant="ghost"
                             onClick={() => requestSmartFit(occurrence.occurrenceNumber, true)}
                             disabled={isSuggestingAgendaPlanSmartFit}
-                            className="notification-liquid-control h-9 rounded-full px-3 text-xs font-bold"
+                            className="agenda-tactile notification-liquid-control min-h-11 rounded-full px-4 text-xs font-bold"
                           >
                             Incluir janelas de 30 min
                           </Button>
@@ -1824,7 +1831,7 @@ export function NewAppointmentModal({
                                 key={`${candidate.startTime}-${candidate.durationMinutes}`}
                                 type="button"
                                 onClick={() => applySmartFitCandidate(occurrence.occurrenceNumber, candidate)}
-                                className="synapse-chat-glass flex min-h-11 items-center justify-between rounded-[15px] border px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                className="agenda-choice-card agenda-tactile synapse-chat-glass flex min-h-11 items-center justify-between rounded-[15px] border px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               >
                                 <span className="text-xs font-black text-foreground">
                                   {format(new Date(candidate.startTime), "EEE, dd/MM · HH:mm", { locale: ptBR })}
@@ -1857,7 +1864,7 @@ export function NewAppointmentModal({
               </Button>
             ) : null}
 
-            <div className="notes-liquid-surface rounded-[22px] border p-4 backdrop-blur-2xl">
+            <div className="agenda-liquid-surface rounded-[22px] border p-4">
               <div className="flex items-start gap-3">
                 <span className="synapse-chat-glass flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border">
                   <Save className="h-4 w-4" />
@@ -1874,21 +1881,21 @@ export function NewAppointmentModal({
                   value={templateName}
                   onChange={(event) => setTemplateName(event.target.value)}
                   placeholder="Ex.: 4 sessões · terceira de manhã"
-                  className="h-11 rounded-2xl border-border/55 bg-background/62 font-semibold"
+                  className="agenda-field h-11 rounded-2xl font-semibold"
                   aria-label="Nome do modelo de recorrência"
                 />
                 <Button
                   type="button"
                   onClick={handleSaveSeriesTemplate}
                   disabled={isSavingTemplate}
-                  className="h-11 rounded-full px-4 font-bold"
+                  className="agenda-primary-action agenda-tactile h-11 rounded-full px-4 font-bold"
                 >
                   {isSavingTemplate ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
                 </Button>
               </div>
             </div>
 
-            <p className="rounded-2xl border border-border/60 bg-muted/20 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
+            <p className="agenda-liquid-card rounded-2xl border border-border/60 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
               A série, seus agendamentos e, quando escolhido, as reservas do pacote serão criados na mesma operação. Cobranças, e-mails em lote e notas fiscais não serão gerados nesta etapa.
             </p>
           </>
@@ -2001,13 +2008,13 @@ export function NewAppointmentModal({
       onOpenChange={onOpenChange}
       trigger={children}
       showCloseButton={false}
-      className="desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[24px] border border-border/70 bg-background/96 p-0 shadow-2xl backdrop-blur-2xl sm:max-w-[640px]"
+      className="agenda-modal-surface agenda-viewport-modal desktop-retina-modal desktop-retina-form flex w-[calc(100vw-1rem)] flex-col overflow-hidden rounded-[28px] border p-0 sm:max-w-[640px]"
       drawerClassName="max-h-[92dvh]"
       contentStyle={{ maxHeight: "min(680px, calc(100dvh - 1rem))" }}
     >
-      <div className="flex min-h-0 flex-1 flex-col bg-background">
+      <div className="agenda-modal-body flex min-h-0 flex-1 flex-col">
         {/* Header */}
-        <div className="px-5 pt-5 pb-3 sm:px-6 flex items-center justify-between shrink-0">
+        <div className="agenda-modal-header flex shrink-0 items-center justify-between border-b px-5 pb-3 pt-5 sm:px-6">
           <div>
             <h2 className="text-xl font-bold text-foreground tracking-tight">{modalTitle}</h2>
             {renderProgressDots()}
@@ -2016,7 +2023,7 @@ export function NewAppointmentModal({
             variant="ghost"
             size="icon"
             onClick={() => onOpenChange(false)}
-            className="h-11 w-11 rounded-full border border-border/70 bg-background text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:scale-[0.98]"
+            className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full border border-border/50 text-muted-foreground hover:text-foreground"
             aria-label="Fechar novo agendamento"
           >
             <X className="h-5 w-5" aria-hidden="true" />
@@ -2055,13 +2062,13 @@ export function NewAppointmentModal({
         </div>
 
         {/* Footer */}
-        <div className="flex shrink-0 items-center justify-between border-t border-border/60 bg-muted/20 p-4 backdrop-blur-xl">
+        <div className="agenda-modal-footer flex shrink-0 items-center justify-between border-t p-4 backdrop-blur-xl">
           {step > 1 ? (
             <Button
               type="button"
               variant="ghost"
               onClick={prevStep}
-              className="text-muted-foreground hover:text-foreground rounded-full px-5 h-10 transition-all hover:bg-secondary/50 active:scale-95"
+              className="agenda-tactile notification-liquid-control h-11 rounded-full px-5 text-muted-foreground hover:text-foreground"
             >
               Voltar
             </Button>
@@ -2073,7 +2080,7 @@ export function NewAppointmentModal({
             <Button
               type="button"
               onClick={handleContinue}
-              className="rounded-full px-6 h-10 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-none transition-all active:scale-95 tracking-wide"
+              className="agenda-primary-action h-11 rounded-full px-6 font-bold tracking-wide"
             >
               Continuar
             </Button>
@@ -2083,10 +2090,7 @@ export function NewAppointmentModal({
               form={APPOINTMENT_FORM_ID}
               disabled={isSubmitting || (recurrenceEnabled && !seriesPreview?.valid)}
               className={cn(
-                "rounded-full px-6 h-10 font-bold tracking-wide shadow-lg hover:shadow-xl transition-all active:scale-95",
-                eventType === "event"
-                  ? "bg-violet-500 text-white hover:bg-violet-600"
-                  : "bg-primary text-primary-foreground"
+                "agenda-primary-action h-11 rounded-full px-6 font-bold tracking-wide",
               )}
             >
               {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : submitButtonLabel}

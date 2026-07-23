@@ -246,7 +246,7 @@ const PolicySelectField = <T extends string>({
       <SelectTrigger id={id} aria-describedby={`${id}-help`} className="border-border/70 bg-background">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="agenda-menu-surface">
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
             {option.label}
@@ -592,6 +592,10 @@ export const AgendaSettingsModal = () => {
       onOpenChange={setOpen}
       preventClose={isSaving}
       size="lg"
+      className="agenda-modal-surface"
+      bodyClassName="agenda-modal-body"
+      headerClassName="agenda-modal-header border-b"
+      footerClassName="agenda-modal-footer"
       eyebrow="Agenda"
       title="Disponibilidade e regras"
       description="Defina sua grade de atendimento e as regras comerciais usadas em novos convites."
@@ -600,7 +604,7 @@ export const AgendaSettingsModal = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="desktop-retina-interactive h-10 w-10 shrink-0 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+          className="agenda-tactile notification-liquid-control h-11 w-11 shrink-0 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:text-foreground"
           aria-label="Configurar agenda e regras comerciais"
         >
           <Settings className="h-4 w-4" />
@@ -610,7 +614,7 @@ export const AgendaSettingsModal = () => {
         <Button
           onClick={handlePrimaryAction}
           disabled={isSaving || isLoading}
-          className="h-12 w-full rounded-2xl bg-foreground text-[10.5px] font-black uppercase tracking-[0.16em] text-background shadow-xl disabled:opacity-50"
+          className="agenda-primary-action h-12 w-full rounded-2xl text-[10.5px] font-black uppercase tracking-[0.16em] disabled:opacity-50"
         >
           {isSaving ? (
             <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
@@ -633,7 +637,7 @@ export const AgendaSettingsModal = () => {
         </div>
       ) : (
         <div className="space-y-5">
-          <section aria-labelledby="working-hours-heading" className="rounded-3xl border border-border/60 bg-muted/20 p-4 sm:p-5">
+          <section aria-labelledby="working-hours-heading" className="agenda-liquid-surface rounded-3xl border p-4 sm:p-5">
             <div className="mb-4">
               <h3 id="working-hours-heading" className="text-base font-black text-foreground">
                 Grade semanal
@@ -650,8 +654,8 @@ export const AgendaSettingsModal = () => {
                   <div
                     key={day.id}
                     className={cn(
-                      "rounded-2xl border motion-safe:transition-colors",
-                      hours.enabled ? "border-border/70 bg-background" : "border-border/35 bg-transparent opacity-70",
+                      "agenda-liquid-card rounded-2xl border motion-safe:transition-colors",
+                      hours.enabled ? "opacity-100" : "opacity-65",
                     )}
                   >
                     <div className={cn("flex items-center gap-3 p-3 sm:p-4", hours.enabled && "pb-2")}>
@@ -671,7 +675,7 @@ export const AgendaSettingsModal = () => {
                             type="time"
                             value={hours.start}
                             onChange={(event) => updateDay(day.id, "start", event.target.value)}
-                            className="h-10 w-[104px] rounded-xl border-border/70 bg-background text-center text-sm font-bold"
+                            className="h-11 w-[104px] rounded-xl border-border/70 bg-background text-center text-sm font-bold"
                             aria-label={`Início em ${day.label}`}
                           />
                           <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">até</span>
@@ -679,7 +683,7 @@ export const AgendaSettingsModal = () => {
                             type="time"
                             value={hours.end}
                             onChange={(event) => updateDay(day.id, "end", event.target.value)}
-                            className="h-10 w-[104px] rounded-xl border-border/70 bg-background text-center text-sm font-bold"
+                            className="h-11 w-[104px] rounded-xl border-border/70 bg-background text-center text-sm font-bold"
                             aria-label={`Fim em ${day.label}`}
                           />
                         </div>
@@ -693,7 +697,7 @@ export const AgendaSettingsModal = () => {
                             type="time"
                             value={hours.start}
                             onChange={(event) => updateDay(day.id, "start", event.target.value)}
-                            className="h-10 flex-1 rounded-xl border-border/70 bg-background text-center text-sm font-bold"
+                            className="h-11 flex-1 rounded-xl border-border/70 bg-background text-center text-sm font-bold"
                             aria-label={`Início em ${day.label}`}
                           />
                           <span className="shrink-0 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">até</span>
@@ -701,7 +705,7 @@ export const AgendaSettingsModal = () => {
                             type="time"
                             value={hours.end}
                             onChange={(event) => updateDay(day.id, "end", event.target.value)}
-                            className="h-10 flex-1 rounded-xl border-border/70 bg-background text-center text-sm font-bold"
+                            className="h-11 flex-1 rounded-xl border-border/70 bg-background text-center text-sm font-bold"
                             aria-label={`Fim em ${day.label}`}
                           />
                         </div>
@@ -712,13 +716,13 @@ export const AgendaSettingsModal = () => {
                         {(additionalWorkingHours[day.id] || []).map((period, index) => (
                           <div key={period.id} className="mt-2 flex items-center gap-2">
                             <span className="w-14 text-[9px] font-black uppercase tracking-[0.1em] text-muted-foreground">Período {index + 2}</span>
-                            <Input type="time" value={period.start} onChange={(event) => updateWorkingPeriod(day.id, period.id, "start", event.target.value)} className="h-9 min-w-0 flex-1 rounded-xl border-border/60 bg-background text-center text-xs font-bold" aria-label={`Início do período ${index + 2} em ${day.label}`} />
+                            <Input type="time" value={period.start} onChange={(event) => updateWorkingPeriod(day.id, period.id, "start", event.target.value)} className="h-11 min-w-0 flex-1 rounded-xl border-border/60 bg-background text-center text-xs font-bold" aria-label={`Início do período ${index + 2} em ${day.label}`} />
                             <span className="text-[9px] font-bold uppercase text-muted-foreground">até</span>
-                            <Input type="time" value={period.end} onChange={(event) => updateWorkingPeriod(day.id, period.id, "end", event.target.value)} className="h-9 min-w-0 flex-1 rounded-xl border-border/60 bg-background text-center text-xs font-bold" aria-label={`Fim do período ${index + 2} em ${day.label}`} />
-                            <Button type="button" variant="ghost" size="icon" onClick={() => removeWorkingPeriod(day.id, period.id)} className="notification-liquid-control h-9 w-9 rounded-full" aria-label={`Remover período ${index + 2} de ${day.label}`}><Trash2 className="h-3.5 w-3.5" /></Button>
+                            <Input type="time" value={period.end} onChange={(event) => updateWorkingPeriod(day.id, period.id, "end", event.target.value)} className="h-11 min-w-0 flex-1 rounded-xl border-border/60 bg-background text-center text-xs font-bold" aria-label={`Fim do período ${index + 2} em ${day.label}`} />
+                            <Button type="button" variant="ghost" size="icon" onClick={() => removeWorkingPeriod(day.id, period.id)} className="notification-liquid-control h-11 w-11 rounded-full" aria-label={`Remover período ${index + 2} de ${day.label}`}><Trash2 className="h-3.5 w-3.5" /></Button>
                           </div>
                         ))}
-                        <Button type="button" variant="ghost" size="sm" onClick={() => addWorkingPeriod(day.id)} className="notification-liquid-control mt-2 h-9 rounded-full px-3 text-[10px] font-black"><Plus className="mr-1 h-3.5 w-3.5" />Adicionar período</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => addWorkingPeriod(day.id)} className="notification-liquid-control mt-2 h-11 rounded-full px-3 text-[10px] font-black"><Plus className="mr-1 h-3.5 w-3.5" />Adicionar período</Button>
                       </div>
                     ) : null}
                   </div>
@@ -728,7 +732,7 @@ export const AgendaSettingsModal = () => {
           </section>
 
           {workingHoursChanged ? (
-            <section aria-labelledby="availability-change-heading" className="notes-liquid-surface rounded-[26px] border p-4 backdrop-blur-2xl sm:p-5">
+            <section aria-labelledby="availability-change-heading" className="agenda-liquid-surface rounded-[26px] border p-4 sm:p-5">
               <div className="flex items-start gap-3">
                 <span className="synapse-chat-glass flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border">
                   <CalendarRange className="h-4 w-4" />
@@ -749,7 +753,7 @@ export const AgendaSettingsModal = () => {
                     {availabilityImpact.conflicts.map((conflict) => (
                       <div key={conflict.appointmentId} className="synapse-chat-glass flex items-center justify-between gap-3 rounded-[16px] border px-3 py-2.5">
                         <div className="min-w-0"><p className="truncate text-xs font-black text-foreground">{conflict.patientName || (conflict.seriesId ? "Sessão recorrente" : "Agendamento individual")}</p><p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">{new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" }).format(new Date(conflict.startTime))}{conflict.seriesId ? " · parte de uma série" : ""}</p></div>
-                        <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); navigate(`/agenda?appointmentId=${conflict.appointmentId}`); }} className="notification-liquid-control h-9 rounded-full px-3 text-[10px] font-black">Abrir</Button>
+                        <Button type="button" variant="ghost" size="sm" onClick={() => { setOpen(false); navigate(`/agenda?appointmentId=${conflict.appointmentId}`); }} className="notification-liquid-control h-11 rounded-full px-3 text-[10px] font-black">Abrir</Button>
                       </div>
                     ))}
                   </div>
@@ -772,7 +776,7 @@ export const AgendaSettingsModal = () => {
                             setEffectiveFrom(toLocalDateTimeInput(tomorrow));
                           }
                         }}
-                        className={cn("synapse-chat-glass rounded-[18px] border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", availabilityStrategy === option.value && "synapse-liquid-tab-active")}
+                        className={cn("agenda-choice-card synapse-chat-glass rounded-[18px] border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", availabilityStrategy === option.value && "synapse-liquid-tab-active")}
                       >
                         <span className="block text-xs font-black text-foreground">{option.title}</span><span className="mt-1 block text-[11px] leading-relaxed text-muted-foreground">{option.description}</span>
                       </button>
@@ -782,24 +786,24 @@ export const AgendaSettingsModal = () => {
               ) : null}
 
               {availabilityStrategy === "keep_previous_until" ? (
-                <div className="mt-4 space-y-2"><Label htmlFor="availability-effective-from" className="text-xs font-black">Nova grade começa em</Label><Input id="availability-effective-from" type="datetime-local" value={effectiveFrom} min={toLocalDateTimeInput(new Date())} onChange={(event) => { setEffectiveFrom(event.target.value); setAvailabilityImpact(null); }} className="h-11 rounded-2xl border-border/55 bg-background/62 font-bold" /></div>
+                <div className="mt-4 space-y-2"><Label htmlFor="availability-effective-from" className="text-xs font-black">Nova grade começa em</Label><Input id="availability-effective-from" type="datetime-local" value={effectiveFrom} min={toLocalDateTimeInput(new Date())} onChange={(event) => { setEffectiveFrom(event.target.value); setAvailabilityImpact(null); }} className="agenda-field h-11 rounded-2xl font-bold" /></div>
               ) : null}
 
               <div className="mt-4 space-y-2">
                 <Label className="text-xs font-black">Lista de espera</Label>
                 <Select value={waitlistStrategy} onValueChange={(value) => setWaitlistStrategy(value as WaitlistMigrationStrategy)}>
-                  <SelectTrigger className="h-11 rounded-2xl border-border/55 bg-background/62 font-bold"><SelectValue /></SelectTrigger>
-                  <SelectContent className="notification-liquid-menu rounded-[18px] p-1.5"><SelectItem value="migrate_all" className="notification-liquid-menu-item rounded-[13px] py-2.5">Aplicar a nova grade à lista</SelectItem><SelectItem value="keep_previous" className="notification-liquid-menu-item rounded-[13px] py-2.5">Manter as regras antigas da lista</SelectItem></SelectContent>
+                  <SelectTrigger className="agenda-field h-11 rounded-2xl font-bold"><SelectValue /></SelectTrigger>
+                  <SelectContent className="agenda-menu-surface notification-liquid-menu rounded-[18px] p-1.5"><SelectItem value="migrate_all" className="notification-liquid-menu-item rounded-[13px] py-2.5">Aplicar a nova grade à lista</SelectItem><SelectItem value="keep_previous" className="notification-liquid-menu-item rounded-[13px] py-2.5">Manter as regras antigas da lista</SelectItem></SelectContent>
                 </Select>
               </div>
 
-              <div className="mt-4 space-y-2"><Label htmlFor="availability-reason" className="text-xs font-black">Motivo (opcional)</Label><Textarea id="availability-reason" value={availabilityReason} onChange={(event) => setAvailabilityReason(event.target.value)} placeholder="Ex.: Novo horário de atendimento no segundo semestre" className="min-h-20 rounded-2xl border-border/55 bg-background/62" /></div>
+              <div className="mt-4 space-y-2"><Label htmlFor="availability-reason" className="text-xs font-black">Motivo (opcional)</Label><Textarea id="availability-reason" value={availabilityReason} onChange={(event) => setAvailabilityReason(event.target.value)} placeholder="Ex.: Novo horário de atendimento no segundo semestre" className="agenda-field min-h-20 rounded-2xl" /></div>
 
-              <Button type="button" variant="ghost" onClick={() => { setWorkingHours(originalWorkingHours); setAdditionalWorkingHours(originalAdditionalWorkingHours); setAvailabilityImpact(null); setAvailabilityStrategy(null); }} className="notification-liquid-control mt-4 h-10 rounded-full px-4 text-xs font-bold"><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Descartar mudança da grade</Button>
+              <Button type="button" variant="ghost" onClick={() => { setWorkingHours(originalWorkingHours); setAdditionalWorkingHours(originalAdditionalWorkingHours); setAvailabilityImpact(null); setAvailabilityStrategy(null); }} className="notification-liquid-control mt-4 h-11 rounded-full px-4 text-xs font-bold"><RotateCcw className="mr-1.5 h-3.5 w-3.5" />Descartar mudança da grade</Button>
             </section>
           ) : null}
 
-          <section aria-labelledby="commercial-policy-heading" className="rounded-3xl border border-border/60 bg-muted/20 p-4 sm:p-5">
+          <section aria-labelledby="commercial-policy-heading" className="agenda-liquid-surface rounded-3xl border p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/60 bg-background">
                 <ShieldCheck className="h-4 w-4" aria-hidden="true" />

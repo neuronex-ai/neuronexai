@@ -281,7 +281,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     if (isLoading) {
         return (
             <div className="flex h-full items-center justify-center bg-transparent">
-                <Loader2 className="h-10 w-10 text-zinc-300 dark:text-white/20 animate-spin" />
+                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground motion-reduce:animate-none" />
             </div>
         );
     }
@@ -294,7 +294,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
         return (
             <div className="flex h-full min-h-0 flex-1 flex-col">
                 {/* Day Headers */}
-                <div className="flex shrink-0 border-b border-zinc-200/70 bg-white/64 backdrop-blur-xl dark:border-white/[0.048] dark:bg-white/[0.018]">
+                <div className="agenda-grid-header flex shrink-0 border-b">
                     {/* Time gutter header */}
                     <div className="w-16 shrink-0" />
                     {/* Day columns headers */}
@@ -304,19 +304,19 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                             <div
                                 key={day.toISOString()}
                                 className={cn(
-                                    "min-w-0 flex-1 border-l border-zinc-100/80 py-3.5 text-center dark:border-white/[0.032]",
-                                    isToday && "bg-zinc-100/62 dark:bg-white/[0.024]"
+                                    "agenda-grid-day min-w-0 flex-1 border-l py-3.5 text-center",
+                                    isToday && "agenda-grid-today"
                                 )}
                             >
                                 <span className={cn(
                                     "mb-1 block text-[9px] font-black uppercase tracking-[0.22em]",
-                                    isToday ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-500"
+                                    isToday ? "text-foreground" : "text-muted-foreground/72",
                                 )}>
                                     {format(day, "EEE", { locale: ptBR })}
                                 </span>
                                 <span className={cn(
                                     "text-xl font-black tracking-[-0.045em]",
-                                    isToday ? "text-zinc-900 dark:text-white" : "text-zinc-400 dark:text-zinc-400"
+                                    isToday ? "text-foreground" : "text-muted-foreground",
                                 )}>
                                     {format(day, "dd")}
                                 </span>
@@ -329,14 +329,14 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 <div className="flex-1 overflow-y-auto custom-scrollbar relative h-full">
                     <div className="flex" style={{ minHeight: HOUR_LABELS.length * HOUR_HEIGHT }}>
                         {/* Time gutter */}
-                        <div className="relative w-16 shrink-0 bg-white/38 dark:bg-black/[0.08]">
+                        <div className="agenda-time-gutter relative w-16 shrink-0">
                             {HOUR_LABELS.map((label, i) => (
                                 <div
                                     key={label}
                                     className="absolute w-full flex items-start justify-end pr-3"
                                     style={{ top: i * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                                 >
-                                    <span className="-mt-[6px] text-[10px] font-bold tabular-nums text-zinc-400 dark:text-white/24">
+                                    <span className="-mt-[6px] text-[10px] font-bold tabular-nums text-muted-foreground/60">
                                         {label}
                                     </span>
                                 </div>
@@ -407,7 +407,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 data-synapse-target="agenda-calendar"
                 className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
             >
-                <header className="desktop-retina-panel relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border border-border/50 bg-card/82 p-3 text-foreground xl:flex-row xl:items-center">
+                <header className="agenda-liquid-surface relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border p-3 text-foreground xl:flex-row xl:items-center">
                     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.024),transparent_38%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
                     {/* Left side: Sidebar Toggle, Title/Date, Google Status */}
                     <div className="relative z-10 flex flex-wrap items-center gap-4">
@@ -417,7 +417,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 size="icon"
                                 onClick={() => setSidebarOpen(!sidebarOpen)}
                                 aria-label={sidebarOpen ? "Ocultar painel da agenda" : "Mostrar painel da agenda"}
-                                className="desktop-retina-interactive hidden h-11 w-11 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground xl:flex"
+                                className="agenda-tactile notification-liquid-control hidden h-11 w-11 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:text-foreground xl:flex"
                             >
                                 {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
                             </Button>
@@ -450,7 +450,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                             ) : (
                                 <Button
                                     onClick={() => navigate('/ajustes?tab=integrations')}
-                                    className="desktop-retina-interactive h-7 rounded-full bg-foreground px-3 text-[9px] font-black uppercase tracking-widest text-background hover:bg-foreground/88"
+                                    className="agenda-primary-action h-11 rounded-full px-3 text-[9px] font-black uppercase tracking-widest"
                                 >
                                     Conectar
                                 </Button>
@@ -489,14 +489,14 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
                                 aria-label="Mostrar período anterior"
-                                className="desktop-retina-interactive h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                                className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:text-foreground"
                             >
                                 <ChevronLeft className="h-4 w-4" />
                             </Button>
                             <Button
                                 variant="ghost"
                                 onClick={() => onDateChange(new Date())}
-                                className="desktop-retina-interactive h-11 rounded-full border border-border/50 bg-background/70 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                                className="agenda-tactile notification-liquid-control h-11 rounded-full border border-border/50 bg-background/70 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
                             >
                                 Hoje
                             </Button>
@@ -505,7 +505,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
                                 aria-label="Mostrar próximo período"
-                                className="desktop-retina-interactive h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:border-border hover:bg-background hover:text-foreground"
+                                className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:text-foreground"
                             >
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
@@ -543,7 +543,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
                             aria-label="Criar novo agendamento"
-                            className="desktop-retina-interactive flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-foreground font-bold uppercase tracking-[0.1em] text-background hover:bg-foreground/88"
+                            className="agenda-primary-action flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bold uppercase tracking-[0.1em]"
                         >
                             <Plus className="h-4 w-4" />
                         </Button>
@@ -553,7 +553,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 {/* Main content area */}
                 <div
                     data-synapse-target="agenda-appointments"
-                    className="desktop-retina-inset flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border border-border/45 bg-background/66"
+                    className="agenda-grid-surface flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border"
                 >
                     {view === 'monthly' ? renderMonthlyView() : renderTimeGridView()}
                 </div>
@@ -583,7 +583,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 >
                     {activeAppointment ? (
                         <div style={{ width: '280px' }} className="cursor-grabbing">
-                            <div className="scale-[1.02] rotate-0 shadow-2xl transition-transform duration-200 rounded-[20px] overflow-hidden">
+                            <div className="scale-[1.02] rotate-0 overflow-hidden rounded-[20px] shadow-2xl transition-transform duration-200 motion-reduce:scale-100 motion-reduce:transition-none">
                                 <AppointmentCard app={activeAppointment} isOverlay />
                             </div>
                         </div>
@@ -611,31 +611,36 @@ const HourDroppableSlot = ({
     const { setNodeRef, isOver } = useDroppable({ id });
 
     return (
-        <div
+        <button
+            type="button"
             ref={setNodeRef}
             onClick={() => !blocked && onSlotClick(hourIndex)}
             className={cn(
-                "group absolute w-full border-t border-zinc-100/80 transition-colors dark:border-white/[0.028]",
-                blocked ? "cursor-not-allowed bg-zinc-100/70 dark:bg-white/[0.018]" : "cursor-pointer hover:bg-zinc-100/45 dark:hover:bg-white/[0.025]",
-                isOver && !blocked && "z-[5] bg-zinc-950/[0.08] dark:bg-white/[0.08]"
+                "agenda-grid-slot group absolute w-full border-t",
+                blocked ? "cursor-not-allowed" : "cursor-pointer",
+                isOver && !blocked && "z-[5]"
             )}
+            data-blocked={blocked}
+            data-over={isOver && !blocked}
+            aria-label={blocked ? "Horário bloqueado" : `Criar agendamento às ${String(hourIndex).padStart(2, "0")}:00`}
+            disabled={blocked}
             style={{ top: hourIndex * HOUR_HEIGHT, height: HOUR_HEIGHT }}
         >
             {blocked ? (
                 <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <div className="flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white/90 px-2 py-1 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.055]">
-                        <Lock className="w-2.5 h-2.5 text-zinc-400 dark:text-zinc-500" />
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500">Bloqueado</span>
+                    <div className="synapse-chat-glass flex items-center gap-1.5 rounded-full border px-2 py-1">
+                        <Lock className="h-2.5 w-2.5 text-muted-foreground" />
+                        <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Bloqueado</span>
                     </div>
                 </div>
             ) : (
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-zinc-300 opacity-0 transition-opacity group-hover:opacity-100 dark:text-white/22">
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center text-muted-foreground/35 opacity-0 transition-opacity group-hover:opacity-100 motion-reduce:transition-none">
                     <Plus className="w-4 h-4" />
                 </div>
             )}
             {/* Half-hour dashed line */}
-            <div className="pointer-events-none absolute w-full border-t border-dashed border-zinc-100/70 dark:border-white/[0.018]" style={{ top: HOUR_HEIGHT / 2 }} />
-        </div>
+            <div className="agenda-grid-day pointer-events-none absolute w-full border-t border-dashed opacity-45" style={{ top: HOUR_HEIGHT / 2 }} />
+        </button>
     );
 };
 
@@ -661,8 +666,8 @@ const GridDroppableColumn = ({
     return (
         <div
             className={cn(
-                "relative min-w-0 flex-1 border-l border-zinc-100/80 transition-colors dark:border-white/[0.032]",
-                isToday && "bg-zinc-50/55 dark:bg-white/[0.018]"
+                "agenda-grid-day relative min-w-0 flex-1 border-l transition-colors",
+                isToday && "agenda-grid-today"
             )}
         >
             {/* Interactive Grid Slots */}
@@ -689,8 +694,8 @@ const GridDroppableColumn = ({
                 return (
                     <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: topPx }}>
                         <div className="flex items-center">
-                            <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)] -ml-[5px]" />
-                            <div className="flex-1 h-[2px] bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.3)]" />
+                            <div className="agenda-current-time-dot -ml-[5px] h-2.5 w-2.5 rounded-full" />
+                            <div className="agenda-current-time-line flex-1" />
                         </div>
                     </div>
                 );
@@ -738,22 +743,22 @@ const DraggableGridItem = ({ app }: { app: Appointment }) => {
                     }}
                 >
                     <div className={cn(
-                        "group/card h-full w-full overflow-hidden rounded-[14px] border text-left shadow-sm transition-all duration-200 hover:z-30 hover:-translate-y-0.5 hover:shadow-lg active:scale-[0.995] motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
+                        "agenda-tactile group/card h-full w-full overflow-hidden rounded-[14px] border text-left shadow-sm hover:z-30",
                         getAppointmentStatusMeta(app.status, app.notes).bgClass,
                         getAppointmentStatusMeta(app.status, app.notes).borderClass
                     )}>
                         <div className="pointer-events-none flex flex-col gap-0.5 px-2.5 py-1.5">
                             <div className="flex items-center gap-1.5">
                                 {app.type === 'online'
-                                    ? <Video className="h-3 w-3 shrink-0 text-zinc-500 dark:text-zinc-400" />
-                                    : <MapPin className="h-3 w-3 shrink-0 text-zinc-500 dark:text-zinc-400" />
+                                    ? <Video className="h-3 w-3 shrink-0 text-muted-foreground" />
+                                    : <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
                                 }
-                                <span className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                                <span className="truncate text-[11px] font-bold text-foreground">
                                     {getAppointmentDisplayTitle(app)}
                                 </span>
                             </div>
                             {heightPx > 36 && (
-                                <span className="text-[9px] font-bold text-zinc-500 dark:text-zinc-400 tabular-nums">
+                                <span className="text-[9px] font-bold tabular-nums text-muted-foreground">
                                     {formatTimeBrazil(app.start_time)} – {formatTimeBrazil(app.end_time)}
                                 </span>
                             )}
@@ -813,27 +818,39 @@ const MonthDroppableColumn = ({
     }, [dayApps, isTarget, activeAppointment]);
 
     return (
-        <div ref={setNodeRef} onClick={onAddAppointment} className={cn(
-            "group/col relative flex min-w-0 cursor-pointer flex-col transition-all duration-300",
-            "gap-1 rounded-[18px] border border-zinc-200/70 bg-white p-1.5 shadow-sm hover:-translate-y-0.5 hover:border-zinc-300 hover:bg-zinc-50 hover:shadow-md dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/14 dark:hover:bg-white/[0.055] motion-reduce:transition-none motion-reduce:hover:translate-y-0",
-            isDraggingAny && "bg-zinc-500/[0.02] dark:bg-white/[0.01]",
-            isTarget && "z-10 bg-white/[0.9] ring-1 ring-zinc-300 dark:bg-white/[0.065] dark:ring-white/14"
-        )}>
+        <div
+          ref={setNodeRef}
+          onClick={onAddAppointment}
+          data-dragging={isDraggingAny}
+          data-target={isTarget}
+          className={cn(
+            "agenda-month-cell group/col relative flex min-w-0 cursor-pointer flex-col gap-1 rounded-[18px] border p-1.5",
+            isTarget && "z-10",
+          )}
+        >
             <div className="flex-row justify-between w-full px-2 py-1 flex items-center">
-                <span className={cn(
-                    "text-[10px] font-medium",
-                    isToday ? "rounded-md bg-zinc-950 px-1.5 py-0.5 text-white dark:bg-white dark:text-zinc-950" : "text-zinc-500 dark:text-white/36"
-                )}>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onAddAppointment?.();
+                  }}
+                  className={cn(
+                    "agenda-tactile flex min-h-11 min-w-11 items-center justify-center rounded-[13px] text-[10px] font-medium",
+                    isToday ? "agenda-primary-action font-black" : "text-muted-foreground hover:bg-accent/55 hover:text-foreground",
+                  )}
+                  aria-label={`Adicionar agendamento em ${format(day, "dd 'de' MMMM", { locale: ptBR })}`}
+                >
                     {format(day, "dd")}
-                </span>
-                {dayApps.length > 0 && <div className="w-1 h-1 rounded-full bg-zinc-400 dark:bg-zinc-600" />}
+                </button>
+                {dayApps.length > 0 && <div className="h-1 w-1 rounded-full bg-muted-foreground/60" />}
             </div>
 
             <div className="flex flex-col flex-1 relative gap-1 min-h-[80px]">
                 <AnimatePresence mode="popLayout">
                     {itemsWithGhost.slice(0, 2).map((app) => (
                         app.isGhost ? (
-                            <div key="ghost" className="opacity-40 scale-[0.98]">
+                            <div key="ghost" className="scale-[0.98] opacity-40 motion-reduce:scale-100">
                                 <AppointmentCard app={app} isGhost />
                             </div>
                         ) : (
@@ -847,27 +864,27 @@ const MonthDroppableColumn = ({
                 {dayApps.length > 2 && (
                     <Popover>
                         <PopoverTrigger asChild>
-                            <button onClick={e => e.stopPropagation()} className="w-full cursor-pointer rounded-lg border border-zinc-200/70 bg-zinc-100/80 py-1 text-center text-[9px] font-bold text-zinc-400 transition-all hover:bg-zinc-200 hover:text-zinc-700 dark:border-white/[0.06] dark:bg-white/[0.045] dark:text-white/38 dark:hover:bg-white/[0.08] dark:hover:text-white/72">
+                            <button type="button" onClick={e => e.stopPropagation()} className="agenda-tactile notification-liquid-control min-h-11 w-full cursor-pointer rounded-lg border py-1 text-center text-[9px] font-bold text-muted-foreground hover:text-foreground">
                                 +{dayApps.length - 2} mais
                             </button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[260px] rounded-[24px] border border-zinc-200 bg-white p-3 shadow-2xl backdrop-blur-3xl dark:border-white/10 dark:bg-zinc-950" align="center" side="bottom">
-                            <p className="text-[9px] font-black uppercase tracking-[0.3em] text-zinc-400 dark:text-zinc-500 mb-3 px-1">
+                        <PopoverContent className="agenda-menu-surface notification-popover-surface w-[260px] rounded-[24px] border p-3" align="center" side="bottom">
+                            <p className="mb-3 px-1 text-[9px] font-black uppercase tracking-[0.3em] text-muted-foreground">
                                 {format(day, "dd MMM", { locale: ptBR })} &mdash; {dayApps.length} agendamentos
                             </p>
                             <div className="space-y-1.5 max-h-[240px] overflow-y-auto custom-scrollbar">
                                 {dayApps.map(app => (
                                     <AppointmentDetailModal key={app.id} appointment={app}>
-                                        <button className="group w-full rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-left transition-all hover:border-zinc-300 hover:bg-zinc-100 dark:border-white/[0.07] dark:bg-white/[0.035] dark:hover:border-white/14 dark:hover:bg-white/[0.06]">
+                                        <button type="button" className="agenda-choice-card agenda-tactile group min-h-11 w-full rounded-xl border p-2.5 text-left">
                                             <div className="flex items-center gap-2">
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full shrink-0",
                                                     getAppointmentStatusMeta(app.status, app.notes).dotClass
                                                 )} />
-                                                <span className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 truncate group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
+                                                <span className="truncate text-[11px] font-bold text-foreground">
                                                     {getAppointmentDisplayTitle(app)}
                                                 </span>
-                                                <span className="text-[9px] font-bold text-zinc-400 dark:text-zinc-600 ml-auto shrink-0">
+                                                <span className="ml-auto shrink-0 text-[9px] font-bold text-muted-foreground">
                                                     {formatTimeBrazil(app.start_time)}
                                                 </span>
                                             </div>
@@ -915,32 +932,32 @@ const DraggableItem = ({ app, isMonthly }: { app: Appointment, isMonthly?: boole
 const AppointmentCard = ({ app, isOverlay, isMonthly, isGhost }: { app: Appointment, isOverlay?: boolean, isMonthly?: boolean, isGhost?: boolean }) => (
     <div
         className={cn(
-            "group relative overflow-hidden rounded-[20px] border border-zinc-200 bg-white shadow-sm dark:border-white/[0.07] dark:bg-white/[0.04]",
-            !isOverlay && !isGhost && "transition-all duration-300 ease-out hover:-translate-y-0.5 hover:border-zinc-300 hover:shadow-lg active:scale-[0.99] dark:hover:border-white/14 motion-reduce:transition-none motion-reduce:hover:translate-y-0 motion-reduce:active:scale-100",
+            "agenda-appointment-card group relative overflow-hidden rounded-[20px] border",
+            !isOverlay && !isGhost && "agenda-tactile",
             isOverlay && "border-none shadow-none z-50 pointer-events-none",
-            isGhost && "border-dashed border-zinc-300 dark:border-white/20 bg-zinc-100/50 dark:bg-white/[0.03] shadow-none",
-            isMonthly ? "rounded-xl border-none bg-zinc-100/90 p-1.5 dark:bg-white/[0.045]" : "p-4"
+            isGhost && "border-dashed opacity-55 shadow-none",
+            isMonthly ? "rounded-xl border-none p-1.5" : "p-4",
         )}
     >
         {!isMonthly && (
             <div className={cn(
-                "absolute top-4 right-4 w-1.5 h-1.5 rounded-full transition-all duration-500",
+                "absolute right-4 top-4 h-1.5 w-1.5 rounded-full",
                 getAppointmentStatusMeta(app.status, app.notes).dotClass
             )} />
         )}
 
         <div className="flex flex-col gap-2">
             {!isMonthly && (
-                <div className="mb-1 flex h-8 w-8 items-center justify-center rounded-full border border-zinc-200 bg-zinc-100 transition-colors group-hover:bg-zinc-200 dark:border-white/[0.07] dark:bg-white/[0.035] dark:group-hover:bg-white/[0.08]">
-                    {app.type === 'online' ? <Video className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" /> : <MapPin className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors" />}
+                <div className="notification-liquid-icon mb-1 flex h-8 w-8 items-center justify-center rounded-full border">
+                    {app.type === 'online' ? <Video className="h-3.5 w-3.5 text-muted-foreground" /> : <MapPin className="h-3.5 w-3.5 text-muted-foreground" />}
                 </div>
             )}
 
             <div className={cn("space-y-0.5", isMonthly && "flex items-center gap-1.5")}>
-                <h4 className={cn("font-medium tracking-tight leading-tight line-clamp-1 text-zinc-900 dark:text-white", isMonthly ? "text-[10px]" : "text-[13px] font-bold")}>
+                <h4 className={cn("line-clamp-1 font-medium leading-tight tracking-tight text-foreground", isMonthly ? "text-[10px]" : "text-[13px] font-bold")}>
                     {getAppointmentDisplayTitle(app)}
                 </h4>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 group-hover:text-zinc-600 dark:group-hover:text-zinc-300 transition-colors">
+                <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                     {!isMonthly && <Clock className="h-3 w-3" />}
                     {formatTimeBrazil(app.start_time)}
                 </div>

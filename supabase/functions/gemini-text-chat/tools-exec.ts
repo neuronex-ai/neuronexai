@@ -70,7 +70,6 @@ export async function executeTool(name: string, args: any, ctx: any) {
             }
 
             case 'list_patients': {
-                console.log('[DEBUG list_patients] user.id =', user.id);
                 const { data, error } = await ctx.supabaseAdmin
                     .from('patients')
                     .select('name, email, phone, diagnosis, id, user_id, status, notes, risk_score, birth_date, emergency_contact, payer_name, payer_cpf, cpf, medications')
@@ -78,7 +77,6 @@ export async function executeTool(name: string, args: any, ctx: any) {
                     .order('created_at', { ascending: false })
                     .limit(args.limit || 20);
 
-                console.log('[DEBUG list_patients] data =', data, 'error =', error);
                 result = { patients: data || [], debug_user_id: user.id };
                 if (data?.length > 0) {
                     structuredData = { type: 'patient_list_widget', data: { patients: data } };
@@ -88,7 +86,6 @@ export async function executeTool(name: string, args: any, ctx: any) {
 
             case 'search_patients': {
                 const queryStr = (args.name_query || '').trim();
-                console.log('[DEBUG search_patients] user.id =', user.id, 'queryStr =', queryStr);
 
                 const { data, error } = await ctx.supabaseAdmin
                     .from('patients')
@@ -97,7 +94,6 @@ export async function executeTool(name: string, args: any, ctx: any) {
                     .or(`name.ilike.%${queryStr}%,email.ilike.%${queryStr}%`)
                     .limit(10);
 
-                console.log('[DEBUG search_patients] data =', data, 'error =', error);
 
                 result = { found: data, debug_user_id: user.id, search_term: queryStr };
                 if (data?.length === 1) {

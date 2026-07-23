@@ -43,32 +43,40 @@ const CustomCaption = () => {
   return (
     <div className="mb-6 flex items-center justify-between px-1">
       <button
+        type="button"
+        aria-label="Mês anterior"
         onClick={() => previousMonth && goToMonth(previousMonth)}
         disabled={!previousMonth}
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 shadow-sm transition-all hover:bg-zinc-100 hover:text-zinc-950 active:scale-95 disabled:opacity-20 dark:border-white/[0.075] dark:bg-white/[0.045] dark:text-white/52 dark:hover:bg-white/[0.085] dark:hover:text-white motion-reduce:transition-none motion-reduce:active:scale-100"
+        className="agenda-tactile notification-liquid-control flex h-11 w-11 items-center justify-center rounded-[15px] disabled:opacity-35"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
 
       <Popover>
         <PopoverTrigger asChild>
-          <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-zinc-950 transition-all hover:opacity-70 dark:text-white motion-reduce:transition-none">
+          <button
+            type="button"
+            className="agenda-tactile flex min-h-11 items-center gap-2 rounded-full px-3 text-[10px] font-black uppercase tracking-[0.2em] text-foreground hover:bg-accent/55"
+            aria-label="Escolher mês e ano"
+          >
             {format(displayMonth, "MMMM yyyy", { locale: ptBR })}
           </button>
         </PopoverTrigger>
-        <PopoverContent className="w-[300px] overflow-hidden rounded-[32px] border border-zinc-200 bg-white p-0 shadow-2xl dark:border-white/[0.08] dark:bg-[#070707]" align="center" sideOffset={12}>
+        <PopoverContent className="agenda-menu-surface notification-liquid-menu w-[320px] overflow-hidden rounded-[28px] p-0" align="center" sideOffset={12}>
           <div className="flex flex-row h-[280px]">
-            <ScrollArea className="w-[100px] border-r border-zinc-100 dark:border-white/[0.05] bg-zinc-50/50 dark:bg-white/[0.01]">
+            <ScrollArea className="w-[108px] border-r border-border/55 bg-muted/25">
               <div className="flex flex-col p-3 gap-1.5">
                 {years.map(year => (
                   <button
+                    type="button"
                     key={year}
                     onClick={() => goToMonth(setYear(displayMonth, year))}
+                    aria-pressed={displayMonth.getFullYear() === year}
                     className={cn(
-                      "px-3 py-2 text-[9px] font-black rounded-xl transition-all text-left uppercase",
-                      displayMonth.getFullYear() === year 
-                        ? "bg-zinc-900 dark:bg-white text-white dark:text-black" 
-                        : "text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                      "agenda-tactile min-h-11 rounded-[14px] px-3 text-left text-[9px] font-black uppercase text-muted-foreground",
+                      displayMonth.getFullYear() === year
+                        ? "synapse-liquid-tab-active text-foreground"
+                        : "hover:bg-accent/55 hover:text-foreground",
                     )}
                   >
                     {year}
@@ -79,13 +87,15 @@ const CustomCaption = () => {
             <div className="flex-1 p-5 grid grid-cols-2 gap-2 content-start">
               {months.map((month, index) => (
                 <button
+                  type="button"
                   key={month}
                   onClick={() => goToMonth(setMonth(displayMonth, index))}
+                  aria-pressed={displayMonth.getMonth() === index}
                   className={cn(
-                    "px-2 py-2.5 text-[8px] font-black uppercase tracking-wider rounded-xl transition-all border",
-                    displayMonth.getMonth() === index 
-                      ? "bg-zinc-900 dark:bg-white border-transparent text-white dark:text-black" 
-                      : "bg-transparent border-zinc-100 dark:border-white/[0.03] text-zinc-400 hover:border-zinc-300 dark:hover:border-white/10"
+                    "agenda-choice-card agenda-tactile min-h-11 rounded-[14px] border px-2 text-[8px] font-black uppercase tracking-wider text-muted-foreground",
+                    displayMonth.getMonth() === index
+                      ? "synapse-liquid-tab-active text-foreground"
+                      : "hover:text-foreground",
                   )}
                 >
                   {month.substring(0, 3)}
@@ -97,9 +107,11 @@ const CustomCaption = () => {
       </Popover>
 
       <button
+        type="button"
+        aria-label="Próximo mês"
         onClick={() => nextMonth && goToMonth(nextMonth)}
         disabled={!nextMonth}
-        className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 text-zinc-500 shadow-sm transition-all hover:bg-zinc-100 hover:text-zinc-950 active:scale-95 disabled:opacity-20 dark:border-white/[0.075] dark:bg-white/[0.045] dark:text-white/52 dark:hover:bg-white/[0.085] dark:hover:text-white motion-reduce:transition-none motion-reduce:active:scale-100"
+        className="agenda-tactile notification-liquid-control flex h-11 w-11 items-center justify-center rounded-[15px] disabled:opacity-35"
       >
         <ChevronRight className="h-4 w-4" />
       </button>
@@ -137,24 +149,22 @@ export const Sidebar = ({
       style={{ touchAction: "pan-y" }}
     >
       
-      {/* 1. Calendar Section - High Fidelity Monochrome */}
-      <div className="desktop-retina-inset relative shrink-0 overflow-hidden rounded-[28px] border border-border/55 bg-background/78 p-5 text-foreground transition-colors duration-300 motion-reduce:transition-none">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.022),transparent_42%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_44%)]" />
-        
+      <section className="agenda-liquid-surface relative shrink-0 overflow-hidden rounded-[28px] border p-5 text-foreground" aria-label="Calendário compacto">
         <div className="relative z-10 mb-8 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 shadow-sm dark:border-white/[0.075] dark:bg-white/[0.045]">
-              <CalendarIcon className="h-3.5 w-3.5 text-zinc-500 dark:text-white/56" />
+            <div className="synapse-chat-glass flex h-11 w-11 items-center justify-center rounded-[15px] border">
+              <CalendarIcon className="h-4 w-4 text-muted-foreground" />
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-zinc-950 dark:text-white">Calendário</span>
-              <span className="text-[7px] font-bold uppercase tracking-widest text-zinc-950/38 dark:text-white/38">Agenda</span>
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-foreground">Calendário</span>
+              <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground">Agenda</span>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={() => onDateChange(new Date())}
-              className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1.5 text-[8px] font-black uppercase tracking-widest text-zinc-500 shadow-sm transition-all hover:bg-zinc-100 hover:text-zinc-950 dark:border-white/[0.075] dark:bg-white/[0.045] dark:text-white/52 dark:hover:bg-white/[0.085] dark:hover:text-white motion-reduce:transition-none"
+              className="agenda-tactile notification-liquid-control min-h-11 rounded-full px-3 text-[8px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
             >
               Hoje
             </button>
@@ -163,7 +173,7 @@ export const Sidebar = ({
                 type="button"
                 aria-label="Fechar painel da agenda"
                 onClick={onClose}
-                className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-950 bg-zinc-950 text-white shadow-sm transition-all hover:bg-zinc-800 active:scale-95 dark:border-white dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100 motion-reduce:transition-none motion-reduce:active:scale-100"
+                className="agenda-primary-action agenda-tactile flex h-11 w-11 items-center justify-center rounded-full"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -186,60 +196,57 @@ export const Sidebar = ({
             nav: "hidden",
             table: "w-full border-collapse",
             head_row: "flex w-full justify-between mb-4",
-            head_cell: "text-zinc-400 dark:text-white/28 w-8 font-black text-[8px] uppercase text-center",
+            head_cell: "w-11 text-center text-[8px] font-black uppercase text-muted-foreground",
             row: "flex w-full mt-1.5 justify-between px-0.5",
-            cell: "h-8 w-8 text-center text-[10px] p-0 relative flex items-center justify-center",
-            day: "h-7 w-7 p-0 font-bold text-zinc-500 dark:text-white/45 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.075] rounded-lg transition-all flex items-center justify-center",
-            day_selected: "!bg-zinc-950 dark:!bg-white !text-white dark:!text-zinc-950 font-black shadow-lg rounded-lg scale-105",
-            day_today: "text-zinc-950 dark:text-white font-black ring-1 ring-zinc-950/20 dark:ring-white/20",
-            day_outside: "text-zinc-950/12 dark:text-white/12 opacity-50",
+            cell: "relative flex h-11 w-11 items-center justify-center p-0 text-center text-[10px]",
+            day: "agenda-tactile flex h-11 w-11 items-center justify-center rounded-[14px] p-0 font-bold text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+            day_selected: "!bg-foreground !text-background font-black shadow-sm",
+            day_today: "font-black text-foreground ring-1 ring-border",
+            day_outside: "text-muted-foreground/30 opacity-50",
             day_disabled: "opacity-10",
           }}
         />
-      </div>
+      </section>
 
-      {/* 2. Metrics Section - Unified Monochrome */}
       <div className="grid shrink-0 grid-cols-2 gap-2.5 px-0.5">
         <MetricCard label="Presenças" value={attended} />
         <MetricCard label="Não pontuados" value={unscored} />
       </div>
 
-      {/* 3. Search & Filters - Minimalist Area */}
-      <div className="desktop-retina-inset relative flex min-h-[250px] shrink-0 flex-col gap-7 overflow-hidden rounded-[28px] border border-border/50 bg-background/72 p-5">
-        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.018),transparent_42%)] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.014),transparent_44%)]" />
-        
-        {/* Search Block */}
+      <section className="agenda-liquid-surface relative flex min-h-[250px] shrink-0 flex-col gap-7 overflow-hidden rounded-[28px] border p-5" aria-label="Busca e filtros">
         <div className="relative z-10 space-y-3">
-          <div className="flex items-center gap-2 opacity-40">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <Search className="h-3 w-3" />
-            <label className="text-[8px] font-black uppercase tracking-[0.3em]">Buscar Paciente</label>
+            <label htmlFor="agenda-patient-search" className="text-[8px] font-black uppercase tracking-[0.24em]">Buscar paciente</label>
           </div>
           <div className="relative">
             <Input
+              id="agenda-patient-search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Digite o nome..."
-              className="h-11 rounded-2xl border-zinc-200 bg-zinc-50 px-5 text-[10px] font-bold text-zinc-900 shadow-sm transition-all placeholder:text-zinc-300 focus:ring-0 dark:border-white/[0.075] dark:bg-white/[0.04] dark:text-white dark:placeholder:text-white/24 motion-reduce:transition-none"
+              className="agenda-field h-11 rounded-2xl px-5 text-[10px] font-bold"
             />
           </div>
         </div>
 
-        {/* Tags Block */}
         <div className="relative z-10 space-y-4">
-          <div className="flex items-center gap-2 opacity-40">
+          <div className="flex items-center gap-2 text-muted-foreground">
             <Filter className="h-3 w-3" />
             <span className="text-[8px] font-black uppercase tracking-[0.3em]">Filtros</span>
           </div>
           <div className="flex flex-wrap gap-2">
             {TAGS.map((tag) => (
               <button
+                type="button"
                 key={tag}
                 onClick={() => onTagChange(selectedTag === tag ? null : tag)}
+                aria-pressed={selectedTag === tag}
                 className={cn(
-                  "px-4 py-2 rounded-xl text-[8px] font-black uppercase tracking-wider transition-all border",
+                  "agenda-choice-card agenda-tactile min-h-11 rounded-[14px] border px-4 text-[8px] font-black uppercase tracking-wider",
                   selectedTag === tag
-                    ? "scale-105 border-transparent bg-zinc-950 text-white shadow-md dark:bg-white dark:text-zinc-950"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-950 dark:border-white/[0.08] dark:bg-white/[0.045] dark:hover:bg-white/[0.08] dark:hover:text-white"
+                    ? "synapse-liquid-tab-active text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
               >
                 {tag}
@@ -251,19 +258,19 @@ export const Sidebar = ({
         <div className="relative z-10 mt-auto border-t border-border/45 pt-5">
           <span className="text-[7px] font-black uppercase tracking-[0.26em] text-muted-foreground">Agenda NeuroNex</span>
         </div>
-      </div>
+      </section>
     </div>
   );
 };
 
 const MetricCard = ({ label, value }: { label: string, value: number }) => (
-  <div className="desktop-retina-inset desktop-retina-interactive group rounded-[22px] border border-border/50 bg-background/76 p-4 hover:border-border/80 hover:bg-background/94">
+  <div className="agenda-liquid-card group rounded-[22px] border p-4">
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100 transition-colors">{label}</span>
-        <div className="h-0.5 w-3 bg-zinc-100 dark:bg-white/[0.05] group-hover:w-6 transition-all" />
+        <span className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">{label}</span>
+        <div className="h-0.5 w-5 bg-border" />
       </div>
-      <span className="text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter leading-none">
+      <span className="text-3xl font-black leading-none tracking-tighter text-foreground">
         {value.toString().padStart(2, '0')}
       </span>
     </div>
