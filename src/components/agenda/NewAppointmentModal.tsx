@@ -327,6 +327,18 @@ export function NewAppointmentModal({
   const idempotencyKeyRef = useRef(`agenda-v2-${crypto.randomUUID()}`);
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
+  const { profile, rememberAppointmentLocation } = useProfile();
+  const { canAccess, isLoading: isLoadingSubscription } = useSubscription();
+  const {
+    account: financialAccount,
+    isApproved: isFinancialAccountApproved,
+    isLoading: isLoadingFinancialAccount,
+  } = useFinancialAccount();
+  const {
+    mutateAsync: generateNeurofinanceInvoice,
+    isPending: isGeneratingNeurofinanceInvoice,
+  } = useGenerateInvoice();
+  const { simulate: simulateNeurofinance } = useNeurofinanceSimulator();
   const {
     createSeries,
     isCreatingSeries,
@@ -364,8 +376,9 @@ export function NewAppointmentModal({
       endTime: addMinutesToTime(selectedTime || "09:00", 50),
       eventLocation: "",
       shouldCreateTransaction: true,
+      shouldGenerateNeurofinanceCharge: false,
       transactionAmount: 0,
-      transactionMethod: "pix",
+      transactionMethod: "patient_choice",
       installments: 1,
       usePackage: false,
       recurrence: false,
@@ -394,11 +407,25 @@ export function NewAppointmentModal({
 
   const eventType = form.watch("eventType");
   const selectedPatientId = form.watch("patientId");
+  const selectedPatient = useMemo(
+    () => patients?.find((patient) => patient.id === selectedPatientId) || null,
+    [patients, selectedPatientId],
+  );
+  const professionalDefaultLocation = useMemo(
+    () => professionalLocationFromProfile(profile),
+    [profile],
+  );
+  const canUseNeurofinance =
+    canAccess("advanced_finance")
+    && isFinancialAccountApproved
+    && financialAccount?.charges_enabled !== false;
   const { data: resolvedFinancial, isLoading: isResolvingFinancial } =
     usePatientFinancialResolution(eventType === "session" ? selectedPatientId : null);
   const selectedPackageId = form.watch("packageId");
   const usePackageSwitch = form.watch("usePackage");
   const shouldCreateTransaction = form.watch("shouldCreateTransaction");
+  const shouldGenerateNeurofinanceCharge = form.watch("shouldGenerateNeurofinanceCharge");
+  const transactionMethod = form.watch("transactionMethod");
   const startTime = form.watch("startTime");
   const duration = form.watch("duration");
   const modality = form.watch("modality");
@@ -407,6 +434,12 @@ export function NewAppointmentModal({
   const recurrenceCount = form.watch("recurrenceCount") || 1;
   const selectedFormDate = form.watch("date");
   const selectedEndTime = form.watch("endTime");
+
+  useEffect(() => {
+    if (!isOpen || !professionalDefaultLocation) return;
+    if (form.getValues("sessionLocation") || form.formState.dirtyFields.sessionLocation) return;
+    form.setValue("sessionLocation", professionalDefaultLocation);
+  }, [form, isOpen, professionalDefaultLocation]);
 
   useEffect(() => {
     if (!startTime || !duration) return;
@@ -476,7 +509,8 @@ export function NewAppointmentModal({
     isCreatingAppointment ||
     isPreviewingAgendaPlan ||
     isCreatingSeries ||
-    isCreatingAgendaSeries;
+    isCreatingAgendaSeries ||
+    isGeneratingNeurofinanceInvoice;
 
   // Auto‑ativar pacote quando tem pacotes, ou abrir lançamento quando não tem
   useEffect(() => {
@@ -508,8 +542,15 @@ export function NewAppointmentModal({
     if (usePackageSwitch && activePackages?.length) {
       form.setValue("transactionAmount", 0);
       form.setValue("shouldCreateTransaction", false);
+      form.setValue("shouldGenerateNeurofinanceCharge", false);
     }
   }, [usePackageSwitch, activePackages, form]);
+
+  useEffect(() => {
+    if (!shouldCreateTransaction || !canUseNeurofinance) {
+      form.setValue("shouldGenerateNeurofinanceCharge", false);
+    }
+  }, [canUseNeurofinance, form, shouldCreateTransaction]);
 
   // ── Número total de passos ─────────────────────────────────────────
   const stepLabels = getAppointmentStepLabels(eventType, recurrenceEnabled);
@@ -537,11 +578,13 @@ export function NewAppointmentModal({
           }
         : resolvedFinancial?.planType === "insurance" && !values.shouldCreateTransaction
           ? { mode: "insurance", charge_mode: "per_occurrence" }
+          : values.shouldGenerateNeurofinanceCharge && canUseNeurofinance
+            ? { mode: "none" }
           : values.shouldCreateTransaction
             ? {
                 mode: "manual",
                 value_per_session: values.transactionAmount || 0,
-                payment_method: values.transactionMethod || "pix",
+                payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
                 charge_mode: "per_occurrence",
               }
             : { mode: "none" };

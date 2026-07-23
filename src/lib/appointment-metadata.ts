@@ -18,6 +18,7 @@ export interface AppointmentMetadata {
     transactionAmount?: number | null;
     transactionMethod?: string | null;
     installments?: number | null;
+    neurofinanceChargeRequested?: boolean;
   };
   recurrence?: {
     enabled?: boolean;

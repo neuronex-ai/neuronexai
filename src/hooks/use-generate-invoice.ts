@@ -13,7 +13,9 @@ interface GenerateInvoiceData {
   billingType?: string;
   paymentMethodType?: string[];
   financialEntryId?: string | null;
+  appointmentId?: string | null;
   operationId?:string;
+  silent?: boolean;
 }
 
 interface GenerateInvoiceResponse {
@@ -73,6 +75,7 @@ export const useGenerateInvoice = () => {
           payment_methods: methods,       // array as backup
           due_date: data.dueDate.toISOString().split('T')[0],
           financial_entry_id: data.financialEntryId || null,
+          appointment_id: data.appointmentId || null,
           operation_id:data.operationId||crypto.randomUUID(),
         }),
       });
@@ -95,16 +98,17 @@ export const useGenerateInvoice = () => {
         amount: result.amount / 100,
       };
     },
-    onSuccess: () => {
-      toast.success("Cobrança NeuroFinance gerada com sucesso!");
+    onSuccess: (_result, variables) => {
+      if (!variables.silent) toast.success("Cobrança NeuroFinance gerada com sucesso!");
       // Invalidate both for safety during transition, but primary is nb_payments
       queryClient.invalidateQueries({ queryKey: ['nb_payments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['invoices-page'] });
       queryClient.invalidateQueries({ queryKey: ['financial_transactions'] });
     },
-    onError: (error) => {
+    onError: (error, variables) => {
       console.error('useGenerateInvoice error:', error);
+      if (variables.silent) return;
       const friendlyError = toUserFacingError(error, "payment");
       toast.error(friendlyError.title, { description: friendlyError.message });
     }
