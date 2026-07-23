@@ -16,6 +16,20 @@ describe("appointment form flow", () => {
     ]);
   });
 
+  it("always ends clinical and general appointments with a review step", () => {
+    expect(getAppointmentStepLabels("session", false)).toEqual([
+      "Atendimento",
+      "Sessão",
+      "Financeiro",
+      "Revisão",
+    ]);
+    expect(getAppointmentStepLabels("event", false)).toEqual([
+      "Compromisso",
+      "Detalhes",
+      "Revisão",
+    ]);
+  });
+
   it("sends hidden financial errors to the financial step", () => {
     expect(getAppointmentFieldStep("transactionAmount", "session", true)).toBe(3);
     expect(getAppointmentFieldStep("transactionAmount", "session", false)).toBe(3);

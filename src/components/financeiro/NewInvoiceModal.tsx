@@ -9,6 +9,7 @@ import {
   Barcode,
   CalendarDays,
   Check,
+  CircleHelp,
   Copy,
   CreditCard,
   Info,
@@ -33,6 +34,7 @@ import { useGenerateInvoice } from "@/hooks/use-generate-invoice";
 import { useNeurofinanceSimulator, type SimulatorMethod } from "@/hooks/use-neurofinance-simulator";
 import { usePatients } from "@/hooks/use-patients";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
+import { useSubscription } from "@/context/SubscriptionContext";
 import { cn } from "@/lib/utils";
 import { toUserFacingError } from "@/lib/user-facing-error";
 import { AnimatePresence, motion } from "framer-motion";
@@ -50,6 +52,7 @@ const NewInvoiceSchema = z.object({
 type NewInvoiceFormValues = z.infer<typeof NewInvoiceSchema>;
 
 const QUICK_AMOUNTS = [150, 200, 250, 300];
+const PATIENT_DECIDES_METHODS = ["pix", "card", "boleto"];
 
 export const NewInvoiceModal = React.memo(({ children }: { children?: React.ReactNode }) => {
   const [open, setOpen] = useState(false);
@@ -63,7 +66,20 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
   const { data: patients } = usePatients();
   const { mutate: generateInvoice, isPending: isCreating } = useGenerateInvoice();
   const { simulate } = useNeurofinanceSimulator();
-  const { isConnected: isAccountReady } = useFinancialAccount();
+  const {
+    account: financialAccount,
+    isApproved: isFinancialAccountApproved,
+    isLoading: isLoadingFinancialAccount,
+  } = useFinancialAccount();
+  const {
+    canAccess,
+    isLoading: isLoadingSubscription,
+  } = useSubscription();
+  const hasNeurofinanceEntitlement = canAccess("advanced_finance");
+  const canGenerateCharge =
+    hasNeurofinanceEntitlement
+    && isFinancialAccountApproved
+    && financialAccount?.charges_enabled !== false;
   const navigate = useNavigate();
   const [showPatientTooltip, setShowPatientTooltip] = useState(false);
 
@@ -73,7 +89,7 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
       description: "Sessão de Psicoterapia",
       amount: undefined as unknown as number,
       dueDate: format(new Date(), "yyyy-MM-dd"),
-      paymentMethods: ["pix", "card"],
+      paymentMethods: PATIENT_DECIDES_METHODS,
     },
     mode: "onChange",
   });
@@ -106,8 +122,8 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
   }, [reset]);
 
   const issueInvoice = useCallback((values: NewInvoiceFormValues) => {
-    if (!isAccountReady) {
-      toast.error("Atenção: sua conta NeuroFinance precisa estar conectada para gerar cobranças reais.");
+    if (!canGenerateCharge) {
+      toast.error("Sua conta e seu plano precisam estar ativos para gerar cobranças NeuroFinance.");
       return;
     }
 
@@ -148,7 +164,7 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
         },
       }
     );
-  }, [isAccountReady, generateInvoice]);
+  }, [canGenerateCharge, generateInvoice]);
 
   const onSubmit = useCallback(() => {
     setStep("confirmation");
@@ -401,11 +417,15 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
       <div className="custom-scrollbar flex-1 overflow-y-auto bg-zinc-50/30 px-8 py-8 dark:bg-transparent">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-10">
-            {!isAccountReady && (
+            {!canGenerateCharge && (
               <div className="flex items-center gap-4 rounded-3xl border border-amber-500/20 bg-amber-500/5 p-5">
                 <AlertCircle className="h-5 w-5 shrink-0 text-amber-500" />
                 <p className="text-xs font-bold leading-relaxed text-amber-600 dark:text-amber-400">
-                  Conta NeuroFinance pendente. Ative em Configurações para emitir cobranças reais.
+                  {isLoadingSubscription || isLoadingFinancialAccount
+                    ? "Verificando seu plano e sua conta NeuroFinance..."
+                    : !hasNeurofinanceEntitlement
+                      ? "Cobranças NeuroFinance estão disponíveis nos planos Professional e Enterprise."
+                      : "Conclua a ativação da conta NeuroFinance para emitir cobranças reais."}
                 </p>
               </div>
             )}
@@ -571,32 +591,56 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
               <FormField
                 control={form.control}
                 name="paymentMethods"
-                render={({ field }) => (
-                  <FormItem className="space-y-4">
-                    <FormLabel className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Métodos de pagamento</FormLabel>
-                    <ToggleGroup
-                      type="multiple"
-                      value={field.value}
-                      onValueChange={(value) => field.onChange(value.length > 0 ? value : field.value)}
-                      className="grid grid-cols-3 gap-4"
-                    >
-                      {[
-                        { value: "pix", label: "Pix", icon: QrCode },
-                        { value: "card", label: "Cartão", icon: CreditCard },
-                        { value: "boleto", label: "Boleto", icon: Barcode },
-                      ].map((method) => (
-                        <ToggleGroupItem
-                          key={method.value}
-                          value={method.value}
-                          className="flex h-28 flex-col gap-3 rounded-[28px] border-2 border-zinc-100 bg-white text-zinc-400 transition-all data-[state=on]:border-zinc-900 data-[state=on]:text-zinc-900 dark:border-white/5 dark:bg-white/5 dark:data-[state=on]:border-white dark:data-[state=on]:text-white"
-                        >
-                          <method.icon className="h-6 w-6" />
-                          <span className="text-[9px] font-black uppercase tracking-widest">{method.label}</span>
-                        </ToggleGroupItem>
-                      ))}
-                    </ToggleGroup>
-                  </FormItem>
-                )}
+                render={({ field }) => {
+                  const patientDecides =
+                    field.value.length === PATIENT_DECIDES_METHODS.length
+                    && PATIENT_DECIDES_METHODS.every((method) => field.value.includes(method));
+
+                  return (
+                    <FormItem className="space-y-4">
+                      <FormLabel className="ml-1 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Métodos de pagamento</FormLabel>
+                      <FormControl>
+                        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                          <button
+                            type="button"
+                            aria-pressed={patientDecides}
+                            onClick={() => field.onChange(PATIENT_DECIDES_METHODS)}
+                            className={cn(
+                              "flex h-28 flex-col items-center justify-center gap-3 rounded-[28px] border-2 bg-white text-zinc-400 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-500/35 dark:bg-white/5",
+                              patientDecides
+                                ? "border-zinc-900 text-zinc-900 dark:border-white dark:text-white"
+                                : "border-zinc-100 dark:border-white/5",
+                            )}
+                          >
+                            <CircleHelp className="h-6 w-6" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Paciente decide</span>
+                          </button>
+                          <ToggleGroup
+                            type="multiple"
+                            value={field.value}
+                            onValueChange={(value) => field.onChange(value.length > 0 ? value : field.value)}
+                            className="contents"
+                          >
+                            {[
+                              { value: "pix", label: "Pix", icon: QrCode },
+                              { value: "card", label: "Cartão", icon: CreditCard },
+                              { value: "boleto", label: "Boleto", icon: Barcode },
+                            ].map((method) => (
+                              <ToggleGroupItem
+                                key={method.value}
+                                value={method.value}
+                                className="flex h-28 flex-col gap-3 rounded-[28px] border-2 border-zinc-100 bg-white text-zinc-400 transition-all data-[state=on]:border-zinc-900 data-[state=on]:text-zinc-900 dark:border-white/5 dark:bg-white/5 dark:data-[state=on]:border-white dark:data-[state=on]:text-white"
+                              >
+                                <method.icon className="h-6 w-6" />
+                                <span className="text-[9px] font-black uppercase tracking-widest">{method.label}</span>
+                              </ToggleGroupItem>
+                            ))}
+                          </ToggleGroup>
+                        </div>
+                      </FormControl>
+                    </FormItem>
+                  );
+                }}
               />
             </div>
           </form>
@@ -613,7 +657,7 @@ export const NewInvoiceModal = React.memo(({ children }: { children?: React.Reac
         <Button
           type="button"
           onClick={form.handleSubmit(onSubmit)}
-          disabled={!isAccountReady}
+          disabled={!canGenerateCharge || isLoadingSubscription || isLoadingFinancialAccount}
           className="h-16 gap-3 rounded-[20px] bg-zinc-900 px-12 text-[10px] font-black uppercase tracking-[0.2em] text-white shadow-2xl transition-all hover:opacity-90 active:scale-95 dark:bg-white dark:text-black"
         >
           Revisar cobrança <ArrowRight className="h-4 w-4" />

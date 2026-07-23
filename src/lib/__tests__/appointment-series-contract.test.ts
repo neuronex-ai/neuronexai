@@ -55,7 +55,7 @@ describe("transactional appointment series contract", () => {
     const hook = source("src/hooks/use-appointment-series.ts");
 
     expect(modal).toContain("createSeries({");
-    expect(modal).toContain("as reservas do pacote serão criados na mesma operação");
+    expect(modal).toContain("A série e as reservas de pacote são confirmadas juntas.");
     expect(modal).not.toContain("addRecurrenceInterval");
     expect(modal).not.toMatch(/for\s*\([^)]*recurrence/i);
     expect(hook).toContain('rpc("create_appointment_series_with_package"');

@@ -25,6 +25,7 @@ const EVENT_ATTENDANCE_FIELDS = new Set([
 
 const FINANCIAL_FIELDS = new Set([
   "shouldCreateTransaction",
+  "shouldGenerateNeurofinanceCharge",
   "transactionAmount",
   "transactionMethod",
   "installments",
@@ -34,17 +35,13 @@ const FINANCIAL_FIELDS = new Set([
 
 export function getAppointmentStepLabels(
   eventType: AppointmentEventType,
-  recurrenceEnabled: boolean,
+  _recurrenceEnabled: boolean,
 ) {
   if (eventType === "event") {
-    return recurrenceEnabled
-      ? ["Compromisso", "Detalhes", "Revisão"]
-      : ["Compromisso", "Detalhes"];
+    return ["Compromisso", "Detalhes", "Revisão"];
   }
 
-  return recurrenceEnabled
-    ? ["Atendimento", "Sessão", "Financeiro", "Revisão"]
-    : ["Atendimento", "Sessão", "Financeiro"];
+  return ["Atendimento", "Sessão", "Financeiro", "Revisão"];
 }
 
 export function getAppointmentFieldStep(

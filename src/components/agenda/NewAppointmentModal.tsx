@@ -37,6 +37,7 @@ import { differenceInMinutes, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -86,6 +87,7 @@ import {
   buildEventMetadata,
   buildEventNotes as buildEventNotesFromMetadata,
   buildSessionMetadata,
+  getSessionTypeLabel,
 } from "@/lib/appointment-metadata";
 import {
   APPOINTMENT_FORM_ID,
@@ -180,6 +182,10 @@ const formSchema = z
       return typeof data.transactionAmount === "number" && data.transactionAmount > 0;
     },
     { message: "Informe um valor maior que zero", path: ["transactionAmount"] }
+  )
+  .refine(
+    (data) => !data.shouldGenerateNeurofinanceCharge || data.shouldCreateTransaction,
+    { message: "Ative o lançamento financeiro para gerar a cobrança", path: ["shouldGenerateNeurofinanceCharge"] },
   );
 
 type FormValues = z.infer<typeof formSchema>;
@@ -245,6 +251,22 @@ const professionalLocationFromProfile = (
   const structuredLabel = profile?.professional_address?.label;
   if (typeof structuredLabel === "string" && structuredLabel.trim()) return structuredLabel.trim();
   return profile?.address?.trim() || "";
+};
+
+const paymentMethodLabel = (method?: FormValues["transactionMethod"]) => {
+  if (method === "patient_choice") return "Paciente decide";
+  if (method === "credit_card") return "Cartão";
+  if (method === "debit_card") return "Débito";
+  if (method === "money") return "Dinheiro";
+  if (method === "boleto") return "Boleto";
+  if (method === "mixed") return "Misto";
+  return "Pix";
+};
+
+const neurofinanceMethodLabel = (method: string) => {
+  if (method === "card") return "Cartão";
+  if (method === "boleto") return "Boleto";
+  return "Pix";
 };
 
 // ─── Props ────────────────────────────────────────────────────────────
@@ -415,8 +437,9 @@ export function NewAppointmentModal({
     () => professionalLocationFromProfile(profile),
     [profile],
   );
+  const hasNeurofinanceEntitlement = canAccess("advanced_finance");
   const canUseNeurofinance =
-    canAccess("advanced_finance")
+    hasNeurofinanceEntitlement
     && isFinancialAccountApproved
     && financialAccount?.charges_enabled !== false;
   const { data: resolvedFinancial, isLoading: isResolvingFinancial } =
@@ -425,7 +448,6 @@ export function NewAppointmentModal({
   const usePackageSwitch = form.watch("usePackage");
   const shouldCreateTransaction = form.watch("shouldCreateTransaction");
   const shouldGenerateNeurofinanceCharge = form.watch("shouldGenerateNeurofinanceCharge");
-  const transactionMethod = form.watch("transactionMethod");
   const startTime = form.watch("startTime");
   const duration = form.watch("duration");
   const modality = form.watch("modality");
@@ -659,9 +681,13 @@ export function NewAppointmentModal({
           financial: {
             usePackage: values.usePackage,
             packageId: values.packageId || selectedPackage?.id || null,
-            transactionAmount: values.shouldCreateTransaction ? values.transactionAmount || 0 : null,
+            transactionAmount:
+              values.shouldCreateTransaction && !values.shouldGenerateNeurofinanceCharge
+                ? values.transactionAmount || 0
+                : null,
             transactionMethod: values.transactionMethod || null,
             installments: values.installments || 1,
+            neurofinanceChargeRequested: values.shouldGenerateNeurofinanceCharge,
           },
         });
 
@@ -684,19 +710,29 @@ export function NewAppointmentModal({
       location: values.eventType === "event" ? values.eventLocation || null : locStr,
       metadata,
       package_id: null,
-      financial: values.eventType === "session" && values.shouldCreateTransaction
+      financial:
+        values.eventType === "session"
+        && values.shouldCreateTransaction
+        && !values.shouldGenerateNeurofinanceCharge
         ? {
             mode: "manual" as const,
             value_per_session: values.transactionAmount || 0,
             total: values.transactionAmount || 0,
             charge_mode: "per_occurrence" as const,
-            payment_method: values.transactionMethod || "pix",
+            payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
             installments: values.installments || 1,
           }
         : { mode: "none" as const, value_per_session: 0, total: 0, charge_mode: "per_occurrence" as const },
     };
 
     try {
+      if (values.shouldGenerateNeurofinanceCharge && !canUseNeurofinance) {
+        setStep(3);
+        throw new Error("Ative uma conta NeuroFinance elegível para gerar a cobrança.");
+      }
+
+      const chargeTargets: Array<{ appointmentId: string; startsAt: Date }> = [];
+
       if (values.recurrence) {
         const latestPreview = seriesPreview?.valid
           ? seriesPreview
@@ -710,6 +746,13 @@ export function NewAppointmentModal({
         const result = await createAgendaSeries({
           input: buildAgendaPlanInput(values, metadata),
           idempotencyKey: idempotencyKeyRef.current,
+        });
+        result.result.appointmentIds.forEach((appointmentId, index) => {
+          const occurrence = latestPreview.occurrences[index];
+          chargeTargets.push({
+            appointmentId,
+            startsAt: occurrence ? new Date(occurrence.startTime) : startDateTime,
+          });
         });
         toast.success(result.result.message || "Série criada com segurança.");
       } else if (
@@ -733,8 +776,88 @@ export function NewAppointmentModal({
         if (!result.success) {
           throw new Error("A disponibilidade mudou. Nenhum agendamento foi criado.");
         }
+        result.appointments.forEach((appointment) => {
+          const appointmentStart =
+            "startTime" in appointment && typeof appointment.startTime === "string"
+              ? new Date(appointment.startTime)
+              : startDateTime;
+          chargeTargets.push({
+            appointmentId: appointment.appointmentId,
+            startsAt: appointmentStart,
+          });
+        });
       } else {
-        await createAppointment(appointmentPayload);
+        const result = await createAppointment(appointmentPayload);
+        chargeTargets.push({
+          appointmentId: result.createdAppointment.id,
+          startsAt: new Date(result.createdAppointment.start_time),
+        });
+      }
+
+      if (values.eventType === "session" && values.modality === "online") {
+        let failedInvites = 0;
+        for (const target of chargeTargets) {
+          const { error } = await supabase.functions.invoke("ensure-teleconsultation-invite", {
+            body: { appointmentId: target.appointmentId },
+          });
+          if (error) failedInvites += 1;
+        }
+        if (failedInvites > 0) {
+          toast.warning(
+            `Agenda criada, mas ${failedInvites} ${failedInvites === 1 ? "link de teleconsulta precisa" : "links de teleconsulta precisam"} ser revisado${failedInvites === 1 ? "" : "s"}.`,
+          );
+        }
+      }
+
+      if (
+        values.eventType === "session"
+        && values.shouldGenerateNeurofinanceCharge
+        && values.patientId
+        && Number(values.transactionAmount || 0) > 0
+      ) {
+        let failedCharges = 0;
+        for (const target of chargeTargets) {
+          try {
+            await generateNeurofinanceInvoice({
+              patientId: values.patientId,
+              appointmentId: target.appointmentId,
+              amount: Number(values.transactionAmount),
+              description: `Sessão · ${selectedPatient?.name || "Paciente"}`,
+              dueDate: target.startsAt,
+              paymentMethodType: neurofinancePaymentMethods(values.transactionMethod),
+              operationId: `agenda-charge-${target.appointmentId}`,
+              silent: true,
+            });
+          } catch {
+            failedCharges += 1;
+          }
+        }
+
+        if (failedCharges === 0) {
+          toast.success(
+            chargeTargets.length === 1
+              ? "Cobrança NeuroFinance criada e vinculada ao agendamento."
+              : `${chargeTargets.length} cobranças NeuroFinance criadas e vinculadas à série.`,
+          );
+        } else {
+          toast.warning(
+            `Agenda criada, mas ${failedCharges} ${failedCharges === 1 ? "cobrança precisa" : "cobranças precisam"} ser revisada no NeuroFinance.`,
+          );
+        }
+      }
+
+      const typedLocation = values.sessionLocation?.trim();
+      if (
+        values.eventType === "session"
+        && values.modality === "presencial"
+        && typedLocation
+        && !professionalDefaultLocation
+      ) {
+        try {
+          await rememberAppointmentLocation(typedLocation);
+        } catch (error) {
+          console.warn("[NewAppointmentModal] Não foi possível memorizar o local da consulta.", error);
+        }
       }
 
       onOpenChange(false);
@@ -1221,11 +1344,11 @@ export function NewAppointmentModal({
           {seriesTemplates?.length ? (
             <div className="agenda-liquid-surface rounded-[20px] border p-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-black text-foreground">
-                <WandSparkles className="h-3.5 w-3.5" /> Usar um modelo salvo
+                <WandSparkles className="h-3.5 w-3.5" /> Repetir uma configuração
               </div>
               <Select value={selectedTemplateId} onValueChange={applySeriesTemplate}>
                 <SelectTrigger className="agenda-field h-11 rounded-2xl font-semibold">
-                  <SelectValue placeholder="Escolha um modelo e edite só o necessário" />
+                  <SelectValue placeholder="Escolha e ajuste só o que mudar" />
                 </SelectTrigger>
                 <SelectContent className="agenda-menu-surface notification-liquid-menu rounded-[18px] p-1.5">
                   {seriesTemplates.map((template) => (
@@ -1335,6 +1458,11 @@ export function NewAppointmentModal({
                       className={cn(inputBase, "px-4 font-medium")}
                     />
                   </FormControl>
+                  {professionalDefaultLocation && field.value === professionalDefaultLocation ? (
+                    <p className="px-1 text-[11px] text-muted-foreground">
+                      Preenchido com o endereço salvo em Ajustes. Você pode alterar só para esta sessão.
+                    </p>
+                  ) : null}
                   <FormMessage />
                 </FormItem>
               )}
@@ -1658,6 +1786,47 @@ export function NewAppointmentModal({
 
           {shouldCreateTransaction && (
             <div className="agenda-step-enter space-y-4 pt-1">
+              <FormField
+                control={form.control}
+                name="shouldGenerateNeurofinanceCharge"
+                render={({ field }) => (
+                  <FormItem className={cn(cardBase, "flex min-h-20 flex-row items-center justify-between gap-4")}>
+                    <div className="min-w-0 space-y-1">
+                      <FormLabel className="flex items-center gap-2 text-sm font-bold text-foreground">
+                        <ReceiptText className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
+                        Gerar cobrança via NeuroFinance
+                      </FormLabel>
+                      <p className="text-xs leading-relaxed text-muted-foreground/70">
+                        {isLoadingSubscription || isLoadingFinancialAccount
+                          ? "Verificando plano e conta..."
+                          : canUseNeurofinance
+                            ? "Cria um link de pagamento e acompanha o recebimento."
+                            : !hasNeurofinanceEntitlement
+                              ? "Disponível nos planos Professional e Enterprise."
+                              : "Ative e conclua a aprovação da conta NeuroFinance."}
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        disabled={!canUseNeurofinance || isLoadingSubscription || isLoadingFinancialAccount}
+                        onCheckedChange={(checked) => {
+                          field.onChange(checked);
+                          if (
+                            checked
+                            && ["money", "mixed", "debit_card"].includes(form.getValues("transactionMethod") || "")
+                          ) {
+                            form.setValue("transactionMethod", "patient_choice");
+                          }
+                        }}
+                        className="shrink-0 data-[state=checked]:bg-foreground"
+                        aria-label="Gerar cobrança via NeuroFinance"
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
               <div className="flex gap-3">
                 <FormField
                   control={form.control}
@@ -1697,11 +1866,24 @@ export function NewAppointmentModal({
                   <FormItem className="space-y-2">
                     <FormLabel className={labelBase}>Forma de Pagamento</FormLabel>
                     <FormControl>
-                      <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-3 gap-2">
+                      <RadioGroup
+                        onValueChange={field.onChange}
+                        value={field.value}
+                        className={cn(
+                          "grid gap-2",
+                          shouldGenerateNeurofinanceCharge
+                            ? "grid-cols-2 sm:grid-cols-4"
+                            : "grid-cols-2 sm:grid-cols-5",
+                        )}
+                      >
                         {[
+                          { id: "patient_choice", icon: CircleHelp, label: "Paciente decide" },
                           { id: "pix", icon: QrCode, label: "Pix" },
-                          { id: "money", icon: Banknote, label: "Dinheiro" },
+                          ...(!shouldGenerateNeurofinanceCharge
+                            ? [{ id: "money", icon: Banknote, label: "Dinheiro" }]
+                            : []),
                           { id: "credit_card", icon: CreditCard, label: "Cartão" },
+                          { id: "boleto", icon: FileText, label: "Boleto" },
                         ].map((m) => (
                           <FormItem key={m.id}>
                             <FormControl>
@@ -1709,7 +1891,7 @@ export function NewAppointmentModal({
                             </FormControl>
                             <label
                               htmlFor={`pay-${m.id}`}
-                              className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border p-3 text-muted-foreground peer-data-[state=checked]:border-foreground/25 peer-data-[state=checked]:text-foreground"
+                              className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border p-3 text-center text-muted-foreground peer-data-[state=checked]:border-foreground/25 peer-data-[state=checked]:text-foreground"
                             >
                               <m.icon className="h-6 w-6 mb-2" />
                               <span className="text-[9px] font-black uppercase tracking-widest">{m.label}</span>
@@ -1728,6 +1910,149 @@ export function NewAppointmentModal({
     </div>
   );
 
+  const renderReviewSummary = () => {
+    const values = form.getValues();
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values);
+    const location = values.sessionLocation?.trim() || professionalDefaultLocation || "Local não informado";
+    const amount = Number(values.transactionAmount || 0);
+    const amountLabel = amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+    const recurrenceLabel = values.recurrence
+      ? recurrenceRuleSummary(agendaRecurrenceDraftToRule(recurrenceDraft))
+      : "Sessão única";
+    const occurrenceLabel = values.recurrence && seriesPreview
+      ? `${seriesPreview.totalOccurrences} sessões`
+      : recurrenceLabel;
+    const selectedMethods = neurofinancePaymentMethods(values.transactionMethod);
+    const feeSummaries = selectedMethods.map((method) => ({
+      method,
+      ...simulateNeurofinance({
+        amount: Math.round(amount * 100),
+        method: method as SimulatorMethod,
+        installments: values.installments || 1,
+      }),
+    }));
+
+    const financialTitle = values.eventType === "event"
+      ? "Sem cobrança"
+      : values.usePackage && selectedPackage
+        ? "Saldo do pacote reservado"
+        : values.shouldGenerateNeurofinanceCharge
+          ? "Cobrança NeuroFinance automática"
+          : values.shouldCreateTransaction
+            ? "Lançamento a receber"
+            : resolvedFinancial?.planType === "insurance"
+              ? "Repasse de convênio"
+              : "Sem cobrança automática";
+
+    const financialDescription = values.eventType === "event"
+      ? "Este compromisso entra na agenda sem movimentar o financeiro."
+      : values.usePackage && selectedPackage
+        ? `${sessionsToReserve ?? "As próximas"} ${sessionsToReserve === 1 ? "sessão será reservada" : "sessões serão reservadas"} no pacote ${selectedPackage.description || "ativo"}.`
+        : values.shouldGenerateNeurofinanceCharge
+          ? values.transactionMethod === "patient_choice"
+            ? `O NeuroFinance gera ${values.recurrence ? "uma cobrança por sessão criada" : "um link de pagamento"} de ${amountLabel}. O paciente escolhe Pix, cartão ou boleto.`
+            : `O NeuroFinance gera ${values.recurrence ? "uma cobrança por sessão criada" : "um link de pagamento"} de ${amountLabel} por ${paymentMethodLabel(values.transactionMethod)}.`
+          : values.shouldCreateTransaction
+            ? `Cria ${values.recurrence ? "um lançamento por sessão" : "um lançamento"} de ${amountLabel} como “A receber” · ${paymentMethodLabel(values.transactionMethod)}.`
+            : resolvedFinancial?.planType === "insurance"
+              ? `Prevê ${(resolvedFinancial.expectedReceivableCents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} de repasse, sem cobrar o paciente.`
+              : "O agendamento será criado sem lançamento ou cobrança.";
+
+    const reviewItems = values.eventType === "session"
+      ? [
+          {
+            title: selectedPatient?.name || "Paciente",
+            description: `${format(startDateTime, "EEEE, dd 'de' MMMM", { locale: ptBR })} · ${format(startDateTime, "HH:mm")}–${format(endDateTime, "HH:mm")} · ${occurrenceLabel}`,
+          },
+          {
+            title: `${getSessionTypeLabel(values.type)} · ${values.modality === "online" ? "Online" : "Presencial"}`,
+            description: values.modality === "online"
+              ? "O link seguro da teleconsulta será preparado ao criar."
+              : location,
+            mapsLocation: values.modality === "presencial" && location !== "Local não informado"
+              ? location
+              : null,
+          },
+          {
+            title: financialTitle,
+            description: financialDescription,
+            feeSummaries: values.shouldGenerateNeurofinanceCharge ? feeSummaries : [],
+          },
+        ]
+      : [
+          {
+            title: values.eventTitle || "Compromisso",
+            description: `${format(startDateTime, "EEEE, dd 'de' MMMM", { locale: ptBR })} · ${format(startDateTime, "HH:mm")}–${format(endDateTime, "HH:mm")} · ${occurrenceLabel}`,
+          },
+          {
+            title: "Detalhes registrados",
+            description: values.eventLocation?.trim() || "Sem local definido.",
+          },
+        ];
+
+    return (
+      <section className="agenda-step-enter space-y-4" aria-labelledby="appointment-review-heading">
+        <div className="space-y-1.5">
+          <h3 id="appointment-review-heading" className="text-lg font-bold tracking-tight text-foreground">
+            O que vai acontecer
+          </h3>
+          <p className="text-sm font-medium text-muted-foreground">
+            Revise o fluxo. A disponibilidade será confirmada novamente ao criar.
+          </p>
+        </div>
+
+        <ol className="relative space-y-3" aria-label="Resumo do agendamento">
+          {reviewItems.map((item, index) => (
+            <li key={`${index}-${item.title}`} className="relative grid grid-cols-[2.75rem_minmax(0,1fr)] gap-3">
+              {index < reviewItems.length - 1 ? (
+                <span
+                  className="absolute bottom-[-0.75rem] left-[1.34rem] top-11 w-px bg-border/70"
+                  aria-hidden="true"
+                />
+              ) : null}
+              <span className="synapse-chat-glass relative z-10 flex h-11 w-11 items-center justify-center rounded-full border text-sm font-black text-foreground">
+                {index + 1}
+              </span>
+              <div className="agenda-liquid-card min-w-0 rounded-[20px] border p-4">
+                <p className="text-sm font-black text-foreground">{item.title}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
+
+                {"mapsLocation" in item && item.mapsLocation ? (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.mapsLocation)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="agenda-tactile notification-liquid-control mt-3 inline-flex min-h-11 items-center gap-2 rounded-full px-4 text-xs font-bold text-foreground"
+                  >
+                    <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+                    Ver no Google Maps
+                    <ExternalLink className="h-3.5 w-3.5 opacity-60" aria-hidden="true" />
+                  </a>
+                ) : null}
+
+                {"feeSummaries" in item && item.feeSummaries?.length ? (
+                  <dl className="mt-3 grid gap-1.5 border-t border-border/55 pt-3">
+                    {item.feeSummaries.map((summary) => (
+                      <div key={summary.method} className="flex items-center justify-between gap-3 text-[11px]">
+                        <dt className="font-bold text-muted-foreground">{neurofinanceMethodLabel(summary.method)}</dt>
+                        <dd className="text-right font-semibold text-foreground">
+                          {summary.netAmount == null
+                            ? "Taxa confirmada no pagamento"
+                            : `Líquido estimado ${(summary.netAmount / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`}
+                          {summary.settlementLabel ? ` · ${summary.settlementLabel}` : ""}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                ) : null}
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    );
+  };
+
   const renderRecurrencePreview = () => {
     const recurrenceRule = agendaRecurrenceDraftToRule(recurrenceDraft);
     return (
@@ -1737,10 +2062,10 @@ export function NewAppointmentModal({
             <span className="rounded-full bg-secondary/20 p-2">
               <Repeat className="h-4 w-4 text-foreground" aria-hidden="true" />
             </span>
-            Revisar recorrência
+            Datas da recorrência
           </h3>
           <p className="ml-1 text-sm font-medium text-muted-foreground">
-            Confira todas as datas antes de confirmar. A disponibilidade será revalidada ao criar.
+            Ajuste apenas as sessões que fugirem do padrão.
           </p>
         </div>
 
@@ -1957,7 +2282,7 @@ export function NewAppointmentModal({
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-black text-foreground">Salvar como modelo</p>
                   <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
-                    Reutiliza regra, duração e modalidade. Paciente e financeiro nunca são copiados.
+                    Use esta configuração de novo sem preencher tudo.
                   </p>
                 </div>
               </div>
@@ -1981,13 +2306,23 @@ export function NewAppointmentModal({
             </div>
 
             <p className="agenda-liquid-card rounded-2xl border border-border/60 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-              A série, seus agendamentos e, quando escolhido, as reservas do pacote serão criados na mesma operação. Cobranças, e-mails em lote e notas fiscais não serão gerados nesta etapa.
+              A série e as reservas de pacote são confirmadas juntas.
+              {shouldGenerateNeurofinanceCharge
+                ? " Depois, o NeuroFinance cria e vincula as cobranças de cada sessão."
+                : " E-mails em lote e notas fiscais não são gerados nesta etapa."}
             </p>
           </>
         ) : null}
       </div>
     );
   };
+
+  const renderFinalReview = () => (
+    <div className="agenda-step-enter space-y-6">
+      {renderReviewSummary()}
+      {recurrenceEnabled ? renderRecurrencePreview() : null}
+    </div>
+  );
 
   // ─── Progress Dots ────────────────────────────────────────────────
 
@@ -2043,9 +2378,10 @@ export function NewAppointmentModal({
       const isValid = await form.trigger(["type", "modality", "duration"]);
       if (isValid) nextStep();
       else setSubmissionError("Revise o campo destacado para continuar.");
-    } else if (eventType === "session" && recurrenceEnabled && step === 3) {
+    } else if (eventType === "session" && step === 3) {
       const isValid = await form.trigger([
         "shouldCreateTransaction",
+        "shouldGenerateNeurofinanceCharge",
         "transactionAmount",
         "transactionMethod",
         "installments",
@@ -2053,8 +2389,12 @@ export function NewAppointmentModal({
         "packageId",
       ]);
       if (isValid) {
-        const preview = await loadSeriesPreview(form.getValues());
-        if (preview) nextStep();
+        if (recurrenceEnabled) {
+          const preview = await loadSeriesPreview(form.getValues());
+          if (preview) nextStep();
+        } else {
+          nextStep();
+        }
       } else {
         setSubmissionError("Revise o campo destacado para continuar.");
       }
@@ -2070,9 +2410,13 @@ export function NewAppointmentModal({
         "recurrenceCount",
       ]);
       if (isValid) nextStep();
-    } else if (eventType === "event" && step === 2 && recurrenceEnabled) {
-      await loadSeriesPreview(form.getValues());
-      nextStep();
+    } else if (eventType === "event" && step === 2) {
+      if (recurrenceEnabled) {
+        const preview = await loadSeriesPreview(form.getValues());
+        if (preview) nextStep();
+      } else {
+        nextStep();
+      }
     } else {
       nextStep();
     }
@@ -2128,11 +2472,9 @@ export function NewAppointmentModal({
               {step === 3 && (
                 eventType === "session"
                   ? renderStep3()
-                  : recurrenceEnabled
-                    ? renderRecurrencePreview()
-                    : null
+                  : renderFinalReview()
               )}
-              {step === 4 && recurrenceEnabled && eventType === "session" && renderRecurrencePreview()}
+              {step === 4 && eventType === "session" && renderFinalReview()}
               {submissionError ? (
                 <div
                   role="alert"
