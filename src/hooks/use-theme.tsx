@@ -2,6 +2,7 @@ import { useUserPreferences, type UserThemePreference } from '@/hooks/use-user-p
 import { runThemeTransition, type ThemeTransitionOrigin } from '@/lib/theme-transition';
 import { useTheme as useNextTheme } from 'next-themes';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 
 export function useTheme() {
   const { theme: currentPreference, setTheme: setNextTheme, resolvedTheme } = useNextTheme();
@@ -45,7 +46,9 @@ export function useTheme() {
       ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
       : normalized;
 
-    runThemeTransition(visualTarget, () => setTheme(normalized), origin);
+    runThemeTransition(visualTarget, () => {
+      flushSync(() => setTheme(normalized));
+    }, origin);
   }, [setTheme]);
 
   const toggleTheme = useCallback((origin?: ThemeTransitionOrigin) => {
