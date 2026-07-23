@@ -5922,14 +5922,14 @@
 
 .app-dialog-position {
   /*
-   * Keep placement independent from utility ordering and animation state.
-   * Viewport units also remain correct when browser zoom changes the visual
-   * viewport. Dialog motion is intentionally opacity-only.
+   * Center through the fixed containing block without transforms. This keeps
+   * the dialog visible when browser zoom changes the visual viewport and
+   * avoids collisions with animation utilities.
    */
-  top: 50dvh !important;
-  left: 50dvw !important;
+  inset: 0 !important;
+  margin: auto !important;
   translate: none !important;
-  transform: translate3d(-50%, -50%, 0) !important;
+  transform: none !important;
 }
 
 .agenda-viewport-modal {

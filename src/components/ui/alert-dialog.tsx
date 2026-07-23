@@ -34,7 +34,7 @@ const AlertDialogContent = React.forwardRef<
     <AlertDialogPrimitive.Content
       ref={ref}
       className={cn(
-        "app-dialog-position fixed z-50 grid max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-lg gap-4 overflow-y-auto overscroll-contain border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-lg",
+        "app-dialog-position fixed z-50 grid h-fit max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-lg gap-4 overflow-y-auto overscroll-contain border bg-background p-6 shadow-lg duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 sm:rounded-lg",
         className,
       )}
       {...props}

@@ -17,9 +17,11 @@ describe("agenda modal layout contract", () => {
     expect(alertDialog).not.toContain("translate-x-[-50%]");
     expect(alertDialog).not.toContain("translate-y-[-50%]");
     expect(styles).toContain(".app-dialog-position");
-    expect(styles).toContain("top: 50dvh !important");
-    expect(styles).toContain("left: 50dvw !important");
-    expect(styles).toContain("transform: translate3d(-50%, -50%, 0) !important");
+    expect(dialog).toContain("grid h-fit");
+    expect(alertDialog).toContain("grid h-fit");
+    expect(styles).toContain("inset: 0 !important");
+    expect(styles).toContain("margin: auto !important");
+    expect(styles).toContain("transform: none !important");
     expect(dialog).not.toContain("zoom-in");
     expect(alertDialog).not.toContain("zoom-in");
   });
