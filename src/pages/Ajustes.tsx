@@ -55,7 +55,7 @@ const Ajustes = () => {
     const { startTour } = useTour();
     const { isConnected: isGoogleConnected, isLoading: isLoadingGoogleAuth, connectGoogle, disconnectGoogle } = useGoogleAuth();
     const { isConnected: isNotionConnected, isLoading: isLoadingNotionAuth, connectNotion, disconnectNotion } = useNotionAuth();
-    const { theme, toggleTheme } = useTheme();
+    const { theme, transitionToTheme, isTransitioning } = useTheme();
     const { user } = useAuth();
     const { data: profile } = useProfile();
     const { plan } = useSubscription();
@@ -286,7 +286,8 @@ const Ajustes = () => {
                                                     <button
                                                         type="button"
                                                         aria-pressed={theme === "dark"}
-                                                        onClick={() => theme !== "dark" && toggleTheme()}
+                                                        aria-busy={isTransitioning}
+                                                        onClick={(event) => theme !== "dark" && transitionToTheme("dark", event)}
                                                         className={cn(
                                                             "desktop-retina-panel desktop-retina-interactive group rounded-[28px] border p-5 text-left",
                                                             theme === "dark"
@@ -304,7 +305,8 @@ const Ajustes = () => {
                                                     <button
                                                         type="button"
                                                         aria-pressed={theme === "light"}
-                                                        onClick={() => theme !== "light" && toggleTheme()}
+                                                        aria-busy={isTransitioning}
+                                                        onClick={(event) => theme !== "light" && transitionToTheme("light", event)}
                                                         className={cn(
                                                             "desktop-retina-panel desktop-retina-interactive group rounded-[28px] border p-5 text-left",
                                                             theme === "light"

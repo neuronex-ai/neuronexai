@@ -47,7 +47,7 @@ export const Navbar = () => {
   const { unreadCount } = useUnreadNotificationCount();
   const { data: profile } = useProfile();
   const { user } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, isTransitioning } = useTheme();
   const isDarkTheme = theme === "dark";
   const isMobile = useIsMobile();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -251,7 +251,13 @@ export const Navbar = () => {
                 <div className="flex items-center gap-3 text-[11px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">
                   {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}<span>Interface</span>
                 </div>
-                <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8 rounded-xl border border-zinc-200 dark:border-white/10 hover:bg-zinc-900 dark:hover:bg-white text-zinc-500 hover:text-white dark:hover:text-black">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(event) => toggleTheme(event)}
+                  aria-busy={isTransitioning}
+                  className="h-8 w-8 rounded-xl border border-zinc-200 dark:border-white/10 hover:bg-zinc-900 dark:hover:bg-white text-zinc-500 hover:text-white dark:hover:text-black"
+                >
                   {theme === 'dark' ? <Moon className="h-3.5 w-3.5" /> : <Sun className="h-3.5 w-3.5" />}
                 </Button>
               </div>

@@ -1,7 +1,13 @@
 import { useUserPreferences, type UserThemePreference } from '@/hooks/use-user-preferences';
-import { runThemeTransition, type ThemeTransitionOrigin } from '@/lib/theme-transition';
+import {
+  getThemeTransitionServerSnapshot,
+  getThemeTransitionSnapshot,
+  runThemeTransition,
+  subscribeToThemeTransition,
+  type ThemeTransitionOrigin,
+} from '@/lib/theme-transition';
 import { useTheme as useNextTheme } from 'next-themes';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { flushSync } from 'react-dom';
 
 export function useTheme() {
@@ -9,6 +15,11 @@ export function useTheme() {
   const { preferences, updatePreferences } = useUserPreferences();
   const [mounted, setMounted] = useState(false);
   const pendingTheme = useRef<UserThemePreference | null>(null);
+  const transitionState = useSyncExternalStore(
+    subscribeToThemeTransition,
+    getThemeTransitionSnapshot,
+    getThemeTransitionServerSnapshot,
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -63,6 +74,9 @@ export function useTheme() {
     toggleTheme,
     setTheme,
     transitionToTheme,
+    isTransitioning: transitionState.isTransitioning,
+    transitionDirection: transitionState.direction,
+    transitionPhase: transitionState.phase,
     mounted,
   };
 }

@@ -199,7 +199,7 @@ const CustomMenuItem = ({ item, onClick }: { item: MenuItem; onClick: () => void
 export const MobileSettings = () => {
     const navigate = useNavigate();
     const { user } = useAuth();
-    const { theme, toggleTheme } = useTheme();
+    const { theme, transitionToTheme, isTransitioning } = useTheme();
     const { startTour } = useTour();
     const { canAccess } = useSubscription();
     const { data: profile } = useProfile();
@@ -467,7 +467,9 @@ export const MobileSettings = () => {
                                                 <button
                                                     key={option.value}
                                                     type="button"
-                                                    onClick={() => theme !== option.value && toggleTheme()}
+                                                    aria-pressed={theme === option.value}
+                                                    aria-busy={isTransitioning}
+                                                    onClick={(event) => theme !== option.value && transitionToTheme(option.value, event)}
                                                     className={cn(
                                                         "rounded-[18px] border p-4 text-left transition-colors",
                                                         theme === option.value

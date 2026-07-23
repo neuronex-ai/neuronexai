@@ -25,7 +25,7 @@ import {
   Sun,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type MouseEvent } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -237,7 +237,7 @@ export default function InitialSettings() {
   const { user } = useAuth();
   const { profile } = useProfile();
   const { startTour } = useTour();
-  const { theme, transitionToTheme } = useTheme();
+  const { theme, transitionToTheme, isTransitioning } = useTheme();
 
   const [step, setStep] = useState<WizardStep>("style");
   const [draft, setDraftState] = useState<InitialSettingsDraft>(() => readStoredDraft(user?.id));
@@ -466,7 +466,19 @@ export default function InitialSettings() {
             </div>
 
             <AnimatePresence mode="wait">
-              {step === "style" ? <StyleStep key="style" draft={draft} mutedPanelClass={mutedPanelClass} activePanelClass={activePanelClass} onTheme={(next) => { transitionToTheme(next); setDraft({ theme: next }); }} /> : null}
+              {step === "style" ? (
+                <StyleStep
+                  key="style"
+                  draft={draft}
+                  mutedPanelClass={mutedPanelClass}
+                  activePanelClass={activePanelClass}
+                  isTransitioning={isTransitioning}
+                  onTheme={(next, origin) => {
+                    transitionToTheme(next, origin);
+                    setDraft({ theme: next });
+                  }}
+                />
+              ) : null}
               {step === "profile" ? <ProfileStep key="profile" draft={draft} inputClass={inputClass} addressSuggestions={addressSuggestions} addressLoading={addressLoading} addressError={addressError} validatingAddressId={validatingAddressId} onSelectAddress={(suggestion) => void selectAddress(suggestion)} onChange={setDraft} /> : null}
             </AnimatePresence>
 
@@ -521,7 +533,19 @@ function InitialSettingsRail({ logoSrc, firstName, step, progress, isDarkTheme }
   );
 }
 
-function StyleStep({ draft, mutedPanelClass, activePanelClass, onTheme }: { draft: InitialSettingsDraft; mutedPanelClass: string; activePanelClass: string; onTheme: (theme: ThemeChoice) => void }) {
+function StyleStep({
+  draft,
+  mutedPanelClass,
+  activePanelClass,
+  isTransitioning,
+  onTheme,
+}: {
+  draft: InitialSettingsDraft;
+  mutedPanelClass: string;
+  activePanelClass: string;
+  isTransitioning: boolean;
+  onTheme: (theme: ThemeChoice, origin: MouseEvent<HTMLButtonElement>) => void;
+}) {
   const themes = [
     { id: "light" as const, label: "Claro", icon: Sun, description: "Interface clara e limpa." },
     { id: "dark" as const, label: "Escuro", icon: Moon, description: "Contraste premium para ambientes escuros." },
@@ -535,7 +559,14 @@ function StyleStep({ draft, mutedPanelClass, activePanelClass, onTheme }: { draf
         {themes.map((item) => {
           const active = draft.theme === item.id;
           return (
-            <button key={item.id} type="button" onClick={() => onTheme(item.id)} className={cn("flex min-h-[4.25rem] items-center justify-between rounded-[22px] border p-4 text-left transition-all active:scale-[0.99]", active ? activePanelClass : mutedPanelClass)}>
+            <button
+              key={item.id}
+              type="button"
+              aria-pressed={active}
+              aria-busy={isTransitioning}
+              onClick={(event) => !active && onTheme(item.id, event)}
+              className={cn("flex min-h-[4.25rem] items-center justify-between rounded-[22px] border p-4 text-left transition-all active:scale-[0.99]", active ? activePanelClass : mutedPanelClass)}
+            >
               <span className="flex items-center gap-3">
                 <span className="flex h-11 w-11 items-center justify-center rounded-[16px] bg-current/10"><item.icon className="h-5 w-5" /></span>
                 <span><span className="block text-sm font-black">{item.label}</span><span className="mt-1 block text-[11px] font-semibold opacity-55">{item.description}</span></span>

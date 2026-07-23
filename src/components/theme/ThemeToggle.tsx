@@ -14,60 +14,33 @@ export const ThemeToggle = () => {
     };
 
     return (
-        <div className="relative flex items-center justify-center p-1 group/toggle">
-            {/* Button Background Glow (Acender effect) */}
-            <motion.div
-                className="absolute inset-x-0 inset-y-0 rounded-full blur-md opacity-0 group-hover/toggle:opacity-100 transition-opacity duration-700 pointer-events-none"
-                animate={{
-                    backgroundColor: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)",
-                    scale: isTransitioning ? [1, 1.4, 1] : 1
-                }}
-            />
-
+        <div className="relative flex items-center justify-center p-1">
             <motion.button
                 onClick={handleToggle}
-                disabled={isTransitioning}
                 className={cn(
-                    "relative p-3 rounded-full flex items-center justify-center border overflow-hidden",
-                    "backdrop-blur-xl transition-[background-color,border-color,color,box-shadow,transform] duration-200 haptic-feedback",
+                    "relative flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border",
+                    "backdrop-blur-xl motion-safe:transition-[background-color,border-color,color,box-shadow,filter,scale,translate] motion-safe:duration-200 motion-safe:ease-apple",
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                    "motion-safe:hover:-translate-y-px motion-safe:active:translate-y-px motion-safe:active:scale-[0.975]",
                     isLight
-                        ? "bg-white/40 border-black/5 text-black/80 shadow-[0_8px_32px_-4px_rgba(0,0,0,0.1)] hover:bg-white/60"
-                        : "bg-black/40 border-white/5 text-white/80 shadow-[0_8px_32px_-4px_rgba(255,255,255,0.05)] hover:bg-black/60",
-                    isTransitioning && "pointer-events-none scale-95 brightness-110"
+                        ? "border-black/[0.07] bg-white/72 text-black/75 shadow-[0_10px_28px_-18px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.9)] hover:border-black/10 hover:bg-white/90 hover:text-black"
+                        : "border-white/[0.075] bg-black/42 text-white/72 shadow-[0_12px_30px_-20px_rgba(0,0,0,0.94),inset_0_1px_0_rgba(255,255,255,0.055)] hover:border-white/10 hover:bg-black/58 hover:text-white",
+                    isTransitioning && "cursor-progress"
                 )}
-                whileTap={{ scale: 0.985 }}
                 title={isLight ? "Ativar Modo Escuro" : "Ativar Modo Claro"}
                 aria-label={isLight ? "Ativar modo escuro" : "Ativar modo claro"}
+                aria-busy={isTransitioning}
             >
-                {/* Liquid Ripple Overlay */}
-                <AnimatePresence>
-                    {isTransitioning && (
-                        <motion.span
-                            key="ripple"
-                            className="absolute inset-0 rounded-full z-0"
-                            initial={{ scale: 0, opacity: 1 }}
-                            animate={{ scale: 2.5, opacity: 0 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.8, ease: "circOut" }}
-                            style={{
-                                background: isLight
-                                    ? "radial-gradient(circle, rgba(0,0,0,0.1), transparent 70%)"
-                                    : "radial-gradient(circle, rgba(255,255,255,0.15), transparent 70%)"
-                            }}
-                        />
-                    )}
-                </AnimatePresence>
-
-                <div className="relative z-10">
+                <div className="relative z-10 flex items-center justify-center">
                     <AnimatePresence mode="wait" initial={false}>
                         {isLight ? (
                             <motion.div
                                 key="moon"
-                                initial={{ y: 20, rotate: -20, opacity: 0, filter: "blur(4px)" }}
-                                animate={{ y: 0, rotate: 0, opacity: 1, filter: "blur(0px)" }}
-                                exit={{ y: -20, rotate: 20, opacity: 0, filter: "blur(4px)" }}
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.92, opacity: 0 }}
                                 transition={{
-                                    duration: 0.24,
+                                    duration: 0.16,
                                     ease: [0.22, 1, 0.36, 1]
                                 }}
                             >
@@ -76,11 +49,11 @@ export const ThemeToggle = () => {
                         ) : (
                             <motion.div
                                 key="sun"
-                                initial={{ y: -20, rotate: 20, opacity: 0, filter: "blur(4px)" }}
-                                animate={{ y: 0, rotate: 0, opacity: 1, filter: "blur(0px)" }}
-                                exit={{ y: 20, rotate: -20, opacity: 0, filter: "blur(4px)" }}
+                                initial={{ scale: 0.9, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                exit={{ scale: 0.92, opacity: 0 }}
                                 transition={{
-                                    duration: 0.24,
+                                    duration: 0.16,
                                     ease: [0.22, 1, 0.36, 1]
                                 }}
                             >
@@ -90,7 +63,6 @@ export const ThemeToggle = () => {
                     </AnimatePresence>
                 </div>
             </motion.button>
-
         </div>
     );
 };

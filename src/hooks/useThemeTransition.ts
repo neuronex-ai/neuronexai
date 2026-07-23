@@ -1,11 +1,6 @@
-import { useCallback, useSyncExternalStore } from 'react';
+import { useCallback } from 'react';
 import { useTheme } from '@/hooks/use-theme';
-import {
-    getThemeTransitionServerSnapshot,
-    getThemeTransitionSnapshot,
-    subscribeToThemeTransition,
-    type ThemeTransitionOrigin,
-} from '@/lib/theme-transition';
+import { type ThemeTransitionOrigin } from '@/lib/theme-transition';
 
 type ThemeMode = 'light' | 'dark';
 
@@ -14,12 +9,13 @@ type ThemeMode = 'light' | 'dark';
  * Creates a smooth "light ascending" or "light descending" effect
  */
 export function useThemeTransition() {
-    const { theme, transitionToTheme } = useTheme();
-    const transitionState = useSyncExternalStore(
-        subscribeToThemeTransition,
-        getThemeTransitionSnapshot,
-        getThemeTransitionServerSnapshot,
-    );
+    const {
+        theme,
+        transitionToTheme,
+        isTransitioning,
+        transitionDirection,
+        transitionPhase,
+    } = useTheme();
     const isLight = theme === 'light';
 
     const transitionTo = useCallback((targetTheme: ThemeMode, origin?: ThemeTransitionOrigin) => {
@@ -32,8 +28,9 @@ export function useThemeTransition() {
     }, [isLight, transitionTo]);
 
     return {
-        isTransitioning: transitionState.isTransitioning,
-        transitionDirection: transitionState.direction,
+        isTransitioning,
+        transitionDirection,
+        transitionPhase,
         transitionTo,
         toggleTheme,
         isLight
