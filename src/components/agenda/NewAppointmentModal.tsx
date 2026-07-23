@@ -591,7 +591,7 @@ export function NewAppointmentModal({
     }
 
     const appointmentPayload = {
-      patient_id: values.eventType === "session" ? values.patientId : null,
+      patient_id: values.eventType === "session" ? values.patientId || null : null,
       start_time: startDateTime,
       end_time: endDateTime,
       type: values.eventType === "session" ? (values.modality as "presencial" | "online") : "block",
