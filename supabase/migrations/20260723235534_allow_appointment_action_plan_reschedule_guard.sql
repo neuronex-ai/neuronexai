@@ -121,4 +121,214 @@ $$;
 revoke all on function private.guard_appointment_database_owned_fields()
   from public, anon, authenticated;
 
+-- Resolve the vacancy shown in the waitlist confirmation from the same
+-- availability, conflict and hold rules enforced by Agenda v2. Returning
+-- canonical timestamptz values avoids depending on the browser timezone.
+create or replace function public.suggest_professional_waitlist_slot(
+  p_entry_id uuid,
+  p_search_days integer default 56
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_professional_id uuid := auth.uid();
+  v_entry public.professional_waitlist_entries%rowtype;
+  v_pending_offer public.professional_waitlist_offers%rowtype;
+  v_search_days integer := least(greatest(coalesce(p_search_days, 56), 1), 60);
+  v_search_start timestamptz;
+  v_search_end timestamptz;
+  v_starts_at timestamptz;
+  v_ends_at timestamptz;
+  v_duration_minutes integer;
+begin
+  if v_professional_id is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select entry.* into v_entry
+  from public.professional_waitlist_entries entry
+  where entry.id = p_entry_id
+    and entry.professional_id = v_professional_id
+    and entry.status in ('active', 'offered');
+
+  if not found then
+    raise exception 'Entrada ativa da lista de espera não encontrada.' using errcode = 'P0002';
+  end if;
+
+  select offer.* into v_pending_offer
+  from public.professional_waitlist_offers offer
+  where offer.waitlist_entry_id = v_entry.id
+    and offer.professional_id = v_professional_id
+    and offer.status = 'pending'
+    and offer.expires_at > now()
+    and offer.offered_start_time > now()
+    and offer.offered_end_time > offer.offered_start_time
+  order by offer.offered_start_time
+  limit 1;
+
+  if found then
+    return jsonb_build_object(
+      'startsAt', v_pending_offer.offered_start_time,
+      'endsAt', v_pending_offer.offered_end_time,
+      'durationMinutes', round(extract(epoch from (
+        v_pending_offer.offered_end_time - v_pending_offer.offered_start_time
+      )) / 60),
+      'source', 'pending_offer',
+      'timezone', 'America/Sao_Paulo'
+    );
+  end if;
+
+  v_search_start :=
+    date_trunc('hour', now())
+    + (
+      floor(extract(minute from now()) / 5) * 5 + 5
+    ) * interval '1 minute';
+  v_search_end := now() + make_interval(days => v_search_days);
+
+  with durations as (
+    select
+      greatest(
+        v_entry.preferred_duration_minutes,
+        v_entry.minimum_duration_minutes
+      ) as minutes,
+      0 as duration_penalty
+    union all
+    select
+      v_entry.minimum_duration_minutes as minutes,
+      1 as duration_penalty
+    where v_entry.minimum_duration_minutes
+      <> greatest(
+        v_entry.preferred_duration_minutes,
+        v_entry.minimum_duration_minutes
+      )
+  ),
+  candidates as (
+    select
+      slot as starts_at,
+      slot + make_interval(mins => duration.minutes) as ends_at,
+      duration.minutes,
+      duration.duration_penalty
+    from durations duration
+    cross join lateral generate_series(
+      v_search_start,
+      v_search_end,
+      interval '5 minutes'
+    ) slot
+    where v_entry.valid_from
+        <= (slot at time zone 'America/Sao_Paulo')::date
+      and (
+        v_entry.valid_until is null
+        or v_entry.valid_until
+          >= (slot at time zone 'America/Sao_Paulo')::date
+      )
+      and (slot at time zone 'America/Sao_Paulo')::date
+        = (
+          (
+            slot + make_interval(mins => duration.minutes)
+          ) at time zone 'America/Sao_Paulo'
+        )::date
+      and (
+        not exists (
+          select 1
+          from public.professional_waitlist_windows configured
+          where configured.waitlist_entry_id = v_entry.id
+        )
+        or exists (
+          select 1
+          from public.professional_waitlist_windows wait_window
+          where wait_window.waitlist_entry_id = v_entry.id
+            and (
+              wait_window.specific_date
+                = (slot at time zone 'America/Sao_Paulo')::date
+              or wait_window.weekday
+                = extract(
+                  dow from slot at time zone 'America/Sao_Paulo'
+                )::smallint
+            )
+            and wait_window.start_time
+              <= (slot at time zone 'America/Sao_Paulo')::time
+            and wait_window.end_time
+              >= (
+                (
+                  slot + make_interval(mins => duration.minutes)
+                ) at time zone 'America/Sao_Paulo'
+              )::time
+        )
+      )
+      and private.agenda_v2_is_available(
+        v_professional_id,
+        slot,
+        slot + make_interval(mins => duration.minutes),
+        null
+      )
+      and not exists (
+        select 1
+        from public.appointments appointment
+        where appointment.user_id = v_professional_id
+          and appointment.start_time is not null
+          and appointment.end_time is not null
+          and lower(coalesce(appointment.status, ''))
+            not in ('cancelled', 'canceled')
+          and coalesce(appointment.lifecycle_status, '') <> 'cancelled'
+          and tstzrange(
+            appointment.start_time,
+            appointment.end_time,
+            '[)'
+          ) && tstzrange(
+            slot,
+            slot + make_interval(mins => duration.minutes),
+            '[)'
+          )
+      )
+      and not exists (
+        select 1
+        from public.appointment_slot_holds hold
+        where hold.professional_id = v_professional_id
+          and hold.status = 'active'
+          and hold.expires_at > now()
+          and tstzrange(
+            hold.starts_at,
+            hold.ends_at,
+            '[)'
+          ) && tstzrange(
+            slot,
+            slot + make_interval(mins => duration.minutes),
+            '[)'
+          )
+      )
+  )
+  select
+    candidate.starts_at,
+    candidate.ends_at,
+    candidate.minutes
+  into v_starts_at, v_ends_at, v_duration_minutes
+  from candidates candidate
+  order by
+    candidate.duration_penalty,
+    candidate.starts_at
+  limit 1;
+
+  if not found then
+    return null;
+  end if;
+
+  return jsonb_build_object(
+    'startsAt', v_starts_at,
+    'endsAt', v_ends_at,
+    'durationMinutes', v_duration_minutes,
+    'source', 'calculated',
+    'timezone', 'America/Sao_Paulo'
+  );
+end;
+$$;
+
+revoke all on function public.suggest_professional_waitlist_slot(uuid, integer)
+  from public, anon, authenticated;
+grant execute on function public.suggest_professional_waitlist_slot(uuid, integer)
+  to authenticated;
+
 commit;

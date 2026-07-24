@@ -47,7 +47,7 @@ export function useTheme() {
       void updatePreferences({ theme: normalized }).catch((error) => {
         finishThemePreferenceChange(normalized, preferences.user_id);
         console.error('[Theme] Não foi possível persistir a preferência.', error);
-        });
+      });
     }
   }, [preferences, setNextTheme, updatePreferences]);
 

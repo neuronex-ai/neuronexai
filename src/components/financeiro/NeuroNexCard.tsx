@@ -1,5 +1,8 @@
 import { motion } from 'framer-motion';
 import { Wifi, ShieldCheck, Hexagon } from 'lucide-react';
+import type { KeyboardEvent } from "react";
+
+import { useReducedMotionPreference } from "@/hooks/use-reduced-motion-preference";
 import { cn } from "@/lib/utils";
 
 interface NeuroNexCardProps {
@@ -84,29 +87,58 @@ export const NeuroNexCard = ({
   className,
   showSensitive = false
 }: NeuroNexCardProps) => {
+  const shouldReduceMotion = useReducedMotionPreference();
   const lastFour = account.replace(/[^\d]/g, '').slice(-4);
   const displayAccount = showSensitive
     ? account
     : lastFour
       ? `•••• •••• •••• ${lastFour}`
       : "Não informada";
+  const isInteractive = Boolean(onToggle);
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (!onToggle || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    onToggle();
+  };
 
   return (
     <>
       <NoiseTexture />
       <motion.div
-        className={cn("relative w-[374px] cursor-pointer group/card", className)}
+        role={isInteractive ? "button" : undefined}
+        tabIndex={isInteractive ? 0 : undefined}
+        aria-expanded={isInteractive ? isExpanded : undefined}
+        aria-label={
+          isInteractive
+            ? isExpanded
+              ? "Recolher detalhes do cartão NeuroFinance"
+              : "Expandir detalhes do cartão NeuroFinance"
+            : undefined
+        }
+        className={cn(
+          "relative w-[374px] group/card",
+          isInteractive && "cursor-pointer rounded-[26px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background",
+          className,
+        )}
         style={{
           height: isExpanded ? 424 : 231,
         }}
-        whileHover={{ scale: isExpanded ? 1 : 1.02 }}
-        transition={{ type: "spring", stiffness: 150, damping: 25 }}
+        whileHover={shouldReduceMotion ? undefined : { scale: isExpanded ? 1 : 1.02 }}
+        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 150, damping: 25 }}
         onClick={onToggle}
+        onKeyDown={isInteractive ? handleKeyDown : undefined}
       >
         <div className="absolute top-0 left-0 w-full h-[231px] group">
           {/* Selective Light Up (Premium Shine) */}
           <motion.div
-            className="absolute -inset-px rounded-[26px] opacity-0 group-hover/card:opacity-100 transition-opacity duration-700 pointer-events-none z-20"
+            data-card-shine="true"
+            className={cn(
+              "absolute -inset-px rounded-[26px] opacity-0 pointer-events-none z-20",
+              shouldReduceMotion
+                ? "transition-none"
+                : "group-hover/card:opacity-100 transition-opacity duration-700",
+            )}
             style={{
               background: `radial-gradient(circle at center, rgba(255,255,255,0.08) 0%, transparent 70%)`
             }}
@@ -121,9 +153,10 @@ export const NeuroNexCard = ({
               opacity: isExpanded ? 1 : 0,
               zIndex: 1
             }}
-            transition={{ type: "spring", stiffness: 120, damping: 20 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 120, damping: 20 }}
             className={cn(
-              "absolute inset-0 rounded-[26px] p-9 flex flex-col justify-between shadow-2xl transition-all duration-700 overflow-hidden"
+              "absolute inset-0 rounded-[26px] p-9 flex flex-col justify-between shadow-2xl overflow-hidden",
+              shouldReduceMotion ? "transition-none" : "transition-all duration-700",
             )}
           >
             <div className="absolute inset-0 dark:block hidden">
@@ -175,10 +208,11 @@ export const NeuroNexCard = ({
               y: isExpanded ? -8 : 0,
               zIndex: 10
             }}
-            transition={{ type: "spring", stiffness: 100, damping: 22 }}
+            transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 100, damping: 22 }}
             className={cn(
-              "absolute inset-0 rounded-[26px] p-9 flex flex-col justify-between transition-all duration-500 overflow-hidden",
-              "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] group-hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)]"
+              "absolute inset-0 rounded-[26px] p-9 flex flex-col justify-between overflow-hidden",
+              "shadow-[0_25px_50px_-12px_rgba(0,0,0,0.5)] group-hover:shadow-[0_50px_100px_-20px_rgba(0,0,0,0.7)]",
+              shouldReduceMotion ? "transition-none" : "transition-all duration-500",
             )}
           >
             <div className="absolute inset-0 dark:block hidden">

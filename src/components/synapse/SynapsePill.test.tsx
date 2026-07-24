@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SynapsePill } from './SynapsePill';
 
@@ -21,6 +21,7 @@ vi.mock('./SynapseLiquidOrb', () => ({
 describe('Synapse voice presence', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        document.documentElement.classList.remove('reduce-motion');
         mocks.context = {
             actionExperience: null,
             execState: 'idle',
@@ -35,6 +36,10 @@ describe('Synapse voice presence', () => {
             voicePhase: 'idle',
             voiceStatus: 'disconnected',
         };
+    });
+
+    afterEach(() => {
+        document.documentElement.classList.remove('reduce-motion');
     });
 
     it('offers separate text and voice actions in the persistent launcher', () => {
@@ -63,6 +68,17 @@ describe('Synapse voice presence', () => {
         expect(mocks.setShellState).toHaveBeenCalledWith('pill');
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
         expect(screen.queryByTestId('liquid-orb')).not.toBeInTheDocument();
+    });
+
+    it('disables launcher magnetism for the internal reduced-motion preference', () => {
+        document.documentElement.classList.add('reduce-motion');
+
+        render(<SynapsePill />);
+
+        expect(screen.getByRole('toolbar', { name: 'Conversar com o Synapse' })).toHaveAttribute(
+            'data-magnetic-motion',
+            'reduced',
+        );
     });
 
     it('uses the centered voice presence to end a continuous voice session', () => {

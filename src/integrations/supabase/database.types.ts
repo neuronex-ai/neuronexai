@@ -10609,6 +10609,10 @@ export type Database = {
         }
         Returns: Json
       }
+      suggest_professional_waitlist_slot: {
+        Args: { p_entry_id: string; p_search_days?: number }
+        Returns: Json
+      }
       transition_financial_entry: {
         Args: {
           p_action: string
@@ -10783,4 +10787,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
