@@ -6474,6 +6474,15 @@
   box-shadow: none !important;
 }
 
+/* The waitlist is a dedicated Agenda panel. It must not inherit the generic
+   popover texture, which could visually detach at the lower rounded corner
+   in the light material. */
+.agenda-waitlist-surface::before,
+.agenda-waitlist-surface::after {
+  background: none !important;
+  box-shadow: none !important;
+}
+
 .dark .agenda-waitlist-surface {
   border-color: rgba(255, 255, 255, 0.032) !important;
   background: rgba(7, 7, 9, 0.97) !important;

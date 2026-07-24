@@ -37,6 +37,13 @@ export const getProfessionalWaitlistErrorMessage = (
     return "Esta entrada não está mais disponível. Atualize a lista para continuar.";
   }
 
+  if (
+    value.includes("appointment_slot_holds_professional_id_idempotency_key_key")
+    || (value.includes("appointment_slot_holds") && value.includes("idempotency_key"))
+  ) {
+    return "Esta tentativa de oferta já foi registrada. Revise a vaga antes de oferecê-la novamente.";
+  }
+
   if (value.includes("já possui uma espera ativa") || value.includes("ja possui uma espera ativa") || value.includes("duplicate") || value.includes("23505")) {
     return "Este paciente já possui uma entrada ativa na lista de espera.";
   }

@@ -3,7 +3,8 @@ import { ArrowLeft, ArrowRight, Clock3, Search } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 
 import { getNeuralCastArticle, NEURALCAST_ARTICLES, NEURALCAST_CATEGORIES } from "../content";
-import { NeuralCastArticleCard, NeuralCastShell, NeuralCastSubscribeForm, useNeuralCastSeo } from "../components/NeuralCastUI";
+import { NeuralCastArticleCard, NeuralCastShell, NeuralCastSubscribeForm } from "../components/NeuralCastUI";
+import { useNeuralCastSeo } from "../hooks";
 import { cn } from "@/lib/utils";
 
 function NeuralCastArticleView({ slug }: { slug: string }) {

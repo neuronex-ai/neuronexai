@@ -68,6 +68,18 @@ export interface ProfessionalWaitlistStatusResult {
   message?: string;
 }
 
+export interface ProfessionalWaitlistOfferResult {
+  success: boolean;
+  offerId?: string;
+  holdId?: string;
+  token?: string;
+  responsePath?: string | null;
+  expiresAt?: string;
+  idempotent?: boolean;
+  alreadyOffered?: boolean;
+  reofferRequired?: boolean;
+}
+
 const parseSlotSuggestion = (value: unknown): ProfessionalWaitlistSlotSuggestion | null => {
   if (!value || typeof value !== "object") return null;
   const record = value as Record<string, unknown>;
@@ -146,22 +158,36 @@ export function useProfessionalWaitlist() {
   });
 
   const offerMutation = useMutation({
-    mutationFn: async ({ entryId, startsAt, endsAt }: { entryId: string; startsAt: string; endsAt: string }) => {
+    mutationFn: async ({
+      entryId,
+      startsAt,
+      endsAt,
+      idempotencyKey,
+    }: {
+      entryId: string;
+      startsAt: string;
+      endsAt: string;
+      idempotencyKey: string;
+    }) => {
       const database = supabase;
       const { data, error } = await database.rpc("prepare_waitlist_offer", {
         p_entry_id: entryId,
         p_starts_at: startsAt,
         p_ends_at: endsAt,
-        p_idempotency_key: `waitlist-${entryId}-${startsAt}`,
+        p_idempotency_key: idempotencyKey,
       });
       if (error) throw new Error(getProfessionalWaitlistErrorMessage(error, "Não foi possível reservar e oferecer o horário."));
-      return data as {
-        success: true;
-        offerId: string;
-        token: string;
-        responsePath: string;
-        expiresAt: string;
-      };
+      const result = data as ProfessionalWaitlistOfferResult | null;
+      if (!result || typeof result !== "object") {
+        throw new Error("Não foi possível confirmar a oferta da vaga agora.");
+      }
+      if (result.reofferRequired) {
+        throw new Error("A oferta anterior já foi encerrada. Revise a vaga e ofereça novamente.");
+      }
+      if (!result.success || !result.offerId) {
+        throw new Error("Não foi possível confirmar a oferta da vaga agora.");
+      }
+      return result;
     },
     onSuccess: invalidate,
   });

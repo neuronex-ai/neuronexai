@@ -9,7 +9,8 @@ describe("agenda modal layout contract", () => {
     const dialog = source("src/components/ui/dialog.tsx");
     const alertDialog = source("src/components/ui/alert-dialog.tsx");
 
-    expect(dialog).toContain("pointer-events-none fixed inset-0 z-[101] flex items-center justify-center");
+    expect(dialog).toContain("pointer-events-none fixed inset-0 flex items-center justify-center");
+    expect(dialog).toContain('contentContainerClassName || "z-[101]"');
     expect(alertDialog).toContain("pointer-events-none fixed inset-0 z-[51] flex items-center justify-center");
     expect(dialog).toContain("app-dialog-surface pointer-events-auto relative");
     expect(alertDialog).toContain("pointer-events-auto relative");

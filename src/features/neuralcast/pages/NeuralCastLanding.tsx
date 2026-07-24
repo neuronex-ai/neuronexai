@@ -7,10 +7,9 @@ import {
   NeuralCastLogo,
   NeuralCastShell,
   NeuralCastSubscribeForm,
-  useNeuralCastMobileLanding,
-  useNeuralCastSeo,
 } from "../components/NeuralCastUI";
 import { NeuralCastReelsSection } from "../components/NeuralCastReels";
+import { useNeuralCastMobileLanding, useNeuralCastSeo } from "../hooks";
 
 function DesktopLanding() {
   const featuredArticle = NEURALCAST_ARTICLES.find((article) => article.featured) ?? NEURALCAST_ARTICLES[0];

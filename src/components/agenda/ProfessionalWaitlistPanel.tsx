@@ -133,6 +133,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
   const [createdOfferPath, setCreatedOfferPath] = useState<string | null>(null);
   const offerSuggestionInFlight = useRef(false);
   const offerSubmissionInFlight = useRef(false);
+  const offerSubmissionKeyRef = useRef<string | null>(null);
 
   const activeCount = entries.filter((entry) => entry.status === "active" || entry.status === "offered").length;
   const selectedPatient = useMemo(
@@ -283,12 +284,26 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
       return;
     }
     offerSubmissionInFlight.current = true;
+    const idempotencyKey = offerSubmissionKeyRef.current || crypto.randomUUID();
+    offerSubmissionKeyRef.current = idempotencyKey;
     try {
       const result = await prepareOffer({
         entryId: entry.id,
         startsAt: offerStartIso,
         endsAt: offerEndIso,
+        idempotencyKey,
       });
+
+      if (result.idempotent || result.alreadyOffered) {
+        setOfferSuggestionSource("pending_offer");
+        toast.info("Esta vaga já está sendo oferecida ao paciente. A oferta pendente foi preservada.");
+        return;
+      }
+
+      if (!result.responsePath) {
+        throw new Error("A vaga foi reservada, mas o link protegido não ficou disponível. Tente novamente em instantes.");
+      }
+
       setCreatedOfferPath(result.responsePath);
       setOfferSuggestionSource("pending_offer");
       toast.success("Vaga reservada e oferecida ao paciente.");
@@ -296,6 +311,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
       toast.error(error instanceof Error ? error.message : "Não foi possível criar a oferta.");
     } finally {
       offerSubmissionInFlight.current = false;
+      offerSubmissionKeyRef.current = null;
     }
   };
 
