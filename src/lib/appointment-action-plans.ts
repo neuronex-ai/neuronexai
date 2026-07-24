@@ -20,115 +20,6 @@ export type AppointmentActionOriginChannel =
   | "synapse_voice"
   | "synapse_whatsapp";
 
-type AppointmentAction = "create" | "reschedule" | "cancel";
-
-const appointmentActionErrorDetails = (error: unknown) => {
-  const values: unknown[] = [error];
-  const seen = new Set<unknown>();
-  const details: string[] = [];
-  let code = "";
-
-  while (values.length) {
-    const value = values.shift();
-    if (!value || seen.has(value)) continue;
-    seen.add(value);
-
-    if (value instanceof Error) {
-      details.push(value.message);
-      const withCause = value as Error & { cause?: unknown; code?: unknown; details?: unknown; hint?: unknown };
-      if (!code && withCause.code) code = String(withCause.code);
-      details.push(String(withCause.details || ""), String(withCause.hint || ""));
-      if (withCause.cause) values.push(withCause.cause);
-      continue;
-    }
-
-    if (typeof value === "string") {
-      details.push(value);
-      continue;
-    }
-
-    if (typeof value === "object") {
-      const record = value as Record<string, unknown>;
-      if (!code && record.code) code = String(record.code);
-      details.push(
-        String(record.message || ""),
-        String(record.details || ""),
-        String(record.hint || ""),
-      );
-      if (record.cause) values.push(record.cause);
-    }
-  }
-
-  return {
-    code: code.toUpperCase(),
-    message: details.filter(Boolean).join(" ").toLowerCase(),
-  };
-};
-
-export const getPrepareAppointmentActionPlanErrorMessage = (
-  error: unknown,
-  action: AppointmentAction = "reschedule",
-) => {
-  const { code, message } = appointmentActionErrorDetails(error);
-  const actionLabel = action === "reschedule"
-    ? "reagendamento"
-    : action === "cancel"
-      ? "cancelamento"
-      : "agendamento";
-
-  if (
-    code === "55000"
-    || message.includes("appointment state does not allow this action")
-    || message.includes("appointment_state_does_not_allow")
-  ) {
-    return action === "reschedule"
-      ? "Este agendamento não pode ser reagendado no estado atual. Atualize a agenda e confira o status da sessão."
-      : `Este ${actionLabel} não está disponível no estado atual. Atualize a agenda e tente novamente.`;
-  }
-
-  if (
-    message.includes("appointment_time_conflict")
-    || message.includes("schedule changed")
-    || message.includes("time conflict")
-    || message.includes("slot is no longer available")
-  ) {
-    return "Este horário não está mais disponível. Escolha outro horário e tente novamente.";
-  }
-
-  if (
-    message.includes("outside availability")
-    || message.includes("working hours")
-    || message.includes("professional availability")
-  ) {
-    return "O novo horário está fora da disponibilidade configurada. Escolha outro horário.";
-  }
-
-  if (
-    code === "PGRST202"
-    || code === "42883"
-    || message.includes("could not find the function")
-    || message.includes("schema cache")
-  ) {
-    return `O ${actionLabel} está temporariamente indisponível. Tente novamente em instantes.`;
-  }
-
-  if (
-    message.includes("failed to fetch")
-    || message.includes("network")
-    || message.includes("timeout")
-  ) {
-    return "Não foi possível conectar à agenda. Verifique sua conexão e tente novamente.";
-  }
-
-  if (code === "42501" || message.includes("permission denied")) {
-    return `Sua conta não tem permissão para concluir este ${actionLabel}.`;
-  }
-
-  return action === "reschedule"
-    ? "Não foi possível preparar o reagendamento. Atualize a agenda e tente novamente."
-    : `Não foi possível preparar este ${actionLabel}. Atualize a agenda e tente novamente.`;
-};
-
 const toPlan = (value: unknown): AppointmentActionPlan => {
   if (!value || typeof value !== "object") throw new Error("O servidor não retornou um plano válido.");
   const plan = value as Record<string, unknown>;
@@ -161,7 +52,7 @@ const rpc = async (name: string, params: Record<string, unknown>) => {
 };
 
 export const prepareAppointmentActionPlan = (
-  action: AppointmentAction,
+  action: "create" | "reschedule" | "cancel",
   input: Record<string, unknown>,
   idempotencyKey: string,
   originChannel: AppointmentActionOriginChannel = "professional_app",
@@ -208,7 +99,7 @@ export const cancelAppointmentActionPlan = (
 });
 
 export const prepareAndExecuteAppointmentAction = async (
-  action: AppointmentAction,
+  action: "create" | "reschedule" | "cancel",
   input: Record<string, unknown>,
   idempotencyKey: string,
   originChannel: AppointmentActionOriginChannel = "professional_app",

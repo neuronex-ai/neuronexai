@@ -184,9 +184,8 @@ export function AppointmentPlanReviewDialog() {
   return (
     <Dialog open={Boolean(reference)} onOpenChange={(open) => { if (!open) close(); }}>
       <DialogContent
-        className="agenda-modal-surface max-w-[620px] gap-0 overflow-hidden rounded-[28px] border p-0 motion-reduce:duration-0"
-        overlayClassName="z-[10030] motion-reduce:duration-0"
-        containerClassName="z-[10031]"
+        className="agenda-modal-surface z-[240] max-w-[620px] gap-0 overflow-hidden rounded-[28px] border p-0 motion-reduce:duration-0"
+        overlayClassName="z-[239] motion-reduce:duration-0"
         aria-busy={isLoading || isSubmitting}
       >
         <DialogHeader className="agenda-modal-header border-b px-6 py-5">

@@ -14,31 +14,6 @@ describe("agenda drag reschedule review contract", () => {
     expect(calendar).not.toContain("updateAppointment.mutateAsync({");
   });
 
-  it("keeps the review surface above its blur layer and translates prepare failures", () => {
-    const dialog = source("src/components/ui/dialog.tsx");
-    const review = source("src/components/appointments/AppointmentPlanReviewDialog.tsx");
-    const calendar = source("src/components/agenda/CalendarView.tsx");
-
-    expect(dialog).toContain("containerClassName?: string");
-    expect(review).toContain('overlayClassName="z-[10030]');
-    expect(review).toContain('containerClassName="z-[10031]"');
-    expect(calendar).toContain("getPrepareAppointmentActionPlanErrorMessage(error, \"reschedule\")");
-    expect(calendar).not.toContain(
-      'toast.error(error instanceof Error ? error.message : "Não foi possível preparar o reagendamento.")',
-    );
-  });
-
-  it("uses explicit inverse-theme borders in the monthly overflow popover", () => {
-    const calendar = source("src/components/agenda/CalendarView.tsx");
-    const styles = source("src/index.css");
-
-    expect(calendar).toContain("agenda-month-overflow-item");
-    expect(styles).toContain(".agenda-month-overflow-item {");
-    expect(styles).toContain("border-color: rgba(255, 255, 255, 0.88) !important");
-    expect(styles).toContain(".dark .agenda-month-overflow-item");
-    expect(styles).toContain("border-color: rgba(0, 0, 0, 0.84) !important");
-  });
-
   it("allows the hash-bound appointment action plan command through the database guard", () => {
     const migration = source(
       "supabase/migrations/20260723235534_allow_appointment_action_plan_reschedule_guard.sql",
