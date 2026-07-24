@@ -192,10 +192,7 @@ export default function DesktopAgenda() {
                                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
                                 className="absolute inset-y-3 right-3 z-40 flex min-h-0 w-[min(420px,calc(100%_-_24px))] flex-col overflow-visible"
                             >
-                                <ProfessionalWaitlistPanel
-                                    appointments={appointments}
-                                    onClose={() => setWaitlistOpen(false)}
-                                />
+                                <ProfessionalWaitlistPanel onClose={() => setWaitlistOpen(false)} />
                             </motion.aside>
                         </>
                     ) : (

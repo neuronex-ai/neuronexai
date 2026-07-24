@@ -5576,6 +5576,57 @@
       transition: none !important;
     }
   }
+
+  /* The in-product Reduce Motion preference mirrors the OS contract for the
+     professional desktop surface, including legacy tactile CSS primitives. */
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] :where(
+    button,
+    a[href],
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"]
+  ) {
+    translate: none !important;
+    scale: none !important;
+    filter: none !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .desktop-retina-interactive,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .desktop-tactile,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .dashboard-tactile,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .dashboard-segment-trigger,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-launcher-action,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-liquid-control,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-desktop-composer-control,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notification-liquid-control,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notification-card,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notification-card-primary,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notification-card-menu-control {
+    transform: none !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .desktop-content-scroll {
+    scroll-behavior: auto !important;
+  }
+
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-retina-texture,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-lumen-field,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-lumen-field::before,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-lumen-field::after,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-neuroview-backdrop,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .dashboard-schedule-orbit,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .dashboard-schedule-scan,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-liquid-orb-caustic,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-presence-orb,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-desktop-thinking::after,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-thinking-signal::before,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-thinking-signal-bar,
+  html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-message-enter {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
 @keyframes noise-float {

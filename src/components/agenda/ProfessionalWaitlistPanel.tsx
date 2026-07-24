@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { addMinutes, format } from "date-fns";
+import { useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
 import {
   CalendarClock,
   ChevronLeft,
@@ -28,14 +28,9 @@ import {
   useProfessionalWaitlist,
   type ProfessionalWaitlistEntry,
   type ProfessionalWaitlistInput,
+  type ProfessionalWaitlistSlotSuggestion,
 } from "@/hooks/use-professional-waitlist";
-import {
-  findProfessionalWaitlistSuggestion,
-  toDateTimeLocalValue,
-  type ProfessionalWaitlistSuggestion,
-} from "@/lib/professional-waitlist-suggestion";
 import { cn } from "@/lib/utils";
-import type { Appointment } from "@/types";
 
 const WEEK_DAYS = [
   { value: 0, label: "Domingo" },
@@ -87,15 +82,30 @@ const hasActivePendingOffer = (
   && new Date(offer.expires_at) > now
 ));
 
+const SAO_PAULO_DATE_TIME = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "America/Sao_Paulo",
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+const toSaoPauloDateTimeLocal = (value: string) => {
+  const parts = Object.fromEntries(
+    SAO_PAULO_DATE_TIME
+      .formatToParts(new Date(value))
+      .map((part) => [part.type, part.value]),
+  );
+  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+};
+
 interface ProfessionalWaitlistPanelProps {
   onClose: () => void;
-  appointments: Appointment[];
 }
 
-export function ProfessionalWaitlistPanel({
-  onClose,
-  appointments,
-}: ProfessionalWaitlistPanelProps) {
+export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanelProps) {
   const { data: patients = [] } = usePatients();
   const {
     data: entries = [],
@@ -103,19 +113,26 @@ export function ProfessionalWaitlistPanel({
     saveEntry,
     setEntryStatus,
     prepareOffer,
+    suggestOfferSlot,
     isSaving,
     isChangingStatus,
     isPreparingOffer,
+    isSuggestingOffer,
   } = useProfessionalWaitlist();
   const [mode, setMode] = useState<"list" | "form">("list");
   const [formValue, setFormValue] = useState<ProfessionalWaitlistInput>(emptyForm);
   const [windows, setWindows] = useState<WindowDraft[]>([newWindow()]);
   const [offeringEntryId, setOfferingEntryId] = useState<string | null>(null);
+  const [suggestingEntryId, setSuggestingEntryId] = useState<string | null>(null);
   const [offerStart, setOfferStart] = useState("");
+  const [offerStartIso, setOfferStartIso] = useState("");
+  const [offerEndIso, setOfferEndIso] = useState("");
   const [offerDuration, setOfferDuration] = useState(50);
   const [offerSuggestionSource, setOfferSuggestionSource] =
-    useState<ProfessionalWaitlistSuggestion["source"] | null>(null);
+    useState<ProfessionalWaitlistSlotSuggestion["source"] | null>(null);
   const [createdOfferPath, setCreatedOfferPath] = useState<string | null>(null);
+  const offerSuggestionInFlight = useRef(false);
+  const offerSubmissionInFlight = useRef(false);
 
   const activeCount = entries.filter((entry) => entry.status === "active" || entry.status === "offered").length;
   const selectedPatient = useMemo(
@@ -208,48 +225,73 @@ export function ProfessionalWaitlistPanel({
     }
   };
 
-  const toggleOfferReview = (entry: ProfessionalWaitlistEntry) => {
+  const toggleOfferReview = async (entry: ProfessionalWaitlistEntry) => {
     if (offeringEntryId === entry.id) {
       setOfferingEntryId(null);
       setOfferSuggestionSource(null);
       return;
     }
 
-    const reservedOffers = entries
-      .filter((otherEntry) => otherEntry.id !== entry.id)
-      .flatMap((otherEntry) => otherEntry.professional_waitlist_offers);
-    const suggestion = findProfessionalWaitlistSuggestion(entry, appointments, {
-      reservedOffers,
-    });
-    if (!suggestion) {
-      toast.info("Ainda não há uma vaga livre compatível com estas preferências.");
-      return;
-    }
-
-    setOfferStart(toDateTimeLocalValue(suggestion.startsAt));
-    setOfferDuration(suggestion.durationMinutes);
-    setOfferSuggestionSource(suggestion.source);
+    if (isSuggestingOffer || offerSuggestionInFlight.current) return;
+    offerSuggestionInFlight.current = true;
+    setSuggestingEntryId(entry.id);
+    setOfferingEntryId(null);
+    setOfferStart("");
+    setOfferStartIso("");
+    setOfferEndIso("");
+    setOfferSuggestionSource(null);
     setCreatedOfferPath(null);
-    setOfferingEntryId(entry.id);
+
+    try {
+      const suggestion = await suggestOfferSlot(entry.id);
+      if (!suggestion) {
+        toast.info("Ainda não há uma vaga livre compatível com estas preferências.");
+        return;
+      }
+
+      setOfferStart(toSaoPauloDateTimeLocal(suggestion.startsAt));
+      setOfferStartIso(suggestion.startsAt);
+      setOfferEndIso(suggestion.endsAt);
+      setOfferDuration(suggestion.durationMinutes);
+      setOfferSuggestionSource(suggestion.source);
+      setOfferingEntryId(entry.id);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível calcular a vaga.");
+    } finally {
+      offerSuggestionInFlight.current = false;
+      setSuggestingEntryId(null);
+    }
   };
 
   const sendOffer = async (entry: ProfessionalWaitlistEntry) => {
-    const startsAt = new Date(offerStart);
-    if (!offerStart || Number.isNaN(startsAt.getTime()) || startsAt <= new Date()) {
-      toast.error("Escolha um horário futuro.");
+    if (offerSubmissionInFlight.current) return;
+    const startsAt = new Date(offerStartIso);
+    const endsAt = new Date(offerEndIso);
+    if (
+      !offerStartIso
+      || !offerEndIso
+      || Number.isNaN(startsAt.getTime())
+      || Number.isNaN(endsAt.getTime())
+      || startsAt <= new Date()
+      || endsAt <= startsAt
+    ) {
+      toast.error("A vaga calculada não está mais disponível.");
       return;
     }
+    offerSubmissionInFlight.current = true;
     try {
       const result = await prepareOffer({
         entryId: entry.id,
-        startsAt: startsAt.toISOString(),
-        endsAt: addMinutes(startsAt, Math.max(entry.minimum_duration_minutes, offerDuration)).toISOString(),
+        startsAt: offerStartIso,
+        endsAt: offerEndIso,
       });
       setCreatedOfferPath(result.responsePath);
       setOfferSuggestionSource("pending_offer");
       toast.success("Vaga reservada e oferecida ao paciente.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível criar a oferta.");
+    } finally {
+      offerSubmissionInFlight.current = false;
     }
   };
 
@@ -379,16 +421,20 @@ export function ProfessionalWaitlistPanel({
                   <div className="min-w-0"><div className="flex items-center gap-2"><span className={cn("flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[10px] font-black", entry.priority <= 2 ? "bg-amber-500/12 text-amber-600" : "bg-muted text-muted-foreground")}>P{entry.priority}</span><p className="truncate text-sm font-black text-foreground">{entry.patients?.name || "Paciente"}</p></div><p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{entry.professional_waitlist_windows.length ? entry.professional_waitlist_windows.map((item) => `${item.specific_date ? format(new Date(`${item.specific_date}T12:00:00`), "dd/MM") : WEEK_DAYS.find((day) => day.value === item.weekday)?.label}: ${item.start_time.slice(0, 5)}–${item.end_time.slice(0, 5)}`).join(" · ") : "Qualquer horário disponível"}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">Mín. {entry.minimum_duration_minutes} min · {entry.modality || "qualquer modalidade"}{entry.offer_automatically ? " · automático" : ""}</p></div>
                   <div className="flex shrink-0 gap-1"><Button type="button" variant="ghost" size="icon" onClick={() => beginEdit(entry)} className="notification-liquid-control h-11 w-11 rounded-full" aria-label="Editar regras da espera"><Pencil className="h-3.5 w-3.5" /></Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, entry.status === "paused" ? "active" : "paused")} className="notification-liquid-control h-11 w-11 rounded-full" aria-label={entry.status === "paused" ? "Retomar espera" : "Pausar espera"}>{entry.status === "paused" ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}</Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, "removed")} className="notification-liquid-control h-11 w-11 rounded-full hover:text-destructive" aria-label="Remover da lista"><Trash2 className="h-3.5 w-3.5" /></Button></div>
                 </div>
-                {entry.status !== "paused" ? (
+                {entry.status === "active" || entry.status === "offered" ? (
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={() => toggleOfferReview(entry)}
+                    onClick={() => void toggleOfferReview(entry)}
+                    disabled={isSuggestingOffer}
                     className="notification-liquid-control mt-3 h-11 w-full rounded-full text-xs font-black"
                     aria-expanded={offeringEntryId === entry.id}
                     aria-controls={`waitlist-offer-review-${entry.id}`}
+                    aria-busy={suggestingEntryId === entry.id}
                   >
-                    <Send className="mr-1.5 h-3.5 w-3.5" />
+                    {suggestingEntryId === entry.id
+                      ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                      : <Send className="mr-1.5 h-3.5 w-3.5" />}
                     {hasActivePendingOffer(entry)
                       ? "Revisar vaga oferecida"
                       : "Oferecer a vaga"}

@@ -52,9 +52,47 @@ export interface ProfessionalWaitlistInput {
   rules_snapshot?: Record<string, unknown>;
 }
 
+export interface ProfessionalWaitlistSlotSuggestion {
+  startsAt: string;
+  endsAt: string;
+  durationMinutes: number;
+  source: "pending_offer" | "calculated";
+  timezone: "America/Sao_Paulo";
+}
+
 const errorMessage = (error: unknown, fallback: string) => {
   if (error && typeof error === "object" && "message" in error) return String(error.message);
   return fallback;
+};
+
+const parseSlotSuggestion = (value: unknown): ProfessionalWaitlistSlotSuggestion | null => {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const startsAt = String(record.startsAt || "");
+  const endsAt = String(record.endsAt || "");
+  const durationMinutes = Number(record.durationMinutes);
+  const source = String(record.source || "");
+  const start = new Date(startsAt);
+  const end = new Date(endsAt);
+
+  if (
+    Number.isNaN(start.getTime())
+    || Number.isNaN(end.getTime())
+    || end <= start
+    || !Number.isFinite(durationMinutes)
+    || durationMinutes < 15
+    || (source !== "pending_offer" && source !== "calculated")
+  ) {
+    throw new Error("O servidor não retornou uma vaga válida.");
+  }
+
+  return {
+    startsAt,
+    endsAt,
+    durationMinutes,
+    source,
+    timezone: "America/Sao_Paulo",
+  };
 };
 
 export function useProfessionalWaitlist() {
@@ -125,13 +163,29 @@ export function useProfessionalWaitlist() {
     onSuccess: invalidate,
   });
 
+  const slotSuggestionMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      const database = supabase;
+      const { data, error } = await database.rpc("suggest_professional_waitlist_slot", {
+        p_entry_id: entryId,
+        p_search_days: 56,
+      });
+      if (error) {
+        throw new Error(errorMessage(error, "Não foi possível calcular uma vaga compatível."));
+      }
+      return parseSlotSuggestion(data);
+    },
+  });
+
   return {
     ...query,
     saveEntry: saveMutation.mutateAsync,
     setEntryStatus: statusMutation.mutateAsync,
     prepareOffer: offerMutation.mutateAsync,
+    suggestOfferSlot: slotSuggestionMutation.mutateAsync,
     isSaving: saveMutation.isPending,
     isChangingStatus: statusMutation.isPending,
     isPreparingOffer: offerMutation.isPending,
+    isSuggestingOffer: slotSuggestionMutation.isPending,
   };
 }

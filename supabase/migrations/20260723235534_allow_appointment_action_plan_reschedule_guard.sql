@@ -263,7 +263,7 @@ begin
         v_professional_id,
         slot,
         slot + make_interval(mins => duration.minutes),
-        null
+        v_entry.availability_version_id
       )
       and not exists (
         select 1
