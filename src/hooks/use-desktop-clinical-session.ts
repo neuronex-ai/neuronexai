@@ -11,7 +11,10 @@ import { useResilientSessionNotes } from '@/hooks/use-resilient-session-notes';
 import { useSessionCapture } from '@/hooks/use-session-capture';
 import { useUpdateAppointment } from '@/hooks/use-update-appointment';
 import { supabase } from '@/integrations/supabase/client';
-import { shouldStartTeleconsultationCapture } from '@/lib/teleconsultation-transcription';
+import {
+  shouldOpenTeleconsultationTranscriptionReview,
+  shouldStartTeleconsultationCapture,
+} from '@/lib/teleconsultation-transcription';
 import type { AISummary, Appointment, SessionNote } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -234,6 +237,10 @@ export const useDesktopClinicalSession = (
     setShowConsent(true);
   }, [isOnlineSession]);
 
+  const dismissTranscriptionDecision = useCallback(() => {
+    setShowConsent(false);
+  }, []);
+
   useEffect(() => {
     const nextDecision = getTranscriptionDecision(activeAppointment.metadata);
     // Always reset the decision when moving between appointments. Keeping the
@@ -360,7 +367,7 @@ export const useDesktopClinicalSession = (
   }, [declineConsent, persistTranscriptionDecision]);
 
   const handleToggleCapture = useCallback(async () => {
-    if (consentStatus !== 'granted') {
+    if (!transcriptionEnabled || consentStatus !== 'granted') {
       setShowConsent(true);
       return;
     }
@@ -375,7 +382,7 @@ export const useDesktopClinicalSession = (
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível alterar a captura.');
     }
-  }, [captureAvailable, captureState, consentStatus, isCaptureEnabled, pauseCapture, record?.status, resumeCapture, startCapture]);
+  }, [captureAvailable, captureState, consentStatus, isCaptureEnabled, pauseCapture, record?.status, resumeCapture, startCapture, transcriptionEnabled]);
 
   const toggleAudio = useCallback(() => {
     jitsiRef.current?.toggleAudio();
@@ -392,6 +399,45 @@ export const useDesktopClinicalSession = (
     setIsScreenSharing((current) => !current);
   }, []);
 
+  const finishSession = useCallback((
+    draftPending: boolean,
+    summaryNoteId?: string,
+    sessionTranscriptId: string | null = transcriptId,
+  ) => {
+    if (finishSessionInFlightRef.current) return finishSessionInFlightRef.current;
+
+    const operation = (async () => {
+      await completeClinicalSession({
+        draftPending,
+        sessionSummaryNoteId: summaryNoteId ?? null,
+        sessionTranscriptId,
+      });
+
+      const cleanup = [clearRecovery()];
+      if (!draftPending || summaryNoteId) cleanup.push(notesDraft.clearDraft());
+      await Promise.all(cleanup);
+      if (isFocusMode) toggleFocusMode();
+      setReviewOpen(false);
+      onSessionEnd();
+      resetClinicalSessionCompletionAttempt();
+    })();
+
+    finishSessionInFlightRef.current = operation;
+    void operation.then(
+      () => {
+        if (finishSessionInFlightRef.current === operation) {
+          finishSessionInFlightRef.current = null;
+        }
+      },
+      () => {
+        if (finishSessionInFlightRef.current === operation) {
+          finishSessionInFlightRef.current = null;
+        }
+      },
+    );
+    return operation;
+  }, [clearRecovery, completeClinicalSession, isFocusMode, notesDraft, onSessionEnd, resetClinicalSessionCompletionAttempt, toggleFocusMode, transcriptId]);
+
   const requestReview = useCallback(async () => {
     if (reviewRequestedRef.current) return;
     reviewRequestedRef.current = true;
@@ -401,6 +447,19 @@ export const useDesktopClinicalSession = (
       if (isOnlineSession) {
         await persistRoomStatus('closed', 'therapist_left');
       }
+
+      const shouldOpenReview = shouldOpenTeleconsultationTranscriptionReview({
+        isOnlineSession,
+        transcriptionEnabled,
+        consentStatus,
+      });
+      if (!shouldOpenReview) {
+        await finishSession(false, undefined, null);
+        if (isOnlineSession && hasJoined) jitsiRef.current?.executeCommand('hangup');
+        toast.success('Sessão concluída sem transcrição.');
+        return;
+      }
+
       let finalTranscript = transcriptText;
       let finalTranscriptId = transcriptId;
       if (consentStatus === 'granted' && captureState !== 'completed') {
@@ -443,45 +502,7 @@ export const useDesktopClinicalSession = (
       setCompletionError(message);
       toast.error(message);
     }
-  }, [appointmentId, captureState, consentStatus, finalizeCapture, generateProntuario, hasJoined, hasNetwork, isOnlineSession, linkSummaryNote, markReviewed, notesDraft.notes, patientId, persistRoomStatus, retrySync, transcriptId, transcriptText]);
-
-  const finishSession = useCallback((
-    draftPending: boolean,
-    summaryNoteId?: string,
-  ) => {
-    if (finishSessionInFlightRef.current) return finishSessionInFlightRef.current;
-
-    const operation = (async () => {
-      await completeClinicalSession({
-        draftPending,
-        sessionSummaryNoteId: summaryNoteId ?? null,
-        sessionTranscriptId: transcriptId ?? null,
-      });
-
-      const cleanup = [clearRecovery()];
-      if (!draftPending || summaryNoteId) cleanup.push(notesDraft.clearDraft());
-      await Promise.all(cleanup);
-      if (isFocusMode) toggleFocusMode();
-      setReviewOpen(false);
-      onSessionEnd();
-      resetClinicalSessionCompletionAttempt();
-    })();
-
-    finishSessionInFlightRef.current = operation;
-    void operation.then(
-      () => {
-        if (finishSessionInFlightRef.current === operation) {
-          finishSessionInFlightRef.current = null;
-        }
-      },
-      () => {
-        if (finishSessionInFlightRef.current === operation) {
-          finishSessionInFlightRef.current = null;
-        }
-      },
-    );
-    return operation;
-  }, [clearRecovery, completeClinicalSession, isFocusMode, notesDraft, onSessionEnd, resetClinicalSessionCompletionAttempt, toggleFocusMode, transcriptId]);
+  }, [appointmentId, captureState, consentStatus, finalizeCapture, finishSession, generateProntuario, hasJoined, hasNetwork, isOnlineSession, linkSummaryNote, markReviewed, notesDraft.notes, patientId, persistRoomStatus, retrySync, transcriptionEnabled, transcriptId, transcriptText]);
 
   const confirmSummaryNote = useCallback(async (noteId: string, finalSummary?: AISummary) => {
     if (!user?.id) throw new Error('Usuário não autenticado.');
@@ -630,6 +651,7 @@ export const useDesktopClinicalSession = (
     setIsChatOpen,
     openPatientInvite,
     requestTranscriptionDecision,
+    dismissTranscriptionDecision,
     setShowInviteModal,
     setReviewTranscript,
     setReviewNotes,

@@ -218,7 +218,11 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
 
   const changeStatus = async (entry: ProfessionalWaitlistEntry, status: "active" | "paused" | "removed") => {
     try {
-      await setEntryStatus({ entryId: entry.id, status });
+      const result = await setEntryStatus({ entryId: entry.id, status });
+      if (result.status === "scheduled") {
+        toast.info(result.message || "A vaga já foi aceita e o agendamento está confirmado na Agenda.");
+        return;
+      }
       toast.success(status === "removed" ? "Paciente removido da lista." : status === "paused" ? "Espera pausada." : "Espera retomada.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível atualizar.");

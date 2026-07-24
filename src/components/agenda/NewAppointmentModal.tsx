@@ -96,6 +96,8 @@ import {
   getAppointmentStepLabels,
 } from "@/lib/appointment-form-flow";
 import { AdvancedRecurrenceEditor } from "@/components/agenda/AdvancedRecurrenceEditor";
+import { EventCategoryManagerDialog } from "@/components/agenda/EventCategoryManagerDialog";
+import { useProfessionalEventCategories } from "@/hooks/use-professional-event-categories";
 import {
   agendaRecurrenceDraftToRule,
   agendaRuleToRecurrenceDraft,
@@ -104,6 +106,8 @@ import {
   type AgendaRecurrenceDraft,
   type OccurrenceOverride,
 } from "@/lib/agenda-scheduling";
+import { getAppointmentRecurrenceTerminology } from "@/lib/appointment-recurrence-terminology";
+import { DEFAULT_PROFESSIONAL_EVENT_CATEGORIES } from "@/lib/professional-event-categories";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
@@ -191,16 +195,6 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 // ─── Constantes ───────────────────────────────────────────────────────
-
-const EVENT_CATEGORIES = [
-  { value: "reuniao", label: "Reunião" },
-  { value: "supervisao", label: "Supervisão" },
-  { value: "particular", label: "Particular" },
-  { value: "bloqueio", label: "Bloqueio de Agenda" },
-  { value: "formacao", label: "Formação / Curso" },
-  { value: "administrativo", label: "Administrativo" },
-  { value: "outro", label: "Outro" },
-];
 
 const addMinutesToTime = (time: string, minutesToAdd: number) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
@@ -345,6 +339,7 @@ export function NewAppointmentModal({
   );
   const [templateName, setTemplateName] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [smartFitSuggestions, setSmartFitSuggestions] = useState<Record<number, AgendaPlanSmartFitCandidate[]>>({});
   const idempotencyKeyRef = useRef(`agenda-v2-${crypto.randomUUID()}`);
   const { data: patients } = usePatients();
@@ -428,6 +423,26 @@ export function NewAppointmentModal({
   }, [selectedTime, form]);
 
   const eventType = form.watch("eventType");
+  const recurrenceTerminology = getAppointmentRecurrenceTerminology(eventType);
+  const {
+    categories: persistedEventCategories,
+    isSuccess: eventCategoriesLoaded,
+  } = useProfessionalEventCategories({ enabled: eventType === "event" });
+  const eventCategories = eventCategoriesLoaded
+    ? persistedEventCategories
+    : DEFAULT_PROFESSIONAL_EVENT_CATEGORIES;
+  const compatibleSeriesTemplates = useMemo(
+    () =>
+      (seriesTemplates || []).filter((template) => {
+        const latestVersion = [...template.appointment_series_template_versions]
+          .sort((left, right) => right.version_number - left.version_number)[0];
+        const templateEventType = latestVersion?.default_config?.eventType;
+        return eventType === "event"
+          ? templateEventType === "event"
+          : templateEventType !== "event";
+      }),
+    [eventType, seriesTemplates],
+  );
   const selectedPatientId = form.watch("patientId");
   const selectedPatient = useMemo(
     () => patients?.find((patient) => patient.id === selectedPatientId) || null,
@@ -494,7 +509,12 @@ export function NewAppointmentModal({
   // Reset step quando muda de tipo
   useEffect(() => {
     setStep(1);
+    setSelectedTemplateId("");
   }, [eventType]);
+
+  useEffect(() => {
+    if (!isOpen) setIsCategoryManagerOpen(false);
+  }, [isOpen]);
 
   // ── Pacotes ativos ─────────────────────────────────────────────────
   const { data: activePackages, isLoading: isLoadingPackages } = useActivePatientPackages(
@@ -626,12 +646,20 @@ export function NewAppointmentModal({
         ? [...(seriesTemplates?.find((item) => item.id === selectedTemplateId)?.appointment_series_template_versions || [])]
             .sort((left, right) => right.version_number - left.version_number)[0]?.id || null
         : null,
-      default_config: {
-        type: values.type,
-        modality: values.modality,
-        durationMinutes: values.duration,
-        location: values.eventType === "event" ? eventLocation : sessionLocation,
-      },
+      default_config: values.eventType === "event"
+        ? {
+            eventType: "event",
+            durationMinutes: values.duration,
+            eventCategory: values.eventCategory || null,
+            eventLocation,
+          }
+        : {
+            eventType: "session",
+            type: values.type,
+            modality: values.modality,
+            durationMinutes: values.duration,
+            location: sessionLocation,
+          },
       financial,
     };
   };
@@ -665,7 +693,7 @@ export function NewAppointmentModal({
       ? buildEventMetadata({
           title: values.eventTitle || "Compromisso",
           category: values.eventCategory || "outro",
-          categoryLabel: EVENT_CATEGORIES.find((item) => item.value === values.eventCategory)?.label,
+          categoryLabel: eventCategories.find((item) => item.slug === values.eventCategory)?.name,
           location: values.eventLocation || null,
           notes: values.notes || "",
           origin: "neuronex",
@@ -913,7 +941,7 @@ export function NewAppointmentModal({
 
   const applySeriesTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
-    const template = seriesTemplates?.find((item) => item.id === templateId);
+    const template = compatibleSeriesTemplates.find((item) => item.id === templateId);
     const version = [...(template?.appointment_series_template_versions || [])]
       .sort((left, right) => right.version_number - left.version_number)[0];
     if (!version) return;
@@ -921,11 +949,23 @@ export function NewAppointmentModal({
     if (Number.isFinite(savedDuration) && savedDuration >= 15) {
       form.setValue("duration", savedDuration);
     }
-    if (version.default_config?.modality === "presencial" || version.default_config?.modality === "online") {
-      form.setValue("modality", version.default_config.modality);
-    }
-    if (typeof version.default_config?.location === "string") {
-      form.setValue("sessionLocation", version.default_config.location);
+    if (eventType === "event") {
+      if (typeof version.default_config?.eventLocation === "string") {
+        form.setValue("eventLocation", version.default_config.eventLocation);
+      }
+      if (
+        typeof version.default_config?.eventCategory === "string" &&
+        eventCategories.some((category) => category.slug === version.default_config.eventCategory)
+      ) {
+        form.setValue("eventCategory", version.default_config.eventCategory, { shouldDirty: true });
+      }
+    } else {
+      if (version.default_config?.modality === "presencial" || version.default_config?.modality === "online") {
+        form.setValue("modality", version.default_config.modality);
+      }
+      if (typeof version.default_config?.location === "string") {
+        form.setValue("sessionLocation", version.default_config.location);
+      }
     }
     const rule = version.recurrence_rule;
     const termination = rule.termination.kind === "count"
@@ -961,15 +1001,27 @@ export function NewAppointmentModal({
       await saveTemplate({
         name,
         recurrenceRule: toAgendaV2RecurrenceRule(agendaRecurrenceDraftToRule(recurrenceDraft)),
-        defaultConfig: {
-          durationMinutes: form.getValues("duration"),
-          modality: form.getValues("modality"),
-          location: form.getValues("sessionLocation") || null,
-        },
+        defaultConfig: eventType === "event"
+          ? {
+              eventType: "event",
+              durationMinutes: form.getValues("duration"),
+              eventCategory: form.getValues("eventCategory") || null,
+              eventLocation: form.getValues("eventLocation") || null,
+            }
+          : {
+              eventType: "session",
+              durationMinutes: form.getValues("duration"),
+              modality: form.getValues("modality"),
+              location: form.getValues("sessionLocation") || null,
+            },
         sourcePatientId: eventType === "session" ? form.getValues("patientId") || null : null,
       });
       setTemplateName("");
-      toast.success("Modelo salvo sem copiar dados financeiros do paciente.");
+      toast.success(
+        eventType === "event"
+          ? "Modelo de eventos salvo."
+          : "Modelo salvo sem copiar dados financeiros do paciente.",
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : "Não foi possível salvar o modelo.";
       setSubmissionError(message);
@@ -1020,7 +1072,9 @@ export function NewAppointmentModal({
         [occurrenceNumber]: result.candidates,
       }));
       if (!result.candidates.length) {
-        setSubmissionError("Não encontrei uma janela válida nos próximos 14 dias para esta sessão.");
+        setSubmissionError(
+          `Não encontrei uma janela válida nos próximos 14 dias para este ${recurrenceTerminology.singular}.`,
+        );
       }
     } catch (error) {
       setSubmissionError(error instanceof Error ? error.message : "Não foi possível sugerir um reencaixe.");
@@ -1168,20 +1222,32 @@ export function NewAppointmentModal({
               render={({ field }) => (
                 <FormItem className="space-y-2.5">
                   <FormLabel className={labelBase}>Categoria</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger className={cn(inputBase, "font-medium px-4 shadow-inner")}>
-                        <SelectValue placeholder="Selecione a categoria..." />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent className={selectPopover}>
-                      {EVENT_CATEGORIES.map((c) => (
-                        <SelectItem key={c.value} value={c.value} className="cursor-pointer py-3 pr-4 text-sm text-foreground/70 focus:bg-accent focus:text-foreground">
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="grid grid-cols-[minmax(0,1fr)_3rem] gap-2">
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className={cn(inputBase, "font-medium px-4 shadow-inner")}>
+                          <SelectValue placeholder="Selecione a categoria..." />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className={selectPopover}>
+                        {eventCategories.map((category) => (
+                          <SelectItem key={category.slug} value={category.slug} className="cursor-pointer py-3 pr-4 text-sm text-foreground/70 focus:bg-accent focus:text-foreground">
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setIsCategoryManagerOpen(true)}
+                      className={cn(inputBase, "w-12 p-0")}
+                      aria-label="Gerenciar categorias de evento"
+                      aria-haspopup="dialog"
+                    >
+                      <Plus className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </div>
                   <FormMessage className="text-rose-400 pl-1" />
                 </FormItem>
               )}
@@ -1330,7 +1396,9 @@ export function NewAppointmentModal({
                 <Repeat className="h-4 w-4 text-muted-foreground/60" />
                 Recorrência
               </FormLabel>
-              <p className="text-xs text-muted-foreground/60">A quantidade total inclui a primeira sessão.</p>
+              <p className="text-xs text-muted-foreground/60">
+                A quantidade total inclui {recurrenceTerminology.firstOccurrence}.
+              </p>
             </div>
             <FormControl>
               <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-foreground" />
@@ -1341,7 +1409,7 @@ export function NewAppointmentModal({
 
       {form.watch("recurrence") && (
         <div className="agenda-step-enter mt-3 space-y-3">
-          {seriesTemplates?.length ? (
+          {compatibleSeriesTemplates.length ? (
             <div className="agenda-liquid-surface rounded-[20px] border p-3">
               <div className="mb-2 flex items-center gap-2 text-xs font-black text-foreground">
                 <WandSparkles className="h-3.5 w-3.5" /> Repetir uma configuração
@@ -1351,7 +1419,7 @@ export function NewAppointmentModal({
                   <SelectValue placeholder="Escolha e ajuste só o que mudar" />
                 </SelectTrigger>
                 <SelectContent className="agenda-menu-surface notification-liquid-menu rounded-[18px] p-1.5">
-                  {seriesTemplates.map((template) => (
+                  {compatibleSeriesTemplates.map((template) => (
                     <SelectItem key={template.id} value={template.id} className="notification-liquid-menu-item rounded-[13px] py-2.5">
                       {template.name}
                     </SelectItem>
@@ -1360,7 +1428,11 @@ export function NewAppointmentModal({
               </Select>
             </div>
           ) : null}
-          <AdvancedRecurrenceEditor value={recurrenceDraft} onChange={setRecurrenceDraft} />
+          <AdvancedRecurrenceEditor
+            value={recurrenceDraft}
+            onChange={setRecurrenceDraft}
+            eventType={eventType}
+          />
         </div>
       )}
     </div>
@@ -1918,9 +1990,9 @@ export function NewAppointmentModal({
     const amountLabel = amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     const recurrenceLabel = values.recurrence
       ? recurrenceRuleSummary(agendaRecurrenceDraftToRule(recurrenceDraft))
-      : "Sessão única";
+      : recurrenceTerminology.singleLabel;
     const occurrenceLabel = values.recurrence && seriesPreview
-      ? `${seriesPreview.totalOccurrences} sessões`
+      ? `${seriesPreview.totalOccurrences} ${seriesPreview.totalOccurrences === 1 ? recurrenceTerminology.singular : recurrenceTerminology.plural}`
       : recurrenceLabel;
     const selectedMethods = neurofinancePaymentMethods(values.transactionMethod);
     const feeSummaries = selectedMethods.map((method) => ({
@@ -2065,7 +2137,7 @@ export function NewAppointmentModal({
             Datas da recorrência
           </h3>
           <p className="ml-1 text-sm font-medium text-muted-foreground">
-            Ajuste apenas as sessões que fugirem do padrão.
+            Ajuste apenas {eventType === "event" ? "os eventos" : "as sessões"} que fugirem do padrão.
           </p>
         </div>
 
@@ -2100,7 +2172,7 @@ export function NewAppointmentModal({
                 )}
                 <div>
                   <p className="font-bold text-foreground">
-                    {seriesPreview.totalOccurrences} {seriesPreview.totalOccurrences === 1 ? "sessão" : "sessões"} · {recurrenceRuleSummary(recurrenceRule)}
+                    {seriesPreview.totalOccurrences} {seriesPreview.totalOccurrences === 1 ? recurrenceTerminology.singular : recurrenceTerminology.plural} · {recurrenceRuleSummary(recurrenceRule)}
                   </p>
                   <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                     {seriesPreview.valid
@@ -2178,14 +2250,14 @@ export function NewAppointmentModal({
                           value={override?.date || format(new Date(occurrence.startTime), "yyyy-MM-dd")}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { date: event.target.value })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
-                          aria-label={`Data da sessão ${occurrence.occurrenceNumber}`}
+                          aria-label={`Data do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         />
                         <Input
                           type="time"
                           value={override?.startTime || format(new Date(occurrence.startTime), "HH:mm")}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { startTime: event.target.value })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
-                          aria-label={`Horário da sessão ${occurrence.occurrenceNumber}`}
+                          aria-label={`Horário do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         />
                         <Input
                           type="number"
@@ -2194,7 +2266,7 @@ export function NewAppointmentModal({
                           value={override?.durationMinutes || occurrence.durationMinutes}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { durationMinutes: Number(event.target.value) })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
-                          aria-label={`Duração da sessão ${occurrence.occurrenceNumber}`}
+                          aria-label={`Duração do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         />
                         <Button
                           type="button"
@@ -2202,7 +2274,7 @@ export function NewAppointmentModal({
                           size="icon"
                           onClick={() => clearOccurrenceOverride(occurrence.occurrenceNumber)}
                           className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full"
-                          aria-label={`Restaurar padrão da sessão ${occurrence.occurrenceNumber}`}
+                          aria-label={`Restaurar padrão do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -2290,7 +2362,7 @@ export function NewAppointmentModal({
                 <Input
                   value={templateName}
                   onChange={(event) => setTemplateName(event.target.value)}
-                  placeholder="Ex.: 4 sessões · terceira de manhã"
+                  placeholder={`Ex.: 4 ${recurrenceTerminology.plural} · terceira de manhã`}
                   className="agenda-field h-11 rounded-2xl font-semibold"
                   aria-label="Nome do modelo de recorrência"
                 />
@@ -2306,10 +2378,14 @@ export function NewAppointmentModal({
             </div>
 
             <p className="agenda-liquid-card rounded-2xl border border-border/60 px-4 py-3 text-xs leading-relaxed text-muted-foreground">
-              A série e as reservas de pacote são confirmadas juntas.
-              {shouldGenerateNeurofinanceCharge
+              {eventType === "event"
+                ? "A série de eventos é confirmada depois da validação de disponibilidade."
+                : "A série e as reservas de pacote são confirmadas juntas."}
+              {eventType === "session" && shouldGenerateNeurofinanceCharge
                 ? " Depois, o NeuroFinance cria e vincula as cobranças de cada sessão."
-                : " E-mails em lote e notas fiscais não são gerados nesta etapa."}
+                : eventType === "session"
+                  ? " E-mails em lote e notas fiscais não são gerados nesta etapa."
+                  : null}
             </p>
           </>
         ) : null}
@@ -2423,7 +2499,9 @@ export function NewAppointmentModal({
   };
 
   const submitButtonLabel = useMemo(() => {
-    if (recurrenceEnabled) return "Criar série";
+    if (recurrenceEnabled) {
+      return eventType === "event" ? "Criar série de eventos" : "Criar série";
+    }
     if (eventType === "event") return "Registrar Evento";
     return "Registrar Agendamento";
   }, [eventType, recurrenceEnabled]);
@@ -2431,7 +2509,8 @@ export function NewAppointmentModal({
   // ─── Render ───────────────────────────────────────────────────────
 
   return (
-    <ResponsiveModal
+    <>
+      <ResponsiveModal
       dataSynapseTarget="new-appointment-modal"
       open={isOpen}
       onOpenChange={onOpenChange}
@@ -2525,6 +2604,23 @@ export function NewAppointmentModal({
           )}
         </div>
       </div>
-    </ResponsiveModal>
+      </ResponsiveModal>
+      <EventCategoryManagerDialog
+        open={isCategoryManagerOpen}
+        onOpenChange={setIsCategoryManagerOpen}
+        selectedSlug={form.watch("eventCategory")}
+        onSelect={(slug) => {
+          form.setValue("eventCategory", slug, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        }}
+        onArchived={(slug) => {
+          if (form.getValues("eventCategory") === slug) {
+            form.setValue("eventCategory", "", { shouldDirty: true, shouldValidate: true });
+          }
+        }}
+      />
+    </>
   );
 }

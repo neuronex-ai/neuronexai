@@ -22,6 +22,24 @@ interface OfferDetails {
 
 const TOKEN_PATTERN = /^[a-f0-9]{64}$/;
 
+const getOfferResponseErrorMessage = (error: unknown) => {
+  const message = error && typeof error === "object" && "message" in error
+    ? String(error.message).toLowerCase()
+    : String(error || "").toLowerCase();
+
+  if (
+    message.includes("expirada")
+    || message.includes("inválida")
+    || message.includes("invalida")
+    || message.includes("55000")
+    || message.includes("23p01")
+  ) {
+    return "Esta oferta não está mais disponível. Peça ao seu profissional uma nova vaga.";
+  }
+
+  return "Não foi possível registrar sua resposta agora. Tente novamente em instantes.";
+};
+
 export default function WaitlistOfferResponse() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
@@ -59,7 +77,7 @@ export default function WaitlistOfferResponse() {
       p_response: response,
     });
     if (rpcError) {
-      setError(rpcError.message || "A oferta mudou. Atualize a página e tente novamente.");
+      setError(getOfferResponseErrorMessage(rpcError));
       setIsResponding(false);
       return;
     }

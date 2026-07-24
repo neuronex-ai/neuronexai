@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { getProfessionalWaitlistErrorMessage } from "@/lib/professional-waitlist-errors";
 
 export interface ProfessionalWaitlistWindow {
   id?: string;
@@ -60,10 +61,12 @@ export interface ProfessionalWaitlistSlotSuggestion {
   timezone: "America/Sao_Paulo";
 }
 
-const errorMessage = (error: unknown, fallback: string) => {
-  if (error && typeof error === "object" && "message" in error) return String(error.message);
-  return fallback;
-};
+export interface ProfessionalWaitlistStatusResult {
+  success: true;
+  entryId: string;
+  status: ProfessionalWaitlistEntry["status"];
+  message?: string;
+}
 
 const parseSlotSuggestion = (value: unknown): ProfessionalWaitlistSlotSuggestion | null => {
   if (!value || typeof value !== "object") return null;
@@ -108,10 +111,10 @@ export function useProfessionalWaitlist() {
       const { data, error } = await database
         .from("professional_waitlist_entries")
         .select("id,patient_id,status,priority,valid_from,valid_until,minimum_duration_minutes,preferred_duration_minutes,modality,location,offer_automatically,offer_count,last_offered_at,created_at,patients(id,name),professional_waitlist_windows(id,weekday,specific_date,start_time,end_time),professional_waitlist_offers(id,status,offered_start_time,offered_end_time,expires_at)")
-        .neq("status", "removed")
+        .in("status", ["active", "paused", "offered"])
         .order("priority", { ascending: true })
         .order("created_at", { ascending: true });
-      if (error) throw new Error(errorMessage(error, "Não foi possível carregar a lista de espera."));
+      if (error) throw new Error(getProfessionalWaitlistErrorMessage(error, "Não foi possível carregar a lista de espera."));
       return (data || []).map((row) => ({
         ...row,
         patients: Array.isArray(row.patients) ? row.patients[0] || null : row.patients,
@@ -123,7 +126,7 @@ export function useProfessionalWaitlist() {
     mutationFn: async (input: ProfessionalWaitlistInput) => {
       const database = supabase;
       const { data, error } = await database.rpc("upsert_professional_waitlist_entry", { p_input: input });
-      if (error) throw new Error(errorMessage(error, "Não foi possível salvar na lista de espera."));
+      if (error) throw new Error(getProfessionalWaitlistErrorMessage(error, "Não foi possível salvar na lista de espera."));
       return data as { success: true; entryId: string; status: string };
     },
     onSuccess: invalidate,
@@ -136,8 +139,8 @@ export function useProfessionalWaitlist() {
         p_entry_id: entryId,
         p_status: status,
       });
-      if (error) throw new Error(errorMessage(error, "Não foi possível atualizar a lista de espera."));
-      return data;
+      if (error) throw new Error(getProfessionalWaitlistErrorMessage(error, "Não foi possível atualizar a lista de espera."));
+      return data as ProfessionalWaitlistStatusResult;
     },
     onSuccess: invalidate,
   });
@@ -151,7 +154,7 @@ export function useProfessionalWaitlist() {
         p_ends_at: endsAt,
         p_idempotency_key: `waitlist-${entryId}-${startsAt}`,
       });
-      if (error) throw new Error(errorMessage(error, "Não foi possível reservar e oferecer o horário."));
+      if (error) throw new Error(getProfessionalWaitlistErrorMessage(error, "Não foi possível reservar e oferecer o horário."));
       return data as {
         success: true;
         offerId: string;
@@ -171,7 +174,7 @@ export function useProfessionalWaitlist() {
         p_search_days: 56,
       });
       if (error) {
-        throw new Error(errorMessage(error, "Não foi possível calcular uma vaga compatível."));
+        throw new Error(getProfessionalWaitlistErrorMessage(error, "Não foi possível calcular uma vaga compatível."));
       }
       return parseSlotSuggestion(data);
     },

@@ -61,4 +61,19 @@ describe("agenda drag reschedule review contract", () => {
       "<ProfessionalWaitlistPanel onClose={() => setWaitlistOpen(false)} />",
     );
   });
+
+  it("closes accepted waitlist entries into the agenda and notifies the professional", () => {
+    const waitlistHook = source("src/hooks/use-professional-waitlist.ts");
+    const realtime = source("src/hooks/use-agenda-realtime.ts");
+    const migration = source(
+      "supabase/migrations/20260724223701_agenda_waitlist_acceptance_feedback.sql",
+    );
+
+    expect(waitlistHook).toContain('.in("status", ["active", "paused", "offered"])');
+    expect(realtime).toContain("['appointmentsByDateRange']");
+    expect(migration).toContain("'waitlist-offer-accepted:' || v_offer.id::text");
+    expect(migration).toContain("'Vaga aceita na lista de espera'");
+    expect(migration).toContain("set status = 'scheduled'");
+    expect(migration).toContain("v_has_accepted_offer");
+  });
 });

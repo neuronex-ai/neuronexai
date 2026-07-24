@@ -20,6 +20,7 @@ import {
   getAppointmentActionPlan,
   type AppointmentActionPlan,
 } from "@/lib/appointment-action-plans";
+import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
 import {
   APPOINTMENT_PLAN_REVIEW_EVENT,
   type AppointmentPlanReviewReference,
@@ -156,7 +157,10 @@ export function AppointmentPlanReviewDialog() {
       ]);
       close();
     } catch (caught) {
-      const message = caught instanceof Error ? caught.message : "Não foi possível executar o plano.";
+      const message = getAppointmentPlanErrorMessage(
+        caught,
+        summary.action === "reschedule" ? "reschedule" : "generic",
+      );
       setError(message);
       toast.error(message);
     } finally {
@@ -184,7 +188,8 @@ export function AppointmentPlanReviewDialog() {
   return (
     <Dialog open={Boolean(reference)} onOpenChange={(open) => { if (!open) close(); }}>
       <DialogContent
-        className="agenda-modal-surface z-[240] max-w-[620px] gap-0 overflow-hidden rounded-[28px] border p-0 motion-reduce:duration-0"
+        className="agenda-modal-surface max-w-[620px] gap-0 overflow-hidden rounded-[28px] border p-0 motion-reduce:duration-0"
+        contentContainerClassName="z-[240]"
         overlayClassName="z-[239] motion-reduce:duration-0"
         aria-busy={isLoading || isSubmitting}
       >

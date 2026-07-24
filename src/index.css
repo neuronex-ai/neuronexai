@@ -6656,6 +6656,17 @@
   }
 }
 
+/* The monthly overflow list belongs to the Agenda desktop surface. Its item
+   edge deliberately follows the resolved canvas tone, avoiding the inverted
+   outline left behind by the previous light/dark conversion. */
+.agenda-month-more-appointment {
+  border-color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.dark .agenda-month-more-appointment {
+  border-color: rgba(0, 0, 0, 0.82) !important;
+}
+
 @media (forced-colors: active) {
   .agenda-liquid-surface,
   .agenda-modal-surface,

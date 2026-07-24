@@ -5873,6 +5873,39 @@ export type Database = {
           },
         ]
       }
+      professional_event_categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_archived: boolean
+          is_default: boolean
+          name: string
+          professional_id: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_default?: boolean
+          name: string
+          professional_id: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_archived?: boolean
+          is_default?: boolean
+          name?: string
+          professional_id?: string
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       professional_waitlist_entries: {
         Row: {
           availability_version_id: string | null

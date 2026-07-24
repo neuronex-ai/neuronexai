@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useDesktopClinicalSession, formatSessionElapsed } from '@/hooks/use-desktop-clinical-session';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import type { Appointment } from '@/types';
 import { DesktopSessionReviewDialog } from './DesktopSessionReviewDialog';
@@ -21,7 +21,12 @@ interface DesktopClinicalSessionProps {
 export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessionEnd, openInviteOnMount = false, initialWorkspaceTab = 'transcript' }: DesktopClinicalSessionProps) => {
   const session = useDesktopClinicalSession(activeAppointment, patientName, onSessionEnd);
   const inviteRequestedRef = useRef(false);
-  const { hasTranscriptionDecision, openPatientInvite, requestTranscriptionDecision } = session;
+  const {
+    hasTranscriptionDecision,
+    openPatientInvite,
+    requestTranscriptionDecision,
+    dismissTranscriptionDecision,
+  } = session;
 
   useEffect(() => {
     if (!openInviteOnMount || inviteRequestedRef.current) return;
@@ -37,17 +42,26 @@ export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessi
 
   const consentDialog =
     session.showConsent && !session.reviewOpen ? (
-      <Dialog open onOpenChange={() => undefined}>
+      <Dialog open={session.showConsent} onOpenChange={(open) => {
+        if (!open) dismissTranscriptionDecision();
+      }}>
         <DialogContent
           showCloseButton={false}
-          overlayClassName='teleconsultation-overlay !z-[179] !backdrop-blur-none'
-          onEscapeKeyDown={(event) => event.preventDefault()}
+          overlayClassName='teleconsultation-overlay !z-[260] !backdrop-blur-none'
+          contentContainerClassName='!z-[261]'
+          onEscapeKeyDown={(event) => {
+            event.preventDefault();
+            dismissTranscriptionDecision();
+          }}
           onPointerDownOutside={(event) => event.preventDefault()}
           data-synapse-target='transcription-decision'
           aria-label='Decisão de transcrição'
-          className='teleconsultation-surface !z-[180] !w-[min(680px,calc(100vw-2rem))] !max-w-[min(680px,calc(100vw-2rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0'
+          className='teleconsultation-surface !w-[min(680px,calc(100vw-2rem))] !max-w-[min(680px,calc(100vw-2rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0'
         >
           <DialogTitle className='sr-only'>Decisão de transcrição</DialogTitle>
+          <DialogDescription className='sr-only'>
+            Escolha se esta teleconsulta poderá ser transcrita antes de entrar na sala.
+          </DialogDescription>
           <TranscriptionConsentPanel
             patientName={patientName}
             isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}

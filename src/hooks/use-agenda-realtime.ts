@@ -23,6 +23,7 @@ export const useAgendaRealtime = () => {
                 },
                 () => {
                     queryClient.invalidateQueries({ queryKey: ['appointments'] });
+                    queryClient.invalidateQueries({ queryKey: ['appointmentsByDateRange'] });
                     queryClient.invalidateQueries({ queryKey: ['financial_metrics'] });
                     queryClient.invalidateQueries({ queryKey: ['transactions'] });
                 }
@@ -38,6 +39,7 @@ export const useAgendaRealtime = () => {
                 () => {
                     queryClient.invalidateQueries({ queryKey: ['transactions'] });
                     queryClient.invalidateQueries({ queryKey: ['appointments'] });
+                    queryClient.invalidateQueries({ queryKey: ['appointmentsByDateRange'] });
                     queryClient.invalidateQueries({ queryKey: ['financial_metrics'] });
                 }
             )
@@ -75,6 +77,7 @@ export const useAgendaRealtime = () => {
                 },
                 () => {
                     queryClient.invalidateQueries({ queryKey: ['appointments'] });
+                    queryClient.invalidateQueries({ queryKey: ['appointmentsByDateRange'] });
                     queryClient.invalidateQueries({ queryKey: ['agenda-series-conflicts', user.id] });
                 }
             )
