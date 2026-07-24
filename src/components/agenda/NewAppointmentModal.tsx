@@ -96,6 +96,8 @@ import {
   getAppointmentStepLabels,
 } from "@/lib/appointment-form-flow";
 import { AdvancedRecurrenceEditor } from "@/components/agenda/AdvancedRecurrenceEditor";
+import { EventCategoryManagerDialog } from "@/components/agenda/EventCategoryManagerDialog";
+import { useProfessionalEventCategories } from "@/hooks/use-professional-event-categories";
 import {
   agendaRecurrenceDraftToRule,
   agendaRuleToRecurrenceDraft,
@@ -104,6 +106,8 @@ import {
   type AgendaRecurrenceDraft,
   type OccurrenceOverride,
 } from "@/lib/agenda-scheduling";
+import { getAppointmentRecurrenceTerminology } from "@/lib/appointment-recurrence-terminology";
+import { DEFAULT_PROFESSIONAL_EVENT_CATEGORIES } from "@/lib/professional-event-categories";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
@@ -191,16 +195,6 @@ const formSchema = z
 type FormValues = z.infer<typeof formSchema>;
 
 // ─── Constantes ───────────────────────────────────────────────────────
-
-const EVENT_CATEGORIES = [
-  { value: "reuniao", label: "Reunião" },
-  { value: "supervisao", label: "Supervisão" },
-  { value: "particular", label: "Particular" },
-  { value: "bloqueio", label: "Bloqueio de Agenda" },
-  { value: "formacao", label: "Formação / Curso" },
-  { value: "administrativo", label: "Administrativo" },
-  { value: "outro", label: "Outro" },
-];
 
 const addMinutesToTime = (time: string, minutesToAdd: number) => {
   const [hours = 0, minutes = 0] = time.split(":").map(Number);
@@ -345,9 +339,14 @@ export function NewAppointmentModal({
   );
   const [templateName, setTemplateName] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [smartFitSuggestions, setSmartFitSuggestions] = useState<Record<number, AgendaPlanSmartFitCandidate[]>>({});
   const idempotencyKeyRef = useRef(`agenda-v2-${crypto.randomUUID()}`);
   const { data: patients } = usePatients();
+  const {
+    categories: persistedEventCategories,
+    isSuccess: eventCategoriesLoaded,
+  } = useProfessionalEventCategories();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
   const { profile, rememberAppointmentLocation } = useProfile();
   const { canAccess, isLoading: isLoadingSubscription } = useSubscription();
@@ -428,6 +427,22 @@ export function NewAppointmentModal({
   }, [selectedTime, form]);
 
   const eventType = form.watch("eventType");
+  const recurrenceTerminology = getAppointmentRecurrenceTerminology(eventType);
+  const eventCategories = useMemo(
+    () =>
+      eventCategoriesLoaded
+        ? persistedEventCategories
+        : DEFAULT_PROFESSIONAL_EVENT_CATEGORIES.map((category) => ({
+            ...category,
+            id: category.slug,
+            professional_id: "",
+            is_default: true,
+            is_archived: false,
+            created_at: "",
+            updated_at: "",
+          })),
+    [eventCategoriesLoaded, persistedEventCategories],
+  );
   const selectedPatientId = form.watch("patientId");
   const selectedPatient = useMemo(
     () => patients?.find((patient) => patient.id === selectedPatientId) || null,

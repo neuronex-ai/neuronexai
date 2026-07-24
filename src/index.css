@@ -6342,6 +6342,20 @@
     0 14px 32px -28px rgba(0, 0, 0, 0.98);
 }
 
+.agenda-month-overflow-item {
+  border-color: rgba(255, 255, 255, 0.88) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
+    0 12px 26px -24px hsl(var(--agenda-shadow) / 0.36);
+}
+
+.dark .agenda-month-overflow-item {
+  border-color: rgba(0, 0, 0, 0.84) !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.52),
+    0 12px 28px -24px rgba(0, 0, 0, 0.92);
+}
+
 .agenda-month-cell[data-target='true'] {
   border-color: hsl(var(--foreground) / 0.28) !important;
   box-shadow:

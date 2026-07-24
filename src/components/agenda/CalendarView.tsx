@@ -36,7 +36,10 @@ import { useNavigate } from "react-router-dom";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
 import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
-import { prepareAppointmentActionPlan } from "@/lib/appointment-action-plans";
+import {
+    getPrepareAppointmentActionPlanErrorMessage,
+    prepareAppointmentActionPlan,
+} from "@/lib/appointment-action-plans";
 import { requestAppointmentPlanReview } from "@/lib/appointment-plan-review";
 import {
     SYNAPSE_PAGE_ACTION_EVENT,
@@ -237,7 +240,8 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                     : "Revise o novo horário antes de concluir o reagendamento.",
             );
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : "Não foi possível preparar o reagendamento.");
+            console.error("[CalendarView] Falha ao preparar reagendamento por arrastar", error);
+            toast.error(getPrepareAppointmentActionPlanErrorMessage(error, "reschedule"));
         } finally {
             rescheduleInFlightRef.current = false;
             setIsPreparingReschedule(false);
@@ -909,7 +913,7 @@ const MonthDroppableColumn = ({
                             <div className="space-y-1.5 max-h-[240px] overflow-y-auto custom-scrollbar">
                                 {dayApps.map(app => (
                                     <AppointmentDetailModal key={app.id} appointment={app}>
-                                        <button type="button" className="agenda-choice-card agenda-tactile group min-h-11 w-full rounded-xl border p-2.5 text-left">
+                                        <button type="button" className="agenda-month-overflow-item agenda-choice-card agenda-tactile group min-h-11 w-full rounded-xl border p-2.5 text-left">
                                             <div className="flex items-center gap-2">
                                                 <div className={cn(
                                                     "w-1.5 h-1.5 rounded-full shrink-0",

@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import type { AgendaRecurrenceDraft, RecurrenceRuleKind } from "@/lib/agenda-scheduling";
+import type { AppointmentEventType } from "@/lib/appointment-form-flow";
+import { getAppointmentRecurrenceTerminology } from "@/lib/appointment-recurrence-terminology";
 import { cn } from "@/lib/utils";
 
 const WEEK_DAYS = [
@@ -36,9 +38,15 @@ const KIND_OPTIONS: Array<{ value: RecurrenceRuleKind; label: string; descriptio
 interface AdvancedRecurrenceEditorProps {
   value: AgendaRecurrenceDraft;
   onChange: (value: AgendaRecurrenceDraft) => void;
+  eventType?: AppointmentEventType;
 }
 
-export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrenceEditorProps) {
+export function AdvancedRecurrenceEditor({
+  value,
+  onChange,
+  eventType = "session",
+}: AdvancedRecurrenceEditorProps) {
+  const terminology = getAppointmentRecurrenceTerminology(eventType);
   const patch = (next: Partial<AgendaRecurrenceDraft>) => onChange({ ...value, ...next });
 
   const toggleWeekDay = (weekday: number) => {
@@ -70,10 +78,10 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
         </span>
         <div className="min-w-0 flex-1">
           <h3 id="recurrence-rules-heading" className="text-sm font-black tracking-[-0.02em] text-foreground">
-            Como as sessões se repetem?
+            {terminology.heading}
           </h3>
           <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Campos não personalizados herdam a primeira sessão.
+            {terminology.inheritanceDescription}
           </p>
         </div>
       </div>
@@ -95,7 +103,11 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                 <SelectItem key={option.value} value={option.value} className="notification-liquid-menu-item rounded-[13px] py-2.5">
                   <span className="flex flex-col">
                     <span className="font-bold">{option.label}</span>
-                    <span className="text-[10px] text-muted-foreground">{option.description}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {option.value === "range_distribution"
+                        ? terminology.distributionDescription
+                        : option.description}
+                    </span>
                   </span>
                 </SelectItem>
               ))}
@@ -227,7 +239,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
             className="grid grid-cols-3 gap-2"
           >
             {[
-              { value: "count", label: "Após sessões" },
+              { value: "count", label: terminology.terminationCountLabel },
               { value: "until", label: "Em uma data" },
               { value: "open", label: "Sem término" },
             ].map((option) => (
@@ -250,9 +262,12 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
                 value={value.count}
                 onChange={(event) => patch({ count: Math.max(2, Number(event.target.value) || 2) })}
                 className="agenda-field h-11 w-28 rounded-2xl text-center font-black"
-                aria-label="Quantidade total de sessões"
+                aria-label={`Quantidade total de ${terminology.plural}`}
               />
-              <span className="text-xs text-muted-foreground">incluindo a primeira sessão</span>
+              <span className="text-xs text-muted-foreground">
+                incluindo {terminology.firstSingular === "primeiro evento" ? "o" : "a"}{" "}
+                {terminology.firstSingular}
+              </span>
             </div>
           ) : null}
           {value.terminationKind === "until" ? (
@@ -275,7 +290,7 @@ export function AdvancedRecurrenceEditor({ value, onChange }: AdvancedRecurrence
         <div className="agenda-liquid-card flex items-center justify-between gap-4 rounded-[18px] border p-3.5">
           <div className="min-w-0">
             <div className="flex items-center gap-2 text-xs font-black text-foreground">
-              <Settings2 className="h-3.5 w-3.5" /> Personalizar sessões
+              <Settings2 className="h-3.5 w-3.5" /> {terminology.customizeLabel}
             </div>
             <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
               Ajuste horário ou duração de ocorrências específicas na revisão.
