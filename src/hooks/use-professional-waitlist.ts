@@ -113,7 +113,7 @@ export function useProfessionalWaitlist() {
         p_ends_at: endsAt,
         p_idempotency_key: `waitlist-${entryId}-${startsAt}`,
       });
-      if (error) throw new Error(errorMessage(error, "Não foi possível reservar e ofertar o horário."));
+      if (error) throw new Error(errorMessage(error, "Não foi possível reservar e oferecer o horário."));
       return data as {
         success: true;
         offerId: string;

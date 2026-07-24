@@ -3,12 +3,12 @@ import {
     AnimatePresence,
     motion,
     useMotionValue,
-    useReducedMotion,
     useSpring,
 } from "framer-motion";
 import { AudioLines, MessageCircle } from "lucide-react";
 
 import { useSynapse } from "@/context/SynapseContext";
+import { useReducedMotionPreference } from "@/hooks/use-reduced-motion-preference";
 import { SynapseLiquidOrb } from "./SynapseLiquidOrb";
 
 type PresenceVisualState =
@@ -64,7 +64,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         voicePhase,
         voiceStatus,
     } = useSynapse();
-    const shouldReduceMotion = Boolean(useReducedMotion());
+    const shouldReduceMotion = useReducedMotionPreference();
     const launcherRef = useRef<HTMLDivElement>(null);
     const launcherX = useMotionValue(0);
     const launcherY = useMotionValue(0);

@@ -31,23 +31,23 @@ export function useTheme() {
 
   useEffect(() => {
     if (!mounted || !preferences?.theme) return;
-    if (shouldApplyPersistedTheme(currentPreference, preferences.theme)) {
+    if (shouldApplyPersistedTheme(currentPreference, preferences.theme, preferences.user_id)) {
       setNextTheme(preferences.theme);
     }
-  }, [currentPreference, mounted, preferences?.theme, setNextTheme]);
+  }, [currentPreference, mounted, preferences?.theme, preferences?.user_id, setNextTheme]);
 
   const setTheme = useCallback((theme: UserThemePreference | string) => {
     const normalized: UserThemePreference = theme === 'light' || theme === 'dark' || theme === 'system'
       ? theme
       : 'system';
 
-    beginThemePreferenceChange(normalized, Boolean(preferences));
+    beginThemePreferenceChange(normalized, preferences?.user_id);
     setNextTheme(normalized);
     if (preferences) {
       void updatePreferences({ theme: normalized }).catch((error) => {
-        finishThemePreferenceChange(normalized);
+        finishThemePreferenceChange(normalized, preferences.user_id);
         console.error('[Theme] Não foi possível persistir a preferência.', error);
-      });
+        });
     }
   }, [preferences, setNextTheme, updatePreferences]);
 

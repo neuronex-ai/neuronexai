@@ -43,6 +43,7 @@ describe('Synapse voice presence', () => {
         const launcher = screen.getByRole('toolbar', { name: 'Conversar com o Synapse' });
         expect(launcher).toBeInTheDocument();
         expect(launcher).toHaveAttribute('data-theme-adaptive', 'true');
+        expect(launcher).toHaveAttribute('data-magnetic-motion', 'enabled');
         expect(launcher).not.toHaveClass('text-white');
 
         const textAction = screen.getByRole('button', { name: 'Abrir conversa por texto com o Synapse' });

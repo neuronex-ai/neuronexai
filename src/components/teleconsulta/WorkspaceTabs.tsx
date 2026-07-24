@@ -28,7 +28,7 @@ export const WorkspaceTabs = ({ patientId, patientName }: WorkspaceTabsProps) =>
       {/* Texture */}
       <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
 
-      <Tabs defaultValue="workspace" className="flex flex-col h-full relative z-10">
+      <Tabs magnetic defaultValue="workspace" className="flex flex-col h-full relative z-10">
         <div className="px-8 pt-8 pb-4">
           <TabsList className="grid w-full grid-cols-3 bg-black/5 dark:bg-white/5 p-1.5 rounded-full border border-black/5 dark:border-white/5">
             <TabsTrigger

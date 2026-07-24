@@ -71,7 +71,7 @@ export const BiofeedbackWidget = ({ patientId }: BiofeedbackWidgetProps) => {
                         </CardTitle>
                         <CardDescription>Correlação entre fisiologia e estados mentais (30 dias)</CardDescription>
                     </div>
-                    <Tabs value={activeTab} onValueChange={setActiveTab} className="w-auto">
+                    <Tabs magnetic value={activeTab} onValueChange={setActiveTab} className="w-auto">
                         <TabsList className="bg-zinc-800/50 border border-zinc-700/50">
                             <TabsTrigger value="overview" className="text-xs">Visão Geral</TabsTrigger>
                             <TabsTrigger value="sleep" className="text-xs">Sono</TabsTrigger>

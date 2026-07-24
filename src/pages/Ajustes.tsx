@@ -184,7 +184,7 @@ const Ajustes = () => {
             <div className="desktop-content-offset flex-1 pb-24 relative">
                 <div className="max-w-[2200px] mx-auto px-5 md:px-7 lg:px-10 xl:px-14 2xl:px-16 relative z-10">
                     <div className="animate-fade-up">
-                        <Tabs value={activeTab} onValueChange={handleTabChange} className="settings-desktop-shell desktop-retina-frame grid min-h-[720px] w-full overflow-hidden rounded-[38px] border border-border/45 md:h-[calc(100vh-var(--desktop-navbar-clearance)-1.5rem)] md:grid-cols-[280px_minmax(0,1fr)]">
+                        <Tabs magnetic value={activeTab} onValueChange={handleTabChange} className="settings-desktop-shell desktop-retina-frame grid min-h-[720px] w-full overflow-hidden rounded-[38px] border border-border/45 md:h-[calc(100vh-var(--desktop-navbar-clearance)-1.5rem)] md:grid-cols-[280px_minmax(0,1fr)]">
                             {/* Sidebar Menu */}
                             <aside className="settings-sidebar-surface flex h-full w-full min-h-0 flex-col overflow-hidden border-b border-border/45 p-4 md:border-b-0 md:border-r md:p-5">
                                 <div className="mb-5 border-b border-border/45 px-1 pb-5">

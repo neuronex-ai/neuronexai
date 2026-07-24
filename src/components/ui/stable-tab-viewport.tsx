@@ -1,9 +1,10 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
+import { useReducedMotionPreference } from "@/hooks/use-reduced-motion-preference";
 
 type StableTabViewportProps<Value extends string> = {
   value: Value;
@@ -20,7 +21,7 @@ export const StableTabViewport = <Value extends string>({
   className,
   contentClassName,
 }: StableTabViewportProps<Value>) => {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionPreference();
 
   return (
     <div className={cn("relative min-h-0 overflow-hidden", className)}>
@@ -47,4 +48,3 @@ export const StableTabViewport = <Value extends string>({
     </div>
   );
 };
-

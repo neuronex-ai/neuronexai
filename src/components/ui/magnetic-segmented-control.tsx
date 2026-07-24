@@ -1,9 +1,10 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion } from "framer-motion";
 import { type KeyboardEvent, type ReactNode, useId, useRef } from "react";
 
 import { cn } from "@/lib/utils";
+import { useReducedMotionPreference } from "@/hooks/use-reduced-motion-preference";
 
 export type MagneticSegmentOption<Value extends string = string> = {
   value: Value;
@@ -36,7 +37,7 @@ export const MagneticSegmentedControl = <const Options extends readonly Magnetic
 }: MagneticSegmentedControlProps<Options>) => {
   const generatedId = useId().replace(/:/g, "");
   const controlId = id || `magnetic-segment-${generatedId}`;
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useReducedMotionPreference();
   const triggerRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const selectAt = (index: number) => {

@@ -335,6 +335,7 @@ export const CommunicationSettings = () => {
 
         <div className="p-1.5 bg-card/60 dark:bg-card border border-border/10 rounded-[20px] shadow-xl">
           <Tabs
+            magnetic
             value={activeChannel}
             onValueChange={(value) => void changeChannel(value)}
             className="w-full"

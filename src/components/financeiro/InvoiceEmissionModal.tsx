@@ -73,7 +73,7 @@ export const InvoiceEmissionModal = ({ children, initialPatientId }: InvoiceEmis
                                 </DialogHeader>
                             </div>
 
-                            <Tabs defaultValue="actions" className="flex-1">
+                            <Tabs magnetic defaultValue="actions" className="flex-1">
                                 <div className="px-6 pt-4 sm:px-8">
                                     <TabsList className="desktop-retina-inset grid h-11 w-full grid-cols-2 rounded-[15px] border border-border/45 bg-muted/30 p-1">
                                         <TabsTrigger value="actions" className="rounded-xl text-xs font-medium text-muted-foreground data-[state=active]:bg-foreground data-[state=active]:text-background">Ações</TabsTrigger>

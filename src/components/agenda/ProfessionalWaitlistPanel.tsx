@@ -29,7 +29,13 @@ import {
   type ProfessionalWaitlistEntry,
   type ProfessionalWaitlistInput,
 } from "@/hooks/use-professional-waitlist";
+import {
+  findProfessionalWaitlistSuggestion,
+  toDateTimeLocalValue,
+  type ProfessionalWaitlistSuggestion,
+} from "@/lib/professional-waitlist-suggestion";
 import { cn } from "@/lib/utils";
+import type { Appointment } from "@/types";
 
 const WEEK_DAYS = [
   { value: 0, label: "Domingo" },
@@ -73,11 +79,23 @@ const emptyForm = (): ProfessionalWaitlistInput => ({
   rules_snapshot: {},
 });
 
+const hasActivePendingOffer = (
+  entry: ProfessionalWaitlistEntry,
+  now = new Date(),
+) => entry.professional_waitlist_offers.some((offer) => (
+  offer.status === "pending"
+  && new Date(offer.expires_at) > now
+));
+
 interface ProfessionalWaitlistPanelProps {
   onClose: () => void;
+  appointments: Appointment[];
 }
 
-export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanelProps) {
+export function ProfessionalWaitlistPanel({
+  onClose,
+  appointments,
+}: ProfessionalWaitlistPanelProps) {
   const { data: patients = [] } = usePatients();
   const {
     data: entries = [],
@@ -95,6 +113,8 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
   const [offeringEntryId, setOfferingEntryId] = useState<string | null>(null);
   const [offerStart, setOfferStart] = useState("");
   const [offerDuration, setOfferDuration] = useState(50);
+  const [offerSuggestionSource, setOfferSuggestionSource] =
+    useState<ProfessionalWaitlistSuggestion["source"] | null>(null);
   const [createdOfferPath, setCreatedOfferPath] = useState<string | null>(null);
 
   const activeCount = entries.filter((entry) => entry.status === "active" || entry.status === "offered").length;
@@ -188,6 +208,31 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
     }
   };
 
+  const toggleOfferReview = (entry: ProfessionalWaitlistEntry) => {
+    if (offeringEntryId === entry.id) {
+      setOfferingEntryId(null);
+      setOfferSuggestionSource(null);
+      return;
+    }
+
+    const reservedOffers = entries
+      .filter((otherEntry) => otherEntry.id !== entry.id)
+      .flatMap((otherEntry) => otherEntry.professional_waitlist_offers);
+    const suggestion = findProfessionalWaitlistSuggestion(entry, appointments, {
+      reservedOffers,
+    });
+    if (!suggestion) {
+      toast.info("Ainda não há uma vaga livre compatível com estas preferências.");
+      return;
+    }
+
+    setOfferStart(toDateTimeLocalValue(suggestion.startsAt));
+    setOfferDuration(suggestion.durationMinutes);
+    setOfferSuggestionSource(suggestion.source);
+    setCreatedOfferPath(null);
+    setOfferingEntryId(entry.id);
+  };
+
   const sendOffer = async (entry: ProfessionalWaitlistEntry) => {
     const startsAt = new Date(offerStart);
     if (!offerStart || Number.isNaN(startsAt.getTime()) || startsAt <= new Date()) {
@@ -201,7 +246,8 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
         endsAt: addMinutes(startsAt, Math.max(entry.minimum_duration_minutes, offerDuration)).toISOString(),
       });
       setCreatedOfferPath(result.responsePath);
-      toast.success("Horário reservado por 2 horas e oferta preparada.");
+      setOfferSuggestionSource("pending_offer");
+      toast.success("Vaga reservada e oferecida ao paciente.");
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Não foi possível criar a oferta.");
     }
@@ -316,7 +362,7 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
 
           <div className="agenda-liquid-card flex items-center justify-between gap-4 rounded-[20px] border p-3.5">
             <div><p className="text-xs font-black text-foreground">Oferta automática</p><p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">Reserva a vaga por 2 horas e pede o aceite.</p></div>
-            <Switch checked={formValue.offer_automatically} onCheckedChange={(offer_automatically) => patchForm({ offer_automatically })} aria-label="Ofertar horários automaticamente" />
+            <Switch checked={formValue.offer_automatically} onCheckedChange={(offer_automatically) => patchForm({ offer_automatically })} aria-label="Oferecer horários automaticamente" />
           </div>
           <Button type="button" onClick={submitEntry} disabled={isSaving} className="h-12 w-full rounded-full font-black">{isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : formValue.id ? <Pencil className="mr-2 h-4 w-4" /> : <Plus className="mr-2 h-4 w-4" />}{formValue.id ? "Salvar regras" : "Adicionar à lista"}</Button>
         </div>
@@ -333,9 +379,88 @@ export function ProfessionalWaitlistPanel({ onClose }: ProfessionalWaitlistPanel
                   <div className="min-w-0"><div className="flex items-center gap-2"><span className={cn("flex h-7 min-w-7 items-center justify-center rounded-full px-2 text-[10px] font-black", entry.priority <= 2 ? "bg-amber-500/12 text-amber-600" : "bg-muted text-muted-foreground")}>P{entry.priority}</span><p className="truncate text-sm font-black text-foreground">{entry.patients?.name || "Paciente"}</p></div><p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">{entry.professional_waitlist_windows.length ? entry.professional_waitlist_windows.map((item) => `${item.specific_date ? format(new Date(`${item.specific_date}T12:00:00`), "dd/MM") : WEEK_DAYS.find((day) => day.value === item.weekday)?.label}: ${item.start_time.slice(0, 5)}–${item.end_time.slice(0, 5)}`).join(" · ") : "Qualquer horário disponível"}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground/70">Mín. {entry.minimum_duration_minutes} min · {entry.modality || "qualquer modalidade"}{entry.offer_automatically ? " · automático" : ""}</p></div>
                   <div className="flex shrink-0 gap-1"><Button type="button" variant="ghost" size="icon" onClick={() => beginEdit(entry)} className="notification-liquid-control h-11 w-11 rounded-full" aria-label="Editar regras da espera"><Pencil className="h-3.5 w-3.5" /></Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, entry.status === "paused" ? "active" : "paused")} className="notification-liquid-control h-11 w-11 rounded-full" aria-label={entry.status === "paused" ? "Retomar espera" : "Pausar espera"}>{entry.status === "paused" ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}</Button><Button type="button" variant="ghost" size="icon" disabled={isChangingStatus} onClick={() => changeStatus(entry, "removed")} className="notification-liquid-control h-11 w-11 rounded-full hover:text-destructive" aria-label="Remover da lista"><Trash2 className="h-3.5 w-3.5" /></Button></div>
                 </div>
-                {entry.status !== "paused" ? <Button type="button" variant="outline" onClick={() => { setOfferingEntryId(offeringEntryId === entry.id ? null : entry.id); setCreatedOfferPath(null); setOfferDuration(entry.preferred_duration_minutes); }} className="notification-liquid-control mt-3 h-11 w-full rounded-full text-xs font-black"><Send className="mr-1.5 h-3.5 w-3.5" />Ofertar uma vaga</Button> : null}
+                {entry.status !== "paused" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => toggleOfferReview(entry)}
+                    className="notification-liquid-control mt-3 h-11 w-full rounded-full text-xs font-black"
+                    aria-expanded={offeringEntryId === entry.id}
+                    aria-controls={`waitlist-offer-review-${entry.id}`}
+                  >
+                    <Send className="mr-1.5 h-3.5 w-3.5" />
+                    {hasActivePendingOffer(entry)
+                      ? "Revisar vaga oferecida"
+                      : "Oferecer a vaga"}
+                  </Button>
+                ) : null}
                 {offeringEntryId === entry.id ? (
-                  <div className="mt-3 space-y-2 border-t border-border/40 pt-3"><Label className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground">Horário disponível</Label><Input type="datetime-local" value={offerStart} onChange={(event) => setOfferStart(event.target.value)} className="agenda-field h-11 rounded-xl text-xs font-bold" /><div className="flex gap-2"><Input type="number" min={entry.minimum_duration_minutes} step={5} value={offerDuration} onChange={(event) => setOfferDuration(Number(event.target.value))} className="agenda-field h-11 w-24 rounded-xl text-xs font-bold" aria-label="Duração ofertada" /><Button type="button" onClick={() => sendOffer(entry)} disabled={isPreparingOffer} className="agenda-primary-action h-11 flex-1 rounded-full text-xs font-black">{isPreparingOffer ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}Reservar e ofertar</Button></div>{createdOfferPath ? <Button type="button" variant="ghost" onClick={copyOfferLink} className="notification-liquid-control h-11 w-full rounded-full text-xs font-bold"><Copy className="mr-1.5 h-3.5 w-3.5" />Copiar link de aceite</Button> : null}</div>
+                  <div
+                    id={`waitlist-offer-review-${entry.id}`}
+                    className="mt-3 space-y-3 border-t border-border/40 pt-3"
+                    aria-live="polite"
+                  >
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground">
+                        {offerSuggestionSource === "pending_offer" ? "Vaga oferecida" : "Vaga sugerida pelo Synapse"}
+                      </p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        {offerSuggestionSource === "pending_offer"
+                          ? "O paciente já recebeu esta vaga e a reserva aguarda a resposta dele."
+                          : "Confira a data, o horário e a duração calculados antes de oferecer ao paciente."}
+                      </p>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor={`waitlist-offer-start-${entry.id}`}
+                        className="text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground"
+                      >
+                        Data e horário
+                      </Label>
+                      <Input
+                        id={`waitlist-offer-start-${entry.id}`}
+                        type="datetime-local"
+                        value={offerStart}
+                        readOnly
+                        aria-readonly="true"
+                        className="agenda-field h-11 rounded-xl text-xs font-bold"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <Input
+                        type="number"
+                        value={offerDuration}
+                        readOnly
+                        aria-readonly="true"
+                        className="agenda-field h-11 w-24 rounded-xl text-xs font-bold"
+                        aria-label="Duração sugerida em minutos"
+                      />
+                      {offerSuggestionSource !== "pending_offer" ? (
+                        <Button
+                          type="button"
+                          onClick={() => sendOffer(entry)}
+                          disabled={isPreparingOffer}
+                          className="agenda-primary-action h-11 flex-1 rounded-full text-xs font-black"
+                        >
+                          {isPreparingOffer
+                            ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin motion-reduce:animate-none" />
+                            : <Sparkles className="mr-1.5 h-3.5 w-3.5" />}
+                          Confirmar e oferecer
+                        </Button>
+                      ) : null}
+                    </div>
+                    {createdOfferPath ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={copyOfferLink}
+                        className="notification-liquid-control h-11 w-full rounded-full text-xs font-bold"
+                      >
+                        <Copy className="mr-1.5 h-3.5 w-3.5" />
+                        Copiar link de aceite
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : null}
               </article>
             ))}

@@ -27,8 +27,7 @@ import {
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useAppointments } from "@/hooks/use-appointments";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { NewAppointmentModal } from "./NewAppointmentModal";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { createPortal } from "react-dom";
@@ -37,7 +36,8 @@ import { useNavigate } from "react-router-dom";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
 import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
-import { useUpdateAppointment } from "@/hooks/use-update-appointment";
+import { prepareAppointmentActionPlan } from "@/lib/appointment-action-plans";
+import { requestAppointmentPlanReview } from "@/lib/appointment-plan-review";
 import {
     SYNAPSE_PAGE_ACTION_EVENT,
     type SynapseInterfaceAction,
@@ -84,10 +84,10 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const { user } = useAuth();
     const navigate = useNavigate();
     const { isConnected: isGoogleConnected, isLoading: isLoadingGoogle } = useGoogleAuth();
-    const { refetch } = useAppointments();
-    const updateAppointment = useUpdateAppointment();
     const [activeId, setActiveId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
+    const [isPreparingReschedule, setIsPreparingReschedule] = useState(false);
+    const rescheduleInFlightRef = useRef(false);
     const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>();
     const [isMounted, setIsMounted] = useState(false);
@@ -161,7 +161,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
         setActiveId(null);
         setOverId(null);
 
-        if (!over) return;
+        if (!over || rescheduleInFlightRef.current) return;
 
         const appointmentId = active.id as string;
         const targetDate = new Date(over.id as string);
@@ -179,6 +179,11 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
             newStart.setMinutes(oldStart.getMinutes(), 0, 0);
         }
         const newEnd = new Date(newStart.getTime() + duration);
+
+        if (
+            newStart.getTime() === oldStart.getTime()
+            && newEnd.getTime() === new Date(appointment.end_time).getTime()
+        ) return;
 
         const now = new Date();
         if (newStart < now) {
@@ -199,19 +204,43 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
             return;
         }
 
+        rescheduleInFlightRef.current = true;
+        setIsPreparingReschedule(true);
         try {
-            await updateAppointment.mutateAsync({
-                id: appointmentId,
-                updates: {
-                    start_time: newStart.toISOString(),
-                    end_time: newEnd.toISOString()
-                }
+            const plan = await prepareAppointmentActionPlan("reschedule", {
+                appointment_id: appointmentId,
+                start_time: newStart.toISOString(),
+                end_time: newEnd.toISOString(),
+                type: appointment.type,
+                location: appointment.location,
+                communication: {
+                    sendConfirmation: true,
+                    provider: "configured",
+                    template: "appointment_reconfirmation_required",
+                    reminderPolicy: "professional_settings",
+                },
+            }, `professional-app:drag-reschedule:${appointmentId}:${crypto.randomUUID()}`, "professional_app");
+
+            if (plan.status !== "awaiting_confirmation" && plan.status !== "review_required") {
+                throw new Error("O novo horário não está disponível para revisão.");
+            }
+
+            requestAppointmentPlanReview({
+                planId: plan.planId,
+                planVersion: plan.planVersion,
+                planHash: plan.planHash,
+                originChannel: "professional_app",
             });
-            toast.success("Agendamento reagendado");
-            refetch();
-        } catch {
-            // useUpdateAppointment restores the optimistic state and exposes the
-            // canonical action-plan error (availability, conflict or policy).
+            toast.info(
+                plan.status === "review_required"
+                    ? "O novo horário precisa de uma revisão adicional."
+                    : "Revise o novo horário antes de concluir o reagendamento.",
+            );
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : "Não foi possível preparar o reagendamento.");
+        } finally {
+            rescheduleInFlightRef.current = false;
+            setIsPreparingReschedule(false);
         }
     };
 
@@ -405,6 +434,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
             <div
                 id="agenda-main-calendar"
                 data-synapse-target="agenda-calendar"
+                aria-busy={isPreparingReschedule}
                 className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
             >
                 <header className="agenda-liquid-surface relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border p-3 text-foreground xl:flex-row xl:items-center">
@@ -608,7 +638,11 @@ const HourDroppableSlot = ({
     blocked: boolean;
     onSlotClick: (hour: number) => void;
 }) => {
-    const { setNodeRef, isOver } = useDroppable({ id });
+    const { setNodeRef, isOver } = useDroppable({
+        id,
+        disabled: blocked,
+        data: { blocked },
+    });
 
     return (
         <button

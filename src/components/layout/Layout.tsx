@@ -6,6 +6,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
+import { DesktopRouteTransition } from "./DesktopRouteTransition";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -41,7 +42,11 @@ export const Layout = ({ children }: LayoutProps) => {
         !isMobile && hasFullBleedDesktopShell && "pb-0",
         isMobile && "pt-0",
       )}>
-        {children}
+        {!isMobile ? (
+          <DesktopRouteTransition pathname={location.pathname}>
+            {children}
+          </DesktopRouteTransition>
+        ) : children}
       </main>
     </div>
   );

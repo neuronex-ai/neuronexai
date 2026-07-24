@@ -1,6 +1,7 @@
 "use client";
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LayoutGroup, motion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useProfile } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
+import { useReducedMotionPreference } from "@/hooks/use-reduced-motion-preference";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { CommandSearch } from "./CommandSearch";
 import { TrialStatusIndicator } from "@/components/subscription";
@@ -50,6 +52,7 @@ export const Navbar = () => {
   const { theme, toggleTheme, isTransitioning } = useTheme();
   const isDarkTheme = theme === "dark";
   const isMobile = useIsMobile();
+  const shouldReduceMotion = useReducedMotionPreference();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
@@ -79,15 +82,19 @@ export const Navbar = () => {
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Usuário';
 
   const dockItemClass = (active: boolean) => cn(
-    "desktop-retina-interactive relative flex items-center justify-center w-10 h-10 rounded-2xl cursor-pointer group",
+    "desktop-retina-interactive group relative isolate flex h-10 w-10 cursor-pointer items-center justify-center rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     active
       ? isDarkTheme
-        ? "bg-white text-black shadow-[0_18px_48px_-28px_rgba(255,255,255,0.48),inset_0_1px_0_rgba(255,255,255,0.65)]"
-        : "bg-zinc-950 text-white shadow-[0_18px_44px_-26px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.12)]"
+        ? "text-black"
+        : "text-white"
       : isDarkTheme
         ? "text-white/42 hover:bg-white/[0.065] hover:text-white"
         : "text-zinc-400 hover:bg-black/[0.045] hover:text-zinc-900"
   );
+
+  const activeSurfaceClass = isDarkTheme
+    ? "bg-white shadow-[0_18px_48px_-28px_rgba(255,255,255,0.48),inset_0_1px_0_rgba(255,255,255,0.65)]"
+    : "bg-zinc-950 shadow-[0_18px_44px_-26px_rgba(0,0,0,0.75),inset_0_1px_0_rgba(255,255,255,0.12)]";
 
   const activeDotClass = cn(
     "absolute -bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full",
@@ -117,11 +124,28 @@ export const Navbar = () => {
     return (
       <Tooltip key={item.name}>
         <TooltipTrigger asChild>
-          <Link to={item.href} id={`nav-${item.href.replace('/', '')}`}>
-            <div className={dockItemClass(isActive)}>
-              <Icon className={cn("h-4 w-4 transition-transform duration-500", isActive ? "scale-100" : "group-hover:scale-110")} />
-              {isActive && <span className={activeDotClass} />}
-            </div>
+          <Link
+            to={item.href}
+            id={`nav-${item.href.replace('/', '')}`}
+            aria-label={item.name}
+            aria-current={isActive ? "page" : undefined}
+            className={dockItemClass(isActive)}
+          >
+            {isActive ? (
+              <motion.span
+                layoutId="desktop-primary-navigation-indicator"
+                aria-hidden="true"
+                data-desktop-nav-indicator="true"
+                className={cn("pointer-events-none absolute inset-0 z-0 rounded-[inherit]", activeSurfaceClass)}
+                transition={
+                  shouldReduceMotion
+                    ? { duration: 0 }
+                    : { type: "spring", stiffness: 410, damping: 35, mass: 0.78 }
+                }
+              />
+            ) : null}
+            <Icon className={cn("relative z-10 h-4 w-4 transition-transform duration-500", isActive ? "scale-100" : "group-hover:scale-110")} />
+            {isActive && <span className={cn(activeDotClass, "z-10")} />}
           </Link>
         </TooltipTrigger>
         <TooltipContent side="bottom" className={tooltipClass}>{item.name}</TooltipContent>
@@ -135,7 +159,7 @@ export const Navbar = () => {
     <nav id="navbar-container" className="fixed top-7 left-0 right-0 z-[60] flex justify-center pointer-events-none px-4">
       <div
         className={cn(
-          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-[transform,background-color,border-color,box-shadow] duration-500 ease-apple hover:-translate-y-0.5 motion-reduce:transform-none motion-reduce:transition-none",
+          "global-retina-navbar pointer-events-auto flex items-center gap-3 rounded-[30px] px-2.5 py-2.5 backdrop-blur-3xl transition-[background-color,border-color,box-shadow] duration-500 ease-apple motion-reduce:transition-none",
           isDarkTheme
             ? "border border-white/[0.055] bg-[#080808]/82 ring-1 ring-white/[0.025] hover:bg-[#0a0a0a]/88"
             : "border border-black/[0.075] bg-white/[0.72] shadow-[0_30px_90px_-46px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-white/40 hover:bg-white/[0.78] hover:shadow-[0_42px_112px_-56px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.8)]"
@@ -169,9 +193,11 @@ export const Navbar = () => {
           <TrialStatusIndicator compact className="hidden xl:inline-flex" />
         </div>
 
-        <div id="main-navigation" className="flex items-center gap-1">
-          {navigation.map((item) => <NavItem key={item.name} item={item} />)}
-        </div>
+        <LayoutGroup id="desktop-primary-navigation">
+          <div id="main-navigation" className="flex items-center gap-1">
+            {navigation.map((item) => <NavItem key={item.name} item={item} />)}
+          </div>
+        </LayoutGroup>
 
         <div className={cn("flex items-center gap-1 pl-4 border-l", isDarkTheme ? "border-white/[0.08]" : "border-black/[0.055]")}>
           <Tooltip>

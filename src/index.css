@@ -144,6 +144,19 @@
     mix-blend-mode: normal;
   }
 
+  html.theme-transitioning::view-transition-group(root) {
+    isolation: isolate;
+  }
+
+  html.theme-transitioning::view-transition-old(root) {
+    z-index: 1;
+    opacity: 1;
+  }
+
+  html.theme-transitioning::view-transition-new(root) {
+    z-index: 2;
+  }
+
   html.theme-transition-to-light::view-transition-old(root) {
     animation: neuronex-theme-old-to-light 560ms cubic-bezier(0.32, 0.72, 0, 1) both;
   }
@@ -192,14 +205,14 @@
 
   @keyframes neuronex-theme-old-to-light {
     0% { opacity: 1; filter: none; }
-    62% { opacity: 0.975; filter: brightness(0.985); }
-    100% { opacity: 0.94; filter: brightness(1.01); }
+    62% { opacity: 1; filter: brightness(0.99) saturate(0.995); }
+    100% { opacity: 1; filter: brightness(1.008); }
   }
 
   @keyframes neuronex-theme-old-to-dark {
     0% { opacity: 1; filter: none; }
-    62% { opacity: 0.98; filter: brightness(0.94) saturate(0.98); }
-    100% { opacity: 0.94; filter: brightness(0.88) saturate(0.96); }
+    62% { opacity: 1; filter: brightness(0.955) saturate(0.985); }
+    100% { opacity: 1; filter: brightness(0.9) saturate(0.97); }
   }
 
   @keyframes neuronex-theme-fallback-light {
@@ -5010,6 +5023,36 @@
   }
 
   .dark .dashboard-segment-indicator {
+    border-color: rgba(255, 255, 255, 0.092);
+    background: rgba(255, 255, 255, 0.082);
+    box-shadow:
+      0 10px 20px -16px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.052);
+  }
+
+  .desktop-magnetic-tab-indicator {
+    display: none;
+  }
+
+  [data-neuronex-surface="professional-desktop"] [data-magnetic-tabs="true"] .desktop-magnetic-tab-indicator {
+    display: block;
+    border: 1px solid hsl(var(--foreground) / 0.112);
+    background: hsl(var(--background) / 0.92);
+    box-shadow:
+      0 8px 18px -14px hsl(var(--foreground) / 0.34),
+      inset 0 1px 0 hsl(var(--background));
+    backdrop-filter: blur(18px) saturate(1.04);
+    -webkit-backdrop-filter: blur(18px) saturate(1.04);
+  }
+
+  [data-neuronex-surface="professional-desktop"] [data-magnetic-tabs="true"] [data-magnetic-tab-trigger="true"][data-state="active"] {
+    border-color: transparent !important;
+    background: transparent !important;
+    color: hsl(var(--foreground)) !important;
+    box-shadow: none !important;
+  }
+
+  .dark [data-neuronex-surface="professional-desktop"] [data-magnetic-tabs="true"] .desktop-magnetic-tab-indicator {
     border-color: rgba(255, 255, 255, 0.092);
     background: rgba(255, 255, 255, 0.082);
     box-shadow:

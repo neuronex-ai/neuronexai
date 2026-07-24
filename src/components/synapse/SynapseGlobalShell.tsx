@@ -1,10 +1,11 @@
 import { useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseContext';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
 import { SynapsePill } from './SynapsePill';
 import { AppointmentPlanReviewDialog } from '@/components/appointments/AppointmentPlanReviewDialog';
+import { useReducedMotionPreference } from '@/hooks/use-reduced-motion-preference';
 
 // ─── Z-Index Strategy ─────────────────────────────────────────────────
 // Assistant chrome: z-index 90 (above page content, below alerts, sheets and dialogs).
@@ -22,7 +23,7 @@ export const SynapseGlobalShell = () => {
         voicePhase,
         voiceStatus,
     } = useSynapse();
-    const shouldReduceMotion = Boolean(useReducedMotion());
+    const shouldReduceMotion = useReducedMotionPreference();
     const isVoiceConnectionActive =
         voiceStatus === 'connected' ||
         voiceStatus === 'connecting' ||
