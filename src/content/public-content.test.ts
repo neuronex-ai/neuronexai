@@ -8,6 +8,10 @@ import {
   PUBLIC_PAGES,
   PUBLIC_UPDATES,
 } from "./public-content";
+import {
+  COMPARISON_PUBLIC_PAGES,
+  COMPARISONS,
+} from "./comparison-content";
 
 const PUBLIC_STATUSES = ["Disponível", "Beta", "Em evolução"];
 const FORBIDDEN_PROVIDER_TERMS =
@@ -87,8 +91,14 @@ describe("public content catalog", () => {
     expect(PUBLIC_PAGES.some(({ route }) => route === "/precos")).toBe(false);
   });
 
-  it("publishes exactly three versioned articles with verified authors", () => {
+  it("publishes only reviewed articles with verified authors", () => {
     expect(PUBLIC_ARTICLES).toHaveLength(3);
+    expect(
+      PUBLIC_CONTENT.articles.filter(
+        ({ publicationStatus }) => publicationStatus === "draft",
+      ),
+    ).toHaveLength(20);
+    expect(PUBLIC_ARTICLES.some(({ route }) => route.includes("/blog/neuronex-vs-"))).toBe(false);
     for (const article of PUBLIC_ARTICLES) {
       expect(article.authorId).toBe("equipe-neuronex");
       expect(article.modifiedAt >= article.publishedAt).toBe(true);
@@ -96,5 +106,40 @@ describe("public content catalog", () => {
         PUBLIC_CONTENT.authors.some(({ id }) => id === article.authorId),
       ).toBe(true);
     }
+  });
+
+  it("publishes six honest comparison definitions reviewed in July 2026", () => {
+    expect(COMPARISONS).toHaveLength(6);
+    expect(COMPARISONS.map(({ slug }) => slug)).toEqual([
+      "neuronex-vs-psicomanager",
+      "neuronex-vs-corpora",
+      "neuronex-vs-sintropia",
+      "neuronex-vs-psipront",
+      "neuronex-vs-terabase",
+      "neuronex-vs-psinexus",
+    ]);
+
+    for (const comparison of COMPARISONS) {
+      expect(comparison.reviewedAt).toBe("2026-07");
+      expect(comparison.faq).toHaveLength(6);
+      expect(comparison.comparisonRows.length).toBeGreaterThanOrEqual(5);
+      expect(comparison.faq.at(-1)?.answer).not.toMatch(
+        /importa(?:ção|r).*(?:automática|automaticamente).*(?:sim|disponível)/iu,
+      );
+    }
+  });
+
+  it("keeps comparison routes, files and titles unique across the public catalog", () => {
+    const allRoutes = [
+      ...PUBLIC_PAGES.map(({ route }) => route),
+      ...PUBLIC_ARTICLES.map(({ route }) => route),
+      ...COMPARISON_PUBLIC_PAGES.map(({ route }) => route),
+    ];
+    const comparisonFiles = COMPARISON_PUBLIC_PAGES.map(({ file }) => file);
+    const comparisonTitles = COMPARISON_PUBLIC_PAGES.map(({ title }) => title);
+
+    expect(new Set(allRoutes).size).toBe(allRoutes.length);
+    expect(new Set(comparisonFiles).size).toBe(comparisonFiles.length);
+    expect(new Set(comparisonTitles).size).toBe(comparisonTitles.length);
   });
 });

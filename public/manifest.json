@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "NeuroNex AI - Gestao Inteligente para Psicologos",
+  "name": "NeuroNex - Sistema operacional para psicólogos",
   "short_name": "NeuroNex AI",
-  "description": "Plataforma de gestao com inteligencia artificial para psicologos e clinicas de psicologia.",
+  "description": "Agenda, atendimento, prontuário, pacientes, cobranças, financeiro e inteligência artificial conectados em uma única operação.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "/",

@@ -44,7 +44,9 @@ test("each public route generates unique metadata and a complete initial HTML", 
 
     const html = await buildPublicEntryHtml(template, page);
     const expectedTitle =
-      page.kind === "article" ? `${page.title} | NeuroNex` : page.title;
+      page.kind === "article"
+        ? page.seoTitle || `${page.title} | NeuroNex`
+        : page.title;
 
     assert.ok(html.includes(`<title>${expectedTitle}</title>`), page.route);
     assert.ok(html.includes(`href="${PUBLIC_SITE_URL}${page.route}"`));
@@ -109,6 +111,26 @@ test("sitemap and Vercel routes cover every public entry", async () => {
     new Set(sitemapRoutes),
     new Set(publicPages.map(({ route }) => route)),
   );
+});
+
+test("comparison entries include source disclosure and useful static content", async () => {
+  const index = publicEntryPages.find(({ route }) => route === "/comparar");
+  const detail = publicEntryPages.find(
+    ({ route }) => route === "/comparar/neuronex-vs-psicomanager",
+  );
+
+  assert.ok(index);
+  assert.ok(detail);
+
+  const indexHtml = await buildPublicEntryHtml(template, index);
+  const detailHtml = await buildPublicEntryHtml(template, detail);
+
+  assert.ok(indexHtml.includes("Comparações disponíveis"));
+  assert.ok(indexHtml.includes("PsicoManager"));
+  assert.ok(detailHtml.includes("Comparação por casos de uso"));
+  assert.ok(detailHtml.includes("dados públicos verificados"));
+  assert.ok(detailHtml.includes("julho de 2026"));
+  assert.ok(detailHtml.includes("FAQPage"));
 });
 
 test("the home entry is generated from the same public catalog", async () => {

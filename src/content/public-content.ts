@@ -41,6 +41,7 @@ export type PublicPageKind =
   | "trust"
   | "blog"
   | "updates"
+  | "comparison"
   | "support"
   | "legal";
 
@@ -66,10 +67,12 @@ export type PublicPageDefinition = {
 
 export type PublicArticle = {
   slug: string;
+  publicationStatus?: "published" | "draft";
   route: string;
   file: string;
   bodyFile: string;
   title: string;
+  seoTitle?: string;
   description: string;
   excerpt: string;
   category: string;
@@ -101,6 +104,12 @@ export type PublicContentCatalog = {
       email: string;
       telephone: string;
       logo: string;
+      address: {
+        streetAddress: string;
+        addressLocality: string;
+        addressRegion: string;
+        addressCountry: string;
+      };
       description: string;
     };
     offers: PublicOffer[];
@@ -113,14 +122,10 @@ export type PublicContentCatalog = {
 
 export const PUBLIC_CONTENT = publicContentJson as PublicContentCatalog;
 export const PUBLIC_PAGES = PUBLIC_CONTENT.pages;
-export const PUBLIC_ARTICLES = PUBLIC_CONTENT.articles;
+export const PUBLIC_ARTICLES = PUBLIC_CONTENT.articles.filter(
+  ({ publicationStatus }) => publicationStatus !== "draft",
+);
 export const PUBLIC_UPDATES = PUBLIC_CONTENT.updates;
-
-const articleBodies = import.meta.glob<string>("./articles/*.md", {
-  query: "?raw",
-  import: "default",
-  eager: true,
-});
 
 export function normalizePublicPath(pathname: string) {
   if (!pathname || pathname === "/") return "/";
@@ -141,8 +146,4 @@ export function getPublicArticle(pathnameOrSlug: string) {
 
 export function getPublicAuthor(authorId: string) {
   return PUBLIC_CONTENT.authors.find((author) => author.id === authorId);
-}
-
-export function getPublicArticleBody(article: PublicArticle) {
-  return articleBodies[`./articles/${article.bodyFile}`] ?? "";
 }

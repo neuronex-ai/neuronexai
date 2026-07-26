@@ -8,6 +8,12 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import {
+  COMPARISON_GUIDE,
+  COMPARISON_PUBLIC_PAGES,
+  COMPARISONS,
+} from "../src/content/comparison-content.ts";
+
+import {
   PUBLIC_SITE_URL,
   absolutePublicUrl,
   buildPublicStructuredData,
@@ -21,7 +27,11 @@ export { PUBLIC_SITE_URL };
 export const PUBLIC_ENTRY_DIRECTORY = "public-pages";
 export const PUBLIC_LAST_MODIFIED = publicContent.site.lastModified;
 
-const articleEntries = publicContent.articles.map((article) => ({
+const publishedArticles = publicContent.articles.filter(
+  ({ publicationStatus }) => publicationStatus !== "draft",
+);
+
+const articleEntries = publishedArticles.map((article) => ({
   ...article,
   kind: "article",
   status: "Disponível",
@@ -33,7 +43,11 @@ const articleEntries = publicContent.articles.map((article) => ({
   faq: [],
 }));
 
-export const publicPages = [...publicContent.pages, ...articleEntries];
+export const publicPages = [
+  ...publicContent.pages,
+  ...COMPARISON_PUBLIC_PAGES,
+  ...articleEntries,
+];
 export const publicEntryPages = publicPages.filter((page) => page.file);
 
 const escapeHtml = (value) =>
@@ -114,6 +128,7 @@ const markdownStyle = {
 const publicNavigation = [
   ["Início", "/"],
   ["Produto", "/produto"],
+  ["Comparar", "/comparar"],
   ["Synapse", "/synapse"],
   ["NeuroFinance", "/neurofinance"],
   ["NeuroBox", "/neurobox"],
@@ -190,6 +205,72 @@ const renderRelated = (related = []) => {
   </section>`;
 };
 
+const renderComparisonDisclosure = () =>
+  `<aside style="${staticStyle.section}">
+    <p style="${staticStyle.paragraph}">Informações organizadas a partir de dados públicos verificados em <time datetime="2026-07">julho de 2026</time>. Recursos, planos e condições podem mudar; confirme os detalhes diretamente com cada fornecedor.</p>
+  </aside>`;
+
+const renderComparisonIndex = () =>
+  `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Comparações disponíveis</h2>
+    <p style="${staticStyle.paragraph}">Cada sistema resolve bem determinadas partes da clínica. A NeuroNex foi projetada para fazer essas partes trabalharem juntas.</p>
+    <div style="${staticStyle.related}">
+      ${COMPARISONS.map(
+        (comparison) =>
+          `<article style="border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+            <p style="${staticStyle.eyebrow}">NeuroNex vs</p>
+            <h3 style="font-size:24px;line-height:1.2;margin:12px 0;">${escapeHtml(comparison.competitor)}</h3>
+            <p style="font-size:15px;line-height:1.6;color:#d4d4d8;">${escapeHtml(comparison.competitorAdvantage)}</p>
+            <p style="font-size:15px;line-height:1.6;color:#d4d4d8;"><strong>Faz mais sentido para:</strong> ${escapeHtml(comparison.competitorBestUse)}</p>
+            <a href="${escapeHtml(comparison.route)}" style="color:#fff;">Ver comparação completa</a>
+          </article>`,
+      ).join("")}
+    </div>
+    <h2 style="${staticStyle.h2};margin-top:42px;">Resumo por prioridade</h2>
+    <ul style="${staticStyle.list}">
+      ${COMPARISON_GUIDE.map(
+        (item) =>
+          `<li style="${staticStyle.item}"><a href="${escapeHtml(item.href)}" style="color:#fff;">${escapeHtml(item.label)}: <strong>${escapeHtml(item.choice)}</strong></a></li>`,
+      ).join("")}
+    </ul>
+    ${renderComparisonDisclosure()}
+  </section>`;
+
+const renderComparisonDetail = (entry) => {
+  const comparison = COMPARISONS.find(
+    (candidate) => candidate.route === entry.route,
+  );
+  if (!comparison) return "";
+
+  return `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Resumo rápido</h2>
+    <div style="${staticStyle.related}">
+      <article style="border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+        <p style="${staticStyle.eyebrow}">${escapeHtml(comparison.competitor)}</p>
+        <h3 style="font-size:22px;line-height:1.2;margin:12px 0;">${escapeHtml(comparison.competitorAdvantage)}</h3>
+        <p style="font-size:15px;line-height:1.6;color:#d4d4d8;">${escapeHtml(comparison.competitorBestUse)}</p>
+      </article>
+      <article style="border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+        <p style="${staticStyle.eyebrow}">NeuroNex</p>
+        <h3 style="font-size:22px;line-height:1.2;margin:12px 0;">${escapeHtml(comparison.neuroNexAdvantage)}</h3>
+        <p style="font-size:15px;line-height:1.6;color:#d4d4d8;">${escapeHtml(comparison.neuroNexBestUse)}</p>
+      </article>
+    </div>
+    <h2 style="${staticStyle.h2};margin-top:42px;">Comparação por casos de uso</h2>
+    ${comparison.comparisonRows
+      .map(
+        (row) =>
+          `<article style="padding:24px 0;border-top:1px solid #27272a;">
+            <h3 style="font-size:21px;line-height:1.3;margin:0;">${escapeHtml(row.topic)}</h3>
+            <p style="${staticStyle.paragraph}"><strong>${escapeHtml(comparison.competitor)}:</strong> ${escapeHtml(row.competitorPerspective)}</p>
+            <p style="${staticStyle.paragraph}"><strong>NeuroNex:</strong> ${escapeHtml(row.neuroNexPerspective)}</p>
+          </article>`,
+      )
+      .join("")}
+    ${renderComparisonDisclosure()}
+  </section>`;
+};
+
 const readArticleBody = async (entry) =>
   readFile(
     path.resolve("src/content/articles", entry.bodyFile),
@@ -248,7 +329,7 @@ const renderBlogCards = () =>
   `<section style="${staticStyle.section}">
     <h2 style="${staticStyle.h2}">Edições em destaque</h2>
     <div style="${staticStyle.related}">
-      ${publicContent.articles
+      ${publishedArticles
         .map(
           (article) =>
             `<article style="border:1px solid #3f3f46;border-radius:8px;padding:20px;">
@@ -277,6 +358,27 @@ const renderUpdates = () =>
       .join("")}
   </section>`;
 
+const renderPublicOffers = () =>
+  `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Planos para diferentes momentos do consultório</h2>
+    <p style="${staticStyle.paragraph}">O Essential organiza o começo da prática. O Profissional amplia limites e conecta recursos clínicos, financeiros e de inteligência artificial.</p>
+    <div style="${staticStyle.related}">
+      ${publicContent.site.offers
+        .map((offer) => {
+          const price = new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: offer.priceCurrency,
+          }).format(offer.price);
+          return `<article style="border:1px solid #3f3f46;border-radius:8px;padding:20px;">
+            <h3 style="font-size:22px;line-height:1.2;margin:0;">${escapeHtml(offer.name)}</h3>
+            <p style="${staticStyle.paragraph}"><strong>${escapeHtml(price)}</strong> por mês</p>
+            <a href="${escapeHtml(offer.url)}" style="color:#fff;">Começar</a>
+          </article>`;
+        })
+        .join("")}
+    </div>
+  </section>`;
+
 export async function renderPublicStaticShell(entry) {
   const isArticle = entry.kind === "article";
   const articleBody = isArticle
@@ -287,7 +389,12 @@ export async function renderPublicStaticShell(entry) {
       ? renderBlogCards()
       : entry.kind === "updates"
         ? renderUpdates()
-        : "";
+        : entry.kind === "comparison"
+          ? entry.route === "/comparar"
+            ? renderComparisonIndex()
+            : renderComparisonDetail(entry)
+          : "";
+  const pricingExtras = entry.route === "/download" ? renderPublicOffers() : "";
 
   return `<main id="static-public-shell" style="${staticStyle.page}">
     <div style="${staticStyle.container}">
@@ -301,15 +408,15 @@ export async function renderPublicStaticShell(entry) {
       ${
         isArticle
           ? `<article style="${staticStyle.section}">${articleBody}</article>`
-          : `${pageExtras}${renderSections(entry.sections)}${renderFaq(entry.faq)}`
+          : `${pageExtras}${pricingExtras}${renderSections(entry.sections)}${renderFaq(entry.faq)}`
       }
       ${renderRelated(entry.related)}
       <section style="${staticStyle.section}">
-        <h2 style="${staticStyle.h2}">Conheça a NeuroNex</h2>
-        <p style="${staticStyle.paragraph}">Crie uma conta ou instale a NeuroNex no Windows para começar a organizar sua rotina.</p>
+        <h2 style="${staticStyle.h2}">Seu consultório inteiro, trabalhando junto.</h2>
+        <p style="${staticStyle.paragraph}">Conheça a operação completa da NeuroNex ou comece gratuitamente.</p>
         <div style="${staticStyle.related}">
           <a href="/create-account" style="${staticStyle.relatedItem}">Começar grátis</a>
-          <a href="/download" style="${staticStyle.relatedItem}">Baixar para Windows</a>
+          <a href="/produto" style="${staticStyle.relatedItem}">Conhecer a operação completa</a>
         </div>
       </section>
     </div>
@@ -347,8 +454,10 @@ const replaceRootContent = (html, shell) => {
 
 export async function buildPublicEntryHtml(template, entry) {
   const config = getPublicSeoConfig(entry.route);
-  const canonical = absolutePublicUrl(entry.route);
-  const image = absolutePublicUrl(entry.image || publicContent.site.defaultImage);
+  const canonical = absolutePublicUrl(config.canonicalPath || entry.route);
+  const image = absolutePublicUrl(
+    config.imagePath || entry.image || publicContent.site.defaultImage,
+  );
   const structuredData = buildPublicStructuredData(config);
   const shell = await renderPublicStaticShell(entry);
   let html = template;
@@ -376,6 +485,12 @@ export async function buildPublicEntryHtml(template, entry) {
   html = replaceMeta(html, "property", "og:description", config.description);
   html = replaceMeta(html, "property", "og:image", image);
   html = replaceMeta(html, "property", "og:image:alt", config.imageAlt);
+  html = replaceMeta(html, "property", "og:image:width", "1280");
+  html = replaceMeta(html, "property", "og:image:height", "720");
+  html = replaceMeta(html, "property", "og:locale", "pt_BR");
+  html = replaceMeta(html, "property", "og:site_name", "NeuroNex AI");
+  html = replaceMeta(html, "name", "application-name", "NeuroNex AI");
+  html = replaceMeta(html, "name", "twitter:card", "summary_large_image");
   html = replaceMeta(html, "name", "twitter:url", canonical);
   html = replaceMeta(html, "name", "twitter:title", config.title);
   html = replaceMeta(html, "name", "twitter:description", config.description);

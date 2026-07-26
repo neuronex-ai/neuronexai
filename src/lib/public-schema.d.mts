@@ -4,6 +4,7 @@ import type {
   PublicFaq,
   PublicPageDefinition,
 } from "../content/public-content";
+import type { ComparisonDefinition } from "../content/comparison-content";
 
 export type PublicSeoConfig = {
   route: string;
@@ -17,7 +18,7 @@ export type PublicSeoConfig = {
   pageType: "website" | "article";
   contentKind: PublicPageDefinition["kind"] | "article" | "unknown";
   faq: PublicFaq[];
-  source: PublicPageDefinition | PublicArticle | null;
+  source: PublicPageDefinition | PublicArticle | ComparisonDefinition | null;
 };
 
 export type JsonLdNode = Record<string, unknown>;

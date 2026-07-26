@@ -24,25 +24,25 @@ const ecosystemItems = [
     icon: Monitor,
     title: "Professional",
     status: "Disponível" as const,
-    text: "O espaço onde você começa o dia, atende, registra, cobra e decide com contexto.",
+    text: "O espaço onde você agenda, atende, registra, cobra e acompanha a rotina do consultório.",
   },
   {
     icon: Smartphone,
     title: "Professional mobile",
     status: "Em evolução" as const,
-    text: "A rotina essencial no bolso: próxima sessão, cobrança rápida, nota e Synapse em movimento.",
+    text: "Uma experiência mobile-first para ações rápidas. Esta frente ainda está em evolução.",
   },
   {
     icon: UserRound,
     title: "Portal do Paciente",
     status: "Disponível" as const,
-    text: "Um lugar próprio para continuidade, humor, tarefas, documentos, pacotes e cobranças.",
+    text: "Um lugar próprio para sessões, humor, tarefas, documentos, pacotes e cobranças compartilhadas.",
   },
   {
     icon: Workflow,
     title: "Jornadas públicas",
     status: "Disponível" as const,
-    text: "Perfil, confirmações, convites, anamneses, ajuda, contato e documentos legais sem abrir o produto.",
+    text: "Perfil, confirmações, convites, anamneses, ajuda e documentos legais sem abrir a área profissional.",
   },
 ];
 
@@ -52,14 +52,14 @@ export const LandingEcosystemAuthoritySection = () => (
       <FadeIn>
         <div className="mx-auto max-w-5xl text-center">
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-            Ecossistema NeuroNex
+            Acessos separados, rotina conectada
           </p>
           <h2 className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,6.7rem)] font-black leading-[0.84] tracking-normal">
-            Quatro experiências.<br />Uma mesma operação clínica.
+            Cada pessoa vê o que precisa.<br />A rotina continua conectada.
           </h2>
           <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
-            Você trabalha em uma experiência própria. Seu paciente acessa outra.
-            O contexto autorizado continua conectado, sem misturar papéis.
+            O psicólogo trabalha na área profissional. O paciente acessa o Portal.
+            Informações autorizadas continuam ligadas, sem misturar papéis ou permissões.
           </p>
         </div>
       </FadeIn>
@@ -90,7 +90,7 @@ export const LandingEcosystemAuthoritySection = () => (
           to="/produto"
           className="public-tactile inline-flex min-h-12 items-center rounded-full border border-border/55 bg-background/46 px-6 font-mono text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-xl dark:border-white/10"
         >
-          Conhecer o ecossistema{" "}
+          Conhecer a operação completa{" "}
           <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
       </div>
@@ -109,10 +109,10 @@ export const LandingContinuityAuthoritySection = () => {
         <FadeIn>
           <div>
             <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] opacity-45">
-              Duas pontas do cuidado
+              Continuidade com limites claros
             </p>
             <h2 className="mt-6 text-balance text-5xl font-black leading-none md:text-7xl">
-              Prontuário vivo e Portal do Paciente em continuidade.
+              O prontuário fica com o profissional. O paciente recebe apenas o que foi compartilhado.
             </h2>
             <p className="mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-66 md:text-xl">
               O profissional mantém resumo, sessões, anamneses, humor, metas,
@@ -239,10 +239,10 @@ export const MobileAuthoritySections = () => (
     <section className="bg-background px-5 py-16">
       <div className="text-center">
         <p className="font-mono text-[8px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-          Ecossistema NeuroNex
+          Acessos separados, rotina conectada
         </p>
         <h2 className="mt-5 text-[2.55rem] font-black leading-[0.92] tracking-normal">
-          Cada pessoa no espaço certo.
+          Cada pessoa vê o que precisa.
         </h2>
       </div>
       <div className="mt-10 divide-y divide-border/45 border-y border-border/45 dark:divide-white/10 dark:border-white/10">
@@ -263,7 +263,7 @@ export const MobileAuthoritySections = () => (
         to="/produto"
         className="mt-7 inline-flex min-h-11 items-center text-[9px] font-black uppercase tracking-[0.16em]"
       >
-        Ver ecossistema <ArrowRight className="ml-2 h-4 w-4" />
+        Conhecer a operação completa <ArrowRight className="ml-2 h-4 w-4" />
       </Link>
     </section>
 
@@ -272,7 +272,7 @@ export const MobileAuthoritySections = () => (
         Continuidade
       </p>
       <h2 className="mt-5 text-[2.55rem] font-black leading-[0.92] tracking-normal">
-        Prontuário vivo de um lado. Portal do Paciente do outro.
+        O prontuário fica com o profissional. O paciente recebe o que foi compartilhado.
       </h2>
       <p className="mt-5 text-sm font-medium leading-relaxed opacity-64">
         Dados profissionais permanecem privados; humor, tarefas, documentos,

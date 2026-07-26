@@ -64,6 +64,7 @@ export const LandingMobileNav = () => {
         { label: "Início", type: "route", path: "/" },
         { label: "Diferenciais", type: "anchor", target: "diferenciais" },
         { label: "Produto", type: "route", path: "/produto" },
+        { label: "Comparar sistemas", type: "route", path: "/comparar" },
         { label: "NeuroFinance", type: "route", path: "/neurofinance" },
         { label: "NeuroZap", type: "route", path: "/neurozap-para-psicologos" },
         { label: "Teleconsulta", type: "route", path: "/teleconsulta-para-psicologos" },
@@ -170,7 +171,7 @@ export const LandingMobileNav = () => {
                         </Link>
                     </Button>
                     <p className="mt-4 text-center text-[10px] font-semibold uppercase leading-relaxed tracking-[0.1em] text-muted-foreground/55">
-                        Sua clínica, seu financeiro e sua rotina em uma só experiência.
+                        Seu consultório inteiro, trabalhando junto.
                     </p>
                 </div>
             </DialogContent>

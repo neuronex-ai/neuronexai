@@ -21,7 +21,6 @@ import {
   MessageCircle,
   Mic2,
   MonitorPlay,
-  ReceiptText,
   ShieldCheck,
   Sparkles,
   Stethoscope,
@@ -61,16 +60,16 @@ const SectionHeader = ({ eyebrow, title, description, align = "center" }: { eyeb
 );
 
 const painPoints = [
-  { icon: CalendarDays, title: "Agenda em um lugar, prontuário em outro", text: "A rotina vira alternância de abas, lembretes manuais e informações soltas." },
-  { icon: WalletCards, title: "Cobrança manual e financeiro sem visão real", text: "Pix, boletos, recebíveis e inadimplência ficam separados da operação clínica." },
-  { icon: ReceiptText, title: "Fiscal e Receita Saúde como tarefas extras", text: "O que deveria acompanhar a cobrança vira um processo repetitivo no fim do dia." },
-  { icon: MessageCircle, title: "Paciente sem continuidade entre sessões", text: "Diário, humor, orientações e vínculo pós-consulta raramente entram no fluxo." },
-  { icon: BrainCircuit, title: "IA genérica, sem contexto clínico", text: "Chatbots ajudam no texto, mas não entendem prontuário, agenda, financeiro e paciente." },
-  { icon: BarChart3, title: "Decisões sem dados consolidados", text: "Relatórios, evolução, receita, despesas e operação não conversam entre si." },
+  { icon: CalendarDays, title: "Uma ferramenta para agendar", text: "Horários e confirmações ficam longe do prontuário e do atendimento." },
+  { icon: Stethoscope, title: "Outra para atender", text: "A sessão acontece sem levar junto o contexto que já existe na clínica." },
+  { icon: FileText, title: "Outra para registrar", text: "Notas e documentos exigem novas buscas, cópias e conferências." },
+  { icon: WalletCards, title: "Outra para cobrar", text: "Cobranças e recebimentos perdem a ligação com o paciente e a sessão." },
+  { icon: MessageCircle, title: "Outra para falar com o paciente", text: "Confirmações, tarefas e documentos se espalham por canais diferentes." },
+  { icon: BrainCircuit, title: "Outra para usar IA", text: "Sem contexto autorizado, a IA ajuda no texto, mas não entende a rotina do consultório." },
 ];
 
 export const LandingProblemSection = () => (
-  <section id="problem" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
+  <section id="como-funciona" className="public-section-stage relative scroll-mt-24 overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="pointer-events-none absolute inset-0">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       <div className="absolute left-[5%] top-[10%] h-[440px] w-[620px] rounded-full bg-foreground/[0.035] blur-[150px]" />
@@ -79,8 +78,8 @@ export const LandingProblemSection = () => (
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <SectionHeader
         eyebrow="O problema real"
-        title={<>O que consome tempo não é a psicologia. <span className="text-muted-foreground/35">É o operacional.</span></>}
-        description="A maioria das clínicas cresce juntando ferramentas. O NeuroNex nasce para substituir esse mosaico por uma operação única, inteligente e conectada."
+        title={<>O psicólogo cuida da clínica <span className="text-muted-foreground/35">e ainda opera várias ferramentas.</span></>}
+        description="Uma ferramenta agenda. Outra registra. Outra atende. Outra cobra. Quando as informações ficam separadas, o psicólogo precisa fazer as pontes sozinho."
       />
       <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {painPoints.map((item, index) => (
@@ -144,8 +143,8 @@ export const LandingDifferentiatorTable = () => (
     <div className="relative z-10 mx-auto max-w-[1280px]">
       <SectionHeader
         eyebrow="O diferencial"
-        title={<>Da clínica fragmentada à <span className="text-muted-foreground/35">operação inteligente.</span></>}
-        description="Uma comparação direta entre o jeito comum de administrar um consultório e a experiência NeuroNex."
+        title={<>Na NeuroNex, cada etapa <span className="text-muted-foreground/35">continua a anterior.</span></>}
+        description="O paciente agenda, a sessão acontece, o registro é revisado e a cobrança continua ligada ao atendimento."
       />
 
       <FadeIn delay={0.22}>
@@ -346,8 +345,8 @@ export const LandingProductShowcase = () => {
 
 const systemCards = [
   { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos, teleconsulta e evolução clínica." },
-  { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse, voz, texto, NeuroBox e apoio operacional contextualizado." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente, NeuroZap e continuidade entre sessões." },
+  { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse por voz e texto com contexto autorizado, revisão e confirmação." },
+  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente disponível e conexão do NeuroZap em validação." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
   { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
@@ -360,8 +359,8 @@ export const LandingOperatingSystemSection = () => (
       <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
         <div>
           <SectionBadge icon={BadgeCheck}>Sistema operacional</SectionBadge>
-          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">Um único sistema para operar a clínica inteira.</h2>
-          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-62 md:text-xl">O NeuroNex não é só uma agenda, um prontuário ou um financeiro. É uma camada operacional que conecta cada parte da rotina.</p>
+          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">As partes do consultório trabalham juntas.</h2>
+          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-62 md:text-xl">É isso que significa sistema operacional: em vez de reunir ferramentas soltas, a NeuroNex conecta a rotina clínica e administrativa.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {systemCards.map((card) => (
@@ -380,7 +379,7 @@ export const LandingOperatingSystemSection = () => (
 const synapseFeatures = [
   { icon: FileText, title: "Texto", text: "Apoio para escrita, organização, resumos, registros e documentação clínica." },
   { icon: Mic2, title: "Voz", text: "Comandos naturais para acelerar rotinas e reduzir cliques em tarefas repetitivas." },
-  { icon: MessageCircle, title: "WhatsApp", text: "NeuroZap conecta WhatsApp Business, agenda e pendências para o Synapse preparar ações sob sua revisão." },
+  { icon: MessageCircle, title: "WhatsApp", text: "A conexão e a sincronização autorizadas do NeuroZap estão em validação; contexto avançado continua em evolução." },
   { icon: BrainCircuit, title: "NeuroBox", text: "NeuroView, NeuroPulse, NeuroFlow, NeuroScan e NeuroFinance expõem contexto estruturado para o agente." },
 ];
 
@@ -391,7 +390,7 @@ export const LandingSynapseSection = () => (
         <SectionHeader
           align="left"
           eyebrow="Synapse AI"
-          title={<>Não é um chat. <span className="text-muted-foreground/35">É a inteligência operacional da clínica.</span></>}
+          title={<>A IA prepara. <span className="text-muted-foreground/35">Você revisa e decide.</span></>}
           description="O Synapse apoia documentação, organização, comunicação e tomada de decisão operacional. A atuação clínica continua sempre sob responsabilidade do profissional."
         />
         <FadeIn delay={0.2}>
@@ -431,16 +430,16 @@ export const LandingSynapseSection = () => (
 
 const neuroZapFlows = [
   {
-    title: "Confirmações no lugar certo",
-    text: "Sessão, horário e paciente acompanham a conversa para reduzir lembretes esquecidos.",
+    title: "Conexão autorizada",
+    text: "O canal da clínica só entra na NeuroNex depois de um fluxo de autorização próprio.",
   },
   {
-    title: "Cobrança sem improviso",
-    text: "A pendência vira uma mensagem clara, preparada pelo Synapse e revisada por você.",
+    title: "Sincronização em validação",
+    text: "A base de sincronização e tempo real é validada antes de ampliar o papel do canal na rotina.",
   },
   {
-    title: "Contexto sem perder o controle",
-    text: "Identidade, finalidade, consentimento e histórico acompanham cada ação sensível.",
+    title: "Próximas etapas visíveis",
+    text: "Inbox, etiquetas e contexto avançado serão comunicados conforme cada fluxo estiver pronto.",
   },
 ];
 
@@ -480,7 +479,7 @@ export const LandingNeuroZapSection = ({ inverted = false }: { inverted?: boolea
               !inverted && "text-foreground",
             )}
           >
-            Menos cobrança desconfortável. Menos horário vazio.
+            WhatsApp Business conectado com autorização, por etapas.
           </h2>
           <p
             className={cn(
@@ -488,7 +487,7 @@ export const LandingNeuroZapSection = ({ inverted = false }: { inverted?: boolea
               inverted ? "opacity-68" : "text-muted-foreground/70",
             )}
           >
-            O WhatsApp Business entra no mesmo fluxo da agenda e do financeiro. O Synapse prepara confirmações e cobranças; você revisa e decide.
+            O NeuroZap valida conexão e sincronização do canal da clínica. Inbox, etiquetas e ações contextuais avançadas ainda estão em evolução.
           </p>
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
             <Button
@@ -513,7 +512,7 @@ export const LandingNeuroZapSection = ({ inverted = false }: { inverted?: boolea
                   "border-background/20 text-background dark:border-zinc-950/20 dark:text-zinc-950",
               )}
             >
-              <Link to="/neurofinance">Ver NeuroFinance</Link>
+              <Link to="/novidades">Ver status do produto</Link>
             </Button>
           </div>
         </div>
@@ -543,7 +542,7 @@ export const LandingNeuroZapSection = ({ inverted = false }: { inverted?: boolea
                   <p className="text-base font-black">NeuroZap</p>
                 </div>
               </div>
-              <ShieldCheck aria-label="Ações sensíveis exigem confirmação" className="h-5 w-5 opacity-45" />
+              <ShieldCheck aria-label="Conexão autorizada e status controlado" className="h-5 w-5 opacity-45" />
             </div>
             <div className="mt-8 grid gap-3">
               {neuroZapFlows.map((flow) => (

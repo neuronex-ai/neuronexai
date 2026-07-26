@@ -99,10 +99,10 @@ const productModules: ProductModule[] = [
   {
     key: "neurofinance",
     label: "NeuroFinance",
-    title: "Core banking integrado",
-    eyebrow: "Banking transacional",
-    description: "Conta digital, Área Pix, boletos, pagamentos, saques, antecipação e previsibilidade dentro do fluxo operacional do consultório.",
-    bullets: ["Conta e saldo", "Pix e boletos", "Capital preditivo"],
+    title: "Financeiro ligado à clínica",
+    eyebrow: "Movimentações reais",
+    description: "Conta, Área Pix, boletos, pagamentos e saques ficam próximos da agenda e das cobranças, conforme elegibilidade da conta.",
+    bullets: ["Conta e saldo", "Pix e boletos", "Confirmação humana"],
     icon: CreditCard,
     dark: `${DARK_NEW_BATCH}/08-neurofinance-conta-saldo-dark.webp`,
     light: `${LIGHT_NEW_BATCH}/08-neurofinance-conta-saldo-white.webp`,
@@ -405,8 +405,8 @@ export const LandingRealSynapseSection = () => {
             <SectionHeading
               align="left"
               eyebrow="Synapse AI"
-              title={<>Não é um chat. <span className="text-muted-foreground/35">É a inteligência operacional da clínica.</span></>}
-              description="Texto e voz conectados ao contexto do sistema para localizar informações, organizar a rotina e reduzir trabalho repetitivo."
+              title={<>A IA prepara. <span className="text-muted-foreground/35">Você revisa e decide.</span></>}
+              description="Texto e voz usam somente o contexto autorizado para localizar informações, organizar a rotina e preparar ações com limites visíveis."
             />
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {synapseModes.map((item) => (
@@ -456,7 +456,7 @@ const financeCards: Array<ScreenshotSource & { title: string; eyebrow: string; d
   {
     title: "NeuroFinance",
     eyebrow: "Movimentar dinheiro real",
-    description: "Conta digital, saldo, Área Pix, boletos, pagamentos, transferências, saques e antecipação preservados em uma camada bancária própria.",
+    description: "Conta, saldo, Área Pix, boletos, pagamentos, transferências e saques ficam em uma área financeira própria. Pontos de antecipação seguem em evolução.",
     icon: WalletCards,
     items: ["Conta e saldo", "Pix e boletos", "Pagamentos"],
     dark: `${DARK_NEW_BATCH}/08-neurofinance-conta-saldo-dark.webp`,
@@ -481,7 +481,7 @@ export const LandingRealFinanceFiscalSection = () => (
       <SectionHeading
         eyebrow="Financeiro sem confusão"
         title={<>Gestão para decidir. <span className="text-muted-foreground/35">NeuroFinance para movimentar.</span></>}
-        description="Duas camadas com papéis claros: gestão preditiva para decidir, core banking para movimentar e fiscal conectado ao consultório."
+        description="Duas áreas com papéis claros: gestão para organizar e decidir, NeuroFinance para movimentar e recursos fiscais ligados ao consultório."
       />
       <div className="mt-14 grid gap-5 lg:grid-cols-3">
         {financeCards.map((card, index) => (

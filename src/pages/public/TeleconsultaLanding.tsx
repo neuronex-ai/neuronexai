@@ -49,7 +49,7 @@ const flow: FlowStep[] = [
     id: "sessao",
     icon: MonitorPlay,
     title: "Sessão",
-    text: "Vídeo, notas e contexto do paciente ficam no mesmo workspace.",
+    text: "Vídeo, notas e contexto do paciente ficam no mesmo ambiente.",
     detail:
       "Você atende sem alternar entre chamada, agenda, documento, lembrete e prontuário.",
   },
@@ -86,10 +86,10 @@ const TeleconsultaFlow = () => {
       <div className="mx-auto max-w-[1240px]">
         <div className="mx-auto max-w-4xl text-center">
           <p className="font-mono text-[9px] font-black uppercase text-muted-foreground">
-            Do atendimento ao registro
+            Uma etapa continua a outra
           </p>
           <h2 className="mt-5 text-balance text-4xl font-black leading-[0.96] md:text-6xl">
-            A sessão vira contexto.
+            Da agenda ao prontuário, com revisão no caminho.
           </h2>
           <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-lg">
             Cada etapa tem um lugar claro. Você sabe o que foi autorizado, o que

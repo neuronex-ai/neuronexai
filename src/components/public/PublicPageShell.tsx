@@ -151,7 +151,11 @@ export function PublicProductHero({
                     variant="outline"
                     className="public-tactile h-14 rounded-full border-border/70 bg-background/38 px-7 font-mono text-[10px] font-black uppercase backdrop-blur-xl"
                   >
-                    <Link to="/contato">Falar com a equipe</Link>
+                    <Link to={page.route === "/produto" ? "/comparar" : "/produto"}>
+                      {page.route === "/produto"
+                        ? "Comparar sistemas"
+                        : "Conhecer a operação completa"}
+                    </Link>
                   </Button>
                 </>
               )}
@@ -438,15 +442,18 @@ export function PublicPageShell({
           <div className="mx-auto max-w-[1180px]">
             <ShieldCheck aria-hidden="true" className="mx-auto h-7 w-7 opacity-55" />
             <h2 className="mx-auto mt-7 max-w-4xl text-balance text-4xl font-black leading-none md:text-6xl">
-              Conecte esta área ao restante da sua prática.
+              Não conecte só uma parte do consultório.
             </h2>
+            <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed opacity-65 md:text-lg">
+              Conheça a operação completa da NeuroNex e veja como cada etapa continua a anterior.
+            </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button
                 asChild
                 className="public-tactile h-14 rounded-full bg-background px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-foreground dark:bg-zinc-950 dark:text-white"
               >
                 <Link to="/create-account">
-                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button
@@ -454,7 +461,7 @@ export function PublicPageShell({
                 variant="outline"
                 className="public-tactile h-14 rounded-full border-background/20 bg-transparent px-7 font-mono text-[10px] font-black uppercase text-background dark:border-zinc-950/20 dark:text-zinc-950"
               >
-                <Link to="/download">Baixar no Windows</Link>
+                <Link to="/comparar">Comparar com meu sistema atual</Link>
               </Button>
             </div>
           </div>

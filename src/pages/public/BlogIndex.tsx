@@ -11,6 +11,16 @@ import { PublicBreadcrumbs } from "@/components/public/PublicPageShell";
 import { Button } from "@/components/ui/button";
 import { PUBLIC_ARTICLES, getPublicPage } from "@/content/public-content";
 
+const editorialTopics = [
+  "Como escolher um sistema para psicólogos",
+  "O que avaliar antes de trocar de prontuário",
+  "Inteligência artificial para psicólogos",
+  "Agenda, prontuário e financeiro integrados",
+  "Quanto custa usar várias ferramentas no consultório",
+  "Como reduzir tarefas administrativas",
+  "Limites éticos da IA na psicologia",
+];
+
 const BlogIndex = () => {
   const page = getPublicPage("/blog");
   const shouldReduceMotion = useReducedMotion();
@@ -34,7 +44,7 @@ const BlogIndex = () => {
                 animate={{ opacity: 1, y: 0 }}
                 className="font-mono text-[9px] font-bold uppercase tracking-[0.24em] text-muted-foreground"
               >
-                Newsletter da NeuroNex
+                Conteúdo educativo da NeuroNex
               </motion.p>
               <motion.h1
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
@@ -50,8 +60,7 @@ const BlogIndex = () => {
                 transition={{ delay: shouldReduceMotion ? 0 : 0.12 }}
                 className="mx-auto mt-8 max-w-3xl text-pretty text-xl font-semibold leading-relaxed text-muted-foreground/82 md:mt-10 md:text-3xl"
               >
-                Ideias claras sobre IA, clínica, operação e dinheiro. Sem
-                espuma. Só o que ajuda você a decidir melhor.
+                Ideias claras sobre tecnologia, rotina clínica, gestão e dinheiro para ajudar você a decidir melhor.
               </motion.p>
               <motion.div
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
@@ -72,7 +81,7 @@ const BlogIndex = () => {
                   variant="outline"
                   className="public-tactile h-14 min-w-[190px] rounded-full border-border/70 bg-background/46 px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em] backdrop-blur-xl"
                 >
-                  <Link to="/novidades">Ver novidades</Link>
+                  <Link to="/comparar">Comparar sistemas</Link>
                 </Button>
               </motion.div>
             </div>
@@ -87,13 +96,11 @@ const BlogIndex = () => {
                   Edições recentes
                 </p>
                 <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">
-                  Conteúdo para quem opera clínica de verdade.
+                  Conteúdo para quem também administra um consultório.
                 </h2>
               </div>
               <p className="max-w-md text-sm font-medium leading-relaxed text-muted-foreground/72">
-                Cada texto parte de uma dor concreta: agenda que escapa,
-                paciente que some, dinheiro que fica nebuloso, IA que precisa
-                obedecer limites.
+                Cada texto parte de uma dúvida concreta sobre agenda, pacientes, dinheiro, tecnologia ou limites da inteligência artificial.
               </p>
             </div>
 
@@ -137,6 +144,29 @@ const BlogIndex = () => {
                   </Link>
                 </motion.article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-5 py-16 md:px-8 md:py-24">
+          <div className="mx-auto max-w-[1180px]">
+            <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr]">
+              <div>
+                <BookOpen aria-hidden="true" className="h-6 w-6 text-muted-foreground" />
+                <p className="mt-7 font-mono text-[9px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                  Temas da biblioteca
+                </p>
+                <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">
+                  Uma linha editorial para decisões reais.
+                </h2>
+              </div>
+              <ul className="divide-y divide-border/45 border-y border-border/45 dark:divide-white/10 dark:border-white/10">
+                {editorialTopics.map((topic) => (
+                  <li key={topic} className="flex min-h-14 items-center py-4 text-sm font-bold leading-relaxed md:text-base">
+                    {topic}
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </section>

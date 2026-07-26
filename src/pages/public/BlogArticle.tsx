@@ -12,11 +12,18 @@ import {
   PublicBreadcrumbs,
   PublicStatusBadge,
 } from "@/components/public/PublicPageShell";
-import {
-  getPublicArticle,
-  getPublicArticleBody,
-  getPublicAuthor,
-} from "@/content/public-content";
+import { getPublicArticleBody } from "@/content/public-article-content";
+import { getPublicArticle, getPublicAuthor } from "@/content/public-content";
+
+const articleDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+  timeZone: "America/Sao_Paulo",
+});
+
+const formatArticleDate = (date: string) =>
+  articleDateFormatter.format(new Date(date));
 
 const BlogArticle = () => {
   const { slug = "" } = useParams<{ slug: string }>();
@@ -25,6 +32,10 @@ const BlogArticle = () => {
 
   const author = getPublicAuthor(article.authorId);
   const body = getPublicArticleBody(article).replace(/^# .+\r?\n+/u, "");
+  const publishedAt = formatArticleDate(article.publishedAt);
+  const modifiedAt = formatArticleDate(article.modifiedAt);
+  const wasReviewedOnPublication =
+    article.publishedAt.slice(0, 10) === article.modifiedAt.slice(0, 10);
 
   return (
     <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background text-foreground">
@@ -38,28 +49,41 @@ const BlogArticle = () => {
           <header className="px-5 pb-10 pt-0 md:px-8 md:pb-14">
             <div className="public-neurox-hero mx-auto max-w-[1320px] px-8 py-16 md:px-14 md:py-20">
               <div className="mx-auto max-w-[1120px]">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-                  {article.category}
-                </span>
-                <PublicStatusBadge status="Disponível" />
-              </div>
-              <h1 className="public-neurox-title mt-8 max-w-5xl text-balance text-[clamp(3rem,6vw,6.5rem)] font-black leading-[0.9] tracking-normal">
-                {article.title}
-              </h1>
-              <p className="mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/74 md:text-xl">
-                {article.description}
-              </p>
-              <div className="mt-8 flex flex-wrap items-center gap-5 border-y border-border/45 py-5 text-sm text-muted-foreground dark:border-white/10">
-                <span className="font-bold text-foreground">
-                  {author?.name ?? "Equipe NeuroNex"}
-                </span>
-                <span>{author?.role}</span>
-                <span className="inline-flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4" />
-                  Publicado e revisado em 16 de julho de 2026
-                </span>
-              </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <span className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                    {article.category}
+                  </span>
+                  <PublicStatusBadge status="Disponível" />
+                </div>
+                <h1 className="public-neurox-title mt-8 max-w-5xl text-balance text-[clamp(3rem,6vw,6.5rem)] font-black leading-[0.9] tracking-normal">
+                  {article.title}
+                </h1>
+                <p className="mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/74 md:text-xl">
+                  {article.description}
+                </p>
+                <div className="mt-8 flex flex-wrap items-center gap-5 border-y border-border/45 py-5 text-sm text-muted-foreground dark:border-white/10">
+                  <span className="font-bold text-foreground">
+                    {author?.name ?? "Equipe NeuroNex"}
+                  </span>
+                  <span>{author?.role}</span>
+                  <span className="inline-flex items-center gap-2">
+                    <CalendarDays aria-hidden="true" className="h-4 w-4" />
+                    {wasReviewedOnPublication ? (
+                      <>
+                        Publicado e revisado em{" "}
+                        <time dateTime={article.publishedAt}>{publishedAt}</time>
+                      </>
+                    ) : (
+                      <>
+                        Publicado em{" "}
+                        <time dateTime={article.publishedAt}>{publishedAt}</time>
+                        {" · "}
+                        revisado em{" "}
+                        <time dateTime={article.modifiedAt}>{modifiedAt}</time>
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
             </div>
           </header>
@@ -90,7 +114,7 @@ const BlogArticle = () => {
             <div className="flex items-start gap-4">
               <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-muted-foreground" />
               <div>
-                <h2 className="text-xl font-black">Continue pelo produto</h2>
+                <h2 className="text-xl font-black">Continue explorando</h2>
                 <div className="mt-6 grid gap-3 md:grid-cols-3">
                   {article.related.map((link) => (
                     <Link

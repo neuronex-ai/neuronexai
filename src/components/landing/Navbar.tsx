@@ -244,7 +244,7 @@ export const Navbar = () => {
                       to="/produto"
                       className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[18px] px-4 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-zinc-900 dark:text-white/45 dark:hover:text-white dark:focus-visible:text-white"
                     >
-                      Ver todo o ecossistema
+                      Conhecer a operação completa
                       <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
                     </Link>
                   </div>
@@ -254,8 +254,14 @@ export const Navbar = () => {
           </div>
 
           <Link
-            to="/download"
+            to="/comparar"
             className={navControlClass}
+          >
+            COMPARAR
+          </Link>
+          <Link
+            to="/download"
+            className={cn(navControlClass, "hidden lg:flex")}
           >
             DOWNLOAD
           </Link>

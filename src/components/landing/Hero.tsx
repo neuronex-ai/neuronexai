@@ -4,9 +4,6 @@
 import { Link } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FadeIn } from "@/components/animations/FadeIn";
-import { TextReveal } from "@/components/animations/TextReveal";
-import { Magnetic } from "@/components/animations/Magnetic";
 import { HeroVisual } from "@/components/landing/HeroVisual";
 
 export const Hero = () => {
@@ -21,58 +18,42 @@ export const Hero = () => {
 
             {/* --- MAIN CONTENT LAYER --- */}
             <div className="relative z-10 text-center flex flex-col items-center w-full max-w-6xl mx-auto pt-[16vh] md:pt-[20vh] lg:pt-[23vh] px-4">
-                <FadeIn delay={0.3}>
-                    <div className="inline-flex items-center gap-2 bg-foreground/[0.03] border border-border/10 rounded-full px-5 py-1.5 mb-8 backdrop-blur-sm">
-                        <span className="text-[11px] uppercase tracking-[0.25em] font-black text-foreground/80">Sistema operacional para psicólogos</span>
-                    </div>
-                </FadeIn>
+                <div className="mb-8 inline-flex min-h-8 items-center gap-2 rounded-full border border-border/35 bg-foreground/[0.03] px-5 py-1.5 backdrop-blur-sm">
+                    <span className="text-[11px] font-bold tracking-[0.08em] text-foreground/80">Sistema operacional para psicólogos</span>
+                </div>
 
                 <div className="mb-4 md:mb-6 pb-2">
                     <h1 className="text-balance text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-tight text-foreground leading-[0.9] md:leading-[0.95] select-none text-center">
-                        <TextReveal stagger={0.08}>
-                            Sua clínica inteira, organizada por IA.
-                        </TextReveal>
+                        Seu consultório inteiro, trabalhando junto.
                     </h1>
                 </div>
 
-                <FadeIn delay={0.6}>
-                    <p className="text-base md:text-xl lg:text-2xl text-muted-foreground/70 font-medium max-w-4xl mx-auto leading-relaxed md:leading-[1.5] tracking-tight mb-8 md:mb-10 lg:mb-12 px-2">
-                        Prontuário, agenda, teleconsulta, financeiro, NFS-e, portal do paciente e Synapse em uma única experiência para psicólogos.
-                    </p>
-                </FadeIn>
+                <p className="mb-8 max-w-4xl px-2 text-base font-medium leading-relaxed tracking-tight text-muted-foreground/75 md:mb-10 md:text-xl md:leading-[1.5] lg:mb-12 lg:text-2xl">
+                    Agenda, prontuário, pacientes, atendimento, cobranças e inteligência artificial conectados em uma única operação.
+                </p>
 
-                <FadeIn delay={0.8} className="w-full">
-                    <div className="flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-8 w-full">
-                        <Magnetic strength={0.2} className="w-full sm:w-auto">
-                            <Button asChild className="group relative overflow-hidden w-full sm:w-auto h-14 sm:h-16 px-8 sm:px-12 rounded-full bg-foreground text-background hover:bg-foreground/90 text-[11px] sm:text-[12px] font-black uppercase tracking-[0.3em] shadow-lg transition-all duration-500 hover:scale-105 active:scale-[0.98] border-0">
-                                <Link to="/create-account">
-                                    <span className="relative flex items-center">
-                                        Começar grátis
-                                        <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2.5 opacity-70 group-hover:translate-x-1.5 transition-transform duration-500 ease-out" />
-                                    </span>
-                                </Link>
-                            </Button>
-                        </Magnetic>
+                <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
+                    <Button asChild className="group h-14 w-full rounded-full border-0 bg-foreground px-8 text-[12px] font-bold text-background shadow-lg hover:bg-foreground/90 sm:h-16 sm:w-auto sm:px-12">
+                        <Link to="/create-account">
+                            Começar grátis
+                            <ChevronRight aria-hidden="true" className="ml-2.5 h-5 w-5 opacity-70" />
+                        </Link>
+                    </Button>
 
-                        <Magnetic strength={0.2} className="w-full sm:w-auto">
-                            <Button
-                                asChild
-                                variant="ghost"
-                                className="w-full sm:w-auto h-14 sm:h-16 px-6 sm:px-10 rounded-full text-foreground/60 hover:text-foreground hover:bg-transparent text-[11px] sm:text-[12px] font-black uppercase tracking-[0.25em] transition-all duration-500 hover:scale-105 active:scale-[0.98]"
-                            >
-                                <Link to="/#comparativo">Ver planos</Link>
-                            </Button>
-                        </Magnetic>
-                    </div>
-                </FadeIn>
+                    <Button
+                        asChild
+                        variant="outline"
+                        className="h-14 w-full rounded-full border-border/55 bg-background/45 px-8 text-[12px] font-bold text-foreground backdrop-blur-sm sm:h-16 sm:w-auto sm:px-10"
+                    >
+                        <a href="#como-funciona">Ver como funciona</a>
+                    </Button>
+                </div>
             </div>
 
             {/* --- 3D HERO VISUAL LAYER --- */}
             <div className="w-full relative z-20 mt-12 md:mt-20 lg:mt-24 xl:mt-32 flex flex-col items-center">
                 <div className="w-full relative gpu-accelerated mb-32">
-                    <FadeIn delay={0.5} direction="up" distance={80} duration={1.5}>
-                        <HeroVisual />
-                    </FadeIn>
+                    <HeroVisual />
                 </div>
             </div>
         </section>

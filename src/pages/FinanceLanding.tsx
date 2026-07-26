@@ -88,18 +88,18 @@ const capabilities: Capability[] = [
   },
   {
     icon: FileCheck2,
-    title: "NFS-e e RPS no percurso",
-    text: "Dados fiscais, cobrança e emissão de NFS-e/RPS ficam preparados para operar com menos retrabalho e mais rastreabilidade.",
+    title: "NFS-e e RPS perto da cobrança",
+    text: "Dados fiscais, cobrança, emissão e histórico ficam no mesmo percurso, conforme elegibilidade e disponibilidade de cada fluxo.",
   },
   {
     icon: TrendingUp,
-    title: "Antecipação de recebíveis",
-    text: "Recebíveis podem entrar no radar financeiro para melhorar previsibilidade e decisões de caixa quando a conta estiver elegível.",
+    title: "Recebíveis com status claro",
+    text: "Acompanhe recebíveis e a elegibilidade da conta. Pontos de antecipação ainda estão em evolução e não aparecem como disponibilidade garantida.",
   },
   {
     icon: BarChart3,
-    title: "Capital de giro preditivo",
-    text: "A Synapse cruza receita, agenda, inadimplência e compromissos para sugerir ações antes que o caixa vire urgência.",
+    title: "Planejamento de caixa",
+    text: "Consulte receita, agenda, inadimplência e compromissos autorizados para organizar decisões financeiras com mais contexto.",
   },
 ];
 
@@ -108,11 +108,11 @@ const flow: FlowStep[] = [
   { title: "Cobrança", text: "Pix, boleto ou link de pagamento saem do mesmo percurso operacional." },
   { title: "Fiscal", text: "NFS-e/RPS usa dados já conectados ao paciente e à cobrança." },
   { title: "Conciliação", text: "Recebimento, extrato e baixa reduzem conferências manuais." },
-  { title: "Previsão", text: "Synapse lê capital de giro, atrasos e recebíveis para orientar próximos passos." },
+  { title: "Acompanhamento", text: "Gestão Financeira e Synapse ajudam a consultar atrasos e recebíveis autorizados antes da próxima decisão." },
 ];
 
 const safetyItems = [
-  "PIN para pagamentos, PIX, saques e mutations sensíveis",
+  "PIN para pagamentos, Pix, saques e outras movimentações sensíveis",
   "Validação de voz assistida quando o agente prepara ações críticas",
   "Elegibilidade por plano, status da conta, saldo, limites e auditoria",
   "Confirmação humana antes de qualquer movimentação real",
@@ -137,7 +137,7 @@ const faqs: FaqItem[] = [
   {
     question: "Onde entram NeuroZap e no-show?",
     answer:
-      "O NeuroZap conecta o WhatsApp Business à agenda e às pendências da clínica. O Synapse prepara confirmações e cobranças para o psicólogo revisar antes do envio.",
+      "A conexão e a sincronização autorizadas do WhatsApp Business estão em validação no NeuroZap. Inbox, etiquetas e contexto avançado para confirmações ou cobranças continuam em evolução.",
   },
 ];
 
@@ -204,7 +204,7 @@ const FinanceLanding = () => {
             <>
               <Button asChild className="public-tactile h-14 rounded-full bg-foreground px-7 font-mono text-[10px] font-black uppercase text-background">
                 <Link to="/create-account">
-                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button
@@ -234,7 +234,7 @@ const FinanceLanding = () => {
             {[
               { icon: WalletCards, label: "Gestão Financeira", title: "Planejar e decidir", text: "Receitas, despesas, inadimplência, recebíveis e fluxo projetado." },
               { icon: CreditCard, label: "NeuroFinance", title: "Movimentar dinheiro real", text: "Conta, Pix, boletos, pagamentos, saques e extrato." },
-              { icon: Sparkles, label: "Synapse AI", title: "Prever e agir com confirmação", text: "Capital de giro, no-show, cobrança e próximos passos assistidos." },
+              { icon: Sparkles, label: "Synapse", title: "Consultar e preparar com confirmação", text: "Métricas, transações e próximos passos dentro do contexto autorizado." },
             ].map((item) => (
               <article key={item.label} className="bg-foreground p-8 dark:bg-white md:p-12">
                 <item.icon className="h-6 w-6 opacity-55" />
@@ -249,9 +249,9 @@ const FinanceLanding = () => {
         <section id="core-banking-neurofinance" className="public-section-stage bg-background px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Fintechização real</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Financeiro conectado à rotina</p>
               <h2 className="mt-6 text-4xl font-black leading-none text-foreground md:text-6xl lg:text-7xl">
-                O dinheiro do consultório dentro do fluxo clínico.
+                Receba, cobre e acompanhe sem separar o financeiro da clínica.
               </h2>
               <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
                 Cada recurso financeiro foi pensado para operar perto da sessão, da cobrança, do paciente e da decisão de caixa.
@@ -273,8 +273,8 @@ const FinanceLanding = () => {
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.92fr_1.08fr]">
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <LockKeyhole className="h-7 w-7 opacity-55" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Segurança preditiva</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Mutation financeira nunca é um gesto invisível.</h2>
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Segurança financeira</p>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Movimentar dinheiro exige uma confirmação visível.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
                 O Synapse pode preparar uma ação, mas pagamentos, PIX, saques, boletos e antecipações passam por confirmações rígidas antes de qualquer movimentação real.
               </p>
@@ -315,7 +315,7 @@ const FinanceLanding = () => {
             <div className="max-w-4xl">
               <BadgeCheck className="h-7 w-7 opacity-55" />
               <p className="mt-8 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Da sessão ao caixa</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Uma linha operacional, não uma pilha de ferramentas.</h2>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-6xl">Cada recebimento continua ligado ao que aconteceu antes.</h2>
             </div>
             <div className="mt-12 grid gap-3 lg:grid-cols-5">
               {flow.map((item, index) => (
@@ -358,10 +358,10 @@ const FinanceLanding = () => {
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
               <MessageCircle className="h-7 w-7 opacity-55" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Cobrança e no-show sem desgaste humano.</h2>
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap em validação</p>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">WhatsApp conectado por etapas, com status claro.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                O WhatsApp Business encontra a agenda e as pendências da clínica. O Synapse prepara a próxima mensagem; você mantém o tom e a decisão.
+                Conexão e sincronização autorizadas estão em validação. Inbox, etiquetas e contexto avançado com outras áreas continuam em evolução.
               </p>
             </article>
             <div className="rounded-[38px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03]">
@@ -405,14 +405,14 @@ const FinanceLanding = () => {
 
         <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="public-closing-neutral mx-auto max-w-[1200px] rounded-[42px] p-8 text-center md:p-12">
-            <h2 className="mx-auto max-w-4xl text-4xl font-black leading-none md:text-6xl">Gestão para decidir. NeuroFinance para movimentar.</h2>
+            <h2 className="mx-auto max-w-4xl text-4xl font-black leading-none md:text-6xl">Organize na Gestão Financeira. Movimente no NeuroFinance.</h2>
             <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70">
               Ative recursos bancários conforme plano, aprovação cadastral, elegibilidade da conta e validações de segurança.
             </p>
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild className="public-tactile h-14 rounded-full bg-foreground px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-background">
                 <Link to="/create-account">
-                  Começar agora <ArrowRight className="ml-2 h-4 w-4" />
+                  Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
               <Button asChild variant="outline" className="public-tactile h-14 rounded-full px-7 font-mono text-[10px] font-black uppercase tracking-[0.18em]">

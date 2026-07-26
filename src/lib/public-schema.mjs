@@ -1,14 +1,18 @@
 import publicContent from "../content/public-content.json" with { type: "json" };
+import {
+  COMPARISON_PUBLIC_ENTRIES,
+  COMPARISON_PUBLIC_PAGES,
+} from "../content/comparison-content.ts";
 
 export const PUBLIC_SITE_URL = publicContent.site.url;
 
 const DEFAULT_KEYWORDS = [
   "sistema para psicólogos",
   "software para psicólogos",
-  "sistema operacional clínico com IA",
-  "plataforma de IA para psicólogos",
-  "prontuário psicológico com IA",
-  "gestão financeira para clínicas de psicologia",
+  "sistema operacional para consultórios de psicologia",
+  "agenda prontuário e financeiro integrados",
+  "inteligência artificial para psicólogos com controle humano",
+  "gestão de consultório de psicologia",
 ];
 
 const PUBLIC_STATUS = new Set(["Disponível", "Beta", "Em evolução"]);
@@ -31,10 +35,19 @@ export function absolutePublicUrl(path = "/") {
 const pageByRoute = new Map(
   publicContent.pages.map((page) => [normalizePublicPath(page.route), page]),
 );
+const publicArticles = publicContent.articles.filter(
+  ({ publicationStatus }) => publicationStatus !== "draft",
+);
 const articleByRoute = new Map(
-  publicContent.articles.map((article) => [
+  publicArticles.map((article) => [
     normalizePublicPath(article.route),
     article,
+  ]),
+);
+const comparisonByRoute = new Map(
+  COMPARISON_PUBLIC_PAGES.map((comparison) => [
+    normalizePublicPath(comparison.route),
+    comparison,
   ]),
 );
 
@@ -87,7 +100,41 @@ export function validatePublicContentCatalog() {
     }
   }
 
-  for (const article of publicContent.articles) {
+  for (const comparison of COMPARISON_PUBLIC_PAGES) {
+    if (routes.has(comparison.route)) {
+      errors.push(`Rota pública duplicada: ${comparison.route}`);
+    }
+    routes.add(comparison.route);
+
+    if (files.has(comparison.file)) {
+      errors.push(`Arquivo público duplicado: ${comparison.file}`);
+    }
+    files.add(comparison.file);
+
+    if (!comparison.route.startsWith("/comparar")) {
+      errors.push(`Rota comparativa inválida: ${comparison.route}`);
+    }
+    if (!comparison.title.trim() || !comparison.heading.trim()) {
+      errors.push(`Metadados comparativos incompletos em ${comparison.route}`);
+    }
+    if (!comparison.description.trim() || !comparison.modifiedAt) {
+      errors.push(`Description ou data ausente em ${comparison.route}`);
+    }
+    if (comparison.reviewedAt !== "2026-07") {
+      errors.push(`Revisão comparativa inválida em ${comparison.route}`);
+    }
+    if (!PUBLIC_STATUS.has(comparison.status)) {
+      errors.push(`Status público inválido em ${comparison.route}`);
+    }
+
+    for (const link of comparison.related) {
+      if (!link.href.startsWith("/") && !link.href.startsWith("https://")) {
+        errors.push(`Link inválido em ${comparison.route}: ${link.href}`);
+      }
+    }
+  }
+
+  for (const article of publicArticles) {
     if (routes.has(article.route)) {
       errors.push(`Rota de artigo duplicada: ${article.route}`);
     }
@@ -103,6 +150,9 @@ export function validatePublicContentCatalog() {
     }
     if (!article.title.trim() || !article.description.trim()) {
       errors.push(`Metadados incompletos em ${article.route}`);
+    }
+    if (article.seoTitle !== undefined && !article.seoTitle.trim()) {
+      errors.push(`SEO title vazio em ${article.route}`);
     }
     if (!article.publishedAt || !article.modifiedAt) {
       errors.push(`Datas editoriais ausentes em ${article.route}`);
@@ -144,11 +194,29 @@ export function getPublicSeoConfig(pathname) {
     };
   }
 
+  const comparison = comparisonByRoute.get(route);
+  if (comparison) {
+    return {
+      route: comparison.route,
+      title: comparison.title,
+      description: comparison.description,
+      keywords: uniqueKeywords(comparison.keywords),
+      canonicalPath: comparison.route,
+      indexable: true,
+      imagePath: comparison.image || publicContent.site.defaultImage,
+      imageAlt: comparison.imageAlt,
+      pageType: "website",
+      contentKind: "comparison",
+      faq: comparison.faq,
+      source: comparison,
+    };
+  }
+
   const article = articleByRoute.get(route);
   if (article) {
     return {
       route: article.route,
-      title: `${article.title} | NeuroNex`,
+      title: article.seoTitle || `${article.title} | NeuroNex`,
       description: article.description,
       keywords: uniqueKeywords(article.keywords),
       canonicalPath: article.route,
@@ -185,16 +253,13 @@ const buildOrganizationNode = () => ({
   url: `${PUBLIC_SITE_URL}/`,
   logo: absolutePublicUrl(publicContent.site.organization.logo),
   image: absolutePublicUrl(publicContent.site.defaultImage),
-  slogan: "Sistema Operacional Clínico com IA e Core Banking Integrado.",
+  slogan: "Seu consultório inteiro, trabalhando junto.",
   description: publicContent.site.organization.description,
   email: publicContent.site.organization.email,
   telephone: publicContent.site.organization.telephone,
   address: {
     "@type": "PostalAddress",
-    streetAddress: "Thera Faria Lima, 215 - Pinheiros",
-    addressLocality: "São Paulo",
-    addressRegion: "SP",
-    addressCountry: "BR",
+    ...publicContent.site.organization.address,
   },
   contactPoint: {
     "@type": "ContactPoint",
@@ -219,13 +284,12 @@ const buildWebsiteNode = () => ({
 });
 
 const platformFeatures = [
-  "Synapse AI por voz e texto com política de risco e confirmação assistida.",
-  "NeuroFinance com conta, Pix, pagamentos, cobranças, saques e recursos fiscais.",
-  "NeuroView com grafos clínicos 2D e 3D.",
-  "NeuroPulse com diagramas clínicos Mermaid.",
-  "NeuroFlow com canvas de fluxos clínicos e operacionais.",
-  "Teleconsulta integrada a agenda, paciente, transcrição autorizada e prontuário.",
-  "Portal do Paciente com sessões, humor, documentos, progresso e financeiro.",
+  "Agenda conectada ao paciente, ao atendimento, ao prontuário e ao financeiro.",
+  "Synapse por voz e texto com contexto autorizado e confirmação humana.",
+  "NeuroFinance com conta, Pix, pagamentos, cobranças, saques e recursos fiscais conforme elegibilidade.",
+  "NeuroBox com grafos, fluxos, diagramas, anamneses e arquivos revisáveis.",
+  "Teleconsulta integrada à agenda, ao paciente, ao consentimento e ao prontuário.",
+  "Portal do Paciente separado da área profissional, com permissões próprias.",
 ];
 
 const publicOffers = () =>
@@ -243,7 +307,7 @@ const buildPlatformSoftwareNode = () => ({
   "@type": ["WebApplication", "SoftwareApplication"],
   "@id": softwareId,
   name: "NeuroNex AI",
-  alternateName: "Sistema Operacional Clínico NeuroNex",
+  alternateName: "Sistema operacional para consultórios de psicologia",
   url: `${PUBLIC_SITE_URL}/`,
   applicationCategory: [
     "HealthApplication",
@@ -251,10 +315,9 @@ const buildPlatformSoftwareNode = () => ({
     "FinanceApplication",
   ],
   applicationSubCategory:
-    "Sistema operacional clínico com IA e infraestrutura financeira integrada",
+    "Sistema operacional que conecta a rotina clínica e administrativa de consultórios de psicologia",
   operatingSystem: ["Web", "Windows"],
   browserRequirements: "Navegador compatível com HTML5.",
-  softwareVersion: "2.0-beta",
   inLanguage: "pt-BR",
   countriesSupported: "BR",
   creator: { "@id": organizationId },
@@ -298,11 +361,23 @@ const breadcrumbItemsFor = (config, url) => {
     });
   }
 
+  if (
+    config.contentKind === "comparison" &&
+    config.canonicalPath !== "/comparar"
+  ) {
+    items.push({
+      "@type": "ListItem",
+      position: 2,
+      name: "Comparar sistemas",
+      item: absolutePublicUrl("/comparar"),
+    });
+  }
+
   if (config.canonicalPath !== "/") {
     items.push({
       "@type": "ListItem",
       position: items.length + 1,
-      name: config.source.title,
+      name: config.source.heading || config.source.title,
       item: url,
     });
   }
@@ -318,7 +393,9 @@ const buildBreadcrumbNode = (config, url) => ({
 
 const buildWebPageNode = (config, url, image) => ({
   "@type":
-    config.contentKind === "blog" || config.contentKind === "updates"
+    config.contentKind === "blog" ||
+    config.contentKind === "updates" ||
+    (config.contentKind === "comparison" && config.canonicalPath === "/comparar")
       ? "CollectionPage"
       : "WebPage",
   "@id": `${url}#webpage`,
@@ -433,7 +510,7 @@ const buildBlogIndexNode = (url) => ({
   url,
   publisher: { "@id": organizationId },
   inLanguage: "pt-BR",
-  blogPost: publicContent.articles.map((article) => ({
+  blogPost: publicArticles.map((article) => ({
     "@id": `${absolutePublicUrl(article.route)}#article`,
   })),
 });
@@ -445,7 +522,7 @@ const buildItemListNode = (url, items, listName) => ({
   itemListElement: items.map((item, index) => ({
     "@type": "ListItem",
     position: index + 1,
-    name: item.title,
+    name: item.heading || item.title,
     url: absolutePublicUrl(item.route || "/novidades"),
   })),
 });
@@ -546,13 +623,26 @@ export function buildPublicStructuredData(config) {
     if (config.contentKind === "blog") {
       graph.push(
         buildBlogIndexNode(url),
-        buildItemListNode(url, publicContent.articles, "Edições NeuroX"),
+        buildItemListNode(url, publicArticles, "Edições NeuroX"),
       );
     }
 
     if (config.contentKind === "updates") {
       graph.push(
         buildItemListNode(url, publicContent.updates, "Novidades NeuroNex"),
+      );
+    }
+
+    if (
+      config.contentKind === "comparison" &&
+      config.canonicalPath === "/comparar"
+    ) {
+      graph.push(
+        buildItemListNode(
+          url,
+          COMPARISON_PUBLIC_ENTRIES,
+          "Comparações de sistemas para psicólogos",
+        ),
       );
     }
 

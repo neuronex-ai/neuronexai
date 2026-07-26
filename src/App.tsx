@@ -76,6 +76,8 @@ const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
 const BlogArticle = lazy(() => import("@/pages/public/BlogArticle"));
 const DownloadLanding = lazy(() => import("@/pages/public/DownloadLanding"));
 const UpdatesLanding = lazy(() => import("@/pages/public/UpdatesLanding"));
+const ComparisonIndex = lazy(() => import("@/pages/public/ComparisonIndex"));
+const ComparisonLanding = lazy(() => import("@/pages/public/ComparisonLanding"));
 const NeuralCastLanding = lazy(() => import("@/pages/public/NeuralCastLanding"));
 const NeuralCastNewsletter = lazy(() => import("@/pages/public/NeuralCastNewsletter"));
 
@@ -179,6 +181,8 @@ const SharedRoutes = () => {
         <Route path="/blog" element={<BlogIndex />} />
         <Route path="/blog/:slug" element={<BlogArticle />} />
         <Route path="/novidades" element={<UpdatesLanding />} />
+        <Route path="/comparar" element={<ComparisonIndex />} />
+        <Route path="/comparar/:slug" element={<ComparisonLanding />} />
         <Route path="/portal-do-paciente" element={<PatientPortalLanding />} />
         <Route path="/teleconsulta-para-psicologos" element={<TeleconsultaLanding />} />
         <Route path="/prontuario-para-psicologos" element={<ProductLanding route="/prontuario-para-psicologos" />} />

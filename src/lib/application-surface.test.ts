@@ -40,6 +40,8 @@ describe("application surface provider boundary", () => {
     "/termos-de-uso",
     "/politica-de-privacidade",
     "/configuracoes-de-cookies",
+    "/comparar",
+    "/comparar/neuronex-vs-psicomanager",
     "/confirmar-agendamento/token",
     "/id/perfil-publico",
     "/authentic",

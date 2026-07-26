@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { PUBLIC_ARTICLES, PUBLIC_PAGES } from "@/content/public-content";
+import { COMPARISON_PUBLIC_PAGES } from "@/content/comparison-content";
 import {
   absolutePublicUrl,
   buildPublicStructuredData,
@@ -20,7 +21,11 @@ const hasType = (
 
 describe("public SEO routes", () => {
   it.each(
-    [...PUBLIC_PAGES.map(({ route }) => route), ...PUBLIC_ARTICLES.map(({ route }) => route)],
+    [
+      ...PUBLIC_PAGES.map(({ route }) => route),
+      ...PUBLIC_ARTICLES.map(({ route }) => route),
+      ...COMPARISON_PUBLIC_PAGES.map(({ route }) => route),
+    ],
   )("keeps %s indexable with a canonical URL", (pathname) => {
     const config = getPublicSeoConfig(pathname);
 
@@ -111,5 +116,23 @@ describe("public SEO routes", () => {
     expect(articleNode?.author).toEqual(
       expect.objectContaining({ name: "Equipe NeuroNex" }),
     );
+  });
+
+  it("publishes comparison collection, breadcrumbs and FAQ without review claims", () => {
+    const indexGraph = graphFor("/comparar");
+    const detailGraph = graphFor(
+      "/comparar/neuronex-vs-psicomanager",
+    );
+    const itemList = indexGraph.find((item) => item["@type"] === "ItemList");
+    const breadcrumb = detailGraph.find(
+      (item) => item["@type"] === "BreadcrumbList",
+    );
+
+    expect(indexGraph.some((item) => item["@type"] === "CollectionPage")).toBe(true);
+    expect(itemList?.itemListElement).toHaveLength(6);
+    expect(detailGraph.some((item) => item["@type"] === "FAQPage")).toBe(true);
+    expect(breadcrumb?.itemListElement).toHaveLength(3);
+    expect(detailGraph.some((item) => hasType(item, "Product"))).toBe(false);
+    expect(detailGraph.some((item) => hasType(item, "Review"))).toBe(false);
   });
 });

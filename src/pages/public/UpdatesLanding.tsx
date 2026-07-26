@@ -12,6 +12,14 @@ import {
 } from "@/components/public/PublicPageShell";
 import { PUBLIC_UPDATES, getPublicPage } from "@/content/public-content";
 
+const formatPublicDate = (value: string) =>
+  new Intl.DateTimeFormat("pt-BR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${value}T00:00:00Z`));
+
 const UpdatesLanding = () => {
   const page = getPublicPage("/novidades");
   if (!page) return null;
@@ -35,7 +43,7 @@ const UpdatesLanding = () => {
                 <div>
                   <p className="inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
                     <CalendarDays className="h-4 w-4" />
-                    16 de julho de 2026
+                    {formatPublicDate(update.date)}
                   </p>
                   <PublicStatusBadge status={update.status} className="mt-4" />
                 </div>

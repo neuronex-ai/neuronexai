@@ -26,7 +26,6 @@ import {
   Fingerprint,
   LockKeyhole,
   MessageCircle,
-  ReceiptText,
   ShieldCheck,
   Sparkles,
   Stethoscope,
@@ -66,19 +65,19 @@ const MobileSectionHeader = ({ eyebrow, title, description, inverted = false }: 
 );
 
 const painPoints = [
-  { icon: CalendarDays, title: "Ferramentas soltas", text: "Agenda, prontuário, cobrança e paciente em lugares diferentes." },
-  { icon: CreditCard, title: "Financeiro manual", text: "Pix, boletos, repasses e inadimplência fora da operação clínica." },
-  { icon: ReceiptText, title: "Fiscal repetitivo", text: "NFS-e, recibos e Receita Saúde viram tarefas extras no fim do dia." },
-  { icon: MessageCircle, title: "Paciente sem continuidade", text: "Diário, humor e vínculo entre sessões raramente entram no fluxo." },
+  { icon: CalendarDays, title: "Uma ferramenta agenda", text: "Horários e confirmações ficam longe do atendimento e do prontuário." },
+  { icon: Stethoscope, title: "Outra atende e registra", text: "Depois da sessão, você precisa reconstruir o contexto em outro lugar." },
+  { icon: CreditCard, title: "Outra cobra e recebe", text: "Pagamento e financeiro perdem a ligação com o paciente e o atendimento." },
+  { icon: MessageCircle, title: "Outra fala com o paciente", text: "Confirmações, tarefas e documentos se espalham por canais diferentes." },
 ];
 
 const diffRows = [
   { title: "Atendimento", old: "Registro manual e histórico disperso.", neo: "Prontuário vivo com evolução, contexto e resumos." },
   { title: "Paciente", old: "Acompanhamento para na sessão.", neo: "Portal com diário, rastreio de humor e continuidade." },
-  { title: "Teleconsulta", old: "Vídeo sem documentação estruturada.", neo: "Sala HD com transcrição e resumo por IA." },
+  { title: "Teleconsulta", old: "Vídeo e registro ficam separados.", neo: "Agenda, paciente, consentimento e material revisável seguem no mesmo caminho." },
   { title: "Financeiro", old: "Pix, boleto e planilha separados.", neo: "Gestão Financeira e NeuroFinance com papéis claros." },
   { title: "Fiscal", old: "NFS-e e recibos fora do fluxo.", neo: "Dados fiscais organizados perto da cobrança." },
-  { title: "IA", old: "Chat genérico, sem contexto.", neo: "Synapse com texto, voz, NeuroBox e política de risco." },
+  { title: "IA", old: "Chat genérico, sem contexto.", neo: "Synapse consulta informações autorizadas, prepara e pede confirmação." },
 ];
 
 const operatingCards = [
@@ -91,10 +90,10 @@ const operatingCards = [
 ];
 
 const faqs = [
-  { q: "O NeuroNex substitui meu sistema atual?", a: "A proposta é centralizar a rotina clínica. Agenda, pacientes, prontuário, teleconsulta, portal, financeiro e IA passam a conversar no mesmo fluxo." },
+  { q: "O NeuroNex substitui meu sistema atual?", a: "A proposta é conectar agenda, pacientes, prontuário, teleconsulta, portal, financeiro e IA. Antes de trocar, compare recursos, dados e o processo de migração necessário." },
   { q: "O Synapse toma decisões clínicas?", a: "Não. O Synapse apoia documentação, organização e operação. A decisão clínica continua sempre com o psicólogo." },
   { q: "Qual a diferença entre Gestão Financeira e NeuroFinance?", a: "A Gestão Financeira organiza receitas, despesas, previsão e planejamento. O NeuroFinance movimenta dinheiro real por meio de conta, Pix, boletos, pagamentos e saques." },
-  { q: "O Profissional tem teste grátis?", a: "Sim. A condição de pré-lançamento prevê 7 dias grátis e benefícios Founder." },
+  { q: "Quais são os planos?", a: "O Essential é gratuito. O Profissional custa R$ 229,90 por mês e amplia limites e recursos clínicos, financeiros e de IA." },
 ];
 
 const HeroMobile = () => (
@@ -105,42 +104,24 @@ const HeroMobile = () => (
     </div>
 
     <div className="relative z-10 mx-auto flex max-w-sm flex-col items-center">
-      <FadeIn><MobileBadge>Sistema operacional para psicólogos</MobileBadge></FadeIn>
-      <FadeIn delay={0.1}>
-        <h1 className="mt-7 text-[3.65rem] font-black leading-[0.86] tracking-[-0.075em] text-foreground">Sua clínica inteira, organizada por IA.</h1>
-      </FadeIn>
-      <FadeIn delay={0.2}>
-        <p className="mt-6 max-w-[21rem] text-base font-medium leading-relaxed text-muted-foreground/72">Prontuário, agenda, teleconsulta, financeiro, preparação fiscal, portal do paciente e Synapse em uma única experiência.</p>
-      </FadeIn>
-      <FadeIn delay={0.3} className="mt-9 w-full">
-        <div className="grid gap-3">
-          <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.22em] text-background shadow-premium active:scale-[0.98]">
-            <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => document.getElementById("waitlist")?.scrollIntoView({ behavior: "smooth" })}
-            className="h-14 w-full rounded-2xl border border-border/35 bg-foreground/[0.035] text-[10px] font-black uppercase tracking-[0.22em] text-foreground/75 active:scale-[0.98] dark:border-white/10 dark:bg-white/[0.045]"
-          >
-            Ver planos
-          </Button>
-        </div>
-      </FadeIn>
+      <MobileBadge>Sistema operacional para psicólogos</MobileBadge>
+      <h1 className="mt-7 text-[3.55rem] font-black leading-[0.88] tracking-[-0.07em] text-foreground">Seu consultório inteiro, trabalhando junto.</h1>
+      <p className="mt-6 max-w-[21rem] text-base font-medium leading-relaxed text-muted-foreground/75">Agenda, prontuário, pacientes, atendimento, cobranças e inteligência artificial conectados em uma única operação.</p>
+      <div className="mt-9 grid w-full gap-3">
+        <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[11px] font-bold text-background shadow-premium">
+          <Link to="/create-account">Começar grátis <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" /></Link>
+        </Button>
+        <Button asChild variant="outline" className="h-14 w-full rounded-2xl border-border/35 bg-foreground/[0.035] text-[11px] font-bold text-foreground dark:border-white/10 dark:bg-white/[0.045]">
+          <a href="#como-funciona">Ver como funciona</a>
+        </Button>
+      </div>
     </div>
-
-    <FadeIn delay={0.55}>
-      <motion.div animate={{ y: [0, 7, 0] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} className="relative z-10 mt-12 flex flex-col items-center gap-2 text-foreground/28">
-        <span className="text-[8px] font-black uppercase tracking-[0.38em]">Deslize</span>
-        <ChevronDown className="h-4 w-4" />
-      </motion.div>
-    </FadeIn>
   </section>
 );
 
 const ProblemMobile = () => (
-  <section id="problem" className="relative overflow-hidden bg-background px-5 py-16">
-    <MobileSectionHeader eyebrow="O problema real" title={<>O que consome tempo é o operacional.</>} description="A clínica cresce, mas as ferramentas ficam espalhadas. O NeuroNex conecta tudo em um único fluxo." />
+  <section id="como-funciona" className="relative scroll-mt-24 overflow-hidden bg-background px-5 py-16">
+    <MobileSectionHeader eyebrow="O problema real" title={<>Você cuida da clínica e ainda opera várias ferramentas.</>} description="Uma agenda. Outra registra. Outra atende. Outra cobra. A NeuroNex conecta essas etapas para você não precisar fazer as pontes sozinho." />
     <div className="mt-10 grid gap-3">
       {painPoints.map((item, index) => (
         <FadeIn key={item.title} delay={index * 0.04}>
@@ -158,7 +139,7 @@ const ProblemMobile = () => (
 
 const DifferentiatorMobile = () => (
   <section id="diferenciais" className="relative overflow-hidden bg-background px-5 py-16">
-    <MobileSectionHeader eyebrow="O diferencial" title={<>Do jeito comum ao jeito NeuroNex.</>} description="A mesma rotina, mas sem fragmentação, retrabalho e decisões sem dados." />
+    <MobileSectionHeader eyebrow="O diferencial" title={<>Quando uma etapa continua a outra.</>} description="Veja como a rotina muda quando as informações deixam de ficar separadas." />
     <div className="mt-10 space-y-4">
       {diffRows.map((row, index) => (
         <FadeIn key={row.title} delay={index * 0.04}>
@@ -179,7 +160,7 @@ const OperatingSystemMobile = () => (
   <section id="sistema" className="relative overflow-hidden bg-foreground px-5 py-16 text-background dark:bg-white dark:text-zinc-950">
     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_38%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.06),transparent_38%,rgba(0,0,0,0.02))]" />
     <div className="relative z-10">
-      <MobileSectionHeader eyebrow="Sistema operacional" title={<>Um único sistema para a clínica inteira.</>} description="Não é só agenda, prontuário ou financeiro. É uma camada operacional conectada." inverted />
+      <MobileSectionHeader eyebrow="Sistema operacional" title={<>As partes do consultório trabalham juntas.</>} description="Em vez de reunir ferramentas soltas, a NeuroNex conecta a rotina clínica e administrativa." inverted />
       <div className="mt-10 grid gap-3">
         {operatingCards.map((card, index) => (
           <FadeIn key={card.title} delay={index * 0.04}>
@@ -275,7 +256,7 @@ const NativeExperienceMobile = () => (
 
 const FinalCTAMobile = () => (
   <section id="cta-final" className="relative overflow-hidden bg-background px-5 py-16">
-    <div className="overflow-hidden rounded-[40px] bg-foreground p-8 text-center text-background shadow-premium dark:bg-white dark:text-zinc-950"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div><h2 className="mt-8 text-[2.65rem] font-black leading-[0.86] tracking-[-0.07em]">A próxima versão da sua clínica começa aqui.</h2><p className="mt-6 text-sm font-medium leading-relaxed opacity-62">Entre agora, garanta benefícios Founder e evolua sua operação com IA, financeiro e gestão em um único lugar.</p><div className="mt-8 grid gap-3"><Button asChild className="h-14 rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white"><Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950"><Link to="/help">Falar com suporte</Link></Button></div></div>
+    <div className="overflow-hidden rounded-[40px] bg-foreground p-8 text-center text-background shadow-premium dark:bg-white dark:text-zinc-950"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div><h2 className="mt-8 text-[2.65rem] font-black leading-[0.86] tracking-[-0.07em]">Comece com uma operação que trabalha junto.</h2><p className="mt-6 text-sm font-medium leading-relaxed opacity-62">Use o plano Essential gratuitamente ou compare a NeuroNex com o sistema que você usa hoje.</p><div className="mt-8 grid gap-3"><Button asChild className="h-14 rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.22em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white"><Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link></Button><Button asChild variant="outline" className="h-14 rounded-2xl border-background/20 bg-background/5 text-[10px] font-black uppercase tracking-[0.22em] text-background hover:bg-background/10 dark:border-zinc-950/20 dark:text-zinc-950"><Link to="/comparar">Comparar sistemas</Link></Button></div></div>
   </section>
 );
 

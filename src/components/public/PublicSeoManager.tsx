@@ -48,6 +48,7 @@ export function PublicSeoManager() {
     document.documentElement.lang = "pt-BR";
     document.title = config.title;
 
+    upsertMeta('meta[name="title"]', { name: "title" }, config.title);
     upsertMeta('meta[name="description"]', { name: "description" }, config.description);
     upsertMeta('meta[name="keywords"]', { name: "keywords" }, config.keywords.join(", "));
     upsertMeta(

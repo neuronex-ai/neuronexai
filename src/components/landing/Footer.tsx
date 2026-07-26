@@ -1,11 +1,14 @@
-import { Link, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
 import { Mail, MapPin, Phone, ArrowUpRight } from "lucide-react";
 import { Logo } from "@/components/ui/Logo";
+import { PUBLIC_CONTENT } from "@/content/public-content";
 
 export const Footer = () => {
-  const navigate = useNavigate();
   const currentYear = new Date().getFullYear();
+  const { organization } = PUBLIC_CONTENT.site;
+  const phoneDigits = organization.telephone.replace(/\D/gu, "");
+  const phoneLabel = `+${phoneDigits.slice(0, 2)} (${phoneDigits.slice(2, 4)}) ${phoneDigits.slice(4, 9)}-${phoneDigits.slice(9)}`;
+  const addressLabel = `${organization.address.streetAddress}, ${organization.address.addressLocality} - ${organization.address.addressRegion}`;
 
   const footerLinks = {
     produto: [
@@ -25,6 +28,7 @@ export const Footer = () => {
     ],
     recursos: [
       { label: "Download", path: "/download" },
+      { label: "Comparar sistemas", path: "/comparar" },
       { label: "Segurança e ética", path: "/seguranca-e-etica" },
       { label: "NeuroX", path: "/blog" },
       { label: "Novidades", path: "/novidades" },
@@ -45,11 +49,11 @@ export const Footer = () => {
       <div className="container relative z-10">
         <div className="mb-24 grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-7 lg:gap-8">
           <div className="space-y-8 lg:col-span-2">
-            <motion.button type="button" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} className="flex items-center" onClick={() => navigate("/")}>
+            <Link to="/" className="flex min-h-11 items-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ir para a página inicial da NeuroNex">
               <Logo className="h-8 w-8" />
               <span className="ml-3 text-sm font-black uppercase tracking-[0.4em]">NeuroNex</span>
-            </motion.button>
-            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground/70">Sistema operacional para psicólogos: gestão clínica, inteligência contextual e financeiro conectado.</p>
+            </Link>
+            <p className="max-w-xs text-sm leading-relaxed text-muted-foreground/70">A NeuroNex conecta agenda, atendimento, prontuário, pacientes, cobranças e IA em uma única operação.</p>
           </div>
 
           {[{ title: "Produto", links: footerLinks.produto }, { title: "Operação", links: footerLinks.operacao }, { title: "Recursos", links: footerLinks.recursos }, { title: "Jurídico", links: footerLinks.legal }].map((section) => (
@@ -66,15 +70,15 @@ export const Footer = () => {
           <div className="space-y-6 lg:col-span-1">
             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-foreground/40">Contato</h4>
             <div className="space-y-4 text-sm text-muted-foreground">
-              <a href="mailto:contato@neuronexai.com.br" className="flex items-center gap-3 hover:text-foreground"><Mail size={14} /> contato@neuronexai.com.br</a>
-              <a href="tel:+5547988730611" className="flex items-center gap-3 hover:text-foreground"><Phone size={14} /> +55 (47) 98873-0611</a>
-              <div className="flex items-start gap-3 leading-relaxed"><MapPin size={14} className="mt-1 shrink-0" /><span>Thera Faria Lima, 215 - Pinheiros, São Paulo - SP</span></div>
+              <a href={`mailto:${organization.email}`} className="flex items-center gap-3 hover:text-foreground"><Mail size={14} /> {organization.email}</a>
+              <a href={`tel:${organization.telephone}`} className="flex items-center gap-3 hover:text-foreground"><Phone size={14} /> {phoneLabel}</a>
+              <div className="flex items-start gap-3 leading-relaxed"><MapPin size={14} className="mt-1 shrink-0" /><span>{addressLabel}</span></div>
             </div>
           </div>
         </div>
 
         <div className="flex flex-col items-center justify-between gap-6 border-t border-border/50 pt-12 md:flex-row">
-          <p className="text-[11px] font-medium tracking-wider text-muted-foreground/50">{currentYear} © NEURONEX AI LTDA. TODOS OS DIREITOS RESERVADOS.</p>
+          <p className="text-[11px] font-medium tracking-wider text-muted-foreground/50">{currentYear} © {organization.legalName}. TODOS OS DIREITOS RESERVADOS.</p>
           <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground/45">Brasil</span>
         </div>
       </div>
