@@ -28,7 +28,7 @@ const Contact = () => (
       <section className="public-neurox-hero mx-auto max-w-[1320px] px-8 py-16 text-center md:px-14 md:py-20">
         <div className="mx-auto max-w-4xl">
         <div className="inline-flex items-center gap-2 rounded-full border border-border/45 px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground"><MessageSquare className="h-4 w-4" />Contato NeuroNex</div>
-        <h1 className="public-neurox-title mt-8 text-[clamp(3.4rem,7vw,7.2rem)] font-black leading-[0.88] tracking-normal">Fale com a equipe sobre <span className="text-muted-foreground/35">o que você precisa.</span></h1>
+        <h1 className="public-neurox-title mt-8 text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight">Fale com a equipe sobre <span className="text-muted-foreground">o que você precisa.</span></h1>
         <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">Escolha o assunto e envie um e-mail pelo canal oficial da NeuroNex.</p>
         </div>
       </section>

@@ -16,6 +16,11 @@ import { Link, Navigate, useParams } from "react-router-dom";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
+import {
+  PublicSynapseCommandSection,
+  PublicTimeGainSection,
+  PublicWorkflowComparisonSection,
+} from "@/components/public/PublicPositioningSections";
 import { Button } from "@/components/ui/button";
 import {
   type ComparisonDefinition,
@@ -383,7 +388,7 @@ export const ComparisonLanding = ({ slug }: { slug?: ComparisonSlug | string }) 
             <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
               Comparação para psicólogos
             </p>
-            <h1 className="mx-auto mt-7 max-w-[16ch] text-balance text-[clamp(3.4rem,8vw,7.2rem)] font-black leading-[0.9] tracking-tight">
+            <h1 className="mx-auto mt-7 max-w-[16ch] text-balance text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight">
               NeuroNex vs {comparison.competitor}
             </h1>
             <p className="mx-auto mt-8 max-w-3xl text-pretty text-lg font-semibold leading-relaxed text-muted-foreground/80 md:text-2xl">
@@ -418,6 +423,9 @@ export const ComparisonLanding = ({ slug }: { slug?: ComparisonSlug | string }) 
         <QuickSummary comparison={comparison} />
         <Perspective comparison={comparison} />
         <UseCaseComparison comparison={comparison} />
+        <WorkflowStorySection comparison={comparison} />
+        <TimeGainSection />
+        <PublicSynapseCommandSection variant="compact" />
         <ChoiceSection comparison={comparison} />
         <ComparisonFaq comparison={comparison} />
         <RelatedLinks comparison={comparison} />

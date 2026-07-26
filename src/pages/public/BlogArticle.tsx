@@ -55,7 +55,7 @@ const BlogArticle = () => {
                   </span>
                   <PublicStatusBadge status="Disponível" />
                 </div>
-                <h1 className="public-neurox-title mt-8 max-w-5xl text-balance text-[clamp(3rem,6vw,6.5rem)] font-black leading-[0.9] tracking-normal">
+                <h1 className="public-neurox-title mt-8 max-w-5xl text-balance text-[clamp(2.8rem,6vw,5.2rem)] font-black leading-[1.04] tracking-tight">
                   {article.title}
                 </h1>
                 <p className="mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/74 md:text-xl">

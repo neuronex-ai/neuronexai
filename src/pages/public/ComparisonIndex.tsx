@@ -49,14 +49,13 @@ const ComparisonIndex = () => {
             <p className="font-mono text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
               Escolha com contexto
             </p>
-            <h1 className="mx-auto mt-7 max-w-[14ch] text-balance text-[clamp(3.4rem,8vw,7.2rem)] font-black leading-[0.9] tracking-tight">
+            <h1 className="mx-auto mt-7 max-w-[14ch] text-balance text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight">
               Compare sistemas para psicólogos
             </h1>
             <p className="mx-auto mt-8 max-w-3xl text-pretty text-lg font-semibold leading-relaxed text-muted-foreground/80 md:text-2xl">
-              Agenda, prontuário, financeiro, WhatsApp e inteligência
-              artificial aparecem em diferentes plataformas. Aqui você
-              entende o foco de cada uma e escolhe a que combina melhor com
-              sua rotina.
+              Compare não só a lista de recursos, mas o trabalho que sobra
+              depois de usá-los. Aqui você entende o foco de cada proposta e
+              o que muda entre uma IA textual e uma operação conectada.
             </p>
             <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
               <Button

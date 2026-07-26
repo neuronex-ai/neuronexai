@@ -54,7 +54,7 @@ export const LandingEcosystemAuthoritySection = () => (
           <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
             Acessos separados, rotina conectada
           </p>
-          <h2 className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,6.7rem)] font-black leading-[0.84] tracking-normal">
+          <h2 className="public-neurox-title mt-7 text-balance text-[clamp(2.8rem,6vw,4.8rem)] font-black leading-[1.02] tracking-tight">
             Cada pessoa vê o que precisa.<br />A rotina continua conectada.
           </h2>
           <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
@@ -111,7 +111,7 @@ export const LandingContinuityAuthoritySection = () => {
             <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] opacity-45">
               Continuidade com limites claros
             </p>
-            <h2 className="mt-6 text-balance text-5xl font-black leading-none md:text-7xl">
+            <h2 className="mt-6 text-balance text-5xl font-black leading-[1.02] md:text-6xl">
               O prontuário fica com o profissional. O paciente recebe apenas o que foi compartilhado.
             </h2>
             <p className="mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-66 md:text-xl">
@@ -167,7 +167,7 @@ export const LandingContinuityAuthoritySection = () => {
 };
 
 export const LandingKnowledgeAuthoritySection = () => (
-  <section className="public-section-stage bg-background px-6 py-20 md:py-28">
+  <section className="public-section-stage public-solid-subtle px-6 py-20 md:py-28">
     <div className="mx-auto max-w-[1240px]">
       <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
         <FadeIn>
@@ -176,7 +176,7 @@ export const LandingKnowledgeAuthoritySection = () => (
             <p className="mt-8 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
               Conteúdo e transparência
             </p>
-            <h2 className="mt-5 text-balance text-5xl font-black leading-none md:text-7xl">
+            <h2 className="mt-5 text-balance text-5xl font-black leading-[1.02] md:text-6xl">
               Produto profundo exige explicação profunda.
             </h2>
           </div>

@@ -39,7 +39,7 @@ const HelpCenter = () => {
         <section className="public-neurox-hero mx-auto max-w-[1320px] px-8 py-16 text-center md:px-14 md:py-20">
           <div className="mx-auto max-w-4xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-border/45 px-4 py-2 text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground"><LifeBuoy className="h-4 w-4" />Central de Ajuda</div>
-          <h1 className="public-neurox-title mt-8 text-[clamp(3.4rem,7vw,7.2rem)] font-black leading-[0.88] tracking-normal">Encontre uma resposta e <span className="text-muted-foreground/35">continue seu trabalho.</span></h1>
+          <h1 className="public-neurox-title mt-8 text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight">Encontre uma resposta e <span className="text-muted-foreground">continue seu trabalho.</span></h1>
           <p className="mx-auto mt-6 max-w-2xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl">Pesquise orientações diretas sobre as principais áreas da NeuroNex.</p>
           <div className="relative mx-auto mt-9 max-w-2xl"><Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" aria-hidden="true" /><Input aria-label="Buscar na Central de Ajuda" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar assunto..." className="h-16 rounded-[22px] pl-14 text-base" /></div>
           </div>

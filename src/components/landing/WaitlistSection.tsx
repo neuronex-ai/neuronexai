@@ -17,7 +17,7 @@ const planIcons: Record<PublicPlanName, typeof Star> = {
 
 export const WaitlistSection = () => {
     return (
-        <section id="waitlist" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
+        <section id="waitlist" className="public-section-stage public-solid-subtle relative overflow-hidden px-6 py-20 md:py-28">
             <div className="relative z-10 mx-auto max-w-[1240px]">
                 <div className="mx-auto mb-12 max-w-5xl text-center md:mb-16">
                     <FadeIn delay={0.1}>
@@ -27,16 +27,16 @@ export const WaitlistSection = () => {
                     </FadeIn>
 
                     <FadeIn delay={0.2}>
-                        <h2 className="mx-auto max-w-5xl text-5xl font-bold leading-[0.9] tracking-[-0.055em] md:text-7xl lg:text-8xl">
+                        <h2 className="mx-auto max-w-5xl text-5xl font-bold leading-[1.02] tracking-tight md:text-6xl">
                             Escolha o plano <br />
-                            <span className="bg-gradient-to-b from-foreground via-foreground/90 to-foreground/30 bg-clip-text text-transparent">
+                            <span className="text-muted-foreground">
                                 ideal para a sua prática.
                             </span>
                         </h2>
                     </FadeIn>
 
                     <FadeIn delay={0.3}>
-                        <p className="mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/60 md:text-xl">
+                        <p className="mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground md:text-xl">
                             Comece gratuitamente ou avance para uma operação mais ampla com Synapse, NeuroBox, NeuroFinance e NeuroZap.
                         </p>
                     </FadeIn>
@@ -49,14 +49,12 @@ export const WaitlistSection = () => {
                             <FadeIn key={plan.name} delay={0.18 + index * 0.08}>
                                 <article
                                     className={cn(
-                                        "group relative flex h-full min-h-[560px] flex-col overflow-hidden rounded-[34px] border p-6 shadow-premium transition-all duration-500 hover:-translate-y-1 md:rounded-[42px] md:p-8",
+                                        "group relative flex h-full min-h-[560px] flex-col overflow-hidden rounded-[34px] border p-6 shadow-premium transition-colors duration-200 md:rounded-[42px] md:p-8",
                                         plan.featured
                                             ? "border-foreground/20 bg-foreground text-background shadow-[0_38px_120px_-72px_rgba(0,0,0,0.85)]"
                                             : "border-border/15 bg-card/70 backdrop-blur-xl hover:border-border/30 hover:bg-card"
                                     )}
                                 >
-                                    <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_24%_0%,rgba(255,255,255,0.14),transparent_34%),linear-gradient(180deg,rgba(255,255,255,0.055),transparent_32%)] opacity-70" />
-
                                     <div className="relative z-10 flex items-start justify-between gap-5">
                                         <Icon className={cn("h-7 w-7 transition-transform duration-500 group-hover:scale-105", plan.featured ? "text-background/76" : "text-muted-foreground")} strokeWidth={1.7} />
                                         <span className={cn(

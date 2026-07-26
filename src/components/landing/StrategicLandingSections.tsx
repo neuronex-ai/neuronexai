@@ -47,13 +47,13 @@ const SectionHeader = ({ eyebrow, title, description, align = "center" }: { eyeb
       <SectionBadge>{eyebrow}</SectionBadge>
     </FadeIn>
     <FadeIn delay={0.12}>
-      <h2 className="mt-8 text-4xl font-bold leading-[0.92] tracking-[-0.055em] text-foreground md:text-6xl lg:text-7xl">
+      <h2 className="mt-8 text-4xl font-bold leading-[1.02] tracking-tight text-foreground md:text-6xl">
         {title}
       </h2>
     </FadeIn>
     {description ? (
       <FadeIn delay={0.2}>
-        <p className={cn("mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/68 md:text-xl", align === "center" && "mx-auto")}>{description}</p>
+        <p className={cn("mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground md:text-xl", align === "center" && "mx-auto")}>{description}</p>
       </FadeIn>
     ) : null}
   </div>
@@ -65,27 +65,21 @@ const painPoints = [
   { icon: FileText, title: "Outra para registrar", text: "Notas e documentos exigem novas buscas, cópias e conferências." },
   { icon: WalletCards, title: "Outra para cobrar", text: "Cobranças e recebimentos perdem a ligação com o paciente e a sessão." },
   { icon: MessageCircle, title: "Outra para falar com o paciente", text: "Confirmações, tarefas e documentos se espalham por canais diferentes." },
-  { icon: BrainCircuit, title: "Outra para usar IA", text: "Sem contexto autorizado, a IA ajuda no texto, mas não entende a rotina do consultório." },
+  { icon: BrainCircuit, title: "Outra para usar IA", text: "Uma IA apenas textual responde ao prompt; depois, o trabalho de localizar, copiar, registrar e conferir continua com você." },
 ];
 
 export const LandingProblemSection = () => (
   <section id="como-funciona" className="public-section-stage relative scroll-mt-24 overflow-hidden bg-background px-6 py-20 md:py-28">
-    <div className="pointer-events-none absolute inset-0">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-      <div className="absolute left-[5%] top-[10%] h-[440px] w-[620px] rounded-full bg-foreground/[0.035] blur-[150px]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.02),transparent)] dark:bg-[linear-gradient(180deg,transparent,rgba(255,255,255,0.018),transparent)]" />
-    </div>
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <SectionHeader
         eyebrow="O problema real"
-        title={<>O psicólogo cuida da clínica <span className="text-muted-foreground/35">e ainda opera várias ferramentas.</span></>}
-        description="Uma ferramenta agenda. Outra registra. Outra atende. Outra cobra. Quando as informações ficam separadas, o psicólogo precisa fazer as pontes sozinho."
+        title={<>Se o sistema consome mais energia do que devolve, <span className="text-muted-foreground">o fluxo falhou.</span></>}
+        description="Mais funções não deveriam criar mais software para administrar. Quando cada área exige estudo, prompts detalhados e cópia e cola, o psicólogo vira a integração entre as ferramentas."
       />
       <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {painPoints.map((item, index) => (
           <FadeIn key={item.title} delay={index * 0.05}>
-            <article className="group relative h-full overflow-hidden rounded-[30px] border border-border/40 bg-card/58 p-6 transition-all duration-500 hover:-translate-y-1 hover:border-foreground/18 hover:bg-card dark:border-white/8 dark:bg-white/[0.032]">
-              <div className="absolute inset-0 bg-gradient-to-br from-foreground/[0.055] to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+            <article className="group relative h-full overflow-hidden rounded-[30px] border border-border bg-card p-6 transition-colors duration-200 hover:border-foreground/25">
               <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-2xl border border-border/40 bg-foreground/[0.045] text-foreground dark:border-white/10 dark:bg-white/[0.055]">
                 <item.icon className="h-5 w-5" />
               </div>
@@ -132,9 +126,9 @@ const comparisonRows = [
   },
   {
     title: "Usar inteligência artificial",
-    old: "IA genérica, sem memória operacional e sem conexão com a rotina do consultório.",
-    neo: "Synapse com texto, voz, NeuroBox, política de risco e contexto real da clínica.",
-    bold: "IA operacional",
+    old: "Uma resposta textual isolada ainda exige localizar a tela, copiar o resultado e concluir cada ação manualmente.",
+    neo: "O Synapse consulta contexto autorizado e prepara o próximo passo, deixando revisão, confirmação e resultado visíveis.",
+    bold: "IA operacional governada",
   },
 ];
 
@@ -143,7 +137,7 @@ export const LandingDifferentiatorTable = () => (
     <div className="relative z-10 mx-auto max-w-[1280px]">
       <SectionHeader
         eyebrow="O diferencial"
-        title={<>Na NeuroNex, cada etapa <span className="text-muted-foreground/35">continua a anterior.</span></>}
+        title={<>Na NeuroNex, cada etapa <span className="text-muted-foreground">continua a anterior.</span></>}
         description="O paciente agenda, a sessão acontece, o registro é revisado e a cobrança continua ligada ao atendimento."
       />
 
@@ -152,10 +146,10 @@ export const LandingDifferentiatorTable = () => (
           <div className="grid grid-cols-[0.88fr_1fr_1.05fr] border-b border-border/50 dark:border-white/10">
             <div className="bg-foreground/[0.045] p-7 dark:bg-white/[0.025]" />
             <div className="bg-foreground/[0.055] p-7 text-center dark:bg-white/[0.04]">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-muted-foreground">O jeito comum</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em] text-muted-foreground">Fluxo fragmentado</p>
             </div>
             <div className="bg-foreground p-7 text-center text-background dark:bg-white dark:text-zinc-950">
-              <p className="text-[11px] font-black uppercase tracking-[0.24em]">O jeito NeuroNex</p>
+              <p className="text-[11px] font-black uppercase tracking-[0.16em]">Operação NeuroNex</p>
             </div>
           </div>
           {comparisonRows.map((row, index) => (
@@ -240,7 +234,6 @@ const ProductMock = ({ active }: { active: typeof productModules[number] }) => {
 
   return (
     <div className="relative min-h-[460px] overflow-hidden rounded-[38px] border border-border/40 bg-card/80 p-5 shadow-[0_40px_120px_-72px_rgba(0,0,0,0.7)] dark:border-white/10 dark:bg-[#0a0a0c]">
-      <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.07),transparent_34%,rgba(255,255,255,0.025))] dark:bg-[linear-gradient(135deg,rgba(255,255,255,0.05),transparent_34%,rgba(255,255,255,0.015))]" />
       <div className="relative z-10 flex items-center justify-between rounded-[24px] border border-border/40 bg-background/80 px-5 py-4 dark:border-white/10 dark:bg-white/[0.04]">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-foreground text-background"><active.icon className="h-5 w-5" /></div>
@@ -316,7 +309,7 @@ export const LandingProductShowcase = () => {
       <div className="relative z-10 mx-auto max-w-[1280px]">
         <SectionHeader
           eyebrow="Por dentro do NeuroNex"
-          title={<>Um produto real para operar <span className="text-muted-foreground/35">a clínica inteira.</span></>}
+          title={<>Um produto real para operar <span className="text-muted-foreground">a clínica inteira.</span></>}
           description="A próxima versão desta seção receberá os prints reais do sistema. A estrutura já está preparada para alternar entre as principais abas do NeuroNex."
         />
         <div className="mt-12 grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -349,18 +342,19 @@ const systemCards = [
   { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente disponível e conexão do NeuroZap em validação." },
   { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
   { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
-  { icon: BarChart3, title: "Relatórios", text: "Visão clínica, financeira e operacional em uma camada de decisão." },
+  { icon: BarChart3, title: "Interface visual intuitiva", text: "Hierarquia clara, cores com função e menos carga mental para encontrar o próximo passo." },
 ];
 
 export const LandingOperatingSystemSection = () => (
   <section id="sistema" className="public-section-stage public-inverted-section relative overflow-hidden px-6 py-20 text-background md:py-28 dark:text-zinc-950">
-    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_36%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.06),transparent_36%,rgba(0,0,0,0.02))]" />
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
         <div>
-          <SectionBadge icon={BadgeCheck}>Sistema operacional</SectionBadge>
-          <h2 className="mt-8 text-5xl font-bold leading-[0.9] tracking-[-0.06em] md:text-7xl">As partes do consultório trabalham juntas.</h2>
-          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-62 md:text-xl">É isso que significa sistema operacional: em vez de reunir ferramentas soltas, a NeuroNex conecta a rotina clínica e administrativa.</p>
+          <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-background/20 px-4 py-1.5 text-xs font-black dark:border-zinc-950/20">
+            <BadgeCheck className="h-4 w-4" /> Sistema operacional
+          </span>
+          <h2 className="mt-8 text-5xl font-bold leading-[1.02] tracking-tight md:text-6xl">As partes do consultório trabalham juntas.</h2>
+          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-75 md:text-xl">Como o Windows conecta programas, arquivos e serviços em um mesmo ambiente, a NeuroNex conecta a rotina clínica e administrativa. Não é apenas mais um aplicativo de agenda ou prontuário.</p>
         </div>
         <div className="grid gap-3 md:grid-cols-2">
           {systemCards.map((card) => (
@@ -390,7 +384,7 @@ export const LandingSynapseSection = () => (
         <SectionHeader
           align="left"
           eyebrow="Synapse AI"
-          title={<>A IA prepara. <span className="text-muted-foreground/35">Você revisa e decide.</span></>}
+          title={<>A IA prepara. <span className="text-muted-foreground">Você revisa e decide.</span></>}
           description="O Synapse apoia documentação, organização, comunicação e tomada de decisão operacional. A atuação clínica continua sempre sob responsabilidade do profissional."
         />
         <FadeIn delay={0.2}>
@@ -475,7 +469,7 @@ export const LandingNeuroZapSection = ({ inverted = false }: { inverted?: boolea
           </div>
           <h2
             className={cn(
-              "mt-8 text-5xl font-black leading-[0.9] md:text-7xl",
+              "mt-8 text-5xl font-black leading-[1.02] md:text-6xl",
               !inverted && "text-foreground",
             )}
           >
@@ -599,7 +593,7 @@ export const LandingFinanceFiscalSection = () => (
 export const LandingPlanComparisonSection = () => (
   <section id="comparativo" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px]">
-      <SectionHeader eyebrow="Comparativo" title={<>Veja o que muda <span className="text-muted-foreground/35">em cada plano.</span></>} description="O Essential organiza o começo da prática. O Profissional amplia escala, contexto, automação e operação financeira." />
+      <SectionHeader eyebrow="Comparativo" title={<>Veja o que muda <span className="text-muted-foreground">em cada plano.</span></>} description="O Essential organiza o começo da prática. O Profissional amplia escala, contexto, automação e operação financeira." />
       <FadeIn delay={0.2}>
         <div className="mt-14 overflow-x-auto rounded-[34px] border border-border/45 bg-card shadow-premium dark:border-white/10 dark:bg-[#0b0b0d]">
           <div className="grid min-w-[760px] grid-cols-[1.25fr_repeat(2,0.9fr)] border-b border-border/45 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground dark:border-white/10">
@@ -659,7 +653,7 @@ export const LandingPublicPagesCarouselSection = () => (
         <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
           Páginas públicas
         </p>
-        <h2 className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,6.7rem)] font-black leading-[0.84] tracking-normal">
+        <h2 className="public-neurox-title mt-7 text-balance text-[clamp(2.8rem,6vw,4.8rem)] font-black leading-[1.02] tracking-tight">
           Uma vitrine viva.<br />Uma relação que começa antes da sessão.
         </h2>
         <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
@@ -701,8 +695,6 @@ const faqs = [
 ];
 
 export const LandingTrustAndFAQSection = () => {
-  const [open, setOpen] = useState(0);
-
   return (
     <section id="seguranca" className="public-sensitive-section public-section-stage relative overflow-hidden px-6 py-20 md:py-28">
       <div className="relative z-10 mx-auto grid max-w-[1240px] gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-start">
@@ -720,29 +712,16 @@ export const LandingTrustAndFAQSection = () => {
         </FadeIn>
         <FadeIn delay={0.1}>
           <div className="public-sensitive-card rounded-[42px] border p-5 md:p-6">
-            {faqs.map((faq, index) => (
-              <div key={faq.q} className="public-sensitive-faq-row border-b last:border-b-0">
-                <button
-                  id={`landing-faq-trigger-${index}`}
-                  type="button"
-                  aria-expanded={open === index}
-                  aria-controls={`landing-faq-panel-${index}`}
-                  onClick={() => setOpen(open === index ? -1 : index)}
-                  className="block w-full px-3 py-5 text-left"
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <h3 className="text-base font-black tracking-[-0.025em] text-foreground">{faq.q}</h3>
-                    <ChevronDown aria-hidden="true" className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", open === index && "rotate-180")} />
-                  </div>
-                </button>
-                <AnimatePresence initial={false}>
-                  {open === index && (
-                    <motion.p id={`landing-faq-panel-${index}`} role="region" aria-labelledby={`landing-faq-trigger-${index}`} initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.25 }} className="overflow-hidden px-3 pb-5 text-sm font-medium leading-relaxed text-muted-foreground/70">
-                      {faq.a}
-                    </motion.p>
-                  )}
-                </AnimatePresence>
-              </div>
+            {faqs.map((faq) => (
+              <details key={faq.q} className="public-sensitive-faq-row group border-b last:border-b-0">
+                <summary className="public-tactile flex min-h-16 cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-3 py-5 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                  <span className="text-base font-black text-foreground">{faq.q}</span>
+                  <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+                </summary>
+                <p className="px-3 pb-5 text-sm font-medium leading-relaxed text-muted-foreground">
+                  {faq.a}
+                </p>
+              </details>
             ))}
           </div>
         </FadeIn>
@@ -754,11 +733,10 @@ export const LandingTrustAndFAQSection = () => {
 export const LandingFinalCTASection = () => (
   <section id="cta-final" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
     <div className="relative z-10 mx-auto max-w-[1240px] overflow-hidden rounded-[52px] border border-border/45 bg-foreground p-10 text-center text-background shadow-[0_40px_150px_-82px_rgba(0,0,0,0.9)] dark:bg-white dark:text-zinc-950 md:p-20">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_42%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.055),transparent_42%,rgba(0,0,0,0.02))]" />
       <div className="relative z-10 mx-auto max-w-4xl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div>
-        <h2 className="mt-9 text-5xl font-black leading-[0.88] tracking-[-0.065em] md:text-7xl">A próxima versão da sua clínica começa aqui.</h2>
-        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-62 md:text-xl">Entre agora, garanta benefícios Founder e evolua sua operação clínica com IA, financeiro e gestão em um único lugar.</p>
+        <h2 className="mt-9 text-5xl font-black leading-[1.02] tracking-tight md:text-6xl">Usar a NeuroNex pode ser perigosamente viciante.</h2>
+        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-75 md:text-xl">Não porque prende você à tela. Porque, depois de agenda, prontuário, financeiro e IA trabalharem no mesmo fluxo, voltar ao copia e cola parece trabalho desnecessário.</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button asChild className="public-tactile h-14 rounded-full bg-background px-8 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>

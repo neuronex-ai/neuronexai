@@ -5,9 +5,6 @@ import { cn } from "@/lib/utils";
 import {
   motion,
   AnimatePresence,
-  useMotionValue,
-  useSpring,
-  useTransform,
 } from "framer-motion";
 import {
   Activity,
@@ -42,7 +39,7 @@ import {
   RotateCcw,
   UserPlus,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { VoiceSpiral } from "@/components/ai-chat/VoiceSpiral";
 import { Logo } from "@/components/ui/Logo";
 
@@ -54,13 +51,7 @@ const FloatingWidget = ({
   x,
   y,
   delay,
-  depth = 1,
-  mouseX,
-  mouseY,
 }: any) => {
-  const moveX = useTransform(mouseX, [0, 1000], [depth * 10, depth * -10]);
-  const moveY = useTransform(mouseY, [0, 650], [depth * 10, depth * -10]);
-
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.8, y: 20 }}
@@ -72,9 +63,9 @@ const FloatingWidget = ({
         stiffness: 50,
         damping: 20,
       }}
-      style={{ top: y, left: x, x: moveX, y: moveY }}
+      style={{ top: y, left: x }}
       className={cn(
-        "absolute z-30 bg-white/95 dark:bg-[#121214]/95 border border-zinc-200 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)] dark:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] backdrop-blur-xl p-4 flex flex-col gap-3",
+        "absolute z-30 hidden flex-col gap-3 rounded-2xl border border-zinc-200 bg-white/95 p-4 shadow-[0_20px_50px_-10px_rgba(0,0,0,0.1)] backdrop-blur-xl dark:border-white/10 dark:bg-[#121214]/95 dark:shadow-[0_20px_50px_-10px_rgba(0,0,0,0.8)] xl:flex",
         "hover:border-zinc-300 dark:hover:border-white/20 transition-colors duration-300 group/widget font-sans",
         className,
       )}
@@ -773,7 +764,6 @@ const SynapseAIScreen = () => (
 // --- MAIN COMPONENT ---
 
 export const HeroVisual = () => {
-  const containerRef = useRef<HTMLDivElement>(null);
   const [currentScreen, setCurrentScreen] = useState(0);
 
   const screens = [
@@ -796,36 +786,15 @@ export const HeroVisual = () => {
     { icon: Sparkles, label: "Synapse AI", id: 6 },
   ];
 
-  const mouseX = useMotionValue(500);
-  const mouseY = useMotionValue(325);
-  const smoothMouseX = useSpring(mouseX, { stiffness: 100, damping: 30 });
-  const smoothMouseY = useSpring(mouseY, { stiffness: 100, damping: 30 });
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    mouseX.set(e.clientX - rect.left);
-    mouseY.set(e.clientY - rect.top);
-  };
-
-  // Ajuste do intervalo: a aba final do Synapse dura 2x (16s)
-  useEffect(() => {
-    const duration = currentScreen === screens.length - 1 ? 16000 : 8000;
-    const interval = setInterval(() => {
-      setCurrentScreen((prev) => (prev + 1) % screens.length);
-    }, duration);
-    return () => clearInterval(interval);
-  }, [currentScreen, screens.length]);
-
   // Comentários contextuais do Synapse baseados na tela atual
   const synapseInsights = [
     {
-      text: "Notei que 3 novos pacientes ainda não foram triados. Quer que eu agende?",
-      action: "Agendar Triagens",
+      text: "Notei que 3 novos pacientes ainda não foram triados. Quer que eu prepare opções de horário?",
+      action: "Preparar Opções",
     },
     {
-      text: "Você tem um buraco na quarta às 15h. Ofereço pro Carlos que pediu encaixe?",
-      action: "Oferecer Horário",
+      text: "Você tem um horário livre na quarta às 15h. Preparo uma opção para o Carlos e deixo para sua confirmação?",
+      action: "Preparar Mensagem",
     },
     {
       text: "Mariana parece mais ansiosa hoje. Quer um sumário comparativo das notas?",
@@ -833,15 +802,15 @@ export const HeroVisual = () => {
     },
     {
       text: "O Rodrigo não aparece há 2 semanas. Preparo um lembrete gentil para revisão?",
-      action: "Enviar Lembrete",
+      action: "Preparar Lembrete",
     },
     {
       text: "Ficou clara a relação da Mariana com o trabalho no grafo. Quer ver o mapa?",
       action: "Ver Mapa Mental",
     },
     {
-      text: "Saldo de R$ 18k liberado. Programo o repasse automático pros parceiros?",
-      action: "Programar Repasses",
+      text: "Há recebíveis disponíveis para consulta. Quer revisar o resumo e as divergências antes de decidir?",
+      action: "Revisar Recebíveis",
     },
     {
       text: "Tô monitorando tudo. Quer que eu faça o briefing pros atendimentos de amanhã?",
@@ -850,11 +819,9 @@ export const HeroVisual = () => {
   ];
 
   return (
-    <div className="w-full h-[700px] relative flex items-center justify-center z-10 overflow-visible mt-8 select-none perspective-[2000px] font-sans">
-      <div className="relative w-[1100px] h-full flex items-center justify-center">
+    <div className="relative z-10 mt-8 flex min-h-[520px] w-full select-none items-center justify-center overflow-visible px-4 font-sans xl:h-[700px] xl:px-0">
+      <div className="relative flex aspect-[16/10] h-auto w-full max-w-[1100px] items-center justify-center xl:h-full">
         <motion.div
-          ref={containerRef}
-          onMouseMove={handleMouseMove}
           initial={{ rotateX: 2, y: 20, opacity: 0 }}
           animate={{ rotateX: 0, y: 0, opacity: 1 }}
           transition={{ duration: 1.2, type: "spring", stiffness: 30 }}
@@ -876,9 +843,12 @@ export const HeroVisual = () => {
                 return (
                   <button
                     key={i}
+                    type="button"
+                    aria-label={item.label}
+                    aria-pressed={isActive}
                     onClick={() => setCurrentScreen(item.id)}
                     className={cn(
-                      "flex items-center gap-2 px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all duration-500",
+                      "flex h-11 min-w-11 items-center justify-center gap-2 rounded-xl px-3 text-[11px] font-bold uppercase tracking-wider transition-colors duration-200 motion-reduce:transition-none",
                       isActive
                         ? "bg-white dark:bg-white/[0.1] text-zinc-900 dark:text-white shadow-sm border border-zinc-200 dark:border-white/10"
                         : "text-zinc-400 dark:text-white/30 hover:text-zinc-600 dark:hover:text-white/60",
@@ -949,9 +919,6 @@ export const HeroVisual = () => {
           x="82%"
           y="15%"
           delay={0.5}
-          depth={3}
-          mouseX={smoothMouseX}
-          mouseY={smoothMouseY}
           className="w-[280px]"
         >
           <div className="flex items-center justify-between mb-4">
@@ -982,9 +949,6 @@ export const HeroVisual = () => {
           x="85%"
           y="65%"
           delay={0.8}
-          depth={4}
-          mouseX={smoothMouseX}
-          mouseY={smoothMouseY}
           className="w-[340px] p-6"
         >
           <div className="flex items-center gap-3 mb-4">
@@ -1039,9 +1003,6 @@ export const HeroVisual = () => {
           x="-80px"
           y="40%"
           delay={1.1}
-          depth={2}
-          mouseX={smoothMouseX}
-          mouseY={smoothMouseY}
           className="w-[280px]"
         >
           <div className="flex items-center gap-4">

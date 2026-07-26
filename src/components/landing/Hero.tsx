@@ -9,13 +9,6 @@ import { HeroVisual } from "@/components/landing/HeroVisual";
 export const Hero = () => {
     return (
         <section className="relative w-full flex flex-col items-center justify-start z-10 min-h-screen overflow-hidden bg-background">
-            {/* --- IMMERSIVE BACKGROUND LAYER --- */}
-            <div className="absolute inset-0 z-0 overflow-hidden">
-                <div className="absolute inset-0 z-[2] bg-[radial-gradient(circle_at_50%_40%,hsl(var(--primary)/0.12)_0%,transparent_70%)]" />
-                <div className="absolute inset-0 z-[3] bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.05)_100%)] dark:bg-[radial-gradient(circle_at_center,transparent_0%,rgba(0,0,0,0.4)_100%)]" />
-                <div className="absolute inset-x-0 bottom-0 h-64 bg-gradient-to-t from-background via-background/80 to-transparent pointer-events-none z-[4]" />
-            </div>
-
             {/* --- MAIN CONTENT LAYER --- */}
             <div className="relative z-10 text-center flex flex-col items-center w-full max-w-6xl mx-auto pt-[16vh] md:pt-[20vh] lg:pt-[23vh] px-4">
                 <div className="mb-8 inline-flex min-h-8 items-center gap-2 rounded-full border border-border/35 bg-foreground/[0.03] px-5 py-1.5 backdrop-blur-sm">
@@ -23,13 +16,13 @@ export const Hero = () => {
                 </div>
 
                 <div className="mb-4 md:mb-6 pb-2">
-                    <h1 className="text-balance text-[2.6rem] sm:text-[3.2rem] md:text-[4rem] lg:text-[5.8rem] xl:text-[6.2rem] font-bold tracking-tight text-foreground leading-[0.9] md:leading-[0.95] select-none text-center">
-                        Seu consultório inteiro, trabalhando junto.
+                    <h1 className="text-balance text-[2.6rem] font-bold leading-[1.02] tracking-tight text-foreground sm:text-[3.2rem] md:text-[4rem] lg:text-[5rem]">
+                        O sistema operacional do seu consultório.
                     </h1>
                 </div>
 
-                <p className="mb-8 max-w-4xl px-2 text-base font-medium leading-relaxed tracking-tight text-muted-foreground/75 md:mb-10 md:text-xl md:leading-[1.5] lg:mb-12 lg:text-2xl">
-                    Agenda, prontuário, pacientes, atendimento, cobranças e inteligência artificial conectados em uma única operação.
+                <p className="mb-8 max-w-4xl px-2 text-base font-medium leading-relaxed text-muted-foreground md:mb-10 md:text-xl md:leading-[1.5] lg:mb-12 lg:text-2xl">
+                    Agenda, prontuário, pacientes, atendimento e financeiro compartilham contexto. O Synapse consulta, organiza e prepara o próximo passo; você confirma o que muda.
                 </p>
 
                 <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
@@ -48,6 +41,9 @@ export const Hero = () => {
                         <a href="#como-funciona">Ver como funciona</a>
                     </Button>
                 </div>
+                <p className="mt-6 max-w-2xl text-sm font-semibold leading-relaxed text-muted-foreground">
+                    Interface limpa, cores com função e menos energia mental gasta navegando por ferramentas separadas.
+                </p>
             </div>
 
             {/* --- 3D HERO VISUAL LAYER --- */}

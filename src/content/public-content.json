@@ -58,8 +58,8 @@
         "gestão de consultório de psicologia"
       ],
       "eyebrow": "Sistema operacional para psicólogos",
-      "heading": "Seu consultório inteiro, trabalhando junto.",
-      "lead": "Agenda, prontuário, pacientes, atendimento, cobranças e inteligência artificial conectados em uma única operação.",
+      "heading": "O sistema operacional do seu consultório.",
+      "lead": "Agenda, prontuário, pacientes, atendimento e financeiro compartilham contexto. O Synapse consulta, organiza e prepara o próximo passo; você confirma o que muda.",
       "highlights": [
         "A sessão continua ligada ao paciente e ao prontuário",
         "A cobrança continua ligada ao atendimento",
@@ -122,8 +122,8 @@
         "sistema operacional para clínica de psicologia"
       ],
       "eyebrow": "Operação completa",
-      "heading": "Todas as partes do consultório continuam conectadas.",
-      "lead": "A NeuroNex acompanha a rotina antes, durante e depois da sessão, sem misturar o acesso do psicólogo com o espaço do paciente.",
+      "heading": "Um sistema operacional, não mais um aplicativo para administrar.",
+      "lead": "A NeuroNex conecta a rotina antes, durante e depois da sessão. Cada área compartilha contexto sem misturar o acesso profissional com o espaço do paciente.",
       "highlights": [
         "Antes: agenda, confirmação e contexto autorizado",
         "Durante: atendimento, notas e revisão",
@@ -186,8 +186,8 @@
         "IA com confirmação humana"
       ],
       "eyebrow": "Inteligência artificial com controle",
-      "heading": "A IA prepara. Você decide.",
-      "lead": "Por texto ou voz, o Synapse consulta informações autorizadas, organiza o contexto e prepara o próximo passo. Mudanças importantes só acontecem depois da sua confirmação.",
+      "heading": "Converse com a operação. Você confirma o que muda.",
+      "lead": "Por texto ou voz, o Synapse consulta informações autorizadas, navega pela NeuroNex e prepara o próximo passo. Registros, comunicações e dinheiro continuam sujeitos às confirmações do fluxo.",
       "highlights": [
         "Trabalha somente com contexto autorizado",
         "Diferencia consulta, rascunho, ação pendente e execução",
@@ -506,7 +506,7 @@
         "acompanhamento longitudinal de pacientes"
       ],
       "eyebrow": "Pacientes e continuidade",
-      "heading": "Encontre o contexto do paciente sem reconstruir a história.",
+      "heading": "Encontre o contexto do paciente sem estudar mais um sistema.",
       "lead": "Cadastro, agenda, atendimento, prontuário, documentos e financeiro continuam ligados à mesma pessoa, com permissões claras em cada área.",
       "highlights": [
         "Cadastro ligado à agenda e ao atendimento",
@@ -627,7 +627,7 @@
         "prontuário integrado à teleconsulta"
       ],
       "eyebrow": "Atendimento online conectado",
-      "heading": "Atenda online sem perder o contexto antes ou depois da sessão.",
+      "heading": "Atenda online sem reconstruir o contexto depois da sessão.",
       "lead": "Essa é a Teleconsulta NeuroNex: agenda e paciente chegam ligados ao atendimento; notas e materiais autorizados só seguem para o prontuário depois da sua revisão.",
       "highlights": [
         "Agenda, sala e paciente no mesmo caminho",
@@ -690,7 +690,7 @@
         "documentos psicológicos em PDF"
       ],
       "eyebrow": "Prontuário para psicólogos",
-      "heading": "Registre cada atendimento sem perder a continuidade do caso.",
+      "heading": "Registre o atendimento sem transformar o prontuário em retrabalho.",
       "lead": "Esse é o Prontuário NeuroNex: histórico, sessões, anamneses, metas, arquivos e documentos ligados ao paciente, com autoria e revisão do psicólogo.",
       "highlights": [
         "Histórico e sessões em ordem clara",
@@ -757,7 +757,7 @@
         "agenda integrada ao financeiro"
       ],
       "eyebrow": "Agenda conectada ao consultório",
-      "heading": "Agende uma vez. Mantenha o contexto nas próximas etapas.",
+      "heading": "Agende uma vez. Deixe o contexto seguir para as próximas etapas.",
       "lead": "Essa é a Agenda NeuroNex: paciente, política, modalidade e recorrência entram juntos; atendimento, prontuário e financeiro continuam ligados depois.",
       "highlights": [
         "Paciente, horário e modalidade no mesmo fluxo",
@@ -891,8 +891,8 @@
         "preços NeuroNex"
       ],
       "eyebrow": "Planos e acesso",
-      "heading": "Comece grátis na web ou instale a NeuroNex no Windows.",
-      "lead": "Use a mesma conta para acessar a operação do consultório. O valor da NeuroNex está em conectar várias partes da rotina, não em vender uma agenda isolada.",
+      "heading": "Comece grátis com o sistema operacional do seu consultório.",
+      "lead": "Use a mesma conta na web ou no Windows. O valor da NeuroNex está em conectar a operação e reduzir passagens manuais — não em vender uma agenda isolada.",
       "highlights": [
         "Plano Essential gratuito",
         "Plano Profissional por R$ 229,90 ao mês",
@@ -1175,7 +1175,6 @@
   "articles": [
     {
       "slug": "agenda-online-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/agenda-online-para-psicologos",
       "file": "blog/agenda-online-para-psicologos.html",
       "bodyFile": "agenda-online-para-psicologos.md",
@@ -1199,7 +1198,6 @@
     },
     {
       "slug": "anamnese-psicologica-digital",
-      "publicationStatus": "draft",
       "route": "/blog/anamnese-psicologica-digital",
       "file": "blog/anamnese-psicologica-digital.html",
       "bodyFile": "anamnese-psicologica-digital.md",
@@ -1223,7 +1221,6 @@
     },
     {
       "slug": "como-reduzir-faltas-e-inadimplencia-na-clinica",
-      "publicationStatus": "draft",
       "route": "/blog/como-reduzir-faltas-e-inadimplencia-na-clinica",
       "file": "blog/como-reduzir-faltas-e-inadimplencia-na-clinica.html",
       "bodyFile": "como-reduzir-faltas-e-inadimplencia-na-clinica.md",
@@ -1247,7 +1244,6 @@
     },
     {
       "slug": "documentos-psicologicos-laudo-relatorio-atestado-declaracao",
-      "publicationStatus": "draft",
       "route": "/blog/documentos-psicologicos-laudo-relatorio-atestado-declaracao",
       "file": "blog/documentos-psicologicos-laudo-relatorio-atestado-declaracao.html",
       "bodyFile": "documentos-psicologicos-laudo-relatorio-atestado-declaracao.md",
@@ -1271,7 +1267,6 @@
     },
     {
       "slug": "ia-para-psicologos-na-pratica",
-      "publicationStatus": "draft",
       "route": "/blog/ia-para-psicologos-na-pratica",
       "file": "blog/ia-para-psicologos-na-pratica.html",
       "bodyFile": "ia-para-psicologos-na-pratica.md",
@@ -1295,7 +1290,6 @@
     },
     {
       "slug": "lgpd-para-psicologos-no-prontuario-digital",
-      "publicationStatus": "draft",
       "route": "/blog/lgpd-para-psicologos-no-prontuario-digital",
       "file": "blog/lgpd-para-psicologos-no-prontuario-digital.html",
       "bodyFile": "lgpd-para-psicologos-no-prontuario-digital.md",
@@ -1319,7 +1313,6 @@
     },
     {
       "slug": "melhores-sistemas-para-psicologos-comparativo-2026",
-      "publicationStatus": "draft",
       "route": "/blog/melhores-sistemas-para-psicologos-comparativo-2026",
       "file": "blog/melhores-sistemas-para-psicologos-comparativo-2026.html",
       "bodyFile": "melhores-sistemas-para-psicologos-comparativo-2026.md",
@@ -1343,7 +1336,6 @@
     },
     {
       "slug": "neuronex-vs-corpora",
-      "publicationStatus": "draft",
       "route": "/blog/neuronex-vs-corpora",
       "file": "blog/neuronex-vs-corpora.html",
       "bodyFile": "neuronex-vs-corpora.md",
@@ -1367,12 +1359,11 @@
     },
     {
       "slug": "neuronex-vs-psicogest",
-      "publicationStatus": "draft",
       "route": "/blog/neuronex-vs-psicogest",
       "file": "blog/neuronex-vs-psicogest.html",
       "bodyFile": "neuronex-vs-psicogest.md",
       "title": "NeuroNex vs PsicoGest: como comparar gestão tradicional e operação com IA",
-      "seoTitle": "NeuroNex vs PsicoGest: comparação para psicólogos",
+      "seoTitle": "NeuroNex vs PsicoGest: análise de recursos e planos",
       "description": "Compare NeuroNex e PsicoGest em agenda, prontuário, teleatendimento, documentos, financeiro, IA, preços e perfil de uso.",
       "excerpt": "Critérios para avaliar a gestão clínica por planos da PsicoGest e a proposta de ecossistema conectado com IA da NeuroNex.",
       "category": "Comparativos",
@@ -1391,12 +1382,11 @@
     },
     {
       "slug": "neuronex-vs-psicomanager",
-      "publicationStatus": "draft",
       "route": "/blog/neuronex-vs-psicomanager",
       "file": "blog/neuronex-vs-psicomanager.html",
       "bodyFile": "neuronex-vs-psicomanager.md",
       "title": "NeuroNex vs PsicoManager: qual proposta combina com a sua clínica?",
-      "seoTitle": "NeuroNex vs PsicoManager: qual sistema escolher?",
+      "seoTitle": "NeuroNex vs PsicoManager: análise completa 2026",
       "description": "Compare NeuroNex e PsicoManager em agenda, prontuário, IA, comunicação, financeiro, experiência do paciente, planos e perfil de clínica.",
       "excerpt": "Uma análise sem ataques sobre gestão clínica consolidada, integração operacional, inteligência artificial, paciente e infraestrutura financeira.",
       "category": "Comparativos",
@@ -1415,7 +1405,6 @@
     },
     {
       "slug": "neuronex-vs-psipront",
-      "publicationStatus": "draft",
       "route": "/blog/neuronex-vs-psipront",
       "file": "blog/neuronex-vs-psipront.html",
       "bodyFile": "neuronex-vs-psipront.md",
@@ -1439,7 +1428,6 @@
     },
     {
       "slug": "neuronex-vs-sintropia",
-      "publicationStatus": "draft",
       "route": "/blog/neuronex-vs-sintropia",
       "file": "blog/neuronex-vs-sintropia.html",
       "bodyFile": "neuronex-vs-sintropia.md",
@@ -1463,7 +1451,6 @@
     },
     {
       "slug": "pix-e-cobranca-automatica-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/pix-e-cobranca-automatica-para-psicologos",
       "file": "blog/pix-e-cobranca-automatica-para-psicologos.html",
       "bodyFile": "pix-e-cobranca-automatica-para-psicologos.md",
@@ -1487,7 +1474,6 @@
     },
     {
       "slug": "portal-do-paciente-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/portal-do-paciente-para-psicologos",
       "file": "blog/portal-do-paciente-para-psicologos.html",
       "bodyFile": "portal-do-paciente-para-psicologos.md",
@@ -1511,7 +1497,6 @@
     },
     {
       "slug": "prontuario-eletronico-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/prontuario-eletronico-para-psicologos",
       "file": "blog/prontuario-eletronico-para-psicologos.html",
       "bodyFile": "prontuario-eletronico-para-psicologos.md",
@@ -1535,7 +1520,6 @@
     },
     {
       "slug": "receita-saude-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/receita-saude-para-psicologos",
       "file": "blog/receita-saude-para-psicologos.html",
       "bodyFile": "receita-saude-para-psicologos.md",
@@ -1559,7 +1543,6 @@
     },
     {
       "slug": "sistema-para-psicologos-como-escolher",
-      "publicationStatus": "draft",
       "route": "/blog/sistema-para-psicologos-como-escolher",
       "file": "blog/sistema-para-psicologos-como-escolher.html",
       "bodyFile": "sistema-para-psicologos-como-escolher.md",
@@ -1583,7 +1566,6 @@
     },
     {
       "slug": "software-para-psicologos-com-inteligencia-artificial",
-      "publicationStatus": "draft",
       "route": "/blog/software-para-psicologos-com-inteligencia-artificial",
       "file": "blog/software-para-psicologos-com-inteligencia-artificial.html",
       "bodyFile": "software-para-psicologos-com-inteligencia-artificial.md",
@@ -1607,7 +1589,6 @@
     },
     {
       "slug": "teleconsulta-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/teleconsulta-para-psicologos",
       "file": "blog/teleconsulta-para-psicologos.html",
       "bodyFile": "teleconsulta-para-psicologos.md",
@@ -1631,7 +1612,6 @@
     },
     {
       "slug": "transcricao-de-sessao-com-ia-para-psicologos",
-      "publicationStatus": "draft",
       "route": "/blog/transcricao-de-sessao-com-ia-para-psicologos",
       "file": "blog/transcricao-de-sessao-com-ia-para-psicologos.html",
       "bodyFile": "transcricao-de-sessao-com-ia-para-psicologos.md",
@@ -1659,6 +1639,7 @@
       "file": "blog/ia-para-psicologos-com-etica-e-controle.html",
       "bodyFile": "ia-para-psicologos-com-etica-e-controle.md",
       "title": "IA para psicólogos com ética, contexto e controle humano",
+      "seoTitle": "IA para psicólogos com ética e controle | NeuroNex",
       "description": "Entenda como usar inteligência artificial na operação clínica sem substituir julgamento profissional, consentimento, autoria ou responsabilidade.",
       "excerpt": "Um guia sobre diferença entre chat genérico e IA operacional, política de risco, revisão humana, rastreabilidade e limites clínicos.",
       "category": "IA na clínica",
@@ -1681,6 +1662,7 @@
       "file": "blog/sistema-operacional-para-clinica-de-psicologia.html",
       "bodyFile": "sistema-operacional-para-clinica-de-psicologia.md",
       "title": "Como montar um sistema operacional para uma clínica de psicologia",
+      "seoTitle": "Sistema operacional para clínicas de psicologia | NeuroNex",
       "description": "Veja como agenda, prontuário, teleconsulta, portal, documentos, financeiro e IA formam uma operação clínica contínua.",
       "excerpt": "Uma estrutura prática para abandonar o mosaico de ferramentas e organizar a clínica em fluxos conectados.",
       "category": "Operação clínica",
@@ -1703,6 +1685,7 @@
       "file": "blog/gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance.html",
       "bodyFile": "gestao-financeira-para-psicologos-do-fluxo-de-caixa-ao-neurofinance.md",
       "title": "Gestão financeira para psicólogos: do fluxo de caixa ao NeuroFinance",
+      "seoTitle": "Gestão financeira para psicólogos | NeuroNex",
       "description": "Aprenda a separar gestão gerencial de movimentação bancária e organizar receitas, despesas, recebíveis, cobrança, planejamento e fiscal.",
       "excerpt": "Um mapa financeiro para clínicas que precisam de previsibilidade sem misturar planilha, cobrança e conta bancária.",
       "category": "Gestão financeira",

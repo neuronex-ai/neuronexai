@@ -12,6 +12,10 @@ import {
   COMPARISON_PUBLIC_PAGES,
   COMPARISONS,
 } from "../src/content/comparison-content.ts";
+import {
+  SYNAPSE_CHANNEL_DISCLOSURE,
+  SYNAPSE_COMMAND_EXAMPLES,
+} from "../src/content/public-positioning.ts";
 
 import {
   PUBLIC_SITE_URL,
@@ -189,6 +193,55 @@ const renderFaq = (faq = []) => {
       .join("")}
   </section>`;
 };
+
+const commercialRoutes = new Set([
+  "/",
+  "/produto",
+  "/synapse",
+  "/neurofinance",
+  "/gestao-financeira-para-psicologos",
+  "/neurobox",
+  "/neurozap-para-psicologos",
+  "/pacientes-para-psicologos",
+  "/portal-do-paciente",
+  "/teleconsulta-para-psicologos",
+  "/prontuario-para-psicologos",
+  "/agenda-para-psicologos",
+  "/seguranca-e-etica",
+  "/download",
+]);
+
+const fullCommandRoutes = new Set([
+  "/",
+  "/produto",
+  "/synapse",
+  "/neurozap-para-psicologos",
+]);
+
+const renderOperatingModel = () =>
+  `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">Mais recursos não deveriam significar mais sistema para administrar.</h2>
+    <p style="${staticStyle.paragraph}">A NeuroNex funciona como o sistema operacional da rotina do psicólogo: agenda, paciente, atendimento, prontuário e financeiro compartilham contexto. O Synapse consulta e navega; alterações sensíveis continuam sujeitas à revisão e à confirmação do profissional.</p>
+    <ul style="${staticStyle.list}">
+      <li style="${staticStyle.item}">Hierarquia clara e cores usadas para comunicar estado, não para competir por atenção.</li>
+      <li style="${staticStyle.item}">Menos passagens manuais e menos cópia e cola entre áreas.</li>
+      <li style="${staticStyle.item}">Consulta, rascunho, ação pendente e execução confirmada permanecem distinguíveis.</li>
+    </ul>
+  </section>`;
+
+const renderSynapseCommands = () =>
+  `<section style="${staticStyle.section}">
+    <h2 style="${staticStyle.h2}">10 exemplos de comandos conectados ao Synapse</h2>
+    <p style="${staticStyle.paragraph}">${escapeHtml(SYNAPSE_CHANNEL_DISCLOSURE)}</p>
+    ${SYNAPSE_COMMAND_EXAMPLES.map(
+      (item, index) => `<article style="padding:22px 0;border-top:1px solid #27272a;">
+        <p style="${staticStyle.eyebrow}">${String(index + 1).padStart(2, "0")} · ${escapeHtml(item.status)} · ${escapeHtml(item.modules.join(" · "))}</p>
+        <h3 style="font-size:19px;line-height:1.35;margin:10px 0;">${escapeHtml(item.title)}</h3>
+        <p style="${staticStyle.paragraph}">“${escapeHtml(item.command)}”</p>
+        <p style="${staticStyle.paragraph}"><strong>Limite visível:</strong> ${escapeHtml(item.guardrail)}</p>
+      </article>`,
+    ).join("")}
+  </section>`;
 
 const renderRelated = (related = []) => {
   if (!related.length) return "";
@@ -395,6 +448,9 @@ export async function renderPublicStaticShell(entry) {
             : renderComparisonDetail(entry)
           : "";
   const pricingExtras = entry.route === "/download" ? renderPublicOffers() : "";
+  const commercialExtras = commercialRoutes.has(entry.route)
+    ? `${renderOperatingModel()}${fullCommandRoutes.has(entry.route) ? renderSynapseCommands() : ""}`
+    : "";
 
   return `<main id="static-public-shell" style="${staticStyle.page}">
     <div style="${staticStyle.container}">
@@ -408,7 +464,7 @@ export async function renderPublicStaticShell(entry) {
       ${
         isArticle
           ? `<article style="${staticStyle.section}">${articleBody}</article>`
-          : `${pageExtras}${pricingExtras}${renderSections(entry.sections)}${renderFaq(entry.faq)}`
+          : `${pageExtras}${pricingExtras}${renderSections(entry.sections)}${commercialExtras}${renderFaq(entry.faq)}`
       }
       ${renderRelated(entry.related)}
       <section style="${staticStyle.section}">

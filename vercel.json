@@ -67,6 +67,7 @@
     { "source": "/seguranca-e-etica", "destination": "/public-pages/seguranca-e-etica.html" },
     { "source": "/comparar", "destination": "/public-pages/comparar.html" },
     { "source": "/comparar/neuronex-vs-psicomanager", "destination": "/public-pages/comparar/neuronex-vs-psicomanager.html" },
+    { "source": "/comparar/neuronex-vs-psicogest", "destination": "/public-pages/comparar/neuronex-vs-psicogest.html" },
     { "source": "/comparar/neuronex-vs-corpora", "destination": "/public-pages/comparar/neuronex-vs-corpora.html" },
     { "source": "/comparar/neuronex-vs-sintropia", "destination": "/public-pages/comparar/neuronex-vs-sintropia.html" },
     { "source": "/comparar/neuronex-vs-psipront", "destination": "/public-pages/comparar/neuronex-vs-psipront.html" },

@@ -167,10 +167,10 @@ const SectionHeading = ({ eyebrow, title, description, align = "center" }: { eye
   <div className={cn("max-w-5xl", align === "center" && "mx-auto text-center")}>
     <FadeIn><FeatureBadge>{eyebrow}</FeatureBadge></FadeIn>
     <FadeIn delay={0.1}>
-      <h2 className="mt-8 text-4xl font-black leading-[0.9] tracking-[-0.06em] text-foreground md:text-6xl lg:text-7xl">{title}</h2>
+      <h2 className="mt-8 text-4xl font-black leading-[1.02] tracking-tight text-foreground md:text-6xl">{title}</h2>
     </FadeIn>
     <FadeIn delay={0.18}>
-      <p className={cn("mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/70 md:text-xl", align === "center" && "mx-auto")}>{description}</p>
+      <p className={cn("mt-7 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground md:text-xl", align === "center" && "mx-auto")}>{description}</p>
     </FadeIn>
   </div>
 );
@@ -294,7 +294,7 @@ const BrowserFrame = ({ source, label, eager = false, compact = false }: { sourc
         >
           <ScreenshotImage source={source} eager={eager} />
           <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/[0.035]" />
-          <div className="pointer-events-none absolute inset-0 flex items-end justify-end bg-gradient-to-t from-black/22 via-transparent to-transparent p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 group-focus-visible:opacity-100">
+          <div className="pointer-events-none absolute inset-0 flex items-end justify-end bg-black/20 p-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
             <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/55 px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] text-white backdrop-blur-md">
               <Maximize2 className="h-3.5 w-3.5" /> Ampliar
             </span>
@@ -312,14 +312,11 @@ export const LandingRealProductShowcase = () => {
 
   return (
     <section id="produto" className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-24 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-foreground/[0.035] blur-[160px] dark:bg-white/[0.025]" />
-      </div>
       <div className="relative z-10 mx-auto max-w-[1380px]">
         <SectionHeading
           eyebrow="Produto real"
-          title={<>Veja o NeuroNex <span className="text-muted-foreground/35">por dentro.</span></>}
-          description="Capturas reais das principais áreas do sistema. Alterne entre gestão clínica, financeiro, IA e módulos visuais para conhecer a experiência completa."
+          title={<>Veja o NeuroNex <span className="text-muted-foreground">por dentro.</span></>}
+          description="Uma interface visual intuitiva: hierarquia antes de decoração, cores apenas quando comunicam estado e o mesmo contexto atravessando gestão clínica, financeiro e IA."
         />
 
         <div className="mt-14 grid gap-6 lg:grid-cols-[292px_minmax(0,1fr)]">
@@ -328,6 +325,7 @@ export const LandingRealProductShowcase = () => {
               <button
                 key={module.key}
                 type="button"
+                aria-pressed={activeKey === module.key}
                 onClick={() => setActiveKey(module.key)}
                 className={cn(
                   "group flex min-h-12 items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-all duration-300",
@@ -405,14 +403,15 @@ export const LandingRealSynapseSection = () => {
             <SectionHeading
               align="left"
               eyebrow="Synapse AI"
-              title={<>A IA prepara. <span className="text-muted-foreground/35">Você revisa e decide.</span></>}
-              description="Texto e voz usam somente o contexto autorizado para localizar informações, organizar a rotina e preparar ações com limites visíveis."
+              title={<>Uma IA realmente agêntica <span className="text-muted-foreground">não empurra retrabalho para você.</span></>}
+              description="Texto e voz consultam o contexto autorizado, navegam pela operação e preparam o próximo passo. Alterações sensíveis continuam visíveis para sua revisão e confirmação."
             />
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
               {synapseModes.map((item) => (
                 <button
                   key={item.key}
                   type="button"
+                  aria-pressed={mode.key === item.key}
                   onClick={() => setMode(item)}
                   className={cn(
                     "flex items-center gap-3 rounded-[22px] border px-5 py-4 text-left transition-all",
@@ -480,7 +479,7 @@ export const LandingRealFinanceFiscalSection = () => (
     <div className="relative z-10 mx-auto max-w-[1380px]">
       <SectionHeading
         eyebrow="Financeiro sem confusão"
-        title={<>Gestão para decidir. <span className="text-muted-foreground/35">NeuroFinance para movimentar.</span></>}
+        title={<>Gestão para decidir. <span className="text-muted-foreground">NeuroFinance para movimentar.</span></>}
         description="Duas áreas com papéis claros: gestão para organizar e decidir, NeuroFinance para movimentar e recursos fiscais ligados ao consultório."
       />
       <div className="mt-14 grid gap-5 lg:grid-cols-3">

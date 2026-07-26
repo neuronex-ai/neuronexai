@@ -22,6 +22,10 @@ import { Link } from "react-router-dom";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
+import {
+  PublicOperatingModelBridge,
+  PublicSynapseCommandSection,
+} from "@/components/public/PublicPositioningSections";
 import { Button } from "@/components/ui/button";
 import type {
   PublicFeatureStatus,
@@ -129,7 +133,7 @@ export function PublicProductHero({
                 <PublicStatusBadge status={page.status} />
               )}
             </div>
-            <h1 className="public-product-title public-neurox-title mx-auto mt-7 max-w-[15ch] whitespace-pre-line pb-[0.12em] text-balance text-[clamp(3.75rem,7.2vw,7.4rem)] font-black leading-[0.9] tracking-normal">
+            <h1 className="public-product-title public-neurox-title mx-auto mt-7 max-w-[15ch] whitespace-pre-line pb-[0.12em] text-balance text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight">
               {page.heading}
             </h1>
             <p className="mx-auto mt-7 max-w-[840px] text-pretty text-lg font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
@@ -235,7 +239,7 @@ export function PublicEditorialHero({
             initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: shouldReduceMotion ? 0 : 0.06 }}
-            className="public-neurox-title mt-7 text-balance text-[clamp(4.25rem,13vw,11.5rem)] font-black leading-[0.82] tracking-normal"
+            className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,5.8rem)] font-black leading-[1.02] tracking-tight"
           >
             {title}
           </motion.h1>
@@ -314,7 +318,7 @@ const PageSections = ({ page }: { page: PublicPageDefinition }) => {
               </p>
             </div>
             <article>
-              <h2 className="text-balance text-4xl font-black leading-[0.96] md:text-6xl">
+              <h2 className="text-balance text-4xl font-black leading-[1.02] md:text-5xl">
                 {section.title}
               </h2>
               <p
@@ -374,7 +378,7 @@ const PageFaq = ({ page }: { page: PublicPageDefinition }) => {
                 {faq.question}
                 <span
                   aria-hidden="true"
-                  className="text-xl text-muted-foreground transition-transform group-open:rotate-45"
+                  className="text-xl text-muted-foreground transition-transform group-open:rotate-45 motion-reduce:transition-none"
                 >
                   +
                 </span>
@@ -424,6 +428,13 @@ export function PublicPageShell({
   children?: ReactNode;
   hero?: ReactNode;
 }) {
+  const fullCommandRoutes = new Set([
+    "/produto",
+    "/synapse",
+    "/neurozap-para-psicologos",
+  ]);
+  const commandVariant = fullCommandRoutes.has(page.route) ? "full" : "compact";
+
   return (
     <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background font-sans text-foreground">
       <div className="hidden md:block">
@@ -436,6 +447,8 @@ export function PublicPageShell({
         <PageHighlights page={page} />
         {children}
         <PageSections page={page} />
+        <PublicOperatingModelBridge />
+        <PublicSynapseCommandSection variant={commandVariant} />
         <PageFaq page={page} />
         <PageRelated page={page} />
         <section className="public-section-stage public-inverted-section px-5 py-20 text-center text-background dark:text-zinc-950 md:px-8 md:py-28">

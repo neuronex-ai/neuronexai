@@ -1,8 +1,15 @@
+import {
+  ILLUSTRATIVE_WORKFLOW,
+  TIME_GAIN_DISCLOSURE,
+  TIME_GAIN_ESTIMATES,
+} from "./public-positioning.ts";
+
 export const COMPARISON_REVIEWED_AT = "2026-07";
 export const COMPARISON_MODIFIED_AT = "2026-07-26";
 
 export type ComparisonSlug =
   | "neuronex-vs-psicomanager"
+  | "neuronex-vs-psicogest"
   | "neuronex-vs-corpora"
   | "neuronex-vs-sintropia"
   | "neuronex-vs-psipront"
@@ -241,6 +248,136 @@ export const COMPARISONS: ComparisonDefinition[] = [
     reviewedAt: COMPARISON_REVIEWED_AT,
   },
   {
+    slug: "neuronex-vs-psicogest",
+    route: "/comparar/neuronex-vs-psicogest",
+    competitor: "PsicoGest",
+    seoTitle: "NeuroNex vs PsicoGest: comparação para psicólogos",
+    description:
+      "Compare NeuroNex e PsicoGest em agenda, prontuário, teleatendimento, documentos, financeiro, IA, planos e continuidade da operação clínica.",
+    keywords: [
+      "NeuroNex vs PsicoGest",
+      "alternativa ao PsicoGest",
+      "PsicoGest para psicólogos",
+      "sistema com IA para psicólogos",
+    ],
+    heroText:
+      "A PsicoGest apresenta gestão clínica organizada por planos. A NeuroNex propõe um sistema operacional que conecta produtos, contexto e IA governada. Compare o fluxo, não só a lista de recursos.",
+    competitorAdvantage:
+      "Planos graduais com agenda, prontuário, teleatendimento, financeiro, documentos e recursos adicionais conforme a contratação.",
+    competitorBestUse:
+      "Profissionais ou clínicas que procuram uma base tradicional de gestão e querem ampliar a cobertura por nível de plano.",
+    neuroNexAdvantage:
+      "Agenda, paciente, atendimento, prontuário, documentos, financeiro e Synapse participam de uma operação conectada.",
+    neuroNexBestUse:
+      "Profissionais que querem reduzir passagens manuais entre módulos e manter ações sensíveis sob revisão e confirmação.",
+    competitorStrengths: [
+      "Planos graduais",
+      "Prontuário eletrônico",
+      "Agenda",
+      "Teleatendimento",
+      "Financeiro e documentos",
+      "Recursos de IA conforme o plano",
+    ],
+    competitorRecognition:
+      "A PsicoGest apresenta uma plataforma clínica com entrada por planos e reúne recursos tradicionais importantes, como agenda, prontuário, teleatendimento, financeiro e documentos. A cobertura exata deve ser confirmada no nível contratado.",
+    neuroNexDifference:
+      "A NeuroNex organiza essas áreas como partes de um sistema operacional. O Synapse consulta contexto autorizado e prepara ações entre domínios; registros, comunicações e dinheiro continuam sujeitos às confirmações aplicáveis.",
+    comparisonRows: [
+      {
+        topic: "Modelo de produto",
+        competitorPerspective:
+          "A cobertura cresce por planos, com recursos clínicos e administrativos conforme a contratação.",
+        neuroNexPerspective:
+          "Os módulos são apresentados como produtos de uma mesma operação conectada.",
+        relatedHref: "/produto",
+      },
+      {
+        topic: "Agenda e atendimento",
+        competitorPerspective:
+          "Agenda, lembretes, comunicação e teleatendimento aparecem na proposta consultada.",
+        neuroNexPerspective:
+          "Agenda e teleconsulta preservam o vínculo com paciente, revisão, prontuário e etapas posteriores.",
+        relatedHref: "/teleconsulta-para-psicologos",
+      },
+      {
+        topic: "Prontuário e documentos",
+        competitorPerspective:
+          "Prontuário eletrônico, documentos e upload compõem a base clínica apresentada.",
+        neuroNexPerspective:
+          "Histórico, notas, documentos, anexos e NeuroBox permanecem ligados ao paciente e à autoria profissional.",
+        relatedHref: "/prontuario-para-psicologos",
+      },
+      {
+        topic: "Inteligência artificial",
+        competitorPerspective:
+          "Rascunho de laudo, resumo clínico e outros recursos podem variar por plano.",
+        neuroNexPerspective:
+          "O Synapse distingue consulta, rascunho, ação pendente e execução confirmada.",
+        relatedHref: "/synapse",
+      },
+      {
+        topic: "Financeiro",
+        competitorPerspective:
+          "Recibos, dados para NFS-e, relatórios e recursos financeiros variam por plano.",
+        neuroNexPerspective:
+          "Gestão gerencial e NeuroFinance têm papéis separados, com movimentações reais sujeitas à elegibilidade e confirmação.",
+        relatedHref: "/neurofinance",
+      },
+      {
+        topic: "Forma de avaliar",
+        competitorPerspective:
+          "É importante confirmar cobertura, limites e preço do plano adequado ao cenário.",
+        neuroNexPerspective:
+          "É importante confirmar o status público de cada fluxo e as ferramentas que a operação conectada substitui.",
+        relatedHref: "/download",
+      },
+    ],
+    chooseCompetitorIf: [
+      "Você prefere uma plataforma clínica tradicional organizada por planos graduais.",
+      "Teleatendimento, prontuário, agenda e documentos cobrem a sua prioridade principal.",
+      "A cobertura e os limites do plano escolhido combinam com seu orçamento e rotina.",
+    ],
+    chooseNeuroNexIf: [
+      "Você quer tratar agenda, paciente, prontuário, documentos e financeiro como uma operação contínua.",
+      "Precisa de IA que consulte contexto e prepare ações com estados e confirmações visíveis.",
+      "Quer diferenciar gestão financeira de movimentação real em uma infraestrutura elegível.",
+    ],
+    faq: [
+      {
+        question: "A PsicoGest tem inteligência artificial?",
+        answer:
+          "As informações consideradas nesta comparação listam rascunho de laudo, resumo clínico e outros recursos que podem variar por plano. Confirme a cobertura atual diretamente com a PsicoGest.",
+      },
+      {
+        question: "Qual tem teleconsulta?",
+        answer:
+          "As duas propostas apresentam teleatendimento ou teleconsulta. Compare estabilidade, consentimento, convite do paciente, revisão e comportamento em falhas.",
+      },
+      {
+        question: "Qual conecta prontuário e financeiro?",
+        answer:
+          "As duas apresentam recursos clínicos e financeiros. Esta página não mede tecnicamente o nível de integração da PsicoGest. Na NeuroNex, a continuidade entre paciente, atendimento, cobrança e financeiro é parte da proposta central.",
+      },
+      {
+        question: "A NeuroNex é mais cara?",
+        answer:
+          "O valor do plano Professional é superior ao preço inicial citado no material consultado da PsicoGest; a NeuroNex também apresenta um plano Essential gratuito. Compare cobertura, limites e custo das ferramentas externas que continuam necessárias.",
+      },
+      {
+        question: "Vale a pena trocar de sistema?",
+        answer:
+          "A troca merece avaliação quando passagens manuais, contexto perdido ou ferramentas paralelas pesam mais que a adaptação. Teste o fluxo completo e confirme exportação, suporte e preservação do histórico.",
+      },
+      {
+        question: "A NeuroNex importa dados da PsicoGest?",
+        answer:
+          "Esta comparação não promete importação automática. Converse com a equipe da NeuroNex para avaliar quais dados precisam ser preservados e as opções disponíveis.",
+      },
+    ],
+    related: sharedRelated,
+    reviewedAt: COMPARISON_REVIEWED_AT,
+  },
+  {
     slug: "neuronex-vs-corpora",
     route: "/comparar/neuronex-vs-corpora",
     competitor: "Corpora",
@@ -377,7 +514,7 @@ export const COMPARISONS: ComparisonDefinition[] = [
     slug: "neuronex-vs-sintropia",
     route: "/comparar/neuronex-vs-sintropia",
     competitor: "Sintropia",
-    seoTitle: "NeuroNex vs Sintropia: diferenças, vantagens e melhor escolha",
+    seoTitle: "NeuroNex vs Sintropia: comparação para psicólogos",
     description:
       "Entenda as diferenças entre NeuroNex e Sintropia: experiência clínica, notas assistidas, organização das sessões e conexão com a operação do consultório.",
     keywords: [
@@ -907,6 +1044,11 @@ export const COMPARISON_GUIDE = [
     href: "/comparar/neuronex-vs-psicomanager",
   },
   {
+    label: "Quer gestão por planos graduais",
+    choice: "PsicoGest",
+    href: "/comparar/neuronex-vs-psicogest",
+  },
+  {
     label: "Quer notas clínicas assistidas",
     choice: "Sintropia",
     href: "/comparar/neuronex-vs-sintropia",
@@ -1012,6 +1154,22 @@ export const COMPARISON_PUBLIC_ENTRIES = COMPARISONS.map((comparison) => ({
     {
       title: "A proposta da NeuroNex",
       text: comparison.neuroNexDifference,
+    },
+    {
+      title: "Terça-feira do Dr. Lucas: cenário ilustrativo",
+      text: `Este cenário compara um fluxo manual ou de IA textual com a operação agêntica governada da NeuroNex. Ele não descreve nem mede o funcionamento do ${comparison.competitor}.`,
+      bullets: ILLUSTRATIVE_WORKFLOW.map(
+        ({ time, title, manualFlow, neuroNexFlow }) =>
+          `${time} — ${title}. Fluxo manual ou IA textual: ${manualFlow} NeuroNex: ${neuroNexFlow}`,
+      ),
+    },
+    {
+      title: "Estimativa ilustrativa de ganho de tempo",
+      text: TIME_GAIN_DISCLOSURE,
+      bullets: TIME_GAIN_ESTIMATES.map(
+        ({ period, estimate, effects }) =>
+          `${period}: ${estimate}. ${effects.join(" ")}`,
+      ),
     },
     {
       title: `Escolha ${comparison.competitor} se...`,

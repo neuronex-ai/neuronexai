@@ -33,6 +33,7 @@ import {
   PublicProductHero,
   PublicRouteBreadcrumbs,
 } from "@/components/public/PublicPageShell";
+import { PublicSynapseCommandSection } from "@/components/public/PublicPositioningSections";
 import { getPublicPage } from "@/content/public-content";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
@@ -250,7 +251,7 @@ const FinanceLanding = () => {
           <div className="mx-auto max-w-[1380px]">
             <div className="mx-auto max-w-5xl text-center">
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-muted-foreground">Financeiro conectado à rotina</p>
-              <h2 className="mt-6 text-4xl font-black leading-none text-foreground md:text-6xl lg:text-7xl">
+              <h2 className="mt-6 text-4xl font-black leading-[1.02] text-foreground md:text-6xl">
                 Receba, cobre e acompanhe sem separar o financeiro da clínica.
               </h2>
               <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground/72 md:text-xl">
@@ -353,6 +354,8 @@ const FinanceLanding = () => {
             </article>
           </div>
         </section>
+
+        <PublicSynapseCommandSection variant="compact" />
 
         <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">

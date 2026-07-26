@@ -129,7 +129,7 @@ describe("public SEO routes", () => {
     );
 
     expect(indexGraph.some((item) => item["@type"] === "CollectionPage")).toBe(true);
-    expect(itemList?.itemListElement).toHaveLength(6);
+    expect(itemList?.itemListElement).toHaveLength(7);
     expect(detailGraph.some((item) => item["@type"] === "FAQPage")).toBe(true);
     expect(breadcrumb?.itemListElement).toHaveLength(3);
     expect(detailGraph.some((item) => hasType(item, "Product"))).toBe(false);

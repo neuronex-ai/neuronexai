@@ -50,7 +50,7 @@ const BlogIndex = () => {
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: shouldReduceMotion ? 0 : 0.06 }}
-                className="public-neurox-title mt-7 text-balance text-[clamp(4.25rem,13vw,11.5rem)] font-black leading-[0.82] tracking-normal"
+                className="public-neurox-title mt-7 text-balance text-[clamp(3rem,7vw,5.8rem)] font-black leading-[1.02] tracking-tight"
               >
                 NeuroX.
               </motion.h1>

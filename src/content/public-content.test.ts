@@ -92,13 +92,13 @@ describe("public content catalog", () => {
   });
 
   it("publishes only reviewed articles with verified authors", () => {
-    expect(PUBLIC_ARTICLES).toHaveLength(3);
+    expect(PUBLIC_ARTICLES).toHaveLength(23);
     expect(
       PUBLIC_CONTENT.articles.filter(
         ({ publicationStatus }) => publicationStatus === "draft",
       ),
-    ).toHaveLength(20);
-    expect(PUBLIC_ARTICLES.some(({ route }) => route.includes("/blog/neuronex-vs-"))).toBe(false);
+    ).toHaveLength(0);
+    expect(PUBLIC_ARTICLES.filter(({ route }) => route.includes("/blog/neuronex-vs-"))).toHaveLength(5);
     for (const article of PUBLIC_ARTICLES) {
       expect(article.authorId).toBe("equipe-neuronex");
       expect(article.modifiedAt >= article.publishedAt).toBe(true);
@@ -108,10 +108,11 @@ describe("public content catalog", () => {
     }
   });
 
-  it("publishes six honest comparison definitions reviewed in July 2026", () => {
-    expect(COMPARISONS).toHaveLength(6);
+  it("publishes seven honest comparison definitions reviewed in July 2026", () => {
+    expect(COMPARISONS).toHaveLength(7);
     expect(COMPARISONS.map(({ slug }) => slug)).toEqual([
       "neuronex-vs-psicomanager",
+      "neuronex-vs-psicogest",
       "neuronex-vs-corpora",
       "neuronex-vs-sintropia",
       "neuronex-vs-psipront",
