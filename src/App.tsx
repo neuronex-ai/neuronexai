@@ -76,8 +76,6 @@ const BlogIndex = lazy(() => import("@/pages/public/BlogIndex"));
 const BlogArticle = lazy(() => import("@/pages/public/BlogArticle"));
 const DownloadLanding = lazy(() => import("@/pages/public/DownloadLanding"));
 const UpdatesLanding = lazy(() => import("@/pages/public/UpdatesLanding"));
-const NeuralCastLanding = lazy(() => import("@/pages/public/NeuralCastLanding"));
-const NeuralCastNewsletter = lazy(() => import("@/pages/public/NeuralCastNewsletter"));
 
 const AnamnesisPublic = lazy(() => import("./pages/public/AnamnesisPublic"));
 const PublicProfessionalProfile = lazy(() => import("./pages/public/PublicProfessionalProfile"));
@@ -166,9 +164,6 @@ const SharedRoutes = () => {
         <Route path="/configuracoes-de-cookies" element={<ConfiguracoesDeCookies />} />
         <Route path="/neurofinance" element={<FinanceLanding />} />
         <Route path="/synapse" element={<SynapseLanding />} />
-        <Route path="/neuralcast" element={<NeuralCastLanding />} />
-        <Route path="/neuralcast/newsletter" element={<NeuralCastNewsletter />} />
-        <Route path="/neuralcast/newsletter/:slug" element={<NeuralCastNewsletter />} />
         <Route path="/neurobox" element={<NeuroBoxLanding />} />
         <Route path="/neurozap-para-psicologos" element={<NeuroZapLanding />} />
         <Route path="/pacientes-para-psicologos" element={<PatientOperationsLanding />} />
