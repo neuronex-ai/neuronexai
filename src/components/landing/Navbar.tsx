@@ -77,6 +77,9 @@ const productLinks = [
   },
 ];
 
+const navControlClass =
+  "public-navbar-control public-tactile flex min-h-11 items-center rounded-[20px] px-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+
 export const Navbar = () => {
   const [productsOpen, setProductsOpen] = useState(false);
   const productMenuRef = useRef<HTMLDivElement>(null);
@@ -109,12 +112,12 @@ export const Navbar = () => {
 
   return (
     <nav className="pointer-events-none fixed inset-x-0 top-7 z-[100] hidden justify-center px-4 md:flex">
-      <div className="global-retina-navbar public-liquid-navbar pointer-events-auto relative flex w-[min(940px,calc(100vw-32px))] items-center justify-between gap-3 rounded-[30px] border border-black/[0.075] bg-white/[0.72] px-2.5 py-2.5 ring-1 ring-white/40 backdrop-blur-3xl transition-[background-color,border-color,box-shadow] duration-500 ease-apple dark:border-white/[0.055] dark:bg-[#080808]/82 dark:ring-white/[0.025] motion-reduce:transition-none">
-        <div className="flex items-center gap-2 border-r border-black/[0.055] pr-4 dark:border-white/[0.08]">
+      <div className="global-retina-navbar public-liquid-navbar pointer-events-auto relative flex w-fit max-w-[calc(100vw-32px)] items-center justify-between gap-3 rounded-[30px] border border-black/[0.075] bg-white/[0.72] px-2 py-2 ring-1 ring-white/40 backdrop-blur-3xl transition-[background-color,border-color,box-shadow] duration-500 ease-apple dark:border-white/[0.055] dark:bg-[#080808]/82 dark:ring-white/[0.025] motion-reduce:transition-none">
+        <div className="flex shrink-0 items-center">
           <Link
             to="/"
             aria-label="Ir para a página inicial da NeuroNex"
-            className="group flex min-h-11 items-center gap-3 rounded-[22px] px-1.5 py-1 transition-colors duration-300 hover:bg-black/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-white/[0.055]"
+            className="public-navbar-brand public-tactile group flex min-h-12 items-center gap-3 rounded-full px-3 py-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)] transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-105 dark:border-white/[0.08] dark:bg-white/[0.045] dark:shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
               <Logo className="h-6 w-6" />
@@ -125,11 +128,11 @@ export const Navbar = () => {
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center gap-1 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-white/45">
+        <div className="flex shrink-0 items-center justify-center gap-1.5 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-white/45">
           <button
             type="button"
             onClick={() => handleSectionClick("diferenciais")}
-            className="hidden min-h-11 items-center rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white xl:flex"
+            className={cn(navControlClass, "hidden xl:flex")}
           >
             DIFERENCIAIS
           </button>
@@ -154,8 +157,9 @@ export const Navbar = () => {
               aria-expanded={productsOpen}
               aria-controls="public-product-menu"
               className={cn(
-                "flex min-h-11 items-center gap-1.5 rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white",
-                productsOpen && "bg-black/[0.045] text-zinc-900 dark:bg-white/[0.065] dark:text-white",
+                navControlClass,
+                "gap-1.5",
+                productsOpen && "public-navbar-control-active",
               )}
               onClick={() => setProductsOpen(true)}
             >
@@ -193,15 +197,15 @@ export const Navbar = () => {
                       ? { duration: 0 }
                       : { type: "spring", stiffness: 470, damping: 38, mass: 0.72 }
                   }
-                  className="absolute left-1/2 top-full w-[min(660px,calc(100vw-32px))] pt-2 text-foreground xl:w-[780px]"
+                  className="absolute left-1/2 top-full w-[min(620px,calc(100vw-32px))] pt-2 text-foreground xl:w-[720px]"
                 >
                   <div
                     id="public-product-menu"
                     role="group"
                     aria-label="Produtos NeuroNex"
-                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2"
+                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2.5"
                   >
-                    <div className="grid grid-cols-3 gap-1" role="list">
+                    <div className="grid grid-cols-3 gap-1.5" role="list">
                       {productLinks.map((item, index) => {
                         const isActive = location.pathname === item.to;
 
@@ -251,19 +255,19 @@ export const Navbar = () => {
 
           <Link
             to="/download"
-            className="flex min-h-11 items-center rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white"
+            className={navControlClass}
           >
             DOWNLOAD
           </Link>
           <Link
             to="/blog"
-            className="hidden min-h-11 items-center rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white xl:flex"
+            className={cn(navControlClass, "hidden xl:flex")}
           >
             NEUROX
           </Link>
         </div>
 
-        <div className="flex items-center gap-1 border-l border-black/[0.055] pl-4 dark:border-white/[0.08]">
+        <div className="flex shrink-0 items-center gap-2">
           <ThemeToggle />
           <Button
             asChild
