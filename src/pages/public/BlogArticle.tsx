@@ -12,6 +12,11 @@ import {
   PublicBreadcrumbs,
   PublicStatusBadge,
 } from "@/components/public/PublicPageShell";
+import {
+  PublicSynapseCommandSection,
+  PublicTimeGainSection,
+  PublicWorkflowComparisonSection,
+} from "@/components/public/PublicPositioningSections";
 import { getPublicArticleBody } from "@/content/public-article-content";
 import { getPublicArticle, getPublicAuthor } from "@/content/public-content";
 
@@ -107,6 +112,14 @@ const BlogArticle = () => {
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{body}</ReactMarkdown>
             </div>
           </div>
+
+          {article.category === "Comparativos" ? (
+            <>
+              <PublicWorkflowComparisonSection />
+              <PublicTimeGainSection />
+              <PublicSynapseCommandSection variant="compact" />
+            </>
+          ) : null}
         </article>
 
         <section className="px-5 pb-20 md:px-8 md:pb-28">

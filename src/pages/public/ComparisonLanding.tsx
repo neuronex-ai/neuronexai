@@ -423,8 +423,8 @@ export const ComparisonLanding = ({ slug }: { slug?: ComparisonSlug | string }) 
         <QuickSummary comparison={comparison} />
         <Perspective comparison={comparison} />
         <UseCaseComparison comparison={comparison} />
-        <WorkflowStorySection comparison={comparison} />
-        <TimeGainSection />
+        <PublicWorkflowComparisonSection competitor={comparison.competitor} />
+        <PublicTimeGainSection />
         <PublicSynapseCommandSection variant="compact" />
         <ChoiceSection comparison={comparison} />
         <ComparisonFaq comparison={comparison} />
