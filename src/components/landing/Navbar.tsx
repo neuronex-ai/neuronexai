@@ -108,28 +108,28 @@ export const Navbar = () => {
   };
 
   return (
-    <nav className="pointer-events-none fixed inset-x-0 top-0 z-[100] hidden justify-center py-4 md:flex">
-      <div className="global-retina-navbar public-liquid-navbar pointer-events-auto relative flex w-[min(880px,calc(100vw-24px))] items-center justify-between gap-3 rounded-[30px] border border-black/[0.075] bg-white/[0.72] px-2.5 py-2.5 shadow-[0_30px_90px_-46px_rgba(0,0,0,0.68),inset_0_1px_0_rgba(255,255,255,0.7)] ring-1 ring-white/40 backdrop-blur-3xl transition-[transform,background-color,border-color,box-shadow] duration-500 ease-apple hover:-translate-y-0.5 hover:bg-white/[0.78] dark:border-white/[0.055] dark:bg-[#080808]/82 dark:ring-white/[0.025] dark:hover:bg-[#0a0a0a]/88 motion-reduce:transform-none motion-reduce:transition-none">
-        <div className="flex items-center gap-2 border-r border-black/[0.055] pr-3 dark:border-white/[0.08]">
+    <nav className="pointer-events-none fixed inset-x-0 top-7 z-[100] hidden justify-center px-4 md:flex">
+      <div className="global-retina-navbar public-liquid-navbar pointer-events-auto relative flex w-[min(940px,calc(100vw-32px))] items-center justify-between gap-3 rounded-[30px] border border-black/[0.075] bg-white/[0.72] px-2.5 py-2.5 ring-1 ring-white/40 backdrop-blur-3xl transition-[background-color,border-color,box-shadow] duration-500 ease-apple dark:border-white/[0.055] dark:bg-[#080808]/82 dark:ring-white/[0.025] motion-reduce:transition-none">
+        <div className="flex items-center gap-2 border-r border-black/[0.055] pr-4 dark:border-white/[0.08]">
           <Link
             to="/"
             aria-label="Ir para a página inicial da NeuroNex"
-            className="public-tactile group flex min-h-11 items-center gap-3 rounded-[22px] px-1 py-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+            className="group flex min-h-11 items-center gap-3 rounded-[22px] px-1.5 py-1 transition-colors duration-300 hover:bg-black/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:hover:bg-white/[0.055]"
           >
-            <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)] transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-[1.025] dark:border-white/[0.08] dark:bg-white/[0.045] dark:shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
+            <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)] transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-105 dark:border-white/[0.08] dark:bg-white/[0.045] dark:shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
               <Logo className="h-6 w-6" />
             </span>
-            <span className="whitespace-nowrap font-sans text-[10px] font-black uppercase tracking-[0.22em] text-foreground">
-              NEURONEX
+            <span className="whitespace-nowrap font-sans text-[10px] font-black uppercase tracking-[0.28em] text-foreground">
+              NeuroNex
             </span>
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center gap-3 font-sans text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground xl:gap-5">
+        <div className="flex flex-1 items-center justify-center gap-1 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-white/45">
           <button
             type="button"
             onClick={() => handleSectionClick("diferenciais")}
-            className="hidden min-h-11 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground xl:block"
+            className="hidden min-h-11 items-center rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white xl:flex"
           >
             DIFERENCIAIS
           </button>
@@ -153,8 +153,11 @@ export const Navbar = () => {
               type="button"
               aria-expanded={productsOpen}
               aria-controls="public-product-menu"
-              className="flex min-h-11 items-center gap-1.5 transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
-              onClick={() => setProductsOpen((current) => !current)}
+              className={cn(
+                "flex min-h-11 items-center gap-1.5 rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white",
+                productsOpen && "bg-black/[0.045] text-zinc-900 dark:bg-white/[0.065] dark:text-white",
+              )}
+              onClick={() => setProductsOpen(true)}
             >
               PRODUTOS
               <ChevronDown
@@ -169,8 +172,6 @@ export const Navbar = () => {
             <AnimatePresence>
               {productsOpen ? (
                 <motion.div
-                  id="public-product-menu"
-                  aria-label="Produtos NeuroNex"
                   initial={
                     shouldReduceMotion
                       ? false
@@ -192,51 +193,57 @@ export const Navbar = () => {
                       ? { duration: 0 }
                       : { type: "spring", stiffness: 470, damping: 38, mass: 0.72 }
                   }
-                  className="public-glass-surface public-product-menu-surface absolute left-1/2 top-[calc(100%+8px)] w-[min(660px,calc(100vw-32px))] rounded-[26px] p-1.5 text-foreground xl:w-[780px]"
+                  className="absolute left-1/2 top-full w-[min(660px,calc(100vw-32px))] pt-2 text-foreground xl:w-[780px]"
                 >
-                  <div className="grid grid-cols-3 gap-1" role="list">
-                    {productLinks.map((item, index) => {
-                      const isActive = location.pathname === item.to;
-
-                      return (
-                        <Link
-                          key={item.to}
-                          to={item.to}
-                          aria-current={isActive ? "page" : undefined}
-                          role="listitem"
-                          className={cn(
-                            "public-product-menu-item public-tactile group relative flex min-h-[80px] gap-3 overflow-hidden rounded-[18px] px-3.5 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                            index === productLinks.length - 1 && "col-span-1",
-                          )}
-                        >
-                          {isActive ? (
-                            <span
-                              className="absolute inset-1 rounded-[14px] bg-foreground/[0.07] dark:bg-white/[0.08]"
-                            />
-                          ) : null}
-                          <item.icon
-                            aria-hidden="true"
-                            className="relative mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground"
-                          />
-                          <span className="relative min-w-0">
-                            <span className="flex items-center gap-2 font-sans text-[10px] font-bold uppercase tracking-[0.12em]">
-                              {item.label}
-                            </span>
-                            <span className="mt-1.5 block font-sans text-[9px] font-semibold uppercase leading-relaxed tracking-[0.08em] text-muted-foreground">
-                              {item.description}
-                            </span>
-                          </span>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                  <Link
-                    to="/produto"
-                    className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[17px] px-4 font-sans text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-foreground"
+                  <div
+                    id="public-product-menu"
+                    role="group"
+                    aria-label="Produtos NeuroNex"
+                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2"
                   >
-                    Ver todo o ecossistema
-                    <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-                  </Link>
+                    <div className="grid grid-cols-3 gap-1" role="list">
+                      {productLinks.map((item, index) => {
+                        const isActive = location.pathname === item.to;
+
+                        return (
+                          <Link
+                            key={item.to}
+                            to={item.to}
+                            aria-current={isActive ? "page" : undefined}
+                            role="listitem"
+                            className={cn(
+                              "public-product-menu-item public-tactile group relative flex min-h-[88px] gap-3 overflow-hidden rounded-[20px] px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                              index === productLinks.length - 1 && "col-span-1",
+                            )}
+                          >
+                            {isActive ? (
+                              <span
+                                className="absolute inset-1 rounded-2xl bg-black/[0.045] dark:bg-white/[0.065]"
+                              />
+                            ) : null}
+                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-black/[0.055] bg-white/70 text-zinc-400 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.42)] transition-colors group-hover:text-zinc-900 dark:border-white/[0.08] dark:bg-white/[0.045] dark:text-white/45 dark:group-hover:text-white">
+                              <item.icon aria-hidden="true" className="h-4 w-4" />
+                            </span>
+                            <span className="relative min-w-0 pt-0.5">
+                              <span className="flex items-center gap-2 font-sans text-[10px] font-black uppercase tracking-[0.18em]">
+                                {item.label}
+                              </span>
+                              <span className="mt-1.5 block font-sans text-[10px] font-medium normal-case leading-relaxed tracking-normal text-zinc-500 dark:text-white/45">
+                                {item.description}
+                              </span>
+                            </span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                    <Link
+                      to="/produto"
+                      className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[18px] px-4 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-zinc-900 dark:text-white/45 dark:hover:text-white dark:focus-visible:text-white"
+                    >
+                      Ver todo o ecossistema
+                      <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                    </Link>
+                  </div>
                 </motion.div>
               ) : null}
             </AnimatePresence>
@@ -244,24 +251,24 @@ export const Navbar = () => {
 
           <Link
             to="/download"
-            className="flex min-h-11 items-center transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground"
+            className="flex min-h-11 items-center rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white"
           >
             DOWNLOAD
           </Link>
           <Link
             to="/blog"
-            className="hidden min-h-11 items-center transition-colors hover:text-foreground focus-visible:outline-none focus-visible:text-foreground xl:flex"
+            className="hidden min-h-11 items-center rounded-2xl px-3 transition-colors hover:bg-black/[0.045] hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.065] dark:hover:text-white xl:flex"
           >
             NEUROX
           </Link>
         </div>
 
-        <div className="flex items-center gap-1 border-l border-black/[0.055] pl-3 dark:border-white/[0.08]">
+        <div className="flex items-center gap-1 border-l border-black/[0.055] pl-4 dark:border-white/[0.08]">
           <ThemeToggle />
           <Button
             asChild
             size="sm"
-            className="public-tactile hidden h-11 rounded-full bg-foreground px-7 font-sans text-[10px] font-bold uppercase tracking-[0.16em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
+            className="public-tactile hidden h-11 rounded-full bg-foreground px-7 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
           >
             <Link to="/auth">ENTRAR</Link>
           </Button>
