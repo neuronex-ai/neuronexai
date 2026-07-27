@@ -203,7 +203,7 @@ export const Navbar = () => {
                     id="public-product-menu"
                     role="group"
                     aria-label="Produtos NeuroNex"
-                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2.5"
+                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2.5 border border-black/[0.08] bg-white/80 backdrop-blur-xl shadow-2xl dark:border-white/[0.08] dark:bg-zinc-950/85"
                   >
                     <div className="grid grid-cols-3 gap-1.5" role="list">
                       {productLinks.map((item, index) => {
@@ -244,7 +244,7 @@ export const Navbar = () => {
                       to="/produto"
                       className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[18px] px-4 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-zinc-900 dark:text-white/45 dark:hover:text-white dark:focus-visible:text-white"
                     >
-                      Conhecer a operação completa
+                      Conhecer a operation completa
                       <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
                     </Link>
                   </div>
