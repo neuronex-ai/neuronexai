@@ -203,7 +203,7 @@ export const Navbar = () => {
                     id="public-product-menu"
                     role="group"
                     aria-label="Produtos NeuroNex"
-                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2.5"
+                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2.5 backdrop-blur-3xl bg-white/[0.88] dark:bg-[#080808]/92 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_24px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_24px_60px_-15px_rgba(0,0,0,0.7)] ring-1 ring-white/40 dark:ring-white/[0.025]"
                   >
                     <div className="grid grid-cols-3 gap-1.5" role="list">
                       {productLinks.map((item, index) => {
