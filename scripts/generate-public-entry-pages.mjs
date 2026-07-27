@@ -13,11 +13,8 @@ import {
   COMPARISONS,
 } from "../src/content/comparison-content.ts";
 import {
-  ILLUSTRATIVE_WORKFLOW,
   SYNAPSE_CHANNEL_DISCLOSURE,
   SYNAPSE_COMMAND_EXAMPLES,
-  TIME_GAIN_DISCLOSURE,
-  TIME_GAIN_ESTIMATES,
 } from "../src/content/public-positioning.ts";
 
 import {
@@ -227,47 +224,24 @@ const renderOperatingModel = () =>
     <p style="${staticStyle.paragraph}">A NeuroNex funciona como o sistema operacional da rotina do psicólogo: agenda, paciente, atendimento, prontuário e financeiro compartilham contexto. O Synapse consulta e navega; alterações sensíveis continuam sujeitas à revisão e à confirmação do profissional.</p>
     <ul style="${staticStyle.list}">
       <li style="${staticStyle.item}">Hierarquia clara e cores usadas para comunicar estado, não para competir por atenção.</li>
-      <li style="${staticStyle.item}">Menos passagens manuais e menos tarefas de copiar e colar entre áreas.</li>
+      <li style="${staticStyle.item}">Menos passagens manuais e menos cópia e cola entre áreas.</li>
       <li style="${staticStyle.item}">Consulta, rascunho, ação pendente e execução confirmada permanecem distinguíveis.</li>
     </ul>
   </section>`;
 
-const renderSynapseCommands = (limit = SYNAPSE_COMMAND_EXAMPLES.length) =>
+const renderSynapseCommands = () =>
   `<section style="${staticStyle.section}">
-    <h2 style="${staticStyle.h2}">${limit} exemplos de comandos conectados ao Synapse</h2>
+    <h2 style="${staticStyle.h2}">10 exemplos de comandos conectados ao Synapse</h2>
     <p style="${staticStyle.paragraph}">${escapeHtml(SYNAPSE_CHANNEL_DISCLOSURE)}</p>
-    ${SYNAPSE_COMMAND_EXAMPLES.slice(0, limit).map(
+    ${SYNAPSE_COMMAND_EXAMPLES.map(
       (item, index) => `<article style="padding:22px 0;border-top:1px solid #27272a;">
-        <p style="${staticStyle.eyebrow}">${String(index + 1).padStart(2, "0")} · Na NeuroNex: ${escapeHtml(item.status)} · ${escapeHtml(item.modules.join(" · "))}</p>
+        <p style="${staticStyle.eyebrow}">${String(index + 1).padStart(2, "0")} · ${escapeHtml(item.status)} · ${escapeHtml(item.modules.join(" · "))}</p>
         <h3 style="font-size:19px;line-height:1.35;margin:10px 0;">${escapeHtml(item.title)}</h3>
         <p style="${staticStyle.paragraph}">“${escapeHtml(item.command)}”</p>
         <p style="${staticStyle.paragraph}"><strong>Limite visível:</strong> ${escapeHtml(item.guardrail)}</p>
       </article>`,
     ).join("")}
   </section>`;
-
-const renderEditorialComparisonExtras = () =>
-  `<section style="${staticStyle.section}">
-    <h2 style="${staticStyle.h2}">Terça-feira do Dr. Lucas: cenário ilustrativo</h2>
-    <p style="${staticStyle.paragraph}">Este cenário compara um fluxo manual ou apoiado por IA textual com a operação agêntica governada da NeuroNex. Ele não descreve nem mede o funcionamento de um concorrente específico.</p>
-    <ul style="${staticStyle.list}">
-      ${ILLUSTRATIVE_WORKFLOW.map(
-        ({ time, title, manualFlow, neuroNexFlow }) =>
-          `<li style="${staticStyle.item}"><strong>${escapeHtml(time)} — ${escapeHtml(title)}.</strong> Fluxo manual ou IA textual: ${escapeHtml(manualFlow)} NeuroNex: ${escapeHtml(neuroNexFlow)}</li>`,
-      ).join("")}
-    </ul>
-  </section>
-  <section style="${staticStyle.section}">
-    <h2 style="${staticStyle.h2}">Cenário hipotético de tempo</h2>
-    <p style="${staticStyle.paragraph}">${escapeHtml(TIME_GAIN_DISCLOSURE)}</p>
-    <ul style="${staticStyle.list}">
-      ${TIME_GAIN_ESTIMATES.map(
-        ({ period, estimate, effects }) =>
-          `<li style="${staticStyle.item}"><strong>${escapeHtml(period)}: ${escapeHtml(estimate)}.</strong> ${escapeHtml(effects.join(" "))}</li>`,
-      ).join("")}
-    </ul>
-  </section>
-  ${renderSynapseCommands(4)}`;
 
 const renderRelated = (related = []) => {
   if (!related.length) return "";
@@ -286,7 +260,7 @@ const renderRelated = (related = []) => {
 
 const renderComparisonDisclosure = () =>
   `<aside style="${staticStyle.section}">
-    <p style="${staticStyle.paragraph}">Conteúdo editorial revisado em <time datetime="2026-07">julho de 2026</time>. Recursos, planos e condições podem mudar; confirme os detalhes e as fontes atuais diretamente com cada fornecedor.</p>
+    <p style="${staticStyle.paragraph}">Informações organizadas a partir de dados públicos verificados em <time datetime="2026-07">julho de 2026</time>. Recursos, planos e condições podem mudar; confirme os detalhes diretamente com cada fornecedor.</p>
   </aside>`;
 
 const renderComparisonIndex = () =>
@@ -477,10 +451,6 @@ export async function renderPublicStaticShell(entry) {
   const commercialExtras = commercialRoutes.has(entry.route)
     ? `${renderOperatingModel()}${fullCommandRoutes.has(entry.route) ? renderSynapseCommands() : ""}`
     : "";
-  const articleExtras =
-    isArticle && entry.category === "Comparativos"
-      ? renderEditorialComparisonExtras()
-      : "";
 
   return `<main id="static-public-shell" style="${staticStyle.page}">
     <div style="${staticStyle.container}">
@@ -493,7 +463,7 @@ export async function renderPublicStaticShell(entry) {
       </header>
       ${
         isArticle
-          ? `<article style="${staticStyle.section}">${articleBody}</article>${articleExtras}`
+          ? `<article style="${staticStyle.section}">${articleBody}</article>`
           : `${pageExtras}${pricingExtras}${renderSections(entry.sections)}${commercialExtras}${renderFaq(entry.faq)}`
       }
       ${renderRelated(entry.related)}

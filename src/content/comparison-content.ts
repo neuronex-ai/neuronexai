@@ -361,7 +361,7 @@ export const COMPARISONS: ComparisonDefinition[] = [
       {
         question: "A NeuroNex é mais cara?",
         answer:
-          "O valor do plano Profissional é superior ao preço inicial citado no material consultado da PsicoGest; a NeuroNex também apresenta um plano Essential gratuito. Compare cobertura, limites e custo das ferramentas externas que continuam necessárias.",
+          "O valor do plano Professional é superior ao preço inicial citado no material consultado da PsicoGest; a NeuroNex também apresenta um plano Essential gratuito. Compare cobertura, limites e custo das ferramentas externas que continuam necessárias.",
       },
       {
         question: "Vale a pena trocar de sistema?",
@@ -1094,7 +1094,7 @@ export const COMPARISON_INDEX_ENTRY = {
   highlights: [
     "Comparações de proposta e foco",
     "Reconhecimento dos pontos fortes de cada sistema",
-    "Conteúdo editorial revisado em julho de 2026",
+    "Informações públicas verificadas em julho de 2026",
   ],
   sections: [
     {
@@ -1143,7 +1143,7 @@ export const COMPARISON_PUBLIC_ENTRIES = COMPARISONS.map((comparison) => ({
   highlights: [
     comparison.competitorAdvantage,
     comparison.neuroNexAdvantage,
-    "Conteúdo editorial revisado em julho de 2026",
+    "Informações públicas verificadas em julho de 2026",
   ],
   sections: [
     {
@@ -1164,7 +1164,7 @@ export const COMPARISON_PUBLIC_ENTRIES = COMPARISONS.map((comparison) => ({
       ),
     },
     {
-      title: "Cenário hipotético de tempo",
+      title: "Estimativa ilustrativa de ganho de tempo",
       text: TIME_GAIN_DISCLOSURE,
       bullets: TIME_GAIN_ESTIMATES.map(
         ({ period, estimate, effects }) =>

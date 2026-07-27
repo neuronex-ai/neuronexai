@@ -412,10 +412,10 @@ export const ComparisonLanding = ({ slug }: { slug?: ComparisonSlug | string }) 
               </Button>
             </div>
             <p className="mx-auto mt-8 max-w-2xl text-xs font-medium leading-relaxed text-muted-foreground/65">
-              Conteúdo editorial revisado em{" "}
+              Informações organizadas a partir de dados públicos verificados em{" "}
               <time dateTime={comparison.reviewedAt}>julho de 2026</time>.
-              Recursos, planos e condições podem mudar; confirme os detalhes e
-              as fontes atuais diretamente com cada fornecedor.
+              Recursos, planos e condições podem mudar; confirme os detalhes
+              diretamente com cada fornecedor.
             </p>
           </div>
         </section>

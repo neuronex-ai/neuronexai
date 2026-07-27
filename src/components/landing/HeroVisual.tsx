@@ -797,8 +797,8 @@ export const HeroVisual = () => {
       action: "Preparar Mensagem",
     },
     {
-      text: "As notas autorizadas da Mariana mencionam ansiedade com mais frequência hoje. Quer um sumário comparativo para sua revisão?",
-      action: "Preparar Sumário",
+      text: "Mariana parece mais ansiosa hoje. Quer um sumário comparativo das notas?",
+      action: "Gerar Sumário",
     },
     {
       text: "O Rodrigo não aparece há 2 semanas. Preparo um lembrete gentil para revisão?",
@@ -813,8 +813,8 @@ export const HeroVisual = () => {
       action: "Revisar Recebíveis",
     },
     {
-      text: "Posso reunir o contexto autorizado dos atendimentos de amanhã em um briefing para sua revisão.",
-      action: "Preparar Briefing",
+      text: "Tô monitorando tudo. Quer que eu faça o briefing pros atendimentos de amanhã?",
+      action: "Fazer Briefing Clínico",
     },
   ];
 

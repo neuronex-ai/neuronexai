@@ -1,6 +1,6 @@
 "use client";
 
-import { useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -11,6 +11,7 @@ import {
   FileCheck2,
   Landmark,
   LockKeyhole,
+  MessageCircle,
   Mic2,
   QrCode,
   ReceiptText,
@@ -20,6 +21,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import type { ElementType } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { AsaasRegulatoryFooter } from "@/components/financeiro/AsaasRegulatoryFooter";
@@ -34,6 +36,7 @@ import {
 import { PublicSynapseCommandSection } from "@/components/public/PublicPositioningSections";
 import { getPublicPage } from "@/content/public-content";
 import { useTheme } from "@/hooks/use-theme";
+import { cn } from "@/lib/utils";
 
 type LandingIcon = ElementType<{ className?: string }>;
 
@@ -77,7 +80,7 @@ const capabilities: Capability[] = [
   {
     icon: QrCode,
     title: "Área Pix própria",
-    text: "Pix por chave, QR Code ou código para copiar e colar, com contexto do paciente, cobrança e sessão no mesmo fluxo operacional.",
+    text: "Pix por chave, QR Code ou copia e cola, com contexto do paciente, cobrança e sessão no mesmo fluxo operacional.",
   },
   {
     icon: ReceiptText,
@@ -125,7 +128,7 @@ const faqs: FaqItem[] = [
   {
     question: "O Synapse pode pagar ou transferir sozinho?",
     answer:
-      "Não. O Synapse pode preparar uma ação, explicar o contexto e pedir confirmação. Pagamentos, Pix, saques, boletos e antecipações exigem validação por PIN ou validação de voz assistida quando aplicável.",
+      "Não. O Synapse pode preparar uma ação, explicar o contexto e pedir confirmação. Pagamentos, PIX, saques, boletos e antecipações exigem validação por PIN ou validação de voz assistida quando aplicável.",
   },
   {
     question: "A gestão financeira depende da conta digital?",
@@ -173,6 +176,7 @@ const FinanceLanding = () => {
   const page = getPublicPage("/neurofinance");
   const { theme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
+  const [openFaq, setOpenFaq] = useState(0);
   const accountScreenshot = theme === "light" ? accountImage.light : accountImage.dark;
   const pixScreenshot = theme === "light" ? pixImage.light : pixImage.dark;
   const fiscalScreenshot = theme === "light" ? fiscalImage.light : fiscalImage.dark;
@@ -273,7 +277,7 @@ const FinanceLanding = () => {
               <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Segurança financeira</p>
               <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">Movimentar dinheiro exige uma confirmação visível.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                O Synapse pode preparar uma ação, mas pagamentos, Pix, saques, boletos e antecipações passam por confirmações rígidas antes de qualquer movimentação real.
+                O Synapse pode preparar uma ação, mas pagamentos, PIX, saques, boletos e antecipações passam por confirmações rígidas antes de qualquer movimentação real.
               </p>
               <div className="mt-8 grid gap-2">
                 {safetyItems.map((item) => (
@@ -356,29 +360,46 @@ const FinanceLanding = () => {
         <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
             <article className="rounded-[38px] bg-foreground p-8 text-background dark:bg-white dark:text-zinc-950 md:p-10">
-              <ShieldCheck aria-hidden="true" className="h-7 w-7 opacity-55" />
-              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">Controles financeiros</p>
-              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">A IA prepara. O dinheiro só se move com confirmação.</h2>
+              <MessageCircle className="h-7 w-7 opacity-55" />
+              <p className="mt-10 text-[9px] font-black uppercase tracking-[0.22em] opacity-45">NeuroZap em validação</p>
+              <h2 className="mt-4 text-4xl font-black leading-none md:text-5xl">WhatsApp conectado por etapas, com status claro.</h2>
               <p className="mt-5 text-sm font-medium leading-relaxed opacity-62 md:text-base">
-                Pagamentos, Pix, saques, boletos e antecipações preservam as validações aplicáveis, como PIN e confirmação assistida, antes de qualquer movimentação real.
+                Conexão e sincronização autorizadas estão em validação. Inbox, etiquetas e contexto avançado com outras áreas continuam em evolução.
               </p>
             </article>
             <div className="rounded-[38px] border border-border/40 bg-card/75 p-7 dark:border-white/10 dark:bg-white/[0.03]">
               <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">Dúvidas frequentes</p>
               <div className="mt-5 divide-y divide-border/40 dark:divide-white/10">
-                {faqs.map((faq) => (
-                  <details
+                {faqs.map((faq, index) => (
+                  <button
                     key={faq.question}
-                    className="group"
+                    id={`finance-faq-trigger-${index}`}
+                    type="button"
+                    aria-expanded={openFaq === index}
+                    aria-controls={`finance-faq-panel-${index}`}
+                    onClick={() => setOpenFaq(openFaq === index ? -1 : index)}
+                    className="block w-full py-5 text-left"
                   >
-                    <summary className="public-tactile flex min-h-14 cursor-pointer list-none items-center justify-between gap-5 rounded-xl py-5 text-left marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <div className="flex items-center justify-between gap-5">
                       <span className="text-sm font-black md:text-base">{faq.question}</span>
-                      <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" />
-                    </summary>
-                    <p className="pb-5 text-sm font-medium leading-relaxed text-muted-foreground/72">
-                      {faq.answer}
-                    </p>
-                  </details>
+                      <ChevronDown className={cn("h-4 w-4 shrink-0 text-muted-foreground transition-transform", openFaq === index && "rotate-180")} />
+                    </div>
+                    <AnimatePresence initial={false}>
+                      {openFaq === index ? (
+                        <motion.p
+                          id={`finance-faq-panel-${index}`}
+                          role="region"
+                          aria-labelledby={`finance-faq-trigger-${index}`}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden pt-4 text-sm font-medium leading-relaxed text-muted-foreground/72"
+                        >
+                          {faq.answer}
+                        </motion.p>
+                      ) : null}
+                    </AnimatePresence>
+                  </button>
                 ))}
               </div>
             </div>
