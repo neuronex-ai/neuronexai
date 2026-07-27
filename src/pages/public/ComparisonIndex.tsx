@@ -102,10 +102,10 @@ const ComparisonIndex = () => {
                 não tem”.
               </p>
               <p className="mt-8 border-t border-background/15 pt-5 text-sm font-medium opacity-60 dark:border-zinc-950/15">
-                Informações organizadas a partir de dados públicos verificados
-                em <time dateTime={COMPARISON_INDEX_META.reviewedAt}>julho de 2026</time>.
-                Recursos, planos e condições podem mudar; confirme os detalhes
-                diretamente com cada fornecedor.
+                Conteúdo editorial revisado em{" "}
+                <time dateTime={COMPARISON_INDEX_META.reviewedAt}>julho de 2026</time>.
+                Recursos, planos e condições podem mudar; confirme os detalhes e
+                as fontes atuais diretamente com cada fornecedor.
               </p>
             </div>
           </div>

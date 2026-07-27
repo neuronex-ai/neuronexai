@@ -74,7 +74,7 @@ export const LandingProblemSection = () => (
       <SectionHeader
         eyebrow="O problema real"
         title={<>Se o sistema consome mais energia do que devolve, <span className="text-muted-foreground">o fluxo falhou.</span></>}
-        description="Mais funções não deveriam criar mais software para administrar. Quando cada área exige estudo, prompts detalhados e cópia e cola, o psicólogo vira a integração entre as ferramentas."
+        description="Mais funções não deveriam criar mais software para administrar. Quando cada área exige estudo, prompts detalhados e mais copiar e colar, o psicólogo vira a integração entre as ferramentas."
       />
       <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {painPoints.map((item, index) => (
@@ -735,8 +735,8 @@ export const LandingFinalCTASection = () => (
     <div className="relative z-10 mx-auto max-w-[1240px] overflow-hidden rounded-[52px] border border-border/45 bg-foreground p-10 text-center text-background shadow-[0_40px_150px_-82px_rgba(0,0,0,0.9)] dark:bg-white dark:text-zinc-950 md:p-20">
       <div className="relative z-10 mx-auto max-w-4xl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div>
-        <h2 className="mt-9 text-5xl font-black leading-[1.02] tracking-tight md:text-6xl">Usar a NeuroNex pode ser perigosamente viciante.</h2>
-        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-75 md:text-xl">Não porque prende você à tela. Porque, depois de agenda, prontuário, financeiro e IA trabalharem no mesmo fluxo, voltar ao copia e cola parece trabalho desnecessário.</p>
+        <h2 className="mt-9 text-5xl font-black leading-[1.02] tracking-tight md:text-6xl">Feita para devolver tempo — não para prender você à tela.</h2>
+        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-75 md:text-xl">“Perigosamente viciante” é só uma frase de efeito. O benefício concreto é reduzir retrabalho: quando agenda, prontuário, financeiro e IA compartilham o fluxo, voltar a copiar e colar parece desnecessário.</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button asChild className="public-tactile h-14 rounded-full bg-background px-8 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>

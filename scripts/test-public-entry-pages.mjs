@@ -128,7 +128,7 @@ test("comparison entries include source disclosure and useful static content", a
   assert.ok(indexHtml.includes("Comparações disponíveis"));
   assert.ok(indexHtml.includes("PsicoManager"));
   assert.ok(detailHtml.includes("Comparação por casos de uso"));
-  assert.ok(detailHtml.includes("dados públicos verificados"));
+  assert.ok(detailHtml.includes("Conteúdo editorial revisado"));
   assert.ok(detailHtml.includes("julho de 2026"));
   assert.ok(detailHtml.includes("FAQPage"));
 });
