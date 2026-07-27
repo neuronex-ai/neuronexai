@@ -73,7 +73,7 @@ export const LandingProblemSection = () => (
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <SectionHeader
         eyebrow="O problema real"
-        title={<>Se o sistema consome mais energia do que devolve, <span className="text-muted-foreground">o fluxo falhou.</span></>}
+        title={<>Se o sistema consome mais energia do que devolve, <span className="text-muted-foreground">ele falhou.</span></>}
         description="Mais funções não deveriam criar mais software para administrar. Quando cada área exige estudo, prompts detalhados e cópia e cola, o psicólogo vira a integração entre as ferramentas."
       />
       <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
