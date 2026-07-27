@@ -11,7 +11,7 @@ import {
   Video,
   WalletCards,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import {
   type FocusEvent,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -317,11 +317,11 @@ export const Navbar = () => {
               />
             </button>
 
-            {typeof document !== "undefined"
+            {typeof document !== "undefined" &&
+            productsOpen &&
+            productMenuPosition
               ? createPortal(
-                  <AnimatePresence>
-                    {productsOpen && productMenuPosition ? (
-                      <motion.div
+                  <motion.div
                         ref={productPopoverRef}
                         initial={
                           shouldReduceMotion
@@ -329,16 +329,6 @@ export const Navbar = () => {
                             : { opacity: 0, x: "-50%", y: -6, scale: 0.985 }
                         }
                         animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
-                        exit={
-                          shouldReduceMotion
-                            ? { opacity: 0, x: "-50%" }
-                            : {
-                                opacity: 0,
-                                x: "-50%",
-                                y: -4,
-                                scale: 0.99,
-                              }
-                        }
                         transition={
                           shouldReduceMotion
                             ? { duration: 0 }
@@ -427,9 +417,7 @@ export const Navbar = () => {
                             </Link>
                           </div>
                         </div>
-                      </motion.div>
-                    ) : null}
-                  </AnimatePresence>,
+                  </motion.div>,
                   document.body,
                 )
               : null}

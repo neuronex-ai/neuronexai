@@ -527,7 +527,7 @@
       {
         "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--em-sessao--sem-transcricao--claro--pagina--004.png",
         "alt": "Sala de teleconsulta em andamento sem transcricao ativa",
-        "caption": "Em sessão: sessão sem transcrição",
+        "caption": "Em sessão: sem transcrição",
         "name": "teleconsulta--em-sessao--sem-transcricao--claro--pagina--004.png",
         "kind": "pagina"
       },
@@ -1795,7 +1795,7 @@
       {
         "src": "/images/prints-sistema/DESKTOP/ESCURO/13. SYNAPSE AI/synapse--voz--ouvindo-comando--escuro--modal--003.png",
         "alt": "Comando de voz sendo ouvido pelo Synapse",
-        "caption": "Voz: ouvindo comando de voz",
+        "caption": "Voz: ouvindo seu comando",
         "name": "synapse--voz--ouvindo-comando--escuro--modal--003.png",
         "kind": "modal"
       }
