@@ -55,14 +55,14 @@ export const PublicOperatingModelBridge = ({ className }: { className?: string }
     )}
   >
     <div className="mx-auto max-w-[1180px]">
-      <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-start">
-        <div>
-          <LayoutDashboard aria-hidden="true" className="h-7 w-7 text-muted-foreground" />
+      <div className="grid gap-10 lg:grid-cols-[1.28fr_0.72fr] lg:items-start">
+        <div className="lg:order-2 lg:justify-self-end lg:text-right">
+          <LayoutDashboard aria-hidden="true" className="h-7 w-7 text-muted-foreground lg:ml-auto" />
           <p className="mt-7 text-xs font-bold text-muted-foreground">
             Sistema operacional para psicólogos
           </p>
         </div>
-        <div>
+        <div className="lg:order-1">
           <h2
             id="public-operating-model-title"
             className="max-w-[18ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
@@ -257,9 +257,9 @@ export function PublicSynapseCommandSection({
       )}
     >
       <div className="mx-auto max-w-[1180px]">
-        <div className="grid gap-10 lg:grid-cols-[0.72fr_1.28fr] lg:items-start">
-          <div>
-            <MessageCircle aria-hidden="true" className={cn("h-7 w-7", inverted ? "opacity-60" : "text-muted-foreground")} />
+        <div className="grid gap-10 lg:grid-cols-[1.3fr_0.7fr] lg:items-start">
+          <div className="lg:order-2 lg:justify-self-end lg:text-right">
+            <MessageCircle aria-hidden="true" className={cn("h-7 w-7 lg:ml-auto", inverted ? "opacity-60" : "text-muted-foreground")} />
             <p className={cn("mt-7 text-xs font-bold", inverted ? "opacity-65" : "text-muted-foreground")}>
               Synapse na NeuroNex
             </p>
@@ -275,19 +275,19 @@ export function PublicSynapseCommandSection({
               WhatsApp/NeuroZap · Beta
             </span>
           </div>
-          <div>
+          <div className="lg:order-1">
             <h2
               id="synapse-command-title"
-              className="max-w-[18ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
+              className="max-w-[20ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
             >
-              Converse com o Synapse. No WhatsApp, a experiência chega por etapas.
+              Converse com o Synapse. No WhatsApp ou no sistema, o cérebro é o mesmo.
             </h2>
             <p className={cn("mt-6 max-w-3xl text-base font-medium leading-relaxed md:text-lg", inverted ? "opacity-75" : "text-muted-foreground")}>
-              No Synapse, texto e voz ajudam você a consultar contexto e preparar
-              rotinas enquanto caminha, toma um café ou aguarda o próximo paciente.
-              No WhatsApp Business, essa experiência avança por etapas no NeuroZap.
-              Conforme cada fluxo for liberado, a proposta é reduzir a necessidade de
-              abrir o notebook, fazer login e percorrer menus para preparar o trabalho.
+              Texto e voz trabalham com o mesmo contexto autorizado da clínica. No
+              sistema, o Synapse consulta informações e prepara rotinas; no WhatsApp
+              Business, o NeuroZap leva esse mesmo cérebro para o caminho do dia a dia.
+              A liberação no WhatsApp continua em Beta e avança por etapas, com os mesmos
+              limites e confirmações visíveis.
             </p>
             <p className={cn("mt-5 max-w-3xl border-l-2 pl-5 text-sm font-medium leading-relaxed", inverted ? "border-background/25 opacity-68 dark:border-zinc-950/25" : "border-border text-muted-foreground")}>
               {SYNAPSE_CHANNEL_DISCLOSURE}

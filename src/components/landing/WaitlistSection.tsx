@@ -17,7 +17,7 @@ const planIcons: Record<PublicPlanName, typeof Star> = {
 
 export const WaitlistSection = () => {
     return (
-        <section id="waitlist" className="public-section-stage public-solid-subtle relative overflow-hidden px-6 py-20 md:py-28">
+        <section id="pricing" className="public-section-stage public-solid-subtle relative overflow-hidden px-6 py-20 md:py-28">
             <div className="relative z-10 mx-auto max-w-[1240px]">
                 <div className="mx-auto mb-12 max-w-5xl text-center md:mb-16">
                     <FadeIn delay={0.1}>

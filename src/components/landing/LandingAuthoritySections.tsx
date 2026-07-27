@@ -3,7 +3,6 @@
 import {
   ArrowRight,
   BookOpen,
-  CalendarDays,
   Monitor,
   Smartphone,
   UserRound,
@@ -16,7 +15,6 @@ import { PublicStatusBadge } from "@/components/public/PublicPageShell";
 import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import {
   PUBLIC_ARTICLES,
-  PUBLIC_UPDATES,
   getPublicPage,
 } from "@/content/public-content";
 import { getPublicMediaCollection } from "@/content/public-product-media";
@@ -171,69 +169,32 @@ export const LandingContinuityAuthoritySection = () => {
 };
 
 export const LandingKnowledgeAuthoritySection = () => (
-  <section className="public-section-stage public-solid-subtle px-6 py-20 md:py-28">
+  <section className="public-section-stage public-solid-subtle px-6 py-12 md:py-16">
     <div className="mx-auto max-w-[1240px]">
-      <div className="grid gap-10 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
-        <FadeIn>
-          <div>
-            <BookOpen className="h-7 w-7 text-muted-foreground" />
-            <p className="mt-8 font-mono text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-              Conteúdo e transparência
-            </p>
-            <h2 className="mt-5 text-balance text-5xl font-black leading-[1.02] md:text-6xl">
-              Produto profundo exige explicação profunda.
-            </h2>
-          </div>
-        </FadeIn>
-        <FadeIn delay={0.1}>
-          <div className="border-y border-border/45 py-6 dark:border-white/10">
-            {PUBLIC_UPDATES.map((update) => (
-              <div
-                key={`${update.status}-${update.title}`}
-                className="flex items-center justify-between gap-5 border-b border-border/35 py-4 last:border-b-0 dark:border-white/10"
-              >
-                <div>
-                  <p className="text-sm font-black">{update.title}</p>
-                  <p className="mt-1 text-xs font-medium text-muted-foreground">
-                    {update.status}
-                  </p>
-                </div>
-                <CalendarDays className="h-4 w-4 text-muted-foreground" />
-              </div>
-            ))}
-            <Link
-              to="/novidades"
-              className="mt-5 inline-flex min-h-11 items-center text-[10px] font-black uppercase tracking-[0.16em]"
-            >
-              Ver status público <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </div>
-        </FadeIn>
-      </div>
-      <div className="mt-14 grid gap-5 lg:grid-cols-3">
-        {PUBLIC_ARTICLES.map((article, index) => (
-          <FadeIn key={article.slug} delay={index * 0.05}>
-            <article className="group h-full border-t border-border/55 py-6 dark:border-white/10">
-              <p className="font-mono text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">
-                {article.category}
+      <FadeIn>
+        <div className="flex flex-col gap-7 rounded-[32px] border border-border/45 bg-card/72 p-7 dark:border-white/10 dark:bg-white/[0.025] md:flex-row md:items-center md:justify-between md:p-9">
+          <div className="flex max-w-3xl items-start gap-5">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] border border-border/55 bg-background/70 text-muted-foreground dark:border-white/10 dark:bg-white/[0.035]">
+              <BookOpen aria-hidden="true" className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground">NeuroX</p>
+              <h2 className="mt-2 text-balance text-2xl font-black leading-tight md:text-3xl">
+                Conteúdo claro para decisões melhores.
+              </h2>
+              <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground md:text-base">
+                Guias sobre prática clínica, gestão, tecnologia e inteligência artificial para psicólogos.
               </p>
-              <h3 className="mt-5 text-2xl font-black leading-tight">
-                {article.title}
-              </h3>
-              <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/70">
-                {article.excerpt}
-              </p>
-              <Link
-                to={article.route}
-                className="mt-7 inline-flex min-h-11 items-center text-[10px] font-black uppercase tracking-[0.16em]"
-              >
-                Ler artigo{" "}
-                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
-              </Link>
-            </article>
-          </FadeIn>
-        ))}
-      </div>
+            </div>
+          </div>
+          <Link
+            to="/blog"
+            className="public-tactile inline-flex min-h-12 shrink-0 items-center justify-center rounded-full bg-foreground px-6 text-sm font-semibold text-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            Explorar o NeuroX <ArrowRight aria-hidden="true" className="ml-2 h-4 w-4" />
+          </Link>
+        </div>
+      </FadeIn>
     </div>
   </section>
 );

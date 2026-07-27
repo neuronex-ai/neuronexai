@@ -20,7 +20,7 @@ describe("public desktop Navbar", () => {
       </MemoryRouter>,
     );
 
-    const trigger = screen.getByRole("button", { name: "PRODUTOS" });
+    const trigger = screen.getByRole("button", { name: /produtos/i });
     const disclosure = trigger.parentElement;
 
     expect(disclosure).not.toBeNull();

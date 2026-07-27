@@ -176,7 +176,7 @@
       "file": "synapse.html",
       "kind": "product",
       "status": "Disponível",
-      "modifiedAt": "2026-07-26",
+      "modifiedAt": "2026-07-27",
       "title": "Synapse | IA para psicólogos com contexto e confirmação",
       "description": "O Synapse consulta informações autorizadas, prepara rascunhos e ações e pede confirmação antes de mudanças sensíveis. A decisão clínica continua humana.",
       "keywords": [
@@ -186,7 +186,7 @@
         "IA com confirmação humana"
       ],
       "eyebrow": "Inteligência artificial com controle",
-      "heading": "Converse com a operação. Você confirma o que muda.",
+      "heading": "Converse com\nSua clínica por voz ou texto",
       "lead": "Por texto ou voz, o Synapse consulta informações autorizadas, navega pela NeuroNex e prepara o próximo passo. Registros, comunicações e dinheiro continuam sujeitos às confirmações do fluxo.",
       "highlights": [
         "Trabalha somente com contexto autorizado",

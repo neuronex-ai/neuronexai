@@ -54,9 +54,9 @@ const DesktopIndex = () => {
                 <WaitlistSection />
                 <LandingPlanComparisonSection />
                 <LandingTrustAndFAQSection />
-                <LandingKnowledgeAuthoritySection />
                 <LandingPublicPagesCarouselSection />
                 <LandingFinalCTASection />
+                <LandingKnowledgeAuthoritySection />
             </main>
             <Footer />
             <LandingSynapseSDR sdr={sdr} />

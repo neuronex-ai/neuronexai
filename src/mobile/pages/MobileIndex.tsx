@@ -173,7 +173,7 @@ const OperatingSystemMobile = () => (
 );
 
 const PlansMobile = () => (
-  <section id="waitlist" className="relative overflow-hidden bg-background px-5 py-16">
+  <section id="pricing" className="relative overflow-hidden bg-background px-5 py-16">
     <MobileSectionHeader eyebrow="Planos NeuroNex" title={<>Escolha o plano ideal para a sua clínica.</>} description="Comece gratuitamente ou avance para o Profissional com maior escala, contexto e automação." />
     <div className="mt-10 space-y-4">
       {PUBLIC_PLAN_CARDS.map((plan, index) => (

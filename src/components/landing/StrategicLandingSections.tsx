@@ -660,7 +660,7 @@ export const LandingPublicPagesCarouselSection = () => (
           Páginas públicas
         </p>
         <h2 className="public-neurox-title mt-7 text-balance text-[clamp(2.8rem,6vw,4.8rem)] font-black leading-[1.02] tracking-tight">
-          Uma vitrine viva.<br />Uma relação que começa antes da sessão.
+          Uma relação que<br />começa antes da sessão.
         </h2>
         <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
           Cada página explica uma parte da clínica em linguagem simples, para que você reconheça o caminho antes de escolher uma ferramenta.

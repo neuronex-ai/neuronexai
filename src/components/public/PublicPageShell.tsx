@@ -15,7 +15,7 @@ import {
   Network,
   ShieldCheck,
 } from "lucide-react";
-import type { ElementType, ReactNode } from "react";
+import { useEffect, useState, type ElementType, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Link } from "react-router-dom";
 
@@ -116,6 +116,66 @@ export function PublicRouteBreadcrumbs({ route }: { route: string }) {
   return page ? <PublicBreadcrumbs page={page} /> : null;
 }
 
+const SYNAPSE_HEADING_WORDS = ["voz", "texto"] as const;
+
+function SynapseAnimatedHeading() {
+  const shouldReduceMotion = useReducedMotion();
+  const [wordIndex, setWordIndex] = useState(0);
+  const [typedWord, setTypedWord] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  useEffect(() => {
+    if (shouldReduceMotion) return undefined;
+
+    const currentWord = SYNAPSE_HEADING_WORDS[wordIndex];
+    const wordIsComplete = typedWord === currentWord;
+    const wordIsEmpty = typedWord.length === 0;
+    let delay = isDeleting ? 55 : 95;
+
+    if (!isDeleting && wordIsComplete) delay = 1_350;
+    if (isDeleting && wordIsEmpty) delay = 240;
+
+    const timer = window.setTimeout(() => {
+      if (!isDeleting && wordIsComplete) {
+        setIsDeleting(true);
+        return;
+      }
+
+      if (isDeleting && wordIsEmpty) {
+        setWordIndex((current) => (current + 1) % SYNAPSE_HEADING_WORDS.length);
+        setIsDeleting(false);
+        return;
+      }
+
+      const nextLength = typedWord.length + (isDeleting ? -1 : 1);
+      setTypedWord(currentWord.slice(0, nextLength));
+    }, delay);
+
+    return () => window.clearTimeout(timer);
+  }, [isDeleting, shouldReduceMotion, typedWord, wordIndex]);
+
+  const visualWord = shouldReduceMotion ? "voz e texto" : typedWord;
+
+  return (
+    <>
+      <span className="block">Converse com</span>
+      <span className="block md:whitespace-nowrap">
+        Sua clínica por{" "}
+        <span
+          aria-hidden="true"
+          className="inline-flex min-w-[9ch] items-baseline text-left text-muted-foreground"
+        >
+          <span>{visualWord || "\u00a0"}</span>
+          <span
+            className="ml-[0.08em] inline-block h-[0.82em] w-[0.055em] translate-y-[0.04em] rounded-full bg-current animate-pulse motion-reduce:animate-none"
+          />
+        </span>
+        <span className="sr-only">voz ou texto</span>
+      </span>
+    </>
+  );
+}
+
 export function PublicProductHero({
   page,
   actions,
@@ -140,8 +200,13 @@ export function PublicProductHero({
                 <PublicStatusBadge status={page.status} />
               )}
             </div>
-            <h1 className="public-product-title public-neurox-title mx-auto mt-7 max-w-[15ch] whitespace-pre-line pb-[0.12em] text-balance text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight">
-              {page.heading}
+            <h1
+              className={cn(
+                "public-product-title public-neurox-title mx-auto mt-7 whitespace-pre-line pb-[0.12em] text-balance text-[clamp(3rem,6vw,5.4rem)] font-black leading-[1.02] tracking-tight",
+                page.route === "/synapse" ? "max-w-[22ch]" : "max-w-[15ch]",
+              )}
+            >
+              {page.route === "/synapse" ? <SynapseAnimatedHeading /> : page.heading}
             </h1>
             <p className="mx-auto mt-7 max-w-[840px] text-pretty text-lg font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
               {page.lead}

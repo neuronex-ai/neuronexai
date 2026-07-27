@@ -1,11 +1,14 @@
 import {
   ArrowUpRight,
+  BookOpen,
   CalendarDays,
   ChevronDown,
+  Download,
   FileText,
   Landmark,
   MessageCircle,
   Network,
+  Scale,
   Sparkles,
   UsersRound,
   Video,
@@ -85,8 +88,42 @@ const productLinks = [
   },
 ];
 
+const productGroups = [
+  {
+    label: "Rotina clínica",
+    description: "Do agendamento ao registro do atendimento.",
+    links: productLinks.slice(0, 4),
+  },
+  {
+    label: "Inteligência e gestão",
+    description: "Contexto, análise e operação conectados.",
+    links: productLinks.slice(4),
+  },
+];
+
+const publicLinks = [
+  {
+    to: "/comparar",
+    label: "Comparar sistemas",
+    description: "Diferenças de proposta e fluxo.",
+    icon: Scale,
+  },
+  {
+    to: "/download",
+    label: "Baixar NeuroNex",
+    description: "Opções de instalação.",
+    icon: Download,
+  },
+  {
+    to: "/blog",
+    label: "NeuroX",
+    description: "Conteúdo para sua prática.",
+    icon: BookOpen,
+  },
+];
+
 const navControlClass =
-  "public-navbar-control public-tactile flex min-h-11 items-center rounded-[20px] px-3.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
+  "public-navbar-control public-tactile flex min-h-11 items-center rounded-[18px] px-4 text-xs font-semibold tracking-[-0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
 export const Navbar = () => {
   const [productsOpen, setProductsOpen] = useState(false);
@@ -132,7 +169,7 @@ export const Navbar = () => {
       const rect = trigger.getBoundingClientRect();
       const menuWidth = Math.min(
         window.innerWidth - 32,
-        window.innerWidth >= 1280 ? 720 : 620,
+        window.innerWidth >= 1280 ? 860 : 720,
       );
       const halfMenuWidth = menuWidth / 2;
       const unclampedLeft = rect.left + rect.width / 2;
@@ -272,19 +309,19 @@ export const Navbar = () => {
             <span className="flex h-10 w-10 items-center justify-center rounded-[18px] border border-black/[0.06] bg-white/80 shadow-[0_18px_44px_-30px_rgba(0,0,0,0.34)] transition-[transform,background-color,border-color,box-shadow] duration-300 group-hover:scale-105 dark:border-white/[0.08] dark:bg-white/[0.045] dark:shadow-[0_18px_48px_-30px_rgba(255,255,255,0.26)] motion-reduce:transition-none motion-reduce:group-hover:scale-100">
               <Logo className="h-6 w-6" />
             </span>
-            <span className="whitespace-nowrap font-sans text-[10px] font-black uppercase tracking-[0.28em] text-foreground">
+            <span className="whitespace-nowrap font-sans text-sm font-semibold tracking-[-0.025em] text-foreground">
               NeuroNex
             </span>
           </Link>
         </div>
 
-        <div className="flex shrink-0 items-center justify-center gap-1.5 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-white/45">
+        <div className="flex shrink-0 items-center justify-center gap-1 font-sans text-muted-foreground">
           <button
             type="button"
             onClick={() => handleSectionClick("diferenciais")}
-            className={cn(navControlClass, "hidden xl:flex")}
+            className={navControlClass}
           >
-            DIFERENCIAIS
+            Diferenciais
           </button>
 
           <div
@@ -307,7 +344,7 @@ export const Navbar = () => {
               onClick={toggleProducts}
               onKeyDown={handleProductButtonKeyDown}
             >
-              PRODUTOS
+              Produtos
               <ChevronDown
                 aria-hidden="true"
                 className={cn(
@@ -343,7 +380,7 @@ export const Navbar = () => {
                           left: productMenuPosition.left,
                           top: productMenuPosition.top,
                         }}
-                        className="pointer-events-auto fixed z-[200] w-[min(620px,calc(100vw-32px))] pt-2 text-foreground xl:w-[720px]"
+                        className="pointer-events-auto fixed z-[200] w-[min(720px,calc(100vw-32px))] pt-2 text-foreground xl:w-[860px]"
                         onMouseEnter={keepProductsOpen}
                         onMouseLeave={closeProductsSoon}
                         onFocus={keepProductsOpen}
@@ -354,7 +391,7 @@ export const Navbar = () => {
                           id="public-product-menu"
                           role="group"
                           aria-label="Produtos NeuroNex"
-                          className="public-product-menu-surface relative isolate overflow-hidden rounded-[30px] border border-black/[0.1] bg-[rgba(255,255,255,0.86)] p-2.5 shadow-[0_36px_90px_-30px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/70 backdrop-blur-[48px] backdrop-saturate-[145%] dark:border-white/[0.1] dark:bg-[rgba(8,8,10,0.86)] dark:shadow-[0_40px_96px_-26px_rgba(0,0,0,0.88)] dark:ring-white/[0.08]"
+                          className="public-product-menu-surface relative isolate max-h-[calc(100vh-7rem)] overflow-x-hidden overflow-y-auto rounded-[32px] border border-black/[0.1] bg-[rgba(255,255,255,0.86)] p-3 shadow-[0_36px_90px_-30px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/70 backdrop-blur-[48px] backdrop-saturate-[145%] dark:border-white/[0.1] dark:bg-[rgba(8,8,10,0.86)] dark:shadow-[0_40px_96px_-26px_rgba(0,0,0,0.88)] dark:ring-white/[0.08]"
                         >
                           <span
                             aria-hidden="true"
@@ -365,56 +402,99 @@ export const Navbar = () => {
                             className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/25"
                           />
                           <div className="relative z-10">
-                            <div
-                              className="grid grid-cols-3 gap-1.5"
-                              role="list"
-                            >
-                              {productLinks.map((item, index) => {
-                                const isActive = location.pathname === item.to;
+                            <div className="flex items-start justify-between gap-6 px-3 pb-3 pt-2">
+                              <div>
+                                <p className="text-sm font-semibold tracking-[-0.015em]">
+                                  Ecossistema NeuroNex
+                                </p>
+                                <p className="mt-1 text-xs font-medium leading-relaxed text-muted-foreground">
+                                  Uma operação contínua, organizada por finalidade.
+                                </p>
+                              </div>
+                              <Link
+                                to="/produto"
+                                className="public-tactile inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white/[0.04]"
+                              >
+                                Visão geral
+                                <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
+                              </Link>
+                            </div>
+
+                            <div className="grid gap-2 md:grid-cols-2">
+                              {productGroups.map((group) => {
+                                const headingId = `product-group-${group.label
+                                  .replaceAll(" ", "-")
+                                  .toLowerCase()}`;
 
                                 return (
-                                  <Link
-                                    key={item.to}
-                                    to={item.to}
-                                    aria-current={isActive ? "page" : undefined}
-                                    role="listitem"
-                                    className={cn(
-                                      "public-product-menu-item public-tactile group relative flex min-h-[88px] gap-3 overflow-hidden rounded-[20px] px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                                      index === productLinks.length - 1 &&
-                                        "col-span-1",
-                                    )}
+                                  <section
+                                    key={group.label}
+                                    aria-labelledby={headingId}
+                                    className="rounded-[24px] border border-border/45 bg-background/32 p-2 dark:border-white/[0.07] dark:bg-white/[0.018]"
                                   >
-                                    {isActive ? (
-                                      <span className="absolute inset-1 rounded-2xl bg-black/[0.045] dark:bg-white/[0.065]" />
-                                    ) : null}
-                                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-black/[0.055] bg-white/70 text-zinc-400 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.42)] transition-colors group-hover:text-zinc-900 dark:border-white/[0.08] dark:bg-white/[0.045] dark:text-white/45 dark:group-hover:text-white">
-                                      <item.icon
-                                        aria-hidden="true"
-                                        className="h-4 w-4"
-                                      />
-                                    </span>
-                                    <span className="relative min-w-0 pt-0.5">
-                                      <span className="flex items-center gap-2 font-sans text-[10px] font-black uppercase tracking-[0.18em]">
-                                        {item.label}
-                                      </span>
-                                      <span className="mt-1.5 block font-sans text-[10px] font-medium normal-case leading-relaxed tracking-normal text-zinc-500 dark:text-white/45">
-                                        {item.description}
-                                      </span>
-                                    </span>
-                                  </Link>
+                                    <div className="px-3 pb-2 pt-2">
+                                      <h3 id={headingId} className="text-xs font-semibold text-foreground">
+                                        {group.label}
+                                      </h3>
+                                      <p className="mt-1 text-[11px] font-medium leading-relaxed text-muted-foreground">
+                                        {group.description}
+                                      </p>
+                                    </div>
+                                    <div className="grid gap-1" role="list">
+                                      {group.links.map((item) => {
+                                        const isActive = location.pathname === item.to;
+
+                                        return (
+                                          <Link
+                                            key={item.to}
+                                            to={item.to}
+                                            aria-current={isActive ? "page" : undefined}
+                                            role="listitem"
+                                            className="public-product-menu-item public-tactile group flex min-h-[62px] items-center gap-3 rounded-[18px] px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                          >
+                                            <span
+                                              className={cn(
+                                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] border border-border/55 bg-background/70 text-muted-foreground transition-colors group-hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.035]",
+                                                isActive && "bg-foreground text-background dark:bg-white dark:text-zinc-950",
+                                              )}
+                                            >
+                                              <item.icon aria-hidden="true" className="h-4 w-4" />
+                                            </span>
+                                            <span className="min-w-0">
+                                              <span className="block text-[13px] font-semibold tracking-[-0.015em]">
+                                                {item.label}
+                                              </span>
+                                              <span className="mt-0.5 block truncate text-[10px] font-medium text-muted-foreground">
+                                                {item.description}
+                                              </span>
+                                            </span>
+                                          </Link>
+                                        );
+                                      })}
+                                    </div>
+                                  </section>
                                 );
                               })}
                             </div>
-                            <Link
-                              to="/produto"
-                              className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[18px] px-4 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-zinc-900 dark:text-white/45 dark:hover:text-white dark:focus-visible:text-white"
-                            >
-                              Conhecer a operação completa
-                              <ArrowUpRight
-                                aria-hidden="true"
-                                className="h-4 w-4"
-                              />
-                            </Link>
+
+                            <div className="mt-2 grid gap-1.5 sm:grid-cols-3" role="list" aria-label="Mais opções">
+                              {publicLinks.map((item) => (
+                                <Link
+                                  key={item.to}
+                                  to={item.to}
+                                  role="listitem"
+                                  className="public-product-menu-footer public-tactile group flex min-h-[66px] items-center gap-3 rounded-[18px] px-3.5 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                                >
+                                  <item.icon aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+                                  <span className="min-w-0">
+                                    <span className="block text-xs font-semibold">{item.label}</span>
+                                    <span className="mt-0.5 block truncate text-[10px] font-medium text-muted-foreground">
+                                      {item.description}
+                                    </span>
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
                           </div>
                         </div>
                   </motion.div>,
@@ -423,18 +503,13 @@ export const Navbar = () => {
               : null}
           </div>
 
-          <Link to="/comparar" className={navControlClass}>
-            COMPARAR
-          </Link>
-          <Link
-            to="/download"
-            className={cn(navControlClass, "hidden lg:flex")}
+          <button
+            type="button"
+            onClick={() => handleSectionClick("pricing")}
+            className={navControlClass}
           >
-            DOWNLOAD
-          </Link>
-          <Link to="/blog" className={cn(navControlClass, "hidden xl:flex")}>
-            NEUROX
-          </Link>
+            Preços
+          </button>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -442,9 +517,9 @@ export const Navbar = () => {
           <Button
             asChild
             size="sm"
-            className="public-tactile hidden h-11 rounded-full bg-foreground px-7 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
+            className="public-tactile hidden h-11 rounded-full bg-foreground px-6 font-sans text-xs font-semibold tracking-[-0.01em] text-background shadow-none hover:bg-foreground/90 md:inline-flex"
           >
-            <Link to="/auth">ENTRAR</Link>
+            <Link to="/auth">Entrar</Link>
           </Button>
         </div>
       </div>
