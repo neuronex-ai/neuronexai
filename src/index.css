@@ -921,7 +921,7 @@
 
   .public-product-menu-surface {
     border-color: rgba(9, 9, 10, 0.1) !important;
-    background-color: rgba(255, 255, 255, 0.62) !important;
+    background-color: rgba(255, 255, 255, 0.86) !important;
     background-image: none !important;
     backdrop-filter: blur(46px) saturate(148%) brightness(1.03);
     -webkit-backdrop-filter: blur(46px) saturate(148%) brightness(1.03);
@@ -933,7 +933,7 @@
 
   .dark .public-product-menu-surface {
     border-color: rgba(255, 255, 255, 0.075) !important;
-    background-color: rgba(8, 8, 8, 0.66) !important;
+    background-color: rgba(8, 8, 8, 0.86) !important;
     background-image: none !important;
     backdrop-filter: blur(48px) saturate(126%) brightness(0.92);
     -webkit-backdrop-filter: blur(48px) saturate(126%) brightness(0.92);

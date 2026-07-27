@@ -12,7 +12,15 @@ import {
   WalletCards,
 } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { useEffect, useRef, useState } from "react";
+import {
+  type FocusEvent,
+  type KeyboardEvent as ReactKeyboardEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
@@ -82,22 +90,164 @@ const navControlClass =
 
 export const Navbar = () => {
   const [productsOpen, setProductsOpen] = useState(false);
+  const [productMenuPosition, setProductMenuPosition] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
   const productMenuRef = useRef<HTMLDivElement>(null);
+  const productButtonRef = useRef<HTMLButtonElement>(null);
+  const productPopoverRef = useRef<HTMLDivElement>(null);
+  const productCloseTimerRef = useRef<number | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setProductsOpen(false);
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape" && productsOpen) {
+        productButtonRef.current?.focus();
+        setProductsOpen(false);
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
+  }, [productsOpen]);
+
+  useEffect(
+    () => () => {
+      if (productCloseTimerRef.current !== null) {
+        window.clearTimeout(productCloseTimerRef.current);
+      }
+    },
+    [],
+  );
+
+  useLayoutEffect(() => {
+    if (!productsOpen) return;
+
+    const updateProductMenuPosition = () => {
+      const trigger = productButtonRef.current;
+      if (!trigger) return;
+
+      const rect = trigger.getBoundingClientRect();
+      const menuWidth = Math.min(
+        window.innerWidth - 32,
+        window.innerWidth >= 1280 ? 720 : 620,
+      );
+      const halfMenuWidth = menuWidth / 2;
+      const unclampedLeft = rect.left + rect.width / 2;
+
+      setProductMenuPosition({
+        left: Math.max(
+          16 + halfMenuWidth,
+          Math.min(window.innerWidth - 16 - halfMenuWidth, unclampedLeft),
+        ),
+        top: rect.bottom,
+      });
+    };
+
+    updateProductMenuPosition();
+    window.addEventListener("resize", updateProductMenuPosition);
+
+    return () =>
+      window.removeEventListener("resize", updateProductMenuPosition);
+  }, [productsOpen]);
 
   useEffect(() => {
     setProductsOpen(false);
   }, [location.pathname]);
+
+  const keepProductsOpen = () => {
+    if (productCloseTimerRef.current !== null) {
+      window.clearTimeout(productCloseTimerRef.current);
+      productCloseTimerRef.current = null;
+    }
+    setProductsOpen(true);
+  };
+
+  const toggleProducts = () => {
+    if (productCloseTimerRef.current !== null) {
+      window.clearTimeout(productCloseTimerRef.current);
+      productCloseTimerRef.current = null;
+    }
+    setProductsOpen((isOpen) => !isOpen);
+  };
+
+  const closeProductsSoon = () => {
+    if (productCloseTimerRef.current !== null) {
+      window.clearTimeout(productCloseTimerRef.current);
+    }
+    productCloseTimerRef.current = window.setTimeout(() => {
+      setProductsOpen(false);
+      productCloseTimerRef.current = null;
+    }, 100);
+  };
+
+  const handleProductsBlur = (event: FocusEvent<HTMLElement>) => {
+    const nextTarget = event.relatedTarget;
+    if (
+      nextTarget instanceof Node &&
+      (productMenuRef.current?.contains(nextTarget) ||
+        productPopoverRef.current?.contains(nextTarget))
+    ) {
+      return;
+    }
+
+    setProductsOpen(false);
+  };
+
+  const handleProductButtonKeyDown = (
+    event: ReactKeyboardEvent<HTMLButtonElement>,
+  ) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      keepProductsOpen();
+      window.requestAnimationFrame(() => {
+        productPopoverRef.current
+          ?.querySelector<HTMLElement>("a[href]")
+          ?.focus();
+      });
+      return;
+    }
+
+    if (event.key === "Tab" && !event.shiftKey && productsOpen) {
+      const firstProductLink =
+        productPopoverRef.current?.querySelector<HTMLElement>("a[href]");
+      if (firstProductLink) {
+        event.preventDefault();
+        firstProductLink.focus();
+      }
+    }
+  };
+
+  const handleProductPopoverKeyDown = (
+    event: ReactKeyboardEvent<HTMLDivElement>,
+  ) => {
+    if (event.key !== "Tab") return;
+
+    const focusableItems = Array.from(
+      productPopoverRef.current?.querySelectorAll<HTMLElement>("a[href]") ?? [],
+    );
+    if (focusableItems.length === 0) return;
+
+    if (event.shiftKey && event.target === focusableItems[0]) {
+      event.preventDefault();
+      productButtonRef.current?.focus();
+      return;
+    }
+
+    if (
+      !event.shiftKey &&
+      event.target === focusableItems[focusableItems.length - 1]
+    ) {
+      const nextNavbarControl = productMenuRef.current
+        ?.nextElementSibling as HTMLElement | null;
+      if (nextNavbarControl) {
+        event.preventDefault();
+        nextNavbarControl.focus();
+      }
+    }
+  };
 
   const handleSectionClick = (target: string) => {
     if (location.pathname !== "/") {
@@ -140,19 +290,12 @@ export const Navbar = () => {
           <div
             ref={productMenuRef}
             className="relative"
-            onMouseEnter={() => setProductsOpen(true)}
-            onMouseLeave={() => setProductsOpen(false)}
-            onFocus={() => setProductsOpen(true)}
-            onBlur={(event) => {
-              if (
-                !(event.relatedTarget instanceof Node) ||
-                !productMenuRef.current?.contains(event.relatedTarget)
-              ) {
-                setProductsOpen(false);
-              }
-            }}
+            onMouseEnter={keepProductsOpen}
+            onMouseLeave={closeProductsSoon}
+            onBlur={handleProductsBlur}
           >
             <button
+              ref={productButtonRef}
               type="button"
               aria-expanded={productsOpen}
               aria-controls="public-product-menu"
@@ -161,7 +304,8 @@ export const Navbar = () => {
                 "gap-1.5",
                 productsOpen && "public-navbar-control-active",
               )}
-              onClick={() => setProductsOpen(true)}
+              onClick={toggleProducts}
+              onKeyDown={handleProductButtonKeyDown}
             >
               PRODUTOS
               <ChevronDown
@@ -173,90 +317,125 @@ export const Navbar = () => {
               />
             </button>
 
-            <AnimatePresence>
-              {productsOpen ? (
-                <motion.div
-                  initial={
-                    shouldReduceMotion
-                      ? false
-                      : { opacity: 0, x: "-50%", y: -6, scale: 0.985 }
-                  }
-                  animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
-                  exit={
-                    shouldReduceMotion
-                      ? { opacity: 0, x: "-50%" }
-                      : {
-                          opacity: 0,
-                          x: "-50%",
-                          y: -4,
-                          scale: 0.99,
+            {typeof document !== "undefined"
+              ? createPortal(
+                  <AnimatePresence>
+                    {productsOpen && productMenuPosition ? (
+                      <motion.div
+                        ref={productPopoverRef}
+                        initial={
+                          shouldReduceMotion
+                            ? false
+                            : { opacity: 0, x: "-50%", y: -6, scale: 0.985 }
                         }
-                  }
-                  transition={
-                    shouldReduceMotion
-                      ? { duration: 0 }
-                      : { type: "spring", stiffness: 470, damping: 38, mass: 0.72 }
-                  }
-                  className="absolute left-1/2 top-full w-[min(620px,calc(100vw-32px))] pt-2 text-foreground xl:w-[720px]"
-                >
-                  <div
-                    id="public-product-menu"
-                    role="group"
-                    aria-label="Produtos NeuroNex"
-                    className="public-glass-surface public-product-menu-surface rounded-[30px] p-2.5 backdrop-blur-3xl bg-white/[0.88] dark:bg-[#080808]/92 border border-black/[0.08] dark:border-white/[0.08] shadow-[0_24px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_24px_60px_-15px_rgba(0,0,0,0.7)] ring-1 ring-white/40 dark:ring-white/[0.025]"
-                  >
-                    <div className="grid grid-cols-3 gap-1.5" role="list">
-                      {productLinks.map((item, index) => {
-                        const isActive = location.pathname === item.to;
+                        animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
+                        exit={
+                          shouldReduceMotion
+                            ? { opacity: 0, x: "-50%" }
+                            : {
+                                opacity: 0,
+                                x: "-50%",
+                                y: -4,
+                                scale: 0.99,
+                              }
+                        }
+                        transition={
+                          shouldReduceMotion
+                            ? { duration: 0 }
+                            : {
+                                type: "spring",
+                                stiffness: 470,
+                                damping: 38,
+                                mass: 0.72,
+                              }
+                        }
+                        style={{
+                          left: productMenuPosition.left,
+                          top: productMenuPosition.top,
+                        }}
+                        className="pointer-events-auto fixed z-[200] w-[min(620px,calc(100vw-32px))] pt-2 text-foreground xl:w-[720px]"
+                        onMouseEnter={keepProductsOpen}
+                        onMouseLeave={closeProductsSoon}
+                        onFocus={keepProductsOpen}
+                        onBlur={handleProductsBlur}
+                        onKeyDown={handleProductPopoverKeyDown}
+                      >
+                        <div
+                          id="public-product-menu"
+                          role="group"
+                          aria-label="Produtos NeuroNex"
+                          className="public-product-menu-surface relative isolate overflow-hidden rounded-[30px] border border-black/[0.1] bg-[rgba(255,255,255,0.86)] p-2.5 shadow-[0_36px_90px_-30px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/70 backdrop-blur-[48px] backdrop-saturate-[145%] dark:border-white/[0.1] dark:bg-[rgba(8,8,10,0.86)] dark:shadow-[0_40px_96px_-26px_rgba(0,0,0,0.88)] dark:ring-white/[0.08]"
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/55 via-white/10 to-transparent dark:from-white/[0.07] dark:via-transparent"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/25"
+                          />
+                          <div className="relative z-10">
+                            <div
+                              className="grid grid-cols-3 gap-1.5"
+                              role="list"
+                            >
+                              {productLinks.map((item, index) => {
+                                const isActive = location.pathname === item.to;
 
-                        return (
-                          <Link
-                            key={item.to}
-                            to={item.to}
-                            aria-current={isActive ? "page" : undefined}
-                            role="listitem"
-                            className={cn(
-                              "public-product-menu-item public-tactile group relative flex min-h-[88px] gap-3 overflow-hidden rounded-[20px] px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                              index === productLinks.length - 1 && "col-span-1",
-                            )}
-                          >
-                            {isActive ? (
-                              <span
-                                className="absolute inset-1 rounded-2xl bg-black/[0.045] dark:bg-white/[0.065]"
+                                return (
+                                  <Link
+                                    key={item.to}
+                                    to={item.to}
+                                    aria-current={isActive ? "page" : undefined}
+                                    role="listitem"
+                                    className={cn(
+                                      "public-product-menu-item public-tactile group relative flex min-h-[88px] gap-3 overflow-hidden rounded-[20px] px-3 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                                      index === productLinks.length - 1 &&
+                                        "col-span-1",
+                                    )}
+                                  >
+                                    {isActive ? (
+                                      <span className="absolute inset-1 rounded-2xl bg-black/[0.045] dark:bg-white/[0.065]" />
+                                    ) : null}
+                                    <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-black/[0.055] bg-white/70 text-zinc-400 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.42)] transition-colors group-hover:text-zinc-900 dark:border-white/[0.08] dark:bg-white/[0.045] dark:text-white/45 dark:group-hover:text-white">
+                                      <item.icon
+                                        aria-hidden="true"
+                                        className="h-4 w-4"
+                                      />
+                                    </span>
+                                    <span className="relative min-w-0 pt-0.5">
+                                      <span className="flex items-center gap-2 font-sans text-[10px] font-black uppercase tracking-[0.18em]">
+                                        {item.label}
+                                      </span>
+                                      <span className="mt-1.5 block font-sans text-[10px] font-medium normal-case leading-relaxed tracking-normal text-zinc-500 dark:text-white/45">
+                                        {item.description}
+                                      </span>
+                                    </span>
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                            <Link
+                              to="/produto"
+                              className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[18px] px-4 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-zinc-900 dark:text-white/45 dark:hover:text-white dark:focus-visible:text-white"
+                            >
+                              Conhecer a operação completa
+                              <ArrowUpRight
+                                aria-hidden="true"
+                                className="h-4 w-4"
                               />
-                            ) : null}
-                            <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-black/[0.055] bg-white/70 text-zinc-400 shadow-[0_16px_36px_-28px_rgba(0,0,0,0.42)] transition-colors group-hover:text-zinc-900 dark:border-white/[0.08] dark:bg-white/[0.045] dark:text-white/45 dark:group-hover:text-white">
-                              <item.icon aria-hidden="true" className="h-4 w-4" />
-                            </span>
-                            <span className="relative min-w-0 pt-0.5">
-                              <span className="flex items-center gap-2 font-sans text-[10px] font-black uppercase tracking-[0.18em]">
-                                {item.label}
-                              </span>
-                              <span className="mt-1.5 block font-sans text-[10px] font-medium normal-case leading-relaxed tracking-normal text-zinc-500 dark:text-white/45">
-                                {item.description}
-                              </span>
-                            </span>
-                          </Link>
-                        );
-                      })}
-                    </div>
-                    <Link
-                      to="/produto"
-                      className="public-product-menu-footer public-tactile mt-1 flex min-h-12 items-center justify-between rounded-[18px] px-4 font-sans text-[10px] font-black uppercase tracking-[0.18em] text-zinc-400 transition-colors hover:text-zinc-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:text-zinc-900 dark:text-white/45 dark:hover:text-white dark:focus-visible:text-white"
-                    >
-                      Conhecer a operação completa
-                      <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-                    </Link>
-                  </div>
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
+                            </Link>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ) : null}
+                  </AnimatePresence>,
+                  document.body,
+                )
+              : null}
           </div>
 
-          <Link
-            to="/comparar"
-            className={navControlClass}
-          >
+          <Link to="/comparar" className={navControlClass}>
             COMPARAR
           </Link>
           <Link
@@ -265,10 +444,7 @@ export const Navbar = () => {
           >
             DOWNLOAD
           </Link>
-          <Link
-            to="/blog"
-            className={cn(navControlClass, "hidden xl:flex")}
-          >
+          <Link to="/blog" className={cn(navControlClass, "hidden xl:flex")}>
             NEUROX
           </Link>
         </div>

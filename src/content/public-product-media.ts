@@ -31,6 +31,7 @@ export const PUBLIC_MEDIA_BASE_KEYS = [
   "ajustes",
   "busca-global",
   "portal-paciente",
+  "synapse",
 ] as const;
 
 export type PublicMediaBaseKey = (typeof PUBLIC_MEDIA_BASE_KEYS)[number];
@@ -111,10 +112,18 @@ const portalCollection: PublicMediaCollection = {
   dark: baseCatalog["portal-paciente"].dark,
 };
 
+const synapseCollection: PublicMediaCollection = {
+  // A remessa atual do Synapse contém apenas capturas escuras. Mantemos o
+  // seletor por tema e usamos o mesmo conjunto no claro até chegar a variante.
+  light: baseCatalog.synapse.dark,
+  dark: baseCatalog.synapse.dark,
+};
+
 export function getPublicMediaCollection(key: PublicMediaKey): PublicMediaCollection {
   if (key === "neurobox") return neuroboxCollection;
   if (key === "produto") return productCollection;
   if (key === "portal-paciente") return portalCollection;
+  if (key === "synapse") return synapseCollection;
   return baseCatalog[key];
 }
 
@@ -156,13 +165,12 @@ const routeMediaConfig: Record<string, PublicRouteMediaConfig> = {
     eyebrow: "Produto real",
   },
   "/synapse": {
-    variant: "youtube",
-    title: "Synapse AI em ação",
-    eyebrow: "Demonstração real",
+    variant: "screenshots",
+    key: "synapse",
+    title: "Synapse AI por dentro",
+    eyebrow: "Produto real",
     description:
-      "Veja como o Synapse transforma uma conversa em contexto e trabalho conectado dentro da clínica.",
-    videoTitle: "Demonstração do Synapse AI",
-    videoSource: "https://youtu.be/vk6cw0bkut8",
+      "Veja como texto, sugestões e voz aparecem no fluxo de trabalho da clínica.",
   },
   "/neurofinance": {
     variant: "screenshots",
@@ -280,8 +288,8 @@ const articleMediaSelection: Record<string, ArticleMediaSelection> = {
   },
   "sistema-para-psicologos-como-escolher": { key: "produto" },
   "software-para-psicologos-com-inteligencia-artificial": {
-    key: "dashboard",
-    nameFragment: "synapse",
+    key: "synapse",
+    nameFragment: "inicio--sugestoes",
   },
   "teleconsulta-para-psicologos": {
     key: "teleconsulta",

@@ -32,11 +32,6 @@ import {
 } from "@/content/public-product-media";
 import { cn } from "@/lib/utils";
 
-const SYNAPSE_VIDEO = {
-  source: "https://youtu.be/vk6cw0bkut8",
-  title: "Demonstração do Synapse AI",
-} as const;
-
 type ProductModule = {
   key: string;
   label: string;
@@ -46,7 +41,6 @@ type ProductModule = {
   bullets: string[];
   icon: ElementType<{ className?: string }>;
   mediaKey?: PublicMediaKey;
-  mediaVariant?: "youtube";
 };
 
 const productModules: ProductModule[] = [
@@ -114,7 +108,7 @@ const productModules: ProductModule[] = [
       "A IA conversa com a rotina da clínica e ajuda a localizar informações, organizar tarefas e reduzir trabalho repetitivo.",
     bullets: ["Texto", "Voz", "Contexto da clínica"],
     icon: Sparkles,
-    mediaVariant: "youtube",
+    mediaKey: "synapse",
   },
   {
     key: "neuroview",
@@ -198,19 +192,6 @@ const SectionHeading = ({
 );
 
 const EmbeddedProductMedia = ({ module }: { module: ProductModule }) => {
-  if (module.mediaVariant === "youtube") {
-    return (
-      <PublicProductShowcase
-        variant="youtube"
-        hideHeader
-        title={module.title}
-        video={SYNAPSE_VIDEO}
-        className="!bg-transparent !px-0 !py-0"
-        frameClassName="!max-w-none"
-      />
-    );
-  }
-
   return (
     <PublicProductShowcase
       hideHeader
@@ -381,10 +362,9 @@ export const LandingRealSynapseSection = () => (
         </div>
         <FadeIn delay={0.15}>
           <PublicProductShowcase
-            variant="youtube"
             hideHeader
             title="Synapse AI em ação"
-            video={SYNAPSE_VIDEO}
+            images={getPublicMediaCollection("synapse")}
             className="!bg-transparent !px-0 !py-0"
             frameClassName="!max-w-none"
           />

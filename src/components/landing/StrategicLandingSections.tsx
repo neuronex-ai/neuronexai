@@ -137,7 +137,13 @@ export const LandingDifferentiatorTable = () => (
     <div className="relative z-10 mx-auto max-w-[1280px]">
       <SectionHeader
         eyebrow="O diferencial"
-        title={<>Na NeuroNex, cada etapa <span className="text-muted-foreground">continua a anterior.</span></>}
+        title={
+          <>
+            Na NeuroNex, cada etapa
+            <br />
+            <span className="text-muted-foreground">continua a anterior.</span>
+          </>
+        }
         description="O paciente agenda, a sessão acontece, o registro é revisado e a cobrança continua ligada ao atendimento."
       />
 

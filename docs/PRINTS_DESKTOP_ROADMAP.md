@@ -2,9 +2,9 @@
 
 ## Resultado do inventário
 
-- 252 arquivos PNG inspecionados visualmente, um a um.
-- 32 pastas ou subpastas catalogadas.
-- 241 capturas binariamente distintas.
+- 255 arquivos PNG inspecionados visualmente, um a um.
+- 33 pastas ou subpastas catalogadas.
+- 244 capturas binariamente distintas.
 - 11 cópias binárias exatas, todas no segundo conjunto do Portal do Paciente.
 - Nenhum arquivo visual foi recortado, recomprimido ou alterado. A intervenção se limita aos nomes.
 - O catálogo completo, com o nome anterior, o novo nome, a descrição e a página pública sugerida, está em [`prints-desktop-manifest.csv`](./prints-desktop-manifest.csv).
@@ -13,10 +13,11 @@
 
 - O catálogo consumido pela interface é gerado por `scripts/generate-public-product-media.mjs` em `src/content/public-product-media.generated.json`.
 - A seleção por módulo, rota, artigo e tema fica centralizada em `src/content/public-product-media.ts`.
-- A moldura compartilhada, o carrossel e o vídeo do Synapse ficam em `src/components/public/PublicProductShowcase.tsx`.
-- O catálogo runtime contém 241 capturas únicas; as 11 duplicatas exatas do Portal não são publicadas nos carrosséis.
+- A moldura compartilhada e o carrossel ficam em `src/components/public/PublicProductShowcase.tsx`.
+- O catálogo runtime contém 244 capturas únicas; as 11 duplicatas exatas do Portal não são publicadas nos carrosséis.
 - O Portal do Paciente possui 11 capturas escuras e nenhuma captura clara real. No tema claro, a moldura é omitida para não apresentar uma imagem de tema incorreto.
-- Ainda não há captura dedicada para NeuroZap, NeuroScan ou NeuralCast. O Synapse usa o vídeo `https://youtu.be/vk6cw0bkut8`.
+- O Synapse possui três capturas escuras dedicadas e ainda não possui a variante clara; enquanto ela não chega, o tema claro usa essas mesmas capturas como fallback.
+- Ainda não há captura dedicada para NeuroZap, NeuroScan ou NeuralCast.
 
 Para reconstruir o catálogo depois de alterar o manifesto ou os nomes dos arquivos:
 
@@ -85,6 +86,7 @@ Os nomes usam apenas ASCII minúsculo, hífens e números. Eles não incluem nom
 | `ESCURO/11. ABA DE BUSCA GLOBAL` | 2 | Estado inicial e resultados com seleção | `/produto` |
 | `CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO` | 11 | Início, sessões, humor, anamnese, notas, progresso e pacote financeiro | `/portal-do-paciente` |
 | `ESCURO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO` | 11 | Duplicatas exatas do conjunto anterior, marcadas para não serem selecionadas | Não usar |
+| `ESCURO/13. SYNAPSE AI` | 3 | Início com sugestões, resposta em processamento e modo de voz ouvindo | `/synapse` e landing principal |
 
 ## Roteamento recomendado para a próxima rodada de landing pages
 
@@ -104,6 +106,7 @@ Os nomes usam apenas ASCII minúsculo, hífens e números. Eles não incluem nom
 - **NeuroFlow:** canvas clínico → biblioteca de blocos → notas existentes → mapa com hipótese diagnóstica.
 - **NeuroPulse:** relato preenchido → abordagem terapêutica → construção da síntese → diagrama pronto.
 - **Portal do Paciente:** início → sessões → humor → NeuroDrive → progresso → pacote financeiro.
+- **Synapse AI:** sugestões iniciais → solicitação em processamento → interação por voz.
 
 ## Atenção antes da publicação externa
 

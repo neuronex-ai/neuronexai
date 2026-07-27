@@ -25,11 +25,6 @@ import {
 } from "@/content/public-product-media";
 import { cn } from "@/lib/utils";
 
-const SYNAPSE_VIDEO = {
-  source: "https://youtu.be/vk6cw0bkut8",
-  title: "Demonstração do Synapse AI",
-} as const;
-
 type ProductModule = {
   key: string;
   label: string;
@@ -38,7 +33,6 @@ type ProductModule = {
   bullets: string[];
   icon: ElementType<{ className?: string }>;
   mediaKey?: PublicMediaKey;
-  mediaVariant?: "youtube";
 };
 
 const productModules: ProductModule[] = [
@@ -90,7 +84,7 @@ const productModules: ProductModule[] = [
       "Pergunte sobre a rotina, localize informações e veja como o Synapse trabalha com o contexto autorizado da clínica.",
     bullets: ["Texto", "Contexto", "Rotina"],
     icon: Sparkles,
-    mediaVariant: "youtube",
+    mediaKey: "synapse",
   },
   {
     key: "teleconsulta",
@@ -175,19 +169,6 @@ const LandscapeProductMedia = ({
     "!bg-transparent !px-0 !py-0",
     inverted && "text-foreground",
   );
-
-  if (module.mediaVariant === "youtube") {
-    return (
-      <PublicProductShowcase
-        variant="youtube"
-        hideHeader
-        title={module.title}
-        video={SYNAPSE_VIDEO}
-        className={sharedClasses}
-        frameClassName="!max-w-none"
-      />
-    );
-  }
 
   return (
     <PublicProductShowcase

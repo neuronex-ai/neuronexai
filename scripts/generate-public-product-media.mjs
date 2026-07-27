@@ -1,6 +1,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createPublicMediaCaption } from "./lib/public-media-captions.mjs";
 
 const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = path.resolve(scriptDirectory, "..");
@@ -28,6 +29,7 @@ const moduleOrder = [
   "ajustes",
   "busca-global",
   "portal-paciente",
+  "synapse",
 ];
 
 const typePriority = new Map([
@@ -67,6 +69,7 @@ function getModuleKey(row) {
   if (row.pasta.includes("10. AJUSTES")) return "ajustes";
   if (row.pasta.includes("11. ABA DE BUSCA")) return "busca-global";
   if (row.pasta.includes("12. PORTAL PACIENTES")) return "portal-paciente";
+  if (row.pasta.includes("13. SYNAPSE AI")) return "synapse";
   throw new Error(`Pasta sem modulo publico: ${row.pasta}`);
 }
 
@@ -94,7 +97,7 @@ for (const [sourceIndex, row] of rows.entries()) {
   catalog[moduleKey][theme].push({
     src: `/images/prints-sistema/DESKTOP/${relativePath}`,
     alt: row.descricao,
-    caption: row.descricao,
+    caption: createPublicMediaCaption(row.arquivo_novo),
     name: row.arquivo_novo,
     kind: row.tipo,
     sourceIndex,
