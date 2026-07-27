@@ -34,7 +34,12 @@ import {
   PublicRouteBreadcrumbs,
 } from "@/components/public/PublicPageShell";
 import { PublicSynapseCommandSection } from "@/components/public/PublicPositioningSections";
+import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import { getPublicPage } from "@/content/public-content";
+import {
+  getPublicMediaCollection,
+  getPublicMediaImage,
+} from "@/content/public-product-media";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 
@@ -56,20 +61,7 @@ type FaqItem = {
   answer: string;
 };
 
-const accountImage = {
-  dark: "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp",
-  light: "/landing/screenshots/desktop/light/Nova remessa/08-neurofinance-conta-saldo-white.webp",
-};
-
-const pixImage = {
-  dark: "/landing/screenshots/desktop/dark/09-neurofinance-pix-cobrancas-com-synapse-de-voz-aberto-dark.webp",
-  light: "/landing/screenshots/desktop/dark/09-neurofinance-pix-cobrancas-com-synapse-de-voz-aberto-dark.webp",
-};
-
-const fiscalImage = {
-  dark: "/landing/screenshots/desktop/dark/13-fiscal-dados-nfse-dark.webp",
-  light: "/landing/screenshots/desktop/light/Nova remessa/13-fiscal-dados-nfse-white.webp",
-};
+const neurofinanceShowcaseImages = getPublicMediaCollection("neurofinance");
 
 const capabilities: Capability[] = [
   {
@@ -167,7 +159,7 @@ const BrowserFrame = ({
       height={720}
       loading={eager ? "eager" : "lazy"}
       decoding="async"
-      className="block aspect-video w-full object-cover"
+      className="block aspect-video w-full object-contain"
     />
   </div>
 );
@@ -177,9 +169,15 @@ const FinanceLanding = () => {
   const { theme } = useTheme();
   const shouldReduceMotion = useReducedMotion();
   const [openFaq, setOpenFaq] = useState(0);
-  const accountScreenshot = theme === "light" ? accountImage.light : accountImage.dark;
-  const pixScreenshot = theme === "light" ? pixImage.light : pixImage.dark;
-  const fiscalScreenshot = theme === "light" ? fiscalImage.light : fiscalImage.dark;
+  const activeMediaTheme = theme === "light" ? "light" : "dark";
+  const pixScreenshot = getPublicMediaImage(
+    "neurofinance",
+    activeMediaTheme,
+    "area-pix",
+  );
+  const fiscalScreenshot = activeMediaTheme === "light"
+    ? getPublicMediaImage("neurofinance", "light", "nfse")
+    : getPublicMediaImage("prontuario", "dark", "fiscal--acoes");
 
   if (!page) return null;
 
@@ -219,16 +217,13 @@ const FinanceLanding = () => {
             </>
           }
         />
-        <section className="public-product-media-band px-5 py-16 md:px-8 md:py-20">
-          <div className="mx-auto max-w-[1240px]">
-            <BrowserFrame
-              src={accountScreenshot}
-              alt="Conta digital e saldo do NeuroFinance"
-              label="Conta digital integrada"
-              eager
-            />
-          </div>
-        </section>
+        <PublicProductShowcase
+          title="NeuroFinance por dentro"
+          eyebrow="Conta e operação financeira"
+          images={neurofinanceShowcaseImages}
+          className="public-product-media-band"
+          frameClassName="public-product-media-frame"
+        />
 
         <section className="public-section-stage public-inverted-section border-y border-border/35 text-background dark:text-zinc-950">
           <div className="mx-auto grid max-w-[1380px] gap-px bg-background/10 md:grid-cols-3">
@@ -291,7 +286,7 @@ const FinanceLanding = () => {
 
             <div className="grid gap-5">
               <BrowserFrame
-                src={pixScreenshot}
+                src={pixScreenshot.src}
                 alt="Área Pix e cobranças do NeuroFinance com Synapse por voz"
                 label="Área Pix + Synapse"
               />
@@ -333,7 +328,7 @@ const FinanceLanding = () => {
         <section className="public-section-stage px-5 py-20 md:px-8 md:py-28">
           <div className="mx-auto grid max-w-[1320px] gap-6 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
             <BrowserFrame
-              src={fiscalScreenshot}
+              src={fiscalScreenshot.src}
               alt="Dados fiscais e emissão de NFS-e/RPS no NeuroFinance"
               label="NFS-e e RPS"
             />

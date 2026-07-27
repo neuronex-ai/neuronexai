@@ -331,13 +331,13 @@ const buildPlatformSoftwareNode = () => ({
   featureList: platformFeatures,
   screenshot: [
     absolutePublicUrl(
-      "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
     ),
     absolutePublicUrl(
-      "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp",
+      "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-3d--rede-completa-e-legenda--escuro--pagina--012.png",
     ),
     absolutePublicUrl(
-      "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp",
+      "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--conta-e-saldo--dashboard-cartao-mascarado--escuro--pagina--001.png",
     ),
   ],
 });

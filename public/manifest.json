@@ -1,6 +1,6 @@
 {
   "id": "/",
-  "name": "NeuroNex - Sistema operacional para psicólogos",
+  "name": "NeuroNex AI - Sistema operacional para psicólogos",
   "short_name": "NeuroNex AI",
   "description": "Agenda, atendimento, prontuário, pacientes, cobranças, financeiro e inteligência artificial conectados em uma única operação.",
   "lang": "pt-BR",
@@ -37,18 +37,18 @@
   ],
   "screenshots": [
     {
-      "src": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
-      "sizes": "1280x720",
-      "type": "image/webp",
+      "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
+      "sizes": "1918x1078",
+      "type": "image/png",
       "form_factor": "wide",
-      "label": "Dashboard desktop do NeuroNex AI"
+      "label": "Dashboard do NeuroNex AI em modo escuro"
     },
     {
-      "src": "/landing/screenshots/mobile/dark/20-mobile-dashboard-dark.webp",
-      "sizes": "750x1334",
-      "type": "image/webp",
+      "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--claro--pagina--001.png",
+      "sizes": "1919x1079",
+      "type": "image/png",
       "form_factor": "narrow",
-      "label": "Dashboard mobile do NeuroNex AI"
+      "label": "Dashboard do NeuroNex AI em modo claro"
     }
   ],
   "shortcuts": [

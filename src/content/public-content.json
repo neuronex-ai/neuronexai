@@ -1,7 +1,7 @@
 {
   "site": {
     "url": "https://www.neuronexai.com.br",
-    "defaultImage": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+    "defaultImage": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
     "lastModified": "2026-07-26",
     "organization": {
       "name": "NeuroNex AI",
@@ -99,7 +99,7 @@
           "answer": "A Gestão Financeira registra, projeta e analisa receitas e despesas. O NeuroFinance adiciona conta, Pix, pagamentos, cobranças, saques e outras movimentações reais sujeitas à elegibilidade."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel da NeuroNex com agenda, pacientes e visão financeira conectadas",
       "related": [
         { "label": "Conheça a operação completa", "href": "/produto" },
@@ -163,7 +163,7 @@
           "answer": "Não. A direção é mobile-first, priorizando ações de campo e fluxos curtos. Recursos em evolução são comunicados com status explícito."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Operação profissional da NeuroNex conectada no desktop",
       "related": [
         { "label": "Comparar com outros sistemas", "href": "/comparar" },
@@ -231,7 +231,7 @@
           "answer": "Não. O Synapse apoia organização, documentação e operação; decisões clínicas continuam com o profissional."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--synapse--historico-whatsapp-business--escuro--drawer--004.png",
       "imageAlt": "Synapse AI em conversa operacional dentro da NeuroNex",
       "related": [
         { "label": "Segurança e política de risco", "href": "/seguranca-e-etica" },
@@ -298,7 +298,7 @@
           "answer": "Não. Recursos financeiros dependem do plano, da aprovação da conta, de limites, saldo e elegibilidade operacional."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/nova remessa/08-neurofinance-conta-saldo-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--conta-e-saldo--dashboard-cartao-mascarado--escuro--pagina--001.png",
       "imageAlt": "Conta, saldo e movimentações no NeuroFinance",
       "related": [
         { "label": "Gestão financeira para psicólogos", "href": "/gestao-financeira-para-psicologos" },
@@ -357,7 +357,7 @@
           "answer": "Sim. Lançamentos, planejamento, recebimentos e análises gerenciais permanecem disponíveis conforme o plano."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/04-financeiro-visao-geral-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--visao-geral--regime-competencia--escuro--pagina--001.png",
       "imageAlt": "Visão geral da gestão financeira NeuroNex",
       "related": [
         { "label": "Conheça o NeuroFinance", "href": "/neurofinance" },
@@ -420,7 +420,7 @@
           "answer": "Não. Diagramas e sínteses são materiais revisáveis antes de serem salvos ou utilizados."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/17-neuroview-3d-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-3d--rede-completa-e-legenda--escuro--pagina--012.png",
       "imageAlt": "NeuroView exibindo um grafo clínico em 3D",
       "related": [
         { "label": "Prontuário vivo", "href": "/prontuario-para-psicologos" },
@@ -483,7 +483,7 @@
           "answer": "A proposta é conectar o canal autorizado da clínica. A disponibilidade e as etapas de conexão são orientadas durante a validação do recurso."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--synapse--historico-whatsapp-business--escuro--drawer--004.png",
       "imageAlt": "NeuroZap conectado ao contexto operacional da NeuroNex",
       "related": [
         { "label": "Novidades e status", "href": "/novidades" },
@@ -541,8 +541,8 @@
           "answer": "Sim. O limite público atual é de cinco pacientes ativos; a interface orienta o upgrade quando necessário."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-grafico-tendencia-humor-minicards-dark.webp",
-      "imageAlt": "Prontuário de paciente com tendência de humor e resumo clínico",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/4. PACIENTES + NOVO PACIENTE/pacientes--lista--cartoes-de-pacientes--escuro--pagina--001.png",
+      "imageAlt": "Gestão de pacientes da NeuroNex com prontuários organizados em cartões",
       "related": [
         { "label": "Prontuário para psicólogos", "href": "/prontuario-para-psicologos" },
         { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
@@ -604,7 +604,7 @@
           "answer": "As ações respeitam a política versionada configurada pelo profissional e apresentam as consequências antes da confirmação."
         }
       ],
-      "image": "/landing/screenshots/mobile/dark/23-mobile-paciente--prontuario-metas-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--inicio--saudacao-e-proximo-agendamento--escuro--pagina--001.png",
       "imageAlt": "Portal do Paciente com prontuário compartilhado, metas e continuidade",
       "related": [
         { "label": "Gestão de pacientes", "href": "/pacientes-para-psicologos" },
@@ -666,7 +666,7 @@
           "answer": "Não. O material precisa ser revisado pelo psicólogo antes de se tornar registro clínico."
         }
       ],
-      "image": "/landing/screenshots/mobile/light/26-mobile-teleconsulta-white.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - ABA PRINCIPAL/teleconsulta--visao-geral--proxima-sessao-e-contexto--escuro--pagina--001.png",
       "imageAlt": "Teleconsulta NeuroNex com sessão online e workspace clínico",
       "related": [
         { "label": "Agenda para psicólogos", "href": "/agenda-para-psicologos" },
@@ -733,8 +733,8 @@
           "answer": "Somente arquivos explicitamente liberados e destinados ao paciente podem aparecer no Portal."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-historico-dark.webp",
-      "imageAlt": "Histórico do prontuário vivo de um paciente na NeuroNex",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--resumo--indicadores-clinicos-e-dados-do-paciente--escuro--pagina--001.png",
+      "imageAlt": "Resumo do prontuário com indicadores clínicos e dados do paciente",
       "related": [
         { "label": "NeuroBox e grafos clínicos", "href": "/neurobox" },
         { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
@@ -796,7 +796,7 @@
           "answer": "Sim, quando a ação estiver disponível e dentro da política versionada configurada pelo profissional."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/nova remessa/9-agenda-mensal-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-mensal--visao-completa--escuro--pagina--016.png",
       "imageAlt": "Agenda mensal da NeuroNex para psicólogos",
       "related": [
         { "label": "Teleconsulta integrada", "href": "/teleconsulta-para-psicologos" },
@@ -867,8 +867,8 @@
           "answer": "Não. A NeuroNex oferece apoio operacional e informacional; decisões profissionais permanecem com as pessoas responsáveis."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
-      "imageAlt": "Synapse por voz com controles de confirmação e segurança",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--login-e-seguranca--2fa-biometria-e-email--escuro--pagina--002.png",
+      "imageAlt": "Configurações de autenticação, biometria e segurança da NeuroNex",
       "related": [
         { "label": "Política de Privacidade", "href": "/politica-de-privacidade" },
         { "label": "Documentos legais", "href": "/documentos-legais" },
@@ -926,7 +926,7 @@
           "answer": "Não. Use a mesma conta NeuroNex que você já utiliza na versão web."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "NeuroNex Professional no desktop Windows",
       "related": [
         { "label": "Abrir Microsoft Store", "href": "https://apps.microsoft.com/detail/9PKGGSPS44CD?hl=pt-BR&gl=BR" },
@@ -976,7 +976,7 @@
         }
       ],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/17-neuroview-2d-com-nota-aberta-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--paciente-com-conexoes-clinicas--escuro--pagina--008.png",
       "imageAlt": "Nota clínica conectada ao NeuroView como base de conteúdo educativo",
       "related": [
         { "label": "Comparar sistemas para psicólogos", "href": "/comparar" },
@@ -1030,7 +1030,7 @@
           "answer": "Não. É um estado de produto e não representa compromisso de data."
         }
       ],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel NeuroNex representando o estado atual do produto",
       "related": [
         { "label": "Conhecer o produto", "href": "/produto" },
@@ -1053,7 +1053,7 @@
       "highlights": ["Dúvidas por área", "Privacidade e segurança", "Contato com a equipe"],
       "sections": [],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Central de ajuda da plataforma NeuroNex",
       "related": [
         { "label": "Contato", "href": "/contato" },
@@ -1075,7 +1075,7 @@
       "highlights": ["Suporte ao produto", "Planos NeuroNex", "Privacidade e LGPD"],
       "sections": [],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Interface NeuroNex associada aos canais de contato",
       "related": [
         { "label": "Central de Ajuda", "href": "/ajuda" },
@@ -1097,7 +1097,7 @@
       "highlights": ["Termos de Uso", "Política de Privacidade", "Cookies e dados locais"],
       "sections": [],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Documentos legais da plataforma NeuroNex",
       "related": [
         { "label": "Termos de Uso", "href": "/termos-de-uso" },
@@ -1120,7 +1120,7 @@
       "highlights": ["Responsabilidades", "Planos e integrações", "Serviços financeiros"],
       "sections": [],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Termos de uso da NeuroNex",
       "related": [
         { "label": "Documentos legais", "href": "/documentos-legais" },
@@ -1142,7 +1142,7 @@
       "highlights": ["Direitos do titular", "Proteção de dados", "Integrações autorizadas"],
       "sections": [],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Política de privacidade e LGPD da NeuroNex",
       "related": [
         { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
@@ -1164,7 +1164,7 @@
       "highlights": ["Funcionamento essencial", "Armazenamento local", "Medição e marketing"],
       "sections": [],
       "faq": [],
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Configurações de cookies da NeuroNex",
       "related": [
         { "label": "Política de Privacidade", "href": "/politica-de-privacidade" },
@@ -1188,7 +1188,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/nova remessa/9-agenda-mensal-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-mensal--visao-completa--escuro--pagina--016.png",
       "imageAlt": "Agenda mensal da NeuroNex com sessões organizadas para psicólogos",
       "related": [
         { "label": "Agenda NeuroNex", "href": "/agenda-para-psicologos" },
@@ -1211,8 +1211,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/11-pacientes-lista-dark.webp",
-      "imageAlt": "Lista de pacientes da NeuroNex associada à jornada de anamnese digital",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--anamnese--formulario-em-edicao--escuro--pagina--004.png",
+      "imageAlt": "Formulário de anamnese digital em edição no prontuário da NeuroNex",
       "related": [
         { "label": "Pacientes", "href": "/pacientes-para-psicologos" },
         { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
@@ -1234,7 +1234,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/06-financeiro-inadimplencia-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--cobranca-manual--paciente-destino-neurofinance--escuro--modal--004.png",
       "imageAlt": "Painel de inadimplência da NeuroNex para acompanhamento de cobranças",
       "related": [
         { "label": "Agenda NeuroNex", "href": "/agenda-para-psicologos" },
@@ -1257,8 +1257,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-historico-dark.webp",
-      "imageAlt": "Histórico de prontuário na NeuroNex associado à produção de documentos psicológicos",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--documentos-oficiais--editor-de-declaracao--escuro--pagina--015.png",
+      "imageAlt": "Editor de documentos psicológicos oficiais no prontuário da NeuroNex",
       "related": [
         { "label": "Prontuário NeuroNex", "href": "/prontuario-para-psicologos" },
         { "label": "Synapse AI", "href": "/synapse" },
@@ -1280,8 +1280,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
-      "imageAlt": "Synapse AI por voz apoiando a rotina de psicólogos com revisão humana",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuropulse--sintese--diagrama-clinico-pronto--escuro--pagina--023.png",
+      "imageAlt": "Diagrama clínico estruturado pelo NeuroPulse para revisão profissional",
       "related": [
         { "label": "Synapse AI", "href": "/synapse" },
         { "label": "NeuroBox", "href": "/neurobox" },
@@ -1303,8 +1303,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
-      "imageAlt": "Interface da NeuroNex com controles para uso seguro de dados clínicos",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--login-e-seguranca--2fa-biometria-e-email--escuro--pagina--002.png",
+      "imageAlt": "Configurações de autenticação e proteção de dados clínicos da NeuroNex",
       "related": [
         { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
         { "label": "Prontuário NeuroNex", "href": "/prontuario-para-psicologos" },
@@ -1326,7 +1326,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel integrado da NeuroNex usado no comparativo de sistemas para psicólogos",
       "related": [
         { "label": "Como escolher um sistema", "href": "/blog/sistema-para-psicologos-como-escolher" },
@@ -1349,7 +1349,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel da NeuroNex usado na comparação com a Corpora",
       "related": [
         { "label": "Comparação resumida", "href": "/comparar/neuronex-vs-corpora" },
@@ -1372,7 +1372,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Operação integrada da NeuroNex usada na comparação com o PsicoGest",
       "related": [
         { "label": "Teleconsulta", "href": "/teleconsulta-para-psicologos" },
@@ -1395,7 +1395,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel operacional da NeuroNex usado na comparação com o PsicoManager",
       "related": [
         { "label": "Comparação resumida", "href": "/comparar/neuronex-vs-psicomanager" },
@@ -1418,7 +1418,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Ecossistema NeuroNex usado na comparação com o Psipront",
       "related": [
         { "label": "Comparação resumida", "href": "/comparar/neuronex-vs-psipront" },
@@ -1441,7 +1441,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--synapse--historico-whatsapp-business--escuro--drawer--004.png",
       "imageAlt": "Synapse AI da NeuroNex usado na comparação com a Sintropia",
       "related": [
         { "label": "Comparação resumida", "href": "/comparar/neuronex-vs-sintropia" },
@@ -1464,7 +1464,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/09-neurofinance-pix-cobrancas-com-synapse-de-voz-aberto-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--cobrancas--lista-com-menu-expandido--escuro--drawer--006.png",
       "imageAlt": "Área de Pix e cobranças do NeuroFinance para psicólogos",
       "related": [
         { "label": "Gestão Financeira", "href": "/gestao-financeira-para-psicologos" },
@@ -1487,7 +1487,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/mobile/dark/23-mobile-paciente--prontuario-metas-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--inicio--saudacao-e-proximo-agendamento--escuro--pagina--001.png",
       "imageAlt": "Portal do Paciente da NeuroNex com metas e informações compartilhadas",
       "related": [
         { "label": "Portal do Paciente", "href": "/portal-do-paciente" },
@@ -1510,8 +1510,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/12-paciente-prontuario-historico-dark.webp",
-      "imageAlt": "Histórico do prontuário eletrônico da NeuroNex para psicólogos",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--resumo--indicadores-clinicos-e-dados-do-paciente--escuro--pagina--001.png",
+      "imageAlt": "Resumo do prontuário eletrônico da NeuroNex com indicadores clínicos",
       "related": [
         { "label": "Prontuário NeuroNex", "href": "/prontuario-para-psicologos" },
         { "label": "NeuroBox", "href": "/neurobox" },
@@ -1533,7 +1533,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/13-fiscal-dados-nfse-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--fiscal--acoes-de-documentos-fiscais--escuro--modal--011.png",
       "imageAlt": "Dados fiscais na NeuroNex para organizar Receita Saúde e documentos de pagamento",
       "related": [
         { "label": "Gestão Financeira", "href": "/gestao-financeira-para-psicologos" },
@@ -1556,7 +1556,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel conectado da NeuroNex para avaliar um sistema para psicólogos",
       "related": [
         { "label": "Produto NeuroNex", "href": "/produto" },
@@ -1579,7 +1579,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/15-synapse-chat-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--synapse--historico-whatsapp-business--escuro--drawer--004.png",
       "imageAlt": "Synapse AI dentro do software NeuroNex para psicólogos",
       "related": [
         { "label": "Synapse AI", "href": "/synapse" },
@@ -1602,7 +1602,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/mobile/light/26-mobile-teleconsulta-white.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - ABA PRINCIPAL/teleconsulta--visao-geral--proxima-sessao-e-contexto--escuro--pagina--001.png",
       "imageAlt": "Teleconsulta NeuroNex conectada ao atendimento psicológico",
       "related": [
         { "label": "Teleconsulta NeuroNex", "href": "/teleconsulta-para-psicologos" },
@@ -1625,8 +1625,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-26T09:00:00-03:00",
       "modifiedAt": "2026-07-26T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
-      "imageAlt": "Synapse por voz associado à transcrição de sessão com revisão profissional",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--revisao-gerada-detalhes--escuro--pagina--006.png",
+      "imageAlt": "Revisão pós-sessão com transcrição e seções clínicas na NeuroNex",
       "related": [
         { "label": "Teleconsulta", "href": "/teleconsulta-para-psicologos" },
         { "label": "Synapse AI", "href": "/synapse" },
@@ -1648,8 +1648,8 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-16T09:00:00-03:00",
       "modifiedAt": "2026-07-16T09:00:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/16-synapse-voz-dark.webp",
-      "imageAlt": "Synapse AI por voz com revisão e controle humano",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--login-e-seguranca--2fa-biometria-e-email--escuro--pagina--002.png",
+      "imageAlt": "Controles de autenticação e segurança para uso responsável da NeuroNex AI",
       "related": [
         { "label": "Synapse AI", "href": "/synapse" },
         { "label": "Segurança e ética", "href": "/seguranca-e-etica" },
@@ -1671,7 +1671,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-16T09:10:00-03:00",
       "modifiedAt": "2026-07-16T09:10:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
       "imageAlt": "Painel de comando de uma clínica organizada pela NeuroNex",
       "related": [
         { "label": "Ecossistema NeuroNex", "href": "/produto" },
@@ -1694,7 +1694,7 @@
       "reviewer": "Equipe NeuroNex",
       "publishedAt": "2026-07-16T09:20:00-03:00",
       "modifiedAt": "2026-07-16T09:20:00-03:00",
-      "image": "/landing/screenshots/desktop/dark/04-financeiro-visao-geral-dark.webp",
+      "image": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--visao-geral--regime-competencia--escuro--pagina--001.png",
       "imageAlt": "Visão geral financeira da NeuroNex para psicólogos",
       "related": [
         { "label": "Gestão Financeira", "href": "/gestao-financeira-para-psicologos" },

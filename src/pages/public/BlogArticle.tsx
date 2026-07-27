@@ -19,6 +19,8 @@ import {
 } from "@/components/public/PublicPositioningSections";
 import { getPublicArticleBody } from "@/content/public-article-content";
 import { getPublicArticle, getPublicAuthor } from "@/content/public-content";
+import { getPublicArticleMedia } from "@/content/public-product-media";
+import { useTheme } from "@/hooks/use-theme";
 
 const articleDateFormatter = new Intl.DateTimeFormat("pt-BR", {
   day: "numeric",
@@ -32,9 +34,14 @@ const formatArticleDate = (date: string) =>
 
 const BlogArticle = () => {
   const { slug = "" } = useParams<{ slug: string }>();
+  const { theme } = useTheme();
   const article = getPublicArticle(slug);
   if (!article) return null;
 
+  const articleMedia = getPublicArticleMedia(
+    article.slug,
+    theme === "light" ? "light" : "dark",
+  );
   const author = getPublicAuthor(article.authorId);
   const body = getPublicArticleBody(article).replace(/^# .+\r?\n+/u, "");
   const publishedAt = formatArticleDate(article.publishedAt);
@@ -93,19 +100,21 @@ const BlogArticle = () => {
             </div>
           </header>
 
-          <div className="px-5 md:px-8">
-            <div className="public-scroll-showcase mx-auto max-w-[1240px] overflow-hidden rounded-[34px] p-3 md:p-4">
-              <img
-                src={article.image}
-                alt={article.imageAlt}
-                width={1280}
-                height={720}
-                loading="eager"
-                decoding="async"
-                className="aspect-video w-full object-cover"
-              />
+          {articleMedia ? (
+            <div className="px-5 md:px-8">
+              <div className="public-scroll-showcase mx-auto max-w-[1240px] overflow-hidden rounded-[34px] p-3 md:p-4">
+                <img
+                  src={articleMedia.src}
+                  alt={articleMedia.alt}
+                  width={1280}
+                  height={720}
+                  loading="eager"
+                  decoding="async"
+                  className="aspect-video w-full bg-muted/25 object-contain dark:bg-black"
+                />
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="px-5 py-16 md:px-8 md:py-24">
             <div className="prose prose-zinc mx-auto max-w-[780px] dark:prose-invert prose-headings:scroll-mt-28 prose-headings:font-black prose-headings:tracking-normal prose-p:font-medium prose-p:leading-relaxed prose-p:text-muted-foreground prose-a:font-bold prose-a:text-foreground prose-li:text-muted-foreground">

@@ -13,11 +13,15 @@ import { Link } from "react-router-dom";
 
 import { FadeIn } from "@/components/animations/FadeIn";
 import { PublicStatusBadge } from "@/components/public/PublicPageShell";
+import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import {
   PUBLIC_ARTICLES,
   PUBLIC_UPDATES,
   getPublicPage,
 } from "@/content/public-content";
+import { getPublicMediaCollection } from "@/content/public-product-media";
+
+const continuityMedia = getPublicMediaCollection("prontuario");
 
 const ecosystemItems = [
   {
@@ -137,15 +141,15 @@ export const LandingContinuityAuthoritySection = () => {
         </FadeIn>
         <FadeIn delay={0.12}>
           <div className="grid gap-5 sm:grid-cols-2">
-            <img
-              src={recordPage.image}
-              alt={recordPage.imageAlt}
-              width={1280}
-              height={720}
-              loading="lazy"
-              decoding="async"
-              className="aspect-video w-full self-center rounded-[28px] border border-background/12 object-cover sm:col-span-2 dark:border-zinc-950/12"
-            />
+            <div className="sm:col-span-2">
+              <PublicProductShowcase
+                hideHeader
+                title="Prontuário por dentro"
+                images={continuityMedia}
+                className="!bg-transparent !px-0 !py-0 text-foreground"
+                frameClassName="!max-w-none"
+              />
+            </div>
             {[
               "Notas clínicas privadas permanecem na área profissional.",
               "Humor, tarefas e documentos compartilhados mantêm finalidade própria.",
@@ -278,6 +282,15 @@ export const MobileAuthoritySections = () => (
         Dados profissionais permanecem privados; humor, tarefas, documentos,
         progresso e financeiro são compartilhados conforme finalidade.
       </p>
+      <div className="mt-8">
+        <PublicProductShowcase
+          hideHeader
+          title="Prontuário por dentro"
+          images={continuityMedia}
+          className="!bg-transparent !px-0 !py-0 text-foreground"
+          frameClassName="!max-w-none"
+        />
+      </div>
       <div className="mt-7 grid gap-3">
         <Link
           to="/prontuario-para-psicologos"

@@ -10,6 +10,8 @@ import { Navbar } from "@/components/landing/Navbar";
 import { PublicBreadcrumbs } from "@/components/public/PublicPageShell";
 import { Button } from "@/components/ui/button";
 import { PUBLIC_ARTICLES, getPublicPage } from "@/content/public-content";
+import { getPublicArticleMedia } from "@/content/public-product-media";
+import { useTheme } from "@/hooks/use-theme";
 
 const editorialTopics = [
   "Como escolher um sistema para psicólogos",
@@ -24,6 +26,8 @@ const editorialTopics = [
 const BlogIndex = () => {
   const page = getPublicPage("/blog");
   const shouldReduceMotion = useReducedMotion();
+  const { theme } = useTheme();
+  const mediaTheme = theme === "light" ? "light" : "dark";
   if (!page) return null;
 
   return (
@@ -105,7 +109,13 @@ const BlogIndex = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {PUBLIC_ARTICLES.map((article, index) => (
+              {PUBLIC_ARTICLES.map((article, index) => {
+                const articleMedia = getPublicArticleMedia(
+                  article.slug,
+                  mediaTheme,
+                );
+
+                return (
                 <motion.article
                   key={article.slug}
                   initial={shouldReduceMotion ? false : { opacity: 0, y: 18 }}
@@ -115,17 +125,19 @@ const BlogIndex = () => {
                   className="public-neurox-card group overflow-hidden rounded-[28px]"
                 >
                   <Link to={article.route} className="block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-                    <div className="overflow-hidden">
-                      <img
-                        src={article.image}
-                        alt={article.imageAlt}
-                        width={640}
-                        height={480}
-                        loading="lazy"
-                        decoding="async"
-                        className="aspect-[4/3] w-full object-cover transition-transform duration-700 group-hover:scale-[1.018] motion-reduce:transition-none"
-                      />
-                    </div>
+                    {articleMedia ? (
+                      <div className="overflow-hidden bg-muted/25 dark:bg-black">
+                        <img
+                          src={articleMedia.src}
+                          alt={articleMedia.alt}
+                          width={640}
+                          height={360}
+                          loading="lazy"
+                          decoding="async"
+                          className="aspect-video w-full object-contain transition-transform duration-700 group-hover:scale-[1.018] motion-reduce:transition-none"
+                        />
+                      </div>
+                    ) : null}
                     <div className="flex min-h-[294px] flex-col p-6">
                       <div className="flex items-center justify-between gap-3 font-mono text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground/78">
                         <span>{article.category}</span>
@@ -143,7 +155,8 @@ const BlogIndex = () => {
                     </div>
                   </Link>
                 </motion.article>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>

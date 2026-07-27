@@ -26,12 +26,17 @@ import {
   PublicOperatingModelBridge,
   PublicSynapseCommandSection,
 } from "@/components/public/PublicPositioningSections";
+import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import { Button } from "@/components/ui/button";
 import type {
   PublicFeatureStatus,
   PublicPageDefinition,
 } from "@/content/public-content";
 import { getPublicPage } from "@/content/public-content";
+import {
+  getPublicMediaCollection,
+  getPublicRouteMediaConfig,
+} from "@/content/public-product-media";
 import { cn } from "@/lib/utils";
 
 const sectionIcons: ElementType<{ className?: string }>[] = [
@@ -120,6 +125,8 @@ export function PublicProductHero({
   actions?: ReactNode;
   showImage?: boolean;
 }) {
+  const mediaConfig = getPublicRouteMediaConfig(page.route);
+
   return (
     <>
       <section className="public-product-hero px-5 md:px-8">
@@ -168,36 +175,34 @@ export function PublicProductHero({
         </div>
       </section>
 
-      {showImage ? (
-        <section
+      {showImage && mediaConfig?.variant === "screenshots" ? (
+        <PublicProductShowcase
+          title={mediaConfig.title}
+          eyebrow={mediaConfig.eyebrow}
+          description={mediaConfig.description}
+          images={getPublicMediaCollection(mediaConfig.key)}
           className={cn(
-            "public-product-media-band px-5 py-16 md:px-8 md:py-20",
+            "public-product-media-band",
             page.route === "/prontuario-para-psicologos" &&
               "public-product-media-band--paper",
           )}
-        >
-          <div className="mx-auto max-w-[1240px]">
-            <div className="public-product-media-frame mx-auto overflow-hidden rounded-[28px] p-2 md:p-3">
-              <img
-                src={page.image}
-                alt={page.imageAlt}
-                width={1280}
-                height={720}
-                loading="eager"
-                decoding="async"
-                className={cn(
-                  "block w-full rounded-[20px] object-cover",
-                  [
-                    "/portal-do-paciente",
-                    "/teleconsulta-para-psicologos",
-                  ].includes(page.route)
-                    ? "mx-auto aspect-video max-w-[920px] object-contain"
-                    : "aspect-video",
-                )}
-              />
-            </div>
-          </div>
-        </section>
+          frameClassName="public-product-media-frame"
+        />
+      ) : null}
+
+      {showImage && mediaConfig?.variant === "youtube" ? (
+        <PublicProductShowcase
+          variant="youtube"
+          title={mediaConfig.title}
+          eyebrow={mediaConfig.eyebrow}
+          description={mediaConfig.description}
+          video={{
+            source: mediaConfig.videoSource,
+            title: mediaConfig.videoTitle,
+          }}
+          className="public-product-media-band"
+          frameClassName="public-product-media-frame"
+        />
       ) : null}
     </>
   );

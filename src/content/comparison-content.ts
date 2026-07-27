@@ -1076,7 +1076,7 @@ export const COMPARISON_GUIDE = [
 ] as const;
 
 const comparisonImage =
-  "/landing/screenshots/desktop/dark/01-dashboard-command-center-dark.webp";
+  "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png";
 
 export const COMPARISON_INDEX_ENTRY = {
   route: COMPARISON_INDEX_META.route,

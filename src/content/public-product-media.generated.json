@@ -1,0 +1,1778 @@
+{
+  "dashboard": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--claro--pagina--001.png",
+        "alt": "Primeira dobra com saudacao agenda indicadores clinicos e financeiros",
+        "caption": "Primeira dobra com saudacao agenda indicadores clinicos e financeiros",
+        "name": "dashboard--visao-geral--primeira-dobra-clinica-financeiro--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--visao-geral--fluxo-financeiro-e-pendencias--claro--pagina--002.png",
+        "alt": "Continuidade do dashboard com fluxo financeiro pendencias e atividade",
+        "caption": "Continuidade do dashboard com fluxo financeiro pendencias e atividade",
+        "name": "dashboard--visao-geral--fluxo-financeiro-e-pendencias--claro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--mensagem-institucional--carrossel-para-quem-cuida--claro--painel--007.png",
+        "alt": "Cartao institucional do carrossel com mensagem para quem cuida",
+        "caption": "Cartao institucional do carrossel com mensagem para quem cuida",
+        "name": "dashboard--mensagem-institucional--carrossel-para-quem-cuida--claro--painel--007.png",
+        "kind": "painel"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--mensagem-institucional--carrossel-reflexao-do-dia--claro--painel--008.png",
+        "alt": "Cartao institucional do carrossel com reflexao do dia",
+        "caption": "Cartao institucional do carrossel com reflexao do dia",
+        "name": "dashboard--mensagem-institucional--carrossel-reflexao-do-dia--claro--painel--008.png",
+        "kind": "painel"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--synapse--historico-de-conversas-aberto--claro--drawer--005.png",
+        "alt": "Synapse aberto com lista de conversas anteriores",
+        "caption": "Synapse aberto com lista de conversas anteriores",
+        "name": "dashboard--synapse--historico-de-conversas-aberto--claro--drawer--005.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--synapse--chat-rascunho-atestado--claro--drawer--006.png",
+        "alt": "Chat Synapse criando um rascunho de atestado dentro do dashboard",
+        "caption": "Chat Synapse criando um rascunho de atestado dentro do dashboard",
+        "name": "dashboard--synapse--chat-rascunho-atestado--claro--drawer--006.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--atalho-agendar--etapa-01-atendimento--claro--modal--003.png",
+        "alt": "Atalho de agendamento na primeira etapa de dados do atendimento",
+        "caption": "Atalho de agendamento na primeira etapa de dados do atendimento",
+        "name": "dashboard--atalho-agendar--etapa-01-atendimento--claro--modal--003.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--atalho-paciente--novo-prontuario-cadastro-rapido--claro--modal--004.png",
+        "alt": "Cadastro rapido de paciente e abertura de prontuario pelo dashboard",
+        "caption": "Cadastro rapido de paciente e abertura de prontuario pelo dashboard",
+        "name": "dashboard--atalho-paciente--novo-prontuario-cadastro-rapido--claro--modal--004.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/1. DASHBOARD/dashboard--notificacoes--lista-com-acoes-do-item--claro--popover--009.png",
+        "alt": "Central de notificacoes com menu de acoes de um item",
+        "caption": "Central de notificacoes com menu de acoes de um item",
+        "name": "dashboard--notificacoes--lista-com-acoes-do-item--claro--popover--009.png",
+        "kind": "popover"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
+        "alt": "Primeira dobra com saudacao agenda indicadores clinicos e financeiros",
+        "caption": "Primeira dobra com saudacao agenda indicadores clinicos e financeiros",
+        "name": "dashboard--visao-geral--primeira-dobra-clinica-financeiro--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--fluxo-financeiro-e-pendencias--escuro--pagina--002.png",
+        "alt": "Continuidade do dashboard com fluxo financeiro pendencias e atividade",
+        "caption": "Continuidade do dashboard com fluxo financeiro pendencias e atividade",
+        "name": "dashboard--visao-geral--fluxo-financeiro-e-pendencias--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--visao-geral--agenda-financeiro-e-pendencias--escuro--pagina--006.png",
+        "alt": "Visao geral combinando agenda financeiro e pendencias",
+        "caption": "Visao geral combinando agenda financeiro e pendencias",
+        "name": "dashboard--visao-geral--agenda-financeiro-e-pendencias--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--mensagem-institucional--carrossel-para-quem-cuida--escuro--painel--005.png",
+        "alt": "Cartao institucional para quem cuida dentro do dashboard",
+        "caption": "Cartao institucional para quem cuida dentro do dashboard",
+        "name": "dashboard--mensagem-institucional--carrossel-para-quem-cuida--escuro--painel--005.png",
+        "kind": "painel"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--mensagem-institucional--carrossel-para-quem-cuida--misto--painel--007.png",
+        "alt": "Cartao claro para quem cuida inserido em estrutura escura",
+        "caption": "Cartao claro para quem cuida inserido em estrutura escura",
+        "name": "dashboard--mensagem-institucional--carrossel-para-quem-cuida--misto--painel--007.png",
+        "kind": "painel"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--mensagem-institucional--carrossel-reflexao-do-dia--misto--painel--008.png",
+        "alt": "Cartao claro de reflexao do dia inserido em estrutura escura",
+        "caption": "Cartao claro de reflexao do dia inserido em estrutura escura",
+        "name": "dashboard--mensagem-institucional--carrossel-reflexao-do-dia--misto--painel--008.png",
+        "kind": "painel"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--synapse--chat-inicial-com-atalhos--escuro--drawer--003.png",
+        "alt": "Synapse aberto no estado inicial com comandos sugeridos",
+        "caption": "Synapse aberto no estado inicial com comandos sugeridos",
+        "name": "dashboard--synapse--chat-inicial-com-atalhos--escuro--drawer--003.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--synapse--historico-whatsapp-business--escuro--drawer--004.png",
+        "alt": "Historico de conversas do Synapse pelo WhatsApp Business",
+        "caption": "Historico de conversas do Synapse pelo WhatsApp Business",
+        "name": "dashboard--synapse--historico-whatsapp-business--escuro--drawer--004.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/1. DASHBOARD/dashboard--notificacoes--lista-com-acoes-do-item--escuro--popover--009.png",
+        "alt": "Central de notificacoes com menu de acoes de um item",
+        "caption": "Central de notificacoes com menu de acoes de um item",
+        "name": "dashboard--notificacoes--lista-com-acoes-do-item--escuro--popover--009.png",
+        "kind": "popover"
+      }
+    ]
+  },
+  "agenda": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-semanal--visao-completa--claro--pagina--007.png",
+        "alt": "Visao semanal completa da agenda com os compromissos",
+        "caption": "Visao semanal completa da agenda com os compromissos",
+        "name": "agenda--calendario-semanal--visao-completa--claro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--disponibilidade--grade-semanal--claro--pagina--023.png",
+        "alt": "Grade semanal para configurar horarios de disponibilidade",
+        "caption": "Grade semanal para configurar horarios de disponibilidade",
+        "name": "agenda--disponibilidade--grade-semanal--claro--pagina--023.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--politicas--regras-comerciais--claro--pagina--024.png",
+        "alt": "Configuracao das politicas e regras comerciais da agenda",
+        "caption": "Configuracao das politicas e regras comerciais da agenda",
+        "name": "agenda--politicas--regras-comerciais--claro--pagina--024.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-diario--sessoes-agendadas--claro--pagina--029.png",
+        "alt": "Visao diaria da agenda com sessoes marcadas",
+        "caption": "Visao diaria da agenda com sessoes marcadas",
+        "name": "agenda--calendario-diario--sessoes-agendadas--claro--pagina--029.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-mensal--visao-completa--claro--pagina--031.png",
+        "alt": "Visao mensal completa da agenda em desktop",
+        "caption": "Visao mensal completa da agenda em desktop",
+        "name": "agenda--calendario-mensal--visao-completa--claro--pagina--031.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-semanal--resumo-lateral--claro--pagina--032.png",
+        "alt": "Visao semanal com resumo de agenda na barra lateral",
+        "caption": "Visao semanal com resumo de agenda na barra lateral",
+        "name": "agenda--calendario-semanal--resumo-lateral--claro--pagina--032.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-semanal--filtros-laterais--claro--pagina--033.png",
+        "alt": "Visao semanal com filtros de calendario na barra lateral",
+        "caption": "Visao semanal com filtros de calendario na barra lateral",
+        "name": "agenda--calendario-semanal--filtros-laterais--claro--pagina--033.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--historico--linha-do-tempo-do-agendamento--claro--modal--002.png",
+        "alt": "Linha do tempo completa de alteracoes de um agendamento",
+        "caption": "Linha do tempo completa de alteracoes de um agendamento",
+        "name": "agenda--historico--linha-do-tempo-do-agendamento--claro--modal--002.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--lista-de-espera--adicionar-paciente--claro--modal--004.png",
+        "alt": "Inclusao de paciente na lista de espera da agenda",
+        "caption": "Inclusao de paciente na lista de espera da agenda",
+        "name": "agenda--lista-de-espera--adicionar-paciente--claro--modal--004.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--lista-de-espera--horario-sugerido--claro--modal--005.png",
+        "alt": "Lista de espera com horario sugerido para o paciente",
+        "caption": "Lista de espera com horario sugerido para o paciente",
+        "name": "agenda--lista-de-espera--horario-sugerido--claro--modal--005.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--lista-de-espera--oferta-aguardando-resposta--claro--modal--006.png",
+        "alt": "Oferta de horario enviada e aguardando resposta do paciente",
+        "caption": "Oferta de horario enviada e aguardando resposta do paciente",
+        "name": "agenda--lista-de-espera--oferta-aguardando-resposta--claro--modal--006.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-01-selecionar-paciente--claro--modal--008.png",
+        "alt": "Primeira etapa do novo agendamento com seletor de paciente",
+        "caption": "Primeira etapa do novo agendamento com seletor de paciente",
+        "name": "agenda--novo-agendamento--etapa-01-selecionar-paciente--claro--modal--008.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--recorrencia-mensal--claro--modal--009.png",
+        "alt": "Configuracao de recorrencia mensal para uma nova sessao",
+        "caption": "Configuracao de recorrencia mensal para uma nova sessao",
+        "name": "agenda--novo-agendamento--recorrencia-mensal--claro--modal--009.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--recorrencia-personalizada--claro--modal--010.png",
+        "alt": "Configuracao de recorrencia com periodicidade personalizada",
+        "caption": "Configuracao de recorrencia com periodicidade personalizada",
+        "name": "agenda--novo-agendamento--recorrencia-personalizada--claro--modal--010.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-02-tipo-de-sessao--claro--modal--011.png",
+        "alt": "Segunda etapa com selecao do tipo de sessao",
+        "caption": "Segunda etapa com selecao do tipo de sessao",
+        "name": "agenda--novo-agendamento--etapa-02-tipo-de-sessao--claro--modal--011.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-04-pacote-e-remarcacao--claro--modal--012.png",
+        "alt": "Resumo final com validade de pacote e regras de remarcacao",
+        "caption": "Resumo final com validade de pacote e regras de remarcacao",
+        "name": "agenda--novo-agendamento--etapa-04-pacote-e-remarcacao--claro--modal--012.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-04-datas-recorrentes-validas--claro--modal--013.png",
+        "alt": "Resumo final mostrando as datas validas da serie recorrente",
+        "caption": "Resumo final mostrando as datas validas da serie recorrente",
+        "name": "agenda--novo-agendamento--etapa-04-datas-recorrentes-validas--claro--modal--013.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-04-recorrencia-e-modelo--claro--modal--014.png",
+        "alt": "Resumo da recorrencia com opcao de salvar como modelo",
+        "caption": "Resumo da recorrencia com opcao de salvar como modelo",
+        "name": "agenda--novo-agendamento--etapa-04-recorrencia-e-modelo--claro--modal--014.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-03-cobranca-neurofinance--claro--modal--015.png",
+        "alt": "Terceira etapa configurando a cobranca pelo NeuroFinance",
+        "caption": "Terceira etapa configurando a cobranca pelo NeuroFinance",
+        "name": "agenda--novo-agendamento--etapa-03-cobranca-neurofinance--claro--modal--015.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-04-resumo-online-e-cobranca--claro--modal--016.png",
+        "alt": "Resumo final de sessao online com detalhes de cobranca",
+        "caption": "Resumo final de sessao online com detalhes de cobranca",
+        "name": "agenda--novo-agendamento--etapa-04-resumo-online-e-cobranca--claro--modal--016.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-04-resumo-presencial-e-cobranca--claro--modal--017.png",
+        "alt": "Resumo final de sessao presencial com detalhes de cobranca",
+        "caption": "Resumo final de sessao presencial com detalhes de cobranca",
+        "name": "agenda--novo-agendamento--etapa-04-resumo-presencial-e-cobranca--claro--modal--017.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--serie-criada-com-sucesso--claro--modal--018.png",
+        "alt": "Confirmacao de criacao bem-sucedida de uma serie de sessoes",
+        "caption": "Confirmacao de criacao bem-sucedida de uma serie de sessoes",
+        "name": "agenda--novo-agendamento--serie-criada-com-sucesso--claro--modal--018.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--historico--criacao-e-cobranca-pix--claro--modal--019.png",
+        "alt": "Historico registrando criacao do agendamento e cobranca Pix",
+        "caption": "Historico registrando criacao do agendamento e cobranca Pix",
+        "name": "agenda--historico--criacao-e-cobranca-pix--claro--modal--019.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--sessao--editar-e-remarcar--claro--modal--020.png",
+        "alt": "Ficha de sessao com opcoes para editar ou remarcar",
+        "caption": "Ficha de sessao com opcoes para editar ou remarcar",
+        "name": "agenda--sessao--editar-e-remarcar--claro--modal--020.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--sessao--cobranca-em-atraso--claro--modal--021.png",
+        "alt": "Ficha de sessao destacando uma cobranca em atraso",
+        "caption": "Ficha de sessao destacando uma cobranca em atraso",
+        "name": "agenda--sessao--cobranca-em-atraso--claro--modal--021.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-compromisso--selecionar-categoria--claro--modal--022.png",
+        "alt": "Novo compromisso com seletor de categoria aberto",
+        "caption": "Novo compromisso com seletor de categoria aberto",
+        "name": "agenda--novo-compromisso--selecionar-categoria--claro--modal--022.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--remarcacao--confirmar-politicas--claro--modal--027.png",
+        "alt": "Confirmacao de remarcacao com exibicao das politicas aplicaveis",
+        "caption": "Confirmacao de remarcacao com exibicao das politicas aplicaveis",
+        "name": "agenda--remarcacao--confirmar-politicas--claro--modal--027.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--remarcacao--sucesso--claro--modal--028.png",
+        "alt": "Confirmacao de que a sessao foi remarcada com sucesso",
+        "caption": "Confirmacao de que a sessao foi remarcada com sucesso",
+        "name": "agenda--remarcacao--sucesso--claro--modal--028.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--novo-agendamento--etapa-04-resumo-recorrencia--claro--modal--030.png",
+        "alt": "Resumo final de uma sessao semanal recorrente",
+        "caption": "Resumo final de uma sessao semanal recorrente",
+        "name": "agenda--novo-agendamento--etapa-04-resumo-recorrencia--claro--modal--030.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--documentacao--disponibilidade-de-documentos--claro--popover--001.png",
+        "alt": "Menu de disponibilidade dos documentos ligados ao atendimento",
+        "caption": "Menu de disponibilidade dos documentos ligados ao atendimento",
+        "name": "agenda--documentacao--disponibilidade-de-documentos--claro--popover--001.png",
+        "kind": "popover"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-mensal--dia-e-evento-selecionados--claro--popover--003.png",
+        "alt": "Calendario mensal com detalhes do dia e do evento selecionado",
+        "caption": "Calendario mensal com detalhes do dia e do evento selecionado",
+        "name": "agenda--calendario-mensal--dia-e-evento-selecionados--claro--popover--003.png",
+        "kind": "popover"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--politicas--consequencia-de-falta--claro--popover--025.png",
+        "alt": "Seletor da consequencia aplicada em caso de falta",
+        "caption": "Seletor da consequencia aplicada em caso de falta",
+        "name": "agenda--politicas--consequencia-de-falta--claro--popover--025.png",
+        "kind": "popover"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/2. AGENDA/agenda--calendario-mensal--detalhes-do-dia--claro--popover--026.png",
+        "alt": "Visao mensal com popover de detalhes dos eventos do dia",
+        "caption": "Visao mensal com popover de detalhes dos eventos do dia",
+        "name": "agenda--calendario-mensal--detalhes-do-dia--claro--popover--026.png",
+        "kind": "popover"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-semanal--sessoes-agendadas--escuro--pagina--002.png",
+        "alt": "Visao semanal com sessoes distribuidas no calendario",
+        "caption": "Visao semanal com sessoes distribuidas no calendario",
+        "name": "agenda--calendario-semanal--sessoes-agendadas--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-semanal--resumo-lateral--escuro--pagina--003.png",
+        "alt": "Visao semanal com resumo de agenda na barra lateral",
+        "caption": "Visao semanal com resumo de agenda na barra lateral",
+        "name": "agenda--calendario-semanal--resumo-lateral--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-diario--estado-vazio--escuro--pagina--004.png",
+        "alt": "Visao diaria sem compromissos no horario mostrado",
+        "caption": "Visao diaria sem compromissos no horario mostrado",
+        "name": "agenda--calendario-diario--estado-vazio--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-mensal--resumo-lateral--escuro--pagina--005.png",
+        "alt": "Visao mensal com resumo e mini calendario lateral",
+        "caption": "Visao mensal com resumo e mini calendario lateral",
+        "name": "agenda--calendario-mensal--resumo-lateral--escuro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--disponibilidade--grade-semanal--escuro--pagina--012.png",
+        "alt": "Grade semanal para configurar horarios de disponibilidade",
+        "caption": "Grade semanal para configurar horarios de disponibilidade",
+        "name": "agenda--disponibilidade--grade-semanal--escuro--pagina--012.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--politicas--regras-comerciais-inicio--escuro--pagina--013.png",
+        "alt": "Parte superior das configuracoes de politicas comerciais",
+        "caption": "Parte superior das configuracoes de politicas comerciais",
+        "name": "agenda--politicas--regras-comerciais-inicio--escuro--pagina--013.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--politicas--consequencias-e-cancelamento--escuro--pagina--014.png",
+        "alt": "Consequencias de falta cancelamento e remarcacao",
+        "caption": "Consequencias de falta cancelamento e remarcacao",
+        "name": "agenda--politicas--consequencias-e-cancelamento--escuro--pagina--014.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-mensal--visao-completa--escuro--pagina--016.png",
+        "alt": "Visao mensal completa da agenda em desktop",
+        "caption": "Visao mensal completa da agenda em desktop",
+        "name": "agenda--calendario-mensal--visao-completa--escuro--pagina--016.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-diario--sessoes-agendadas--escuro--pagina--018.png",
+        "alt": "Visao diaria da agenda com sessoes marcadas",
+        "caption": "Visao diaria da agenda com sessoes marcadas",
+        "name": "agenda--calendario-diario--sessoes-agendadas--escuro--pagina--018.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-semanal--resumo-lateral-alternativo--escuro--pagina--019.png",
+        "alt": "Visao semanal com segunda composicao do resumo lateral",
+        "caption": "Visao semanal com segunda composicao do resumo lateral",
+        "name": "agenda--calendario-semanal--resumo-lateral-alternativo--escuro--pagina--019.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-semanal--filtros-laterais--escuro--pagina--020.png",
+        "alt": "Visao semanal com filtros de calendario na barra lateral",
+        "caption": "Visao semanal com filtros de calendario na barra lateral",
+        "name": "agenda--calendario-semanal--filtros-laterais--escuro--pagina--020.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--novo-agendamento--etapa-01-dados-vazios--escuro--modal--006.png",
+        "alt": "Primeira etapa vazia do formulario de novo agendamento",
+        "caption": "Primeira etapa vazia do formulario de novo agendamento",
+        "name": "agenda--novo-agendamento--etapa-01-dados-vazios--escuro--modal--006.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--novo-agendamento--recorrencia-semanal--escuro--modal--007.png",
+        "alt": "Configuracao de recorrencia semanal para a sessao",
+        "caption": "Configuracao de recorrencia semanal para a sessao",
+        "name": "agenda--novo-agendamento--recorrencia-semanal--escuro--modal--007.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--novo-agendamento--etapa-02-primeira-consulta-online--escuro--modal--008.png",
+        "alt": "Segunda etapa configurada como primeira consulta online",
+        "caption": "Segunda etapa configurada como primeira consulta online",
+        "name": "agenda--novo-agendamento--etapa-02-primeira-consulta-online--escuro--modal--008.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--novo-agendamento--etapa-03-revisar-recorrencia--escuro--modal--009.png",
+        "alt": "Terceira etapa revisando os dados da recorrencia",
+        "caption": "Terceira etapa revisando os dados da recorrencia",
+        "name": "agenda--novo-agendamento--etapa-03-revisar-recorrencia--escuro--modal--009.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--sessao--realizada-e-recorrente--escuro--modal--010.png",
+        "alt": "Ficha de uma sessao realizada pertencente a serie recorrente",
+        "caption": "Ficha de uma sessao realizada pertencente a serie recorrente",
+        "name": "agenda--sessao--realizada-e-recorrente--escuro--modal--010.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--historico--datas-e-convite-do-paciente--escuro--modal--011.png",
+        "alt": "Historico com datas da sessao e convite enviado ao paciente",
+        "caption": "Historico com datas da sessao e convite enviado ao paciente",
+        "name": "agenda--historico--datas-e-convite-do-paciente--escuro--modal--011.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--remarcacao--confirmar-politicas--escuro--modal--017.png",
+        "alt": "Confirmacao de remarcacao com politicas aplicaveis",
+        "caption": "Confirmacao de remarcacao com politicas aplicaveis",
+        "name": "agenda--remarcacao--confirmar-politicas--escuro--modal--017.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--notificacoes--filtro-e-acoes--escuro--popover--001.png",
+        "alt": "Central de notificacoes da agenda com filtro e acoes",
+        "caption": "Central de notificacoes da agenda com filtro e acoes",
+        "name": "agenda--notificacoes--filtro-e-acoes--escuro--popover--001.png",
+        "kind": "popover"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/2. AGENDA/agenda--calendario-mensal--detalhes-do-agendamento--escuro--popover--015.png",
+        "alt": "Popover de um agendamento dentro da visao mensal",
+        "caption": "Popover de um agendamento dentro da visao mensal",
+        "name": "agenda--calendario-mensal--detalhes-do-agendamento--escuro--popover--015.png",
+        "kind": "popover"
+      }
+    ]
+  },
+  "teleconsulta": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pre-entrada--camera-desligada-e-privacidade--claro--pagina--001.png",
+        "alt": "Pre-entrada com camera desligada privacidade e botao iniciar",
+        "caption": "Pre-entrada com camera desligada privacidade e botao iniciar",
+        "name": "teleconsulta--pre-entrada--camera-desligada-e-privacidade--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pre-entrada--dispositivos-de-audio-e-video--claro--pagina--002.png",
+        "alt": "Pre-entrada mostrando seletores de microfone camera e saida",
+        "caption": "Pre-entrada mostrando seletores de microfone camera e saida",
+        "name": "teleconsulta--pre-entrada--dispositivos-de-audio-e-video--claro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--em-sessao--sem-transcricao--claro--pagina--004.png",
+        "alt": "Sala de teleconsulta em andamento sem transcricao ativa",
+        "caption": "Sala de teleconsulta em andamento sem transcricao ativa",
+        "name": "teleconsulta--em-sessao--sem-transcricao--claro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--carregando-revisao-sem-transcricao--claro--pagina--005.png",
+        "alt": "Pos-sessao carregando revisao de uma chamada sem transcricao",
+        "caption": "Pos-sessao carregando revisao de uma chamada sem transcricao",
+        "name": "teleconsulta--pos-sessao--carregando-revisao-sem-transcricao--claro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--revisao-sem-dados-resumo--claro--pagina--006.png",
+        "alt": "Topo da revisao pos-sessao sem dados de transcricao",
+        "caption": "Topo da revisao pos-sessao sem dados de transcricao",
+        "name": "teleconsulta--pos-sessao--revisao-sem-dados-resumo--claro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--detalhes-sem-dados--claro--pagina--007.png",
+        "alt": "Detalhes e acordeoes da revisao sem dados de transcricao",
+        "caption": "Detalhes e acordeoes da revisao sem dados de transcricao",
+        "name": "teleconsulta--pos-sessao--detalhes-sem-dados--claro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--carregando-revisao-com-transcricao--claro--pagina--008.png",
+        "alt": "Revisao pos-sessao sendo gerada a partir da transcricao",
+        "caption": "Revisao pos-sessao sendo gerada a partir da transcricao",
+        "name": "teleconsulta--pos-sessao--carregando-revisao-com-transcricao--claro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--revisao-gerada-e-aviso-pendente--claro--pagina--009.png",
+        "alt": "Revisao gerada com resumo clinico e aviso de salvamento pendente",
+        "caption": "Revisao gerada com resumo clinico e aviso de salvamento pendente",
+        "name": "teleconsulta--pos-sessao--revisao-gerada-e-aviso-pendente--claro--pagina--009.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3.TELECONSULTA - ABA PRINCIPAL/teleconsulta--visao-geral--proxima-sessao-e-contexto--claro--pagina--001.png",
+        "alt": "Pagina principal com proxima sessao contexto e historico",
+        "caption": "Pagina principal com proxima sessao contexto e historico",
+        "name": "teleconsulta--visao-geral--proxima-sessao-e-contexto--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--transcricao--consentimento-antes-de-iniciar--claro--modal--003.png",
+        "alt": "Consentimento para transcrever a teleconsulta antes da entrada",
+        "caption": "Consentimento para transcrever a teleconsulta antes da entrada",
+        "name": "teleconsulta--transcricao--consentimento-antes-de-iniciar--claro--modal--003.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - ABA PRINCIPAL/teleconsulta--visao-geral--proxima-sessao-e-contexto--escuro--pagina--001.png",
+        "alt": "Pagina principal com proxima sessao contexto e historico",
+        "caption": "Pagina principal com proxima sessao contexto e historico",
+        "name": "teleconsulta--visao-geral--proxima-sessao-e-contexto--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pre-entrada--camera-desligada-e-privacidade--escuro--pagina--001.png",
+        "alt": "Pre-entrada com camera desligada privacidade e botao iniciar",
+        "caption": "Pre-entrada com camera desligada privacidade e botao iniciar",
+        "name": "teleconsulta--pre-entrada--camera-desligada-e-privacidade--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pre-entrada--dispositivos-de-audio-e-video--escuro--pagina--002.png",
+        "alt": "Pre-entrada mostrando seletores de microfone camera e saida",
+        "caption": "Pre-entrada mostrando seletores de microfone camera e saida",
+        "name": "teleconsulta--pre-entrada--dispositivos-de-audio-e-video--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--em-sessao--transcricao-concluida--escuro--pagina--003.png",
+        "alt": "Sala em sessao com captura e transcricao concluidas",
+        "caption": "Sala em sessao com captura e transcricao concluidas",
+        "name": "teleconsulta--em-sessao--transcricao-concluida--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--carregando-revisao--escuro--pagina--004.png",
+        "alt": "Revisao pos-sessao em estado de carregamento",
+        "caption": "Revisao pos-sessao em estado de carregamento",
+        "name": "teleconsulta--pos-sessao--carregando-revisao--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--revisao-gerada-resumo--escuro--pagina--005.png",
+        "alt": "Topo da revisao gerada com resumo clinico da sessao",
+        "caption": "Topo da revisao gerada com resumo clinico da sessao",
+        "name": "teleconsulta--pos-sessao--revisao-gerada-resumo--escuro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--pos-sessao--revisao-gerada-detalhes--escuro--pagina--006.png",
+        "alt": "Detalhes da revisao com transcricao e secoes clinicas",
+        "caption": "Detalhes da revisao com transcricao e secoes clinicas",
+        "name": "teleconsulta--pos-sessao--revisao-gerada-detalhes--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/3. TELECONSULTA - PRÉ E PÓS-JOIN/teleconsulta--transcricao--consentimento-antes-de-iniciar--escuro--modal--007.png",
+        "alt": "Consentimento para transcrever a teleconsulta antes da entrada",
+        "caption": "Consentimento para transcrever a teleconsulta antes da entrada",
+        "name": "teleconsulta--transcricao--consentimento-antes-de-iniciar--escuro--modal--007.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "pacientes": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/4. PACIENTES + NOVO PACIENTE/pacientes--lista--cartoes-de-pacientes--claro--pagina--001.png",
+        "alt": "Grade de cartoes dos pacientes cadastrados",
+        "caption": "Grade de cartoes dos pacientes cadastrados",
+        "name": "pacientes--lista--cartoes-de-pacientes--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/4. PACIENTES + NOVO PACIENTE/pacientes--exclusao--confirmar-e-exportar-dados--claro--modal--002.png",
+        "alt": "Confirmacao de exclusao com opcao de exportar os dados",
+        "caption": "Confirmacao de exclusao com opcao de exportar os dados",
+        "name": "pacientes--exclusao--confirmar-e-exportar-dados--claro--modal--002.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/4. PACIENTES + NOVO PACIENTE/pacientes--novo-prontuario--cadastro-rapido--claro--modal--003.png",
+        "alt": "Cadastro rapido para criar paciente e prontuario",
+        "caption": "Cadastro rapido para criar paciente e prontuario",
+        "name": "pacientes--novo-prontuario--cadastro-rapido--claro--modal--003.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/4. PACIENTES + NOVO PACIENTE/pacientes--novo-prontuario--cadastro-completo-financeiro-endereco--claro--modal--004.png",
+        "alt": "Cadastro completo nas secoes financeira e endereco",
+        "caption": "Cadastro completo nas secoes financeira e endereco",
+        "name": "pacientes--novo-prontuario--cadastro-completo-financeiro-endereco--claro--modal--004.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/4. PACIENTES + NOVO PACIENTE/pacientes--novo-prontuario--cadastro-completo-responsavel--claro--modal--005.png",
+        "alt": "Cadastro completo com dados adicionais e responsavel",
+        "caption": "Cadastro completo com dados adicionais e responsavel",
+        "name": "pacientes--novo-prontuario--cadastro-completo-responsavel--claro--modal--005.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/4. PACIENTES + NOVO PACIENTE/pacientes--lista--cartoes-de-pacientes--escuro--pagina--001.png",
+        "alt": "Grade de cartoes dos pacientes cadastrados",
+        "caption": "Grade de cartoes dos pacientes cadastrados",
+        "name": "pacientes--lista--cartoes-de-pacientes--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/4. PACIENTES + NOVO PACIENTE/pacientes--novo-prontuario--cadastro-rapido--escuro--modal--002.png",
+        "alt": "Cadastro rapido para criar paciente e prontuario",
+        "caption": "Cadastro rapido para criar paciente e prontuario",
+        "name": "pacientes--novo-prontuario--cadastro-rapido--escuro--modal--002.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/4. PACIENTES + NOVO PACIENTE/pacientes--novo-prontuario--cadastro-completo--escuro--modal--003.png",
+        "alt": "Formulario completo para cadastrar paciente e prontuario",
+        "caption": "Formulario completo para cadastrar paciente e prontuario",
+        "name": "pacientes--novo-prontuario--cadastro-completo--escuro--modal--003.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "prontuario": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--resumo--indicadores-clinicos-e-dados-do-paciente--claro--pagina--001.png",
+        "alt": "Resumo superior do prontuario com indicadores clinicos e dados",
+        "caption": "Resumo superior do prontuario com indicadores clinicos e dados",
+        "name": "prontuario--resumo--indicadores-clinicos-e-dados-do-paciente--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--sessao--resumo-clinico-sem-dados--claro--pagina--005.png",
+        "alt": "Cartao de resumo da sessao antes de haver dados gerados",
+        "caption": "Cartao de resumo da sessao antes de haver dados gerados",
+        "name": "prontuario--sessao--resumo-clinico-sem-dados--claro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--sessao--resumo-clinico-gerado-expandido--claro--pagina--006.png",
+        "alt": "Resumo clinico de sessao preenchido e expandido",
+        "caption": "Resumo clinico de sessao preenchido e expandido",
+        "name": "prontuario--sessao--resumo-clinico-gerado-expandido--claro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--anamnese--formulario-em-edicao--claro--pagina--007.png",
+        "alt": "Formulario de anamnese aberto para preenchimento e edicao",
+        "caption": "Formulario de anamnese aberto para preenchimento e edicao",
+        "name": "prontuario--anamnese--formulario-em-edicao--claro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--humor--grafico-de-tendencia--claro--pagina--008.png",
+        "alt": "Grafico de tendencia do humor registrado ao longo do tempo",
+        "caption": "Grafico de tendencia do humor registrado ao longo do tempo",
+        "name": "prontuario--humor--grafico-de-tendencia--claro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--humor--historico-de-registros--claro--pagina--009.png",
+        "alt": "Cartoes do historico detalhado de registros de humor",
+        "caption": "Cartoes do historico detalhado de registros de humor",
+        "name": "prontuario--humor--historico-de-registros--claro--pagina--009.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--financeiro--movimentacoes-do-paciente--claro--pagina--011.png",
+        "alt": "Movimentacoes financeiras vinculadas ao paciente",
+        "caption": "Movimentacoes financeiras vinculadas ao paciente",
+        "name": "prontuario--financeiro--movimentacoes-do-paciente--claro--pagina--011.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--financeiro--cobrancas-do-paciente--claro--pagina--012.png",
+        "alt": "Lista de cobrancas financeiras do paciente",
+        "caption": "Lista de cobrancas financeiras do paciente",
+        "name": "prontuario--financeiro--cobrancas-do-paciente--claro--pagina--012.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--arquivos--estado-vazio--claro--pagina--016.png",
+        "alt": "Area de arquivos do paciente em estado vazio",
+        "caption": "Area de arquivos do paciente em estado vazio",
+        "name": "prontuario--arquivos--estado-vazio--claro--pagina--016.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--documentos-oficiais--editor-de-declaracao--claro--pagina--017.png",
+        "alt": "Editor A4 de declaracao com seletor do tipo de documento",
+        "caption": "Editor A4 de declaracao com seletor do tipo de documento",
+        "name": "prontuario--documentos-oficiais--editor-de-declaracao--claro--pagina--017.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--historico--agendamento-criado-e-politica--claro--pagina--018.png",
+        "alt": "Historico completo com criacao do atendimento e politica aplicada",
+        "caption": "Historico completo com criacao do atendimento e politica aplicada",
+        "name": "prontuario--historico--agendamento-criado-e-politica--claro--pagina--018.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--historico--remarcacao-recusada-e-resumo--claro--pagina--019.png",
+        "alt": "Historico com remarcacao recusada pagamento e resumo clinico",
+        "caption": "Historico com remarcacao recusada pagamento e resumo clinico",
+        "name": "prontuario--historico--remarcacao-recusada-e-resumo--claro--pagina--019.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--resumo--historico-synapse-whatsapp--claro--drawer--002.png",
+        "alt": "Resumo inferior do prontuario com historico Synapse via WhatsApp",
+        "caption": "Resumo inferior do prontuario com historico Synapse via WhatsApp",
+        "name": "prontuario--resumo--historico-synapse-whatsapp--claro--drawer--002.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--portal-paciente--enviar-convite--claro--modal--003.png",
+        "alt": "Convite para liberar o acesso do paciente ao portal",
+        "caption": "Convite para liberar o acesso do paciente ao portal",
+        "name": "prontuario--portal-paciente--enviar-convite--claro--modal--003.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--anamnese--selecionar-modelo--claro--modal--004.png",
+        "alt": "Galeria de modelos para iniciar uma anamnese",
+        "caption": "Galeria de modelos para iniciar uma anamnese",
+        "name": "prontuario--anamnese--selecionar-modelo--claro--modal--004.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--relatorio-mensal--pre-visualizacao--claro--modal--010.png",
+        "alt": "Pre-visualizacao do relatorio mensal do paciente",
+        "caption": "Pre-visualizacao do relatorio mensal do paciente",
+        "name": "prontuario--relatorio-mensal--pre-visualizacao--claro--modal--010.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--fiscal--acoes-de-documentos-fiscais--claro--modal--013.png",
+        "alt": "Acoes para emitir ou arquivar documentos fiscais",
+        "caption": "Acoes para emitir ou arquivar documentos fiscais",
+        "name": "prontuario--fiscal--acoes-de-documentos-fiscais--claro--modal--013.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--fiscal--arquivar-nfse-externa--claro--modal--014.png",
+        "alt": "Formulario para arquivar uma NFS-e emitida externamente",
+        "caption": "Formulario para arquivar uma NFS-e emitida externamente",
+        "name": "prontuario--fiscal--arquivar-nfse-externa--claro--modal--014.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/5. PRONTUÁRIO/prontuario--fiscal--emitir-nfse-configuracao-automatica--claro--modal--015.png",
+        "alt": "Emissao de NFS-e usando configuracao fiscal automatica",
+        "caption": "Emissao de NFS-e usando configuracao fiscal automatica",
+        "name": "prontuario--fiscal--emitir-nfse-configuracao-automatica--claro--modal--015.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--resumo--indicadores-clinicos-e-dados-do-paciente--escuro--pagina--001.png",
+        "alt": "Resumo superior do prontuario com indicadores clinicos e dados",
+        "caption": "Resumo superior do prontuario com indicadores clinicos e dados",
+        "name": "prontuario--resumo--indicadores-clinicos-e-dados-do-paciente--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--historico--remarcacao-recusada--escuro--pagina--002.png",
+        "alt": "Historico completo destacando uma remarcacao recusada",
+        "caption": "Historico completo destacando uma remarcacao recusada",
+        "name": "prontuario--historico--remarcacao-recusada--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--sessao--resumo-clinico-gerado--escuro--pagina--003.png",
+        "alt": "Resumo clinico de sessao preenchido pela plataforma",
+        "caption": "Resumo clinico de sessao preenchido pela plataforma",
+        "name": "prontuario--sessao--resumo-clinico-gerado--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--anamnese--formulario-em-edicao--escuro--pagina--004.png",
+        "alt": "Formulario de anamnese aberto para preenchimento e edicao",
+        "caption": "Formulario de anamnese aberto para preenchimento e edicao",
+        "name": "prontuario--anamnese--formulario-em-edicao--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--humor--grafico-de-tendencia--escuro--pagina--006.png",
+        "alt": "Grafico de tendencia do humor registrado ao longo do tempo",
+        "caption": "Grafico de tendencia do humor registrado ao longo do tempo",
+        "name": "prontuario--humor--grafico-de-tendencia--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--objetivos-terapeuticos--progresso-parcial--escuro--pagina--007.png",
+        "alt": "Objetivos terapeuticos com progresso parcial do plano",
+        "caption": "Objetivos terapeuticos com progresso parcial do plano",
+        "name": "prontuario--objetivos-terapeuticos--progresso-parcial--escuro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--planos-e-pacotes--visao-do-paciente--escuro--pagina--008.png",
+        "alt": "Planos e pacotes de sessoes vinculados ao paciente",
+        "caption": "Planos e pacotes de sessoes vinculados ao paciente",
+        "name": "prontuario--planos-e-pacotes--visao-do-paciente--escuro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--financeiro--movimentacoes-do-paciente--escuro--pagina--009.png",
+        "alt": "Movimentacoes financeiras vinculadas ao paciente",
+        "caption": "Movimentacoes financeiras vinculadas ao paciente",
+        "name": "prontuario--financeiro--movimentacoes-do-paciente--escuro--pagina--009.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--arquivos--documento-pdf-compartilhado--escuro--pagina--010.png",
+        "alt": "Arquivo PDF compartilhado e armazenado no prontuario",
+        "caption": "Arquivo PDF compartilhado e armazenado no prontuario",
+        "name": "prontuario--arquivos--documento-pdf-compartilhado--escuro--pagina--010.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--financeiro--cobrancas-do-paciente--escuro--pagina--013.png",
+        "alt": "Lista de cobrancas financeiras do paciente",
+        "caption": "Lista de cobrancas financeiras do paciente",
+        "name": "prontuario--financeiro--cobrancas-do-paciente--escuro--pagina--013.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--documentos-oficiais--editor-de-declaracao--escuro--pagina--015.png",
+        "alt": "Editor A4 de declaracao com seletor do tipo de documento",
+        "caption": "Editor A4 de declaracao com seletor do tipo de documento",
+        "name": "prontuario--documentos-oficiais--editor-de-declaracao--escuro--pagina--015.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--anamnese--selecionar-modelo--escuro--modal--005.png",
+        "alt": "Galeria de modelos para iniciar uma anamnese",
+        "caption": "Galeria de modelos para iniciar uma anamnese",
+        "name": "prontuario--anamnese--selecionar-modelo--escuro--modal--005.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--fiscal--acoes-de-documentos-fiscais--escuro--modal--011.png",
+        "alt": "Acoes para emitir ou arquivar documentos fiscais",
+        "caption": "Acoes para emitir ou arquivar documentos fiscais",
+        "name": "prontuario--fiscal--acoes-de-documentos-fiscais--escuro--modal--011.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--fiscal--arquivar-nfse-externa--escuro--modal--012.png",
+        "alt": "Formulario para arquivar uma NFS-e emitida externamente",
+        "caption": "Formulario para arquivar uma NFS-e emitida externamente",
+        "name": "prontuario--fiscal--arquivar-nfse-externa--escuro--modal--012.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/5. PRONTUÁRIO/prontuario--portal-paciente--enviar-convite--escuro--modal--014.png",
+        "alt": "Convite para liberar o acesso do paciente ao portal",
+        "caption": "Convite para liberar o acesso do paciente ao portal",
+        "name": "prontuario--portal-paciente--enviar-convite--escuro--modal--014.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "neurodrive": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/1. NOTAS/neurodrive--notas--modo-foco-editor--claro--pagina--001.png",
+        "alt": "Editor de nota ocupando a area principal no modo foco",
+        "caption": "Editor de nota ocupando a area principal no modo foco",
+        "name": "neurodrive--notas--modo-foco-editor--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/1. NOTAS/neurodrive--inicio--estado-vazio-com-navegacao--claro--pagina--002.png",
+        "alt": "Inicio vazio do NeuroDrive com todas as areas na navegacao",
+        "caption": "Inicio vazio do NeuroDrive com todas as areas na navegacao",
+        "name": "neurodrive--inicio--estado-vazio-com-navegacao--claro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/1. NOTAS/neurodrive--notas--lista-e-editor-em-tres-colunas--claro--pagina--003.png",
+        "alt": "Notas em estrutura de navegacao lista e editor em tres colunas",
+        "caption": "Notas em estrutura de navegacao lista e editor em tres colunas",
+        "name": "neurodrive--notas--lista-e-editor-em-tres-colunas--claro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/1. NOTAS/neurodrive--notas--lista-com-editor-vazio--claro--pagina--004.png",
+        "alt": "Lista de notas com painel de edicao ainda vazio",
+        "caption": "Lista de notas com painel de edicao ainda vazio",
+        "name": "neurodrive--notas--lista-com-editor-vazio--claro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/2. TAREFAS/neurodrive--tarefas--kanban-com-navegacao--claro--pagina--001.png",
+        "alt": "Quadro Kanban de tarefas com navegacao completa do NeuroDrive",
+        "caption": "Quadro Kanban de tarefas com navegacao completa do NeuroDrive",
+        "name": "neurodrive--tarefas--kanban-com-navegacao--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/2. TAREFAS/neurodrive--tarefas--kanban-navegacao-compacta--claro--pagina--002.png",
+        "alt": "Quadro Kanban com navegacao lateral compactada",
+        "caption": "Quadro Kanban com navegacao lateral compactada",
+        "name": "neurodrive--tarefas--kanban-navegacao-compacta--claro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/2. TAREFAS/neurodrive--tarefas--lista-e-filtros-pendentes--claro--pagina--003.png",
+        "alt": "Tarefas em lista com filtros e itens pendentes",
+        "caption": "Tarefas em lista com filtros e itens pendentes",
+        "name": "neurodrive--tarefas--lista-e-filtros-pendentes--claro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/3. DOCUMENTOS/neurodrive--documentos--arquivos-de-pacientes--claro--pagina--001.png",
+        "alt": "Grade de documentos e arquivos vinculados a pacientes",
+        "caption": "Grade de documentos e arquivos vinculados a pacientes",
+        "name": "neurodrive--documentos--arquivos-de-pacientes--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/1. NOTAS/neurodrive--notas--modo-foco-com-synapse--claro--drawer--005.png",
+        "alt": "Nota em modo foco com chat do Synapse aberto",
+        "caption": "Nota em modo foco com chat do Synapse aberto",
+        "name": "neurodrive--notas--modo-foco-com-synapse--claro--drawer--005.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/4. INTEGRAÇÕES/neurodrive--integracoes--google-drive-e-notion--claro--modal--001.png",
+        "alt": "Integracoes com Google Drive indisponivel e Notion configuravel",
+        "caption": "Integracoes com Google Drive indisponivel e Notion configuravel",
+        "name": "neurodrive--integracoes--google-drive-e-notion--claro--modal--001.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neurodrive--notas--modo-foco-texto-rolado--escuro--pagina--002.png",
+        "alt": "Editor de nota no modo foco em uma posicao rolada do texto",
+        "caption": "Editor de nota no modo foco em uma posicao rolada do texto",
+        "name": "neurodrive--notas--modo-foco-texto-rolado--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neurodrive--notas--lista-e-editor-em-tres-colunas--escuro--pagina--003.png",
+        "alt": "Notas em estrutura de navegacao lista e editor em tres colunas",
+        "caption": "Notas em estrutura de navegacao lista e editor em tres colunas",
+        "name": "neurodrive--notas--lista-e-editor-em-tres-colunas--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neurodrive--tarefas--kanban-com-filtros--escuro--pagina--004.png",
+        "alt": "Quadro Kanban de tarefas com filtros na barra lateral",
+        "caption": "Quadro Kanban de tarefas com filtros na barra lateral",
+        "name": "neurodrive--tarefas--kanban-com-filtros--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neurodrive--tarefas--lista-com-filtros--escuro--pagina--005.png",
+        "alt": "Tarefas em formato de lista com filtros laterais",
+        "caption": "Tarefas em formato de lista com filtros laterais",
+        "name": "neurodrive--tarefas--lista-com-filtros--escuro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neurodrive--notas--modo-foco-com-synapse--escuro--drawer--001.png",
+        "alt": "Nota em modo foco com chat do Synapse aberto",
+        "caption": "Nota em modo foco com chat do Synapse aberto",
+        "name": "neurodrive--notas--modo-foco-com-synapse--escuro--drawer--001.png",
+        "kind": "drawer"
+      }
+    ]
+  },
+  "neuroview": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/5. NEUROVIEW/neuroview--grafo-2d--rede-com-paciente-e-nota--claro--pagina--001.png",
+        "alt": "Grafo 2D de pacientes notas fluxos e tags com nota selecionada",
+        "caption": "Grafo 2D de pacientes notas fluxos e tags com nota selecionada",
+        "name": "neuroview--grafo-2d--rede-com-paciente-e-nota--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/5. NEUROVIEW/neuroview--grafo-3d--rede-completa-em-canvas--misto--pagina--002.png",
+        "alt": "Grafo 3D em canvas escuro dentro da navegacao clara",
+        "caption": "Grafo 3D em canvas escuro dentro da navegacao clara",
+        "name": "neuroview--grafo-3d--rede-completa-em-canvas--misto--pagina--002.png",
+        "kind": "pagina"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--paciente-e-nota-em-foco--escuro--pagina--006.png",
+        "alt": "Grafo 2D com paciente e nota relacionados em foco",
+        "caption": "Grafo 2D com paciente e nota relacionados em foco",
+        "name": "neuroview--grafo-2d--paciente-e-nota-em-foco--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--rede-deslocada-com-nota--escuro--pagina--007.png",
+        "alt": "Grafo 2D deslocado no canvas com painel de nota aberto",
+        "caption": "Grafo 2D deslocado no canvas com painel de nota aberto",
+        "name": "neuroview--grafo-2d--rede-deslocada-com-nota--escuro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--paciente-com-conexoes-clinicas--escuro--pagina--008.png",
+        "alt": "Paciente selecionado com varias conexoes clinicas rotuladas",
+        "caption": "Paciente selecionado com varias conexoes clinicas rotuladas",
+        "name": "neuroview--grafo-2d--paciente-com-conexoes-clinicas--escuro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--no-selecionado-em-tela-cheia--escuro--pagina--009.png",
+        "alt": "No selecionado e seus controles no grafo em tela cheia",
+        "caption": "No selecionado e seus controles no grafo em tela cheia",
+        "name": "neuroview--grafo-2d--no-selecionado-em-tela-cheia--escuro--pagina--009.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--problema-e-tags-selecionados--escuro--pagina--010.png",
+        "alt": "Nota de problema selecionada com tags e ligacao ao paciente",
+        "caption": "Nota de problema selecionada com tags e ligacao ao paciente",
+        "name": "neuroview--grafo-2d--problema-e-tags-selecionados--escuro--pagina--010.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-2d--busca-filtrada-com-nota--escuro--pagina--011.png",
+        "alt": "Busca textual filtrando a rede 2D com nota aberta",
+        "caption": "Busca textual filtrando a rede 2D com nota aberta",
+        "name": "neuroview--grafo-2d--busca-filtrada-com-nota--escuro--pagina--011.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-3d--rede-completa-e-legenda--escuro--pagina--012.png",
+        "alt": "Rede 3D completa com legenda e retorno para a visao 2D",
+        "caption": "Rede 3D completa com legenda e retorno para a visao 2D",
+        "name": "neuroview--grafo-3d--rede-completa-e-legenda--escuro--pagina--012.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-3d--paciente-e-fluxo-selecionados--escuro--pagina--013.png",
+        "alt": "Grafo 3D destacando um paciente e seu fluxo de pensamento",
+        "caption": "Grafo 3D destacando um paciente e seu fluxo de pensamento",
+        "name": "neuroview--grafo-3d--paciente-e-fluxo-selecionados--escuro--pagina--013.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-3d--fluxo-em-foco-tela-cheia--escuro--pagina--014.png",
+        "alt": "Fluxo selecionado no grafo 3D em enquadramento de tela cheia",
+        "caption": "Fluxo selecionado no grafo 3D em enquadramento de tela cheia",
+        "name": "neuroview--grafo-3d--fluxo-em-foco-tela-cheia--escuro--pagina--014.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroview--grafo-3d--rede-integrada-na-navegacao--escuro--pagina--015.png",
+        "alt": "Grafo 3D exibido dentro da navegacao completa do NeuroDrive",
+        "caption": "Grafo 3D exibido dentro da navegacao completa do NeuroDrive",
+        "name": "neuroview--grafo-3d--rede-integrada-na-navegacao--escuro--pagina--015.png",
+        "kind": "pagina"
+      }
+    ]
+  },
+  "neuroflow": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/6. NEUROFLOW/neuroflow--canvas--mapa-clinico-com-diagnostico--claro--pagina--001.png",
+        "alt": "Mapa visual de raciocinio clinico com blocos conexoes e diagnostico",
+        "caption": "Mapa visual de raciocinio clinico com blocos conexoes e diagnostico",
+        "name": "neuroflow--canvas--mapa-clinico-com-diagnostico--claro--pagina--001.png",
+        "kind": "pagina"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroflow--canvas--mapa-clinico-com-diagnostico--escuro--pagina--016.png",
+        "alt": "Mapa visual de raciocinio clinico com diagnostico e intervencoes",
+        "caption": "Mapa visual de raciocinio clinico com diagnostico e intervencoes",
+        "name": "neuroflow--canvas--mapa-clinico-com-diagnostico--escuro--pagina--016.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroflow--biblioteca--notas-livre-e-vinculada--escuro--modal--017.png",
+        "alt": "Biblioteca do NeuroFlow nos blocos nota livre e nota vinculada",
+        "caption": "Biblioteca do NeuroFlow nos blocos nota livre e nota vinculada",
+        "name": "neuroflow--biblioteca--notas-livre-e-vinculada--escuro--modal--017.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroflow--biblioteca--blocos-clinicos--escuro--modal--018.png",
+        "alt": "Biblioteca rolada nos blocos paciente hipotese evidencia e gatilho",
+        "caption": "Biblioteca rolada nos blocos paciente hipotese evidencia e gatilho",
+        "name": "neuroflow--biblioteca--blocos-clinicos--escuro--modal--018.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuroflow--biblioteca--minhas-notas--escuro--modal--019.png",
+        "alt": "Biblioteca do NeuroFlow na aba de notas existentes",
+        "caption": "Biblioteca do NeuroFlow na aba de notas existentes",
+        "name": "neuroflow--biblioteca--minhas-notas--escuro--modal--019.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "neuropulse": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/7. NEUROPULSE/neuropulse--sintese--diagrama-clinico-pronto--claro--pagina--003.png",
+        "alt": "Diagrama causal e clinico concluido pelo NeuroPulse",
+        "caption": "Diagrama causal e clinico concluido pelo NeuroPulse",
+        "name": "neuropulse--sintese--diagrama-clinico-pronto--claro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/7. NEUROPULSE/neuropulse--sintese--construindo-analise--claro--estado--001.png",
+        "alt": "NeuroPulse processando o relato e construindo a sintese",
+        "caption": "NeuroPulse processando o relato e construindo a sintese",
+        "name": "neuropulse--sintese--construindo-analise--claro--estado--001.png",
+        "kind": "estado"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/6. NEURODRIVE/7. NEUROPULSE/neuropulse--sintese--seletor-de-abordagem--claro--popover--002.png",
+        "alt": "Seletor de abordagem terapeutica aberto antes da analise",
+        "caption": "Seletor de abordagem terapeutica aberto antes da analise",
+        "name": "neuropulse--sintese--seletor-de-abordagem--claro--popover--002.png",
+        "kind": "popover"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuropulse--sintese--relato-preenchido-resultado-vazio--escuro--pagina--020.png",
+        "alt": "Relato preenchido antes de selecionar paciente e analisar",
+        "caption": "Relato preenchido antes de selecionar paciente e analisar",
+        "name": "neuropulse--sintese--relato-preenchido-resultado-vazio--escuro--pagina--020.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuropulse--sintese--diagrama-clinico-pronto--escuro--pagina--023.png",
+        "alt": "Diagrama clinico TCC pronto com controles de exportacao",
+        "caption": "Diagrama clinico TCC pronto com controles de exportacao",
+        "name": "neuropulse--sintese--diagrama-clinico-pronto--escuro--pagina--023.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuropulse--sintese--construindo-analise--escuro--estado--022.png",
+        "alt": "NeuroPulse organizando relacoes contexto e hipoteses",
+        "caption": "NeuroPulse organizando relacoes contexto e hipoteses",
+        "name": "neuropulse--sintese--construindo-analise--escuro--estado--022.png",
+        "kind": "estado"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/6. NEURODRIVE/neuropulse--sintese--seletor-de-abordagem--escuro--popover--021.png",
+        "alt": "Seletor com abordagens terapeuticas para orientar a sintese",
+        "caption": "Seletor com abordagens terapeuticas para orientar a sintese",
+        "name": "neuropulse--sintese--seletor-de-abordagem--escuro--popover--021.png",
+        "kind": "popover"
+      }
+    ]
+  },
+  "gestao-financeira": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--visao-geral--regime-caixa--claro--pagina--001.png",
+        "alt": "Visao financeira geral organizada pelo regime de caixa",
+        "caption": "Visao financeira geral organizada pelo regime de caixa",
+        "name": "gestao-financeira--visao-geral--regime-caixa--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--recorrencia--clinica-lista-pessoal-vazio--claro--pagina--007.png",
+        "alt": "Recorrencias da clinica listadas e area pessoal vazia",
+        "caption": "Recorrencias da clinica listadas e area pessoal vazia",
+        "name": "gestao-financeira--recorrencia--clinica-lista-pessoal-vazio--claro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--planejamento--metas-e-limites--claro--pagina--008.png",
+        "alt": "Planejamento financeiro com metas limites e acompanhamento",
+        "caption": "Planejamento financeiro com metas limites e acompanhamento",
+        "name": "gestao-financeira--planejamento--metas-e-limites--claro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--navegacao--menu-expandido-visao-geral--claro--drawer--002.png",
+        "alt": "Menu lateral financeiro expandido sobre a visao geral",
+        "caption": "Menu lateral financeiro expandido sobre a visao geral",
+        "name": "gestao-financeira--navegacao--menu-expandido-visao-geral--claro--drawer--002.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--novo-lancamento--receita-formulario--claro--modal--003.png",
+        "alt": "Formulario para registrar uma nova receita",
+        "caption": "Formulario para registrar uma nova receita",
+        "name": "gestao-financeira--novo-lancamento--receita-formulario--claro--modal--003.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--novo-lancamento--despesa-formulario--claro--modal--004.png",
+        "alt": "Formulario para registrar uma nova despesa",
+        "caption": "Formulario para registrar uma nova despesa",
+        "name": "gestao-financeira--novo-lancamento--despesa-formulario--claro--modal--004.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--cobranca-manual--sem-paciente-em-aberto--claro--modal--005.png",
+        "alt": "Cobranca manual antes de escolher paciente ou pacote",
+        "caption": "Cobranca manual antes de escolher paciente ou pacote",
+        "name": "gestao-financeira--cobranca-manual--sem-paciente-em-aberto--claro--modal--005.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/7. GESTÃO FINANCEIRA/gestao-financeira--cobranca-manual--paciente-e-pacote--claro--modal--006.png",
+        "alt": "Cobranca manual com paciente e pacote selecionados",
+        "caption": "Cobranca manual com paciente e pacote selecionados",
+        "name": "gestao-financeira--cobranca-manual--paciente-e-pacote--claro--modal--006.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--visao-geral--regime-competencia--escuro--pagina--001.png",
+        "alt": "Visao financeira geral organizada pelo regime de competencia",
+        "caption": "Visao financeira geral organizada pelo regime de competencia",
+        "name": "gestao-financeira--visao-geral--regime-competencia--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--planejamento--metas-e-limites--escuro--pagina--006.png",
+        "alt": "Planejamento financeiro com metas limites e acompanhamento",
+        "caption": "Planejamento financeiro com metas limites e acompanhamento",
+        "name": "gestao-financeira--planejamento--metas-e-limites--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--lancamentos--lista-com-menu-expandido--escuro--drawer--005.png",
+        "alt": "Lista de lancamentos com menu financeiro expandido",
+        "caption": "Lista de lancamentos com menu financeiro expandido",
+        "name": "gestao-financeira--lancamentos--lista-com-menu-expandido--escuro--drawer--005.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--novo-lancamento--receita-formulario--escuro--modal--002.png",
+        "alt": "Formulario para registrar uma nova receita",
+        "caption": "Formulario para registrar uma nova receita",
+        "name": "gestao-financeira--novo-lancamento--receita-formulario--escuro--modal--002.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--cobranca-manual--sem-paciente-em-aberto--escuro--modal--003.png",
+        "alt": "Cobranca manual antes de escolher paciente ou pacote",
+        "caption": "Cobranca manual antes de escolher paciente ou pacote",
+        "name": "gestao-financeira--cobranca-manual--sem-paciente-em-aberto--escuro--modal--003.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/7. GESTÃO FINANCEIRA/gestao-financeira--cobranca-manual--paciente-destino-neurofinance--escuro--modal--004.png",
+        "alt": "Cobranca manual com paciente e destino NeuroFinance",
+        "caption": "Cobranca manual com paciente e destino NeuroFinance",
+        "name": "gestao-financeira--cobranca-manual--paciente-destino-neurofinance--escuro--modal--004.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "neurofinance": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--conta-e-saldo--dashboard-com-cartao--claro--pagina--002.png",
+        "alt": "Dashboard da conta com saldo atalhos e cartao financeiro",
+        "caption": "Dashboard da conta com saldo atalhos e cartao financeiro",
+        "name": "neurofinance--conta-e-saldo--dashboard-com-cartao--claro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--pagar-boleto--etapa-01-consultar--claro--pagina--003.png",
+        "alt": "Primeira etapa para consultar e pagar um boleto",
+        "caption": "Primeira etapa para consultar e pagar um boleto",
+        "name": "neurofinance--pagar-boleto--etapa-01-consultar--claro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--pagar-pix--etapa-01-consultar-codigo--claro--pagina--004.png",
+        "alt": "Primeira etapa para colar e consultar um codigo Pix",
+        "caption": "Primeira etapa para colar e consultar um codigo Pix",
+        "name": "neurofinance--pagar-pix--etapa-01-consultar-codigo--claro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--pagamentos-agendados--resumo-e-historico--claro--pagina--007.png",
+        "alt": "Resumo e historico dos pagamentos agendados",
+        "caption": "Resumo e historico dos pagamentos agendados",
+        "name": "neurofinance--pagamentos-agendados--resumo-e-historico--claro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--area-pix--gerar-qr-code-com-menu--claro--pagina--008.png",
+        "alt": "Tela para gerar QR Code Pix com menu lateral aberto",
+        "caption": "Tela para gerar QR Code Pix com menu lateral aberto",
+        "name": "neurofinance--area-pix--gerar-qr-code-com-menu--claro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--nfse--configuracao-dados-fiscais--claro--pagina--009.png",
+        "alt": "Configuracao dos dados fiscais usados na emissao de NFS-e",
+        "caption": "Configuracao dos dados fiscais usados na emissao de NFS-e",
+        "name": "neurofinance--nfse--configuracao-dados-fiscais--claro--pagina--009.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--tarifas--custos-e-prazos--claro--pagina--010.png",
+        "alt": "Tabela de tarifas custos operacionais e prazos",
+        "caption": "Tabela de tarifas custos operacionais e prazos",
+        "name": "neurofinance--tarifas--custos-e-prazos--claro--pagina--010.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--saude-da-conta--cadastro-aprovado--claro--pagina--011.png",
+        "alt": "Saude da conta com cadastro aprovado e verificacoes concluidas",
+        "caption": "Saude da conta com cadastro aprovado e verificacoes concluidas",
+        "name": "neurofinance--saude-da-conta--cadastro-aprovado--claro--pagina--011.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--pagar-pix--etapa-02-revisao-saldo-insuficiente--claro--pagina--014.png",
+        "alt": "Revisao de pagamento Pix sinalizando saldo insuficiente",
+        "caption": "Revisao de pagamento Pix sinalizando saldo insuficiente",
+        "name": "neurofinance--pagar-pix--etapa-02-revisao-saldo-insuficiente--claro--pagina--014.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--seguranca-da-conta--status-pin-e-saude--claro--pagina--015.png",
+        "alt": "Painel de seguranca com status do PIN e saude da conta",
+        "caption": "Painel de seguranca com status do PIN e saude da conta",
+        "name": "neurofinance--seguranca-da-conta--status-pin-e-saude--claro--pagina--015.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--area-pix-limites--menu-expandido--claro--drawer--001.png",
+        "alt": "Area Pix e limites com navegacao financeira expandida",
+        "caption": "Area Pix e limites com navegacao financeira expandida",
+        "name": "neurofinance--area-pix-limites--menu-expandido--claro--drawer--001.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--extrato--visualizacao-a4-impressao--claro--modal--005.png",
+        "alt": "Extrato em formato A4 pronto para imprimir ou exportar",
+        "caption": "Extrato em formato A4 pronto para imprimir ou exportar",
+        "name": "neurofinance--extrato--visualizacao-a4-impressao--claro--modal--005.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--extrato--filtros-avancados--claro--modal--006.png",
+        "alt": "Filtros avancados para consultar movimentacoes do extrato",
+        "caption": "Filtros avancados para consultar movimentacoes do extrato",
+        "name": "neurofinance--extrato--filtros-avancados--claro--modal--006.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--cobranca--etapa-02-confirmar-taxas--claro--modal--012.png",
+        "alt": "Segunda etapa da cobranca com revisao de valor e taxas",
+        "caption": "Segunda etapa da cobranca com revisao de valor e taxas",
+        "name": "neurofinance--cobranca--etapa-02-confirmar-taxas--claro--modal--012.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--cobranca--etapa-03-gerada-qr-e-compartilhar--claro--modal--013.png",
+        "alt": "Cobranca gerada com QR Code e opcoes de compartilhamento",
+        "caption": "Cobranca gerada com QR Code e opcoes de compartilhamento",
+        "name": "neurofinance--cobranca--etapa-03-gerada-qr-e-compartilhar--claro--modal--013.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--seguranca--conectar-google-authenticator--claro--modal--016.png",
+        "alt": "Conexao do Google Authenticator por QR Code",
+        "caption": "Conexao do Google Authenticator por QR Code",
+        "name": "neurofinance--seguranca--conectar-google-authenticator--claro--modal--016.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/8. NEUROFINANCE/neurofinance--pin-financeiro--etapa-01-confirmar-atual--claro--modal--017.png",
+        "alt": "Primeira etapa para confirmar ou trocar o PIN financeiro",
+        "caption": "Primeira etapa para confirmar ou trocar o PIN financeiro",
+        "name": "neurofinance--pin-financeiro--etapa-01-confirmar-atual--claro--modal--017.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--conta-e-saldo--dashboard-cartao-mascarado--escuro--pagina--001.png",
+        "alt": "Dashboard da conta com saldo e dados do cartao mascarados",
+        "caption": "Dashboard da conta com saldo e dados do cartao mascarados",
+        "name": "neurofinance--conta-e-saldo--dashboard-cartao-mascarado--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--pagar-pix--etapa-01-codigo-preenchido--escuro--pagina--003.png",
+        "alt": "Primeira etapa do Pix com codigo de pagamento preenchido",
+        "caption": "Primeira etapa do Pix com codigo de pagamento preenchido",
+        "name": "neurofinance--pagar-pix--etapa-01-codigo-preenchido--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--area-pix--minhas-chaves-lista--escuro--pagina--004.png",
+        "alt": "Lista de chaves Pix cadastradas na conta",
+        "caption": "Lista de chaves Pix cadastradas na conta",
+        "name": "neurofinance--area-pix--minhas-chaves-lista--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--saude-da-conta--cadastro-aprovado--escuro--pagina--008.png",
+        "alt": "Saude da conta com cadastro aprovado e verificacoes concluidas",
+        "caption": "Saude da conta com cadastro aprovado e verificacoes concluidas",
+        "name": "neurofinance--saude-da-conta--cadastro-aprovado--escuro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--conta-e-saldo--cartao-verso-dados-conta--escuro--estado--002.png",
+        "alt": "Verso do cartao exibindo dados bancarios da conta",
+        "caption": "Verso do cartao exibindo dados bancarios da conta",
+        "name": "neurofinance--conta-e-saldo--cartao-verso-dados-conta--escuro--estado--002.png",
+        "kind": "estado"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--pagar-pix--etapa-01-com-menu-expandido--escuro--drawer--005.png",
+        "alt": "Primeira etapa do pagamento Pix com menu lateral aberto",
+        "caption": "Primeira etapa do pagamento Pix com menu lateral aberto",
+        "name": "neurofinance--pagar-pix--etapa-01-com-menu-expandido--escuro--drawer--005.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--cobrancas--lista-com-menu-expandido--escuro--drawer--006.png",
+        "alt": "Lista de cobrancas com navegacao financeira expandida",
+        "caption": "Lista de cobrancas com navegacao financeira expandida",
+        "name": "neurofinance--cobrancas--lista-com-menu-expandido--escuro--drawer--006.png",
+        "kind": "drawer"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/8. NEUROFINANCE/neurofinance--pagamentos-agendados--resumo-com-menu--escuro--drawer--007.png",
+        "alt": "Resumo dos pagamentos agendados com menu expandido",
+        "caption": "Resumo dos pagamentos agendados com menu expandido",
+        "name": "neurofinance--pagamentos-agendados--resumo-com-menu--escuro--drawer--007.png",
+        "kind": "drawer"
+      }
+    ]
+  },
+  "neuroid": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/9. NEUROID/neuroid--identidade-profissional--editor-e-credencial--claro--pagina--001.png",
+        "alt": "Editor da identidade profissional com pre-visualizacao da credencial",
+        "caption": "Editor da identidade profissional com pre-visualizacao da credencial",
+        "name": "neuroid--identidade-profissional--editor-e-credencial--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/9. NEUROID/neuroid--perfil-publico--identidade-e-compartilhamento--claro--pagina--003.png",
+        "alt": "Perfil publico profissional com identidade e compartilhamento",
+        "caption": "Perfil publico profissional com identidade e compartilhamento",
+        "name": "neuroid--perfil-publico--identidade-e-compartilhamento--claro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/9. NEUROID/neuroid--compartilhar-perfil--qr-code-e-link--misto--modal--002.png",
+        "alt": "Modal de compartilhamento do perfil por QR Code e link",
+        "caption": "Modal de compartilhamento do perfil por QR Code e link",
+        "name": "neuroid--compartilhar-perfil--qr-code-e-link--misto--modal--002.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/9. NEUROID/neuroid--identidade-profissional--editor-e-credencial--escuro--pagina--002.png",
+        "alt": "Editor da identidade profissional com pre-visualizacao da credencial",
+        "caption": "Editor da identidade profissional com pre-visualizacao da credencial",
+        "name": "neuroid--identidade-profissional--editor-e-credencial--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/9. NEUROID/neuroid--perfil-publico--identidade-e-compartilhamento--escuro--pagina--003.png",
+        "alt": "Perfil publico profissional com identidade e compartilhamento",
+        "caption": "Perfil publico profissional com identidade e compartilhamento",
+        "name": "neuroid--perfil-publico--identidade-e-compartilhamento--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/9. NEUROID/neuroid--identidade-profissional--synapse-chat-aberto--escuro--drawer--001.png",
+        "alt": "Identidade profissional com chat do Synapse aberto",
+        "caption": "Identidade profissional com chat do Synapse aberto",
+        "name": "neuroid--identidade-profissional--synapse-chat-aberto--escuro--drawer--001.png",
+        "kind": "drawer"
+      }
+    ]
+  },
+  "ajustes": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/10. AJUSTES - SEGURANÇA/ajustes--neurofinance--seguranca-pin-e-saude-da-conta--claro--pagina--001.png",
+        "alt": "Ajustes de seguranca financeira PIN e saude da conta",
+        "caption": "Ajustes de seguranca financeira PIN e saude da conta",
+        "name": "ajustes--neurofinance--seguranca-pin-e-saude-da-conta--claro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/10. AJUSTES - SEGURANÇA/ajustes--comunicacao--modelo-lembrete-whatsapp--claro--pagina--002.png",
+        "alt": "Editor do modelo de lembrete enviado por WhatsApp",
+        "caption": "Editor do modelo de lembrete enviado por WhatsApp",
+        "name": "ajustes--comunicacao--modelo-lembrete-whatsapp--claro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/10. AJUSTES - SEGURANÇA/ajustes--login-e-seguranca--2fa-biometria-e-email--claro--pagina--003.png",
+        "alt": "Opcoes de autenticacao em dois fatores biometria e email",
+        "caption": "Opcoes de autenticacao em dois fatores biometria e email",
+        "name": "ajustes--login-e-seguranca--2fa-biometria-e-email--claro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/10. AJUSTES - SEGURANÇA/ajustes--integracoes--google-workspace-e-notion-ativos--claro--pagina--004.png",
+        "alt": "Integracoes ativas com Google Workspace e Notion",
+        "caption": "Integracoes ativas com Google Workspace e Notion",
+        "name": "ajustes--integracoes--google-workspace-e-notion-ativos--claro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/10. AJUSTES - SEGURANÇA/ajustes--meu-perfil--tooltip-selo-founder--claro--estado--005.png",
+        "alt": "Perfil profissional exibindo explicacao do selo Founder",
+        "caption": "Perfil profissional exibindo explicacao do selo Founder",
+        "name": "ajustes--meu-perfil--tooltip-selo-founder--claro--estado--005.png",
+        "kind": "estado"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--login-e-seguranca--2fa-biometria-e-email--escuro--pagina--002.png",
+        "alt": "Opcoes de autenticacao em dois fatores biometria e email",
+        "caption": "Opcoes de autenticacao em dois fatores biometria e email",
+        "name": "ajustes--login-e-seguranca--2fa-biometria-e-email--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--comunicacao--modelo-lembrete-email--escuro--pagina--003.png",
+        "alt": "Editor do modelo de lembrete enviado por email",
+        "caption": "Editor do modelo de lembrete enviado por email",
+        "name": "ajustes--comunicacao--modelo-lembrete-email--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--neurofinance--seguranca-pin-e-saude-da-conta--escuro--pagina--004.png",
+        "alt": "Ajustes de seguranca financeira PIN e saude da conta",
+        "caption": "Ajustes de seguranca financeira PIN e saude da conta",
+        "name": "ajustes--neurofinance--seguranca-pin-e-saude-da-conta--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--integracoes--google-workspace-e-notion-ativos--escuro--pagina--005.png",
+        "alt": "Integracoes ativas com Google Workspace e Notion",
+        "caption": "Integracoes ativas com Google Workspace e Notion",
+        "name": "ajustes--integracoes--google-workspace-e-notion-ativos--escuro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--dados-e-privacidade--backup-exportacao-e-exclusao--escuro--pagina--006.png",
+        "alt": "Controles de backup exportacao e exclusao de dados",
+        "caption": "Controles de backup exportacao e exclusao de dados",
+        "name": "ajustes--dados-e-privacidade--backup-exportacao-e-exclusao--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/10. AJUSTES - SEGURANÇA/ajustes--login-e-seguranca--conectar-authenticator--escuro--modal--001.png",
+        "alt": "Conexao de aplicativo autenticador em duas etapas",
+        "caption": "Conexao de aplicativo autenticador em duas etapas",
+        "name": "ajustes--login-e-seguranca--conectar-authenticator--escuro--modal--001.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "busca-global": {
+    "light": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/11. ABA DE BUSCA GLOBAL/busca-global--inicio--sugestoes-de-atividade--claro--modal--001.png",
+        "alt": "Busca global vazia com sugestoes de atividades recentes",
+        "caption": "Busca global vazia com sugestoes de atividades recentes",
+        "name": "busca-global--inicio--sugestoes-de-atividade--claro--modal--001.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/11. ABA DE BUSCA GLOBAL/busca-global--resultados--paciente-e-agendamentos--claro--modal--002.png",
+        "alt": "Resultados globais agrupados por paciente e agendamentos",
+        "caption": "Resultados globais agrupados por paciente e agendamentos",
+        "name": "busca-global--resultados--paciente-e-agendamentos--claro--modal--002.png",
+        "kind": "modal"
+      }
+    ],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/11. ABA DE BUSCA GLOBAL/busca-global--inicio--sugestoes-de-atividade--escuro--modal--001.png",
+        "alt": "Busca global vazia com sugestoes de atividades recentes",
+        "caption": "Busca global vazia com sugestoes de atividades recentes",
+        "name": "busca-global--inicio--sugestoes-de-atividade--escuro--modal--001.png",
+        "kind": "modal"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/ESCURO/11. ABA DE BUSCA GLOBAL/busca-global--resultados--agendamentos-com-selecao--escuro--modal--002.png",
+        "alt": "Resultados globais de agendamentos com um item selecionado",
+        "caption": "Resultados globais de agendamentos com um item selecionado",
+        "name": "busca-global--resultados--agendamentos-com-selecao--escuro--modal--002.png",
+        "kind": "modal"
+      }
+    ]
+  },
+  "portal-paciente": {
+    "light": [],
+    "dark": [
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--inicio--saudacao-e-proximo-agendamento--escuro--pagina--001.png",
+        "alt": "Topo inicial do portal com saudacao e proximo agendamento vazio",
+        "caption": "Topo inicial do portal com saudacao e proximo agendamento vazio",
+        "name": "portal-paciente--inicio--saudacao-e-proximo-agendamento--escuro--pagina--001.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--inicio--atalhos-e-carrossel-boas-vindas--escuro--pagina--002.png",
+        "alt": "Inicio do portal com atalhos indicadores e carrossel de boas-vindas",
+        "caption": "Inicio do portal com atalhos indicadores e carrossel de boas-vindas",
+        "name": "portal-paciente--inicio--atalhos-e-carrossel-boas-vindas--escuro--pagina--002.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--inicio--atalhos-e-carrossel-frase-do-dia--escuro--pagina--003.png",
+        "alt": "Inicio do portal com indicadores e cartao de frase do dia",
+        "caption": "Inicio do portal com indicadores e cartao de frase do dia",
+        "name": "portal-paciente--inicio--atalhos-e-carrossel-frase-do-dia--escuro--pagina--003.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--sessoes--agendamentos-sem-sessao-futura--escuro--pagina--004.png",
+        "alt": "Aba de sessoes sem proximo agendamento confirmado",
+        "caption": "Aba de sessoes sem proximo agendamento confirmado",
+        "name": "portal-paciente--sessoes--agendamentos-sem-sessao-futura--escuro--pagina--004.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--sessoes--historico-de-sessoes-realizadas--escuro--pagina--005.png",
+        "alt": "Historico cronologico de sessoes online realizadas",
+        "caption": "Historico cronologico de sessoes online realizadas",
+        "name": "portal-paciente--sessoes--historico-de-sessoes-realizadas--escuro--pagina--005.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--humor--grafico-de-tendencia-e-registro--escuro--pagina--006.png",
+        "alt": "Grafico de tendencia emocional e seletor do humor atual",
+        "caption": "Grafico de tendencia emocional e seletor do humor atual",
+        "name": "portal-paciente--humor--grafico-de-tendencia-e-registro--escuro--pagina--006.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--humor--formulario-e-registros-recentes--escuro--pagina--007.png",
+        "alt": "Formulario para registrar humor e lista de registros recentes",
+        "caption": "Formulario para registrar humor e lista de registros recentes",
+        "name": "portal-paciente--humor--formulario-e-registros-recentes--escuro--pagina--007.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--neurodrive--anamnese-expirada-leitura--escuro--pagina--008.png",
+        "alt": "Anamnese expirada apresentada ao paciente em modo de leitura",
+        "caption": "Anamnese expirada apresentada ao paciente em modo de leitura",
+        "name": "portal-paciente--neurodrive--anamnese-expirada-leitura--escuro--pagina--008.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--neurodrive--notas-pessoais-editor--escuro--pagina--009.png",
+        "alt": "Lista e editor de notas pessoais privadas do paciente",
+        "caption": "Lista e editor de notas pessoais privadas do paciente",
+        "name": "portal-paciente--neurodrive--notas-pessoais-editor--escuro--pagina--009.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--progresso--missoes-concluidas--escuro--pagina--010.png",
+        "alt": "Painel de progresso com indicadores e missoes concluidas",
+        "caption": "Painel de progresso com indicadores e missoes concluidas",
+        "name": "portal-paciente--progresso--missoes-concluidas--escuro--pagina--010.png",
+        "kind": "pagina"
+      },
+      {
+        "src": "/images/prints-sistema/DESKTOP/CLARO/12. PORTAL PACIENTES - MODO CLARO E MODO ESCURO/portal-paciente--neurofinance--pacote-ativo-e-sessoes--escuro--pagina--011.png",
+        "alt": "Pacote ativo com sessoes usadas restantes e investimento",
+        "caption": "Pacote ativo com sessoes usadas restantes e investimento",
+        "name": "portal-paciente--neurofinance--pacote-ativo-e-sessoes--escuro--pagina--011.png",
+        "kind": "pagina"
+      }
+    ]
+  }
+}

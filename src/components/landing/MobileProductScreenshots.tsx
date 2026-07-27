@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   BarChart3,
@@ -16,94 +16,101 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import { Button } from "@/components/ui/button";
-import { useTheme } from "@/hooks/use-theme";
+import {
+  getPublicMediaCollection,
+  type PublicMediaCollection,
+  type PublicMediaKey,
+} from "@/content/public-product-media";
 import { cn } from "@/lib/utils";
 
-const ROOT = "/landing/screenshots";
+const SYNAPSE_VIDEO = {
+  source: "https://youtu.be/vk6cw0bkut8",
+  title: "Demonstração do Synapse AI",
+} as const;
 
-type MobileScreenshotSource = {
-  dark: string;
-  light?: string;
-  alt: string;
-};
-
-type MobileModule = MobileScreenshotSource & {
+type ProductModule = {
   key: string;
   label: string;
   title: string;
   description: string;
   bullets: string[];
   icon: ElementType<{ className?: string }>;
+  mediaKey?: PublicMediaKey;
+  mediaVariant?: "youtube";
 };
 
-const mobileModules: MobileModule[] = [
+const productModules: ProductModule[] = [
   {
     key: "dashboard",
     label: "Dashboard",
     title: "Central da Clínica",
-    description: "Resumo do dia, radar de atenção, próxima sessão e ações rápidas em uma experiência realmente mobile-first.",
+    description:
+      "Resumo do dia, radar de atenção, próxima sessão e ações rápidas organizados em um único ponto de partida.",
     bullets: ["Hoje", "Próxima sessão", "Pendências"],
     icon: BarChart3,
-    dark: `${ROOT}/mobile/dark/20-mobile-dashboard-dark.webp`,
-    light: `${ROOT}/mobile/light/20-mobile-dashboard-white.webp`,
-    alt: "Dashboard mobile do NeuroNex",
+    mediaKey: "dashboard",
   },
   {
     key: "agenda",
     label: "Agenda",
     title: "Agenda sempre à mão",
-    description: "Consulte o mês, abra a agenda do dia e acesse compromissos sem depender do computador.",
+    description:
+      "Consulte o mês, abra a agenda do dia e acesse compromissos com o contexto da clínica preservado.",
     bullets: ["Mês e semana", "Agenda do dia", "Status"],
     icon: CalendarDays,
-    dark: `${ROOT}/mobile/dark/21-mobile-agenda-view-mes-dark.webp`,
-    light: `${ROOT}/mobile/light/21-mobile-agenda-semanal-white.webp`,
-    alt: "Agenda mobile do NeuroNex",
+    mediaKey: "agenda",
   },
   {
     key: "financeiro",
     label: "Financeiro",
-    title: "Gestão Financeira mobile",
-    description: "Resultado, receitas, despesas e visão da clínica disponíveis no celular sem misturar gestão com conta bancária.",
+    title: "Gestão Financeira conectada",
+    description:
+      "Resultado, receitas, despesas e visão da clínica sem misturar gestão com movimentação da conta.",
     bullets: ["Resultado", "Receitas", "Despesas"],
     icon: CreditCard,
-    dark: `${ROOT}/mobile/dark/22-mobile-financeiro-dark.webp`,
-    alt: "Gestão Financeira mobile do NeuroNex",
+    mediaKey: "gestao-financeira",
   },
   {
     key: "paciente",
     label: "Paciente",
     title: "Prontuário em continuidade",
-    description: "Metas, histórico e informações relevantes do paciente organizadas para consulta rápida e segura.",
+    description:
+      "Metas, histórico e informações relevantes do paciente organizadas para consulta rápida e segura.",
     bullets: ["Prontuário", "Metas", "Histórico"],
     icon: ClipboardList,
-    dark: `${ROOT}/mobile/dark/23-mobile-paciente--prontuario-metas-dark.webp`,
-    alt: "Prontuário mobile de paciente no NeuroNex",
+    mediaKey: "prontuario",
   },
   {
     key: "synapse",
     label: "Synapse",
-    title: "Synapse no celular",
-    description: "Pergunte sobre a rotina, localize informações e receba respostas contextuais enquanto estiver fora do consultório.",
+    title: "Synapse AI",
+    description:
+      "Pergunte sobre a rotina, localize informações e veja como o Synapse trabalha com o contexto autorizado da clínica.",
     bullets: ["Texto", "Contexto", "Rotina"],
     icon: Sparkles,
-    dark: `${ROOT}/mobile/dark/24-mobile-synapse-dark-respondendo-agendamentos-do-dia.webp`,
-    alt: "Synapse respondendo sobre os agendamentos do dia no celular",
+    mediaVariant: "youtube",
   },
   {
     key: "teleconsulta",
     label: "Teleconsulta",
-    title: "Teleconsulta mobile",
-    description: "Entrada de sessão e atendimento em uma experiência preparada para acompanhar o profissional em qualquer tela.",
-    bullets: ["Pré-entrada", "Sala online", "Mobilidade"],
+    title: "Teleconsulta conectada",
+    description:
+      "Pré-entrada, atendimento e revisão seguem um fluxo ligado à agenda, ao paciente e ao prontuário.",
+    bullets: ["Pré-entrada", "Sala online", "Revisão"],
     icon: MonitorPlay,
-    dark: `${ROOT}/mobile/light/26-mobile-teleconsulta-prejoin-white.webp`,
-    light: `${ROOT}/mobile/light/26-mobile-teleconsulta-prejoin-white.webp`,
-    alt: "Pré-entrada da teleconsulta mobile do NeuroNex",
+    mediaKey: "teleconsulta",
   },
 ];
 
-const Badge = ({ children, inverted = false }: { children: ReactNode; inverted?: boolean }) => (
+const Badge = ({
+  children,
+  inverted = false,
+}: {
+  children: ReactNode;
+  inverted?: boolean;
+}) => (
   <div
     className={cn(
       "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-[8px] font-black uppercase tracking-[0.22em]",
@@ -129,89 +136,94 @@ const Heading = ({
   inverted?: boolean;
 }) => (
   <div className="mx-auto max-w-sm text-center">
-    <FadeIn><Badge inverted={inverted}>{eyebrow}</Badge></FadeIn>
+    <FadeIn>
+      <Badge inverted={inverted}>{eyebrow}</Badge>
+    </FadeIn>
     <FadeIn delay={0.08}>
-      <h2 className={cn("mt-6 text-[2.55rem] font-black leading-[0.88] tracking-[-0.065em]", inverted ? "text-background dark:text-zinc-950" : "text-foreground")}>{title}</h2>
+      <h2
+        className={cn(
+          "mt-6 text-[2.55rem] font-black leading-[0.88] tracking-[-0.065em]",
+          inverted ? "text-background dark:text-zinc-950" : "text-foreground",
+        )}
+      >
+        {title}
+      </h2>
     </FadeIn>
     <FadeIn delay={0.16}>
-      <p className={cn("mx-auto mt-5 max-w-[21rem] text-[0.92rem] font-medium leading-relaxed", inverted ? "text-background/60 dark:text-zinc-950/62" : "text-muted-foreground/70")}>{description}</p>
+      <p
+        className={cn(
+          "mx-auto mt-5 max-w-[21rem] text-[0.92rem] font-medium leading-relaxed",
+          inverted
+            ? "text-background/60 dark:text-zinc-950/62"
+            : "text-muted-foreground/70",
+        )}
+      >
+        {description}
+      </p>
     </FadeIn>
   </div>
 );
 
-const MobileImage = ({ source }: { source: MobileScreenshotSource }) => {
-  const { theme } = useTheme();
-  const src = theme === "light" ? source.light || source.dark : source.dark;
-
-  return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.img
-        key={src}
-        src={src}
-        alt={source.alt}
-        width={750}
-        height={1334}
-        loading="lazy"
-        decoding="async"
-        initial={{ opacity: 0, scale: 0.988, filter: "blur(8px)" }}
-        animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-        exit={{ opacity: 0, scale: 0.988, filter: "blur(8px)" }}
-        transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="block h-auto w-full"
-      />
-    </AnimatePresence>
+const LandscapeProductMedia = ({
+  module,
+  inverted = false,
+}: {
+  module: ProductModule;
+  inverted?: boolean;
+}) => {
+  const sharedClasses = cn(
+    "!bg-transparent !px-0 !py-0",
+    inverted && "text-foreground",
   );
-};
 
-const DeviceFrame = ({ source, label }: { source: MobileScreenshotSource; label: string }) => (
-  <div className="mx-auto w-full max-w-[330px] rounded-[48px] border border-border/45 bg-[#08090b] p-2.5 shadow-[0_38px_110px_-62px_rgba(0,0,0,0.88)] dark:border-white/10">
-    <div className="relative overflow-hidden rounded-[39px] bg-background">
-      <div className="pointer-events-none absolute left-1/2 top-2 z-20 h-5 w-24 -translate-x-1/2 rounded-full bg-black/85" />
-      <MobileImage source={source} />
-      <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/[0.05]" />
-    </div>
-    <p className="px-4 pb-2 pt-3 text-center text-[8px] font-black uppercase tracking-[0.2em] text-white/38">{label}</p>
-  </div>
-);
-
-const LandscapeFrame = ({ source, label }: { source: MobileScreenshotSource; label: string }) => {
-  const { theme } = useTheme();
-  const src = theme === "light" ? source.light || source.dark : source.dark;
+  if (module.mediaVariant === "youtube") {
+    return (
+      <PublicProductShowcase
+        variant="youtube"
+        hideHeader
+        title={module.title}
+        video={SYNAPSE_VIDEO}
+        className={sharedClasses}
+        frameClassName="!max-w-none"
+      />
+    );
+  }
 
   return (
-    <div className="overflow-hidden rounded-[28px] border border-border/45 bg-card shadow-[0_28px_90px_-68px_rgba(0,0,0,0.72)] dark:border-white/10 dark:bg-[#08090b]">
-      <div className="flex h-11 items-center gap-2 border-b border-border/40 px-4 dark:border-white/10">
-        <span className="h-2 w-2 rounded-full bg-foreground/22" />
-        <span className="h-2 w-2 rounded-full bg-foreground/14" />
-        <span className="h-2 w-2 rounded-full bg-foreground/8" />
-        <span className="ml-auto text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground/50">{label}</span>
-      </div>
-      <img src={src} alt={source.alt} width={1280} height={720} loading="lazy" decoding="async" className="block h-auto w-full" />
-    </div>
+    <PublicProductShowcase
+      hideHeader
+      title={module.title}
+      images={getPublicMediaCollection(module.mediaKey ?? "produto")}
+      className={sharedClasses}
+      frameClassName="!max-w-none"
+    />
   );
 };
 
 export const MobileRealProductShowcase = () => {
-  const [activeKey, setActiveKey] = useState(mobileModules[0].key);
-  const active = mobileModules.find((module) => module.key === activeKey) || mobileModules[0];
+  const shouldReduceMotion = useReducedMotion();
+  const [activeKey, setActiveKey] = useState(productModules[0].key);
+  const active =
+    productModules.find((module) => module.key === activeKey) ?? productModules[0];
 
   return (
     <section id="produto" className="relative overflow-hidden bg-background px-5 py-16">
       <Heading
         eyebrow="Produto real"
-        title={<>O NeuroNex no seu bolso.</>}
-        description="Capturas reais das experiências mobile. Alterne entre as principais áreas e veja como o sistema acompanha a rotina fora do desktop."
+        title={<>O NeuroNex por dentro.</>}
+        description="Capturas reais das principais áreas da operação. Alterne entre os módulos e veja como o mesmo contexto percorre o sistema."
       />
 
       <div className="-mx-5 mt-9 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-max gap-2">
-          {mobileModules.map((module) => (
+          {productModules.map((module) => (
             <button
               key={module.key}
               type="button"
+              aria-pressed={activeKey === module.key}
               onClick={() => setActiveKey(module.key)}
               className={cn(
-                "flex items-center gap-2 rounded-2xl px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] transition-all",
+                "flex min-h-11 items-center gap-2 rounded-2xl px-4 py-3 text-[9px] font-black uppercase tracking-[0.15em] transition-all motion-reduce:transition-none",
                 activeKey === module.key
                   ? "bg-foreground text-background"
                   : "border border-border/40 bg-card text-muted-foreground dark:border-white/10 dark:bg-white/[0.035]",
@@ -225,16 +237,37 @@ export const MobileRealProductShowcase = () => {
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div key={active.key} initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.3 }} className="mt-7">
-          <DeviceFrame source={active} label={active.label} />
+        <motion.div
+          key={active.key}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={
+            shouldReduceMotion
+              ? { opacity: 1, y: 0 }
+              : { opacity: 0, y: -10 }
+          }
+          transition={{ duration: shouldReduceMotion ? 0 : 0.3 }}
+          className="mt-7"
+        >
+          <LandscapeProductMedia module={active} />
           <div className="mt-5 rounded-[30px] border border-border/40 bg-card/78 p-6 dark:border-white/10 dark:bg-white/[0.035]">
-            <p className="text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">Experiência mobile</p>
-            <h3 className="mt-3 text-[2rem] font-black leading-[0.9] tracking-[-0.06em] text-foreground">{active.title}</h3>
-            <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/72">{active.description}</p>
+            <p className="text-[8px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+              Operação conectada
+            </p>
+            <h3 className="mt-3 text-[2rem] font-black leading-[0.9] tracking-[-0.06em] text-foreground">
+              {active.title}
+            </h3>
+            <p className="mt-4 text-sm font-medium leading-relaxed text-muted-foreground/72">
+              {active.description}
+            </p>
             <div className="mt-6 grid gap-2">
               {active.bullets.map((bullet) => (
-                <div key={bullet} className="flex items-center gap-3 rounded-2xl border border-border/40 bg-foreground/[0.03] px-4 py-3 text-[9px] font-black uppercase tracking-[0.13em] text-foreground/68 dark:border-white/10 dark:bg-white/[0.035]">
-                  <Check className="h-4 w-4" />{bullet}
+                <div
+                  key={bullet}
+                  className="flex items-center gap-3 rounded-2xl border border-border/40 bg-foreground/[0.03] px-4 py-3 text-[9px] font-black uppercase tracking-[0.13em] text-foreground/68 dark:border-white/10 dark:bg-white/[0.035]"
+                >
+                  <Check className="h-4 w-4" />
+                  {bullet}
                 </div>
               ))}
             </div>
@@ -245,13 +278,14 @@ export const MobileRealProductShowcase = () => {
   );
 };
 
-const mobileSynapse: MobileScreenshotSource = {
-  dark: `${ROOT}/mobile/dark/24-mobile-synapse-dark-respondendo-agendamentos-do-dia.webp`,
-  alt: "Synapse mobile respondendo sobre os atendimentos do dia",
-};
+const synapseModule = productModules.find((module) => module.key === "synapse") ??
+  productModules[0];
 
 export const MobileRealSynapseSection = () => (
-  <section id="synapse" className="relative overflow-hidden bg-foreground px-5 py-16 text-background dark:bg-white dark:text-zinc-950">
+  <section
+    id="synapse"
+    className="relative overflow-hidden bg-foreground px-5 py-16 text-background dark:bg-white dark:text-zinc-950"
+  >
     <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.12),transparent_38%,rgba(255,255,255,0.04))] dark:bg-[linear-gradient(135deg,rgba(0,0,0,0.06),transparent_38%,rgba(0,0,0,0.02))]" />
     <div className="relative z-10">
       <Heading
@@ -261,16 +295,29 @@ export const MobileRealSynapseSection = () => (
         inverted
       />
       <FadeIn delay={0.15}>
-        <div className="mt-10"><DeviceFrame source={mobileSynapse} label="Synapse · mobile" /></div>
+        <div className="mt-10">
+          <LandscapeProductMedia module={synapseModule} inverted />
+        </div>
       </FadeIn>
       <div className="mt-6 grid gap-2">
-        {["Contexto da agenda", "Respostas operacionais", "Acesso em qualquer lugar"].map((item) => (
-          <div key={item} className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[9px] font-black uppercase tracking-[0.13em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
-            <Check className="h-4 w-4" />{item}
+        {[
+          "Contexto da agenda",
+          "Respostas operacionais",
+          "Acesso em qualquer lugar",
+        ].map((item) => (
+          <div
+            key={item}
+            className="flex items-center gap-3 rounded-2xl border border-background/10 bg-background/[0.07] px-4 py-3 text-[9px] font-black uppercase tracking-[0.13em] opacity-72 dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]"
+          >
+            <Check className="h-4 w-4" />
+            {item}
           </div>
         ))}
       </div>
-      <Button asChild className="mt-6 h-14 w-full rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.2em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
+      <Button
+        asChild
+        className="mt-6 h-14 w-full rounded-2xl bg-background text-[10px] font-black uppercase tracking-[0.2em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white"
+      >
         <Link to="/synapse">
           Conhecer o Synapse <ArrowRight className="ml-2 h-4 w-4" />
         </Link>
@@ -279,55 +326,139 @@ export const MobileRealSynapseSection = () => (
   </section>
 );
 
-const mobileFinance: MobileScreenshotSource = {
-  dark: `${ROOT}/mobile/dark/22-mobile-financeiro-dark.webp`,
-  alt: "Gestão Financeira mobile do NeuroNex",
+type FinanceModule = {
+  key: string;
+  label: string;
+  media: PublicMediaCollection;
 };
 
-const fiscalDesktop: MobileScreenshotSource = {
-  dark: `${ROOT}/desktop/dark/13-fiscal-dados-nfse-dark.webp`,
-  alt: "Dados fiscais e preparação para NFS-e no NeuroNex",
+const neurofinanceMedia = getPublicMediaCollection("neurofinance");
+const prontuarioMedia = getPublicMediaCollection("prontuario");
+const fiscalMedia: PublicMediaCollection = {
+  light: [
+    ...neurofinanceMedia.light.filter((image) => image.name.includes("nfse")),
+    ...prontuarioMedia.light.filter((image) => image.name.includes("fiscal")),
+  ],
+  dark: [
+    ...neurofinanceMedia.dark.filter((image) => image.name.includes("nfse")),
+    ...prontuarioMedia.dark.filter((image) => image.name.includes("fiscal")),
+  ],
 };
 
-export const MobileRealFinanceSection = () => (
-  <section id="financeiro" className="relative overflow-hidden bg-background px-5 py-16">
-    <Heading
-      eyebrow="Financeiro conectado"
-      title={<>Gestão, conta e preparação fiscal com papéis claros.</>}
-      description="A Gestão Financeira ajuda a decidir. O NeuroFinance movimenta dinheiro real. A base fiscal fica organizada enquanto emissão e automações evoluem."
-    />
-    <FadeIn delay={0.12}>
-      <div className="mt-10"><DeviceFrame source={mobileFinance} label="Gestão Financeira" /></div>
-    </FadeIn>
-    <div className="mt-5 grid gap-3">
-      {[
-        { title: "Gestão Financeira", text: "Resultado, receitas, despesas, fluxo e planejamento." },
-        { title: "NeuroFinance", text: "Pix, boletos, pagamentos, transferências e saldo real." },
-        { title: "Fluxo fiscal", text: "Dados fiscais, cobrança e emissão de NFS-e no mesmo percurso operacional." },
-      ].map((item, index) => (
-        <FadeIn key={item.title} delay={0.04 * index}>
-          <article className="rounded-[26px] border border-border/40 bg-card/76 p-5 dark:border-white/10 dark:bg-white/[0.035]">
-            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">0{index + 1}</p>
-            <h3 className="mt-3 text-lg font-black tracking-[-0.035em] text-foreground">{item.title}</h3>
-            <p className="mt-2 text-sm font-medium leading-relaxed text-muted-foreground/70">{item.text}</p>
-          </article>
-        </FadeIn>
-      ))}
-    </div>
-    <FadeIn delay={0.2}>
-      <div className="mt-5"><LandscapeFrame source={fiscalDesktop} label="Dados fiscais · preparação para NFS-e" /></div>
-    </FadeIn>
-    <div className="mt-6 grid gap-3">
-      <Button asChild className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.2em] text-background">
-        <Link to="/neurofinance">
-          Conhecer o NeuroFinance <ArrowRight className="ml-2 h-4 w-4" />
-        </Link>
-      </Button>
-      <Button asChild variant="outline" className="h-14 w-full rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]">
-        <Link to="/create-account">
-          Começar grátis
-        </Link>
-      </Button>
-    </div>
-  </section>
-);
+const financeModules: FinanceModule[] = [
+  {
+    key: "gestao",
+    label: "Gestão",
+    media: getPublicMediaCollection("gestao-financeira"),
+  },
+  { key: "neurofinance", label: "NeuroFinance", media: neurofinanceMedia },
+  { key: "fiscal", label: "Fiscal", media: fiscalMedia },
+];
+
+export const MobileRealFinanceSection = () => {
+  const shouldReduceMotion = useReducedMotion();
+  const [activeKey, setActiveKey] = useState(financeModules[0].key);
+  const active =
+    financeModules.find((module) => module.key === activeKey) ?? financeModules[0];
+
+  return (
+    <section id="financeiro" className="relative overflow-hidden bg-background px-5 py-16">
+      <Heading
+        eyebrow="Financeiro conectado"
+        title={<>Gestão, conta e preparação fiscal com papéis claros.</>}
+        description="A Gestão Financeira ajuda a decidir. O NeuroFinance movimenta dinheiro real. A base fiscal fica organizada enquanto emissão e automações evoluem."
+      />
+
+      <div className="mt-9 grid grid-cols-3 gap-2 rounded-[22px] border border-border/40 bg-card/70 p-1.5 dark:border-white/10 dark:bg-white/[0.035]">
+        {financeModules.map((module) => (
+          <button
+            key={module.key}
+            type="button"
+            aria-pressed={active.key === module.key}
+            onClick={() => setActiveKey(module.key)}
+            className={cn(
+              "min-h-11 rounded-[16px] px-2 text-[8px] font-black uppercase tracking-[0.12em] transition-colors motion-reduce:transition-none",
+              active.key === module.key
+                ? "bg-foreground text-background"
+                : "text-muted-foreground",
+            )}
+          >
+            {module.label}
+          </button>
+        ))}
+      </div>
+
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={active.key}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={
+            shouldReduceMotion
+              ? { opacity: 1, y: 0 }
+              : { opacity: 0, y: -8 }
+          }
+          transition={{ duration: shouldReduceMotion ? 0 : 0.28 }}
+          className="mt-5"
+        >
+          <PublicProductShowcase
+            hideHeader
+            title={active.label}
+            images={active.media}
+            className="!bg-transparent !px-0 !py-0"
+            frameClassName="!max-w-none"
+          />
+        </motion.div>
+      </AnimatePresence>
+
+      <div className="mt-5 grid gap-3">
+        {[
+          {
+            title: "Gestão Financeira",
+            text: "Resultado, receitas, despesas, fluxo e planejamento.",
+          },
+          {
+            title: "NeuroFinance",
+            text: "Pix, boletos, pagamentos, transferências e saldo real.",
+          },
+          {
+            title: "Fluxo fiscal",
+            text: "Dados fiscais, cobrança e emissão de NFS-e no mesmo percurso operacional.",
+          },
+        ].map((item, index) => (
+          <FadeIn key={item.title} delay={0.04 * index}>
+            <article className="rounded-[26px] border border-border/40 bg-card/76 p-5 dark:border-white/10 dark:bg-white/[0.035]">
+              <p className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+                0{index + 1}
+              </p>
+              <h3 className="mt-3 text-lg font-black tracking-[-0.035em] text-foreground">
+                {item.title}
+              </h3>
+              <p className="mt-2 text-sm font-medium leading-relaxed text-muted-foreground/70">
+                {item.text}
+              </p>
+            </article>
+          </FadeIn>
+        ))}
+      </div>
+
+      <div className="mt-6 grid gap-3">
+        <Button
+          asChild
+          className="h-14 w-full rounded-2xl bg-foreground text-[10px] font-black uppercase tracking-[0.2em] text-background"
+        >
+          <Link to="/neurofinance">
+            Conhecer o NeuroFinance <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+        <Button
+          asChild
+          variant="outline"
+          className="h-14 w-full rounded-2xl text-[10px] font-black uppercase tracking-[0.2em]"
+        >
+          <Link to="/create-account">Começar grátis</Link>
+        </Button>
+      </div>
+    </section>
+  );
+};

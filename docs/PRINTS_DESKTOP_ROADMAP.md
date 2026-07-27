@@ -9,6 +9,21 @@
 - Nenhum arquivo visual foi recortado, recomprimido ou alterado. A intervenção se limita aos nomes.
 - O catálogo completo, com o nome anterior, o novo nome, a descrição e a página pública sugerida, está em [`prints-desktop-manifest.csv`](./prints-desktop-manifest.csv).
 
+## Integração pública atual
+
+- O catálogo consumido pela interface é gerado por `scripts/generate-public-product-media.mjs` em `src/content/public-product-media.generated.json`.
+- A seleção por módulo, rota, artigo e tema fica centralizada em `src/content/public-product-media.ts`.
+- A moldura compartilhada, o carrossel e o vídeo do Synapse ficam em `src/components/public/PublicProductShowcase.tsx`.
+- O catálogo runtime contém 241 capturas únicas; as 11 duplicatas exatas do Portal não são publicadas nos carrosséis.
+- O Portal do Paciente possui 11 capturas escuras e nenhuma captura clara real. No tema claro, a moldura é omitida para não apresentar uma imagem de tema incorreto.
+- Ainda não há captura dedicada para NeuroZap, NeuroScan ou NeuralCast. O Synapse usa o vídeo `https://youtu.be/vk6cw0bkut8`.
+
+Para reconstruir o catálogo depois de alterar o manifesto ou os nomes dos arquivos:
+
+```powershell
+node scripts/generate-public-product-media.mjs
+```
+
 ## Contrato de nomenclatura
 
 ```text

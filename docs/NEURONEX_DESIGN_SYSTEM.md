@@ -20,7 +20,7 @@ A ordem de referência é:
 
 Se o código antigo contrariar este guia, não copie a inconsistência. Registre-a como algo a organizar e peça aprovação antes de uma alteração ampla.
 
-As capturas em `public/landing/screenshots/desktop/` continuam sendo usadas no material de apresentação, mas algumas mostram versões anteriores de Dashboard, prontuário e Financeiro. Elas ajudam a entender a intenção estética; não são prova de que um componente ou fluxo ainda funciona daquele modo. Para comportamento e composição atuais, prevalecem o código validado em execução e os componentes ativos.
+As capturas catalogadas em `public/images/prints-sistema/DESKTOP/` são usadas no material de apresentação e estão descritas em `docs/PRINTS_DESKTOP_ROADMAP.md`. Elas ajudam a entender a interface registrada no momento da captura; para comportamento e composição atuais, prevalecem o código validado em execução e os componentes ativos.
 
 ## 2. Essência da marca
 
