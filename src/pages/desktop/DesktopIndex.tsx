@@ -18,10 +18,7 @@ import {
     LandingTrustAndFAQSection,
 } from "@/components/landing/StrategicLandingSections";
 import { WaitlistSection } from "@/components/landing/WaitlistSection";
-import {
-    PublicOperatingModelBridge,
-    PublicSynapseCommandSection,
-} from "@/components/public/PublicPositioningSections";
+import { PublicSynapseCommandSection } from "@/components/public/PublicPositioningSections";
 import { useLandingSynapse } from "@/hooks/use-landing-synapse";
 import {
     LandingContinuityAuthoritySection,
@@ -44,7 +41,6 @@ const DesktopIndex = () => {
                 <LandingContinuityAuthoritySection />
                 <LandingOperatingSystemSection />
                 <PublicSynapseCommandSection variant="full" />
-                <PublicOperatingModelBridge />
                 <LandingHorizontalProductStory />
                 <WaitlistSection />
                 <LandingPlanComparisonSection />

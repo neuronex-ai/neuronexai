@@ -40,7 +40,7 @@ const SectionBadge = ({ children, icon: Icon = Sparkles }: { children: React.Rea
   </div>
 );
 
-const SectionHeader = ({ eyebrow, title, description, align = "center" }: { eyebrow: string; title: React.ReactNode; description?: string; align?: "center" | "left" }) => (
+const SectionHeader = ({ eyebrow, title, description, align = "center" }: { eyebrow: string; title: React.ReactNode; description?: React.ReactNode; align?: "center" | "left" }) => (
   <div className={cn("mx-auto max-w-5xl", align === "center" ? "text-center" : "text-left")}> 
     <FadeIn>
       <SectionBadge>{eyebrow}</SectionBadge>
@@ -73,7 +73,19 @@ export const LandingProblemSection = () => (
       <SectionHeader
         eyebrow="O problema real"
         title={<>Se o sistema consome mais energia do que devolve, <span className="text-muted-foreground">ele falhou.</span></>}
-        description="Mais funções não deveriam criar mais software para administrar. Quando cada área exige estudo, prompts detalhados e cópia e cola, o psicólogo vira a integração entre as ferramentas."
+        description={(
+          <>
+            <span className="block">
+              Nossa missão é provar que um sistema completo não precisa ser complexo.
+            </span>
+            <span className="mt-4 block">
+              A NeuroNex foi projetada para ser robusta e intuitiva: por meio do Synapse, nossa inteligência integrada cruza os dados de todas as abas em tempo real e conversa com você em linguagem natural.
+            </span>
+            <span className="mt-4 block">
+              Esqueça os formulários e a análise manual da sua clínica. <strong className="font-black text-foreground">Apenas converse.</strong>
+            </span>
+          </>
+        )}
       />
       <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {painPoints.map((item, index) => (

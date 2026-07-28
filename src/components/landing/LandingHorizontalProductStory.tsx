@@ -1,11 +1,3 @@
-import {
-  LandingRealFinanceFiscalSection,
-  LandingRealSynapseSection,
-} from "@/components/landing/LandingProductScreenshots";
+import { LandingRealFinanceFiscalSection } from "@/components/landing/LandingProductScreenshots";
 
-export const LandingHorizontalProductStory = () => (
-  <>
-    <LandingRealSynapseSection />
-    <LandingRealFinanceFiscalSection />
-  </>
-);
+export const LandingHorizontalProductStory = () => <LandingRealFinanceFiscalSection />;

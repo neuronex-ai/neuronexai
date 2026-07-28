@@ -2,18 +2,13 @@
 
 import {
   ArrowRight,
-  BrainCircuit,
-  CheckCircle2,
-  CircleDashed,
   Clock3,
   FlaskConical,
   LayoutDashboard,
   MessageCircle,
-  ShieldCheck,
   Sparkles,
   Smartphone,
 } from "lucide-react";
-import type { ElementType } from "react";
 import { Link } from "react-router-dom";
 
 import {
@@ -21,15 +16,8 @@ import {
   SYNAPSE_COMMAND_EXAMPLES,
   TIME_GAIN_DISCLOSURE,
   TIME_GAIN_ESTIMATES,
-  type SynapseCommandExample,
 } from "@/content/public-positioning";
 import { cn } from "@/lib/utils";
-
-const statusIcons: Record<SynapseCommandExample["status"], ElementType<{ className?: string }>> = {
-  Disponível: CheckCircle2,
-  Beta: FlaskConical,
-  "Em evolução": CircleDashed,
-};
 
 const synapseChannels = [
   {
@@ -46,25 +34,18 @@ const synapseChannels = [
   },
 ];
 
-const synapseStarterQuestions = [
-  "Tenho algum paciente sem confirmação para amanhã?",
-  "Crie um lembrete para eu finalizar o documento da Júlia.",
-  "Qual foi a última cobrança enviada para o Carlos?",
-  "Prepare um agendamento para sexta-feira às 10h.",
-];
-
 const operatingPrinciples = [
   {
-    title: "Um contexto, não várias ilhas",
-    text: "Agenda, paciente, atendimento, prontuário e financeiro preservam a continuidade da rotina.",
+    title: "Sua clínica inteira em 1 só lugar.",
+    text: "Agenda, prontuário e financeiro conversam entre si. Chega de alternar entre várias telas ou reescrever a mesma informação.",
   },
   {
-    title: "Menos energia para operar",
-    text: "Hierarquia clara, cores com função e estados previsíveis reduzem a necessidade de estudar a interface.",
+    title: "Curva de aprendizado zero",
+    text: "Uma interface limpa e intuitiva, feita para poupar sua energia mental. Você não precisa \"estudar\" o sistema para começar a usar.",
   },
   {
-    title: "IA com consequência visível",
-    text: "O Synapse consulta e navega; quando prepara uma mudança, mostra o que depende da sua confirmação.",
+    title: "Inteligência com controle total",
+    text: "O Synapse cruza os dados e prepara as ações reais para você. Ele faz o trabalho pesado, mas você mantém a palavra final.",
   },
 ];
 
@@ -298,119 +279,138 @@ export function PublicSynapseCommandSection({
             Converse com o Synapse. No WhatsApp ou no sistema, o cérebro é o mesmo.
           </h2>
 
-          <div className="mx-auto mt-10 grid max-w-[960px] gap-3 sm:grid-cols-3">
-            {synapseChannels.map((channel) => (
-              <article
-                key={channel.title}
-                className={cn(
-                  "rounded-[24px] border px-5 py-6 text-center",
-                  inverted
-                    ? "border-background/15 bg-background/[0.06] dark:border-zinc-950/15 dark:bg-zinc-950/[0.05]"
-                    : "border-border bg-card",
-                )}
-              >
-                <channel.icon aria-hidden="true" className="mx-auto h-5 w-5 opacity-60" />
-                <h3 className="mt-4 text-lg font-black leading-tight">
-                  {channel.title}
-                </h3>
-              </article>
-            ))}
-          </div>
-
-          <p className={cn("mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed md:text-lg", inverted ? "opacity-75" : "text-muted-foreground")}>
-            Envie texto ou áudio como em qualquer conversa. O Synapse consulta o
-            contexto autorizado da sua clínica e prepara o próximo passo — sem abrir
-            o notebook nem procurar por menus.
-          </p>
-          <p className="mx-auto mt-4 max-w-2xl text-base font-black leading-relaxed md:text-lg">
-            Comece no WhatsApp e continue no sistema — ou faça o caminho inverso.
-          </p>
-
-          <div className="mx-auto mt-8 grid max-w-[960px] gap-3 text-left md:grid-cols-2">
-            {synapseStarterQuestions.map((question) => (
-              <blockquote
-                key={question}
-                className={cn(
-                  "rounded-[22px] border px-5 py-4 text-sm font-bold leading-relaxed",
-                  inverted
-                    ? "border-background/15 bg-background/[0.045] dark:border-zinc-950/15 dark:bg-zinc-950/[0.04]"
-                    : "border-border bg-card",
-                )}
-              >
-                “{question}”
-              </blockquote>
-            ))}
-          </div>
-
-          <p className="mx-auto mt-9 max-w-3xl text-balance text-2xl font-black leading-tight md:text-3xl">
-            A conversa pode mudar de canal. O contexto continua.
-          </p>
-          <p className={cn("mx-auto mt-4 max-w-2xl text-xs font-semibold leading-relaxed md:text-sm", inverted ? "opacity-60" : "text-muted-foreground")}>
-            Texto e voz já estão disponíveis na NeuroNex. No WhatsApp, o NeuroZap está
-            em Beta e libera cada fluxo por etapas, sempre com as confirmações necessárias.
-          </p>
-          <Link
-            to="/neurozap-para-psicologos"
+          <p
             className={cn(
-              "public-tactile mx-auto mt-7 inline-flex min-h-12 items-center gap-2 rounded-full border px-6 text-sm font-black",
-              inverted
-                ? "border-background/20 bg-background text-foreground dark:border-zinc-950/20 dark:bg-zinc-950 dark:text-white"
-                : "border-foreground bg-foreground text-background",
+              "mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed md:text-lg",
+              inverted ? "opacity-75" : "text-muted-foreground",
             )}
           >
-            Conhecer o Synapse no WhatsApp
-            <ArrowRight aria-hidden="true" className="h-4 w-4" />
-          </Link>
+            Envie texto ou áudio como em qualquer conversa. O Synapse consulta o
+            contexto da sua clínica no sistema e prepara uma ação ou te informa sobre
+            ela — você não precisa abrir o notebook nem procurar por menus.
+          </p>
+
+          <div
+            className="mx-auto mt-24 max-w-[1080px] pt-8"
+          >
+            <h3 className="text-balance text-4xl font-black leading-[1.02] tracking-tight md:text-6xl">
+              O verdadeiro
+              <br />
+              <span className={cn(inverted ? "opacity-55" : "text-muted-foreground")}>
+                significado de “tanto faz”
+              </span>
+            </h3>
+
+            <div className="mx-auto mt-12 grid max-w-[960px] gap-3 sm:grid-cols-3">
+              {synapseChannels.map((channel) => (
+                <article
+                  key={channel.title}
+                  className={cn(
+                    "rounded-[24px] border px-5 py-6 text-center",
+                    inverted
+                      ? "border-background/15 bg-background/[0.06] dark:border-zinc-950/15 dark:bg-zinc-950/[0.05]"
+                      : "border-border bg-card",
+                  )}
+                >
+                  <channel.icon aria-hidden="true" className="mx-auto h-5 w-5 opacity-60" />
+                  <h4 className="mt-4 text-lg font-black leading-tight">
+                    {channel.title}
+                  </h4>
+                </article>
+              ))}
+            </div>
+
+            <p className="mx-auto mt-9 max-w-3xl text-base font-black leading-relaxed md:text-lg">
+              Comece no sistema e continue pelo WhatsApp — ou faça o caminho inverso.
+            </p>
+            <p
+              className={cn(
+                "mx-auto mt-4 max-w-3xl text-base font-medium leading-relaxed md:text-lg",
+                inverted ? "opacity-70" : "text-muted-foreground",
+              )}
+            >
+              <strong className="font-black">Tanto faz, você decide.</strong>{" "}
+              A conversa pode mudar de canal, mas o contexto sempre continua,
+              independentemente de como você o acessa.
+            </p>
+          </div>
         </div>
 
-        <div className={cn("mx-auto mt-16 max-w-[1080px] border-t pt-14 text-center", inverted ? "border-background/15 dark:border-zinc-950/15" : "border-border")}>
+        <div className="mx-auto mt-20 max-w-[1080px] pt-4 text-center">
           <p className={cn("text-xs font-bold", inverted ? "opacity-60" : "text-muted-foreground")}>
             Sua clínica, no seu bolso.
           </p>
-          <h3 className="mx-auto mt-4 max-w-3xl text-balance text-3xl font-black leading-tight md:text-5xl">
+          <h3 className="mx-auto mt-4 max-w-4xl text-balance text-4xl font-black leading-[1.02] md:text-6xl">
             Converse com sua clínica, em linguagem natural.
           </h3>
           <p className={cn("mx-auto mt-5 max-w-2xl text-sm font-medium leading-relaxed md:text-base", inverted ? "opacity-65" : "text-muted-foreground")}>
-            Abra um exemplo e veja o contexto, os módulos envolvidos e o que depende da sua confirmação.
+            Abra um dos {commands.length} exemplos e veja como conversar com sua clínica de forma simples e natural.
           </p>
         </div>
 
-        <div className={cn("mx-auto mt-10 max-w-[1080px] divide-y border-y", inverted ? "divide-background/15 border-background/15 dark:divide-zinc-950/15 dark:border-zinc-950/15" : "divide-border border-border")}>
-          {commands.map((item, index) => {
-            const StatusIcon = statusIcons[item.status];
-            return (
-              <details key={item.title} className="group">
-                <summary className={cn("public-tactile flex min-h-16 cursor-pointer list-none items-center gap-4 rounded-2xl px-3 py-4 marker:hidden focus-visible:outline-none focus-visible:ring-2", inverted ? "hover:bg-background/10 focus-visible:ring-background dark:hover:bg-zinc-950/10 dark:focus-visible:ring-zinc-950" : "hover:bg-muted focus-visible:ring-ring")}>
-                  <span className={cn("flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-black", inverted ? "border-background/20 dark:border-zinc-950/20" : "border-border")}>
-                    {String(index + 1).padStart(2, "0")}
+        <div className="mx-auto mt-10 grid max-w-[1080px] gap-3">
+          {commands.map((item, index) => (
+            <details
+              key={item.title}
+              className={cn(
+                "group overflow-hidden rounded-[28px] border transition-[border-color,background-color,box-shadow] duration-200 open:shadow-[0_28px_80px_-52px_rgba(0,0,0,0.68)] motion-reduce:transition-none",
+                inverted
+                  ? "border-zinc-800/90 bg-zinc-900/75 dark:border-zinc-200/90 dark:bg-zinc-100/80"
+                  : "border-border bg-card",
+              )}
+            >
+              <summary
+                className={cn(
+                  "public-tactile flex min-h-24 cursor-pointer list-none items-center gap-4 px-5 py-5 marker:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset md:px-6",
+                  inverted
+                    ? "hover:bg-zinc-800/60 focus-visible:ring-background dark:hover:bg-zinc-200/70 dark:focus-visible:ring-zinc-950"
+                    : "hover:bg-muted focus-visible:ring-ring",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border font-mono text-xs font-black",
+                    inverted
+                      ? "border-zinc-700 bg-zinc-800/90 dark:border-zinc-300 dark:bg-zinc-200"
+                      : "border-border bg-muted",
+                  )}
+                >
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <span className="min-w-0 flex-1 text-left">
+                  <strong className="block text-base font-black leading-tight md:text-lg">
+                    {item.title}
+                  </strong>
+                  <span className={cn("mt-2 block text-xs font-semibold", inverted ? "opacity-55" : "text-muted-foreground")}>
+                    {item.modules.join(" · ")}
                   </span>
-                  <span className="min-w-0 flex-1 text-left">
-                    <strong className="block text-base font-black leading-tight">{item.title}</strong>
-                    <span className={cn("mt-1 block text-xs font-medium", inverted ? "opacity-60" : "text-muted-foreground")}>
-                      {item.modules.join(" · ")}
-                    </span>
-                    <span className={cn("mt-2 inline-flex items-center gap-2 text-xs font-bold", inverted ? "opacity-70" : "text-muted-foreground")}>
-                      <StatusIcon aria-hidden="true" className="h-4 w-4" />
-                      Na NeuroNex: {item.status}
-                    </span>
-                  </span>
-                  <span aria-hidden="true" className="text-xl transition-transform group-open:rotate-45 motion-reduce:transition-none">+</span>
-                </summary>
-                <div className="grid gap-4 px-3 pb-7 pl-16 lg:grid-cols-[1.2fr_0.8fr]">
-                  <blockquote className={cn("rounded-[22px] border p-5 text-sm font-semibold leading-relaxed", inverted ? "border-background/15 bg-background/[0.07] dark:border-zinc-950/15 dark:bg-zinc-950/[0.06]" : "border-border bg-card")}>
-                    “{item.command}”
-                  </blockquote>
-                  <div className={cn("flex gap-3 rounded-[22px] border p-5 text-sm font-medium leading-relaxed", inverted ? "border-background/15 dark:border-zinc-950/15" : "border-border text-muted-foreground")}>
-                    <ShieldCheck aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
-                    <p>
-                      <strong className="block font-black">Limite visível</strong>
-                      <span className={cn(inverted ? "opacity-70" : undefined)}>{item.guardrail}</span>
-                    </p>
-                  </div>
-                </div>
-              </details>
-            );
-          })}
+                </span>
+                <span
+                  aria-hidden="true"
+                  className={cn(
+                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-xl transition-transform duration-200 group-open:rotate-45 motion-reduce:transition-none",
+                    inverted
+                      ? "border-zinc-700 bg-zinc-800/70 dark:border-zinc-300 dark:bg-zinc-200/80"
+                      : "border-border bg-muted",
+                  )}
+                >
+                  +
+                </span>
+              </summary>
+              <div className="px-5 pb-5 md:px-6 md:pb-6">
+                <blockquote
+                  className={cn(
+                    "rounded-[24px] px-5 py-5 text-sm font-semibold leading-relaxed md:px-6 md:py-6 md:text-base",
+                    inverted
+                      ? "bg-black/25 dark:bg-white/80"
+                      : "bg-muted/70",
+                  )}
+                >
+                  “{item.command}”
+                </blockquote>
+              </div>
+            </details>
+          ))}
         </div>
 
         {variant === "compact" ? (
@@ -418,18 +418,10 @@ export function PublicSynapseCommandSection({
             to="/synapse"
             className={cn("public-tactile mx-auto mt-8 flex min-h-12 w-fit items-center gap-2 rounded-full border px-5 text-sm font-black", inverted ? "border-background/20 dark:border-zinc-950/20" : "border-border")}
           >
-            Ver os 10 exemplos e os estados de cada fluxo
+            Ver todos os 10 exemplos
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
-        ) : (
-          <div className={cn("mx-auto mt-8 flex max-w-[1080px] items-start justify-center gap-3 text-sm font-medium leading-relaxed", inverted ? "opacity-68" : "text-muted-foreground")}>
-            <BrainCircuit aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
-            <p>
-              Cada exemplo mostra o estágio atual e as confirmações necessárias antes
-              de qualquer efeito sensível.
-            </p>
-          </div>
-        )}
+        ) : null}
       </div>
     </section>
   );
