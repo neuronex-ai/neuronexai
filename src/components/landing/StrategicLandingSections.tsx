@@ -3,11 +3,10 @@
 import type { ElementType } from "react";
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   BadgeCheck,
-  BarChart3,
   BrainCircuit,
   CalendarDays,
   Check,
@@ -342,36 +341,237 @@ export const LandingProductShowcase = () => {
   );
 };
 
-const systemCards = [
-  { icon: Stethoscope, title: "Gestão clínica", text: "Agenda, pacientes, prontuário, documentos, teleconsulta e evolução clínica." },
-  { icon: BrainCircuit, title: "Inteligência artificial", text: "Synapse por voz e texto com contexto autorizado, revisão e confirmação." },
-  { icon: MessageCircle, title: "Comunicação", text: "Portal do Paciente disponível e conexão do NeuroZap em validação." },
-  { icon: CreditCard, title: "Financeiro", text: "Cobranças, Pix, boletos, QR Code, extrato, saques e saúde da conta." },
-  { icon: FileCheck2, title: "Preparação fiscal", text: "Dados fiscais próximos do financeiro, com emissão e automações ainda em evolução." },
-  { icon: BarChart3, title: "Interface visual intuitiva", text: "Hierarquia clara, cores com função e menos carga mental para encontrar o próximo passo." },
+type CubicCurve = readonly [
+  readonly [number, number],
+  readonly [number, number],
+  readonly [number, number],
+  readonly [number, number],
 ];
+
+const getCubicPath = (curve: CubicCurve) => {
+  const [start, controlA, controlB, end] = curve;
+  return `M ${start[0]} ${start[1]} C ${controlA[0]} ${controlA[1]}, ${controlB[0]} ${controlB[1]}, ${end[0]} ${end[1]}`;
+};
+
+const sampleCubicCurve = (curve: CubicCurve, sampleCount = 49) => {
+  const [start, controlA, controlB, end] = curve;
+
+  return Array.from({ length: sampleCount }, (_, index) => {
+    const t = index / (sampleCount - 1);
+    const inverseT = 1 - t;
+    const inverseTSquared = inverseT * inverseT;
+    const tSquared = t * t;
+
+    return {
+      x:
+        inverseTSquared * inverseT * start[0]
+        + 3 * inverseTSquared * t * controlA[0]
+        + 3 * inverseT * tSquared * controlB[0]
+        + tSquared * t * end[0],
+      y:
+        inverseTSquared * inverseT * start[1]
+        + 3 * inverseTSquared * t * controlA[1]
+        + 3 * inverseT * tSquared * controlB[1]
+        + tSquared * t * end[1],
+    };
+  });
+};
+
+const systemCards = [
+  {
+    icon: CalendarDays,
+    title: "Agenda e pacientes",
+    text: "Horários, confirmações e contexto do paciente seguem juntos.",
+    x: 150,
+    y: 105,
+    curve: [[500, 310], [390, 310], [350, 105], [150, 105]] as const,
+  },
+  {
+    icon: ClipboardList,
+    title: "Prontuário clínico",
+    text: "Registros, evolução e documentos preservam a continuidade clínica.",
+    x: 125,
+    y: 310,
+    curve: [[500, 310], [365, 310], [285, 310], [125, 310]] as const,
+  },
+  {
+    icon: MonitorPlay,
+    title: "Teleconsulta",
+    text: "Atendimento e documentação permanecem no mesmo fluxo.",
+    x: 150,
+    y: 515,
+    curve: [[500, 310], [390, 310], [350, 515], [150, 515]] as const,
+  },
+  {
+    icon: MessageCircle,
+    title: "Comunicação",
+    text: "Portal do Paciente e NeuroZap conectam as conversas autorizadas.",
+    x: 850,
+    y: 105,
+    curve: [[500, 310], [610, 310], [650, 105], [850, 105]] as const,
+  },
+  {
+    icon: CreditCard,
+    title: "NeuroFinance",
+    text: "Cobranças, Pix, boletos e extrato acompanham o atendimento.",
+    x: 875,
+    y: 310,
+    curve: [[500, 310], [635, 310], [715, 310], [875, 310]] as const,
+  },
+  {
+    icon: FileCheck2,
+    title: "Preparação fiscal",
+    text: "Dados financeiros e fiscais permanecem próximos e organizados.",
+    x: 850,
+    y: 515,
+    curve: [[500, 310], [610, 310], [650, 515], [850, 515]] as const,
+  },
+];
+
+const SynapseConnectionMap = () => {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <figure className="mt-14" aria-labelledby="synapse-connection-caption">
+      <figcaption id="synapse-connection-caption" className="sr-only">
+        Synapse conectado à agenda, aos pacientes, ao prontuário, à teleconsulta, à comunicação, ao financeiro e à preparação fiscal.
+      </figcaption>
+      <div className="relative mx-auto hidden h-[620px] max-w-[1100px] md:block">
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-zinc-800/55 dark:border-zinc-200/70" />
+        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[300px] w-[300px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-zinc-800/70 dark:border-zinc-200/85" />
+
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 h-full w-full overflow-visible text-zinc-600 dark:text-zinc-300"
+          viewBox="0 0 1000 620"
+          fill="none"
+        >
+          {systemCards.map((card, index) => {
+            const path = getCubicPath(card.curve);
+            const pulsePoints = sampleCubicCurve(card.curve);
+
+            return (
+              <g key={card.title}>
+                <path
+                  d={path}
+                  stroke="currentColor"
+                  strokeDasharray="3 8"
+                  strokeLinecap="round"
+                  strokeWidth="1"
+                  className="opacity-20"
+                />
+                <motion.path
+                  d={path}
+                  stroke="currentColor"
+                  strokeLinecap="round"
+                  strokeWidth="1.7"
+                  initial={shouldReduceMotion ? false : { pathLength: 0, opacity: 0 }}
+                  whileInView={{ pathLength: 1, opacity: 0.56 }}
+                  viewport={{ once: true, amount: 0.45 }}
+                  transition={{ duration: 0.9, delay: index * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                />
+                {!shouldReduceMotion ? (
+                  <motion.circle
+                    r="3.5"
+                    fill="currentColor"
+                    initial={{ opacity: 0 }}
+                    animate={{
+                      cx: pulsePoints.map((point) => point.x),
+                      cy: pulsePoints.map((point) => point.y),
+                      opacity: [0, 0.9, 0.9, 0],
+                      scale: [0.7, 1, 1, 0.7],
+                    }}
+                    transition={{
+                      duration: 2.4,
+                      delay: 0.8 + index * 0.42,
+                      ease: "linear",
+                      repeat: Infinity,
+                      repeatDelay: 1.9,
+                    }}
+                  />
+                ) : null}
+              </g>
+            );
+          })}
+        </svg>
+
+        <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+          <motion.div
+            initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.86 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true, amount: 0.6 }}
+            transition={{ type: "spring", stiffness: 165, damping: 18 }}
+            className="relative flex h-[190px] w-[190px] items-center justify-center rounded-full border border-zinc-800 bg-background text-center text-foreground shadow-[0_32px_90px_-38px_rgba(0,0,0,0.72)] dark:border-zinc-200 dark:bg-zinc-950 dark:text-white"
+          >
+            {!shouldReduceMotion ? (
+              <motion.span
+                aria-hidden="true"
+                className="absolute inset-[-14px] rounded-full border border-zinc-800 dark:border-zinc-200"
+                animate={{ scale: [0.94, 1.07, 0.94], opacity: [0.24, 0.65, 0.24] }}
+                transition={{ duration: 3.2, ease: "easeInOut", repeat: Infinity }}
+              />
+            ) : null}
+            <strong className="text-2xl font-black tracking-[-0.05em]">Synapse AI</strong>
+          </motion.div>
+        </div>
+
+        {systemCards.map((card, index) => (
+          <div
+            key={card.title}
+            className="absolute z-10 w-[250px] -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${card.x / 10}%`, top: `${(card.y / 620) * 100}%` }}
+          >
+            <motion.article
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 18, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              whileHover={shouldReduceMotion ? undefined : { y: -4, scale: 1.012 }}
+              viewport={{ once: true, amount: 0.55 }}
+              transition={{ duration: 0.48, delay: 0.15 + index * 0.07, ease: [0.22, 1, 0.36, 1] }}
+              className="min-h-[132px] rounded-[28px] border border-zinc-800/90 bg-zinc-900/90 p-5 text-left shadow-[0_28px_70px_-50px_rgba(0,0,0,0.7)] backdrop-blur-xl dark:border-zinc-200/90 dark:bg-zinc-100/90"
+            >
+              <span className="flex h-10 w-10 items-center justify-center rounded-[14px] border border-zinc-700/75 bg-zinc-800/80 dark:border-zinc-200 dark:bg-zinc-200/75">
+                <card.icon className="h-[18px] w-[18px] opacity-65" />
+              </span>
+              <h3 className="mt-4 text-base font-black tracking-[-0.03em]">{card.title}</h3>
+              <p className="mt-2 text-xs font-medium leading-relaxed opacity-60">{card.text}</p>
+            </motion.article>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid gap-3 md:hidden">
+        <div className="mb-2 flex items-center justify-center rounded-[24px] bg-background px-5 py-4 text-foreground dark:bg-zinc-950 dark:text-white">
+          <strong className="text-lg font-black">Synapse AI</strong>
+        </div>
+        {systemCards.map((card) => (
+          <article key={card.title} className="rounded-[24px] border border-zinc-800/90 bg-zinc-900/90 p-5 dark:border-zinc-200/90 dark:bg-zinc-100/90">
+            <div className="flex items-center gap-3">
+              <card.icon className="h-5 w-5 opacity-65" />
+              <h3 className="text-base font-black">{card.title}</h3>
+            </div>
+            <p className="mt-3 text-sm font-medium leading-relaxed opacity-62">{card.text}</p>
+          </article>
+        ))}
+      </div>
+    </figure>
+  );
+};
 
 export const LandingOperatingSystemSection = () => (
   <section id="sistema" className="public-section-stage public-inverted-section relative overflow-hidden px-6 py-20 text-background md:py-28 dark:text-zinc-950">
     <div className="relative z-10 mx-auto max-w-[1240px]">
-      <div className="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-        <div>
-          <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-background/20 px-4 py-1.5 text-xs font-black dark:border-zinc-950/20">
-            <BadgeCheck className="h-4 w-4" /> Sistema operacional
-          </span>
-          <h2 className="mt-8 text-5xl font-bold leading-[1.02] tracking-tight md:text-6xl">As partes do consultório trabalham juntas.</h2>
-          <p className="mt-7 max-w-xl text-base font-medium leading-relaxed opacity-75 md:text-xl">Como o Windows conecta programas, arquivos e serviços em um mesmo ambiente, a NeuroNex conecta a rotina clínica e administrativa. Não é apenas mais um aplicativo de agenda ou prontuário.</p>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2">
-          {systemCards.map((card) => (
-            <article key={card.title} className="rounded-[28px] border border-background/10 bg-background/[0.06] p-5 backdrop-blur-sm dark:border-zinc-950/10 dark:bg-zinc-950/[0.045]">
-              <card.icon className="h-5 w-5 opacity-55" />
-              <h3 className="mt-7 text-lg font-black tracking-[-0.03em]">{card.title}</h3>
-              <p className="mt-3 text-sm font-medium leading-relaxed opacity-62">{card.text}</p>
-            </article>
-          ))}
-        </div>
+      <div className="mx-auto max-w-5xl text-center">
+        <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-zinc-800 px-4 py-1.5 text-xs font-black dark:border-zinc-200">
+          <BadgeCheck className="h-4 w-4" /> Sistema operacional
+        </span>
+        <h2 className="mt-8 text-balance text-4xl font-bold leading-[1.02] tracking-tight md:text-6xl">
+          As partes do consultório trabalham juntas.
+        </h2>
+        <p className="mx-auto mt-7 max-w-4xl text-base font-medium leading-relaxed opacity-75 md:text-xl">
+          Agenda, prontuário, atendimento, comunicação, financeiro e preparação fiscal compartilham o mesmo contexto operacional. O Synapse conecta as partes e prepara o próximo passo, mantendo revisão e confirmação visíveis.
+        </p>
       </div>
+      <SynapseConnectionMap />
     </div>
   </section>
 );
@@ -742,7 +942,7 @@ export const LandingFinalCTASection = () => (
       <div className="relative z-10 mx-auto max-w-4xl">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-background text-foreground dark:bg-zinc-950 dark:text-white"><Fingerprint className="h-6 w-6" /></div>
         <h2 className="mt-9 text-5xl font-black leading-[1.02] tracking-tight md:text-6xl">Usar a NeuroNex pode ser perigosamente viciante.</h2>
-        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-75 md:text-xl">Não porque prende você à tela. Porque, depois de agenda, prontuário, financeiro e IA trabalharem no mesmo fluxo, voltar ao copia e cola parece trabalho desnecessário.</p>
+        <p className="mx-auto mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-75 md:text-xl">Não porque prende você à tela, mas porque facilmente tira você dela.</p>
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
           <Button asChild className="public-tactile h-14 rounded-full bg-background px-8 font-mono text-[10px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white">
             <Link to="/create-account">Começar grátis <ArrowRight className="ml-2 h-4 w-4" /></Link>

@@ -22,10 +22,6 @@ import { Link } from "react-router-dom";
 import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
-import {
-  PublicOperatingModelBridge,
-  PublicSynapseCommandSection,
-} from "@/components/public/PublicPositioningSections";
 import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import { Button } from "@/components/ui/button";
 import type {
@@ -498,13 +494,6 @@ export function PublicPageShell({
   children?: ReactNode;
   hero?: ReactNode;
 }) {
-  const fullCommandRoutes = new Set([
-    "/produto",
-    "/synapse",
-    "/neurozap-para-psicologos",
-  ]);
-  const commandVariant = fullCommandRoutes.has(page.route) ? "full" : "compact";
-
   return (
     <div className="public-lumen-page min-h-screen overflow-x-hidden bg-background font-sans text-foreground">
       <div className="hidden md:block">
@@ -517,8 +506,6 @@ export function PublicPageShell({
         <PageHighlights page={page} />
         {children}
         <PageSections page={page} />
-        <PublicOperatingModelBridge />
-        <PublicSynapseCommandSection variant={commandVariant} />
         <PageFaq page={page} />
         <PageRelated page={page} />
         <section className="public-section-stage public-inverted-section px-5 py-20 text-center text-background dark:text-zinc-950 md:px-8 md:py-28">

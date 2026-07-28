@@ -17,7 +17,6 @@ import { Footer } from "@/components/landing/Footer";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { Navbar } from "@/components/landing/Navbar";
 import {
-  PublicSynapseCommandSection,
   PublicTimeGainSection,
   PublicWorkflowComparisonSection,
 } from "@/components/public/PublicPositioningSections";
@@ -425,7 +424,6 @@ export const ComparisonLanding = ({ slug }: { slug?: ComparisonSlug | string }) 
         <UseCaseComparison comparison={comparison} />
         <PublicWorkflowComparisonSection competitor={comparison.competitor} />
         <PublicTimeGainSection />
-        <PublicSynapseCommandSection variant="compact" />
         <ChoiceSection comparison={comparison} />
         <ComparisonFaq comparison={comparison} />
         <RelatedLinks comparison={comparison} />

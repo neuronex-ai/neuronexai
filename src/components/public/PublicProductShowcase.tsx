@@ -3,12 +3,15 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Maximize2,
   Pause,
   Play,
+  X,
 } from "lucide-react";
 import { useReducedMotion } from "framer-motion";
 import {
   type FocusEvent,
+  type KeyboardEvent,
   type PointerEvent,
   useCallback,
   useEffect,
@@ -18,6 +21,13 @@ import {
   useState,
 } from "react";
 
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useTheme } from "@/hooks/use-theme";
 import { cn } from "@/lib/utils";
 
@@ -254,8 +264,10 @@ function ScreenshotShowcase({
   const [shouldAnimateTrack, setShouldAnimateTrack] = useState(true);
   const [isInViewport, setIsInViewport] = useState(false);
   const [isDocumentVisible, setIsDocumentVisible] = useState(true);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const sectionRef = useRef<HTMLElement | null>(null);
   const pointerStartRef = useRef<{ id: number; x: number } | null>(null);
+  const suppressLightboxOpenRef = useRef(false);
   const indicatorTrackRef = useRef<HTMLDivElement | null>(null);
   const indicatorRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
@@ -266,7 +278,11 @@ function ScreenshotShowcase({
   const supportsAutoplay =
     slideCount > 1 && autoplayIntervalMs > 0 && !prefersReducedMotion;
   const interactionPaused =
-    isHovered || hasFocusWithin || !isInViewport || !isDocumentVisible;
+    isHovered
+    || hasFocusWithin
+    || isLightboxOpen
+    || !isInViewport
+    || !isDocumentVisible;
 
   const showNext = useCallback(() => {
     if (slideCount === 0) return;
@@ -378,20 +394,21 @@ function ScreenshotShowcase({
     }
   };
 
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
+    suppressLightboxOpenRef.current = false;
     pointerStartRef.current = { id: event.pointerId, x: event.clientX };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   };
 
-  const clearPointer = (event: PointerEvent<HTMLDivElement>) => {
+  const clearPointer = (event: PointerEvent<HTMLButtonElement>) => {
     if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
     pointerStartRef.current = null;
   };
 
-  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
+  const handlePointerUp = (event: PointerEvent<HTMLButtonElement>) => {
     const pointerStart = pointerStartRef.current;
     if (!pointerStart || pointerStart.id !== event.pointerId) return;
 
@@ -399,8 +416,30 @@ function ScreenshotShowcase({
     clearPointer(event);
 
     if (Math.abs(distance) < SWIPE_THRESHOLD_PX) return;
+    suppressLightboxOpenRef.current = true;
     if (distance < 0) showNext();
     else showPrevious();
+  };
+
+  const handleImageClick = () => {
+    if (suppressLightboxOpenRef.current) {
+      suppressLightboxOpenRef.current = false;
+      return;
+    }
+
+    setIsLightboxOpen(true);
+  };
+
+  const handleLightboxKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "ArrowLeft" && slideCount > 1) {
+      event.preventDefault();
+      showPrevious();
+    }
+
+    if (event.key === "ArrowRight" && slideCount > 1) {
+      event.preventDefault();
+      showNext();
+    }
   };
 
   if (slideCount === 0) return null;
@@ -492,10 +531,7 @@ function ScreenshotShowcase({
               </div>
 
               <div
-                className="relative aspect-video cursor-grab overflow-hidden bg-zinc-100 [touch-action:pan-y] active:cursor-grabbing dark:bg-black"
-                onPointerDown={handlePointerDown}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={clearPointer}
+                className="relative aspect-video overflow-hidden bg-zinc-100 dark:bg-black"
               >
                 <div
                   className={cn(
@@ -555,6 +591,21 @@ function ScreenshotShowcase({
                     );
                   })}
                 </div>
+                <button
+                  type="button"
+                  aria-haspopup="dialog"
+                  aria-label={`Abrir em tela cheia: ${activeSlide?.caption ?? activeSlide?.alt}`}
+                  onClick={handleImageClick}
+                  onPointerDown={handlePointerDown}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={clearPointer}
+                  className="group absolute inset-0 z-10 cursor-zoom-in [touch-action:pan-y] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:cursor-grabbing"
+                >
+                  <span className="pointer-events-none absolute bottom-3 right-3 inline-flex min-h-10 items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 text-[10px] font-black uppercase tracking-[0.14em] text-white opacity-0 backdrop-blur-md transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100 motion-reduce:transition-none">
+                    <Maximize2 aria-hidden="true" className="h-4 w-4" />
+                    Ampliar
+                  </span>
+                </button>
               </div>
 
               {slideCount > 1 ? (
@@ -594,6 +645,108 @@ function ScreenshotShowcase({
               ) : null}
             </div>
         </ShowcaseFrame>
+
+        <Dialog open={isLightboxOpen} onOpenChange={setIsLightboxOpen}>
+          <DialogContent
+            showCloseButton={false}
+            overlayClassName="z-[120] bg-black/92 backdrop-blur-xl"
+            contentContainerClassName="z-[121] p-0"
+            onKeyDown={handleLightboxKeyDown}
+            className="flex h-[100dvh] max-h-none w-screen max-w-none flex-col gap-0 overflow-hidden rounded-none border-0 bg-[#050506] p-0 text-white shadow-none sm:rounded-none"
+          >
+            <header className="flex min-h-16 shrink-0 items-center justify-between gap-5 border-b border-white/10 px-5 py-3 md:px-7">
+              <div className="min-w-0">
+                <DialogTitle className="truncate text-sm font-black text-white md:text-base">
+                  {title}
+                </DialogTitle>
+                <DialogDescription className="mt-1 truncate text-xs font-medium text-white/55">
+                  {activeSlide?.caption ?? activeSlide?.alt} · Imagem {safeActiveIndex + 1} de {slideCount}
+                </DialogDescription>
+              </div>
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  aria-label="Fechar visualização em tela cheia"
+                  className="public-tactile inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/[0.07] text-white hover:bg-white/[0.13] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <X aria-hidden="true" className="h-4 w-4" />
+                </button>
+              </DialogClose>
+            </header>
+
+            <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden px-16 py-4 md:px-24 md:py-6">
+              {slideCount > 1 ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={showPrevious}
+                    aria-label="Mostrar imagem anterior em tela cheia"
+                    className="public-tactile absolute left-3 top-1/2 z-10 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur-md hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:left-6 md:h-14 md:w-14"
+                  >
+                    <ChevronLeft aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={showNext}
+                    aria-label="Mostrar próxima imagem em tela cheia"
+                    className="public-tactile absolute right-3 top-1/2 z-10 inline-flex h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/55 text-white backdrop-blur-md hover:bg-white/12 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white md:right-6 md:h-14 md:w-14"
+                  >
+                    <ChevronRight aria-hidden="true" className="h-5 w-5" />
+                  </button>
+                </>
+              ) : null}
+
+              {activeSlide ? (
+                <img
+                  key={activeSlide.src}
+                  src={activeSlide.src}
+                  alt={activeSlide.alt}
+                  width={1920}
+                  height={1080}
+                  decoding="sync"
+                  draggable={false}
+                  className="block max-h-full max-w-full select-none object-contain"
+                />
+              ) : null}
+            </div>
+
+            <footer className="flex min-h-16 shrink-0 items-center justify-center border-t border-white/10 px-5 py-2">
+              {slideCount > 1 ? (
+                <div
+                  role="group"
+                  aria-label="Escolher imagem na visualização em tela cheia"
+                  className="no-scrollbar flex max-w-full items-center justify-center gap-0.5 overflow-x-auto"
+                >
+                  {slides.map((image, index) => {
+                    const isActive = index === safeActiveIndex;
+                    return (
+                      <button
+                        key={`${image.src}-lightbox-indicator-${index}`}
+                        type="button"
+                        onClick={() => showSlide(index)}
+                        aria-label={`Mostrar imagem ${index + 1}: ${image.caption ?? image.alt}`}
+                        aria-current={isActive ? "true" : undefined}
+                        className="public-tactile group inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                      >
+                        <span
+                          aria-hidden="true"
+                          className={cn(
+                            "h-1.5 rounded-full transition-[width,background-color] duration-300 motion-reduce:transition-none",
+                            isActive
+                              ? "w-5 bg-white"
+                              : "w-1.5 bg-white/25 group-hover:bg-white/55",
+                          )}
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs font-bold text-white/50">Imagem 1 de 1</p>
+              )}
+            </footer>
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );

@@ -436,7 +436,8 @@ export const LandingRealFinanceFiscalSection = () => (
         eyebrow="Financeiro sem confusão"
         title={
           <>
-            Gestão para decidir.{" "}
+            Gestão para decidir.
+            <br />
             <span className="text-muted-foreground">NeuroFinance para movimentar.</span>
           </>
         }

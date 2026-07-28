@@ -24,13 +24,13 @@ const continuityMedia = getPublicMediaCollection("prontuario");
 const ecosystemItems = [
   {
     icon: Monitor,
-    title: "Professional",
+    title: "Sistema Desktop",
     status: "Disponível" as const,
     text: "O espaço onde você agenda, atende, registra, cobra e acompanha a rotina do consultório.",
   },
   {
     icon: Smartphone,
-    title: "Professional mobile",
+    title: "Sistema Mobile",
     status: "Em evolução" as const,
     text: "Uma experiência mobile-first para ações rápidas. Esta frente ainda está em evolução.",
   },
@@ -42,7 +42,7 @@ const ecosystemItems = [
   },
   {
     icon: Workflow,
-    title: "Jornadas públicas",
+    title: "Jornada pública",
     status: "Disponível" as const,
     text: "Perfil, confirmações, convites, anamneses, ajuda e documentos legais sem abrir a área profissional.",
   },
@@ -106,61 +106,31 @@ export const LandingContinuityAuthoritySection = () => {
   if (!portalPage || !recordPage) return null;
 
   return (
-    <section className="public-section-stage public-inverted-section px-6 py-20 text-background dark:text-zinc-950 md:py-28">
-      <div className="mx-auto grid max-w-[1240px] gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+    <section className="public-section-stage public-inverted-section relative overflow-hidden px-6 py-20 text-background dark:text-zinc-950 md:py-28">
+      <div className="relative z-10 mx-auto max-w-[1080px] text-center">
         <FadeIn>
-          <div>
-            <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] opacity-45">
-              Continuidade com limites claros
-            </p>
-            <h2 className="mt-6 text-balance text-5xl font-black leading-[1.02] md:text-6xl">
-              O prontuário fica com o profissional. O paciente recebe apenas o que foi compartilhado.
-            </h2>
-            <p className="mt-7 max-w-2xl text-base font-medium leading-relaxed opacity-66 md:text-xl">
-              O profissional mantém resumo, sessões, anamneses, humor, metas,
-              planos, financeiro e arquivos. O paciente acessa somente o que foi
-              destinado ao seu espaço.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <Link
-                to={recordPage.route}
-                className="public-tactile inline-flex min-h-12 items-center justify-center rounded-full bg-background px-5 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-foreground dark:bg-zinc-950 dark:text-white"
-              >
-                Ver prontuário <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-              <Link
-                to={portalPage.route}
-                className="public-tactile inline-flex min-h-12 items-center justify-center rounded-full border border-background/20 px-5 font-mono text-[10px] font-black uppercase tracking-[0.16em] dark:border-zinc-950/20"
-              >
-                Ver Portal do Paciente
-              </Link>
-            </div>
-          </div>
-        </FadeIn>
-        <FadeIn delay={0.12}>
-          <div className="grid gap-5 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <PublicProductShowcase
-                hideHeader
-                title="Prontuário por dentro"
-                images={continuityMedia}
-                className="!bg-transparent !px-0 !py-0 text-foreground"
-                frameClassName="!max-w-none"
-              />
-            </div>
-            {[
-              "Notas clínicas privadas permanecem na área profissional.",
-              "Humor, tarefas e documentos compartilhados mantêm finalidade própria.",
-              "Políticas de agenda aparecem antes de confirmar, remarcar ou cancelar.",
-              "Pacotes e cobranças ficam visíveis conforme vínculo e permissão.",
-            ].map((item) => (
-              <div
-                key={item}
-                className="border-t border-background/15 py-4 text-sm font-bold leading-relaxed dark:border-zinc-950/15"
-              >
-                {item}
-              </div>
-            ))}
+          <p className="font-mono text-[9px] font-bold uppercase tracking-[0.16em] opacity-45">
+            Contexto preservado
+          </p>
+          <h2 className="mx-auto mt-6 max-w-5xl text-balance text-4xl font-black leading-[1.02] md:text-6xl">
+            Seu prontuário profissional é seu. O paciente recebe apenas o que você decidir compartilhar.
+          </h2>
+          <p className="mx-auto mt-7 max-w-4xl text-base font-medium leading-relaxed opacity-66 md:text-xl">
+            Mantenha resumo, sessões, anamneses, humor, metas, planos, financeiro e arquivos no seu prontuário. O paciente acessa somente o que foi destinado a ele, através do Portal do Paciente.
+          </p>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Link
+              to={recordPage.route}
+              className="public-tactile inline-flex min-h-12 items-center justify-center rounded-full bg-background px-6 font-mono text-[10px] font-black uppercase tracking-[0.16em] text-foreground dark:bg-zinc-950 dark:text-white"
+            >
+              Ver Prontuário <ArrowRight className="ml-2 h-4 w-4" />
+            </Link>
+            <Link
+              to={portalPage.route}
+              className="public-tactile inline-flex min-h-12 items-center justify-center rounded-full border border-background/20 px-6 font-mono text-[10px] font-black uppercase tracking-[0.16em] dark:border-zinc-950/20"
+            >
+              Ver Portal do Paciente
+            </Link>
           </div>
         </FadeIn>
       </div>

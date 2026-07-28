@@ -11,13 +11,13 @@ import {
   MessageCircle,
   ShieldCheck,
   Sparkles,
+  Smartphone,
 } from "lucide-react";
 import type { ElementType } from "react";
 import { Link } from "react-router-dom";
 
 import {
   ILLUSTRATIVE_WORKFLOW,
-  SYNAPSE_CHANNEL_DISCLOSURE,
   SYNAPSE_COMMAND_EXAMPLES,
   TIME_GAIN_DISCLOSURE,
   TIME_GAIN_ESTIMATES,
@@ -30,6 +30,28 @@ const statusIcons: Record<SynapseCommandExample["status"], ElementType<{ classNa
   Beta: FlaskConical,
   "Em evolução": CircleDashed,
 };
+
+const synapseChannels = [
+  {
+    icon: LayoutDashboard,
+    title: "Trabalhe pelo sistema.",
+  },
+  {
+    icon: Smartphone,
+    title: "Continue pelo celular.",
+  },
+  {
+    icon: MessageCircle,
+    title: "Peça pelo WhatsApp.",
+  },
+];
+
+const synapseStarterQuestions = [
+  "Tenho algum paciente sem confirmação para amanhã?",
+  "Crie um lembrete para eu finalizar o documento da Júlia.",
+  "Qual foi a última cobrança enviada para o Carlos?",
+  "Prepare um agendamento para sexta-feira às 10h.",
+];
 
 const operatingPrinciples = [
   {
@@ -54,35 +76,31 @@ export const PublicOperatingModelBridge = ({ className }: { className?: string }
       className,
     )}
   >
-    <div className="mx-auto max-w-[1180px]">
-      <div className="grid gap-10 lg:grid-cols-[1.28fr_0.72fr] lg:items-start">
-        <div className="lg:order-2 lg:justify-self-end lg:text-right">
-          <LayoutDashboard aria-hidden="true" className="h-7 w-7 text-muted-foreground lg:ml-auto" />
-          <p className="mt-7 text-xs font-bold text-muted-foreground">
-            Sistema operacional para psicólogos
-          </p>
-        </div>
-        <div className="lg:order-1">
-          <h2
-            id="public-operating-model-title"
-            className="max-w-[18ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
-          >
-            Mais recursos não deveriam significar mais sistema para administrar.
-          </h2>
-          <p className="mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground md:text-lg">
-            Quando cada função exige um novo menu, uma nova regra e mais copiar e colar,
-            “completo” vira carga mental. A NeuroNex foi desenhada como o sistema
-            operacional do consultório: os produtos compartilham contexto e o Synapse
-            ajuda a conduzir o fluxo sem esconder limites ou decisões.
-          </p>
-        </div>
+    <div className="mx-auto max-w-[1180px] text-center">
+      <div className="mx-auto max-w-5xl">
+        <LayoutDashboard aria-hidden="true" className="mx-auto h-7 w-7 text-muted-foreground" />
+        <p className="mt-7 text-xs font-bold text-muted-foreground">
+          Sistema operacional para psicólogos
+        </p>
+        <h2
+          id="public-operating-model-title"
+          className="mx-auto mt-6 max-w-[20ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
+        >
+          Mais recursos não deveriam significar mais sistema para administrar.
+        </h2>
+        <p className="mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed text-muted-foreground md:text-lg">
+          Quando cada função exige um novo menu, uma nova regra e mais copiar e colar,
+          “completo” vira carga mental. A NeuroNex foi desenhada como o sistema
+          operacional do consultório: os produtos compartilham contexto e o Synapse
+          ajuda a conduzir o fluxo sem esconder limites ou decisões.
+        </p>
       </div>
 
-      <div className="mt-12 grid gap-4 md:grid-cols-3">
+      <div className="mx-auto mt-12 grid max-w-[1080px] gap-4 md:grid-cols-3">
         {operatingPrinciples.map((principle) => (
           <article
             key={principle.title}
-            className="rounded-[26px] border border-border bg-card p-6"
+            className="rounded-[26px] border border-border bg-card p-6 text-center"
           >
             <h3 className="text-xl font-black leading-tight">{principle.title}</h3>
             <p className="mt-3 text-sm font-medium leading-relaxed text-muted-foreground">
@@ -257,45 +275,41 @@ export function PublicSynapseCommandSection({
       )}
     >
       <div className="mx-auto max-w-[1180px]">
-        <div className="grid gap-10 lg:grid-cols-[1.3fr_0.7fr] lg:items-start">
-          <div className="lg:order-2 lg:justify-self-end lg:text-right">
-            <MessageCircle aria-hidden="true" className={cn("h-7 w-7 lg:ml-auto", inverted ? "opacity-60" : "text-muted-foreground")} />
-            <p className={cn("mt-7 text-xs font-bold", inverted ? "opacity-65" : "text-muted-foreground")}>
-              Synapse na NeuroNex
-            </p>
-            <span
-              className={cn(
-                "mt-4 inline-flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold",
-                inverted
-                  ? "border-background/20 dark:border-zinc-950/20"
-                  : "border-border text-muted-foreground",
-              )}
-            >
-              <FlaskConical aria-hidden="true" className="h-4 w-4" />
-              WhatsApp/NeuroZap · Beta
-            </span>
-          </div>
-          <div className="lg:order-1">
-            <h2
-              id="synapse-command-title"
-              className="max-w-[20ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
-            >
-              Converse com o Synapse. No WhatsApp ou no sistema, o cérebro é o mesmo.
-            </h2>
-            <p className={cn("mt-6 max-w-3xl text-base font-medium leading-relaxed md:text-lg", inverted ? "opacity-75" : "text-muted-foreground")}>
-              Texto e voz trabalham com o mesmo contexto autorizado da clínica. No
-              sistema, o Synapse consulta informações e prepara rotinas; no WhatsApp
-              Business, o NeuroZap leva esse mesmo cérebro para o caminho do dia a dia.
-              A liberação no WhatsApp continua em Beta e avança por etapas, com os mesmos
-              limites e confirmações visíveis.
-            </p>
-            <p className={cn("mt-5 max-w-3xl border-l-2 pl-5 text-sm font-medium leading-relaxed", inverted ? "border-background/25 opacity-68 dark:border-zinc-950/25" : "border-border text-muted-foreground")}>
-              {SYNAPSE_CHANNEL_DISCLOSURE}
-            </p>
-          </div>
+        <div className="mx-auto max-w-5xl text-center">
+          <MessageCircle aria-hidden="true" className={cn("mx-auto h-7 w-7", inverted ? "opacity-60" : "text-muted-foreground")} />
+          <p className={cn("mt-7 text-xs font-bold", inverted ? "opacity-65" : "text-muted-foreground")}>
+            Synapse na NeuroNex
+          </p>
+          <span
+            className={cn(
+              "mt-4 inline-flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold",
+              inverted
+                ? "border-background/20 dark:border-zinc-950/20"
+                : "border-border text-muted-foreground",
+            )}
+          >
+            <FlaskConical aria-hidden="true" className="h-4 w-4" />
+            WhatsApp/NeuroZap · Beta
+          </span>
+          <h2
+            id="synapse-command-title"
+            className="mx-auto mt-8 max-w-[20ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
+          >
+            Converse com o Synapse. No WhatsApp ou no sistema, o cérebro é o mesmo.
+          </h2>
+          <p className={cn("mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed md:text-lg", inverted ? "opacity-75" : "text-muted-foreground")}>
+            Texto e voz trabalham com o mesmo contexto autorizado da clínica. No
+            sistema, o Synapse consulta informações e prepara rotinas; no WhatsApp
+            Business, o NeuroZap leva esse mesmo cérebro para o caminho do dia a dia.
+            A liberação no WhatsApp continua em Beta e avança por etapas, com os mesmos
+            limites e confirmações visíveis.
+          </p>
+          <p className={cn("mx-auto mt-6 max-w-3xl rounded-[24px] border px-6 py-5 text-sm font-medium leading-relaxed", inverted ? "border-background/18 bg-background/[0.055] opacity-72 dark:border-zinc-950/18 dark:bg-zinc-950/[0.05]" : "border-border bg-card text-muted-foreground")}>
+            {SYNAPSE_CHANNEL_DISCLOSURE}
+          </p>
         </div>
 
-        <div className={cn("mt-12 divide-y border-y", inverted ? "divide-background/15 border-background/15 dark:divide-zinc-950/15 dark:border-zinc-950/15" : "divide-border border-border")}>
+        <div className={cn("mx-auto mt-12 max-w-[1080px] divide-y border-y", inverted ? "divide-background/15 border-background/15 dark:divide-zinc-950/15 dark:border-zinc-950/15" : "divide-border border-border")}>
           {commands.map((item, index) => {
             const StatusIcon = statusIcons[item.status];
             return (
@@ -336,13 +350,13 @@ export function PublicSynapseCommandSection({
         {variant === "compact" ? (
           <Link
             to="/synapse"
-            className={cn("public-tactile mt-8 inline-flex min-h-12 items-center gap-2 rounded-full border px-5 text-sm font-black", inverted ? "border-background/20 dark:border-zinc-950/20" : "border-border")}
+            className={cn("public-tactile mx-auto mt-8 flex min-h-12 w-fit items-center gap-2 rounded-full border px-5 text-sm font-black", inverted ? "border-background/20 dark:border-zinc-950/20" : "border-border")}
           >
             Ver os 10 exemplos e os estados de cada fluxo
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         ) : (
-          <div className={cn("mt-8 flex items-start gap-3 text-sm font-medium leading-relaxed", inverted ? "opacity-68" : "text-muted-foreground")}>
+          <div className={cn("mx-auto mt-8 flex max-w-[1080px] items-start justify-center gap-3 text-sm font-medium leading-relaxed", inverted ? "opacity-68" : "text-muted-foreground")}>
             <BrainCircuit aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <p>
               Uma IA realmente agêntica deve reduzir etapas sem esconder autoria,

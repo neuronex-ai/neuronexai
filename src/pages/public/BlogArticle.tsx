@@ -13,7 +13,6 @@ import {
   PublicStatusBadge,
 } from "@/components/public/PublicPageShell";
 import {
-  PublicSynapseCommandSection,
   PublicTimeGainSection,
   PublicWorkflowComparisonSection,
 } from "@/components/public/PublicPositioningSections";
@@ -126,7 +125,6 @@ const BlogArticle = () => {
             <>
               <PublicWorkflowComparisonSection />
               <PublicTimeGainSection />
-              <PublicSynapseCommandSection variant="compact" />
             </>
           ) : null}
         </article>

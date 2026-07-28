@@ -33,7 +33,6 @@ import {
   PublicProductHero,
   PublicRouteBreadcrumbs,
 } from "@/components/public/PublicPageShell";
-import { PublicSynapseCommandSection } from "@/components/public/PublicPositioningSections";
 import { PublicProductShowcase } from "@/components/public/PublicProductShowcase";
 import { getPublicPage } from "@/content/public-content";
 import {
@@ -349,8 +348,6 @@ const FinanceLanding = () => {
             </article>
           </div>
         </section>
-
-        <PublicSynapseCommandSection variant="compact" />
 
         <section className="public-section-stage px-5 pb-20 md:px-8 md:pb-28">
           <div className="mx-auto grid max-w-[1320px] gap-5 lg:grid-cols-[0.9fr_1.1fr]">
