@@ -326,39 +326,6 @@ export function NeuralCastShell({ children }: { children: ReactNode }) {
   );
 }
 
-export function NeuralCastPedroProfileSection({ className }: { className?: string }) {
-  return (
-    <section className={cn("px-5 py-20 md:px-8 md:py-28", className)}>
-      <div className="mx-auto grid max-w-[1120px] gap-8 border-t border-[#17130f]/[0.14] pt-10 md:grid-cols-[190px_minmax(0,1fr)] md:gap-12 md:pt-14">
-        <figure className="w-36 overflow-hidden rounded-[30px] border border-[#17130f]/[0.12] bg-[#f4e8d1]/70 p-1.5 shadow-[0_24px_70px_-48px_rgba(23,19,15,0.62)] md:w-44">
-          <div className="overflow-hidden rounded-[24px] border border-[#17130f]/[0.08] bg-[#f4e8d1]">
-            <img
-              src={pedroPortrait}
-              alt="Pedro Luiz Pereira, Diretor de Gente e Gestão na Metal Group"
-              className="aspect-square w-full object-cover object-top"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-        </figure>
-        <div className="max-w-3xl">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#a97838]">Sobre o autor</p>
-          <h2 className="mt-4 text-balance text-4xl font-black leading-[0.95] tracking-[-0.055em] md:text-6xl">
-            Pedro Luiz Pereira
-          </h2>
-          <p className="mt-4 text-sm font-black uppercase tracking-[0.14em] text-[#17130f]/[0.50]">
-            Diretor de Gente e Gestão na Metal Group
-          </p>
-          <p className="mt-6 max-w-2xl text-base font-semibold leading-relaxed text-[#17130f]/[0.68] md:text-lg">
-            A NeuralCast organiza reflexões de Pedro sobre liderança, comportamento, cultura e desenvolvimento humano,
-            conectando repertório executivo com perguntas práticas do cotidiano organizacional.
-          </p>
-        </div>
-      </div>
-    </section>
-  );
-}
-
 export function NeuralCastSubscribeForm({ inverted = false }: { inverted?: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");

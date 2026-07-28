@@ -58,6 +58,12 @@
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.74), transparent);
 }
 
+.neuralcast-navbar-brand img {
+  box-shadow:
+    0 14px 28px -22px rgb(var(--neuralcast-ink) / 0.8),
+    inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
 .neuralcast-nav-control {
   border: 1px solid transparent;
   color: rgb(var(--neuralcast-ink) / 0.68);

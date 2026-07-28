@@ -5,7 +5,6 @@ import { Link, useParams } from "react-router-dom";
 import { getNeuralCastArticle, NEURALCAST_ARTICLES, NEURALCAST_CATEGORIES } from "../content";
 import {
   NeuralCastArticleCard,
-  NeuralCastPedroProfileSection,
   NeuralCastShell,
   NeuralCastSubscribeForm,
 } from "../components/NeuralCastUI";
@@ -93,7 +92,6 @@ function NeuralCastArticleView({ slug }: { slug: string }) {
             </div>
           </section>
         ) : null}
-        <NeuralCastPedroProfileSection />
       </article>
     </NeuralCastShell>
   );
@@ -173,7 +171,6 @@ function NeuralCastArchive() {
       </section>
 
       <section id="newsletter" className="neuralcast-dark-section bg-[#17130f] px-5 py-24 text-[#f4e8d1] md:px-8 md:py-32"><div className="mx-auto grid max-w-[1320px] gap-10 lg:grid-cols-[0.85fr_1.15fr] lg:items-end"><div><p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#d5ad69]">Assine a NeuralCast</p><h2 className="mt-5 max-w-[12ch] text-balance text-5xl font-black leading-[0.9] tracking-[-0.065em] md:text-7xl">O próximo artigo pode chegar até você.</h2></div><div><p className="max-w-2xl text-lg font-medium leading-relaxed text-[#f4e8d1]/[0.58]">Uma seleção autoral, sem ruído e sem excesso de envios.</p><NeuralCastSubscribeForm inverted /></div></div></section>
-      <NeuralCastPedroProfileSection />
     </NeuralCastShell>
   );
 }

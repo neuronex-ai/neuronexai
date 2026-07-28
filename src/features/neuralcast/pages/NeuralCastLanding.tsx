@@ -1,17 +1,37 @@
 import { ArrowDownRight, ArrowRight, CircleDot, Quote, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
 
+import pedroPortrait from "../assets/pedro-luiz-pereira.jpg";
 import { NEURALCAST_ARTICLES } from "../content";
 import {
   NeuralCastArticleCard,
   NeuralCastLogo,
-  NeuralCastPedroProfileSection,
   NeuralCastShell,
   NeuralCastSubscribeForm,
 } from "../components/NeuralCastUI";
 import { NeuralCastReelsSection } from "../components/NeuralCastReels";
 import { useNeuralCastMobileLanding, useNeuralCastSeo } from "../hooks";
 import { triggerNeuralCastTactileFeedback } from "../utils/tactile";
+
+function PedroPortraitFrame({ compact = false }: { compact?: boolean }) {
+  return (
+    <figure
+      className={`shrink-0 overflow-hidden border border-[#f4e8d1]/[0.18] bg-[#f4e8d1]/[0.10] shadow-[0_18px_45px_rgba(0,0,0,0.22)] ${
+        compact ? "w-20 rounded-[23px] p-1" : "w-28 rounded-[28px] p-1.5 md:w-32"
+      }`}
+    >
+      <div className={`overflow-hidden border border-[#17130f]/[0.10] bg-[#f4e8d1] ${compact ? "rounded-[18px]" : "rounded-[24px]"}`}>
+        <img
+          src={pedroPortrait}
+          alt="Pedro Luiz Pereira, Diretor de Gente e Gestão na Metal Group"
+          className="aspect-square w-full object-cover object-top"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+    </figure>
+  );
+}
 
 function DesktopLanding() {
   const featuredArticle = NEURALCAST_ARTICLES.find((article) => article.featured) ?? NEURALCAST_ARTICLES[0];
@@ -57,11 +77,11 @@ function DesktopLanding() {
               <div className="relative flex h-full flex-col justify-between">
                 <div className="flex items-start justify-between">
                   <NeuralCastLogo surface="dark" compact />
-                  <p className="max-w-32 text-right text-[10px] font-black uppercase leading-relaxed tracking-[0.18em] text-[#d5ad69]">Citação editorial</p>
+                  <PedroPortraitFrame />
                 </div>
-                <div className="max-w-[430px]">
-                  <Quote className="h-10 w-10 text-[#d5ad69]" />
-                  <p className="mt-6 text-balance text-[clamp(2.35rem,4.1vw,3.35rem)] font-black leading-[0.96] tracking-[-0.045em]">
+                <div>
+                  <Quote className="h-9 w-9 text-[#d5ad69]" />
+                  <p className="mt-5 max-w-[14ch] text-balance text-[2.35rem] font-black leading-[0.98] tracking-[-0.04em]">
                     Pessoas não são peças. São sistemas vivos em desenvolvimento.
                   </p>
                   <div className="mt-9 border-t border-[#f4e8d1]/[0.18] pt-5">
@@ -145,7 +165,6 @@ function DesktopLanding() {
       </section>
 
       <NeuralCastReelsSection />
-      <NeuralCastPedroProfileSection />
     </>
   );
 }
@@ -189,7 +208,7 @@ function MobileLanding() {
           <div className="relative">
             <div className="flex items-start justify-between gap-5">
               <NeuralCastLogo surface="dark" compact />
-              <p className="max-w-28 text-right text-[8px] font-black uppercase leading-relaxed tracking-[0.18em] text-[#d5ad69]">Citação editorial</p>
+              <PedroPortraitFrame compact />
             </div>
             <Quote className="mt-12 h-8 w-8 text-[#d5ad69]" />
             <p className="mt-6 text-[1.9rem] font-black leading-[1.05] tracking-normal">
@@ -218,7 +237,6 @@ function MobileLanding() {
       <section id="newsletter" className="bg-[#a97838] px-4 py-20"><p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#17130f]/[0.55]">Newsletter NeuralCast</p><h2 className="mt-5 text-balance text-5xl font-black leading-[0.9] tracking-[-0.065em]">Novas ideias, direto ao ponto.</h2><p className="mt-6 text-base font-semibold leading-relaxed text-[#17130f]/[0.68]">Receba os próximos artigos de Pedro Luiz Pereira.</p><NeuralCastSubscribeForm /></section>
 
       <NeuralCastReelsSection mobile />
-      <NeuralCastPedroProfileSection className="px-4 py-20" />
     </>
   );
 }
