@@ -297,19 +297,85 @@ export function PublicSynapseCommandSection({
           >
             Converse com o Synapse. No WhatsApp ou no sistema, o cérebro é o mesmo.
           </h2>
-          <p className={cn("mx-auto mt-6 max-w-3xl text-base font-medium leading-relaxed md:text-lg", inverted ? "opacity-75" : "text-muted-foreground")}>
-            Texto e voz trabalham com o mesmo contexto autorizado da clínica. No
-            sistema, o Synapse consulta informações e prepara rotinas; no WhatsApp
-            Business, o NeuroZap leva esse mesmo cérebro para o caminho do dia a dia.
-            A liberação no WhatsApp continua em Beta e avança por etapas, com os mesmos
-            limites e confirmações visíveis.
+
+          <div className="mx-auto mt-10 grid max-w-[960px] gap-3 sm:grid-cols-3">
+            {synapseChannels.map((channel) => (
+              <article
+                key={channel.title}
+                className={cn(
+                  "rounded-[24px] border px-5 py-6 text-center",
+                  inverted
+                    ? "border-background/15 bg-background/[0.06] dark:border-zinc-950/15 dark:bg-zinc-950/[0.05]"
+                    : "border-border bg-card",
+                )}
+              >
+                <channel.icon aria-hidden="true" className="mx-auto h-5 w-5 opacity-60" />
+                <h3 className="mt-4 text-lg font-black leading-tight">
+                  {channel.title}
+                </h3>
+              </article>
+            ))}
+          </div>
+
+          <p className={cn("mx-auto mt-8 max-w-3xl text-base font-medium leading-relaxed md:text-lg", inverted ? "opacity-75" : "text-muted-foreground")}>
+            Envie texto ou áudio como em qualquer conversa. O Synapse consulta o
+            contexto autorizado da sua clínica e prepara o próximo passo — sem abrir
+            o notebook nem procurar por menus.
           </p>
-          <p className={cn("mx-auto mt-6 max-w-3xl rounded-[24px] border px-6 py-5 text-sm font-medium leading-relaxed", inverted ? "border-background/18 bg-background/[0.055] opacity-72 dark:border-zinc-950/18 dark:bg-zinc-950/[0.05]" : "border-border bg-card text-muted-foreground")}>
-            {SYNAPSE_CHANNEL_DISCLOSURE}
+          <p className="mx-auto mt-4 max-w-2xl text-base font-black leading-relaxed md:text-lg">
+            Comece no WhatsApp e continue no sistema — ou faça o caminho inverso.
+          </p>
+
+          <div className="mx-auto mt-8 grid max-w-[960px] gap-3 text-left md:grid-cols-2">
+            {synapseStarterQuestions.map((question) => (
+              <blockquote
+                key={question}
+                className={cn(
+                  "rounded-[22px] border px-5 py-4 text-sm font-bold leading-relaxed",
+                  inverted
+                    ? "border-background/15 bg-background/[0.045] dark:border-zinc-950/15 dark:bg-zinc-950/[0.04]"
+                    : "border-border bg-card",
+                )}
+              >
+                “{question}”
+              </blockquote>
+            ))}
+          </div>
+
+          <p className="mx-auto mt-9 max-w-3xl text-balance text-2xl font-black leading-tight md:text-3xl">
+            A conversa pode mudar de canal. O contexto continua.
+          </p>
+          <p className={cn("mx-auto mt-4 max-w-2xl text-xs font-semibold leading-relaxed md:text-sm", inverted ? "opacity-60" : "text-muted-foreground")}>
+            Texto e voz já estão disponíveis na NeuroNex. No WhatsApp, o NeuroZap está
+            em Beta e libera cada fluxo por etapas, sempre com as confirmações necessárias.
+          </p>
+          <Link
+            to="/neurozap-para-psicologos"
+            className={cn(
+              "public-tactile mx-auto mt-7 inline-flex min-h-12 items-center gap-2 rounded-full border px-6 text-sm font-black",
+              inverted
+                ? "border-background/20 bg-background text-foreground dark:border-zinc-950/20 dark:bg-zinc-950 dark:text-white"
+                : "border-foreground bg-foreground text-background",
+            )}
+          >
+            Conhecer o Synapse no WhatsApp
+            <ArrowRight aria-hidden="true" className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className={cn("mx-auto mt-16 max-w-[1080px] border-t pt-14 text-center", inverted ? "border-background/15 dark:border-zinc-950/15" : "border-border")}>
+          <p className={cn("text-xs font-bold", inverted ? "opacity-60" : "text-muted-foreground")}>
+            Sua clínica, no seu bolso.
+          </p>
+          <h3 className="mx-auto mt-4 max-w-3xl text-balance text-3xl font-black leading-tight md:text-5xl">
+            Converse com sua clínica, em linguagem natural.
+          </h3>
+          <p className={cn("mx-auto mt-5 max-w-2xl text-sm font-medium leading-relaxed md:text-base", inverted ? "opacity-65" : "text-muted-foreground")}>
+            Abra um exemplo e veja o contexto, os módulos envolvidos e o que depende da sua confirmação.
           </p>
         </div>
 
-        <div className={cn("mx-auto mt-12 max-w-[1080px] divide-y border-y", inverted ? "divide-background/15 border-background/15 dark:divide-zinc-950/15 dark:border-zinc-950/15" : "divide-border border-border")}>
+        <div className={cn("mx-auto mt-10 max-w-[1080px] divide-y border-y", inverted ? "divide-background/15 border-background/15 dark:divide-zinc-950/15 dark:border-zinc-950/15" : "divide-border border-border")}>
           {commands.map((item, index) => {
             const StatusIcon = statusIcons[item.status];
             return (
@@ -359,9 +425,8 @@ export function PublicSynapseCommandSection({
           <div className={cn("mx-auto mt-8 flex max-w-[1080px] items-start justify-center gap-3 text-sm font-medium leading-relaxed", inverted ? "opacity-68" : "text-muted-foreground")}>
             <BrainCircuit aria-hidden="true" className="mt-0.5 h-5 w-5 shrink-0" />
             <p>
-              Uma IA realmente agêntica deve reduzir etapas sem esconder autoria,
-              consentimento ou consequência. “Disponível”, “Beta” e “Em evolução”
-              indicam o estágio atual de cada exemplo — não uma promessa de execução autônoma.
+              Cada exemplo mostra o estágio atual e as confirmações necessárias antes
+              de qualquer efeito sensível.
             </p>
           </div>
         )}
