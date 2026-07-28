@@ -4,7 +4,7 @@ Esta pasta reúne toda a interface pública da NeuralCast para facilitar sua fut
 
 ## O que está aqui
 
-- `assets/`: as duas variações oficiais da marca, já otimizadas para uso web.
+- `assets/`: as duas variações oficiais da marca e a foto de Pedro Luiz Pereira, já organizadas para uso web.
 - `components/`: shell, cabeçalho, rodapé, formulário da newsletter, cards e showcase de reels.
 - `database/`: SQL necessário para a captura de assinantes da newsletter.
 - `pages/`: landing responsiva e arquivo/página dos artigos.

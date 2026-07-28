@@ -1,0 +1,243 @@
+.neuralcast-page {
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  --neuralcast-ink: 23 19 15;
+  --neuralcast-paper: 234 216 183;
+  --neuralcast-cream: 244 232 209;
+  --neuralcast-gold: 169 120 56;
+  --neuralcast-bright-gold: 213 173 105;
+  background-image:
+    linear-gradient(115deg, rgb(var(--neuralcast-cream) / 0.24), transparent 38%);
+}
+
+.neuralcast-page::before {
+  content: none;
+}
+
+.neuralcast-liquid-nav,
+.neuralcast-mobile-bar,
+.neuralcast-mobile-menu,
+.neuralcast-card-material,
+.neuralcast-field {
+  -webkit-backdrop-filter: blur(34px) saturate(128%);
+  backdrop-filter: blur(34px) saturate(128%);
+}
+
+.neuralcast-liquid-nav {
+  position: relative;
+  isolation: isolate;
+  border: 1px solid rgb(var(--neuralcast-ink) / 0.11);
+  background:
+    linear-gradient(135deg, rgb(var(--neuralcast-cream) / 0.76), rgb(var(--neuralcast-paper) / 0.58));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.54),
+    inset 0 -1px 0 rgb(var(--neuralcast-ink) / 0.045),
+    0 30px 84px -52px rgb(var(--neuralcast-ink) / 0.58);
+}
+
+.neuralcast-liquid-nav::before,
+.neuralcast-mobile-menu::before,
+.neuralcast-card-material::before,
+.neuralcast-dark-section::before {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-image:
+    linear-gradient(120deg, rgba(255, 255, 255, 0.22), transparent 38%);
+  opacity: 0.5;
+}
+
+.neuralcast-liquid-nav::after {
+  pointer-events: none;
+  position: absolute;
+  inset: 1px 16px auto;
+  height: 1px;
+  content: "";
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.74), transparent);
+}
+
+.neuralcast-nav-control {
+  border: 1px solid transparent;
+  color: rgb(var(--neuralcast-ink) / 0.68);
+  background: transparent;
+  box-shadow: none;
+}
+
+.neuralcast-nav-control:hover,
+.neuralcast-nav-control:focus-visible,
+.neuralcast-nav-control-active {
+  border-color: rgb(var(--neuralcast-ink) / 0.1);
+  color: rgb(var(--neuralcast-ink));
+  background: rgb(var(--neuralcast-cream) / 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 14px 30px -26px rgb(var(--neuralcast-ink) / 0.44);
+}
+
+.neuralcast-primary-button {
+  border: 1px solid rgb(var(--neuralcast-ink) / 0.12);
+  color: rgb(var(--neuralcast-cream));
+  background:
+    linear-gradient(180deg, rgb(var(--neuralcast-ink) / 0.98), rgba(9, 8, 7, 0.96));
+  box-shadow:
+    inset 0 1px 0 rgb(var(--neuralcast-cream) / 0.1),
+    0 18px 44px -32px rgb(var(--neuralcast-ink) / 0.82);
+}
+
+.neuralcast-primary-button:hover,
+.neuralcast-primary-button:focus-visible {
+  color: rgb(var(--neuralcast-cream));
+  box-shadow:
+    inset 0 1px 0 rgb(var(--neuralcast-cream) / 0.16),
+    0 22px 52px -34px rgb(var(--neuralcast-ink) / 0.9);
+}
+
+.neuralcast-mobile-bar {
+  border: 1px solid rgb(var(--neuralcast-ink) / 0.1);
+  background: rgb(var(--neuralcast-paper) / 0.72);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 20px 54px -42px rgb(var(--neuralcast-ink) / 0.72);
+}
+
+.neuralcast-mobile-menu {
+  --neuralcast-ink: 23 19 15;
+  --neuralcast-paper: 234 216 183;
+  --neuralcast-cream: 244 232 209;
+  --neuralcast-gold: 169 120 56;
+  --neuralcast-bright-gold: 213 173 105;
+  color: rgb(var(--neuralcast-ink)) !important;
+  background:
+    linear-gradient(145deg, rgb(var(--neuralcast-cream) / 0.96), rgb(var(--neuralcast-paper) / 0.97)) !important;
+}
+
+.app-dialog-surface.neuralcast-mobile-menu,
+.dark .app-dialog-surface.neuralcast-mobile-menu {
+  color: rgb(var(--neuralcast-ink)) !important;
+  background:
+    linear-gradient(145deg, rgb(var(--neuralcast-cream) / 0.96), rgb(var(--neuralcast-paper) / 0.97)) !important;
+  background-color: rgb(var(--neuralcast-paper)) !important;
+}
+
+.neuralcast-menu-item {
+  border: 1px solid rgb(var(--neuralcast-ink) / 0.1);
+  background: rgb(var(--neuralcast-cream) / 0.32);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.36);
+}
+
+.neuralcast-menu-item-active {
+  background: rgb(var(--neuralcast-bright-gold) / 0.22);
+  border-color: rgb(var(--neuralcast-gold) / 0.28);
+}
+
+.neuralcast-tactile {
+  transform: translateZ(0);
+  touch-action: manipulation;
+  transition-property: transform, background-color, border-color, color, box-shadow, opacity;
+  transition-duration: 180ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) {
+  .neuralcast-tactile:hover {
+    transform: translateY(-1px);
+  }
+}
+
+.neuralcast-tactile:active {
+  transform: translateY(0) scale(0.985);
+}
+
+.neuralcast-tactile:focus-visible {
+  outline: 2px solid rgb(var(--neuralcast-gold) / 0.54);
+  outline-offset: 3px;
+}
+
+.neuralcast-field {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 16px 36px -32px rgb(var(--neuralcast-ink) / 0.46);
+}
+
+.neuralcast-field:focus {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.42),
+    0 0 0 4px rgb(var(--neuralcast-gold) / 0.12),
+    0 18px 42px -32px rgb(var(--neuralcast-ink) / 0.5);
+}
+
+.neuralcast-card-material {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.34),
+    0 28px 70px -58px rgb(var(--neuralcast-ink) / 0.54);
+}
+
+.neuralcast-card-material > * {
+  position: relative;
+  z-index: 1;
+}
+
+.neuralcast-card-material:hover,
+.neuralcast-card-material:focus-within {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    0 34px 84px -62px rgb(var(--neuralcast-ink) / 0.62);
+}
+
+.neuralcast-dark-section {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.neuralcast-dark-section::before {
+  background-image:
+    linear-gradient(120deg, rgb(var(--neuralcast-bright-gold) / 0.08), transparent 42%);
+  opacity: 0.72;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neuralcast-tactile,
+  .neuralcast-tactile:hover,
+  .neuralcast-tactile:active {
+    transform: none !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .neuralcast-liquid-nav,
+  .neuralcast-mobile-bar,
+  .neuralcast-mobile-menu,
+  .neuralcast-card-material,
+  .neuralcast-field {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .neuralcast-liquid-nav,
+  .neuralcast-mobile-bar,
+  .neuralcast-mobile-menu {
+    background: rgb(var(--neuralcast-paper));
+  }
+}
+
+@media (forced-colors: active) {
+  .neuralcast-liquid-nav,
+  .neuralcast-mobile-bar,
+  .neuralcast-mobile-menu,
+  .neuralcast-nav-control,
+  .neuralcast-menu-item,
+  .neuralcast-field,
+  .neuralcast-card-material {
+    border: 1px solid CanvasText !important;
+    color: CanvasText !important;
+    background: Canvas !important;
+    box-shadow: none !important;
+  }
+}

@@ -1,210 +1,306 @@
 "use client";
 
-import type { ElementType } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useState, type ElementType, type KeyboardEvent } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
+  ArrowLeftRight,
   ArrowRight,
-  CalendarDays,
+  BrainCircuit,
   CheckCircle2,
-  ClipboardList,
-  FileText,
+  Copy,
+  CreditCard,
+  Landmark,
+  MessageCircle,
+  Network,
   Search,
   ShieldCheck,
   Sparkles,
-  Users,
-  WalletCards,
 } from "lucide-react";
 
 import { FadeIn } from "@/components/animations/FadeIn";
+import { cn } from "@/lib/utils";
 
 type FlowIcon = ElementType<{ className?: string }>;
+type WorkflowMode = "without" | "with";
 
-type FlowNodeProps = {
+type WorkflowStep = {
   icon: FlowIcon;
   title: string;
   text: string;
-  delay: number;
-  shouldReduceMotion: boolean;
-  emphasized?: boolean;
 };
 
-const beforeSteps = [
-  {
-    icon: CalendarDays,
-    title: "Abrir a agenda",
-    text: "Encontrar o horário e identificar quem precisa de atenção.",
-  },
-  {
-    icon: Users,
-    title: "Encontrar o paciente",
-    text: "Localizar o cadastro correto antes de consultar o histórico.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Consultar o prontuário",
-    text: "Relembrar o contexto e conferir o que ficou pendente.",
-  },
-  {
-    icon: WalletCards,
-    title: "Conferir o financeiro",
-    text: "Abrir outra área para verificar cobranças e pagamentos.",
-  },
-  {
-    icon: FileText,
-    title: "Preencher e enviar",
-    text: "Reescrever a informação, copiar a mensagem e concluir a tarefa.",
-  },
+type WorkflowContent = {
+  eyebrow: string;
+  title: string;
+  subtitle: string;
+  steps: WorkflowStep[];
+  footer: string;
+  prompt?: string;
+};
+
+const workflowTabs: Array<{ id: WorkflowMode; label: string }> = [
+  { id: "without", label: "Sem a NeuroNex" },
+  { id: "with", label: "Com a NeuroNex" },
 ];
 
-const connectedModules = [
-  { icon: CalendarDays, label: "Agenda" },
-  { icon: ClipboardList, label: "Prontuário" },
-  { icon: WalletCards, label: "Financeiro" },
-];
+const workflowContent: Record<WorkflowMode, WorkflowContent> = {
+  without: {
+    eyebrow: "O caos manual",
+    title: "O custo invisível de operar cada parte manualmente.",
+    subtitle:
+      "Alternar entre vários sistemas, agenda, aplicativos e bancos esgota sua energia mental antes mesmo do atendimento começar.",
+    steps: [
+      {
+        icon: ArrowLeftRight,
+        title: "Troca constante de aplicativos",
+        text: "Alternar entre WhatsApp, agenda e gerenciador para tentar descobrir o status de um paciente.",
+      },
+      {
+        icon: Landmark,
+        title: "Conferência manual no app do banco",
+        text: "Sair do sistema, abrir o aplicativo do banco e procurar no extrato se o Pix da sessão caiu.",
+      },
+      {
+        icon: CreditCard,
+        title: "Cobrança em outro sistema",
+        text: "Abrir outra plataforma de pagamentos, gerar o link ou comprovante e enviar manualmente.",
+      },
+      {
+        icon: BrainCircuit,
+        title: "Extração de padrões “de cabeça”",
+        text: "Forçar a memória para lembrar o contexto das sessões anteriores e cruzar os relatos sem histórico conectado.",
+      },
+      {
+        icon: Copy,
+        title: "Reescrita e “copia e cola”",
+        text: "Preencher formulários repetitivos, colar mensagens em abas diferentes e torcer para não esquecer nada. Alguns sistemas têm prontuário com IA, mas você sabe que isso não resolve tudo.",
+      },
+    ],
+    footer: "5 aplicativos. Mais de 10 cliques. Nenhuma integração.",
+  },
+  with: {
+    eyebrow: "Synapse em ação",
+    title: "Tudo acontece no intervalo entre uma pergunta e uma resposta.",
+    subtitle:
+      "Você não navega pelo sistema. O Synapse percorre a estrutura, cruza os dados e traz a ação pronta. Ele alterna abas na sua tela para ilustrar sobre o que está falando: pode mencionar a agenda, levar você até ela e mostrar os detalhes de um agendamento. Você assiste e o contexto não se perde.",
+    prompt:
+      "Synapse, a Maria pagou a sessão de ontem? Aproveita e resuma os gatilhos de ansiedade que ela citou.",
+    steps: [
+      {
+        icon: MessageCircle,
+        title: "Uma pergunta em linguagem natural",
+        text: "Você fala ou digita exatamente como pensa, sem precisar saber em qual aba o dado está.",
+      },
+      {
+        icon: Network,
+        title: "Navegação e cruzamento invisível",
+        text: "Entre sua pergunta e a resposta, o Synapse lê a agenda, checa o financeiro, busca os relatos do prontuário em tempo real e segue as normativas do CFP nesse processo.",
+      },
+      {
+        icon: Sparkles,
+        title: "Ação preparada na tela",
+        text: "O status do pagamento é verificado, o padrão do paciente é extraído e o próximo passo surge organizado para você.",
+      },
+      {
+        icon: ShieldCheck,
+        title: "Revisão e confirmação rápida",
+        text: "A inteligência faz o trabalho pesado de buscar e organizar. Você apenas revisa e dá a palavra final.",
+      },
+    ],
+    footer: "1 conversa. Zero cliques manuais. Você no controle.",
+  },
+};
 
-const FlowNode = ({
-  icon: Icon,
-  title,
-  text,
-  delay,
+const WorkflowStepCard = ({
+  step,
+  index,
+  total,
+  mode,
   shouldReduceMotion,
-  emphasized = false,
-}: FlowNodeProps) => (
-  <motion.article
-    initial={shouldReduceMotion ? false : { opacity: 0, y: 18, scale: 0.985 }}
-    whileInView={{ opacity: 1, y: 0, scale: 1 }}
-    viewport={{ once: true, amount: 0.45 }}
-    transition={
-      shouldReduceMotion
-        ? { duration: 0 }
-        : { duration: 0.5, delay, ease: [0.22, 1, 0.36, 1] }
-    }
-    className={
-      emphasized
-        ? "relative z-10 rounded-[26px] border border-foreground bg-foreground p-5 text-background shadow-[0_28px_80px_-48px_rgba(0,0,0,0.82)] dark:border-white dark:bg-white dark:text-zinc-950"
-        : "relative z-10 rounded-[26px] border border-border/55 bg-background/92 p-5 shadow-[0_24px_74px_-58px_rgba(0,0,0,0.62)] dark:border-white/10 dark:bg-white/[0.045]"
-    }
-  >
-    <div className="flex items-start gap-4">
+}: {
+  step: WorkflowStep;
+  index: number;
+  total: number;
+  mode: WorkflowMode;
+  shouldReduceMotion: boolean;
+}) => {
+  const Icon = step.icon;
+  const isConnected = mode === "with";
+
+  return (
+    <motion.div
+      initial={shouldReduceMotion ? false : { opacity: 0, x: 14 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { duration: 0.42, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }
+      }
+      className="relative grid grid-cols-[48px_minmax(0,1fr)] gap-4"
+    >
+      {index < total - 1 ? (
+        <span
+          aria-hidden="true"
+          className={cn(
+            "absolute bottom-[-16px] left-[23px] top-12",
+            isConnected
+              ? "w-px bg-foreground/[0.28] dark:bg-white/[0.24]"
+              : "border-l border-dashed border-border/80 dark:border-white/14",
+          )}
+        />
+      ) : null}
       <span
-        className={
-          emphasized
-            ? "flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] bg-background text-foreground dark:bg-zinc-950 dark:text-white"
-            : "flex h-11 w-11 shrink-0 items-center justify-center rounded-[15px] border border-border/45 bg-foreground/[0.045] text-foreground dark:border-white/10 dark:bg-white/[0.055]"
-        }
+        className={cn(
+          "relative z-10 flex h-12 w-12 items-center justify-center rounded-[17px] border",
+          isConnected
+            ? "border-foreground bg-foreground text-background shadow-[0_14px_36px_-22px_rgba(0,0,0,0.8)] dark:border-white dark:bg-white dark:text-zinc-950"
+            : "border-border/65 bg-background/72 text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.5)] backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.04]",
+        )}
       >
         <Icon aria-hidden="true" className="h-5 w-5" />
       </span>
-      <div>
-        <h3 className="text-lg font-black leading-tight tracking-[-0.025em]">
-          {title}
-        </h3>
-        <p className={emphasized ? "mt-2 text-sm font-medium leading-relaxed opacity-68" : "mt-2 text-sm font-medium leading-relaxed text-muted-foreground/72"}>
-          {text}
+      <article
+        className={cn(
+          "rounded-[24px] border p-5 backdrop-blur-2xl",
+          isConnected
+            ? "border-foreground/[0.14] bg-background/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.64),0_24px_64px_-50px_rgba(0,0,0,0.72)] dark:border-white/10 dark:bg-white/[0.055] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_26px_70px_-48px_rgba(0,0,0,0.9)]"
+            : "border-border/50 bg-card/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.38)] dark:border-white/[0.07] dark:bg-white/[0.025]",
+        )}
+      >
+        <div className="flex items-start justify-between gap-4">
+          <h4 className="text-base font-black leading-tight tracking-[-0.025em] text-foreground">
+            {step.title}
+          </h4>
+          <span className="shrink-0 font-mono text-[9px] font-black text-muted-foreground/55">
+            {String(index + 1).padStart(2, "0")}
+          </span>
+        </div>
+        <p className="mt-2 text-sm font-medium leading-relaxed text-muted-foreground/75">
+          {step.text}
         </p>
-      </div>
-    </div>
-  </motion.article>
-);
+      </article>
+    </motion.div>
+  );
+};
 
-const FlowConnector = ({
-  delay,
-  shouldReduceMotion,
-  emphasized = false,
-}: {
-  delay: number;
-  shouldReduceMotion: boolean;
-  emphasized?: boolean;
-}) => (
-  <div aria-hidden="true" className="relative mx-auto h-10 w-5 overflow-hidden">
-    <motion.span
-      initial={shouldReduceMotion ? false : { scaleY: 0 }}
-      whileInView={{ scaleY: 1 }}
-      viewport={{ once: true, amount: 0.8 }}
-      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.42, delay }}
-      className={emphasized ? "absolute inset-y-0 w-px bg-foreground/65" : "absolute inset-y-0 w-px bg-border"}
-      style={{ left: "calc(50% - 0.5px)", transformOrigin: "top" }}
-    />
-    {!shouldReduceMotion ? (
-      <motion.span
-        initial={{ y: 1, opacity: 0 }}
-        whileInView={{ y: [1, 30], opacity: [0, 1, 0] }}
-        viewport={{ once: false, amount: 0.8 }}
-        transition={{
-          duration: 1.45,
-          delay: delay + 0.2,
-          repeat: Number.POSITIVE_INFINITY,
-          repeatDelay: 1.1,
-          ease: "easeInOut",
-        }}
-        className={emphasized ? "absolute top-0 h-2 w-2 rounded-full bg-foreground" : "absolute top-0 h-2 w-2 rounded-full bg-muted-foreground"}
-        style={{ left: "calc(50% - 4px)" }}
-      />
-    ) : null}
-  </div>
-);
-
-const BranchLines = ({
-  merge = false,
-  delay,
+const WorkflowPanel = ({
+  mode,
   shouldReduceMotion,
 }: {
-  merge?: boolean;
-  delay: number;
+  mode: WorkflowMode;
   shouldReduceMotion: boolean;
-}) => (
-  <svg
-    aria-hidden="true"
-    viewBox="0 0 600 64"
-    preserveAspectRatio="none"
-    className="h-16 w-full overflow-visible text-border dark:text-white/16"
-  >
-    <motion.path
-      d={
-        merge
-          ? "M80 0V42 M300 0V42 M520 0V42 M80 42H520 M300 42V64"
-          : "M300 0V22 M80 22H520 M80 22V64 M300 22V64 M520 22V64"
+}) => {
+  const content = workflowContent[mode];
+  const isConnected = mode === "with";
+
+  return (
+    <motion.div
+      id={`workflow-panel-${mode}`}
+      role="tabpanel"
+      aria-labelledby={`workflow-tab-${mode}`}
+      tabIndex={0}
+      initial={shouldReduceMotion ? false : { opacity: 0, y: 14, filter: "blur(7px)" }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10, filter: "blur(5px)" }}
+      transition={
+        shouldReduceMotion
+          ? { duration: 0 }
+          : { duration: 0.38, ease: [0.22, 1, 0.36, 1] }
       }
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      vectorEffect="non-scaling-stroke"
-      initial={shouldReduceMotion ? false : { pathLength: 0, opacity: 0 }}
-      whileInView={{ pathLength: 1, opacity: 1 }}
-      viewport={{ once: true, amount: 0.7 }}
-      transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.7, delay, ease: [0.22, 1, 0.36, 1] }}
-    />
-  </svg>
-);
+      className={cn(
+        "public-glass-surface relative overflow-hidden rounded-[44px] p-6 outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background md:p-8 lg:p-10",
+        isConnected
+          ? "border-foreground/[0.14] bg-background/70"
+          : "border-border/55 bg-card/50",
+      )}
+    >
+      <div
+        aria-hidden="true"
+        className={cn(
+          "pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full blur-3xl",
+          isConnected ? "bg-foreground/[0.075] dark:bg-white/[0.065]" : "bg-muted-foreground/[0.045]",
+        )}
+      />
+      <div className="relative z-10 grid gap-10 lg:grid-cols-[0.86fr_1.14fr] lg:gap-14">
+        <div className="lg:sticky lg:top-32 lg:self-start">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">
+            {content.eyebrow}
+          </p>
+          <h3 className="mt-5 text-balance text-3xl font-black leading-[1.02] tracking-[-0.045em] text-foreground md:text-4xl">
+            {content.title}
+          </h3>
+          <p className="mt-5 text-base font-medium leading-relaxed text-muted-foreground/75">
+            {content.subtitle}
+          </p>
 
-const ConnectedModuleFork = ({ shouldReduceMotion }: { shouldReduceMotion: boolean }) => (
-  <div className="relative">
-    <BranchLines delay={0.34} shouldReduceMotion={shouldReduceMotion} />
-    <div className="grid grid-cols-3 gap-2 sm:gap-3">
-      {connectedModules.map((module, index) => (
-        <motion.article
-          key={module.label}
-          initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.6 }}
-          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.48 + index * 0.08 }}
-          className="relative z-10 flex min-h-24 flex-col items-center justify-center rounded-[20px] border border-border/55 bg-background/95 px-2 py-4 text-center dark:border-white/10 dark:bg-white/[0.045]"
-        >
-          <module.icon aria-hidden="true" className="h-5 w-5 text-muted-foreground" />
-          <h4 className="mt-3 text-xs font-black sm:text-sm">{module.label}</h4>
-        </motion.article>
-      ))}
-    </div>
-    <BranchLines merge delay={0.72} shouldReduceMotion={shouldReduceMotion} />
-  </div>
-);
+          {content.prompt ? (
+            <div className="mt-8 rounded-[26px] border border-foreground bg-foreground p-5 text-background shadow-[0_28px_74px_-48px_rgba(0,0,0,0.86)] dark:border-white dark:bg-white dark:text-zinc-950">
+              <div className="flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-background text-foreground dark:bg-zinc-950 dark:text-white">
+                  <MessageCircle aria-hidden="true" className="h-5 w-5" />
+                </span>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] opacity-52">
+                  Exemplo de uso
+                </p>
+              </div>
+              <blockquote className="mt-5 text-lg font-black leading-snug tracking-[-0.025em]">
+                “{content.prompt}”
+              </blockquote>
+            </div>
+          ) : null}
+
+          <div
+            className={cn(
+              "mt-8 inline-flex min-h-11 items-center rounded-full border px-5 py-2.5 text-xs font-black",
+              isConnected
+                ? "border-foreground bg-foreground text-background dark:border-white dark:bg-white dark:text-zinc-950"
+                : "border-border/60 bg-background/50 text-muted-foreground backdrop-blur-xl dark:border-white/10 dark:bg-white/[0.035]",
+            )}
+          >
+            {content.footer}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          <p className="pl-16 text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+            {isConnected ? "O que acontece em milissegundos" : "Fluxo cronológico"}
+          </p>
+          {content.steps.map((step, index) => (
+            <WorkflowStepCard
+              key={step.title}
+              step={step}
+              index={index}
+              total={content.steps.length}
+              mode={mode}
+              shouldReduceMotion={shouldReduceMotion}
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+};
 
 export const LandingWorkflowDiagramSection = () => {
+  const [activeMode, setActiveMode] = useState<WorkflowMode>("without");
   const shouldReduceMotion = Boolean(useReducedMotion());
+
+  const handleTabKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+    currentIndex: number,
+  ) => {
+    if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+    event.preventDefault();
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+    const nextIndex = (currentIndex + direction + workflowTabs.length) % workflowTabs.length;
+    const nextTab = workflowTabs[nextIndex];
+    setActiveMode(nextTab.id);
+    requestAnimationFrame(() => document.getElementById(`workflow-tab-${nextTab.id}`)?.focus());
+  };
 
   return (
     <section className="public-section-stage relative overflow-hidden bg-background px-6 py-20 md:py-28">
-      <div className="relative z-10 mx-auto max-w-[1320px]">
+      <div className="relative z-10 mx-auto max-w-[1240px]">
         <FadeIn>
           <div className="mx-auto max-w-5xl text-center">
             <p className="text-xs font-bold text-muted-foreground">Uma rotina, dois caminhos</p>
@@ -217,101 +313,57 @@ export const LandingWorkflowDiagramSection = () => {
           </div>
         </FadeIn>
 
-        <div className="mt-16 grid items-stretch gap-6 lg:grid-cols-2 lg:gap-8">
-          <div className="rounded-[40px] border border-border/50 bg-card/80 p-5 shadow-[0_36px_120px_-86px_rgba(0,0,0,0.72)] dark:border-white/10 dark:bg-white/[0.025] sm:p-7 lg:p-8">
-            <div className="mb-9 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Antes</p>
-                <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">Você opera cada parte.</h3>
-              </div>
-              <span className="rounded-full border border-border/55 px-3 py-2 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground dark:border-white/10">
-                Fluxo fragmentado
-              </span>
-            </div>
-
-            <FlowNode
-              icon={Search}
-              title="Uma pendência aparece"
-              text="Você precisa descobrir onde estão as informações antes de agir."
-              delay={0.05}
-              shouldReduceMotion={shouldReduceMotion}
-            />
-            {beforeSteps.map((step, index) => (
-              <div key={step.title}>
-                <FlowConnector delay={0.12 + index * 0.11} shouldReduceMotion={shouldReduceMotion} />
-                <FlowNode
-                  {...step}
-                  delay={0.18 + index * 0.11}
-                  shouldReduceMotion={shouldReduceMotion}
-                />
-              </div>
-            ))}
-            <motion.p
-              initial={shouldReduceMotion ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.4, delay: 0.85 }}
-              className="mx-auto mt-7 w-fit rounded-full border border-border/55 bg-foreground/[0.035] px-4 py-2 text-center text-xs font-black text-muted-foreground dark:border-white/10 dark:bg-white/[0.045]"
-            >
-              Cinco telas. A mesma informação repetida.
-            </motion.p>
+        <FadeIn delay={0.14}>
+          <div
+            role="tablist"
+            aria-label="Comparar a rotina sem e com a NeuroNex"
+            className="public-glass-capsule relative isolate mx-auto mt-12 grid w-full max-w-[520px] grid-cols-2 rounded-[24px] p-1.5"
+          >
+            {workflowTabs.map((tab, index) => {
+              const isActive = activeMode === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  id={`workflow-tab-${tab.id}`}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-controls={`workflow-panel-${tab.id}`}
+                  tabIndex={isActive ? 0 : -1}
+                  onClick={() => setActiveMode(tab.id)}
+                  onKeyDown={(event) => handleTabKeyDown(event, index)}
+                  className={cn(
+                    "public-tactile relative min-h-12 rounded-[19px] px-5 text-sm font-black transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+                    isActive ? "text-background dark:text-zinc-950" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {isActive ? (
+                    <motion.span
+                      layoutId="workflow-active-tab"
+                      aria-hidden="true"
+                      className="absolute inset-0 -z-10 rounded-[19px] border border-foreground/90 bg-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.22),0_14px_34px_-22px_rgba(0,0,0,0.72)] dark:border-white dark:bg-white dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_16px_38px_-22px_rgba(0,0,0,0.86)]"
+                      transition={
+                        shouldReduceMotion
+                          ? { duration: 0 }
+                          : { type: "spring", stiffness: 430, damping: 36, mass: 0.72 }
+                      }
+                    />
+                  ) : null}
+                  <span className="relative z-10">{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
+        </FadeIn>
 
-          <div className="rounded-[40px] border border-foreground/15 bg-foreground/[0.035] p-5 shadow-[0_36px_120px_-82px_rgba(0,0,0,0.76)] dark:border-white/10 dark:bg-white/[0.035] sm:p-7 lg:p-8">
-            <div className="mb-9 flex items-center justify-between gap-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Com a NeuroNex</p>
-                <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">Você conversa com o todo.</h3>
-              </div>
-              <span className="rounded-full bg-foreground px-3 py-2 text-[9px] font-black uppercase tracking-[0.16em] text-background dark:bg-white dark:text-zinc-950">
-                Contexto conectado
-              </span>
-            </div>
-
-            <FlowNode
-              icon={Sparkles}
-              title="“Synapse, quem precisa da minha atenção hoje?”"
-              text="Um pedido em linguagem natural inicia o fluxo inteiro."
-              delay={0.08}
-              shouldReduceMotion={shouldReduceMotion}
-              emphasized
-            />
-            <FlowConnector delay={0.2} shouldReduceMotion={shouldReduceMotion} emphasized />
-            <ConnectedModuleFork shouldReduceMotion={shouldReduceMotion} />
-            <FlowNode
-              icon={Search}
-              title="Contexto cruzado"
-              text="O Synapse encontra pacientes e reúne agenda, histórico e financeiro no mesmo raciocínio."
-              delay={0.82}
+        <div className="mt-8">
+          <AnimatePresence mode="wait" initial={false}>
+            <WorkflowPanel
+              key={activeMode}
+              mode={activeMode}
               shouldReduceMotion={shouldReduceMotion}
             />
-            <FlowConnector delay={0.88} shouldReduceMotion={shouldReduceMotion} emphasized />
-            <FlowNode
-              icon={Sparkles}
-              title="Ação preparada"
-              text="Pendências e próximos passos chegam organizados, sem copiar e colar entre abas."
-              delay={0.94}
-              shouldReduceMotion={shouldReduceMotion}
-            />
-            <FlowConnector delay={1} shouldReduceMotion={shouldReduceMotion} emphasized />
-            <FlowNode
-              icon={ShieldCheck}
-              title="Você revisa e confirma"
-              text="O trabalho pesado fica pronto, mas a palavra final continua sendo sua."
-              delay={1.06}
-              shouldReduceMotion={shouldReduceMotion}
-              emphasized
-            />
-            <motion.p
-              initial={shouldReduceMotion ? false : { opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              viewport={{ once: true }}
-              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.4, delay: 1.14 }}
-              className="mx-auto mt-7 w-fit rounded-full bg-foreground px-4 py-2 text-center text-xs font-black text-background dark:bg-white dark:text-zinc-950"
-            >
-              Uma conversa. Tudo no mesmo contexto.
-            </motion.p>
-          </div>
+          </AnimatePresence>
         </div>
       </div>
     </section>

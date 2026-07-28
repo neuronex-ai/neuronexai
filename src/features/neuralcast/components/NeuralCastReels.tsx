@@ -2,6 +2,7 @@ import { ExternalLink, Instagram } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { NEURALCAST_REELS } from "../content";
+import { triggerNeuralCastTactileFeedback } from "../utils/tactile";
 import { cn } from "@/lib/utils";
 
 function ReelPhone({ index, compact = false }: { index: number; compact?: boolean }) {
@@ -45,7 +46,8 @@ function ReelPhone({ index, compact = false }: { index: number; compact?: boolea
           target="_blank"
           rel="noreferrer"
           aria-label={`Abrir ${reel.title} no Instagram`}
-          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-[#f4e8d1]/[0.20] text-[#f4e8d1] transition-colors hover:bg-[#f4e8d1] hover:text-[#17130f]"
+          className="neuralcast-tactile grid h-11 w-11 shrink-0 place-items-center rounded-full border border-[#f4e8d1]/[0.20] text-[#f4e8d1] transition-colors hover:bg-[#f4e8d1] hover:text-[#17130f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5ad69]/55"
+          onPointerDown={() => triggerNeuralCastTactileFeedback(6)}
         >
           <ExternalLink className="h-4 w-4" />
         </a>
@@ -56,7 +58,7 @@ function ReelPhone({ index, compact = false }: { index: number; compact?: boolea
 
 export function NeuralCastReelsSection({ mobile = false }: { mobile?: boolean }) {
   return (
-    <section className="relative overflow-hidden bg-[#17130f] px-0 py-24 text-[#f4e8d1] md:py-32">
+    <section id="reels" className="neuralcast-dark-section relative overflow-hidden bg-[#17130f] px-0 py-24 text-[#f4e8d1] md:py-32">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_0%,rgba(169,120,56,0.28),transparent_34%),radial-gradient(circle_at_95%_70%,rgba(234,216,183,0.12),transparent_30%)]" />
       <div className="relative mx-auto max-w-[1480px] px-5 md:px-8">
         <div className={cn("grid gap-8", mobile ? "" : "lg:grid-cols-[0.78fr_1.22fr] lg:items-end")}>
