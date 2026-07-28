@@ -22,7 +22,6 @@ import {
   MonitorPlay,
   ShieldCheck,
   Sparkles,
-  Stethoscope,
   Users,
   WalletCards,
   X,
@@ -59,12 +58,21 @@ const SectionHeader = ({ eyebrow, title, description, align = "center" }: { eyeb
 );
 
 const painPoints = [
-  { icon: CalendarDays, title: "Uma ferramenta para agendar", text: "Horários e confirmações ficam longe do prontuário e do atendimento." },
-  { icon: Stethoscope, title: "Outra para atender", text: "A sessão acontece sem levar junto o contexto que já existe na clínica." },
-  { icon: FileText, title: "Outra para registrar", text: "Notas e documentos exigem novas buscas, cópias e conferências." },
-  { icon: WalletCards, title: "Outra para cobrar", text: "Cobranças e recebimentos perdem a ligação com o paciente e a sessão." },
-  { icon: MessageCircle, title: "Outra para falar com o paciente", text: "Confirmações, tarefas e documentos se espalham por canais diferentes." },
-  { icon: BrainCircuit, title: "Outra para usar IA", text: "Uma IA apenas textual responde ao prompt; depois, o trabalho de localizar, copiar, registrar e conferir continua com você." },
+  {
+    icon: ClipboardList,
+    title: "Sua clínica inteira em 1 só lugar.",
+    text: "Agenda, prontuário e financeiro conversam entre si. Chega de alternar entre várias telas ou reescrever a mesma informação.",
+  },
+  {
+    icon: Fingerprint,
+    title: "Curva de aprendizado zero",
+    text: "Uma interface limpa e intuitiva, feita para poupar sua energia mental. Você não precisa \"estudar\" o sistema para começar a usar.",
+  },
+  {
+    icon: BrainCircuit,
+    title: "Inteligência com controle total",
+    text: "O Synapse cruza os dados e prepara as ações reais para você. Ele faz o trabalho pesado, mas você mantém a palavra final.",
+  },
 ];
 
 export const LandingProblemSection = () => (
