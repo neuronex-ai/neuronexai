@@ -3,11 +3,10 @@
 import {
   ArrowRight,
   Clock3,
-  FlaskConical,
   LayoutDashboard,
   MessageCircle,
+  Mic2,
   Sparkles,
-  Smartphone,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -25,12 +24,12 @@ const synapseChannels = [
     title: "Trabalhe pelo sistema.",
   },
   {
-    icon: Smartphone,
-    title: "Continue pelo celular.",
+    icon: Mic2,
+    title: "Peça por voz.",
   },
   {
     icon: MessageCircle,
-    title: "Peça pelo WhatsApp.",
+    title: "Continue pelo WhatsApp.",
   },
 ];
 
@@ -261,17 +260,6 @@ export function PublicSynapseCommandSection({
           <p className={cn("mt-7 text-xs font-bold", inverted ? "opacity-65" : "text-muted-foreground")}>
             Synapse na NeuroNex
           </p>
-          <span
-            className={cn(
-              "mt-4 inline-flex min-h-8 items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold",
-              inverted
-                ? "border-background/20 dark:border-zinc-950/20"
-                : "border-border text-muted-foreground",
-            )}
-          >
-            <FlaskConical aria-hidden="true" className="h-4 w-4" />
-            WhatsApp/NeuroZap · Beta
-          </span>
           <h2
             id="synapse-command-title"
             className="mx-auto mt-8 max-w-[20ch] text-balance text-4xl font-black leading-[1.02] md:text-6xl"
@@ -285,23 +273,11 @@ export function PublicSynapseCommandSection({
               inverted ? "opacity-75" : "text-muted-foreground",
             )}
           >
-            Envie texto ou áudio como em qualquer conversa. O Synapse consulta o
-            contexto da sua clínica no sistema e prepara uma ação ou te informa sobre
-            ela — você não precisa abrir o notebook nem procurar por menus.
+            No computador, por voz ou pelo WhatsApp, você conversa com o mesmo Synapse. Ele consulta o contexto da sua clínica, prepara o próximo passo e permite que você continue de onde estiver.
           </p>
 
-          <div
-            className="mx-auto mt-24 max-w-[1080px] pt-8"
-          >
-            <h3 className="text-balance text-4xl font-black leading-[1.02] tracking-tight md:text-6xl">
-              O verdadeiro
-              <br />
-              <span className={cn(inverted ? "opacity-55" : "text-muted-foreground")}>
-                significado de “tanto faz”
-              </span>
-            </h3>
-
-            <div className="mx-auto mt-12 grid max-w-[960px] gap-3 sm:grid-cols-3">
+          <div className="mx-auto mt-14 max-w-[1080px]">
+            <div className="mx-auto grid max-w-[960px] gap-3 sm:grid-cols-3">
               {synapseChannels.map((channel) => (
                 <article
                   key={channel.title}
@@ -320,8 +296,8 @@ export function PublicSynapseCommandSection({
               ))}
             </div>
 
-            <p className="mx-auto mt-9 max-w-3xl text-base font-black leading-relaxed md:text-lg">
-              Comece no sistema e continue pelo WhatsApp — ou faça o caminho inverso.
+            <p className="mx-auto mt-10 max-w-3xl text-balance text-2xl font-black leading-tight md:text-3xl">
+              O canal muda. O contexto continua.
             </p>
             <p
               className={cn(
@@ -329,9 +305,7 @@ export function PublicSynapseCommandSection({
                 inverted ? "opacity-70" : "text-muted-foreground",
               )}
             >
-              <strong className="font-black">Tanto faz, você decide.</strong>{" "}
-              A conversa pode mudar de canal, mas o contexto sempre continua,
-              independentemente de como você o acessa.
+              Comece pelo sistema e continue pelo WhatsApp — ou faça o caminho inverso. O histórico e as informações da sua clínica acompanham a conversa.
             </p>
           </div>
         </div>
@@ -418,7 +392,7 @@ export function PublicSynapseCommandSection({
             to="/synapse"
             className={cn("public-tactile mx-auto mt-8 flex min-h-12 w-fit items-center gap-2 rounded-full border px-5 text-sm font-black", inverted ? "border-background/20 dark:border-zinc-950/20" : "border-border")}
           >
-            Ver todos os 10 exemplos
+            Ver os 10 exemplos no Synapse
             <ArrowRight aria-hidden="true" className="h-4 w-4" />
           </Link>
         ) : null}

@@ -4,15 +4,17 @@ import { Footer } from "@/components/landing/Footer";
 import { Hero } from "@/components/landing/Hero";
 import { LandingSynapseSDR } from "@/components/landing/LandingSynapseSDR";
 import { LandingHorizontalProductStory } from "@/components/landing/LandingHorizontalProductStory";
+import {
+    LandingHumanControlSection,
+    LandingWorkflowDiagramSection,
+} from "@/components/landing/LandingNarrativeSections";
 import { Navbar } from "@/components/landing/Navbar";
 import {
     LandingRealProductShowcase,
 } from "@/components/landing/LandingProductScreenshots";
 import {
-    LandingDifferentiatorTable,
     LandingFinalCTASection,
     LandingOperatingSystemSection,
-    LandingPlanComparisonSection,
     LandingPublicPagesCarouselSection,
     LandingProblemSection,
     LandingTrustAndFAQSection,
@@ -22,7 +24,6 @@ import { PublicSynapseCommandSection } from "@/components/public/PublicPositioni
 import { useLandingSynapse } from "@/hooks/use-landing-synapse";
 import {
     LandingContinuityAuthoritySection,
-    LandingEcosystemAuthoritySection,
     LandingKnowledgeAuthoritySection,
 } from "@/components/landing/LandingAuthoritySections";
 
@@ -35,17 +36,16 @@ const DesktopIndex = () => {
             <main>
                 <Hero />
                 <LandingProblemSection />
-                <LandingDifferentiatorTable />
-                <LandingRealProductShowcase />
-                <LandingEcosystemAuthoritySection />
-                <LandingContinuityAuthoritySection />
                 <LandingOperatingSystemSection />
-                <PublicSynapseCommandSection variant="full" />
+                <LandingWorkflowDiagramSection />
+                <LandingHumanControlSection />
+                <PublicSynapseCommandSection variant="compact" />
+                <LandingRealProductShowcase />
+                <LandingContinuityAuthoritySection />
                 <LandingHorizontalProductStory />
-                <WaitlistSection />
-                <LandingPlanComparisonSection />
                 <LandingTrustAndFAQSection />
                 <LandingPublicPagesCarouselSection />
+                <WaitlistSection />
                 <LandingFinalCTASection />
                 <LandingKnowledgeAuthoritySection />
             </main>

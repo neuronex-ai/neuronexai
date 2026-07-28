@@ -17,12 +17,14 @@ export const Hero = () => {
 
                 <div className="mb-4 md:mb-6 pb-2">
                     <h1 className="text-balance text-[2.6rem] font-bold leading-[1.02] tracking-tight text-foreground sm:text-[3.2rem] md:text-[4rem] lg:text-[5rem]">
-                        O sistema operacional do seu consultório.
+                        Todo o seu consultório,
+                        <br />
+                        em uma única conversa.
                     </h1>
                 </div>
 
                 <p className="mb-8 max-w-4xl px-2 text-base font-medium leading-relaxed text-muted-foreground md:mb-10 md:text-xl md:leading-[1.5] lg:mb-12 lg:text-2xl">
-                    Agenda, prontuário, pacientes, atendimento e financeiro compartilham contexto. O Synapse consulta, organiza e prepara o próximo passo; você confirma o que muda.
+                    A primeira plataforma AI-Native da psicologia brasileira. Esqueça a navegação por menus: um sistema inteiro projetado para entender sua intenção e fazer o trabalho pesado por você.
                 </p>
 
                 <div className="flex w-full flex-col items-center justify-center gap-3 sm:w-auto sm:flex-row">
@@ -42,7 +44,7 @@ export const Hero = () => {
                     </Button>
                 </div>
                 <p className="mt-6 max-w-2xl text-sm font-semibold leading-relaxed text-muted-foreground">
-                    Interface limpa, cores com função e menos energia mental gasta navegando por ferramentas separadas.
+                    Você continua no controle e confirma o que muda.
                 </p>
             </div>
 

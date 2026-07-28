@@ -94,7 +94,7 @@ const productModules: ProductModule[] = [
     title: "Financeiro ligado à clínica",
     eyebrow: "Movimentações reais",
     description:
-      "Conta, Área Pix, boletos, pagamentos e saques ficam próximos da agenda e das cobranças, conforme elegibilidade da conta.",
+      "Conta, Área Pix, boletos, pagamentos e saques ficam próximos da agenda, dos pacientes e das cobranças.",
     bullets: ["Conta e saldo", "Pix e boletos", "Confirmação humana"],
     icon: CreditCard,
     mediaKey: "neurofinance",
@@ -105,7 +105,7 @@ const productModules: ProductModule[] = [
     title: "Synapse AI",
     eyebrow: "Inteligência contextual",
     description:
-      "A IA conversa com a rotina da clínica e ajuda a localizar informações, organizar tarefas e reduzir trabalho repetitivo.",
+      "A inteligência encontra pacientes, cruza informações entre módulos e prepara tarefas dentro da rotina da clínica.",
     bullets: ["Texto", "Voz", "Contexto da clínica"],
     icon: Sparkles,
     mediaKey: "synapse",
@@ -410,7 +410,7 @@ const financeCards: FinanceCard[] = [
     title: "NeuroFinance",
     eyebrow: "Movimentar dinheiro real",
     description:
-      "Conta, saldo, Área Pix, boletos, pagamentos, transferências e saques ficam em uma área financeira própria. Pontos de antecipação seguem em evolução.",
+      "Conta, saldo, Área Pix, boletos, pagamentos, transferências e saques ficam em uma área financeira própria, conectada à operação da clínica.",
     icon: WalletCards,
     items: ["Conta e saldo", "Pix e boletos", "Pagamentos"],
     media: neurofinanceMedia,

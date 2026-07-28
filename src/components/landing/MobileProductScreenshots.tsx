@@ -347,7 +347,7 @@ export const MobileRealFinanceSection = () => {
       <Heading
         eyebrow="Financeiro conectado"
         title={<>Gestão, conta e preparação fiscal com papéis claros.</>}
-        description="A Gestão Financeira ajuda a decidir. O NeuroFinance movimenta dinheiro real. A base fiscal fica organizada enquanto emissão e automações evoluem."
+        description="A Gestão Financeira ajuda a decidir. O NeuroFinance movimenta dinheiro real. Dados fiscais, cobrança e emissão permanecem no mesmo percurso operacional."
       />
 
       <div className="mt-9 grid grid-cols-3 gap-2 rounded-[22px] border border-border/40 bg-card/70 p-1.5 dark:border-white/10 dark:bg-white/[0.035]">

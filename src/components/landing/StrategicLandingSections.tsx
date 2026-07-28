@@ -80,18 +80,18 @@ export const LandingProblemSection = () => (
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <SectionHeader
         eyebrow="O problema real"
-        title={<>Se o sistema consome mais energia do que devolve, <span className="text-muted-foreground">ele falhou.</span></>}
+        title={
+          <>
+            Se o sistema consome mais
+            <br />
+            energia do que seus pacientes,
+            <br />
+            <span className="text-muted-foreground">ele falhou.</span>
+          </>
+        }
         description={(
           <>
-            <span className="block">
-              Nossa missão é provar que um sistema completo não precisa ser complexo.
-            </span>
-            <span className="mt-4 block">
-              A NeuroNex foi projetada para ser robusta e intuitiva: por meio do Synapse, nossa inteligência integrada cruza os dados de todas as abas em tempo real e conversa com você em linguagem natural.
-            </span>
-            <span className="mt-4 block">
-              Esqueça os formulários e a análise manual da sua clínica. <strong className="font-black text-foreground">Apenas converse.</strong>
-            </span>
+            Sua rotina não deveria ser um labirinto de cliques. O Synapse cruza os dados de todas as abas e faz o trabalho pesado por você em tempo real. Esqueça os formulários. <strong className="font-black text-foreground">Apenas converse.</strong>
           </>
         )}
       />
@@ -578,17 +578,19 @@ const SynapseConnectionMap = () => {
 };
 
 export const LandingOperatingSystemSection = () => (
-  <section id="sistema" className="public-section-stage public-inverted-section relative overflow-hidden px-6 py-20 text-background md:py-28 dark:text-zinc-950">
+  <section id="diferenciais" className="public-section-stage public-inverted-section relative scroll-mt-24 overflow-hidden px-6 py-20 text-background md:py-28 dark:text-zinc-950">
     <div className="relative z-10 mx-auto max-w-[1240px]">
       <div className="mx-auto max-w-5xl text-center">
         <span className="inline-flex min-h-8 items-center gap-2 rounded-full border border-zinc-800 px-4 py-1.5 text-xs font-black dark:border-zinc-200">
           <BadgeCheck className="h-4 w-4" /> Sistema operacional
         </span>
         <h2 className="mt-8 text-balance text-4xl font-bold leading-[1.02] tracking-tight md:text-6xl">
-          As partes do consultório trabalham juntas.
+          O Synapse não é um chat de canto.
+          <br />
+          Ele trabalha no sistema inteiro.
         </h2>
         <p className="mx-auto mt-7 max-w-4xl text-base font-medium leading-relaxed opacity-75 md:text-xl">
-          Agenda, prontuário, atendimento, comunicação, financeiro e preparação fiscal compartilham o mesmo contexto operacional. O Synapse conecta as partes e prepara o próximo passo, mantendo revisão e confirmação visíveis.
+          Um chat de IA genérica conhece apenas o que você digita — você pergunta, ela responde. O Synapse trabalha e executa ações dentro de todo o sistema: ele encontra pacientes, navega pelas abas em tempo real, cruza agenda, prontuário e financeiro, traz insights contextualizados e prepara tarefas reais.
         </p>
       </div>
       <SynapseConnectionMap />
@@ -877,13 +879,13 @@ export const LandingPublicPagesCarouselSection = () => (
     <div className="public-neurox-hero mx-auto max-w-[1480px] px-5 py-16 md:px-10 md:py-24">
       <div className="mx-auto max-w-5xl text-center">
         <p className="font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          Páginas públicas
+          Explore por módulo
         </p>
         <h2 className="public-neurox-title mt-7 text-balance text-[clamp(2.8rem,6vw,4.8rem)] font-black leading-[1.02] tracking-tight">
-          Uma relação que<br />começa antes da sessão.
+          Conheça cada parte<br />da sua clínica.
         </h2>
         <p className="mx-auto mt-8 max-w-3xl text-base font-semibold leading-relaxed text-muted-foreground/78 md:text-2xl">
-          Cada página explica uma parte da clínica em linguagem simples, para que você reconheça o caminho antes de escolher uma ferramenta.
+          Aprofunde-se na área que mais importa agora. Agenda, Portal, NeuroFinance e Synapse continuam ligados ao mesmo sistema.
         </p>
       </div>
 
@@ -915,7 +917,7 @@ export const LandingPublicPagesCarouselSection = () => (
 
 const faqs = [
   { q: "O NeuroNex substitui minha agenda e meu prontuário atual?", a: "A proposta é centralizar a operação clínica. Agenda, pacientes, prontuário, teleconsulta, portal, financeiro e IA passam a conversar no mesmo fluxo." },
-  { q: "O Synapse toma decisões clínicas?", a: "Não. O Synapse é uma camada de apoio operacional, documentação, organização e inteligência contextual. A decisão clínica continua sempre com o psicólogo." },
+  { q: "O Synapse toma decisões clínicas?", a: "Não. O Synapse encontra informações e prepara ações. Registros clínicos, mensagens ou movimentações importantes só são concluídos depois da revisão e autorização do psicólogo." },
   { q: "O NeuroFinance movimenta dinheiro real?", a: "Sim, quando a conta financeira é criada e aprovada. As funcionalidades de Pix, cobranças, boletos e saques operam dentro de um fluxo financeiro integrado." },
   { q: "O plano Profissional tem teste grátis?", a: "Sim. A condição de pré-lançamento prevê 7 dias grátis para o plano Profissional, além dos benefícios Founder." },
 ];
