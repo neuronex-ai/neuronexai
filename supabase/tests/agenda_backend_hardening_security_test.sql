@@ -78,15 +78,67 @@ begin
   where trigger_row.tgrelid = 'public.appointments'::regclass
     and not trigger_row.tgisinternal
     and trigger_row.tgname in (
-      'appointments_20_prepare_external_effect_state',
-      'appointments_enqueue_external_effects',
+      'appointments_20_prepare_external_effect_state_insert',
+      'appointments_20_prepare_external_effect_state_update',
+      'appointments_80_enqueue_external_effects_insert',
+      'appointments_80_enqueue_external_effects_update',
       'appointments_persist_series_default_config',
       'agenda_v2_apply_materialized_series_override',
       'appointments_persist_materialized_occurrence_override'
     );
 
-  if v_trigger_count <> 5 then
+  if v_trigger_count <> 7 then
     raise exception 'Agenda hardening appointment triggers are incomplete';
+  end if;
+
+  if not private.explicit_neurofinance_plan_is_confirmable(jsonb_build_object(
+    'action', 'create',
+    'input', jsonb_build_object(
+      'financial', jsonb_build_object('mode', 'neurofinance')
+    ),
+    'agenda', jsonb_build_object('hasConflicts', false),
+    'financial', jsonb_build_object(
+      'mode', 'neurofinance',
+      'value_per_session', 150,
+      'unsafeExternalFacts', false,
+      'packageReviewRequired', false
+    )
+  )) then
+    raise exception 'explicit valid NeuroFinance decision is not confirmable';
+  end if;
+
+  if private.explicit_neurofinance_plan_is_confirmable(jsonb_build_object(
+    'action', 'create',
+    'input', jsonb_build_object(
+      'financial', jsonb_build_object('mode', 'neurofinance')
+    ),
+    'agenda', jsonb_build_object('hasConflicts', true),
+    'financial', jsonb_build_object(
+      'mode', 'neurofinance',
+      'value_per_session', 150
+    )
+  )) then
+    raise exception 'NeuroFinance conflict review was bypassed';
+  end if;
+
+  select pg_get_functiondef(
+    'private.preview_agenda_v2_plan(uuid,jsonb)'::regprocedure
+  ) into v_function_definition;
+  if position('NOT V_IS_EVENT' in upper(v_function_definition)) = 0
+    or position('V_START <= NOW()' in upper(v_function_definition)) = 0
+    or position('APPOINTMENT_CONFLICT' in upper(v_function_definition)) = 0
+  then
+    raise exception 'Agenda V2 event validation does not preserve safety checks';
+  end if;
+
+  select pg_get_functiondef(
+    'private.validate_appointment_series(uuid,timestamptz,timestamptz,text,integer)'::regprocedure
+  ) into v_function_definition;
+  if position('V_ALLOW_OUTSIDE_WORKING_HOURS' in upper(v_function_definition)) = 0
+    or position('PAST_TIME' in upper(v_function_definition)) = 0
+    or position('APPOINTMENT_CONFLICT' in upper(v_function_definition)) = 0
+  then
+    raise exception 'single event validation does not preserve safety checks';
   end if;
 
   if not exists (
@@ -102,6 +154,8 @@ begin
 
   if to_regprocedure(
     'private.execute_appointment_action_plan_core_20260716(uuid,uuid,integer,text,text,uuid)'
+  ) is null or to_regprocedure(
+    'private.prepare_appointment_action_plan_core_20260716(uuid,text,jsonb,jsonb,text,uuid)'
   ) is null or to_regprocedure(
     'private.generate_agenda_v2_occurrences_20260718(uuid,jsonb)'
   ) is null then

@@ -3,7 +3,12 @@ import { toast } from "sonner";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { supabase } from "@/integrations/supabase/client";
-import { prepareAndExecuteAppointmentAction } from "@/lib/appointment-action-plans";
+import {
+  AppointmentPlanReviewRequiredError,
+  executeAppointmentActionPlan,
+  prepareAppointmentActionPlan,
+  type AppointmentActionPlan,
+} from "@/lib/appointment-action-plans";
 import {
   buildEventMetadata,
   getAppointmentMetadata,
@@ -15,6 +20,7 @@ import type { Appointment, Patient } from "@/types";
 export interface NewAppointmentData {
   id?: string;
   idempotency_key?: string;
+  prepared_plan?: AppointmentActionPlan;
   patient_id: string | null;
   start_time: Date;
   end_time: Date;
@@ -51,7 +57,7 @@ const resolveMetadata = (appointmentData: NewAppointmentData): AppointmentMetada
       title: appointmentData.notes || "Compromisso",
       location: appointmentData.location,
       notes: appointmentData.notes,
-      syncStatus: "pending",
+      syncStatus: "not_configured",
     });
   }
   return getAppointmentMetadata({
@@ -81,44 +87,68 @@ const loadPatientData = async (patientId: string | null, userId: string, metadat
   return patient as Partial<Patient>;
 };
 
+const appointmentPlanInput = (
+  appointmentData: NewAppointmentData,
+  metadata: AppointmentMetadata,
+) => ({
+  patient_id: appointmentData.patient_id,
+  start_time: appointmentData.start_time.toISOString(),
+  end_time: appointmentData.end_time.toISOString(),
+  frequency: "single",
+  occurrence_count: 1,
+  type: appointmentData.type,
+  notes: appointmentData.notes || null,
+  location: appointmentData.location,
+  metadata,
+  package_id: appointmentData.package_id || null,
+  communication: {
+    sendConfirmation: Boolean(appointmentData.patient_id),
+    provider: "configured",
+    template: "appointment_invitation",
+    reminderPolicy: "professional_settings",
+  },
+  financial: appointmentData.financial || {
+    mode: appointmentData.package_id ? "package" : "none",
+    value_per_session: 0,
+    total: 0,
+    charge_mode: "per_occurrence",
+  },
+  fiscal: {
+    automationEnabled: false,
+    trigger: "professional_settings",
+    potentialDocuments: appointmentData.patient_id ? 1 : 0,
+    blocked: false,
+  },
+});
+
+const prepareNewAppointment = async (appointmentData: NewAppointmentData) => {
+  const metadata = resolveMetadata(appointmentData);
+  const idempotencyKey = appointmentData.idempotency_key
+    || `professional-app:create:${appointmentData.id || crypto.randomUUID()}`;
+  return prepareAppointmentActionPlan(
+    "create",
+    appointmentPlanInput(appointmentData, metadata),
+    idempotencyKey,
+  );
+};
+
 const addAppointment = async (
   appointmentData: NewAppointmentData,
   userId: string,
 ): Promise<AppointmentCreationResult> => {
   const metadata = resolveMetadata(appointmentData);
 
-  const idempotencyKey = appointmentData.idempotency_key
-      || `professional-app:create:${appointmentData.id || crypto.randomUUID()}`;
-    const plan = await prepareAndExecuteAppointmentAction("create", {
-      patient_id: appointmentData.patient_id,
-      start_time: appointmentData.start_time.toISOString(),
-      end_time: appointmentData.end_time.toISOString(),
-      frequency: "single",
-      occurrence_count: 1,
-      type: appointmentData.type,
-      notes: appointmentData.notes || null,
-      location: appointmentData.location,
-      metadata,
-      package_id: appointmentData.package_id || null,
-      communication: {
-        sendConfirmation: Boolean(appointmentData.patient_id),
-        provider: "configured",
-        template: "appointment_invitation",
-        reminderPolicy: "professional_settings",
-      },
-      financial: appointmentData.financial || {
-        mode: appointmentData.package_id ? "package" : "none",
-        value_per_session: 0,
-        total: 0,
-        charge_mode: "per_occurrence",
-      },
-      fiscal: {
-        automationEnabled: false,
-        trigger: "professional_settings",
-        potentialDocuments: appointmentData.patient_id ? 1 : 0,
-        blocked: false,
-      },
-    }, idempotencyKey);
+  const prepared = appointmentData.prepared_plan || await prepareNewAppointment(appointmentData);
+  if (prepared.status === "review_required") {
+    throw new AppointmentPlanReviewRequiredError(prepared);
+  }
+  if (prepared.status !== "awaiting_confirmation") {
+    throw new Error("O plano não está disponível para confirmação. Revise o resumo novamente.");
+  }
+  const plan = await executeAppointmentActionPlan(prepared);
+  if (plan.status !== "completed") {
+    throw new Error("Os dados mudaram durante a confirmação. Revise o agendamento atualizado.");
+  }
 
     const result = plan.result || {};
     const appointmentIds = Array.isArray(result.appointmentIds)
@@ -150,7 +180,7 @@ export const useAddAppointment = () => {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: (data: NewAppointmentData) => {
       if (!user?.id) throw new Error("Usuário não autenticado.");
       return addAppointment(data, user.id);
@@ -182,4 +212,12 @@ export const useAddAppointment = () => {
       toast.error(getUserFacingErrorMessage(error, "save"));
     },
   });
+
+  return {
+    ...mutation,
+    prepareAsync: (data: NewAppointmentData) => {
+      if (!user?.id) throw new Error("Usuário não autenticado.");
+      return prepareNewAppointment(data);
+    },
+  };
 };

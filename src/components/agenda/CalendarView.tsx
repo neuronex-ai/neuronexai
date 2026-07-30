@@ -33,6 +33,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { NewAppointmentModal } from "./NewAppointmentModal";
+import {
+    AppointmentRescheduleConflictDialog,
+    type RescheduleConflict,
+} from "./AppointmentRescheduleConflictDialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth/SessionContextProvider";
@@ -40,7 +44,10 @@ import { useNavigate } from "react-router-dom";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
 import { getAppointmentStatusMeta } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
-import { prepareAppointmentActionPlan } from "@/lib/appointment-action-plans";
+import {
+    getAppointmentPlanIssues,
+    prepareAppointmentActionPlan,
+} from "@/lib/appointment-action-plans";
 import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
 import { requestAppointmentPlanReview } from "@/lib/appointment-plan-review";
 import { isWaitlistAppointment } from "@/lib/appointment-metadata";
@@ -126,6 +133,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const [activeId, setActiveId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
     const [isPreparingReschedule, setIsPreparingReschedule] = useState(false);
+    const [rescheduleConflict, setRescheduleConflict] = useState<RescheduleConflict | null>(null);
     const rescheduleInFlightRef = useRef(false);
     const dragIdempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
     const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
@@ -273,17 +281,24 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 throw new Error("O novo horário não está disponível para revisão.");
             }
 
+            if (plan.status === "review_required") {
+                setRescheduleConflict({
+                    appointment,
+                    requestedStart: newStart.toISOString(),
+                    requestedEnd: newEnd.toISOString(),
+                    issues: getAppointmentPlanIssues(plan),
+                });
+                toast.info("O horário entrou em conflito. O Synapse está buscando um encaixe próximo.");
+                return;
+            }
+
             requestAppointmentPlanReview({
                 planId: plan.planId,
                 planVersion: plan.planVersion,
                 planHash: plan.planHash,
                 originChannel: "professional_app",
             });
-            toast.info(
-                plan.status === "review_required"
-                    ? "O novo horário precisa de uma revisão adicional."
-                    : "Revise o novo horário antes de concluir o reagendamento.",
-            );
+            toast.info("Revise o novo horário antes de concluir o reagendamento.");
         } catch (error) {
             toast.error(getAppointmentPlanErrorMessage(error, "reschedule"));
         } finally {
@@ -650,6 +665,21 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                         open={!!newAppointmentDate}
                     />
                 )}
+
+                <AppointmentRescheduleConflictDialog
+                    conflict={rescheduleConflict}
+                    onOpenChange={(open) => {
+                        if (!open) setRescheduleConflict(null);
+                    }}
+                    onPlanReady={(plan) => {
+                        requestAppointmentPlanReview({
+                            planId: plan.planId,
+                            planVersion: plan.planVersion,
+                            planHash: plan.planHash,
+                            originChannel: "professional_app",
+                        });
+                    }}
+                />
             </div>
 
             {isMounted && createPortal(

@@ -203,6 +203,20 @@ begin
       and effect.attempts < effect.max_attempts
       and (p_effect_type is null or effect.effect_type = p_effect_type)
       and (p_outbox_id is null or effect.id = p_outbox_id)
+      and not exists (
+        select 1
+        from private.appointment_effect_outbox predecessor
+        where predecessor.appointment_id = effect.appointment_id
+          and predecessor.effect_type = effect.effect_type
+          and (predecessor.created_at, predecessor.id) < (effect.created_at, effect.id)
+          and (
+            predecessor.status in ('pending', 'processing', 'waiting_connection')
+            or (
+              predecessor.status = 'failed'
+              and predecessor.attempts < predecessor.max_attempts
+            )
+          )
+      )
     order by effect.next_attempt_at, effect.created_at, effect.id
     limit case
       when p_outbox_id is null then least(greatest(coalesce(p_limit, 20), 1), 100)
@@ -401,23 +415,11 @@ begin
     raise exception 'Invalid Google sync status' using errcode = '22023';
   end if;
 
-  -- Read the immutable routing columns first, then follow the global lock
-  -- order: appointment row -> appointment advisory -> outbox row.
-  select effect.* into v_effect
-  from private.appointment_effect_outbox effect
-  where effect.id = p_outbox_id;
-
-  if not found
-    or v_effect.effect_type <> 'google_sync'
-    or v_effect.appointment_id <> p_appointment_id
-  then
-    raise exception 'Google sync effect not found' using errcode = 'P0002';
-  end if;
-
+  -- Follow the same lock order as cancellation: appointment -> advisory ->
+  -- outbox. This prevents worker/cancellation deadlocks after provider I/O.
   select appointment.* into v_appointment
   from public.appointments appointment
   where appointment.id = p_appointment_id
-    and appointment.user_id = v_effect.professional_id
   for update;
 
   if not found then
@@ -434,6 +436,7 @@ begin
     and effect.appointment_id = p_appointment_id
     and effect.appointment_revision = p_revision
     and effect.effect_type = 'google_sync'
+    and effect.professional_id = v_appointment.user_id
     and effect.status = 'processing'
     and effect.lease_token = p_lease_token
   for update;
@@ -606,6 +609,33 @@ $$;
 revoke all on function private.appointment_google_relevant_metadata(jsonb)
   from public, anon, authenticated, service_role;
 
+create or replace function private.appointment_google_state_fingerprint(
+  p_appointment public.appointments
+)
+returns text
+language sql
+immutable
+set search_path = pg_catalog, extensions
+as $$
+  select encode(digest(jsonb_build_object(
+    'startTime', p_appointment.start_time,
+    'endTime', p_appointment.end_time,
+    'type', p_appointment.type,
+    'location', p_appointment.location,
+    'notes', p_appointment.notes,
+    'lifecycleStatus', p_appointment.lifecycle_status,
+    'status', p_appointment.status,
+    'googleEventId', p_appointment.google_event_id,
+    'metadata', private.appointment_google_relevant_metadata(
+      p_appointment.metadata
+    )
+  )::text, 'sha256'), 'hex');
+$$;
+
+revoke all on function private.appointment_google_state_fingerprint(
+  public.appointments
+) from public, anon, authenticated, service_role;
+
 -- Merge only professional-editable clinical fields. Provider state,
 -- provenance and finance keys cannot be overwritten by a stale browser row.
 create or replace function public.patch_appointment_clinical_details(
@@ -758,20 +788,34 @@ begin
   end if;
 
   v_google_connected := private.appointment_has_google_connection(new.user_id);
-  v_google_origin := new.action_origin = 'google_calendar'
-    or lower(coalesce(new.metadata ->> 'origin', '')) = 'google';
+  -- Historical provenance (for example action_origin=google_calendar on an
+  -- imported row) must not suppress a later local edit. The poller advances a
+  -- mutation marker in audit_metadata for each inbound provider write.
+  v_google_origin := (
+    tg_op = 'INSERT'
+    and (
+      new.action_origin = 'google_calendar'
+      or lower(coalesce(new.metadata ->> 'origin', '')) in ('google', 'google_calendar')
+    )
+  ) or (
+    tg_op = 'UPDATE'
+    and lower(coalesce(new.audit_metadata ->> 'source', '')) = 'google_calendar_poll'
+    and nullif(new.audit_metadata ->> 'googleMutationMarker', '') is not null
+    and (new.audit_metadata ->> 'googleMutationMarker')
+      is distinct from (old.audit_metadata ->> 'googleMutationMarker')
+  );
 
   new.metadata := new.metadata || jsonb_build_object(
     'syncStatus', case
-      when v_google_origin or new.google_event_id is not null
-        and not v_schedule_changed then 'synced'
+      when v_google_origin then 'synced'
+      when new.google_event_id is not null and not v_schedule_changed then 'synced'
       when v_google_connected then 'queued'
       when new.google_event_id is not null then 'queued'
       else 'not_configured'
     end,
     'googleSyncState', case
-      when v_google_origin or new.google_event_id is not null
-        and not v_schedule_changed then 'synced'
+      when v_google_origin then 'synced'
+      when new.google_event_id is not null and not v_schedule_changed then 'synced'
       when v_google_connected then 'queued'
       when new.google_event_id is not null then 'queued'
       else 'not_configured'
@@ -787,8 +831,15 @@ revoke all on function private.prepare_appointment_external_effect_state()
 
 drop trigger if exists appointments_20_prepare_external_effect_state
   on public.appointments;
-create trigger appointments_20_prepare_external_effect_state
-before insert or update of
+drop trigger if exists appointments_20_prepare_external_effect_state_insert
+  on public.appointments;
+drop trigger if exists appointments_20_prepare_external_effect_state_update
+  on public.appointments;
+create trigger appointments_20_prepare_external_effect_state_insert
+before insert on public.appointments
+for each row execute function private.prepare_appointment_external_effect_state();
+create trigger appointments_20_prepare_external_effect_state_update
+before update of
   start_time, end_time, type, location, notes, lifecycle_status, metadata, google_event_id
 on public.appointments
 for each row execute function private.prepare_appointment_external_effect_state();
@@ -812,6 +863,7 @@ declare
   v_payment_method text;
   v_due_date date;
   v_operation_id text;
+  v_google_state_fingerprint text;
 begin
   v_cancelled := new.lifecycle_status = 'cancelled'
     or lower(coalesce(new.status, '')) in ('cancelled', 'canceled', 'cancelled_by_patient');
@@ -836,6 +888,7 @@ begin
     else 'update'
   end;
   v_google_connected := private.appointment_has_google_connection(new.user_id);
+  v_google_state_fingerprint := private.appointment_google_state_fingerprint(new);
 
   if v_cancelled then
     update private.appointment_effect_outbox effect
@@ -847,8 +900,10 @@ begin
       last_error = 'appointment_cancelled',
       updated_at = now()
     where effect.appointment_id = new.id
-      and effect.effect_type in ('teleconsultation_room', 'neurofinance_charge')
-      and effect.status in ('pending', 'failed', 'waiting_connection', 'processing');
+      and effect.effect_type in (
+        'google_sync', 'teleconsultation_room', 'neurofinance_charge'
+      )
+      and effect.status in ('pending', 'failed', 'waiting_connection');
   end if;
 
   if lower(coalesce(new.metadata ->> 'syncStatus', '')) = 'queued'
@@ -864,10 +919,11 @@ begin
         'appointmentId', new.id,
         'appointmentRevision', v_revision,
         'operation', v_operation,
-        'googleEventId', new.google_event_id
+        'googleEventId', new.google_event_id,
+        'stateFingerprint', v_google_state_fingerprint
       )),
       'appointment:' || new.id::text || ':revision:' || v_revision::text
-        || ':google:' || v_operation,
+        || ':google:' || v_operation || ':' || v_google_state_fingerprint,
       case when v_google_connected then 'pending' else 'waiting_connection' end
     );
   end if;
@@ -955,8 +1011,15 @@ revoke all on function private.enqueue_appointment_external_effects()
 
 drop trigger if exists appointments_enqueue_external_effects
   on public.appointments;
-create trigger appointments_enqueue_external_effects
-after insert or update of start_time, end_time, type, location, notes, lifecycle_status, metadata
+drop trigger if exists appointments_80_enqueue_external_effects_insert
+  on public.appointments;
+drop trigger if exists appointments_80_enqueue_external_effects_update
+  on public.appointments;
+create trigger appointments_80_enqueue_external_effects_insert
+after insert on public.appointments
+for each row execute function private.enqueue_appointment_external_effects();
+create trigger appointments_80_enqueue_external_effects_update
+after update of start_time, end_time, type, location, notes, lifecycle_status, metadata
 on public.appointments
 for each row execute function private.enqueue_appointment_external_effects();
 
@@ -971,6 +1034,7 @@ as $$
 declare
   v_appointment public.appointments%rowtype;
   v_operation text;
+  v_google_state_fingerprint text;
 begin
   update private.appointment_effect_outbox effect
   set status = 'pending', next_attempt_at = now(), updated_at = now()
@@ -993,6 +1057,9 @@ begin
       then 'cancel'
       else 'update'
     end;
+    v_google_state_fingerprint := private.appointment_google_state_fingerprint(
+      v_appointment
+    );
 
     perform private.enqueue_appointment_effect(
       v_appointment.user_id,
@@ -1004,11 +1071,12 @@ begin
         'appointmentId', v_appointment.id,
         'appointmentRevision', greatest(coalesce(v_appointment.confirmation_revision, 1), 1),
         'operation', v_operation,
-        'googleEventId', v_appointment.google_event_id
+        'googleEventId', v_appointment.google_event_id,
+        'stateFingerprint', v_google_state_fingerprint
       )),
       'appointment:' || v_appointment.id::text || ':revision:'
         || greatest(coalesce(v_appointment.confirmation_revision, 1), 1)::text
-        || ':google:' || v_operation
+        || ':google:' || v_operation || ':' || v_google_state_fingerprint
     );
   end loop;
 
@@ -1032,9 +1100,417 @@ begin
 end
 $$;
 
+-- The canonical event command sets this transaction-local flag. It bypasses
+-- only clinical working hours; future-time, duration and overlap checks remain
+-- exactly the same as for a session.
+create or replace function private.validate_appointment_series(
+  p_psychologist_id uuid,
+  p_start_time timestamptz,
+  p_end_time timestamptz,
+  p_frequency text,
+  p_occurrence_count integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_working_hours jsonb;
+  v_day_config jsonb;
+  v_duration interval;
+  v_duration_minutes integer;
+  v_occurrence_start timestamptz;
+  v_occurrence_end timestamptz;
+  v_occurrence jsonb;
+  v_occurrences jsonb := '[]'::jsonb;
+  v_conflicts jsonb := '[]'::jsonb;
+  v_reason_code text;
+  v_reason text;
+  v_day_key text;
+  v_index integer;
+  v_last_start_time timestamptz;
+  v_timezone text := 'America/Sao_Paulo';
+  v_allow_outside_working_hours boolean := lower(coalesce(
+    current_setting('app.agenda_event_bypass_working_hours', true),
+    'off'
+  )) in ('on', 'true', '1');
+begin
+  if p_psychologist_id is null then
+    raise exception 'Professional is required' using errcode = '22023';
+  end if;
+  if p_start_time is null or p_end_time is null or p_end_time <= p_start_time then
+    raise exception 'Choose a valid start and end time' using errcode = '22023';
+  end if;
+  select coalesce(version.timezone, 'America/Sao_Paulo')
+  into v_timezone
+  from public.professional_availability_versions version
+  where version.professional_id = p_psychologist_id
+    and version.effective_from <= p_start_time
+  order by version.effective_from desc, version.version_number desc
+  limit 1;
+  v_timezone := coalesce(v_timezone, 'America/Sao_Paulo');
+
+  if (p_start_time at time zone v_timezone)::date
+    <> (p_end_time at time zone v_timezone)::date
+  then
+    raise exception 'Appointments must start and end on the same day' using errcode = '22023';
+  end if;
+  if p_frequency not in ('single', 'weekly', 'biweekly', 'monthly') then
+    raise exception 'Unsupported recurrence frequency' using errcode = '22023';
+  end if;
+  if p_occurrence_count not between 1 and 20 then
+    raise exception 'Occurrence count must be between 1 and 20' using errcode = '22023';
+  end if;
+  if p_frequency = 'single' and p_occurrence_count <> 1 then
+    raise exception 'A single appointment must have exactly one occurrence' using errcode = '22023';
+  end if;
+  if p_frequency <> 'single' and p_occurrence_count < 2 then
+    raise exception 'A recurring series must have at least two occurrences' using errcode = '22023';
+  end if;
+
+  v_duration := p_end_time - p_start_time;
+  v_duration_minutes := extract(epoch from v_duration)::integer / 60;
+  if v_duration_minutes not between 15 and 1440 then
+    raise exception 'Appointment duration must be between 15 and 1440 minutes' using errcode = '22023';
+  end if;
+
+  select coalesce(profile.working_hours, '{}'::jsonb)
+  into v_working_hours
+  from public.profiles profile
+  where profile.id = p_psychologist_id;
+
+  if not found then
+    raise exception 'Professional profile not found' using errcode = 'P0002';
+  end if;
+
+  for v_index in 1..p_occurrence_count loop
+    v_occurrence_start := case p_frequency
+      when 'weekly' then p_start_time + ((v_index - 1) * interval '7 days')
+      when 'biweekly' then p_start_time + ((v_index - 1) * interval '14 days')
+      when 'monthly' then p_start_time + make_interval(months => v_index - 1)
+      else p_start_time
+    end;
+    v_occurrence_end := v_occurrence_start + v_duration;
+    v_last_start_time := v_occurrence_start;
+    v_reason_code := null;
+    v_reason := null;
+
+    if v_occurrence_start <= now() then
+      v_reason_code := 'past_time';
+      v_reason := 'A data ou o horÃ¡rio jÃ¡ passou.';
+    elsif (v_occurrence_start at time zone v_timezone)::date
+      <> (v_occurrence_end at time zone v_timezone)::date
+    then
+      v_reason_code := 'crosses_day';
+      v_reason := 'A sessÃ£o precisa comeÃ§ar e terminar no mesmo dia.';
+    else
+      v_day_key := extract(
+        dow from v_occurrence_start at time zone v_timezone
+      )::integer::text;
+      v_day_config := v_working_hours -> v_day_key;
+
+      if not v_allow_outside_working_hours
+        and not coalesce((v_day_config ->> 'enabled')::boolean, false)
+      then
+        v_reason_code := 'outside_working_day';
+        v_reason := 'O profissional nÃ£o atende neste dia.';
+      elsif not v_allow_outside_working_hours
+        and (
+          coalesce(v_day_config ->> 'start', '') !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+          or coalesce(v_day_config ->> 'end', '') !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
+        )
+      then
+        v_reason_code := 'invalid_working_hours';
+        v_reason := 'A disponibilidade do profissional precisa ser revisada.';
+      elsif not v_allow_outside_working_hours
+        and (
+          (v_occurrence_start at time zone v_timezone)::time
+            < (v_day_config ->> 'start')::time
+          or (v_occurrence_end at time zone v_timezone)::time
+            > (v_day_config ->> 'end')::time
+        )
+      then
+        v_reason_code := 'outside_working_hours';
+        v_reason := 'O horÃ¡rio estÃ¡ fora do expediente do profissional.';
+      elsif exists (
+        select 1
+        from public.appointments conflict
+        where conflict.user_id = p_psychologist_id
+          and conflict.start_time is not null
+          and conflict.end_time is not null
+          and coalesce(conflict.lifecycle_status, 'created') <> 'cancelled'
+          and lower(coalesce(conflict.status, '')) not in (
+            'cancelled', 'canceled',
+            'cancelled_by_patient', 'cancelled_by_professional'
+          )
+          and conflict.start_time < v_occurrence_end
+          and conflict.end_time > v_occurrence_start
+      ) then
+        v_reason_code := 'appointment_conflict';
+        v_reason := 'JÃ¡ existe um compromisso neste horÃ¡rio.';
+      end if;
+    end if;
+
+    v_occurrence := jsonb_build_object(
+      'occurrenceNumber', v_index,
+      'startTime', v_occurrence_start,
+      'endTime', v_occurrence_end,
+      'status', case when v_reason_code is null then 'available' else 'conflict' end,
+      'reasonCode', v_reason_code,
+      'reason', v_reason
+    );
+    v_occurrences := v_occurrences || jsonb_build_array(v_occurrence);
+    if v_reason_code is not null then
+      v_conflicts := v_conflicts || jsonb_build_array(v_occurrence);
+    end if;
+  end loop;
+
+  return jsonb_build_object(
+    'valid', jsonb_array_length(v_conflicts) = 0,
+    'frequency', p_frequency,
+    'totalOccurrences', p_occurrence_count,
+    'durationMinutes', v_duration_minutes,
+    'firstStartTime', p_start_time,
+    'lastStartTime', v_last_start_time,
+    'occurrences', v_occurrences,
+    'conflicts', v_conflicts
+  );
+end;
+$$;
+
+revoke all on function private.validate_appointment_series(
+  uuid, timestamptz, timestamptz, text, integer
+) from public, anon, authenticated, service_role;
+
 -- ---------------------------------------------------------------------------
 -- Preserve single-action-plan metadata and provenance
 -- ---------------------------------------------------------------------------
+
+create or replace function private.explicit_neurofinance_plan_is_confirmable(
+  p_snapshot jsonb
+)
+returns boolean
+language sql
+immutable
+set search_path = pg_catalog
+as $$
+  select
+    p_snapshot ->> 'action' = 'create'
+    and p_snapshot #>> '{input,financial,mode}' = 'neurofinance'
+    and p_snapshot #>> '{financial,mode}' = 'neurofinance'
+    and not coalesce((p_snapshot #>> '{agenda,hasConflicts}')::boolean, false)
+    and not coalesce((p_snapshot #>> '{financial,unsafeExternalFacts}')::boolean, false)
+    and not coalesce((p_snapshot #>> '{financial,packageReviewRequired}')::boolean, false)
+    and coalesce(
+      nullif(p_snapshot #>> '{financial,value_per_session}', ''),
+      nullif(p_snapshot #>> '{financial,amount}', ''),
+      nullif(p_snapshot #>> '{financial,transactionAmount}', ''),
+      ''
+    ) ~ '^[0-9]+([.][0-9]{1,2})?$'
+    and coalesce(
+      nullif(p_snapshot #>> '{financial,value_per_session}', ''),
+      nullif(p_snapshot #>> '{financial,amount}', ''),
+      nullif(p_snapshot #>> '{financial,transactionAmount}', ''),
+      '0'
+    )::numeric > 0;
+$$;
+
+revoke all on function private.explicit_neurofinance_plan_is_confirmable(jsonb)
+  from public, anon, authenticated, service_role;
+
+-- The legacy guard made the blanket NeuroFinance review impossible to confirm.
+-- Permit only this narrowly-defined normalization; immutable facts and every
+-- genuine conflict/risk review remain protected.
+create or replace function private.guard_appointment_action_plan_mutation()
+returns trigger
+language plpgsql
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_neurofinance_normalization boolean :=
+    old.status = 'review_required'
+    and new.status = 'awaiting_confirmation'
+    and private.explicit_neurofinance_plan_is_confirmable(old.immutable_snapshot);
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'Appointment action plans cannot be deleted';
+  end if;
+
+  if
+    new.id is distinct from old.id
+    or new.plan_id is distinct from old.plan_id
+    or new.plan_version is distinct from old.plan_version
+    or new.plan_hash is distinct from old.plan_hash
+    or new.snapshot_version is distinct from old.snapshot_version
+    or new.action is distinct from old.action
+    or new.professional_id is distinct from old.professional_id
+    or new.patient_id is distinct from old.patient_id
+    or (
+      new.appointment_id is distinct from old.appointment_id
+      and not (
+        old.action = 'create'
+        and old.appointment_id is null
+        and new.appointment_id is not null
+        and old.status = 'executing'
+      )
+    )
+    or (
+      new.series_id is distinct from old.series_id
+      and not (
+        old.action = 'create'
+        and old.series_id is null
+        and new.series_id is not null
+        and old.status = 'executing'
+      )
+    )
+    or new.origin_channel is distinct from old.origin_channel
+    or new.conversation_id is distinct from old.conversation_id
+    or new.voice_session_id is distinct from old.voice_session_id
+    or new.whatsapp_message_id is distinct from old.whatsapp_message_id
+    or new.tool_call is distinct from old.tool_call
+    or new.correlation_id is distinct from old.correlation_id
+    or new.immutable_snapshot is distinct from old.immutable_snapshot
+    or (
+      new.safe_summary is distinct from old.safe_summary
+      and not v_neurofinance_normalization
+    )
+    or new.idempotency_key is distinct from old.idempotency_key
+    or new.created_at is distinct from old.created_at
+    or new.expires_at is distinct from old.expires_at
+  then
+    raise exception 'Immutable appointment plan facts cannot change';
+  end if;
+
+  if new.status is distinct from old.status and not (
+    (old.status in ('prepared', 'awaiting_confirmation', 'review_required')
+      and new.status in ('confirmed', 'cancelled', 'expired', 'superseded', 'failed'))
+    or (old.status = 'confirmed' and new.status in ('executing', 'cancelled', 'expired', 'failed'))
+    or (old.status = 'executing' and new.status in ('completed', 'review_required', 'failed'))
+    or v_neurofinance_normalization
+  ) then
+    raise exception 'Invalid appointment plan status transition';
+  end if;
+
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+revoke all on function private.guard_appointment_action_plan_mutation()
+  from public, anon, authenticated, service_role;
+
+alter function private.prepare_appointment_action_plan_core(
+  uuid, text, jsonb, jsonb, text, uuid
+) rename to prepare_appointment_action_plan_core_20260716;
+
+create or replace function private.prepare_appointment_action_plan_core(
+  p_professional_id uuid,
+  p_action text,
+  p_input jsonb,
+  p_provenance jsonb,
+  p_idempotency_key text,
+  p_plan_id uuid default null
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, extensions
+as $$
+declare
+  v_response jsonb;
+  v_plan public.appointment_action_plans%rowtype;
+  v_normalized_action text := lower(coalesce(p_action, ''));
+  v_is_event boolean;
+  v_previous_bypass text := current_setting(
+    'app.agenda_event_bypass_working_hours',
+    true
+  );
+begin
+  v_is_event := v_normalized_action in ('create', 'create_appointment')
+    and (
+      lower(coalesce(p_input ->> 'type', '')) = 'block'
+      or lower(coalesce(p_input #>> '{metadata,kind}', '')) = 'event'
+    );
+
+  begin
+    if v_is_event then
+      perform set_config('app.agenda_event_bypass_working_hours', 'on', true);
+    end if;
+
+    v_response := private.prepare_appointment_action_plan_core_20260716(
+      p_professional_id,
+      p_action,
+      p_input,
+      p_provenance,
+      p_idempotency_key,
+      p_plan_id
+    );
+  exception when others then
+    if v_is_event then
+      perform set_config(
+        'app.agenda_event_bypass_working_hours',
+        coalesce(nullif(v_previous_bypass, ''), 'off'),
+        true
+      );
+    end if;
+    raise;
+  end;
+
+  if v_is_event then
+    perform set_config(
+      'app.agenda_event_bypass_working_hours',
+      coalesce(nullif(v_previous_bypass, ''), 'off'),
+      true
+    );
+  end if;
+
+  select plan.* into v_plan
+  from public.appointment_action_plans plan
+  where plan.plan_id = nullif(v_response ->> 'planId', '')::uuid
+    and plan.plan_version = (v_response ->> 'planVersion')::integer
+    and plan.professional_id = p_professional_id
+  for update;
+
+  if found
+    and v_plan.status = 'review_required'
+    and private.explicit_neurofinance_plan_is_confirmable(v_plan.immutable_snapshot)
+  then
+    update public.appointment_action_plans plan
+    set
+      status = 'awaiting_confirmation',
+      safe_summary = private.appointment_action_plan_safe_summary(
+        plan.immutable_snapshot,
+        'awaiting_confirmation'
+      )
+    where plan.id = v_plan.id
+    returning plan.* into v_plan;
+
+    perform private.append_appointment_action_plan_event(
+      v_plan,
+      'explicit_neurofinance_decision_confirmable',
+      'review_required',
+      'awaiting_confirmation',
+      'system',
+      p_professional_id,
+      v_plan.origin_channel,
+      null,
+      v_plan.idempotency_key || ':v' || v_plan.plan_version::text
+        || ':neurofinance-confirmable',
+      jsonb_build_object('reason', 'explicit_financial_decision')
+    );
+
+    v_response := private.safe_appointment_action_plan(v_plan);
+  end if;
+
+  return v_response;
+end;
+$$;
+
+revoke all on function private.prepare_appointment_action_plan_core(
+  uuid, text, jsonb, jsonb, text, uuid
+) from public, anon, authenticated, service_role;
 
 alter function private.execute_appointment_action_plan_core(
   uuid, uuid, integer, text, text, uuid
@@ -1065,15 +1541,56 @@ declare
   v_created_appointment public.appointments%rowtype;
   v_amount_cents bigint;
   v_neurofinance_operation_id text;
-begin
-  v_response := private.execute_appointment_action_plan_core_20260716(
-    p_professional_id,
-    p_plan_id,
-    p_plan_version,
-    p_plan_hash,
-    p_confirmation_channel,
-    p_conversation_id
+  v_is_event boolean := false;
+  v_previous_bypass text := current_setting(
+    'app.agenda_event_bypass_working_hours',
+    true
   );
+begin
+  select plan.* into v_plan
+  from public.appointment_action_plans plan
+  where plan.plan_id = p_plan_id
+    and plan.plan_version = p_plan_version
+    and plan.professional_id = p_professional_id;
+
+  v_is_event := found
+    and v_plan.action = 'create'
+    and (
+      lower(coalesce(v_plan.immutable_snapshot #>> '{input,type}', '')) = 'block'
+      or lower(coalesce(v_plan.immutable_snapshot #>> '{input,metadata,kind}', '')) = 'event'
+  );
+
+  begin
+    if v_is_event then
+      perform set_config('app.agenda_event_bypass_working_hours', 'on', true);
+    end if;
+
+    v_response := private.execute_appointment_action_plan_core_20260716(
+      p_professional_id,
+      p_plan_id,
+      p_plan_version,
+      p_plan_hash,
+      p_confirmation_channel,
+      p_conversation_id
+    );
+  exception when others then
+    if v_is_event then
+      perform set_config(
+        'app.agenda_event_bypass_working_hours',
+        coalesce(nullif(v_previous_bypass, ''), 'off'),
+        true
+      );
+    end if;
+    raise;
+  end;
+
+  if v_is_event then
+    perform set_config(
+      'app.agenda_event_bypass_working_hours',
+      coalesce(nullif(v_previous_bypass, ''), 'off'),
+      true
+    );
+  end if;
 
   select plan.* into v_plan
   from public.appointment_action_plans plan
@@ -1293,6 +1810,203 @@ $$;
 revoke all on function private.generate_agenda_v2_occurrences(uuid, jsonb)
   from public, anon, authenticated, service_role;
 
+create or replace function private.preview_agenda_v2_plan(
+  p_professional_id uuid,
+  p_input jsonb
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_patient_id uuid := nullif(p_input ->> 'patient_id', '')::uuid;
+  v_package_id uuid := nullif(p_input #>> '{financial,package_id}', '')::uuid;
+  v_package public.patient_packages%rowtype;
+  v_package_balance integer;
+  v_occurrence_index integer := 0;
+  v_occurrences jsonb;
+  v_checked jsonb := '[]'::jsonb;
+  v_conflicts jsonb := '[]'::jsonb;
+  v_item jsonb;
+  v_start timestamptz;
+  v_end timestamptz;
+  v_local_date date;
+  v_end_local_date date;
+  v_reason_code text;
+  v_reason text;
+  v_version_id uuid;
+  v_financial jsonb := '{}'::jsonb;
+  v_timezone text := coalesce(
+    nullif(p_input ->> 'timezone', ''),
+    'America/Sao_Paulo'
+  );
+  v_is_event boolean := lower(coalesce(p_input ->> 'type', '')) = 'block'
+    or lower(coalesce(p_input #>> '{metadata,kind}', '')) = 'event';
+begin
+  if v_patient_id is not null and not exists (
+    select 1 from public.patients patient
+    where patient.id = v_patient_id
+      and patient.user_id = p_professional_id
+  ) then
+    raise exception 'Paciente nÃ£o encontrado.' using errcode = '42501';
+  end if;
+
+  if v_package_id is not null then
+    select package.*
+    into v_package
+    from public.patient_packages package
+    where package.id = v_package_id
+      and package.user_id = p_professional_id
+      and package.patient_id = v_patient_id;
+
+    if not found then
+      raise exception 'Pacote nÃ£o encontrado para este paciente.' using errcode = 'P0002';
+    end if;
+    if v_package.package_status <> 'active'
+      or lower(coalesce(v_package.active, 'true')) not in ('true', '1', 'yes', 'active')
+      or (v_package.end_date is not null and v_package.end_date < current_date)
+    then
+      raise exception 'O pacote nÃ£o estÃ¡ ativo ou estÃ¡ fora da validade.' using errcode = '22023';
+    end if;
+
+    v_package_balance := greatest(
+      v_package.total_sessions - v_package.sessions_used - v_package.sessions_reserved,
+      0
+    );
+  end if;
+
+  v_occurrences := private.generate_agenda_v2_occurrences(p_professional_id, p_input);
+  if jsonb_array_length(v_occurrences) = 0 then
+    raise exception 'A regra nÃ£o gerou nenhuma sessÃ£o.' using errcode = '22023';
+  end if;
+  v_version_id := private.agenda_v2_availability_version(
+    p_professional_id,
+    (v_occurrences -> 0 ->> 'startTime')::timestamptz
+  );
+
+  for v_item in select value from jsonb_array_elements(v_occurrences)
+  loop
+    v_occurrence_index := v_occurrence_index + 1;
+    v_start := (v_item ->> 'startTime')::timestamptz;
+    v_end := (v_item ->> 'endTime')::timestamptz;
+    v_local_date := (v_start at time zone v_timezone)::date;
+    v_end_local_date := (v_end at time zone v_timezone)::date;
+    v_reason_code := null;
+    v_reason := null;
+
+    if v_start <= now() then
+      v_reason_code := 'past_time';
+      v_reason := 'A data ou o horÃ¡rio jÃ¡ passou.';
+    elsif v_end <= v_start then
+      v_reason_code := 'invalid_time_range';
+      v_reason := 'O horÃ¡rio final precisa ser posterior ao inicial.';
+    elsif v_local_date <> v_end_local_date then
+      v_reason_code := 'crosses_day';
+      v_reason := 'O compromisso precisa comeÃ§ar e terminar no mesmo dia.';
+    elsif not v_is_event
+      and not private.agenda_v2_is_available(
+        p_professional_id,
+        v_start,
+        v_end,
+        v_version_id
+      )
+    then
+      v_reason_code := 'outside_availability';
+      v_reason := 'Fora da disponibilidade profissional vigente.';
+    elsif exists (
+      select 1 from public.appointments appointment
+      where appointment.user_id = p_professional_id
+        and appointment.start_time is not null
+        and appointment.end_time is not null
+        and lower(coalesce(appointment.status, '')) not in (
+          'cancelled', 'canceled',
+          'cancelled_by_patient', 'cancelled_by_professional'
+        )
+        and coalesce(appointment.lifecycle_status, 'created') <> 'cancelled'
+        and tstzrange(appointment.start_time, appointment.end_time, '[)')
+          && tstzrange(v_start, v_end, '[)')
+    ) then
+      v_reason_code := 'appointment_conflict';
+      v_reason := 'JÃ¡ existe um compromisso neste horÃ¡rio.';
+    elsif exists (
+      select 1 from public.appointment_slot_holds hold
+      where hold.professional_id = p_professional_id
+        and hold.status = 'active'
+        and hold.expires_at > now()
+        and tstzrange(hold.starts_at, hold.ends_at, '[)')
+          && tstzrange(v_start, v_end, '[)')
+    ) then
+      v_reason_code := 'slot_held';
+      v_reason := 'O horÃ¡rio estÃ¡ temporariamente reservado.';
+    elsif v_package_id is not null
+      and v_package.start_date is not null
+      and v_local_date < v_package.start_date
+    then
+      v_reason_code := 'package_outside_validity';
+      v_reason := 'A sessÃ£o ocorre antes do inÃ­cio da validade do pacote.';
+    elsif v_package_id is not null
+      and v_package.end_date is not null
+      and v_local_date > v_package.end_date
+    then
+      v_reason_code := 'package_outside_validity';
+      v_reason := 'A sessÃ£o ultrapassa a validade do pacote.';
+    elsif v_package_id is not null and v_occurrence_index > v_package_balance then
+      v_reason_code := 'package_insufficient_balance';
+      v_reason := format(
+        'O pacote possui saldo para %s sessÃ£o(Ãµes), abaixo do necessÃ¡rio para esta sÃ©rie.',
+        v_package_balance
+      );
+    end if;
+
+    v_item := v_item || jsonb_strip_nulls(jsonb_build_object(
+      'status', case when v_reason_code is null then 'available' else 'conflict' end,
+      'reasonCode', v_reason_code,
+      'reason', v_reason
+    ));
+    v_checked := v_checked || jsonb_build_array(v_item);
+    if v_reason_code is not null then
+      v_conflicts := v_conflicts || jsonb_build_array(v_item);
+    end if;
+  end loop;
+
+  if v_patient_id is not null then
+    v_financial := private.resolve_patient_appointment_financial(
+      p_professional_id,
+      v_patient_id
+    );
+  end if;
+
+  return jsonb_build_object(
+    'valid', jsonb_array_length(v_conflicts) = 0,
+    'ruleKind', p_input #>> '{recurrence_rule,kind}',
+    'terminationKind', p_input #>> '{recurrence_rule,termination,kind}',
+    'totalOccurrences', jsonb_array_length(v_checked),
+    'durationMinutes', (p_input ->> 'duration_minutes')::integer,
+    'firstStartTime', v_checked -> 0 ->> 'startTime',
+    'lastStartTime', v_checked -> (jsonb_array_length(v_checked) - 1) ->> 'startTime',
+    'availabilityVersionId', v_version_id,
+    'occurrences', v_checked,
+    'conflicts', v_conflicts,
+    'financial', v_financial,
+    'package', case
+      when v_package_id is null then null
+      else jsonb_build_object(
+        'id', v_package_id,
+        'availableSessions', v_package_balance,
+        'requiredSessions', jsonb_array_length(v_checked),
+        'startDate', v_package.start_date,
+        'endDate', v_package.end_date
+      )
+    end
+  );
+end;
+$$;
+
+revoke all on function private.preview_agenda_v2_plan(uuid, jsonb)
+  from public, anon, authenticated, service_role;
+
 create or replace function private.persist_appointment_series_default_config()
 returns trigger
 language plpgsql
@@ -1368,27 +2082,63 @@ set search_path = pg_catalog
 as $$
 declare
   v_override jsonb;
+  v_plan_id uuid;
+  v_plan_version integer;
 begin
   if new.series_id is null
     or new.occurrence_number is null
-    or not coalesce((new.audit_metadata ->> 'materializedAutomatically')::boolean, false)
   then
     return new;
   end if;
 
-  select item.value into v_override
-  from public.appointment_series series
-  cross join lateral jsonb_array_elements(
-    case
-      when jsonb_typeof(series.default_config -> 'overrides') = 'array'
-        then series.default_config -> 'overrides'
-      else '[]'::jsonb
-    end
-  ) item
-  where series.id = new.series_id
-    and series.psychologist_id = new.user_id
-    and (item.value ->> 'occurrence_number')::integer = new.occurrence_number
-  limit 1;
+  begin
+    v_plan_id := nullif(new.audit_metadata ->> 'planId', '')::uuid;
+    v_plan_version := nullif(new.audit_metadata ->> 'planVersion', '')::integer;
+  exception when invalid_text_representation then
+    v_plan_id := null;
+    v_plan_version := null;
+  end;
+
+  -- Initial V2 occurrences are inserted before default_config is enriched, so
+  -- resolve their override from the immutable reviewed plan first.
+  if v_plan_id is not null and v_plan_version is not null then
+    select item.value into v_override
+    from public.appointment_action_plans plan
+    cross join lateral jsonb_array_elements(
+      case
+        when jsonb_typeof(plan.immutable_snapshot #> '{agenda,input,overrides}') = 'array'
+          then plan.immutable_snapshot #> '{agenda,input,overrides}'
+        when jsonb_typeof(plan.immutable_snapshot #> '{input,overrides}') = 'array'
+          then plan.immutable_snapshot #> '{input,overrides}'
+        else '[]'::jsonb
+      end
+    ) item
+    where plan.plan_id = v_plan_id
+      and plan.plan_version = v_plan_version
+      and plan.professional_id = new.user_id
+      and coalesce(item.value ->> 'occurrence_number', '') ~ '^[1-9][0-9]*$'
+      and (item.value ->> 'occurrence_number')::integer = new.occurrence_number
+    limit 1;
+  end if;
+
+  -- Automatically materialized open-series occurrences have no action plan;
+  -- they inherit the exact approved override kept in series.default_config.
+  if v_override is null then
+    select item.value into v_override
+    from public.appointment_series series
+    cross join lateral jsonb_array_elements(
+      case
+        when jsonb_typeof(series.default_config -> 'overrides') = 'array'
+          then series.default_config -> 'overrides'
+        else '[]'::jsonb
+      end
+    ) item
+    where series.id = new.series_id
+      and series.psychologist_id = new.user_id
+      and coalesce(item.value ->> 'occurrence_number', '') ~ '^[1-9][0-9]*$'
+      and (item.value ->> 'occurrence_number')::integer = new.occurrence_number
+    limit 1;
+  end if;
 
   if v_override is null then
     return new;
@@ -1581,6 +2331,209 @@ set default_config = jsonb_build_object(
 from first_occurrence
 where series.id = first_occurrence.series_id;
 
+-- Backward-compatible smart-fit extension: four-argument callers continue to
+-- work through the trailing default, while drag-and-drop can anchor ranking at
+-- the requested slot instead of the appointment's previous time.
+drop function if exists public.suggest_appointment_smart_fit(
+  uuid, integer, boolean, integer
+);
+
+create function public.suggest_appointment_smart_fit(
+  p_appointment_id uuid,
+  p_search_days integer default 14,
+  p_allow_shorter boolean default false,
+  p_minimum_duration_minutes integer default 30,
+  p_anchor_start timestamptz default null
+)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_professional_id uuid := auth.uid();
+  v_appointment public.appointments%rowtype;
+  v_duration integer;
+  v_result jsonb;
+  v_anchor_start timestamptz;
+  v_search_days integer := least(greatest(coalesce(p_search_days, 14), 1), 60);
+  v_timezone text := 'America/Sao_Paulo';
+begin
+  if v_professional_id is null then
+    raise exception 'Authentication required' using errcode = '42501';
+  end if;
+
+  select appointment.* into v_appointment
+  from public.appointments appointment
+  where appointment.id = p_appointment_id
+    and appointment.user_id = v_professional_id;
+  if not found then
+    raise exception 'Agendamento nÃ£o encontrado.' using errcode = 'P0002';
+  end if;
+  if v_appointment.start_time is null or v_appointment.end_time is null then
+    raise exception 'Agendamento sem intervalo vÃ¡lido.' using errcode = '22023';
+  end if;
+  if coalesce(v_appointment.lifecycle_status, 'created') in (
+    'cancelled', 'in_progress', 'completed', 'closed'
+  ) or lower(coalesce(v_appointment.status, '')) in (
+    'cancelled', 'canceled', 'cancelled_by_patient',
+    'cancelled_by_professional', 'completed'
+  ) then
+    raise exception 'Este agendamento nÃ£o pode ser reencaixado.' using errcode = '55000';
+  end if;
+
+  v_duration := extract(epoch from (
+    v_appointment.end_time - v_appointment.start_time
+  ))::integer / 60;
+  if v_duration not between 15 and 1440 then
+    raise exception 'DuraÃ§Ã£o do agendamento invÃ¡lida.' using errcode = '22023';
+  end if;
+  if p_minimum_duration_minutes not between 15 and 1440 then
+    raise exception 'DuraÃ§Ã£o mÃ­nima invÃ¡lida.' using errcode = '22023';
+  end if;
+
+  v_anchor_start := coalesce(p_anchor_start, v_appointment.start_time);
+  if v_anchor_start <= now()
+    or v_anchor_start > now() + interval '10 years'
+  then
+    raise exception 'A Ã¢ncora do reencaixe precisa ser futura e vÃ¡lida.'
+      using errcode = '22023';
+  end if;
+
+  select coalesce(version.timezone, 'America/Sao_Paulo')
+  into v_timezone
+  from public.professional_availability_versions version
+  where version.professional_id = v_professional_id
+    and version.effective_from <= v_anchor_start
+  order by version.effective_from desc, version.version_number desc
+  limit 1;
+  v_timezone := coalesce(v_timezone, 'America/Sao_Paulo');
+
+  with durations as (
+    select v_duration as minutes, 0 as duration_penalty
+    union all
+    select greatest(p_minimum_duration_minutes, 15), 1
+    where p_allow_shorter
+      and greatest(p_minimum_duration_minutes, 15) < v_duration
+  ), candidates as (
+    select
+      slot as starts_at,
+      slot + make_interval(mins => duration.minutes) as ends_at,
+      duration.minutes,
+      duration.duration_penalty,
+      case
+        when (slot at time zone v_timezone)::date
+          = (v_anchor_start at time zone v_timezone)::date then 0
+        else 1
+      end as date_penalty,
+      case
+        when extract(dow from slot at time zone v_timezone)
+          = extract(dow from v_anchor_start at time zone v_timezone) then 0
+        else 1
+      end as weekday_penalty,
+      abs(extract(epoch from (slot - v_anchor_start))) as distance_seconds
+    from durations duration
+    cross join lateral generate_series(
+      greatest(
+        date_trunc('day', now()),
+        date_trunc('day', v_anchor_start - make_interval(days => v_search_days))
+      ),
+      date_trunc('day', v_anchor_start + make_interval(days => v_search_days))
+        + interval '23 hours 50 minutes',
+      interval '10 minutes'
+    ) slot
+    where slot > now()
+      and private.agenda_v2_is_available(
+        v_professional_id,
+        slot,
+        slot + make_interval(mins => duration.minutes),
+        null
+      )
+      and not exists (
+        select 1 from public.appointments conflict
+        where conflict.user_id = v_professional_id
+          and conflict.id <> v_appointment.id
+          and conflict.start_time is not null
+          and conflict.end_time is not null
+          and lower(coalesce(conflict.status, '')) not in (
+            'cancelled', 'canceled',
+            'cancelled_by_patient', 'cancelled_by_professional'
+          )
+          and coalesce(conflict.lifecycle_status, 'created') <> 'cancelled'
+          and tstzrange(conflict.start_time, conflict.end_time, '[)')
+            && tstzrange(
+              slot,
+              slot + make_interval(mins => duration.minutes),
+              '[)'
+            )
+      )
+      and not exists (
+        select 1 from public.appointment_slot_holds hold
+        where hold.professional_id = v_professional_id
+          and hold.status = 'active'
+          and hold.expires_at > now()
+          and tstzrange(hold.starts_at, hold.ends_at, '[)')
+            && tstzrange(
+              slot,
+              slot + make_interval(mins => duration.minutes),
+              '[)'
+            )
+      )
+  ), ranked as (
+    select * from candidates
+    order by
+      duration_penalty,
+      date_penalty,
+      distance_seconds,
+      weekday_penalty,
+      starts_at
+    limit 3
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'startTime', ranked.starts_at,
+    'endTime', ranked.ends_at,
+    'durationMinutes', ranked.minutes,
+    'keepsFullDuration', ranked.minutes = v_duration,
+    'reasonCodes', jsonb_build_array(
+      case
+        when ranked.minutes = v_duration then 'full_duration'
+        else 'shorter_duration_opt_in'
+      end,
+      case
+        when ranked.date_penalty = 0 then 'same_date'
+        else 'nearest_available'
+      end
+    ),
+    'distanceMinutes', round(ranked.distance_seconds / 60)
+  ) order by
+    ranked.duration_penalty,
+    ranked.date_penalty,
+    ranked.distance_seconds,
+    ranked.weekday_penalty
+  ), '[]'::jsonb)
+  into v_result
+  from ranked;
+
+  return jsonb_build_object(
+    'appointmentId', v_appointment.id,
+    'originalStartTime', v_appointment.start_time,
+    'originalEndTime', v_appointment.end_time,
+    'anchorStartTime', v_anchor_start,
+    'timezone', v_timezone,
+    'requiresConfirmation', true,
+    'candidates', v_result
+  );
+end;
+$$;
+
+revoke all on function public.suggest_appointment_smart_fit(
+  uuid, integer, boolean, integer, timestamptz
+) from public, anon, authenticated;
+grant execute on function public.suggest_appointment_smart_fit(
+  uuid, integer, boolean, integer, timestamptz
+) to authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Waitlist offer snapshot and transactional patient acceptance
 -- ---------------------------------------------------------------------------
@@ -1603,8 +2556,10 @@ set search_path = pg_catalog
 as $$
 declare
   v_entry public.professional_waitlist_entries%rowtype;
+  v_policy public.appointment_policy_versions%rowtype;
   v_financial jsonb;
   v_duration integer;
+  v_requested_policy_id uuid;
 begin
   select entry.* into v_entry
   from public.professional_waitlist_entries entry
@@ -1629,6 +2584,34 @@ begin
     v_financial := v_financial || jsonb_build_object('mode', 'none');
   end if;
 
+  begin
+    v_requested_policy_id := nullif(coalesce(
+      v_entry.rules_snapshot #>> '{policy,policyVersionId}',
+      v_entry.rules_snapshot #>> '{policy,id}',
+      ''
+    ), '')::uuid;
+  exception when invalid_text_representation then
+    raise exception 'Invalid waitlist policy snapshot' using errcode = '22023';
+  end;
+
+  if v_requested_policy_id is not null then
+    select policy.* into v_policy
+    from public.appointment_policy_versions policy
+    where policy.id = v_requested_policy_id
+      and policy.psychologist_id = new.professional_id
+      and policy.effective_at <= now();
+    if not found then
+      raise exception 'Waitlist policy is not available' using errcode = '22023';
+    end if;
+  else
+    select policy.* into v_policy
+    from public.appointment_policy_versions policy
+    where policy.psychologist_id = new.professional_id
+      and policy.effective_at <= now()
+    order by policy.effective_at desc, policy.version desc
+    limit 1;
+  end if;
+
   new.appointment_snapshot := jsonb_strip_nulls(jsonb_build_object(
     'schemaVersion', 1,
     'kind', 'session',
@@ -1642,7 +2625,12 @@ begin
     'notes', nullif(v_entry.rules_snapshot ->> 'notes', ''),
     'metadata', coalesce(v_entry.rules_snapshot -> 'metadata', '{}'::jsonb),
     'financial', v_financial,
-    'policy', coalesce(v_entry.rules_snapshot -> 'policy', '{}'::jsonb),
+    'policy', coalesce(v_entry.rules_snapshot -> 'policy', '{}'::jsonb)
+      || jsonb_strip_nulls(jsonb_build_object(
+        'policyVersionId', v_policy.id,
+        'version', v_policy.version,
+        'effectiveAt', v_policy.effective_at
+      )),
     'source', 'waitlist_offer'
   )) || coalesce(new.appointment_snapshot, '{}'::jsonb);
 
@@ -1756,6 +2744,9 @@ declare
   v_snapshot jsonb;
   v_financial jsonb;
   v_financial_mode text;
+  v_policy_version_id uuid;
+  v_package_id uuid;
+  v_manual_amount numeric;
   v_now timestamptz := now();
 begin
   if p_response not in ('accept', 'decline') then
@@ -1767,11 +2758,48 @@ begin
 
   select offer.* into v_offer
   from public.professional_waitlist_offers offer
-  where offer.token_hash = encode(digest(p_token, 'sha256'), 'hex')
-  for update;
+  where offer.token_hash = encode(digest(p_token, 'sha256'), 'hex');
 
   if not found then
     raise exception 'Oferta invÃ¡lida ou expirada.' using errcode = 'P0002';
+  end if;
+
+  -- Keep the same lock order as offer creation: entry -> appointment advisory
+  -- -> offer -> hold. The token lookup above is revalidated under lock.
+  select entry.* into v_entry
+  from public.professional_waitlist_entries entry
+  where entry.id = v_offer.waitlist_entry_id
+  for update;
+  if not found then
+    perform pg_advisory_xact_lock(
+      hashtextextended('appointments:' || v_offer.professional_id::text, 0)
+    );
+    update public.professional_waitlist_offers offer
+    set status = case when offer.status = 'pending' then 'expired' else offer.status end,
+        responded_at = coalesce(offer.responded_at, v_now)
+    where offer.id = v_offer.id;
+    update public.appointment_slot_holds hold
+    set status = case when hold.status = 'active' then 'expired' else hold.status end,
+        released_at = coalesce(hold.released_at, v_now)
+    where hold.id = v_offer.hold_id;
+    return jsonb_build_object(
+      'success', false,
+      'status', 'expired',
+      'reasonCode', 'entry_missing'
+    );
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended('appointments:' || v_offer.professional_id::text, 0)
+  );
+
+  select offer.* into v_offer
+  from public.professional_waitlist_offers offer
+  where offer.id = v_offer.id
+    and offer.token_hash = encode(digest(p_token, 'sha256'), 'hex')
+  for update;
+  if not found then
+    raise exception 'Waitlist offer disappeared' using errcode = '40001';
   end if;
 
   -- An accepted token is a safe idempotent replay; never create twice.
@@ -1791,22 +2819,18 @@ begin
   where hold.id = v_offer.hold_id
   for update;
   if not found then
+    update public.professional_waitlist_offers offer
+    set status = case when offer.status = 'pending' then 'expired' else offer.status end,
+        responded_at = coalesce(offer.responded_at, v_now)
+    where offer.id = v_offer.id;
+    update public.professional_waitlist_entries entry
+    set status = case when entry.status = 'offered' then 'active' else entry.status end,
+        updated_at = v_now
+    where entry.id = v_entry.id;
     return jsonb_build_object(
       'success', false,
       'status', 'expired',
       'reasonCode', 'hold_missing'
-    );
-  end if;
-
-  select entry.* into v_entry
-  from public.professional_waitlist_entries entry
-  where entry.id = v_offer.waitlist_entry_id
-  for update;
-  if not found then
-    return jsonb_build_object(
-      'success', false,
-      'status', 'expired',
-      'reasonCode', 'entry_missing'
     );
   end if;
 
@@ -1853,10 +2877,6 @@ begin
     return jsonb_build_object('success', true, 'status', 'declined');
   end if;
 
-  perform pg_advisory_xact_lock(
-    hashtextextended('appointments:' || v_offer.professional_id::text, 0)
-  );
-
   if exists (
     select 1
     from public.appointments appointment
@@ -1888,6 +2908,20 @@ begin
   v_snapshot := coalesce(v_offer.appointment_snapshot, '{}'::jsonb);
   v_financial := coalesce(v_snapshot -> 'financial', jsonb_build_object('mode', 'none'));
   v_financial_mode := lower(coalesce(v_financial ->> 'mode', 'none'));
+  begin
+    v_policy_version_id := nullif(coalesce(
+      v_snapshot #>> '{policy,policyVersionId}',
+      v_snapshot #>> '{policy,id}',
+      ''
+    ), '')::uuid;
+    v_package_id := nullif(coalesce(
+      v_financial ->> 'package_id',
+      v_financial ->> 'packageId',
+      ''
+    ), '')::uuid;
+  exception when invalid_text_representation then
+    raise exception 'Invalid waitlist appointment snapshot' using errcode = '22023';
+  end;
 
   insert into public.appointments (
     user_id,
@@ -1957,9 +2991,74 @@ begin
   v_policy_snapshot_id := private.create_appointment_policy_snapshot(
     v_appointment_id,
     'waitlist_acceptance',
-    null,
+    v_policy_version_id,
     true
   );
+
+  if v_financial_mode = 'package' then
+    if v_package_id is null then
+      raise exception 'Waitlist package snapshot is incomplete' using errcode = '22023';
+    end if;
+    perform private.reserve_package_appointments(
+      v_offer.professional_id,
+      v_offer.patient_id,
+      v_package_id,
+      array[v_appointment_id],
+      'waitlist_acceptance',
+      'waitlist-offer:' || v_offer.id::text,
+      v_offer.professional_id
+    );
+  elsif v_financial_mode = 'manual' then
+    v_manual_amount := coalesce(
+      nullif(v_financial ->> 'value_per_session', '')::numeric,
+      nullif(v_financial ->> 'amount', '')::numeric,
+      nullif(v_financial ->> 'transactionAmount', '')::numeric,
+      nullif(v_financial ->> 'expectedReceivableCents', '')::numeric / 100,
+      0
+    );
+    if v_manual_amount <= 0 then
+      raise exception 'Waitlist manual financial snapshot is incomplete'
+        using errcode = '22023';
+    end if;
+
+    insert into public.financial_entries (
+      professional_id,
+      patient_id,
+      appointment_id,
+      type,
+      title,
+      description,
+      amount,
+      due_date,
+      competence_date,
+      status,
+      payment_method,
+      origin,
+      idempotency_key,
+      metadata
+    ) values (
+      v_offer.professional_id,
+      v_offer.patient_id,
+      v_appointment_id,
+      'income',
+      'SessÃ£o agendada',
+      'LanÃ§amento aprovado na oferta da lista de espera',
+      v_manual_amount,
+      v_offer.offered_start_time::date,
+      v_offer.offered_start_time::date,
+      'pending',
+      coalesce(nullif(v_financial ->> 'payment_method', ''), 'manual'),
+      'appointment',
+      'waitlist-offer:' || v_offer.id::text || ':manual',
+      jsonb_build_object(
+        'source', 'waitlist_acceptance',
+        'waitlistOfferId', v_offer.id
+      )
+    )
+    on conflict (professional_id, idempotency_key)
+      where idempotency_key is not null
+    do nothing;
+  end if;
 
   update public.professional_waitlist_offers
   set status = 'accepted',

@@ -6103,6 +6103,7 @@ export type Database = {
       professional_waitlist_offers: {
         Row: {
           accepted_appointment_id: string | null
+          appointment_snapshot: Json
           created_at: string
           expires_at: string
           hold_id: string
@@ -6118,6 +6119,7 @@ export type Database = {
         }
         Insert: {
           accepted_appointment_id?: string | null
+          appointment_snapshot?: Json
           created_at?: string
           expires_at: string
           hold_id: string
@@ -6133,6 +6135,7 @@ export type Database = {
         }
         Update: {
           accepted_appointment_id?: string | null
+          appointment_snapshot?: Json
           created_at?: string
           expires_at?: string
           hold_id?: string
@@ -9924,6 +9927,14 @@ export type Database = {
         Args: { p_limit?: number; p_outbox_id?: string }
         Returns: Json
       }
+      claim_appointment_effect_outbox: {
+        Args: {
+          p_effect_type?: string | null
+          p_limit?: number
+          p_outbox_id?: string | null
+        }
+        Returns: Json
+      }
       claim_waitlist_offer_outbox: {
         Args: { p_limit?: number }
         Returns: {
@@ -9998,6 +10009,14 @@ export type Database = {
           p_success: boolean
         }
         Returns: undefined
+      }
+      complete_appointment_effect_outbox: {
+        Args: {
+          p_lease_token: string
+          p_outbox_id: string
+          p_result_safe?: Json
+        }
+        Returns: Json
       }
       complete_synapse_neuroview_run: {
         Args: {
@@ -10350,6 +10369,28 @@ export type Database = {
         }
         Returns: undefined
       }
+      patch_appointment_clinical_details: {
+        Args: {
+          p_appointment_id: string
+          p_metadata_patch: Json
+          p_notes: string | null
+          p_notes_set: boolean
+        }
+        Returns: Json
+      }
+      patch_appointment_google_sync_effect: {
+        Args: {
+          p_appointment_id: string
+          p_error?: string | null
+          p_google_event_id: string | null
+          p_google_meet_link: string | null
+          p_lease_token: string
+          p_outbox_id: string
+          p_revision: number
+          p_status: string
+        }
+        Returns: Json
+      }
       prepare_agenda_action_plan: {
         Args: {
           p_action: string
@@ -10541,6 +10582,17 @@ export type Database = {
         Args: { p_response: string; p_token: string }
         Returns: Json
       }
+      retry_appointment_effect_outbox: {
+        Args: {
+          p_error: string
+          p_lease_token: string
+          p_outbox_id: string
+          p_retry_after_seconds?: number | null
+          p_retryable?: boolean
+          p_wait_for_connection?: boolean
+        }
+        Returns: Json
+      }
       restore_notification: {
         Args: { p_notification_id: string }
         Returns: boolean
@@ -10636,6 +10688,7 @@ export type Database = {
       suggest_appointment_smart_fit: {
         Args: {
           p_allow_shorter?: boolean
+          p_anchor_start?: string | null
           p_appointment_id: string
           p_minimum_duration_minutes?: number
           p_search_days?: number

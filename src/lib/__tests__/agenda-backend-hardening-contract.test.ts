@@ -73,4 +73,69 @@ describe("Agenda backend hardening contract", () => {
     expect(body).toContain("coalesce(appointment.metadata, '{}'::jsonb) - 'googleSyncError'");
     expect(body).not.toContain("status = 'completed'");
   });
+
+  it("does not mistake historical Google provenance for a new inbound mutation", () => {
+    expect(migration).toContain("googleMutationMarker");
+    expect(migration).toContain(
+      "is distinct from (old.audit_metadata ->> 'googleMutationMarker')",
+    );
+    expect(migration).toContain(
+      "when new.google_event_id is not null and not v_schedule_changed then 'synced'",
+    );
+  });
+
+  it("keeps event safety checks while bypassing only clinical availability", () => {
+    expect(migration).toContain("v_allow_outside_working_hours");
+    expect(migration).toContain("if v_occurrence_start <= now() then");
+    expect(migration).toContain("elsif not v_is_event");
+    expect(migration).toContain("v_reason_code := 'appointment_conflict'");
+    expect(migration).toContain("coalesce(nullif(v_previous_bypass, ''), 'off')");
+  });
+
+  it("makes only a safe explicit NeuroFinance decision confirmable", () => {
+    expect(migration).toContain("explicit_neurofinance_plan_is_confirmable");
+    expect(migration).toContain("old.status = 'review_required'");
+    expect(migration).toContain("new.status = 'awaiting_confirmation'");
+    expect(migration).toContain("'explicit_neurofinance_decision_confirmable'");
+  });
+
+  it("serializes waitlist acceptance and applies its approved snapshots", () => {
+    const start = migration.indexOf(
+      "create or replace function public.respond_waitlist_offer",
+    );
+    const end = migration.indexOf(
+      "revoke all on function public.respond_waitlist_offer",
+      start,
+    );
+    const body = migration.slice(start, end);
+    const firstOfferRead = body.indexOf(
+      "from public.professional_waitlist_offers offer",
+    );
+    const lockedOfferRead = body.indexOf(
+      "from public.professional_waitlist_offers offer",
+      firstOfferRead + 1,
+    );
+
+    expect(body.indexOf("from public.professional_waitlist_entries entry")).toBeLessThan(
+      body.indexOf("perform pg_advisory_xact_lock"),
+    );
+    expect(body.indexOf("perform pg_advisory_xact_lock")).toBeLessThan(
+      lockedOfferRead,
+    );
+    expect(body).toContain("v_policy_version_id");
+    expect(body).toContain("private.reserve_package_appointments");
+    expect(body).toContain("insert into public.financial_entries");
+    expect(body).toContain("'idempotent', true");
+  });
+
+  it("exposes an authenticated atomic clinical-details patch", () => {
+    expect(migration).toContain(
+      "create or replace function public.patch_appointment_clinical_details",
+    );
+    expect(migration).toContain("v_patch - array[");
+    expect(migration).toContain("'localUpdatedAt', now()");
+    expect(migration).toContain(
+      "grant execute on function public.patch_appointment_clinical_details",
+    );
+  });
 });

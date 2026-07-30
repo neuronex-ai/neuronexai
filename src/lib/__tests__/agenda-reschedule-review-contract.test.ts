@@ -7,11 +7,20 @@ const source = (path: string) => readFileSync(resolve(process.cwd(), path), "utf
 describe("agenda drag reschedule review contract", () => {
   it("prepares an immutable plan and opens the canonical review dialog", () => {
     const calendar = source("src/components/agenda/CalendarView.tsx");
+    const conflictDialog = source(
+      "src/components/agenda/AppointmentRescheduleConflictDialog.tsx",
+    );
 
     expect(calendar).toContain('prepareAppointmentActionPlan("reschedule"');
     expect(calendar).toContain("requestAppointmentPlanReview({");
+    expect(calendar).toContain("getAppointmentPlanIssues(plan)");
+    expect(calendar).toContain("<AppointmentRescheduleConflictDialog");
     expect(calendar).toContain('originChannel: "professional_app"');
     expect(calendar).not.toContain("updateAppointment.mutateAsync({");
+    expect(conflictDialog).toContain("suggestAppointmentSmartFit");
+    expect(conflictDialog).toContain('plan.status === "review_required"');
+    expect(conflictDialog).toContain('plan.status === "awaiting_confirmation"');
+    expect(conflictDialog).toContain("onPlanReady(plan)");
   });
 
   it("allows the hash-bound appointment action plan command through the database guard", () => {

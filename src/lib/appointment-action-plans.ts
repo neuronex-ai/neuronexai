@@ -158,11 +158,23 @@ export const executeAppointmentActionPlan = (
 
 export const executeAgendaActionPlan = (
   plan: Pick<AppointmentActionPlan, "planId" | "planVersion" | "planHash">,
+  confirmationChannel: AppointmentActionOriginChannel = "professional_app",
 ) => rpc("execute_agenda_action_plan", {
   p_plan_id: plan.planId,
   p_plan_version: plan.planVersion,
   p_plan_hash: plan.planHash,
-  p_confirmation_channel: "professional_app",
+  p_confirmation_channel: confirmationChannel,
+});
+
+export const prepareAgendaActionPlan = (
+  input: Record<string, unknown>,
+  idempotencyKey: string,
+  originChannel: AppointmentActionOriginChannel = "professional_app",
+) => rpc("prepare_agenda_action_plan", {
+  p_action: "create_series_v2",
+  p_input: input,
+  p_provenance: { origin_channel: originChannel },
+  p_idempotency_key: idempotencyKey,
 });
 
 export const getAppointmentActionPlan = (planId: string, planVersion?: number | null) =>

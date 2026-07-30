@@ -185,6 +185,17 @@ describe("financial mode", () => {
       canUseNeurofinance: true,
     })).toBe("none");
   });
+
+  it("preserves a configured insurance receivable without charging the patient", () => {
+    expect(resolveAppointmentFinancialMode({
+      eventType: "session",
+      usePackage: false,
+      shouldCreateTransaction: false,
+      shouldGenerateNeurofinanceCharge: false,
+      canUseNeurofinance: true,
+      insuranceConfigured: true,
+    })).toBe("insurance");
+  });
 });
 
 describe("invalid field reveal", () => {

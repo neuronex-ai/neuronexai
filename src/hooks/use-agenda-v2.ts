@@ -6,6 +6,13 @@ import type {
   AdvancedRecurrenceRule,
   OccurrenceOverride,
 } from "@/lib/agenda-scheduling";
+import {
+  AppointmentPlanReviewRequiredError,
+  executeAgendaActionPlan,
+  prepareAgendaActionPlan,
+  type AppointmentActionOriginChannel,
+  type AppointmentActionPlan,
+} from "@/lib/appointment-action-plans";
 import type { AppointmentMetadata } from "@/lib/appointment-metadata";
 
 export interface AgendaV2PlanInput {
@@ -138,6 +145,22 @@ export interface AgendaSeriesTemplate {
   }>;
 }
 
+export interface AgendaSeriesPlanRequest {
+  input: AgendaV2PlanInput;
+  idempotencyKey: string;
+  originChannel?: AppointmentActionOriginChannel;
+}
+
+export type CompletedAgendaSeriesPlan = AppointmentActionPlan & {
+  status: "completed";
+  result: {
+    seriesId: string;
+    appointmentIds: string[];
+    totalOccurrences: number;
+    message: string;
+  };
+};
+
 const rpcError = (error: unknown, fallback: string) => {
   if (error && typeof error === "object") {
     const value = error as Record<string, unknown>;
@@ -212,6 +235,63 @@ export function useAgendaV2() {
       const { data, error } = await database.rpc("preview_agenda_plan", { p_input: input });
       if (error) throw new Error(rpcError(error, "Não foi possível revisar a recorrência."));
       return data as AgendaV2Preview;
+    },
+  });
+
+  const prepareMutation = useMutation({
+    mutationFn: async ({
+      input,
+      idempotencyKey,
+      originChannel = "professional_app",
+    }: AgendaSeriesPlanRequest) => {
+      if (!user?.id) throw new Error("Sessão expirada. Entre novamente.");
+      const prepared = await prepareAgendaActionPlan(
+        input as unknown as Record<string, unknown>,
+        idempotencyKey,
+        originChannel,
+      );
+      if (prepared.status === "review_required") {
+        const error = new AppointmentPlanReviewRequiredError(prepared) as AppointmentPlanReviewRequiredError & {
+          preview?: AgendaV2Preview;
+        };
+        const latest = await supabase.rpc("preview_agenda_plan", { p_input: input });
+        if (!latest.error) error.preview = latest.data as AgendaV2Preview;
+        throw error;
+      }
+      if (prepared.status !== "awaiting_confirmation") {
+        throw new Error("O plano não está disponível para confirmação.");
+      }
+      return prepared;
+    },
+  });
+
+  const executeMutation = useMutation({
+    mutationFn: async ({
+      plan,
+      originChannel = "professional_app",
+    }: {
+      plan: AppointmentActionPlan;
+      originChannel?: AppointmentActionOriginChannel;
+    }) => {
+      if (!user?.id) throw new Error("Sessão expirada. Entre novamente.");
+      if (plan.status !== "awaiting_confirmation") {
+        throw new Error("O plano revisado não está mais disponível para confirmação.");
+      }
+      const executed = await executeAgendaActionPlan(plan, originChannel);
+      if (executed.status !== "completed") {
+        throw new Error(
+          String(executed.result?.message || "")
+          || "Os horários mudaram durante a confirmação. Revise a série novamente.",
+        );
+      }
+      return executed as CompletedAgendaSeriesPlan;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["appointments"] }),
+        queryClient.invalidateQueries({ queryKey: ["appointmentsByDateRange"] }),
+        queryClient.invalidateQueries({ queryKey: ["agenda-series-templates"] }),
+      ]);
     },
   });
 
@@ -324,9 +404,13 @@ export function useAgendaV2() {
 
   return {
     previewAgendaPlan: previewMutation.mutateAsync,
+    prepareAgendaSeries: prepareMutation.mutateAsync,
+    executePreparedAgendaSeries: executeMutation.mutateAsync,
     createAgendaSeries: createMutation.mutateAsync,
     isPreviewingAgendaPlan: previewMutation.isPending,
-    isCreatingAgendaSeries: createMutation.isPending,
+    isPreparingAgendaSeries: prepareMutation.isPending,
+    isExecutingAgendaSeries: executeMutation.isPending,
+    isCreatingAgendaSeries: createMutation.isPending || executeMutation.isPending,
     suggestAgendaPlanSmartFit: smartFitMutation.mutateAsync,
     isSuggestingAgendaPlanSmartFit: smartFitMutation.isPending,
     suggestAppointmentSmartFit: existingAppointmentSmartFitMutation.mutateAsync,

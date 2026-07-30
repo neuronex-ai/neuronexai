@@ -99,37 +99,24 @@ const updateAppointmentFn = async ({
     }, `${originChannel}:reschedule:${id}:${crypto.randomUUID()}`, originChannel);
   }
 
-  const directUpdates: Record<string, unknown> = {};
-  if (updates.notes !== undefined && !cancellationRequested) directUpdates.notes = updates.notes;
-  if (updates.metadata !== undefined && !cancellationRequested) {
-    let currentMetadata = existingAppointment.metadata || {};
-    if (hasMaterialChange) {
-      const refreshed = await supabase
-        .from("appointments")
-        .select("metadata")
-        .eq("id", id)
-        .eq("user_id", userId)
-        .single();
-      if (refreshed.error || !refreshed.data) {
-        throw new Error("A alteração foi concluída, mas os metadados atuais não puderam ser recarregados.");
-      }
-      currentMetadata = refreshed.data.metadata || {};
-    }
-    directUpdates.metadata = {
-      ...currentMetadata,
-      ...editableMetadataPatch(updates.metadata),
-      localUpdatedAt: new Date().toISOString(),
+  const hasClinicalPatch = !cancellationRequested
+    && (updates.notes !== undefined || updates.metadata !== undefined);
+  if (hasClinicalPatch) {
+    const database = supabase as unknown as {
+      rpc: (
+        name: string,
+        args: Record<string, unknown>,
+      ) => Promise<{ data: unknown; error: { message?: string } | null }>;
     };
-  }
-  if (Object.keys(directUpdates).length) {
-    const { data, error } = await supabase
-      .from("appointments")
-      .update(directUpdates)
-      .eq("id", id)
-      .eq("user_id", userId)
-      .select()
-      .single();
-    if (error) throw error;
+    const { data, error } = await database.rpc("patch_appointment_clinical_details", {
+      p_appointment_id: id,
+      p_notes: updates.notes ?? null,
+      p_notes_set: updates.notes !== undefined,
+      p_metadata_patch: editableMetadataPatch(updates.metadata),
+    });
+    if (error || !data) {
+      throw new Error(error?.message || "Os detalhes clínicos não puderam ser salvos.");
+    }
     currentAppointment = data as Appointment;
   } else if (hasMaterialChange || cancellationRequested) {
     const { data, error } = await supabase

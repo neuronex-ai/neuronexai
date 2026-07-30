@@ -60,7 +60,7 @@ import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ResponsiveModal } from "@/components/ui/ResponsiveModal";
 import { usePatients } from "@/hooks/use-patients";
-import { useAddAppointment } from "@/hooks/use-add-appointment";
+import { useAddAppointment, type NewAppointmentData } from "@/hooks/use-add-appointment";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
@@ -117,7 +117,11 @@ import {
 } from "@/lib/agenda-scheduling";
 import { getAppointmentRecurrenceTerminology } from "@/lib/appointment-recurrence-terminology";
 import { DEFAULT_PROFESSIONAL_EVENT_CATEGORIES } from "@/lib/professional-event-categories";
-import { isAppointmentPlanReviewRequiredError } from "@/lib/appointment-action-plans";
+import {
+  AppointmentPlanReviewRequiredError,
+  isAppointmentPlanReviewRequiredError,
+  type AppointmentActionPlan,
+} from "@/lib/appointment-action-plans";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
@@ -369,12 +373,35 @@ export function NewAppointmentModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [smartFitSuggestions, setSmartFitSuggestions] = useState<Record<number, AgendaPlanSmartFitCandidate[]>>({});
+  const [preparedSinglePlan, setPreparedSinglePlan] = useState<{
+    fingerprint: string;
+    idempotencyKey: string;
+    plan: AppointmentActionPlan;
+  } | null>(null);
+  const [preparedSeriesPlan, setPreparedSeriesPlan] = useState<{
+    fingerprint: string;
+    idempotencyKey: string;
+    plan: AppointmentActionPlan;
+  } | null>(null);
+  const [isPreparingSinglePlan, setIsPreparingSinglePlan] = useState(false);
+  const [isPreparingSeriesPlan, setIsPreparingSeriesPlan] = useState(false);
   const idempotencyIntentRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const previewRequestSequenceRef = useRef(0);
+  const singlePlanRequestSequenceRef = useRef(0);
+  const seriesPlanRequestSequenceRef = useRef(0);
+  const currentSingleFingerprintRef = useRef<string | null>(null);
+  const currentSingleIdempotencyKeyRef = useRef<string | null>(null);
+  const currentSeriesFingerprintRef = useRef<string | null>(null);
+  const currentSeriesIdempotencyKeyRef = useRef<string | null>(null);
+  const lastSingleDraftIdentityRef = useRef<string | null>(null);
   const bodyScrollRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
   const { data: patients } = usePatients();
-  const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
+  const {
+    mutateAsync: createAppointment,
+    prepareAsync: prepareAppointment,
+    isPending: isCreatingAppointment,
+  } = useAddAppointment();
   const { profile, rememberAppointmentLocation } = useProfile();
   const { canAccess, isLoading: isLoadingSubscription } = useSubscription();
   const {
@@ -386,8 +413,10 @@ export function NewAppointmentModal({
   const { data: professionalTimezone = "America/Sao_Paulo" } = useProfessionalAgendaTimezone();
   const {
     previewAgendaPlan,
-    createAgendaSeries,
+    prepareAgendaSeries,
+    executePreparedAgendaSeries,
     isPreviewingAgendaPlan,
+    isPreparingAgendaSeries,
     isCreatingAgendaSeries,
     suggestAgendaPlanSmartFit,
     isSuggestingAgendaPlanSmartFit,
@@ -636,6 +665,7 @@ export function NewAppointmentModal({
     && (isLoadingPackages || isLoadingPatientPackages || isResolvingFinancial);
   const isSubmitting =
     isCreatingAppointment ||
+    isPreparingSinglePlan ||
     isPreviewingAgendaPlan ||
     isCreatingAgendaSeries;
 
@@ -777,7 +807,7 @@ export function NewAppointmentModal({
     buildAgendaPlanInput(watchedFormValues),
   );
 
-  const idempotencyKeyForPayload = (payload: unknown) => {
+  const idempotencyKeyForPayload = useCallback((payload: unknown) => {
     const fingerprint = appointmentPayloadFingerprint(payload);
     if (idempotencyIntentRef.current?.fingerprint !== fingerprint) {
       idempotencyIntentRef.current = {
@@ -786,7 +816,229 @@ export function NewAppointmentModal({
       };
     }
     return idempotencyIntentRef.current.key;
-  };
+  }, []);
+
+  const buildAppointmentIntentContext = useCallback((values: FormValues) => {
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values, professionalTimezone);
+    const selectedFinancialMode = resolveAppointmentFinancialMode({
+      eventType: values.eventType,
+      usePackage: values.usePackage,
+      packageId: selectedPackage?.id || values.packageId,
+      shouldCreateTransaction: values.shouldCreateTransaction,
+      shouldGenerateNeurofinanceCharge: values.shouldGenerateNeurofinanceCharge,
+      canUseNeurofinance,
+      insuranceConfigured: resolvedFinancial?.planType === "insurance",
+    });
+    const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60_000);
+    const metadata = values.eventType === "event"
+      ? buildEventMetadata({
+          title: values.eventTitle || "Compromisso",
+          category: values.eventCategory || "outro",
+          categoryLabel: eventCategories.find((item) => item.slug === values.eventCategory)?.name,
+          location: values.eventLocation || null,
+          notes: values.notes || "",
+          origin: "neuronex",
+          syncStatus: "not_configured",
+        })
+      : buildSessionMetadata({
+          sessionType: values.type,
+          modality: values.modality,
+          durationMinutes,
+          notes: values.notes || "",
+          origin: "neuronex",
+          syncStatus: "not_configured",
+          financial: {
+            mode: selectedFinancialMode,
+            usePackage: values.usePackage,
+            packageId: values.packageId || selectedPackage?.id || null,
+            transactionAmount: values.shouldCreateTransaction
+              ? values.transactionAmount || 0
+              : null,
+            transactionMethod: values.transactionMethod || null,
+            installments: values.installments || 1,
+            neurofinanceChargeRequested: values.shouldGenerateNeurofinanceCharge,
+          },
+        });
+
+    return {
+      startDateTime,
+      endDateTime,
+      selectedFinancialMode,
+      metadata,
+    };
+  }, [
+    canUseNeurofinance,
+    eventCategories,
+    professionalTimezone,
+    resolvedFinancial?.planType,
+    selectedPackage?.id,
+  ]);
+
+  const buildSingleAppointmentIntent = useCallback((values: FormValues) => {
+    const {
+      startDateTime,
+      endDateTime,
+      selectedFinancialMode,
+      metadata,
+    } = buildAppointmentIntentContext(values);
+
+    let notes = values.notes || "";
+    let location: string | null = null;
+    if (values.eventType === "event") {
+      notes = buildEventNotesFromMetadata(metadata);
+      location = values.eventLocation || null;
+    } else {
+      const prefix = values.type === "first_visit" ? "[Primeira Consulta] " : "";
+      notes = `${prefix}${values.notes || (values.type === "first_visit" ? "Primeira Consulta" : "")}`;
+      location = values.modality === "online"
+        ? "Teleconsulta NeuroNex"
+        : values.sessionLocation?.trim() || "Consultório";
+    }
+
+    const payloadBase: Omit<NewAppointmentData, "idempotency_key" | "prepared_plan"> = {
+      patient_id: values.eventType === "session" ? values.patientId || null : null,
+      start_time: startDateTime,
+      end_time: endDateTime,
+      type: values.eventType === "session" ? values.modality : "block",
+      notes,
+      location,
+      metadata,
+      package_id: selectedFinancialMode === "package"
+        ? selectedPackage?.id || values.packageId || null
+        : null,
+      financial: selectedFinancialMode === "package"
+        ? {
+            mode: "package",
+            value_per_session: 0,
+            total: 0,
+            charge_mode: "per_occurrence",
+          }
+        : selectedFinancialMode === "manual"
+          ? {
+              mode: "manual",
+              value_per_session: values.transactionAmount || 0,
+              total: values.transactionAmount || 0,
+              charge_mode: "per_occurrence",
+              payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
+              installments: values.installments || 1,
+            }
+          : selectedFinancialMode === "neurofinance"
+            ? {
+                mode: "neurofinance",
+                value_per_session: values.transactionAmount || 0,
+                total: values.transactionAmount || 0,
+                charge_mode: "per_occurrence",
+                payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
+                installments: values.installments || 1,
+              }
+            : selectedFinancialMode === "insurance"
+              ? {
+                  mode: "insurance",
+                  value_per_session: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
+                  total: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
+                  charge_mode: "per_occurrence",
+                }
+              : {
+                  mode: "none",
+                  value_per_session: 0,
+                  total: 0,
+                  charge_mode: "per_occurrence",
+                },
+    };
+    const fingerprint = appointmentPayloadFingerprint(payloadBase);
+
+    return {
+      fingerprint,
+      metadata,
+      payload: {
+        ...payloadBase,
+        idempotency_key: idempotencyKeyForPayload(payloadBase),
+      } satisfies NewAppointmentData,
+    };
+  }, [
+    buildAppointmentIntentContext,
+    idempotencyKeyForPayload,
+    resolvedFinancial?.expectedReceivableCents,
+    selectedPackage?.id,
+  ]);
+
+  const buildSeriesAppointmentIntent = useCallback((values: FormValues) => {
+    const { metadata } = buildAppointmentIntentContext(values);
+    const input = buildAgendaPlanInput(values, metadata);
+    const fingerprint = appointmentPayloadFingerprint(input);
+    return {
+      input,
+      fingerprint,
+      idempotencyKey: idempotencyKeyForPayload(input),
+    };
+  }, [buildAgendaPlanInput, buildAppointmentIntentContext, idempotencyKeyForPayload]);
+
+  const currentSingleAppointmentIntent = useMemo(() => {
+    if (recurrenceEnabled) return null;
+    try {
+      return buildSingleAppointmentIntent(watchedFormValues);
+    } catch {
+      return null;
+    }
+  }, [buildSingleAppointmentIntent, recurrenceEnabled, watchedFormValues]);
+  const currentSingleFingerprint = currentSingleAppointmentIntent?.fingerprint || null;
+  const currentSingleIdempotencyKey = currentSingleAppointmentIntent?.payload.idempotency_key || null;
+  const currentSingleDraftIdentity = currentSingleFingerprint && currentSingleIdempotencyKey
+    ? `${currentSingleFingerprint}:${currentSingleIdempotencyKey}`
+    : null;
+  currentSingleFingerprintRef.current = currentSingleFingerprint;
+  currentSingleIdempotencyKeyRef.current = currentSingleIdempotencyKey;
+
+  const currentSeriesAppointmentIntent = useMemo(() => {
+    if (!recurrenceEnabled) return null;
+    try {
+      return buildSeriesAppointmentIntent(watchedFormValues);
+    } catch {
+      return null;
+    }
+  }, [buildSeriesAppointmentIntent, recurrenceEnabled, watchedFormValues]);
+  const currentSeriesFingerprint = currentSeriesAppointmentIntent?.fingerprint || null;
+  const currentSeriesIdempotencyKey = currentSeriesAppointmentIntent?.idempotencyKey || null;
+  currentSeriesFingerprintRef.current = currentSeriesFingerprint;
+  currentSeriesIdempotencyKeyRef.current = currentSeriesIdempotencyKey;
+
+  useEffect(() => {
+    if (lastSingleDraftIdentityRef.current === currentSingleDraftIdentity) return;
+    lastSingleDraftIdentityRef.current = currentSingleDraftIdentity;
+    singlePlanRequestSequenceRef.current += 1;
+    setIsPreparingSinglePlan(false);
+    setPreparedSinglePlan((current) => (
+      current?.fingerprint === currentSingleFingerprint
+      && current.idempotencyKey === currentSingleIdempotencyKey
+        ? current
+        : null
+    ));
+  }, [currentSingleDraftIdentity, currentSingleFingerprint, currentSingleIdempotencyKey]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    singlePlanRequestSequenceRef.current += 1;
+    setPreparedSinglePlan(null);
+    setIsPreparingSinglePlan(false);
+  }, [isOpen]);
+
+  useEffect(() => {
+    seriesPlanRequestSequenceRef.current += 1;
+    setIsPreparingSeriesPlan(false);
+    setPreparedSeriesPlan((current) => (
+      current?.fingerprint === currentSeriesFingerprint
+      && current.idempotencyKey === currentSeriesIdempotencyKey
+        ? current
+        : null
+    ));
+  }, [currentSeriesFingerprint, currentSeriesIdempotencyKey]);
+
+  useEffect(() => {
+    if (isOpen) return;
+    seriesPlanRequestSequenceRef.current += 1;
+    setPreparedSeriesPlan(null);
+    setIsPreparingSeriesPlan(false);
+  }, [isOpen]);
 
   const loadSeriesPreview = useCallback(async (values: FormValues, recurrence = recurrenceDraft) => {
     const input = buildAgendaPlanInput(values, undefined, recurrence);
@@ -871,113 +1123,6 @@ export function NewAppointmentModal({
   // ── Submit ─────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
     setSubmissionError(null);
-    const { startDateTime, endDateTime } = buildAppointmentTimes(values, professionalTimezone);
-    const selectedFinancialMode = resolveAppointmentFinancialMode({
-      eventType: values.eventType,
-      usePackage: values.usePackage,
-      packageId: selectedPackage?.id || values.packageId,
-      shouldCreateTransaction: values.shouldCreateTransaction,
-      shouldGenerateNeurofinanceCharge: values.shouldGenerateNeurofinanceCharge,
-      canUseNeurofinance,
-      insuranceConfigured: resolvedFinancial?.planType === "insurance",
-    });
-
-    let notesStr = values.notes || "";
-    let locStr: string | null = null;
-
-    const durationMinutes = Math.round((endDateTime.getTime() - startDateTime.getTime()) / 60000);
-    const metadata = values.eventType === "event"
-      ? buildEventMetadata({
-          title: values.eventTitle || "Compromisso",
-          category: values.eventCategory || "outro",
-          categoryLabel: eventCategories.find((item) => item.slug === values.eventCategory)?.name,
-          location: values.eventLocation || null,
-          notes: values.notes || "",
-          origin: "neuronex",
-          syncStatus: "not_configured",
-        })
-      : buildSessionMetadata({
-          sessionType: values.type,
-          modality: values.modality,
-          durationMinutes,
-          notes: values.notes || "",
-          origin: "neuronex",
-          syncStatus: "not_configured",
-          financial: {
-            mode: selectedFinancialMode,
-            usePackage: values.usePackage,
-            packageId: values.packageId || selectedPackage?.id || null,
-            transactionAmount:
-              values.shouldCreateTransaction
-                ? values.transactionAmount || 0
-                : null,
-            transactionMethod: values.transactionMethod || null,
-            installments: values.installments || 1,
-            neurofinanceChargeRequested: values.shouldGenerateNeurofinanceCharge,
-          },
-        });
-
-    if (values.eventType === "event") {
-      notesStr = buildEventNotesFromMetadata(metadata);
-    } else if (values.eventType === "session") {
-      const prefix = values.type === "first_visit" ? "[Primeira Consulta] " : "";
-      notesStr = `${prefix}${values.notes || (values.type === "first_visit" ? "Primeira Consulta" : "")}`;
-      locStr = values.modality === "online" ? "Teleconsulta NeuroNex" : values.sessionLocation?.trim() || "Consultório";
-    }
-
-    const appointmentPayloadBase = {
-      patient_id: values.eventType === "session" ? values.patientId || null : null,
-      start_time: startDateTime,
-      end_time: endDateTime,
-      type: (values.eventType === "session"
-        ? values.modality
-        : "block") as "presencial" | "online" | "block",
-      notes: notesStr,
-      location: values.eventType === "event" ? values.eventLocation || null : locStr,
-      metadata,
-      package_id:
-        selectedFinancialMode === "package"
-          ? selectedPackage?.id || values.packageId || null
-          : null,
-      financial:
-        selectedFinancialMode === "package"
-        ? {
-            mode: "package" as const,
-            value_per_session: 0,
-            total: 0,
-            charge_mode: "per_occurrence" as const,
-          }
-        : selectedFinancialMode === "manual"
-        ? {
-            mode: "manual" as const,
-            value_per_session: values.transactionAmount || 0,
-            total: values.transactionAmount || 0,
-            charge_mode: "per_occurrence" as const,
-            payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
-            installments: values.installments || 1,
-          }
-        : selectedFinancialMode === "neurofinance"
-        ? {
-            mode: "neurofinance" as const,
-            value_per_session: values.transactionAmount || 0,
-            total: values.transactionAmount || 0,
-            charge_mode: "per_occurrence" as const,
-            payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
-            installments: values.installments || 1,
-          }
-        : selectedFinancialMode === "insurance"
-        ? {
-            mode: "insurance" as const,
-            value_per_session: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
-            total: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
-            charge_mode: "per_occurrence" as const,
-          }
-        : { mode: "none" as const, value_per_session: 0, total: 0, charge_mode: "per_occurrence" as const },
-    };
-    const appointmentPayload = {
-      ...appointmentPayloadBase,
-      idempotency_key: idempotencyKeyForPayload(appointmentPayloadBase),
-    };
 
     try {
       if (values.shouldGenerateNeurofinanceCharge && !canUseNeurofinance) {
@@ -998,6 +1143,7 @@ export function NewAppointmentModal({
           return;
         }
 
+        const { metadata } = buildAppointmentIntentContext(values);
         const creationInput = buildAgendaPlanInput(values, metadata);
         const result = await createAgendaSeries({
           input: creationInput,
@@ -1005,7 +1151,24 @@ export function NewAppointmentModal({
         });
         toast.success(result.result.message || "Série criada com segurança.");
       } else {
-        await createAppointment(appointmentPayload);
+        const singleIntent = buildSingleAppointmentIntent(values);
+        if (
+          !preparedSinglePlan
+          || preparedSinglePlan.fingerprint !== singleIntent.fingerprint
+          || preparedSinglePlan.idempotencyKey !== singleIntent.payload.idempotency_key
+        ) {
+          const prepared = await prepareSingleAppointmentForReview(values);
+          if (prepared) {
+            const message = "O plano foi atualizado. Revise o resumo e confirme novamente.";
+            setSubmissionError(message);
+            setValidationAnnouncement(message);
+          }
+          return;
+        }
+        await createAppointment({
+          ...singleIntent.payload,
+          prepared_plan: preparedSinglePlan.plan,
+        });
       }
 
       const typedLocation = values.sessionLocation?.trim();
@@ -1028,20 +1191,17 @@ export function NewAppointmentModal({
       setSelectedTemplateId("");
       setTemplateName("");
       idempotencyIntentRef.current = null;
+      singlePlanRequestSequenceRef.current += 1;
+      setPreparedSinglePlan(null);
       setSeriesPreview(null);
       setSeriesPreviewFingerprint(null);
       setSeriesPreviewError(null);
       setStep(1);
     } catch (error: unknown) {
       if (isAppointmentPlanReviewRequiredError(error)) {
-        const issue = Array.isArray(error.issues) ? error.issues[0] : undefined;
-        if (issue?.field) {
-          form.setError(issue.field as FieldPath<FormValues>, {
-            type: "server",
-            message: issue.message,
-          });
-          void revealFirstInvalidField(form.formState.errors, issue.field);
-        }
+        setPreparedSinglePlan(null);
+        await revealSingleAppointmentPlanError(error);
+        return;
       }
       const agendaError = error as Error & { preview?: AgendaV2Preview };
       if (agendaError.preview) {
@@ -1103,6 +1263,85 @@ export function NewAppointmentModal({
         } catch {
           // Controles compostos sem ref usam o alvo DOM marcado acima.
         }
+      }
+    }
+  };
+
+  const revealSingleAppointmentPlanError = async (error: unknown) => {
+    if (isAppointmentPlanReviewRequiredError(error)) {
+      const issue = Array.isArray(error.issues) ? error.issues[0] : undefined;
+      if (issue?.field) {
+        form.setError(issue.field as FieldPath<FormValues>, {
+          type: "server",
+          message: issue.message,
+        });
+      }
+      await revealFirstInvalidField(form.formState.errors, issue?.field);
+      return issue?.message || error.message;
+    }
+
+    const message = error instanceof Error
+      ? error.message
+      : "Não foi possível preparar o agendamento para revisão.";
+    setSubmissionError(message);
+    setValidationAnnouncement(message);
+    toast.error(message);
+    return message;
+  };
+
+  const prepareSingleAppointmentForReview = async (values: FormValues) => {
+    let intent: ReturnType<typeof buildSingleAppointmentIntent>;
+    try {
+      intent = buildSingleAppointmentIntent(values);
+    } catch (error) {
+      await revealSingleAppointmentPlanError(error);
+      return false;
+    }
+    const idempotencyKey = intent.payload.idempotency_key;
+    if (!idempotencyKey) {
+      await revealSingleAppointmentPlanError(
+        new Error("Não foi possível identificar esta tentativa de agendamento."),
+      );
+      return false;
+    }
+
+    const requestSequence = ++singlePlanRequestSequenceRef.current;
+    setPreparedSinglePlan(null);
+    setIsPreparingSinglePlan(true);
+    setSubmissionError(null);
+    setValidationAnnouncement("Validando o plano do agendamento.");
+
+    try {
+      const plan = await prepareAppointment(intent.payload);
+      const isLatestDraft =
+        requestSequence === singlePlanRequestSequenceRef.current
+        && currentSingleFingerprintRef.current === intent.fingerprint
+        && currentSingleIdempotencyKeyRef.current === idempotencyKey;
+      if (!isLatestDraft) return false;
+
+      if (plan.status === "review_required") {
+        throw new AppointmentPlanReviewRequiredError(plan);
+      }
+      if (plan.status !== "awaiting_confirmation") {
+        throw new Error("O plano não está disponível para confirmação. Atualize os dados e tente novamente.");
+      }
+
+      setPreparedSinglePlan({
+        fingerprint: intent.fingerprint,
+        idempotencyKey,
+        plan,
+      });
+      setSubmissionError(null);
+      setValidationAnnouncement("Plano validado. Revise os dados antes de confirmar.");
+      return true;
+    } catch (error) {
+      if (requestSequence !== singlePlanRequestSequenceRef.current) return false;
+      setPreparedSinglePlan(null);
+      await revealSingleAppointmentPlanError(error);
+      return false;
+    } finally {
+      if (requestSequence === singlePlanRequestSequenceRef.current) {
+        setIsPreparingSinglePlan(false);
       }
     }
   };
@@ -2677,9 +2916,14 @@ export function NewAppointmentModal({
     }
 
     const isEnteringReview = step === totalSteps - 1;
-    if (recurrenceEnabled && isEnteringReview) {
-      const preview = await loadSeriesPreview(form.getValues());
-      if (!preview) return;
+    if (isEnteringReview) {
+      if (recurrenceEnabled) {
+        const preview = await loadSeriesPreview(form.getValues());
+        if (!preview) return;
+      } else {
+        const prepared = await prepareSingleAppointmentForReview(form.getValues());
+        if (!prepared) return;
+      }
     }
     nextStep();
   };
@@ -2775,9 +3019,10 @@ export function NewAppointmentModal({
             <Button
               type="button"
               onClick={handleContinue}
+              disabled={isSubmitting}
               className="agenda-primary-action h-11 rounded-full px-6 font-bold tracking-wide"
             >
-              Continuar
+              {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : "Continuar"}
             </Button>
           ) : (
             <Button

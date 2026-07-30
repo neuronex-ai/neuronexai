@@ -149,7 +149,7 @@ serve(async (req: Request) => {
       const { data: existing } = await supabaseService
         .from("appointments")
         .select(
-          "id, user_id, patient_id, start_time, end_time, status, lifecycle_status, type, notes, location, metadata, updated_at",
+          "id, user_id, patient_id, start_time, end_time, status, lifecycle_status, type, notes, location, metadata, audit_metadata, updated_at",
         )
         .eq("google_event_id", event.id)
         .maybeSingle();
@@ -219,6 +219,14 @@ serve(async (req: Request) => {
         }
 
         if (Object.keys(updatePayload).length > 1 || updatePayload.metadata) {
+          updatePayload.audit_metadata = {
+            ...(existing.audit_metadata || {}),
+            ...(updatePayload.audit_metadata || {}),
+            source: "google_calendar_poll",
+            googleEventId: event.id,
+            googleUpdatedAt: event.updated || null,
+            googleMutationMarker: event.updated || `${event.id}:${event.status || "confirmed"}`,
+          };
           const { error: updateError } = await supabaseService
             .from("appointments")
             .update(updatePayload)
