@@ -45,7 +45,6 @@ import { useAppointmentsByDateRange } from "@/hooks/use-appointments-by-date-ran
 import { useDashboardManagerialMetrics } from "@/hooks/use-dashboard-managerial-metrics";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
 import { fromPlanningCents, useFinancialPlanning } from "@/hooks/use-financial-planning";
-import { useGoogleCalendarSync } from "@/hooks/use-google-calendar-sync";
 import { useNeuroFinanceBalance } from "@/hooks/use-neurofinance-balance";
 import { useNotifications } from "@/hooks/use-notifications";
 import { usePendingPatientsCount } from "@/hooks/use-pending-patients-count";
@@ -1300,8 +1299,6 @@ export const DesktopDashboardCommandCenter = () => {
   const [manualChargeOpen, setManualChargeOpen] = useState(false);
   const professionalReflection = useDailyRotationItem(professionalReflections) || professionalReflections[0];
   const firstName = getFirstName(profile);
-
-  useGoogleCalendarSync();
 
   const { data: allUpcomingAppointments, isLoading: loadingAppointments } = useAppointmentsByDateRange(startOfDay(today), endOfDay(addDays(today, 7)));
   const { data: pendingPatientsRaw } = usePendingPatientsCount();

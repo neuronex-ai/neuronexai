@@ -28,4 +28,19 @@ describe("appointment action plan error messages", () => {
       ),
     ).toBe("Estamos atualizando a Agenda. Tente novamente em instantes.");
   });
+
+  it("maps a past-time plan review to the scheduling fields instead of finance", () => {
+    expect(
+      getAppointmentPlanErrorMessage(
+        { code: "APPOINTMENT_PLAN_REVIEW_REQUIRED", message: "A data ou o horário já passou. past_time" },
+        "create",
+      ),
+    ).toBe("A data ou o horário escolhido já passou. Selecione um horário futuro para continuar.");
+  });
+
+  it("keeps invalid same-day intervals actionable", () => {
+    expect(
+      getAppointmentPlanErrorMessage({ code: "crosses_day" }, "create"),
+    ).toBe("O horário final precisa ser posterior ao horário inicial no mesmo dia.");
+  });
 });

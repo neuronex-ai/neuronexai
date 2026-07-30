@@ -143,6 +143,44 @@ export async function ensureTeleconsultationInvite(
   };
 }
 
+export async function revokeTeleconsultationAccess(
+  admin: any,
+  appointmentId: string,
+  professionalId: string,
+) {
+  const now = new Date().toISOString();
+  const appointmentResult = await admin
+    .from("appointments")
+    .select("id,user_id")
+    .eq("id", appointmentId)
+    .eq("user_id", professionalId)
+    .maybeSingle();
+  if (appointmentResult.error) throw appointmentResult.error;
+  if (!appointmentResult.data) throw new Error("Agendamento não encontrado.");
+
+  const [inviteResult, participantResult, appointmentUpdate] = await Promise.all([
+    admin
+      .from("teleconsultation_invites")
+      .update({ revoked_at: now, updated_at: now })
+      .eq("appointment_id", appointmentId)
+      .is("revoked_at", null),
+    admin
+      .from("teleconsultation_participants")
+      .update({ revoked_at: now, last_seen_at: now })
+      .eq("appointment_id", appointmentId)
+      .is("revoked_at", null),
+    admin
+      .from("appointments")
+      .update({ google_meet_link: null, updated_at: now })
+      .eq("id", appointmentId)
+      .eq("user_id", professionalId),
+  ]);
+  if (inviteResult.error) throw inviteResult.error;
+  if (participantResult.error) throw participantResult.error;
+  if (appointmentUpdate.error) throw appointmentUpdate.error;
+  return { success: true, revokedAt: now };
+}
+
 export async function resolveTeleconsultationInvite(admin: any, inviteToken: unknown) {
   const token = String(inviteToken ?? "").trim();
   if (!/^[a-f0-9]{64}$/i.test(token)) return null;

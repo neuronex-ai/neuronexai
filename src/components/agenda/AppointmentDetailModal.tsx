@@ -37,9 +37,12 @@ import {
 import {
   buildEventNotes,
   getAppointmentMetadata,
+  getAppointmentSyncPresentation,
   getEditableAppointmentNotes,
   getEventCategoryLabel,
   getSessionTypeLabel,
+  isWaitlistAppointmentMetadata,
+  normalizeAppointmentSyncStatus,
   type AppointmentMetadata,
 } from "@/lib/appointment-metadata";
 import { getAppointmentDisplayTitle, getDurationString } from "@/lib/appointment-utils";
@@ -63,6 +66,7 @@ import {
   CreditCard,
   FileText,
   Loader2,
+  ListPlus,
   Mail,
   MessageCircle,
   MoreHorizontal,
@@ -182,6 +186,11 @@ export const AppointmentDetailModal = ({
     appointment.notes,
   );
   const recurrence = metadata.recurrence;
+  const isFromWaitlist = isWaitlistAppointmentMetadata(metadata);
+  const syncPresentation = getAppointmentSyncPresentation(metadata.syncStatus, {
+    googleEventId: appointment.google_event_id,
+    origin: metadata.origin,
+  });
   const lifecycleLabel = appointment.lifecycle_status
     ? LIFECYCLE_LABELS[appointment.lifecycle_status] || "Situação do agendamento atualizada"
     : null;
@@ -286,14 +295,66 @@ export const AppointmentDetailModal = ({
 
   const saveDetails = async () => {
     const timeUpdates = buildTimeUpdates();
+    let nextNotes = notes;
+    let nextLocation = appointment.location;
+    const nextType = isSession ? modality : appointment.type;
+
+    if (isEvent) {
+      nextNotes = buildEventNotes({
+        ...metadata,
+        kind,
+        eventTitle: eventTitle.trim() || "Compromisso",
+        eventCategory,
+        eventCategoryLabel: getEventCategoryLabel(eventCategory),
+        eventLocation: eventLocation.trim(),
+        eventNotes: notes.trim(),
+      });
+      nextLocation = eventLocation.trim() || null;
+    } else if (modality !== (metadata.modality === "online" || appointment.type === "online" ? "online" : "presencial")) {
+      nextLocation = modality === "online" ? appointment.location || "Teleconsulta NeuroNex" : appointment.location || "Consultório";
+    }
+
+    const startChanged = new Date(timeUpdates.start_time).getTime() !== new Date(appointment.start_time).getTime();
+    const endChanged = new Date(timeUpdates.end_time).getTime() !== new Date(appointment.end_time).getTime();
+    const typeChanged = nextType !== appointment.type;
+    const locationChanged = (nextLocation || "").trim() !== (appointment.location || "").trim();
+    const notesChanged = nextNotes !== (appointment.notes || "");
+    const eventMetadataChanged = isEvent && (
+      (eventTitle.trim() || "Compromisso") !== (metadata.eventTitle || displayTitle || "Compromisso")
+      || eventCategory !== (metadata.eventCategory || "outro")
+      || eventLocation.trim() !== (metadata.eventLocation || appointment.location || "").trim()
+      || notes.trim() !== (metadata.eventNotes || getEditableAppointmentNotes(appointment)).trim()
+    );
+    const currentModality = metadata.modality === "online" || appointment.type === "online" ? "online" : "presencial";
+    const sessionMetadataChanged = isSession && (
+      sessionType !== (metadata.sessionType || "follow_up")
+      || modality !== currentModality
+    );
+    const hasAnyChange = startChanged
+      || endChanged
+      || typeChanged
+      || locationChanged
+      || notesChanged
+      || eventMetadataChanged
+      || sessionMetadataChanged;
+
+    if (!hasAnyChange) {
+      toast.info("Nenhuma alteração para salvar.");
+      setOpen(false);
+      return;
+    }
+
+    const currentSyncStatus = metadata.syncStatus === "pending_professional_review"
+      ? metadata.syncStatus
+      : normalizeAppointmentSyncStatus(metadata.syncStatus, {
+        googleEventId: appointment.google_event_id,
+        origin: metadata.origin,
+      });
     const nextMetadata: AppointmentMetadata = {
       ...metadata,
       kind,
-      syncStatus: appointment.google_event_id ? "pending" : metadata.syncStatus || "pending",
+      syncStatus: appointment.google_event_id ? "queued" : currentSyncStatus,
     };
-
-    let nextNotes = notes;
-    let nextLocation = appointment.location;
 
     if (isEvent) {
       nextMetadata.eventTitle = eventTitle.trim() || "Compromisso";
@@ -301,27 +362,27 @@ export const AppointmentDetailModal = ({
       nextMetadata.eventCategoryLabel = getEventCategoryLabel(eventCategory);
       nextMetadata.eventLocation = eventLocation.trim();
       nextMetadata.eventNotes = notes.trim();
-      nextNotes = buildEventNotes(nextMetadata);
-      nextLocation = eventLocation.trim() || null;
     } else {
       nextMetadata.sessionType = sessionType;
       nextMetadata.modality = modality;
       nextMetadata.durationMinutes = Math.max(
         1,
-        Math.round((new Date(timeUpdates.end_time).getTime() - new Date(timeUpdates.start_time).getTime()) / 60000)
+        Math.round((new Date(timeUpdates.end_time).getTime() - new Date(timeUpdates.start_time).getTime()) / 60000),
       );
-      nextLocation = modality === "online" ? appointment.location || "Teleconsulta NeuroNex" : appointment.location || "Consultório";
+    }
+
+    const updates: Partial<Appointment> = {};
+    if (startChanged || endChanged) Object.assign(updates, timeUpdates);
+    if (typeChanged) updates.type = nextType;
+    if (locationChanged) updates.location = nextLocation;
+    if (notesChanged) updates.notes = nextNotes;
+    if (eventMetadataChanged || sessionMetadataChanged || startChanged || endChanged) {
+      updates.metadata = nextMetadata;
     }
 
     await updateAppointment.mutateAsync({
       id: appointment.id,
-      updates: {
-        ...timeUpdates,
-        type: isSession ? modality : appointment.type,
-        notes: nextNotes,
-        location: nextLocation,
-        metadata: nextMetadata,
-      },
+      updates,
     });
 
     toast.success("Agendamento atualizado.");
@@ -478,6 +539,14 @@ export const AppointmentDetailModal = ({
                   <ShieldCheck className="h-3 w-3" aria-hidden="true" />
                   <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em]">
                     {lifecycleLabel}
+                  </span>
+                </div>
+              ) : null}
+              {isFromWaitlist ? (
+                <div className="flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-sky-700 dark:text-sky-300">
+                  <ListPlus className="h-3 w-3" aria-hidden="true" />
+                  <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em]">
+                    Lista de espera · confirmado pelo paciente
                   </span>
                 </div>
               ) : null}
@@ -696,12 +765,18 @@ export const AppointmentDetailModal = ({
                   <FieldShell label={isSession ? "Sessão" : "Origem"} icon={isSession ? <Video className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}>
                     <div className="space-y-1">
                       <p className="text-lg font-bold text-foreground tracking-tight">
-                        {isSession ? getSessionTypeLabel(metadata.sessionType) : metadata.origin === "google" ? "Google Agenda" : "NeuroNex"}
+                        {isSession
+                          ? getSessionTypeLabel(metadata.sessionType)
+                          : metadata.origin === "google"
+                            ? "Google Agenda"
+                            : metadata.origin === "waitlist"
+                              ? "Lista de espera"
+                              : "NeuroNex"}
                       </p>
                       <p className="text-sm font-medium text-muted-foreground">
                         {isSession
                           ? `${appointment.type === "online" ? "Online" : "Presencial"} • ${getDurationString(appointment.start_time, appointment.end_time)}`
-                          : metadata.syncStatus === "synced" ? "Sincronizado" : "Pendente de sync"}
+                          : syncPresentation.label}
                       </p>
                     </div>
                   </FieldShell>

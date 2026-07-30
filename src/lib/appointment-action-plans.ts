@@ -14,6 +14,88 @@ export type AppointmentActionPlan = {
   result?: Record<string, unknown>;
 };
 
+export type AppointmentPlanIssue = {
+  code: string;
+  message: string;
+  field?: string;
+  occurrenceNumber?: number;
+  source: "agenda" | "financial" | "policy" | "unknown";
+};
+
+const asRecord = (value: unknown): Record<string, unknown> =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+
+const issueField = (code: string): string | undefined => {
+  if (code === "past_time") return "startTime";
+  if (["crosses_day", "invalid_interval", "invalid_end_time"].includes(code)) return "endTime";
+  if (["appointment_conflict", "slot_conflict", "outside_working_hours", "blocked_time"].includes(code)) {
+    return "startTime";
+  }
+  if (code.includes("package")) return "packageId";
+  if (code.includes("payment_method")) return "transactionMethod";
+  if (code.includes("financial") || code.includes("amount")) return "transactionAmount";
+  return undefined;
+};
+
+export const getAppointmentPlanIssues = (plan: Pick<AppointmentActionPlan, "summary">): AppointmentPlanIssue[] => {
+  const summary = asRecord(plan.summary);
+  const agenda = asRecord(summary.agenda);
+  const conflicts = Array.isArray(agenda.conflicts) ? agenda.conflicts : [];
+  const agendaIssues = conflicts.map((value): AppointmentPlanIssue => {
+    const conflict = asRecord(value);
+    const code = String(conflict.reasonCode || "appointment_conflict");
+    const occurrence = Number(conflict.occurrenceNumber);
+    return {
+      code,
+      message: String(conflict.reason || "O horário precisa ser revisado."),
+      field: issueField(code),
+      occurrenceNumber: Number.isInteger(occurrence) && occurrence > 0 ? occurrence : undefined,
+      source: "agenda",
+    };
+  });
+
+  if (agendaIssues.length > 0) return agendaIssues;
+
+  const financial = asRecord(summary.financial);
+  const financialCode = String(financial.reasonCode || financial.errorCode || "");
+  if (financialCode) {
+    return [{
+      code: financialCode,
+      message: String(financial.reason || financial.impactMessage || "Revise a configuração financeira."),
+      field: issueField(financialCode),
+      source: "financial",
+    }];
+  }
+
+  return [{
+    code: "review_required",
+    message: "Revise os dados destacados antes de continuar.",
+    source: "unknown",
+  }];
+};
+
+export class AppointmentPlanReviewRequiredError extends Error {
+  readonly code = "APPOINTMENT_PLAN_REVIEW_REQUIRED";
+  readonly plan: AppointmentActionPlan;
+  readonly issues: AppointmentPlanIssue[];
+
+  constructor(plan: AppointmentActionPlan) {
+    const issues = getAppointmentPlanIssues(plan);
+    super(issues[0]?.message || "Revise os dados do agendamento antes de continuar.");
+    this.name = "AppointmentPlanReviewRequiredError";
+    this.plan = plan;
+    this.issues = issues;
+  }
+}
+
+export const isAppointmentPlanReviewRequiredError = (
+  error: unknown,
+): error is AppointmentPlanReviewRequiredError =>
+  error instanceof AppointmentPlanReviewRequiredError
+  || asRecord(error).code === "APPOINTMENT_PLAN_REVIEW_REQUIRED";
+
 export type AppointmentActionOriginChannel =
   | "professional_app"
   | "synapse_text"
@@ -106,7 +188,7 @@ export const prepareAndExecuteAppointmentAction = async (
 ) => {
   const prepared = await prepareAppointmentActionPlan(action, input, idempotencyKey, originChannel);
   if (prepared.status === "review_required") {
-    throw new Error("O impacto financeiro ou fiscal precisa de revisão antes desta alteração.");
+    throw new AppointmentPlanReviewRequiredError(prepared);
   }
   if (prepared.status !== "awaiting_confirmation") {
     throw new Error("O plano não está disponível para confirmação. Atualize os dados e tente novamente.");

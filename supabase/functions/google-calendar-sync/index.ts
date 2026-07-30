@@ -95,7 +95,6 @@ const buildEventBody = (appointment: any, patient: any, userEmail?: string, prof
         { method: "popup", minutes: 30 },
       ],
     },
-    sendUpdates: session ? "all" : "none",
   };
 
   if (location) body.location = location;
@@ -144,7 +143,8 @@ serve(async (req) => {
       .eq("id", user.id)
       .single();
 
-    const calendarResponse = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+    const sendUpdates = isSession(appointment) ? "all" : "none";
+    const calendarResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?sendUpdates=${sendUpdates}`, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${accessToken}`,

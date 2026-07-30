@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useForm, type FieldErrors, type FieldPath } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -37,7 +37,6 @@ import { differenceInMinutes, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -64,15 +63,14 @@ import { usePatients } from "@/hooks/use-patients";
 import { useAddAppointment } from "@/hooks/use-add-appointment";
 import { useActivePatientPackages } from "@/hooks/use-active-patient-packages";
 import { usePatientPackages } from "@/hooks/use-patient-packages";
-import { useAppointmentSeries } from "@/hooks/use-appointment-series";
 import { useFinancialAccount } from "@/hooks/use-financial-account";
-import { useGenerateInvoice } from "@/hooks/use-generate-invoice";
 import { useNeurofinanceSimulator, type SimulatorMethod } from "@/hooks/use-neurofinance-simulator";
 import { useProfile } from "@/hooks/use-profile";
 import { useSubscription } from "@/context/SubscriptionContext";
 import {
   useAgendaSeriesTemplates,
   useAgendaV2,
+  useProfessionalAgendaTimezone,
   usePatientFinancialResolution,
   toAgendaV2Overrides,
   toAgendaV2RecurrenceRule,
@@ -91,9 +89,20 @@ import {
 } from "@/lib/appointment-metadata";
 import {
   APPOINTMENT_FORM_ID,
+  appointmentPayloadFingerprint,
   findFirstInvalidAppointmentField,
+  getAppointmentErrorMessage,
+  getAppointmentFieldOrder,
+  getAppointmentFieldsForStep,
   getAppointmentFieldStep,
+  getInitialAppointmentSlot,
   getAppointmentStepLabels,
+  getOccurrenceOverrideIssue,
+  normalizeOccurrenceOverride,
+  dateAtTimeInZone,
+  revealAppointmentField,
+  resolveAppointmentFinancialMode,
+  validateAppointmentTiming,
 } from "@/lib/appointment-form-flow";
 import { AdvancedRecurrenceEditor } from "@/components/agenda/AdvancedRecurrenceEditor";
 import { EventCategoryManagerDialog } from "@/components/agenda/EventCategoryManagerDialog";
@@ -108,10 +117,11 @@ import {
 } from "@/lib/agenda-scheduling";
 import { getAppointmentRecurrenceTerminology } from "@/lib/appointment-recurrence-terminology";
 import { DEFAULT_PROFESSIONAL_EVENT_CATEGORIES } from "@/lib/professional-event-categories";
+import { isAppointmentPlanReviewRequiredError } from "@/lib/appointment-action-plans";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
-const formSchema = z
+const createFormSchema = (timeZone: string) => z
   .object({
     eventType: z.enum(["session", "event"]).default("session"),
 
@@ -122,14 +132,14 @@ const formSchema = z
       { message: "Não é possível agendar para datas passadas" }
     ),
     startTime: z.string().min(1, "Horário de início obrigatório"),
-    duration: z.number().min(15, "Mínimo 15 minutos"),
+    duration: z.number().min(15, "Mínimo 15 minutos").max(1440, "Máximo 24 horas"),
     type: z.enum(["first_visit", "follow_up", "emergency", "block"]).default("follow_up"),
     modality: z.enum(["presencial", "online"]).default("presencial"),
     sessionLocation: z.string().optional(),
     notes: z.string().optional(),
 
     // Evento Geral
-    eventTitle: z.string().optional(),
+    eventTitle: z.string().trim().optional(),
     eventCategory: z.string().optional(),
     endTime: z.string().optional(),
     eventLocation: z.string().optional(),
@@ -188,11 +198,29 @@ const formSchema = z
     { message: "Informe um valor maior que zero", path: ["transactionAmount"] }
   )
   .refine(
+    (data) => data.eventType !== "session" || !data.usePackage || Boolean(data.packageId),
+    { message: "Selecione o pacote que será utilizado", path: ["packageId"] },
+  )
+  .refine(
     (data) => !data.shouldGenerateNeurofinanceCharge || data.shouldCreateTransaction,
     { message: "Ative o lançamento financeiro para gerar a cobrança", path: ["shouldGenerateNeurofinanceCharge"] },
-  );
+  )
+  .superRefine((data, context) => {
+    validateAppointmentTiming({
+      date: data.date,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      timeZone,
+    }).forEach((issue) => {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [issue.field],
+        message: issue.message,
+      });
+    });
+  });
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<ReturnType<typeof createFormSchema>>;
 
 // ─── Constantes ───────────────────────────────────────────────────────
 
@@ -203,17 +231,15 @@ const addMinutesToTime = (time: string, minutesToAdd: number) => {
   return format(date, "HH:mm");
 };
 
-const buildAppointmentTimes = (values: FormValues) => {
-  const startDateTime = new Date(values.date);
-  const [hours, minutes] = values.startTime.split(":").map(Number);
-  startDateTime.setHours(hours, minutes, 0, 0);
+const buildAppointmentTimes = (values: FormValues, timeZone: string) => {
+  const startDateTime = dateAtTimeInZone(values.date, values.startTime, timeZone);
+  if (!startDateTime) throw new Error("Data ou horário inicial inválido.");
 
   let endDateTime: Date;
   if (values.endTime) {
-    endDateTime = new Date(values.date);
-    const [endHours, endMinutes] = values.endTime.split(":").map(Number);
-    endDateTime.setHours(endHours, endMinutes, 0, 0);
-    if (endDateTime <= startDateTime) endDateTime.setDate(endDateTime.getDate() + 1);
+    const resolvedEnd = dateAtTimeInZone(values.date, values.endTime, timeZone);
+    if (!resolvedEnd) throw new Error("Horário final inválido.");
+    endDateTime = resolvedEnd;
   } else {
     endDateTime = new Date(startDateTime);
     endDateTime.setMinutes(endDateTime.getMinutes() + values.duration);
@@ -332,8 +358,10 @@ export function NewAppointmentModal({
 
   const [step, setStep] = useState(1);
   const [seriesPreview, setSeriesPreview] = useState<AgendaV2Preview | null>(null);
+  const [seriesPreviewFingerprint, setSeriesPreviewFingerprint] = useState<string | null>(null);
   const [seriesPreviewError, setSeriesPreviewError] = useState<string | null>(null);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [validationAnnouncement, setValidationAnnouncement] = useState("");
   const [recurrenceDraft, setRecurrenceDraft] = useState<AgendaRecurrenceDraft>(() =>
     createAgendaRecurrenceDraft(selectedDate || initialDate || new Date()),
   );
@@ -341,7 +369,10 @@ export function NewAppointmentModal({
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [smartFitSuggestions, setSmartFitSuggestions] = useState<Record<number, AgendaPlanSmartFitCandidate[]>>({});
-  const idempotencyKeyRef = useRef(`agenda-v2-${crypto.randomUUID()}`);
+  const idempotencyIntentRef = useRef<{ fingerprint: string; key: string } | null>(null);
+  const previewRequestSequenceRef = useRef(0);
+  const bodyScrollRef = useRef<HTMLDivElement>(null);
+  const wasOpenRef = useRef(false);
   const { data: patients } = usePatients();
   const { mutateAsync: createAppointment, isPending: isCreatingAppointment } = useAddAppointment();
   const { profile, rememberAppointmentLocation } = useProfile();
@@ -351,15 +382,8 @@ export function NewAppointmentModal({
     isApproved: isFinancialAccountApproved,
     isLoading: isLoadingFinancialAccount,
   } = useFinancialAccount();
-  const {
-    mutateAsync: generateNeurofinanceInvoice,
-    isPending: isGeneratingNeurofinanceInvoice,
-  } = useGenerateInvoice();
   const { simulate: simulateNeurofinance } = useNeurofinanceSimulator();
-  const {
-    createSeries,
-    isCreatingSeries,
-  } = useAppointmentSeries();
+  const { data: professionalTimezone = "America/Sao_Paulo" } = useProfessionalAgendaTimezone();
   const {
     previewAgendaPlan,
     createAgendaSeries,
@@ -375,14 +399,23 @@ export function NewAppointmentModal({
   } = useAgendaSeriesTemplates();
 
   const effectiveDate = selectedDate || initialDate;
+  const initialSlot = getInitialAppointmentSlot({
+    effectiveDate,
+    selectedTime,
+    workingHours: profile?.working_hours,
+  });
+  const formSchema = useMemo(
+    () => createFormSchema(professionalTimezone),
+    [professionalTimezone],
+  );
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       eventType: "session",
       patientId: "",
-      date: effectiveDate || new Date(),
-      startTime: selectedTime || "09:00",
+      date: initialSlot.date,
+      startTime: initialSlot.startTime,
       duration: 50,
       type: "follow_up",
       modality: "presencial",
@@ -390,9 +423,9 @@ export function NewAppointmentModal({
       notes: "",
       eventTitle: "",
       eventCategory: "",
-      endTime: addMinutesToTime(selectedTime || "09:00", 50),
+      endTime: addMinutesToTime(initialSlot.startTime, 50),
       eventLocation: "",
-      shouldCreateTransaction: true,
+      shouldCreateTransaction: false,
       shouldGenerateNeurofinanceCharge: false,
       transactionAmount: 0,
       transactionMethod: "patient_choice",
@@ -404,9 +437,36 @@ export function NewAppointmentModal({
     },
   });
 
+  useEffect(() => {
+    const justOpened = isOpen && !wasOpenRef.current;
+    wasOpenRef.current = isOpen;
+    if (!isOpen || selectedTime) return;
+    if (!justOpened && !profile?.working_hours) return;
+    if (form.formState.dirtyFields.date || form.formState.dirtyFields.startTime) return;
+    const slot = getInitialAppointmentSlot({
+      effectiveDate,
+      workingHours: profile?.working_hours,
+      durationMinutes: form.getValues("duration") || 50,
+    });
+    form.setValue("date", slot.date);
+    form.setValue("startTime", slot.startTime);
+    form.setValue("endTime", addMinutesToTime(slot.startTime, form.getValues("duration") || 50));
+  }, [effectiveDate, form, isOpen, profile?.working_hours, selectedTime]);
+
   // Atualizar data quando selecionada externamente
   useEffect(() => {
-    if (effectiveDate) form.setValue("date", effectiveDate);
+    if (effectiveDate) {
+      const slot = getInitialAppointmentSlot({
+        effectiveDate,
+        selectedTime,
+        durationMinutes: form.getValues("duration") || 50,
+      });
+      form.setValue("date", slot.date);
+      if (!selectedTime) {
+        form.setValue("startTime", slot.startTime);
+        form.setValue("endTime", addMinutesToTime(slot.startTime, form.getValues("duration") || 50));
+      }
+    }
     if (effectiveDate) {
       setRecurrenceDraft((current) => ({
         ...current,
@@ -414,7 +474,7 @@ export function NewAppointmentModal({
         monthDays: current.overrides.length ? current.monthDays : [effectiveDate.getDate()],
       }));
     }
-  }, [effectiveDate, form]);
+  }, [effectiveDate, form, selectedTime]);
 
   useEffect(() => {
     if (!selectedTime) return;
@@ -457,8 +517,12 @@ export function NewAppointmentModal({
     hasNeurofinanceEntitlement
     && isFinancialAccountApproved
     && financialAccount?.charges_enabled !== false;
-  const { data: resolvedFinancial, isLoading: isResolvingFinancial } =
-    usePatientFinancialResolution(eventType === "session" ? selectedPatientId : null);
+  const {
+    data: resolvedFinancial,
+    isLoading: isResolvingFinancial,
+    isError: isFinancialResolutionError,
+    refetch: retryFinancialResolution,
+  } = usePatientFinancialResolution(eventType === "session" ? selectedPatientId : null);
   const selectedPackageId = form.watch("packageId");
   const usePackageSwitch = form.watch("usePackage");
   const shouldCreateTransaction = form.watch("shouldCreateTransaction");
@@ -471,6 +535,7 @@ export function NewAppointmentModal({
   const recurrenceCount = form.watch("recurrenceCount") || 1;
   const selectedFormDate = form.watch("date");
   const selectedEndTime = form.watch("endTime");
+  const watchedFormValues = form.watch();
 
   useEffect(() => {
     if (!isOpen || !professionalDefaultLocation) return;
@@ -479,13 +544,16 @@ export function NewAppointmentModal({
   }, [form, isOpen, professionalDefaultLocation]);
 
   useEffect(() => {
+    if (eventType === "event") return;
     if (!startTime || !duration) return;
     form.setValue("endTime", addMinutesToTime(startTime, duration));
-  }, [duration, form, startTime]);
+  }, [duration, eventType, form, startTime]);
 
   useEffect(() => {
     setSeriesPreview(null);
+    setSeriesPreviewFingerprint(null);
     setSeriesPreviewError(null);
+    previewRequestSequenceRef.current += 1;
   }, [
     duration,
     eventType,
@@ -510,7 +578,25 @@ export function NewAppointmentModal({
   useEffect(() => {
     setStep(1);
     setSelectedTemplateId("");
-  }, [eventType]);
+    setSubmissionError(null);
+    setValidationAnnouncement("");
+    if (eventType === "event") {
+      form.setValue("usePackage", false);
+      form.setValue("packageId", "");
+      form.setValue("shouldCreateTransaction", false);
+      form.setValue("shouldGenerateNeurofinanceCharge", false);
+      form.setValue("transactionAmount", 0);
+      form.clearErrors([
+        "usePackage",
+        "packageId",
+        "shouldCreateTransaction",
+        "shouldGenerateNeurofinanceCharge",
+        "transactionAmount",
+        "transactionMethod",
+        "installments",
+      ]);
+    }
+  }, [eventType, form]);
 
   useEffect(() => {
     if (!isOpen) setIsCategoryManagerOpen(false);
@@ -546,38 +632,30 @@ export function NewAppointmentModal({
     : 0;
   const latestPackageIsExpired = !!latestPackage?.end_date && new Date(`${latestPackage.end_date}T23:59:59`) < new Date();
   const projectedUncoveredBalance = latestPackage ? Math.min(latestPackageRemaining - 1, -1) : -1;
-  const isCheckingFinancialRules = isLoadingPackages || isLoadingPatientPackages || isResolvingFinancial;
+  const isCheckingFinancialRules = Boolean(selectedPatientId)
+    && (isLoadingPackages || isLoadingPatientPackages || isResolvingFinancial);
   const isSubmitting =
     isCreatingAppointment ||
     isPreviewingAgendaPlan ||
-    isCreatingSeries ||
-    isCreatingAgendaSeries ||
-    isGeneratingNeurofinanceInvoice;
+    isCreatingAgendaSeries;
 
-  // Auto‑ativar pacote quando tem pacotes, ou abrir lançamento quando não tem
+  // Cada paciente começa com uma decisão financeira neutra. Sugestões e pacotes
+  // continuam visíveis, mas só são aplicados depois de uma escolha explícita.
   useEffect(() => {
-    if (eventType !== "session" || step !== 3) return;
-    if (hasActivePackage) {
-      form.setValue("usePackage", true);
-      if (activePackages && activePackages.length > 0 && !form.getValues("packageId")) {
-        form.setValue("packageId", activePackages[0].id);
-      }
-    } else if (resolvedFinancial?.planType === "insurance" || resolvedFinancial?.planType === "monthly" || resolvedFinancial?.planType === "exempt") {
-      form.setValue("usePackage", false);
-      form.setValue("shouldCreateTransaction", false);
-      if (resolvedFinancial.sessionValueCents > 0) {
-        form.setValue("transactionAmount", resolvedFinancial.sessionValueCents / 100);
-      }
-    } else {
-      form.setValue("usePackage", false);
-      form.setValue("shouldCreateTransaction", resolvedFinancial?.shouldCreateCharge ?? true);
-      if (form.getValues("transactionAmount") === 0) {
-        form.setValue("transactionAmount", resolvedFinancial?.sessionValueCents
-          ? resolvedFinancial.sessionValueCents / 100
-          : 150);
-      }
+    if (eventType !== "session") return;
+    form.setValue("usePackage", false);
+    form.setValue("packageId", "");
+    form.setValue("shouldCreateTransaction", false);
+    form.setValue("shouldGenerateNeurofinanceCharge", false);
+    form.setValue("transactionAmount", 0);
+  }, [eventType, form, selectedPatientId]);
+
+  useEffect(() => {
+    if (eventType !== "session" || isCheckingFinancialRules || !activePackages?.length) return;
+    if (!form.getValues("packageId")) {
+      form.setValue("packageId", activePackages[0].id);
     }
-  }, [hasActivePackage, activePackages, step, eventType, form, resolvedFinancial]);
+  }, [activePackages, eventType, form, isCheckingFinancialRules]);
 
   // Zerar valor da transação quando usa pacote
   useEffect(() => {
@@ -598,44 +676,61 @@ export function NewAppointmentModal({
   const stepLabels = getAppointmentStepLabels(eventType, recurrenceEnabled);
   const totalSteps = stepLabels.length;
 
-  const buildAgendaPlanInput = (
+  const buildAgendaPlanInput = useCallback((
     values: FormValues,
     metadata?: ReturnType<typeof buildSessionMetadata> | ReturnType<typeof buildEventMetadata>,
     recurrence = recurrenceDraft,
   ): AgendaV2PlanInput => {
-    const { startDateTime, endDateTime } = buildAppointmentTimes(values);
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values, professionalTimezone);
     const recurrenceRule = agendaRecurrenceDraftToRule(recurrence);
     const sessionLocation = values.modality === "online"
       ? "Teleconsulta NeuroNex"
       : values.sessionLocation?.trim() || "Consultório";
     const eventLocation = values.eventLocation?.trim() || null;
+    const selectedFinancialMode = resolveAppointmentFinancialMode({
+      eventType: values.eventType,
+      usePackage: values.usePackage,
+      packageId: selectedPackage?.id || values.packageId,
+      shouldCreateTransaction: values.shouldCreateTransaction,
+      shouldGenerateNeurofinanceCharge: values.shouldGenerateNeurofinanceCharge,
+      canUseNeurofinance,
+      insuranceConfigured: resolvedFinancial?.planType === "insurance",
+    });
 
-    const financial: AgendaV2PlanInput["financial"] = values.eventType !== "session"
-      ? { mode: "none" }
-      : values.usePackage && (selectedPackage?.id || values.packageId)
+    const financial: AgendaV2PlanInput["financial"] = selectedFinancialMode === "package"
+      ? {
+          mode: "package",
+          package_id: selectedPackage?.id || values.packageId || null,
+          charge_mode: "per_occurrence",
+        }
+      : selectedFinancialMode === "neurofinance"
         ? {
-            mode: "package",
-            package_id: selectedPackage?.id || values.packageId || null,
+            mode: "neurofinance",
+            value_per_session: values.transactionAmount || 0,
+            payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
+            installments: values.installments || 1,
             charge_mode: "per_occurrence",
           }
-        : resolvedFinancial?.planType === "insurance" && !values.shouldCreateTransaction
-          ? { mode: "insurance", charge_mode: "per_occurrence" }
-          : values.shouldGenerateNeurofinanceCharge && canUseNeurofinance
-            ? { mode: "none" }
-          : values.shouldCreateTransaction
+          : selectedFinancialMode === "manual"
+          ? {
+              mode: "manual",
+              value_per_session: values.transactionAmount || 0,
+              payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
+              charge_mode: "per_occurrence",
+            }
+          : selectedFinancialMode === "insurance"
             ? {
-                mode: "manual",
-                value_per_session: values.transactionAmount || 0,
-                payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
+                mode: "insurance",
+                value_per_session: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
                 charge_mode: "per_occurrence",
               }
-            : { mode: "none" };
+          : { mode: "none" };
 
     return {
       patient_id: values.eventType === "session" ? values.patientId || null : null,
       first_start_time: startDateTime.toISOString(),
       duration_minutes: Math.max(15, differenceInMinutes(endDateTime, startDateTime)),
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo",
+      timezone: professionalTimezone,
       type: values.eventType === "session" ? values.modality : "block",
       recurrence_rule: toAgendaV2RecurrenceRule(recurrenceRule),
       overrides: toAgendaV2Overrides(recurrence.overrides),
@@ -652,6 +747,9 @@ export function NewAppointmentModal({
             durationMinutes: values.duration,
             eventCategory: values.eventCategory || null,
             eventLocation,
+            metadata: metadata || {},
+            notes: values.notes?.trim() || null,
+            location: eventLocation,
           }
         : {
             eventType: "session",
@@ -659,31 +757,130 @@ export function NewAppointmentModal({
             modality: values.modality,
             durationMinutes: values.duration,
             location: sessionLocation,
+            metadata: metadata || {},
+            notes: values.notes?.trim() || null,
           },
       financial,
     };
+  }, [
+    canUseNeurofinance,
+    professionalTimezone,
+    recurrenceDraft,
+    resolvedFinancial?.expectedReceivableCents,
+    resolvedFinancial?.planType,
+    selectedPackage?.id,
+    selectedTemplateId,
+    seriesTemplates,
+  ]);
+
+  const currentPreviewFingerprint = appointmentPayloadFingerprint(
+    buildAgendaPlanInput(watchedFormValues),
+  );
+
+  const idempotencyKeyForPayload = (payload: unknown) => {
+    const fingerprint = appointmentPayloadFingerprint(payload);
+    if (idempotencyIntentRef.current?.fingerprint !== fingerprint) {
+      idempotencyIntentRef.current = {
+        fingerprint,
+        key: `agenda-${crypto.randomUUID()}`,
+      };
+    }
+    return idempotencyIntentRef.current.key;
   };
 
-  const loadSeriesPreview = async (values: FormValues, recurrence = recurrenceDraft) => {
+  const loadSeriesPreview = useCallback(async (values: FormValues, recurrence = recurrenceDraft) => {
+    const input = buildAgendaPlanInput(values, undefined, recurrence);
+    const fingerprint = appointmentPayloadFingerprint(input);
+    const requestSequence = ++previewRequestSequenceRef.current;
     setSeriesPreviewError(null);
+    const overrideIssue = getOccurrenceOverrideIssue(recurrence.overrides);
+    if (overrideIssue) {
+      setSeriesPreview(null);
+      setSeriesPreviewFingerprint(null);
+      setSeriesPreviewError(overrideIssue.message);
+      setSubmissionError(overrideIssue.message);
+      setValidationAnnouncement(`Ocorrência ${overrideIssue.occurrenceNumber}: ${overrideIssue.message}`);
+      window.setTimeout(() => {
+        if (bodyScrollRef.current) {
+          const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+          revealAppointmentField(
+            bodyScrollRef.current,
+            `occurrence-${overrideIssue.occurrenceNumber}`,
+            reducedMotion,
+          );
+          bodyScrollRef.current
+            .querySelector<HTMLElement>(
+              `[data-appointment-field="occurrence-${overrideIssue.occurrenceNumber}"] [data-override-field="${overrideIssue.field}"]`,
+            )
+            ?.focus({ preventScroll: true });
+        }
+      }, 0);
+      return null;
+    }
+    setSubmissionError(null);
+    setValidationAnnouncement("");
     try {
-      const preview = await previewAgendaPlan(buildAgendaPlanInput(values, undefined, recurrence));
+      const preview = await previewAgendaPlan(input);
+      if (requestSequence !== previewRequestSequenceRef.current) return null;
       setSeriesPreview(preview);
+      setSeriesPreviewFingerprint(fingerprint);
       return preview;
     } catch (error) {
+      if (requestSequence !== previewRequestSequenceRef.current) return null;
       const message =
         error instanceof Error ? error.message : "Não foi possível verificar a disponibilidade.";
       setSeriesPreview(null);
+      setSeriesPreviewFingerprint(null);
       setSeriesPreviewError(message);
       toast.error(message);
       return null;
     }
-  };
+  }, [buildAgendaPlanInput, previewAgendaPlan, recurrenceDraft]);
+
+  useEffect(() => {
+    if (!recurrenceEnabled) return;
+    if (seriesPreviewFingerprint === currentPreviewFingerprint) return;
+    previewRequestSequenceRef.current += 1;
+    setSeriesPreview(null);
+    setSeriesPreviewFingerprint(null);
+    setSeriesPreviewError(null);
+  }, [currentPreviewFingerprint, recurrenceEnabled, seriesPreviewFingerprint]);
+
+  useEffect(() => {
+    if (!isOpen || !recurrenceEnabled || step !== totalSteps) return;
+    if (seriesPreview && seriesPreviewFingerprint === currentPreviewFingerprint) return;
+
+    const timeout = window.setTimeout(() => {
+      void form.trigger().then((isValid) => {
+        if (isValid) void loadSeriesPreview(form.getValues());
+      });
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [
+    currentPreviewFingerprint,
+    form,
+    isOpen,
+    loadSeriesPreview,
+    recurrenceEnabled,
+    seriesPreview,
+    seriesPreviewFingerprint,
+    step,
+    totalSteps,
+  ]);
 
   // ── Submit ─────────────────────────────────────────────────────────
   const onSubmit = async (values: FormValues) => {
     setSubmissionError(null);
-    const { startDateTime, endDateTime } = buildAppointmentTimes(values);
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values, professionalTimezone);
+    const selectedFinancialMode = resolveAppointmentFinancialMode({
+      eventType: values.eventType,
+      usePackage: values.usePackage,
+      packageId: selectedPackage?.id || values.packageId,
+      shouldCreateTransaction: values.shouldCreateTransaction,
+      shouldGenerateNeurofinanceCharge: values.shouldGenerateNeurofinanceCharge,
+      canUseNeurofinance,
+      insuranceConfigured: resolvedFinancial?.planType === "insurance",
+    });
 
     let notesStr = values.notes || "";
     let locStr: string | null = null;
@@ -697,7 +894,7 @@ export function NewAppointmentModal({
           location: values.eventLocation || null,
           notes: values.notes || "",
           origin: "neuronex",
-          syncStatus: "pending",
+          syncStatus: "not_configured",
         })
       : buildSessionMetadata({
           sessionType: values.type,
@@ -705,12 +902,13 @@ export function NewAppointmentModal({
           durationMinutes,
           notes: values.notes || "",
           origin: "neuronex",
-          syncStatus: "pending",
+          syncStatus: "not_configured",
           financial: {
+            mode: selectedFinancialMode,
             usePackage: values.usePackage,
             packageId: values.packageId || selectedPackage?.id || null,
             transactionAmount:
-              values.shouldCreateTransaction && !values.shouldGenerateNeurofinanceCharge
+              values.shouldCreateTransaction
                 ? values.transactionAmount || 0
                 : null,
             transactionMethod: values.transactionMethod || null,
@@ -727,7 +925,7 @@ export function NewAppointmentModal({
       locStr = values.modality === "online" ? "Teleconsulta NeuroNex" : values.sessionLocation?.trim() || "Consultório";
     }
 
-    const appointmentPayload = {
+    const appointmentPayloadBase = {
       patient_id: values.eventType === "session" ? values.patientId || null : null,
       start_time: startDateTime,
       end_time: endDateTime,
@@ -737,11 +935,19 @@ export function NewAppointmentModal({
       notes: notesStr,
       location: values.eventType === "event" ? values.eventLocation || null : locStr,
       metadata,
-      package_id: null,
+      package_id:
+        selectedFinancialMode === "package"
+          ? selectedPackage?.id || values.packageId || null
+          : null,
       financial:
-        values.eventType === "session"
-        && values.shouldCreateTransaction
-        && !values.shouldGenerateNeurofinanceCharge
+        selectedFinancialMode === "package"
+        ? {
+            mode: "package" as const,
+            value_per_session: 0,
+            total: 0,
+            charge_mode: "per_occurrence" as const,
+          }
+        : selectedFinancialMode === "manual"
         ? {
             mode: "manual" as const,
             value_per_session: values.transactionAmount || 0,
@@ -750,7 +956,27 @@ export function NewAppointmentModal({
             payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
             installments: values.installments || 1,
           }
+        : selectedFinancialMode === "neurofinance"
+        ? {
+            mode: "neurofinance" as const,
+            value_per_session: values.transactionAmount || 0,
+            total: values.transactionAmount || 0,
+            charge_mode: "per_occurrence" as const,
+            payment_method: normalizeFinancialEntryPaymentMethod(values.transactionMethod),
+            installments: values.installments || 1,
+          }
+        : selectedFinancialMode === "insurance"
+        ? {
+            mode: "insurance" as const,
+            value_per_session: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
+            total: (resolvedFinancial?.expectedReceivableCents || 0) / 100,
+            charge_mode: "per_occurrence" as const,
+          }
         : { mode: "none" as const, value_per_session: 0, total: 0, charge_mode: "per_occurrence" as const },
+    };
+    const appointmentPayload = {
+      ...appointmentPayloadBase,
+      idempotency_key: idempotencyKeyForPayload(appointmentPayloadBase),
     };
 
     try {
@@ -759,10 +985,11 @@ export function NewAppointmentModal({
         throw new Error("Ative uma conta NeuroFinance elegível para gerar a cobrança.");
       }
 
-      const chargeTargets: Array<{ appointmentId: string; startsAt: Date }> = [];
-
       if (values.recurrence) {
+        const previewInput = buildAgendaPlanInput(values);
+        const previewFingerprint = appointmentPayloadFingerprint(previewInput);
         const latestPreview = seriesPreview?.valid
+          && seriesPreviewFingerprint === previewFingerprint
           ? seriesPreview
           : await loadSeriesPreview(values);
         if (!latestPreview?.valid) {
@@ -771,107 +998,14 @@ export function NewAppointmentModal({
           return;
         }
 
+        const creationInput = buildAgendaPlanInput(values, metadata);
         const result = await createAgendaSeries({
-          input: buildAgendaPlanInput(values, metadata),
-          idempotencyKey: idempotencyKeyRef.current,
-        });
-        result.result.appointmentIds.forEach((appointmentId, index) => {
-          const occurrence = latestPreview.occurrences[index];
-          chargeTargets.push({
-            appointmentId,
-            startsAt: occurrence ? new Date(occurrence.startTime) : startDateTime,
-          });
+          input: creationInput,
+          idempotencyKey: idempotencyKeyForPayload(creationInput),
         });
         toast.success(result.result.message || "Série criada com segurança.");
-      } else if (
-        values.eventType === "session"
-        && values.usePackage
-        && selectedPackage?.id
-        && values.patientId
-      ) {
-        const result = await createSeries({
-          patientId: values.patientId,
-          packageId: selectedPackage.id,
-          startTime: startDateTime,
-          endTime: endDateTime,
-          frequency: "single",
-          occurrenceCount: 1,
-          type: values.modality as "presencial" | "online",
-          notes: notesStr || null,
-          location: locStr,
-          metadata,
-        });
-        if (!result.success) {
-          throw new Error("A disponibilidade mudou. Nenhum agendamento foi criado.");
-        }
-        result.appointments.forEach((appointment) => {
-          const appointmentStart =
-            "startTime" in appointment && typeof appointment.startTime === "string"
-              ? new Date(appointment.startTime)
-              : startDateTime;
-          chargeTargets.push({
-            appointmentId: appointment.appointmentId,
-            startsAt: appointmentStart,
-          });
-        });
       } else {
-        const result = await createAppointment(appointmentPayload);
-        chargeTargets.push({
-          appointmentId: result.createdAppointment.id,
-          startsAt: new Date(result.createdAppointment.start_time),
-        });
-      }
-
-      if (values.eventType === "session" && values.modality === "online") {
-        let failedInvites = 0;
-        for (const target of chargeTargets) {
-          const { error } = await supabase.functions.invoke("ensure-teleconsultation-invite", {
-            body: { appointmentId: target.appointmentId },
-          });
-          if (error) failedInvites += 1;
-        }
-        if (failedInvites > 0) {
-          toast.warning(
-            `Agenda criada, mas ${failedInvites} ${failedInvites === 1 ? "link de teleconsulta precisa" : "links de teleconsulta precisam"} ser revisado${failedInvites === 1 ? "" : "s"}.`,
-          );
-        }
-      }
-
-      if (
-        values.eventType === "session"
-        && values.shouldGenerateNeurofinanceCharge
-        && values.patientId
-        && Number(values.transactionAmount || 0) > 0
-      ) {
-        let failedCharges = 0;
-        for (const target of chargeTargets) {
-          try {
-            await generateNeurofinanceInvoice({
-              patientId: values.patientId,
-              appointmentId: target.appointmentId,
-              amount: Number(values.transactionAmount),
-              description: `Sessão · ${selectedPatient?.name || "Paciente"}`,
-              dueDate: target.startsAt,
-              paymentMethodType: neurofinancePaymentMethods(values.transactionMethod),
-              operationId: `agenda-charge-${target.appointmentId}`,
-              silent: true,
-            });
-          } catch {
-            failedCharges += 1;
-          }
-        }
-
-        if (failedCharges === 0) {
-          toast.success(
-            chargeTargets.length === 1
-              ? "Cobrança NeuroFinance criada e vinculada ao agendamento."
-              : `${chargeTargets.length} cobranças NeuroFinance criadas e vinculadas à série.`,
-          );
-        } else {
-          toast.warning(
-            `Agenda criada, mas ${failedCharges} ${failedCharges === 1 ? "cobrança precisa" : "cobranças precisam"} ser revisada no NeuroFinance.`,
-          );
-        }
+        await createAppointment(appointmentPayload);
       }
 
       const typedLocation = values.sessionLocation?.trim();
@@ -893,11 +1027,22 @@ export function NewAppointmentModal({
       setRecurrenceDraft(createAgendaRecurrenceDraft(effectiveDate || new Date()));
       setSelectedTemplateId("");
       setTemplateName("");
-      idempotencyKeyRef.current = `agenda-v2-${crypto.randomUUID()}`;
+      idempotencyIntentRef.current = null;
       setSeriesPreview(null);
+      setSeriesPreviewFingerprint(null);
       setSeriesPreviewError(null);
       setStep(1);
     } catch (error: unknown) {
+      if (isAppointmentPlanReviewRequiredError(error)) {
+        const issue = Array.isArray(error.issues) ? error.issues[0] : undefined;
+        if (issue?.field) {
+          form.setError(issue.field as FieldPath<FormValues>, {
+            type: "server",
+            message: issue.message,
+          });
+          void revealFirstInvalidField(form.formState.errors, issue.field);
+        }
+      }
       const agendaError = error as Error & { preview?: AgendaV2Preview };
       if (agendaError.preview) {
         setSeriesPreview(agendaError.preview);
@@ -912,20 +1057,58 @@ export function NewAppointmentModal({
     }
   };
 
-  const onInvalid = (errors: FieldErrors<FormValues>) => {
-    const firstField = findFirstInvalidAppointmentField(errors);
+  const revealFirstInvalidField = async (
+    errors: FieldErrors<FormValues> = form.formState.errors,
+    preferredField?: string,
+  ) => {
+    const currentErrors = { ...errors } as Record<string, unknown>;
+    getAppointmentFieldOrder(eventType, recurrenceEnabled).forEach((fieldName) => {
+      const fieldError = form.getFieldState(fieldName as FieldPath<FormValues>).error;
+      if (fieldError) currentErrors[fieldName] = fieldError;
+    });
+    const firstField = preferredField || findFirstInvalidAppointmentField(
+      currentErrors,
+      eventType,
+      recurrenceEnabled,
+    );
     const targetStep = firstField
       ? getAppointmentFieldStep(firstField, eventType, recurrenceEnabled)
       : 1;
+    const message = firstField
+      ? getAppointmentErrorMessage(currentErrors, firstField)
+        || form.getFieldState(firstField as FieldPath<FormValues>).error?.message
+      : null;
 
     setStep(targetStep);
-    setSubmissionError("Revise o campo destacado para continuar.");
+    setSubmissionError(message || "Revise o campo destacado para continuar.");
+    setValidationAnnouncement(
+      message ? `Campo inválido: ${message}` : "Há um campo que precisa ser revisado.",
+    );
 
     if (firstField) {
-      window.setTimeout(() => {
-        form.setFocus(firstField as FieldPath<FormValues>);
-      }, 0);
+      const nextFrame = () => new Promise<void>((resolve) => {
+        const schedule = window.requestAnimationFrame
+          || ((callback: FrameRequestCallback) => window.setTimeout(callback, 0));
+        schedule(() => resolve());
+      });
+      await nextFrame();
+      await nextFrame();
+      const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+      const revealed = bodyScrollRef.current
+        ? revealAppointmentField(bodyScrollRef.current, firstField, reducedMotion)
+        : false;
+      if (!revealed) {
+        try {
+          form.setFocus(firstField as FieldPath<FormValues>);
+        } catch {
+          // Controles compostos sem ref usam o alvo DOM marcado acima.
+        }
+      }
     }
+  };
+
+  const onInvalid = (errors: FieldErrors<FormValues>) => {
+    void revealFirstInvalidField(errors);
   };
 
   const nextStep = () => setStep((s) => Math.min(s + 1, totalSteps));
@@ -1034,19 +1217,23 @@ export function NewAppointmentModal({
   ) => {
     setRecurrenceDraft((current) => {
       const previous = current.overrides.find((item) => item.occurrenceNumber === occurrenceNumber);
-      const next = {
+      const next = normalizeOccurrenceOverride({
         occurrenceNumber,
         source: "professional" as const,
         reason: previous?.reason || "Ajuste individual definido na criação da série.",
         ...previous,
         ...patch,
-      };
+      });
       return {
         ...current,
-        overrides: [
-          ...current.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber),
-          next,
-        ].sort((left, right) => left.occurrenceNumber - right.occurrenceNumber),
+        overrides: (
+          next
+            ? [
+                ...current.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber),
+                next,
+              ]
+            : current.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber)
+        ).sort((left, right) => left.occurrenceNumber - right.occurrenceNumber),
       };
     });
   };
@@ -1141,12 +1328,16 @@ export function NewAppointmentModal({
               control={form.control}
               name="patientId"
               render={({ field }) => (
-                  <FormItem className="space-y-2.5">
+                  <FormItem className="space-y-2.5" data-appointment-field="patientId">
                   <FormLabel className={labelBase}>Paciente</FormLabel>
                   <div className="grid grid-cols-[1fr_3rem] gap-2">
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className={cn(inputBase, "font-medium px-4 shadow-inner data-[state=open]:border-primary/50")}>
+                        <SelectTrigger
+                          ref={field.ref}
+                          data-appointment-focus
+                          className={cn(inputBase, "font-medium px-4 shadow-inner data-[state=open]:border-primary/50")}
+                        >
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                       </FormControl>
@@ -1202,7 +1393,7 @@ export function NewAppointmentModal({
               control={form.control}
               name="eventTitle"
               render={({ field }) => (
-                <FormItem className="space-y-2.5">
+                <FormItem className="space-y-2.5" data-appointment-field="eventTitle">
                   <FormLabel className={labelBase}>Título do Evento</FormLabel>
                   <FormControl>
                     <Input
@@ -1220,12 +1411,12 @@ export function NewAppointmentModal({
               control={form.control}
               name="eventCategory"
               render={({ field }) => (
-                <FormItem className="space-y-2.5">
+                <FormItem className="space-y-2.5" data-appointment-field="eventCategory">
                   <FormLabel className={labelBase}>Categoria</FormLabel>
                   <div className="grid grid-cols-[minmax(0,1fr)_3rem] gap-2">
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger className={cn(inputBase, "font-medium px-4 shadow-inner")}>
+                        <SelectTrigger ref={field.ref} data-appointment-focus className={cn(inputBase, "font-medium px-4 shadow-inner")}>
                           <SelectValue placeholder="Selecione a categoria..." />
                         </SelectTrigger>
                       </FormControl>
@@ -1277,12 +1468,13 @@ export function NewAppointmentModal({
           control={form.control}
           name="date"
           render={({ field }) => (
-            <FormItem className="grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0">
+            <FormItem className="grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0" data-appointment-field="date">
               <FormLabel className={labelBase}>Data</FormLabel>
               <Popover>
                 <PopoverTrigger asChild>
                   <FormControl>
                     <Button
+                      data-appointment-focus
                       variant="outline"
                       className={cn(inputBase, "w-full pl-4 text-left font-medium shadow-sm relative overflow-hidden group", !field.value && "text-muted-foreground")}
                     >
@@ -1321,7 +1513,7 @@ export function NewAppointmentModal({
           control={form.control}
           name="startTime"
           render={({ field }) => (
-            <FormItem className="grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0">
+            <FormItem className="grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0" data-appointment-field="startTime">
               <FormLabel className={labelBase}>{showEndTime ? "Início" : "Horário"}</FormLabel>
               <FormControl>
                 <div className="relative group">
@@ -1347,7 +1539,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="endTime"
             render={({ field }) => (
-              <FormItem className="agenda-step-enter grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0">
+              <FormItem className="agenda-step-enter grid min-w-0 grid-rows-[auto_3rem_auto] gap-2 space-y-0" data-appointment-field="endTime">
                 <FormLabel className={labelBase}>Fim</FormLabel>
                 <FormControl>
                   <div className="relative group">
@@ -1365,8 +1557,10 @@ export function NewAppointmentModal({
                         const endDate = new Date(date);
                         const [endHours, endMinutes] = event.target.value.split(":").map(Number);
                         endDate.setHours(endHours, endMinutes, 0, 0);
-                        if (endDate <= startDate) endDate.setDate(endDate.getDate() + 1);
-                        form.setValue("duration", Math.max(15, differenceInMinutes(endDate, startDate)));
+                        const nextDuration = differenceInMinutes(endDate, startDate);
+                        form.setValue("duration", nextDuration > 0 ? nextDuration : 15, {
+                          shouldValidate: true,
+                        });
                       }}
                       className={cn(inputBase, "agenda-time-input agenda-time-input--end px-3 text-center font-bold")}
                     />
@@ -1390,7 +1584,7 @@ export function NewAppointmentModal({
         control={form.control}
         name="recurrence"
         render={({ field }) => (
-          <FormItem className={cn(cardBase, "flex flex-row items-center justify-between")}>
+          <FormItem className={cn(cardBase, "flex flex-row items-center justify-between")} data-appointment-field="recurrence">
             <div className="space-y-1">
               <FormLabel className="text-sm font-bold text-foreground flex items-center gap-2">
                 <Repeat className="h-4 w-4 text-muted-foreground/60" />
@@ -1401,7 +1595,7 @@ export function NewAppointmentModal({
               </p>
             </div>
             <FormControl>
-              <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-foreground" />
+              <Switch data-appointment-focus checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-foreground" />
             </FormControl>
           </FormItem>
         )}
@@ -1458,11 +1652,11 @@ export function NewAppointmentModal({
             control={form.control}
             name="type"
             render={({ field }) => (
-              <FormItem className="space-y-2.5">
+              <FormItem className="space-y-2.5" data-appointment-field="type">
                 <FormLabel className={labelBase}>Tipo de Sessão</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl>
-                    <SelectTrigger className={cn(inputBase, "px-4 text-left font-medium shadow-inner [&>span:first-child]:text-left")}>
+                    <SelectTrigger ref={field.ref} data-appointment-focus className={cn(inputBase, "px-4 text-left font-medium shadow-inner [&>span:first-child]:text-left")}>
                       <SelectValue />
                     </SelectTrigger>
                   </FormControl>
@@ -1488,17 +1682,17 @@ export function NewAppointmentModal({
             control={form.control}
             name="modality"
             render={({ field }) => (
-              <FormItem className="space-y-2.5">
+              <FormItem className="space-y-2.5" data-appointment-field="modality">
                 <FormLabel className={labelBase}>Modalidade</FormLabel>
                 <FormControl>
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value} className="grid grid-cols-2 gap-3">
+                  <RadioGroup onValueChange={field.onChange} value={field.value} className="grid grid-cols-2 gap-3">
                     {[
                       { id: "presencial", icon: Building2, label: "Presencial" },
                       { id: "online", icon: Video, label: "Online" },
                     ].map((m) => (
                       <FormItem key={m.id}>
                         <FormControl>
-                          <RadioGroupItem value={m.id} id={`modality-${m.id}`} className="peer sr-only" />
+                          <RadioGroupItem data-appointment-focus value={m.id} id={`modality-${m.id}`} className="peer sr-only" />
                         </FormControl>
                         <label
                           htmlFor={`modality-${m.id}`}
@@ -1521,7 +1715,7 @@ export function NewAppointmentModal({
               control={form.control}
               name="sessionLocation"
               render={({ field }) => (
-                <FormItem className="space-y-2.5">
+                <FormItem className="space-y-2.5" data-appointment-field="sessionLocation">
                   <FormLabel className={labelBase}>Local da consulta</FormLabel>
                   <FormControl>
                     <Input
@@ -1545,7 +1739,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="duration"
             render={({ field }) => (
-              <FormItem className="space-y-2.5">
+              <FormItem className="space-y-2.5" data-appointment-field="duration">
                 <FormLabel className={labelBase}>Duração (min)</FormLabel>
                 <FormControl>
                   <Input
@@ -1568,7 +1762,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="notes"
             render={({ field }) => (
-              <FormItem className="space-y-2.5">
+              <FormItem className="space-y-2.5" data-appointment-field="notes">
                 <FormLabel className={labelBase}>Observações</FormLabel>
                 <FormControl>
                   <Textarea
@@ -1600,7 +1794,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="eventLocation"
             render={({ field }) => (
-              <FormItem className="space-y-2.5">
+              <FormItem className="space-y-2.5" data-appointment-field="eventLocation">
                 <FormLabel className={labelBase}>Local ou Link</FormLabel>
                 <FormControl>
                   <div className="relative group">
@@ -1620,7 +1814,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="notes"
             render={({ field }) => (
-              <FormItem className="space-y-2.5">
+              <FormItem className="space-y-2.5" data-appointment-field="notes">
                 <FormLabel className={labelBase}>Notas Internas</FormLabel>
                 <FormControl>
                   <Textarea
@@ -1658,6 +1852,23 @@ export function NewAppointmentModal({
           <span className="text-sm text-muted-foreground font-medium">Verificando planos do paciente...</span>
         </div>
       )}
+
+      {!isCheckingFinancialRules && selectedPatientId && isFinancialResolutionError ? (
+        <div className="agenda-liquid-card rounded-2xl border border-amber-500/25 p-4" role="status">
+          <p className="text-sm font-bold text-foreground">Não foi possível carregar a sugestão financeira.</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Você pode continuar sem lançamento ou tentar novamente. Nenhum valor foi preenchido automaticamente.
+          </p>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => void retryFinancialResolution()}
+            className="agenda-tactile notification-liquid-control mt-3 min-h-11 rounded-full px-4 text-xs font-bold"
+          >
+            Tentar novamente
+          </Button>
+        </div>
+      ) : null}
 
       {!isCheckingFinancialRules && resolvedFinancial ? (
         <div className="agenda-liquid-surface rounded-[22px] border p-4">
@@ -1730,7 +1941,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="usePackage"
             render={({ field }) => (
-              <FormItem className={cn(cardBase, "flex flex-row items-center justify-between")}>
+              <FormItem className={cn(cardBase, "flex flex-row items-center justify-between")} data-appointment-field="usePackage">
                 <div className="space-y-1">
                   <FormLabel className="text-sm font-bold text-foreground flex items-center gap-2">
                     <Briefcase className="h-4 w-4 text-muted-foreground/60" />
@@ -1744,24 +1955,14 @@ export function NewAppointmentModal({
                 </div>
                 <FormControl>
                   <Switch
+                    data-appointment-focus
                     checked={field.value}
                     onCheckedChange={(val) => {
                       field.onChange(val);
                       if (!val) {
-                        form.setValue(
-                          "shouldCreateTransaction",
-                          resolvedFinancial?.planType === "insurance"
-                            ? false
-                            : resolvedFinancial?.shouldCreateCharge ?? true,
-                        );
-                        if (form.getValues("transactionAmount") === 0) {
-                          form.setValue(
-                            "transactionAmount",
-                            resolvedFinancial?.sessionValueCents
-                              ? resolvedFinancial.sessionValueCents / 100
-                              : 150,
-                          );
-                        }
+                        form.setValue("shouldCreateTransaction", false);
+                        form.setValue("shouldGenerateNeurofinanceCharge", false);
+                        form.setValue("transactionAmount", 0);
                       }
                     }}
                     className="data-[state=checked]:bg-emerald-500"
@@ -1777,11 +1978,11 @@ export function NewAppointmentModal({
               control={form.control}
               name="packageId"
               render={({ field }) => (
-                <div className="agenda-step-enter space-y-3">
-                  <RadioGroup onValueChange={field.onChange} defaultValue={field.value || activePackages[0]?.id} className="grid gap-3">
+                <div className="agenda-step-enter space-y-3" data-appointment-field="packageId">
+                  <RadioGroup onValueChange={field.onChange} value={field.value || activePackages[0]?.id} className="grid gap-3">
                     {activePackages.map((pkg) => (
                       <div key={pkg.id}>
-                        <RadioGroupItem value={pkg.id} id={pkg.id} className="peer sr-only" />
+                        <RadioGroupItem data-appointment-focus value={pkg.id} id={pkg.id} className="peer sr-only" />
                         <label
                           htmlFor={pkg.id}
                           className={cn(
@@ -1841,7 +2042,7 @@ export function NewAppointmentModal({
             control={form.control}
             name="shouldCreateTransaction"
             render={({ field }) => (
-              <FormItem className={cn(cardBase, "flex flex-row items-center justify-between")}>
+              <FormItem className={cn(cardBase, "flex flex-row items-center justify-between")} data-appointment-field="shouldCreateTransaction">
                 <div className="space-y-1">
                   <FormLabel className="text-sm font-bold text-foreground flex items-center gap-2">
                     <DollarSign className="h-4 w-4 text-muted-foreground/60" />
@@ -1850,7 +2051,24 @@ export function NewAppointmentModal({
                   <p className="text-xs text-muted-foreground/60">Registra como "A Receber". Desative para continuar sem cobrança.</p>
                 </div>
                 <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} className="data-[state=checked]:bg-foreground" />
+                  <Switch
+                    data-appointment-focus
+                    checked={field.value}
+                    onCheckedChange={(checked) => {
+                      field.onChange(checked);
+                      if (!checked) {
+                        form.setValue("shouldGenerateNeurofinanceCharge", false);
+                        return;
+                      }
+                      if (
+                        Number(form.getValues("transactionAmount") || 0) <= 0
+                        && Number(resolvedFinancial?.sessionValueCents || 0) > 0
+                      ) {
+                        form.setValue("transactionAmount", Number(resolvedFinancial?.sessionValueCents) / 100);
+                      }
+                    }}
+                    className="data-[state=checked]:bg-foreground"
+                  />
                 </FormControl>
               </FormItem>
             )}
@@ -1862,7 +2080,7 @@ export function NewAppointmentModal({
                 control={form.control}
                 name="shouldGenerateNeurofinanceCharge"
                 render={({ field }) => (
-                  <FormItem className={cn(cardBase, "flex min-h-20 flex-row items-center justify-between gap-4")}>
+                  <FormItem className={cn(cardBase, "flex min-h-20 flex-row items-center justify-between gap-4")} data-appointment-field="shouldGenerateNeurofinanceCharge">
                     <div className="min-w-0 space-y-1">
                       <FormLabel className="flex items-center gap-2 text-sm font-bold text-foreground">
                         <ReceiptText className="h-4 w-4 text-muted-foreground/60" aria-hidden="true" />
@@ -1880,6 +2098,7 @@ export function NewAppointmentModal({
                     </div>
                     <FormControl>
                       <Switch
+                        data-appointment-focus
                         checked={field.value}
                         disabled={!canUseNeurofinance || isLoadingSubscription || isLoadingFinancialAccount}
                         onCheckedChange={(checked) => {
@@ -1904,7 +2123,7 @@ export function NewAppointmentModal({
                   control={form.control}
                   name="transactionAmount"
                   render={({ field }) => (
-                    <FormItem className="flex-1 space-y-2">
+                    <FormItem className="flex-1 space-y-2" data-appointment-field="transactionAmount">
                       <FormLabel className={labelBase}>Valor (R$)</FormLabel>
                       <FormControl>
                         <div className="relative group">
@@ -1920,7 +2139,7 @@ export function NewAppointmentModal({
                   control={form.control}
                   name="installments"
                   render={({ field }) => (
-                    <FormItem className="w-[104px] space-y-2">
+                    <FormItem className="w-[104px] space-y-2" data-appointment-field="installments">
                       <FormLabel className={labelBase}>Parcelas</FormLabel>
                       <FormControl>
                         <Input type="number" {...field} min={1} className={cn(inputBase, "text-center font-bold")} />
@@ -1935,7 +2154,7 @@ export function NewAppointmentModal({
                 control={form.control}
                 name="transactionMethod"
                 render={({ field }) => (
-                  <FormItem className="space-y-2">
+                  <FormItem className="space-y-2" data-appointment-field="transactionMethod">
                     <FormLabel className={labelBase}>Forma de Pagamento</FormLabel>
                     <FormControl>
                       <RadioGroup
@@ -1959,7 +2178,7 @@ export function NewAppointmentModal({
                         ].map((m) => (
                           <FormItem key={m.id}>
                             <FormControl>
-                              <RadioGroupItem value={m.id} id={`pay-${m.id}`} className="peer sr-only" />
+                              <RadioGroupItem data-appointment-focus value={m.id} id={`pay-${m.id}`} className="peer sr-only" />
                             </FormControl>
                             <label
                               htmlFor={`pay-${m.id}`}
@@ -1984,7 +2203,7 @@ export function NewAppointmentModal({
 
   const renderReviewSummary = () => {
     const values = form.getValues();
-    const { startDateTime, endDateTime } = buildAppointmentTimes(values);
+    const { startDateTime, endDateTime } = buildAppointmentTimes(values, professionalTimezone);
     const location = values.sessionLocation?.trim() || professionalDefaultLocation || "Local não informado";
     const amount = Number(values.transactionAmount || 0);
     const amountLabel = amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -2209,6 +2428,8 @@ export function NewAppointmentModal({
                   return (
                   <li
                     key={`${occurrence.occurrenceNumber}-${occurrence.startTime}`}
+                    data-appointment-occurrence={occurrence.occurrenceNumber}
+                    data-appointment-field={`occurrence-${occurrence.occurrenceNumber}`}
                     className={cn(
                       "agenda-liquid-card min-h-12 rounded-2xl border px-4 py-3",
                       occurrence.status === "conflict"
@@ -2247,6 +2468,7 @@ export function NewAppointmentModal({
                       <div className="mt-3 grid grid-cols-[1fr_100px_90px_44px] gap-2 border-t border-border/45 pt-3">
                         <Input
                           type="date"
+                          data-override-field="date"
                           value={override?.date || format(new Date(occurrence.startTime), "yyyy-MM-dd")}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { date: event.target.value })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
@@ -2254,6 +2476,7 @@ export function NewAppointmentModal({
                         />
                         <Input
                           type="time"
+                          data-override-field="startTime"
                           value={override?.startTime || format(new Date(occurrence.startTime), "HH:mm")}
                           onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { startTime: event.target.value })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
@@ -2261,6 +2484,7 @@ export function NewAppointmentModal({
                         />
                         <Input
                           type="number"
+                          data-override-field="durationMinutes"
                           min={15}
                           max={1440}
                           value={override?.durationMinutes || occurrence.durationMinutes}
@@ -2439,63 +2663,25 @@ export function NewAppointmentModal({
   const canAdvance = step < totalSteps;
 
   const handleContinue = async () => {
-    if (eventType === "session" && step === 1) {
-      const isValid = await form.trigger([
-        "patientId",
-        "date",
-        "startTime",
-        "endTime",
-        "recurrence",
-        "recurrenceFrequency",
-        "recurrenceCount",
-      ]);
-      if (isValid) nextStep();
-    } else if (eventType === "session" && step === 2) {
-      const isValid = await form.trigger(["type", "modality", "duration"]);
-      if (isValid) nextStep();
-      else setSubmissionError("Revise o campo destacado para continuar.");
-    } else if (eventType === "session" && step === 3) {
-      const isValid = await form.trigger([
-        "shouldCreateTransaction",
-        "shouldGenerateNeurofinanceCharge",
-        "transactionAmount",
-        "transactionMethod",
-        "installments",
-        "usePackage",
-        "packageId",
-      ]);
-      if (isValid) {
-        if (recurrenceEnabled) {
-          const preview = await loadSeriesPreview(form.getValues());
-          if (preview) nextStep();
-        } else {
-          nextStep();
-        }
-      } else {
-        setSubmissionError("Revise o campo destacado para continuar.");
-      }
-    } else if (eventType === "event" && step === 1) {
-      const isValid = await form.trigger([
-        "eventTitle",
-        "eventCategory",
-        "date",
-        "startTime",
-        "endTime",
-        "recurrence",
-        "recurrenceFrequency",
-        "recurrenceCount",
-      ]);
-      if (isValid) nextStep();
-    } else if (eventType === "event" && step === 2) {
-      if (recurrenceEnabled) {
-        const preview = await loadSeriesPreview(form.getValues());
-        if (preview) nextStep();
-      } else {
-        nextStep();
-      }
-    } else {
-      nextStep();
+    setSubmissionError(null);
+    setValidationAnnouncement("");
+    const fields = getAppointmentFieldsForStep(
+      eventType,
+      recurrenceEnabled,
+      step,
+    ) as FieldPath<FormValues>[];
+    const isValid = fields.length ? await form.trigger(fields) : true;
+    if (!isValid) {
+      await revealFirstInvalidField();
+      return;
     }
+
+    const isEnteringReview = step === totalSteps - 1;
+    if (recurrenceEnabled && isEnteringReview) {
+      const preview = await loadSeriesPreview(form.getValues());
+      if (!preview) return;
+    }
+    nextStep();
   };
 
   const submitButtonLabel = useMemo(() => {
@@ -2539,13 +2725,16 @@ export function NewAppointmentModal({
         </div>
 
         {/* Body */}
-        <div className="px-5 py-3 sm:px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
+        <div ref={bodyScrollRef} className="px-5 py-3 sm:px-6 overflow-y-auto custom-scrollbar flex-1 min-h-0">
           <Form {...form}>
             <form
               id={APPOINTMENT_FORM_ID}
               onSubmit={form.handleSubmit(onSubmit, onInvalid)}
               className="space-y-3"
             >
+              <p className="sr-only" role="status" aria-live="assertive" aria-atomic="true">
+                {validationAnnouncement}
+              </p>
               {step === 1 && renderStep1()}
               {step === 2 && renderStep2()}
               {step === 3 && (
@@ -2594,7 +2783,13 @@ export function NewAppointmentModal({
             <Button
               type="submit"
               form={APPOINTMENT_FORM_ID}
-              disabled={isSubmitting || (recurrenceEnabled && !seriesPreview?.valid)}
+              disabled={
+                isSubmitting
+                || (recurrenceEnabled && (
+                  !seriesPreview?.valid
+                  || seriesPreviewFingerprint !== currentPreviewFingerprint
+                ))
+              }
               className={cn(
                 "agenda-primary-action h-11 rounded-full px-6 font-bold tracking-wide",
               )}

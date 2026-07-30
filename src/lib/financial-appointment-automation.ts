@@ -27,11 +27,14 @@ const isClinicalAppointment = (appointment: Partial<AppointmentLike>) => {
   return Boolean(appointment.patient_id) && appointment.type !== 'block' && metadata.kind !== 'event' && metadata.kind !== 'block';
 };
 
-const hasExplicitFinancialIntent = (appointment: Partial<AppointmentLike>) => {
+export const hasExplicitFinancialIntent = (appointment: Partial<AppointmentLike>) => {
   const metadata = asRecord(appointment.metadata);
   const financial = asRecord(metadata.financial);
   const transactionAmount = Number(financial.transactionAmount || 0);
-  return financial.usePackage === true || transactionAmount > 0;
+  const mode = String(financial.mode || "");
+  return ["none", "manual", "neurofinance", "package", "insurance"].includes(mode)
+    || financial.usePackage === true
+    || transactionAmount > 0;
 };
 
 async function fetchLinkedFinancialEntry(userId: string, appointmentId: string) {

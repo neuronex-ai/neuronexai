@@ -9,6 +9,7 @@ import {
 } from "@/lib/appointment-action-plans";
 import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
+import { hasMaterialAppointmentChanges } from "@/lib/appointment-change-detection";
 import type { Appointment } from "@/types";
 
 interface UpdateAppointmentData {
@@ -19,6 +20,25 @@ interface UpdateAppointmentData {
 
 const MATERIAL_FIELDS = new Set(["start_time", "end_time", "type", "location"]);
 const DIRECT_CLINICAL_FIELDS = new Set(["notes", "metadata"]);
+const EDITABLE_METADATA_FIELDS = new Set([
+  "kind",
+  "sessionType",
+  "modality",
+  "durationMinutes",
+  "eventTitle",
+  "eventCategory",
+  "eventCategoryLabel",
+  "eventLocation",
+  "eventNotes",
+]);
+
+const editableMetadataPatch = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key, fieldValue]) => EDITABLE_METADATA_FIELDS.has(key) && fieldValue !== undefined),
+  );
+};
 
 const updateAppointmentFn = async ({
   id,
@@ -34,7 +54,10 @@ const updateAppointmentFn = async ({
   if (fetchError || !existingAppointment) throw new Error("Agendamento não encontrado.");
 
   const changedKeys = Object.keys(updates).filter((key) => (updates as Record<string, unknown>)[key] !== undefined);
-  const hasMaterialChange = changedKeys.some((key) => MATERIAL_FIELDS.has(key));
+  const hasMaterialChange = hasMaterialAppointmentChanges(
+    existingAppointment as Pick<Appointment, "start_time" | "end_time" | "type" | "location">,
+    updates,
+  );
   const cancellationRequested = updates.status !== undefined && isCancelledAppointmentStatus(updates.status, updates.notes);
 
   if (updates.status !== undefined && !cancellationRequested) {
@@ -78,10 +101,23 @@ const updateAppointmentFn = async ({
 
   const directUpdates: Record<string, unknown> = {};
   if (updates.notes !== undefined && !cancellationRequested) directUpdates.notes = updates.notes;
-  if (updates.metadata !== undefined) {
+  if (updates.metadata !== undefined && !cancellationRequested) {
+    let currentMetadata = existingAppointment.metadata || {};
+    if (hasMaterialChange) {
+      const refreshed = await supabase
+        .from("appointments")
+        .select("metadata")
+        .eq("id", id)
+        .eq("user_id", userId)
+        .single();
+      if (refreshed.error || !refreshed.data) {
+        throw new Error("A alteração foi concluída, mas os metadados atuais não puderam ser recarregados.");
+      }
+      currentMetadata = refreshed.data.metadata || {};
+    }
     directUpdates.metadata = {
-      ...(existingAppointment.metadata || {}),
-      ...updates.metadata,
+      ...currentMetadata,
+      ...editableMetadataPatch(updates.metadata),
       localUpdatedAt: new Date().toISOString(),
     };
   }

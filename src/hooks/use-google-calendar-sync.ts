@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/components/auth/SessionContextProvider';
 import { toast } from 'sonner';
 import { edgeFunctionUrl } from '@/lib/supabase-config';
+import { useGoogleAuth } from '@/hooks/use-google-auth';
 
 const POLL_URL = edgeFunctionUrl("google-calendar-poll");
 
@@ -9,11 +10,12 @@ export const useGoogleCalendarSync = () => {
   const { session } = useAuth();
   const accessToken = session?.access_token;
   const queryClient = useQueryClient();
+  const { isConnected, isLoading: isLoadingConnection } = useGoogleAuth();
 
   useQuery({
-    queryKey: ['googleCalendarSync'],
+    queryKey: ['googleCalendarSync', session?.user?.id],
     queryFn: async () => {
-      if (!accessToken) return null;
+      if (!accessToken || !isConnected) return null;
 
       try {
           const response = await fetch(POLL_URL, {
@@ -31,14 +33,17 @@ export const useGoogleCalendarSync = () => {
               }
               return data;
           }
+          if (response.status !== 404) {
+            console.error("[useGoogleCalendarSync] Poll recusado", response.status);
+          }
       } catch (e) {
           console.error("Background Sync Error:", e);
       }
       return null;
     },
-    enabled: !!accessToken,
+    enabled: Boolean(accessToken && isConnected && !isLoadingConnection),
     refetchInterval: 1000 * 60 * 2, // Poll a cada 2 minutos
-    refetchOnWindowFocus: true, // Sincroniza ao voltar para a aba
+    refetchOnWindowFocus: Boolean(isConnected), // Sincroniza ao voltar para a aba apenas se conectado
     staleTime: 0 // Sempre tenta buscar dados frescos
   });
 };

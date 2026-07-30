@@ -1,85 +1,63 @@
-import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import {
+  appointmentAdminClient,
+  appointmentTokenHash,
+  publicRequestMetadata,
+  resolveAppointmentInvitation,
+} from "../_shared/appointment-lifecycle.ts";
 import { getErrorMessage } from "../_shared/error-message.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+function frontendBaseUrl() {
+  const configured = String(Deno.env.get("FRONTEND_URL") || "http://localhost:8080")
+    .trim()
+    .replace(/\/$/, "");
+  if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configured)) {
+    return configured;
   }
+  return configured.startsWith("https://")
+    ? configured
+    : `https://${configured.replace(/^http:\/\//i, "")}`;
+}
 
-  // --- Robust Base URL Detection ---
-  let baseUrl = Deno.env.get('FRONTEND_URL');
-  if (!baseUrl) {
-      console.warn("WARNING: FRONTEND_URL environment variable is not set. Falling back to a default. This may fail in production.");
-      baseUrl = 'http://localhost:8080';
+function redirect(baseUrl: string, outcome: "success" | "failure", params: Record<string, string> = {}) {
+  const destination = new URL("/agenda", `${baseUrl}/`);
+  destination.searchParams.set("confirmation", outcome);
+  for (const [key, value] of Object.entries(params)) {
+    destination.searchParams.set(key, value);
   }
-  baseUrl = baseUrl.replace(/\/$/, "");
-  // Force HTTPS for non-local environments
-  if (!baseUrl.includes('localhost') && !baseUrl.includes('127.0.0.1')) {
-      if (!baseUrl.startsWith('https://')) {
-          baseUrl = `https://${baseUrl.replace(/^http:\/\//, '')}`;
-      }
-  }
-  // --------------------------------
+  return Response.redirect(destination.toString(), 302);
+}
 
-  const REDIRECT_SUCCESS_URL = `${baseUrl}/agenda?confirmation=success`;
-  const REDIRECT_FAILURE_URL = `${baseUrl}/agenda?confirmation=failure`;
-
-  const supabaseService = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-  );
-
+Deno.serve(async (request) => {
+  const baseUrl = frontendBaseUrl();
   try {
-    const url = new URL(req.url);
-    const token = url.searchParams.get('token');
-
+    const token = new URL(request.url).searchParams.get("token")?.trim();
     if (!token) {
-      return Response.redirect(`${REDIRECT_FAILURE_URL}&message=Token de confirmação ausente.`, 302);
+      return redirect(baseUrl, "failure", { message: "Token de confirmação ausente." });
     }
 
-    const { data: tokenData, error: tokenError } = await supabaseService
-      .from('appointment_confirmation_tokens')
-      .select('appointment_id, expires_at')
-      .eq('token', token)
-      .single();
+    const db = appointmentAdminClient();
+    const invitation = await resolveAppointmentInvitation(db, token);
+    const result = await db.rpc("process_appointment_public_action", {
+      p_token_hash: await appointmentTokenHash(token),
+      p_action: "confirm",
+      p_reason: null,
+      p_requested_start_time: null,
+      p_requested_end_time: null,
+      p_metadata: {
+        ...publicRequestMetadata(request),
+        compatibility_endpoint: "confirm-appointment",
+      },
+    });
+    if (result.error) throw result.error;
 
-    if (tokenError || !tokenData) {
-      console.error("Token not found:", tokenError);
-      return Response.redirect(`${REDIRECT_FAILURE_URL}&message=Token inválido ou expirado.`, 302);
-    }
-
-    if (new Date(tokenData.expires_at) < new Date()) {
-      return Response.redirect(`${REDIRECT_FAILURE_URL}&message=Token expirado.`, 302);
-    }
-
-    const { error: updateError } = await supabaseService
-      .from('appointments')
-      .update({ status: 'confirmed' })
-      .eq('id', tokenData.appointment_id);
-
-    if (updateError) {
-      console.error("Appointment update failed:", updateError);
-      return Response.redirect(`${REDIRECT_FAILURE_URL}&message=Falha ao atualizar o status da consulta.`, 302);
-    }
-    
-    await supabaseService
-      .from('appointment_confirmation_tokens')
-      .delete()
-      .eq('token', token);
-
-    return Response.redirect(`${REDIRECT_SUCCESS_URL}&appointmentId=${tokenData.appointment_id}`, 302);
-
-  } catch (e) {
-    console.error("Unhandled error in confirm-appointment:", e);
-    return new Response(JSON.stringify({ error: 'Internal server error', details: getErrorMessage(e, 'Internal server error') }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      status: 500,
+    return redirect(baseUrl, "success", {
+      appointmentId: invitation.appointment.id,
+      replay: result.data?.idempotentReplay ? "1" : "0",
+    });
+  } catch (error) {
+    console.error("[confirm-appointment]", error);
+    return redirect(baseUrl, "failure", {
+      message: getErrorMessage(error, "Não foi possível confirmar a consulta."),
     });
   }
 });

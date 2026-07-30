@@ -50,17 +50,17 @@ describe("transactional appointment series contract", () => {
     expect(createFunction).toContain("return jsonb_build_object('success', false) || v_validation");
   });
 
-  it("uses one RPC from the modal and does not create finance or recurrence in a frontend loop", () => {
+  it("uses canonical action plans and does not create finance or recurrence in a frontend loop", () => {
     const modal = source("src/components/agenda/NewAppointmentModal.tsx");
-    const hook = source("src/hooks/use-appointment-series.ts");
+    const addAppointmentHook = source("src/hooks/use-add-appointment.ts");
 
-    expect(modal).toContain("createSeries({");
+    expect(modal).toContain("createAgendaSeries({");
+    expect(modal).toContain("createAppointment(appointmentPayload)");
+    expect(modal).not.toContain("createSeries({");
     expect(modal).toContain("A série e as reservas de pacote são confirmadas juntas.");
     expect(modal).not.toContain("addRecurrenceInterval");
     expect(modal).not.toMatch(/for\s*\([^)]*recurrence/i);
-    expect(hook).toContain('rpc("create_appointment_series_with_package"');
-    expect(hook).toContain('rpc("preview_appointment_series"');
-    expect(hook).not.toContain("financial_entries");
-    expect(hook).not.toContain("send-email");
+    expect(addAppointmentHook).toContain('prepareAndExecuteAppointmentAction("create"');
+    expect(addAppointmentHook).toContain("appointmentData.package_id || null");
   });
 });

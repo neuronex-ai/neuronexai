@@ -44,9 +44,10 @@ export interface AgendaV2PlanInput {
   template_version_id?: string | null;
   default_config?: Record<string, unknown>;
   financial?: {
-    mode: "none" | "manual" | "package" | "insurance";
+    mode: "none" | "manual" | "neurofinance" | "package" | "insurance";
     value_per_session?: number;
     payment_method?: string;
+    installments?: number;
     package_id?: string | null;
     charge_mode?: "per_occurrence" | "series";
     exception_reason?: string | null;
@@ -145,6 +146,32 @@ const rpcError = (error: unknown, fallback: string) => {
   }
   return error instanceof Error ? error.message : fallback;
 };
+
+export function useProfessionalAgendaTimezone() {
+  const { user } = useAuth();
+  return useQuery({
+    queryKey: ["professional-agenda-timezone", user?.id],
+    enabled: Boolean(user?.id),
+    staleTime: 5 * 60_000,
+    queryFn: async () => {
+      const policy = await supabase.rpc("get_effective_appointment_policy");
+      const policyValue = policy.data && typeof policy.data === "object"
+        ? String((policy.data as Record<string, unknown>).timezone || "").trim()
+        : "";
+      if (!policy.error && policyValue) return policyValue;
+
+      const preferences = await supabase
+        .from("user_preferences")
+        .select("timezone")
+        .eq("user_id", user!.id)
+        .maybeSingle();
+      if (!preferences.error && preferences.data?.timezone) {
+        return preferences.data.timezone;
+      }
+      return "America/Sao_Paulo";
+    },
+  });
+}
 
 export const toAgendaV2Overrides = (overrides: OccurrenceOverride[] = []) => overrides.map((override) => ({
   occurrence_number: override.occurrenceNumber,

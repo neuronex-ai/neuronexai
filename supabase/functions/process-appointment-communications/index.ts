@@ -17,6 +17,17 @@ import {
   generateAppointmentToken,
 } from "../_shared/appointment-lifecycle.ts";
 import { professionalDisplayName } from "../_shared/appointment-public-dto.ts";
+import {
+  GoogleCalendarConnectionRequiredError,
+  GoogleCalendarProviderError,
+  syncCommittedAppointmentToGoogle,
+} from "../_shared/google-calendar-provider.ts";
+import { createNeurofinanceChargeForUser } from "../_shared/neurofinance-charge.ts";
+import { isSubscriptionAccessError } from "../_shared/subscription-access.ts";
+import {
+  ensureTeleconsultationInvite,
+  revokeTeleconsultationAccess,
+} from "../_shared/teleconsultation-access.ts";
 
 const headers = {
   "Content-Type": "application/json; charset=UTF-8",
@@ -64,6 +75,263 @@ type WaitlistOutboxRow = {
   lease_token: string;
   lease_expires_at: string;
 };
+
+type AppointmentEffectRow = {
+  id: string;
+  professionalId: string;
+  appointmentId: string;
+  appointmentRevision: number;
+  effectType: "google_sync" | "teleconsultation_room" | "neurofinance_charge";
+  operation: "create" | "update" | "cancel";
+  payload: Record<string, unknown>;
+  payloadFingerprint: string;
+  idempotencyKey: string;
+  attempt: number;
+  maxAttempts: number;
+  leaseToken: string;
+  leaseExpiresAt: string;
+};
+
+const terminalAppointmentStatuses = new Set([
+  "cancelled",
+  "canceled",
+  "cancelled_by_patient",
+  "cancelled_by_professional",
+]);
+
+const appointmentIsCancelled = (appointment: Record<string, unknown>) =>
+  appointment.lifecycle_status === "cancelled" ||
+  terminalAppointmentStatuses.has(String(appointment.status || "").toLowerCase());
+
+const errorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : "Falha desconhecida do provedor.";
+
+async function completeAppointmentEffect(
+  db: any,
+  row: AppointmentEffectRow,
+  result: Record<string, unknown>,
+) {
+  const completed = await db.rpc("complete_appointment_effect_outbox", {
+    p_outbox_id: row.id,
+    p_lease_token: row.leaseToken,
+    p_result_safe: result,
+  });
+  if (completed.error) throw completed.error;
+}
+
+async function retryAppointmentEffect(
+  db: any,
+  row: AppointmentEffectRow,
+  error: unknown,
+  options: {
+    retryable?: boolean;
+    waitForConnection?: boolean;
+    retryAfterSeconds?: number | null;
+  } = {},
+) {
+  const retried = await db.rpc("retry_appointment_effect_outbox", {
+    p_outbox_id: row.id,
+    p_lease_token: row.leaseToken,
+    p_error: errorMessage(error),
+    p_retryable: options.retryable !== false,
+    p_wait_for_connection: options.waitForConnection === true,
+    p_retry_after_seconds: options.retryAfterSeconds || null,
+  });
+  if (retried.error) throw retried.error;
+}
+
+async function currentEffectAppointment(db: any, row: AppointmentEffectRow) {
+  const result = await db
+    .from("appointments")
+    .select(
+      "id,user_id,patient_id,type,status,lifecycle_status,start_time,end_time,google_meet_link,google_event_id,metadata,confirmation_revision",
+    )
+    .eq("id", row.appointmentId)
+    .eq("user_id", row.professionalId)
+    .maybeSingle();
+  if (result.error) throw result.error;
+  return result.data as Record<string, any> | null;
+}
+
+async function recordGoogleEffectState(
+  db: any,
+  row: AppointmentEffectRow,
+  input: {
+    status: "synced" | "failed" | "queued";
+    googleEventId?: string | null;
+    googleMeetLink?: string | null;
+    error?: string | null;
+  },
+) {
+  const recorded = await db.rpc("patch_appointment_google_sync_effect", {
+    p_appointment_id: row.appointmentId,
+    p_revision: row.appointmentRevision,
+    p_outbox_id: row.id,
+    p_lease_token: row.leaseToken,
+    p_google_event_id: input.googleEventId || null,
+    p_google_meet_link: input.googleMeetLink || null,
+    p_status: input.status,
+    p_error: input.error || null,
+  });
+  if (recorded.error) throw recorded.error;
+  return recorded.data;
+}
+
+async function processAppointmentEffectQueue(
+  db: any,
+  limit: number,
+  outboxId?: string | null,
+) {
+  const claimed = await db.rpc("claim_appointment_effect_outbox", {
+    p_limit: limit,
+    p_effect_type: null,
+    p_outbox_id: outboxId || null,
+  });
+  if (claimed.error) {
+    console.error("[appointment-effects] claim failed", claimed.error);
+    return json({ error: "Não foi possível reservar os efeitos pendentes." }, 500);
+  }
+
+  const rows = (Array.isArray(claimed.data) ? claimed.data : []) as AppointmentEffectRow[];
+  let completed = 0;
+  let retried = 0;
+  let waitingConnection = 0;
+  let skipped = 0;
+
+  for (const row of rows) {
+    if (!leaseIsActive(row.leaseToken, row.leaseExpiresAt)) {
+      skipped += 1;
+      continue;
+    }
+    try {
+      const appointment = await currentEffectAppointment(db, row);
+      if (!appointment) {
+        await completeAppointmentEffect(db, row, { skipped: true, reason: "appointment_missing" });
+        skipped += 1;
+        continue;
+      }
+      if (Number(appointment.confirmation_revision || 1) !== row.appointmentRevision) {
+        await completeAppointmentEffect(db, row, {
+          skipped: true,
+          reason: "superseded_revision",
+          currentRevision: Number(appointment.confirmation_revision || 1),
+        });
+        skipped += 1;
+        continue;
+      }
+
+      if (row.effectType === "google_sync") {
+        const result = await syncCommittedAppointmentToGoogle({
+          db,
+          professionalId: row.professionalId,
+          appointmentId: row.appointmentId,
+          operation: row.operation,
+        });
+        await recordGoogleEffectState(db, row, {
+          status: "synced",
+          googleEventId: "googleEventId" in result ? result.googleEventId : null,
+          googleMeetLink: "googleMeetLink" in result ? result.googleMeetLink : null,
+        });
+        await completeAppointmentEffect(db, row, {
+          provider: "google_calendar",
+          operation: row.operation,
+          googleEventId: "googleEventId" in result ? result.googleEventId : null,
+          skipped: "skipped" in result ? result.skipped : false,
+        });
+      } else if (row.effectType === "teleconsultation_room") {
+        const cancel = row.operation === "cancel" || appointmentIsCancelled(appointment) ||
+          appointment.type !== "online";
+        const result = cancel
+          ? await revokeTeleconsultationAccess(db, row.appointmentId, row.professionalId)
+          : await ensureTeleconsultationInvite(db, appointment);
+        await completeAppointmentEffect(db, row, {
+          provider: "neuronex_teleconsultation",
+          operation: cancel ? "revoke" : "ensure",
+          inviteId: "inviteId" in result ? result.inviteId : null,
+        });
+      } else if (row.effectType === "neurofinance_charge") {
+        if (appointmentIsCancelled(appointment)) {
+          await completeAppointmentEffect(db, row, {
+            skipped: true,
+            reason: "appointment_cancelled",
+          });
+          skipped += 1;
+          continue;
+        }
+        const amountCents = Number(row.payload.amountCents);
+        if (!Number.isInteger(amountCents) || amountCents <= 0) {
+          throw new GoogleCalendarProviderError(
+            "Snapshot financeiro sem valor em centavos válido.",
+            422,
+            false,
+          );
+        }
+        const result = await createNeurofinanceChargeForUser({
+          userId: row.professionalId,
+          payload: {
+            patient_id: appointment.patient_id || null,
+            appointment_id: row.appointmentId,
+            amount: amountCents,
+            payment_method: String(row.payload.paymentMethod || "patient_decides"),
+            due_date: row.payload.dueDate ? String(row.payload.dueDate) : null,
+            financial_entry_id: row.payload.financialEntryId
+              ? String(row.payload.financialEntryId)
+              : null,
+            operation_id: String(row.payload.operationId || row.idempotencyKey),
+            description: "Sessão clínica · NeuroFinance",
+          },
+        });
+        await completeAppointmentEffect(db, row, {
+          provider: "asaas",
+          paymentId: result.payment_id,
+          financialEntryId: result.financial_entry_id,
+          idempotentReplay: Boolean(result.idempotent_replay),
+        });
+      } else {
+        throw new GoogleCalendarProviderError("Tipo de efeito não suportado.", 422, false);
+      }
+      completed += 1;
+    } catch (error) {
+      try {
+        if (error instanceof GoogleCalendarConnectionRequiredError) {
+          await recordGoogleEffectState(db, row, {
+            status: "queued",
+            error: errorMessage(error),
+          });
+          await retryAppointmentEffect(db, row, error, { waitForConnection: true });
+          waitingConnection += 1;
+          continue;
+        }
+        const retryable = error instanceof GoogleCalendarProviderError
+          ? error.retryable
+          : !isSubscriptionAccessError(error) &&
+            !/conta financeira não configurada|snapshot financeiro/i.test(errorMessage(error));
+        if (row.effectType === "google_sync") {
+          await recordGoogleEffectState(db, row, {
+            status: "failed",
+            error: errorMessage(error),
+          });
+        }
+        await retryAppointmentEffect(db, row, error, { retryable });
+        retried += 1;
+      } catch (transitionError) {
+        console.error("[appointment-effects] transition failed", row.id, transitionError);
+        retried += 1;
+      }
+      console.error("[appointment-effects] provider failed", row.id, error);
+    }
+  }
+
+  return json({
+    success: true,
+    queue: "appointment_effects",
+    claimed: rows.length,
+    completed,
+    retried,
+    waitingConnection,
+    skipped,
+  });
+}
 
 const formatWaitlistOffer = (value: string) => {
   const date = new Date(value);
@@ -293,6 +561,13 @@ serve(async (request) => {
 
   const body = await request.json().catch(() => ({}));
   const limit = Math.max(1, Math.min(Number(body.limit || 10), 50));
+  if (body.processEffects === true) {
+    return processAppointmentEffectQueue(
+      db,
+      limit,
+      body.outboxId ? String(body.outboxId) : null,
+    );
+  }
   if (body.processWaitlist === true) {
     return processWaitlistOfferQueue(db, limit);
   }

@@ -4,7 +4,7 @@ import { Appointment } from "@/types";
 import { format, addDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatTimeBrazil } from "@/lib/timezone";
-import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen, UsersRound } from "lucide-react";
+import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen, UsersRound, ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
@@ -19,10 +19,14 @@ import {
     useSensors,
     PointerSensor,
     TouchSensor,
+    KeyboardSensor,
     DragOverlay,
     DragStartEvent,
+    DragCancelEvent,
     defaultDropAnimationSideEffects,
     MeasuringStrategy,
+    type Announcements,
+    type ScreenReaderInstructions,
 } from "@dnd-kit/core";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,11 +38,13 @@ import { createPortal } from "react-dom";
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { useNavigate } from "react-router-dom";
 import { useGoogleAuth } from "@/hooks/use-google-auth";
-import { getAppointmentStatusMeta, isCancelledAppointmentStatus } from "@/lib/appointment-status";
+import { getAppointmentStatusMeta } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
 import { prepareAppointmentActionPlan } from "@/lib/appointment-action-plans";
 import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
 import { requestAppointmentPlanReview } from "@/lib/appointment-plan-review";
+import { isWaitlistAppointment } from "@/lib/appointment-metadata";
+import { isAppointmentDraggable } from "@/lib/appointment-drag";
 import {
     SYNAPSE_PAGE_ACTION_EVENT,
     type SynapseInterfaceAction,
@@ -52,6 +58,7 @@ interface CalendarViewProps {
     date: Date;
     onDateChange: (date: Date) => void;
     appointments: Appointment[];
+    /** Coleção canônica, sem filtros visuais, usada para detectar conflitos. */
     isLoading: boolean;
     view: 'daily' | 'weekly' | 'monthly';
     onViewChange?: (view: 'daily' | 'weekly' | 'monthly') => void;
@@ -80,6 +87,37 @@ interface AvailabilityVersionConfig {
 
 type AppointmentWithGhost = Appointment & { isGhost?: boolean };
 
+const appointmentDragLabel = (appointment?: Appointment) =>
+    appointment ? getAppointmentDisplayTitle(appointment) : "agendamento";
+
+const dropTargetLabel = (id?: string | number | null) => {
+    if (id === null || id === undefined) return "uma área indisponível";
+    const target = new Date(String(id));
+    if (Number.isNaN(target.getTime())) return "o novo horário";
+    return format(target, "EEEE, dd 'de' MMMM 'às' HH:mm", { locale: ptBR });
+};
+
+const AGENDA_DRAG_ANNOUNCEMENTS: Announcements = {
+    onDragStart({ active }) {
+        return `${appointmentDragLabel(active.data.current?.app)} selecionado para reagendamento. Use as setas para escolher outro horário.`;
+    },
+    onDragOver({ active, over }) {
+        if (!over) return `${appointmentDragLabel(active.data.current?.app)} fora de um horário disponível.`;
+        return `${appointmentDragLabel(active.data.current?.app)} sobre ${dropTargetLabel(over.id)}.`;
+    },
+    onDragEnd({ active, over }) {
+        if (!over) return `Reagendamento de ${appointmentDragLabel(active.data.current?.app)} cancelado.`;
+        return `${appointmentDragLabel(active.data.current?.app)} movido para ${dropTargetLabel(over.id)}. Revise a alteração antes de confirmar.`;
+    },
+    onDragCancel({ active }) {
+        return `Reagendamento de ${appointmentDragLabel(active.data.current?.app)} cancelado.`;
+    },
+};
+
+const AGENDA_DRAG_INSTRUCTIONS: ScreenReaderInstructions = {
+    draggable: "Para reagendar, pressione Espaço ou Enter. Use as setas para escolher o horário, Espaço ou Enter para revisar, e Escape para cancelar.",
+};
+
 export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen, waitlistOpen, onWaitlistOpenChange, waitlistCount = 0 }: CalendarViewProps) => {
     const shouldReduceMotion = useReducedMotion();
     const { user } = useAuth();
@@ -89,6 +127,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const [overId, setOverId] = useState<string | null>(null);
     const [isPreparingReschedule, setIsPreparingReschedule] = useState(false);
     const rescheduleInFlightRef = useRef(false);
+    const dragIdempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
     const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>();
     const [isMounted, setIsMounted] = useState(false);
@@ -146,7 +185,8 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 delay: 200,
                 tolerance: 5
             }
-        })
+        }),
+        useSensor(KeyboardSensor)
     );
 
     const handleDragStart = (event: DragStartEvent) => {
@@ -155,6 +195,11 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
     const handleDragOver = (event: DragOverEvent) => {
         setOverId(event.over ? String(event.over.id) : null);
+    };
+
+    const handleDragCancel = (_event: DragCancelEvent) => {
+        setActiveId(null);
+        setOverId(null);
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
@@ -192,22 +237,24 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
             return;
         }
 
-        const hasConflict = appointments.some(app => {
-            if (app.id === appointment.id) return false;
-            if (isCancelledAppointmentStatus(app.status, app.notes)) return false;
-            const appStart = new Date(app.start_time);
-            const appEnd = new Date(app.end_time);
-            return newStart < appEnd && newEnd > appStart;
-        });
-
-        if (hasConflict) {
-            toast.error("Conflito de agenda no novo horário");
-            return;
-        }
-
         rescheduleInFlightRef.current = true;
         setIsPreparingReschedule(true);
         try {
+            const intentFingerprint = [
+                appointmentId,
+                appointment.start_time,
+                appointment.end_time,
+                newStart.toISOString(),
+                newEnd.toISOString(),
+                appointment.type,
+                appointment.location || "",
+            ].join(":");
+            if (dragIdempotencyRef.current?.fingerprint !== intentFingerprint) {
+                dragIdempotencyRef.current = {
+                    fingerprint: intentFingerprint,
+                    key: `professional-app:drag-reschedule:${appointmentId}:${crypto.randomUUID()}`,
+                };
+            }
             const plan = await prepareAppointmentActionPlan("reschedule", {
                 appointment_id: appointmentId,
                 start_time: newStart.toISOString(),
@@ -220,7 +267,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                     template: "appointment_reconfirmation_required",
                     reminderPolicy: "professional_settings",
                 },
-            }, `professional-app:drag-reschedule:${appointmentId}:${crypto.randomUUID()}`, "professional_app");
+            }, dragIdempotencyRef.current.key, "professional_app");
 
             if (plan.status !== "awaiting_confirmation" && plan.status !== "review_required") {
                 throw new Error("O novo horário não está disponível para revisão.");
@@ -423,9 +470,15 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     return (
         <DndContext
             sensors={sensors}
+            accessibility={{
+                announcements: AGENDA_DRAG_ANNOUNCEMENTS,
+                screenReaderInstructions: AGENDA_DRAG_INSTRUCTIONS,
+                restoreFocus: true,
+            }}
             onDragStart={handleDragStart}
             onDragOver={handleDragOver}
             onDragEnd={handleDragEnd}
+            onDragCancel={handleDragCancel}
             measuring={{
                 droppable: {
                     strategy: MeasuringStrategy.WhileDragging,
@@ -744,10 +797,28 @@ const GridDroppableColumn = ({
     );
 };
 
+const WaitlistOriginMark = ({ appointment, className }: { appointment: Appointment; className?: string }) => {
+    if (!isWaitlistAppointment(appointment)) return null;
+    return (
+        <span
+            className={cn(
+                "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-300",
+                className,
+            )}
+            aria-label="Criado pela lista de espera inteligente"
+            title="Criado pela lista de espera inteligente"
+        >
+            <ListPlus className="h-3 w-3" aria-hidden="true" />
+        </span>
+    );
+};
+
 const DraggableGridItem = ({ app }: { app: Appointment }) => {
+    const draggable = isAppointmentDraggable(app);
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: app.id,
-        data: { type: 'appointment', app }
+        data: { type: 'appointment', app },
+        disabled: !draggable,
     });
 
     const appStart = new Date(app.start_time);
@@ -771,7 +842,11 @@ const DraggableGridItem = ({ app }: { app: Appointment }) => {
                 <div
                     {...listeners}
                     {...attributes}
-                    className="w-full h-full cursor-grab active:cursor-grabbing focus:outline-none touch-none"
+                    aria-disabled={!draggable}
+                    className={cn(
+                        "h-full w-full focus:outline-none",
+                        draggable ? "cursor-grab touch-none active:cursor-grabbing" : "cursor-pointer",
+                    )}
                     onClick={(e) => {
                         // Prevent click propagation when dragging
                         if (isDragging) e.stopPropagation();
@@ -788,6 +863,7 @@ const DraggableGridItem = ({ app }: { app: Appointment }) => {
                                     ? <Video className="h-3 w-3 shrink-0 text-muted-foreground" />
                                     : <MapPin className="h-3 w-3 shrink-0 text-muted-foreground" />
                                 }
+                                <WaitlistOriginMark appointment={app} className="h-4 w-4" />
                                 <span className="truncate text-[11px] font-bold text-foreground">
                                     {getAppointmentDisplayTitle(app)}
                                 </span>
@@ -916,6 +992,7 @@ const MonthDroppableColumn = ({
                                                     "w-1.5 h-1.5 rounded-full shrink-0",
                                                     getAppointmentStatusMeta(app.status, app.notes).dotClass
                                                 )} />
+                                                <WaitlistOriginMark appointment={app} className="h-4 w-4" />
                                                 <span className="truncate text-[11px] font-bold text-foreground">
                                                     {getAppointmentDisplayTitle(app)}
                                                 </span>
@@ -936,9 +1013,11 @@ const MonthDroppableColumn = ({
 };
 
 const DraggableItem = ({ app, isMonthly }: { app: Appointment, isMonthly?: boolean }) => {
+    const draggable = isAppointmentDraggable(app);
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
         id: app.id,
-        data: { type: 'appointment', app }
+        data: { type: 'appointment', app },
+        disabled: !draggable,
     });
 
     return (
@@ -954,7 +1033,11 @@ const DraggableItem = ({ app, isMonthly }: { app: Appointment, isMonthly?: boole
                 <div
                     {...listeners}
                     {...attributes}
-                    className="w-full cursor-grab active:cursor-grabbing focus:outline-none touch-none"
+                    aria-disabled={!draggable}
+                    className={cn(
+                        "w-full focus:outline-none",
+                        draggable ? "cursor-grab touch-none active:cursor-grabbing" : "cursor-pointer",
+                    )}
                     onClick={(e) => { if (isDragging) e.stopPropagation(); }}
                 >
                     <AppointmentCard app={app} isMonthly={isMonthly} />
@@ -983,12 +1066,16 @@ const AppointmentCard = ({ app, isOverlay, isMonthly, isGhost }: { app: Appointm
 
         <div className="flex flex-col gap-2">
             {!isMonthly && (
-                <div className="notification-liquid-icon mb-1 flex h-8 w-8 items-center justify-center rounded-full border">
-                    {app.type === 'online' ? <Video className="h-3.5 w-3.5 text-muted-foreground" /> : <MapPin className="h-3.5 w-3.5 text-muted-foreground" />}
+                <div className="mb-1 flex items-center gap-1.5">
+                    <div className="notification-liquid-icon flex h-8 w-8 items-center justify-center rounded-full border">
+                        {app.type === 'online' ? <Video className="h-3.5 w-3.5 text-muted-foreground" /> : <MapPin className="h-3.5 w-3.5 text-muted-foreground" />}
+                    </div>
+                    <WaitlistOriginMark appointment={app} />
                 </div>
             )}
 
             <div className={cn("space-y-0.5", isMonthly && "flex items-center gap-1.5")}>
+                {isMonthly ? <WaitlistOriginMark appointment={app} className="h-4 w-4" /> : null}
                 <h4 className={cn("line-clamp-1 font-medium leading-tight tracking-tight text-foreground", isMonthly ? "text-[10px]" : "text-[13px] font-bold")}>
                     {getAppointmentDisplayTitle(app)}
                 </h4>

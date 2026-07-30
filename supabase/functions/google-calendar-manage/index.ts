@@ -100,10 +100,20 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing auth header");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Missing auth header" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { data: { user }, error: userError } = await supabaseService.auth.getUser(authHeader.replace("Bearer ", ""));
-    if (userError || !user) throw new Error("Invalid token");
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Invalid token" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     const { action, googleEventId, appointmentData } = await req.json();
     if (!googleEventId) {
@@ -117,14 +127,25 @@ serve(async (req) => {
       .select("*")
       .eq("user_id", user.id)
       .single();
-    if (!tokenData) throw new Error("Google not connected");
+    if (!tokenData) {
+      return new Response(JSON.stringify({ error: "Google not connected" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     let accessToken = tokenData.access_token;
     if (new Date(tokenData.expires_at) < new Date(Date.now() + 60000)) {
       accessToken = await refreshAccessToken(supabaseService, user.id, tokenData.refresh_token);
     }
+    if (!accessToken) {
+      return new Response(JSON.stringify({ error: "Google authorization expired" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
-    const baseUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${googleEventId}`;
+    const baseUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(googleEventId)}`;
     let response: Response | undefined;
 
     if (action === "delete") {
@@ -154,13 +175,18 @@ serve(async (req) => {
         },
         body: JSON.stringify(patchFromAppointment(safeAppointmentData)),
       });
+    } else {
+      return new Response(JSON.stringify({ error: "Unsupported Google Calendar action" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     if (response && !response.ok && response.status !== 410) {
       const errText = await response.text();
       console.error("Google Calendar API Error:", errText);
       return new Response(JSON.stringify({ error: "Failed to sync with Google", details: errText }), {
-        status: 200,
+        status: 502,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }

@@ -7,7 +7,6 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../neuralcast.css";
 import logoBeige from "../assets/logo-beige.png";
 import logoDark from "../assets/logo-dark.png";
-import pedroPortrait from "../assets/pedro-luiz-pereira.jpg";
 import type { NeuralCastArticle } from "../content";
 import { triggerNeuralCastTactileFeedback } from "../utils/tactile";
 import {

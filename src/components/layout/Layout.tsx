@@ -7,10 +7,16 @@ import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
 import { DesktopRouteTransition } from "./DesktopRouteTransition";
+import { useGoogleCalendarSync } from "@/hooks/use-google-calendar-sync";
 
 interface LayoutProps {
   children: React.ReactNode;
 }
+
+const DesktopGoogleCalendarSync = () => {
+  useGoogleCalendarSync();
+  return null;
+};
 
 export const Layout = ({ children }: LayoutProps) => {
   const isMobile = useIsMobile();
@@ -34,6 +40,7 @@ export const Layout = ({ children }: LayoutProps) => {
     >
       {/* Camada global de canvas: todas as telas desktop devem revelar a mesma base. */}
       {!isMobile ? <DesktopLumenBackdrop /> : null}
+      {!isMobile ? <DesktopGoogleCalendarSync /> : null}
 
       {!isMobile && <Navbar />}
       <main className={cn(

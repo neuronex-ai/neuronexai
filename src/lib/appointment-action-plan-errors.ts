@@ -6,6 +6,8 @@ type ErrorDetails = {
   cause?: unknown;
 };
 
+type AppointmentPlanAction = "create" | "reschedule" | "generic";
+
 const collectErrorText = (error: unknown, seen = new Set<unknown>()): string => {
   if (error === null || error === undefined || seen.has(error)) return "";
   if (typeof error === "string") return error.toLowerCase();
@@ -28,9 +30,21 @@ const collectErrorText = (error: unknown, seen = new Set<unknown>()): string => 
  */
 export const getAppointmentPlanErrorMessage = (
   error: unknown,
-  action: "reschedule" | "generic" = "generic",
+  action: AppointmentPlanAction = "generic",
 ) => {
   const value = collectErrorText(error);
+
+  if (value.includes("past_time") || value.includes("data ou o horário já passou")) {
+    return "A data ou o horário escolhido já passou. Selecione um horário futuro para continuar.";
+  }
+
+  if (
+    value.includes("crosses_day")
+    || value.includes("invalid_interval")
+    || value.includes("horário final")
+  ) {
+    return "O horário final precisa ser posterior ao horário inicial no mesmo dia.";
+  }
 
   if (
     value.includes("appointment state does not allow")
@@ -101,5 +115,7 @@ export const getAppointmentPlanErrorMessage = (
 
   return action === "reschedule"
     ? "Não foi possível preparar o reagendamento agora. Nenhuma alteração foi feita."
-    : "Não foi possível concluir esta alteração do agendamento agora. Tente novamente em instantes.";
+    : action === "create"
+      ? "Não foi possível criar o agendamento agora. Revise os dados e tente novamente."
+      : "Não foi possível concluir esta alteração do agendamento agora. Tente novamente em instantes.";
 };

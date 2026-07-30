@@ -286,6 +286,11 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/get-appointment-by-token/index.ts"
 
+[functions.confirm-appointment]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/confirm-appointment/index.ts"
+
 [functions.get-public-availability]
 enabled = true
 verify_jwt = false

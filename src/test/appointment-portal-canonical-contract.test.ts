@@ -11,6 +11,9 @@ describe("patient portal canonical appointment adapter", () => {
   const adapter = read(
     "supabase/functions/patient-portal-appointment-action/index.ts",
   );
+  const legacyConfirmationAdapter = read(
+    "supabase/functions/confirm-appointment/index.ts",
+  );
   const portalCurrent = read(
     "supabase/functions/patient-portal-current/index.ts",
   );
@@ -41,6 +44,21 @@ describe("patient portal canonical appointment adapter", () => {
     expect(adapter).toContain("calculatePatientAppointmentAvailability");
     expect(adapter).not.toMatch(
       /\.from\(["']appointments["']\)\s*\.(?:insert|update|delete)/u,
+    );
+  });
+
+  it("keeps the legacy confirmation URL as a canonical command adapter", () => {
+    expect(legacyConfirmationAdapter).toContain(
+      'db.rpc("process_appointment_public_action"',
+    );
+    expect(legacyConfirmationAdapter).toContain(
+      'compatibility_endpoint: "confirm-appointment"',
+    );
+    expect(legacyConfirmationAdapter).not.toMatch(
+      /\.from\(["']appointments["']\)\s*\.(?:insert|update|delete)/u,
+    );
+    expect(legacyConfirmationAdapter).not.toMatch(
+      /\.from\(["']appointment_confirmation_tokens["']\)\s*\.delete/u,
     );
   });
 

@@ -3,8 +3,16 @@ import type { Appointment } from "@/types";
 import { parseAppointmentEventDetails } from "./appointment-utils";
 
 export type AppointmentKind = "session" | "event" | "block";
-export type AppointmentOrigin = "neuronex" | "google";
-export type AppointmentSyncStatus = "synced" | "pending" | "failed" | "imported";
+export type AppointmentOrigin = "neuronex" | "google" | "waitlist";
+export type CanonicalAppointmentSyncStatus =
+  | "not_configured"
+  | "queued"
+  | "syncing"
+  | "synced"
+  | "failed"
+  | "conflict";
+export type LegacyAppointmentSyncStatus = "pending" | "imported" | "pending_professional_review" | "not_requested";
+export type AppointmentSyncStatus = CanonicalAppointmentSyncStatus | LegacyAppointmentSyncStatus;
 
 export interface AppointmentMetadata {
   kind?: AppointmentKind;
@@ -12,6 +20,7 @@ export interface AppointmentMetadata {
   modality?: "presencial" | "online" | string;
   durationMinutes?: number;
   financial?: {
+    mode?: "none" | "manual" | "neurofinance" | "package" | "insurance";
     usePackage?: boolean;
     packageId?: string | null;
     transactionId?: string | null;
@@ -32,6 +41,10 @@ export interface AppointmentMetadata {
   eventNotes?: string;
   origin?: AppointmentOrigin;
   syncStatus?: AppointmentSyncStatus;
+  waitlistEntryId?: string | null;
+  waitlistOfferId?: string | null;
+  waitlistAcceptedAt?: string | null;
+  acceptedAt?: string | null;
   lastSyncedAt?: string;
   googleUpdatedAt?: string;
   localUpdatedAt?: string;
@@ -55,6 +68,64 @@ export interface AppointmentMetadata {
     openedBy?: string;
   };
 }
+
+export interface AppointmentSyncPresentation {
+  status: CanonicalAppointmentSyncStatus;
+  label: string;
+}
+
+const SYNC_STATUS_LABELS: Record<CanonicalAppointmentSyncStatus, string> = {
+  not_configured: "Google não conectado",
+  queued: "Sincronização na fila",
+  syncing: "Sincronizando",
+  synced: "Sincronizado",
+  failed: "Falha na sincronização",
+  conflict: "Conflito de sincronização",
+};
+
+export const normalizeAppointmentSyncStatus = (
+  status: AppointmentSyncStatus | null | undefined,
+  options: {
+    googleEventId?: string | null;
+    origin?: AppointmentOrigin | null;
+  } = {},
+): CanonicalAppointmentSyncStatus => {
+  if (status === "pending") {
+    return options.googleEventId ? "queued" : "not_configured";
+  }
+  if (status === "imported") return "synced";
+  if (status === "pending_professional_review") return "conflict";
+  if (status === "not_requested") return "not_configured";
+  if (status) return status;
+  if (options.googleEventId || options.origin === "google") return "synced";
+  return "not_configured";
+};
+
+export const getAppointmentSyncPresentation = (
+  status: AppointmentSyncStatus | null | undefined,
+  options: {
+    googleEventId?: string | null;
+    origin?: AppointmentOrigin | null;
+  } = {},
+): AppointmentSyncPresentation => {
+  const normalizedStatus = normalizeAppointmentSyncStatus(status, options);
+  return {
+    status: normalizedStatus,
+    label: SYNC_STATUS_LABELS[normalizedStatus],
+  };
+};
+
+export const isWaitlistAppointmentMetadata = (
+  metadata?: AppointmentMetadata | null,
+) => Boolean(
+  metadata?.origin === "waitlist"
+  || metadata?.waitlistEntryId
+  || metadata?.waitlistOfferId,
+);
+
+export const isWaitlistAppointment = (
+  appointment: Pick<Appointment, "metadata" | "notes" | "type" | "patient_id" | "start_time" | "end_time" | "location">,
+) => isWaitlistAppointmentMetadata(getAppointmentMetadata(appointment));
 
 const SESSION_TYPE_LABELS: Record<string, string> = {
   first_visit: "Primeira Consulta",
@@ -161,7 +232,7 @@ export const buildEventMetadata = (input: {
   eventLocation: input.location || "",
   eventNotes: input.notes || "",
   origin: input.origin || "neuronex",
-  syncStatus: input.syncStatus || "pending",
+  syncStatus: input.syncStatus || "not_configured",
 });
 
 export const buildSessionMetadata = (input: {
@@ -179,7 +250,7 @@ export const buildSessionMetadata = (input: {
   durationMinutes: input.durationMinutes,
   eventNotes: input.notes || "",
   origin: input.origin || "neuronex",
-  syncStatus: input.syncStatus || "pending",
+  syncStatus: input.syncStatus || "not_configured",
   financial: input.financial,
 });
 
