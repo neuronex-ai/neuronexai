@@ -100,10 +100,12 @@ describe("Agenda lifecycle UI", () => {
     const detail = read("src/components/agenda/AppointmentDetailModal.tsx");
     const calendar = read("src/components/agenda/CalendarView.tsx");
     expect(detail).toContain("Lista de espera · confirmado pelo paciente");
-    expect(detail).toContain("aria-expanded={isWaitlistOriginExpanded}");
     expect(detail).toContain("Origem: lista de espera. Mostrar detalhes.");
-    expect(detail).toContain("inline-flex min-h-11 max-w-full");
-    expect(detail).toContain("max-w-[min(15rem,calc(100vw-13rem))]");
+    expect(detail).toContain("PopoverTrigger");
+    expect(detail).toContain('aria-label="Contexto do agendamento"');
+    expect(detail).toContain("synapse-liquid-control flex h-11 w-11");
+    expect(detail).not.toContain("isWaitlistOriginExpanded");
+    expect(detail).toContain("agenda-menu-surface w-auto max-w-72");
     expect(detail).toContain("if (!hasAnyChange)");
     expect(detail).not.toContain("Pendente de sync");
     expect(calendar).toContain('role="img"');

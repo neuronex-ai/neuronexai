@@ -61,6 +61,19 @@ function classify(message: string): {
   const normalized = message.toLowerCase();
 
   if (
+    normalized.includes("patient_document_required")
+    || normalized.includes("patient_cpf_required")
+    || normalized.includes("cpf do paciente")
+  ) {
+    return {
+      code: "PATIENT_DOCUMENT_REQUIRED",
+      title: "Complete o CPF do paciente",
+      message: "O NeuroFinance precisa do CPF para gerar a cobrança. Você pode completar o cadastro ou continuar sem cobrança.",
+      retryable: true,
+    };
+  }
+
+  if (
     normalized.includes("validação de segurança") ||
     normalized.includes("duplo fator") ||
     normalized.includes("código de segurança")
@@ -172,11 +185,17 @@ export function toUserFacingError(
     const classification = classify(edge.message);
     const code = edge.code === "FINANCIAL_SECURITY_VERIFICATION_REQUIRED"
       ? "SECURITY_VERIFICATION_REQUIRED"
-      : classification.code;
+      : edge.code === "PATIENT_DOCUMENT_REQUIRED" || edge.code === "PATIENT_CPF_REQUIRED"
+        ? "PATIENT_DOCUMENT_REQUIRED"
+        : classification.code;
     const title = code === "SECURITY_VERIFICATION_REQUIRED"
       ? "Validação de segurança necessária"
-      : classification.title;
-    const message = edge.message || classification.message || contextMessages[context];
+      : code === "PATIENT_DOCUMENT_REQUIRED"
+        ? "Complete o CPF do paciente"
+        : classification.title;
+    const message = code === "PATIENT_DOCUMENT_REQUIRED"
+      ? "O NeuroFinance precisa do CPF para gerar a cobrança. Você pode completar o cadastro ou continuar sem cobrança."
+      : classification.message || contextMessages[context];
     return {
       code,
       title,

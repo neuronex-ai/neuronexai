@@ -174,4 +174,28 @@ describe("agenda scheduling", () => {
     });
     expect(new Date(occurrences[1].startTime).getHours()).toBe(9);
   });
+
+  it("removes an occurrence from the canonical result and renumbers the remainder", () => {
+    const occurrences = generateAgendaOccurrences({
+      firstStartTime: localDate("2026-07-20"),
+      durationMinutes: 50,
+      rule: {
+        kind: "weekly",
+        weekDays: [1],
+        termination: { kind: "count", count: 4 },
+      },
+      overrides: [{
+        occurrenceNumber: 3,
+        startTime: "08:00",
+        reason: "Exceção preservada depois da remoção",
+      }],
+      excludedOccurrenceNumbers: [2],
+    });
+
+    expect(occurrences).toHaveLength(3);
+    expect(occurrences.map((item) => item.occurrenceNumber)).toEqual([1, 2, 3]);
+    expect(occurrences.map((item) => item.originalOccurrenceNumber)).toEqual([1, 3, 4]);
+    expect(new Date(occurrences[1].startTime).getHours()).toBe(8);
+    expect(occurrences[1].overrideReason).toContain("preservada");
+  });
 });

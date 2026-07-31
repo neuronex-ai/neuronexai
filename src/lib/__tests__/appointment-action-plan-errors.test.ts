@@ -43,4 +43,22 @@ describe("appointment action plan error messages", () => {
       getAppointmentPlanErrorMessage({ code: "crosses_day" }, "create"),
     ).toBe("O horário final precisa ser posterior ao horário inicial no mesmo dia.");
   });
+
+  it("never exposes the protected-field trigger or PostgreSQL code", () => {
+    const message = getAppointmentPlanErrorMessage({
+      code: "P0001",
+      message: "Appointment lifecycle, outcome, patient and financial fields are database-owned",
+    }, "create");
+
+    expect(message).toContain("Nenhuma alteração foi feita");
+    expect(message).not.toMatch(/P0001|database-owned|Appointment lifecycle/i);
+  });
+
+  it("explains that CPF is required only for the NeuroFinance charge", () => {
+    expect(
+      getAppointmentPlanErrorMessage({ code: "PATIENT_DOCUMENT_REQUIRED" }, "create"),
+    ).toBe(
+      "Complete o CPF do paciente para gerar a cobrança NeuroFinance. O agendamento pode ser criado sem cobrança.",
+    );
+  });
 });

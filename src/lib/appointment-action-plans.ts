@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
 
 export type AppointmentActionPlan = {
   planId: string;
@@ -114,11 +115,10 @@ const toPlan = (value: unknown): AppointmentActionPlan => {
 const rpc = async (name: string, params: Record<string, unknown>) => {
   const { data, error } = await supabase.rpc(name as any, params as any);
   if (error) {
-    const details = [error.code, error.message, error.details, error.hint]
-      .filter(Boolean)
-      .map(String)
-      .join(" ");
-    const wrappedError = new Error(`RPC ${name} falhou${details ? `: ${details}` : "."}`) as Error & {
+    const action = name.includes("agenda") || name.includes("prepare")
+      ? "create"
+      : "generic";
+    const wrappedError = new Error(getAppointmentPlanErrorMessage(error, action)) as Error & {
       code?: string;
       details?: string;
       hint?: string;

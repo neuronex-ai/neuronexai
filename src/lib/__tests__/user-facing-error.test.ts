@@ -37,4 +37,18 @@ describe("toUserFacingError", () => {
     expect(result.message).toContain("NeuroFinance");
     expect(result.message).not.toContain("conexão");
   });
+
+  it("turns a missing patient document into a short actionable message", () => {
+    const result = toUserFacingError(new EdgeFunctionInvocationError({
+      kind: "http",
+      status: 422,
+      code: "PATIENT_DOCUMENT_REQUIRED",
+      message: "provider rejected cpfCnpj",
+    }), "payment");
+
+    expect(result.code).toBe("PATIENT_DOCUMENT_REQUIRED");
+    expect(result.title).toBe("Complete o CPF do paciente");
+    expect(result.message).toContain("continuar sem cobrança");
+    expect(result.message).not.toContain("cpfCnpj");
+  });
 });

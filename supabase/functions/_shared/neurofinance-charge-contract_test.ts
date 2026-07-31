@@ -1,6 +1,7 @@
 import {
   neurofinanceBillingType,
   neurofinanceChargeOperationId,
+  requireNeurofinancePatientDocument,
 } from "./neurofinance-charge-contract.ts";
 
 const equal = (actual: unknown, expected: unknown, message: string) => {
@@ -45,5 +46,23 @@ Deno.test("NeuroFinance recusa identificador externo curto ou excessivo", () => 
       rejected = true;
     }
     equal(rejected, true, `identificador inválido ${value.length}`);
+  }
+});
+
+Deno.test("NeuroFinance exige CPF antes de chamar o provedor", () => {
+  equal(
+    requireNeurofinancePatientDocument("123.456.789-01"),
+    "12345678901",
+    "o CPF deve ser normalizado",
+  );
+
+  for (const value of [null, "", "123", "000.000.000-00"]) {
+    let code = "";
+    try {
+      requireNeurofinancePatientDocument(value);
+    } catch (error) {
+      code = String((error as { code?: string }).code || "");
+    }
+    equal(code, "PATIENT_DOCUMENT_REQUIRED", "a falha precisa ser estável e tratável");
   }
 });

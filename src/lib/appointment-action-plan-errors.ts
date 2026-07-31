@@ -90,10 +90,28 @@ export const getAppointmentPlanErrorMessage = (
   if (
     value.includes("prepare_appointment_action_plan")
     || value.includes("execute_appointment_action_plan")
+    || value.includes("execute_agenda_action_plan")
     || value.includes("schema cache")
     || value.includes("could not find the function")
+    || value.includes("function digest")
   ) {
     return "Estamos atualizando a Agenda. Tente novamente em instantes.";
+  }
+
+  if (
+    value.includes("appointment lifecycle")
+    || value.includes("database-owned")
+    || value.includes("p0001")
+  ) {
+    return "Não foi possível confirmar o agendamento agora. Nenhuma alteração foi feita; revise e tente novamente.";
+  }
+
+  if (
+    value.includes("patient_document_required")
+    || value.includes("patient_cpf_required")
+    || value.includes("cpf")
+  ) {
+    return "Complete o CPF do paciente para gerar a cobrança NeuroFinance. O agendamento pode ser criado sem cobrança.";
   }
 
   if (

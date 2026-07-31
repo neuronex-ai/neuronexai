@@ -17,6 +17,7 @@ import { ensureFinancialEntryForCharge } from "./financial-management.ts";
 import {
   neurofinanceBillingType,
   neurofinanceChargeOperationId,
+  requireNeurofinancePatientDocument,
 } from "./neurofinance-charge-contract.ts";
 import { requireEntitlementForUser } from "./subscription-access.ts";
 
@@ -91,6 +92,8 @@ export async function createNeurofinanceChargeForUser(input: {
       };
     }
   }
+
+  patientData.cpfCnpj = requireNeurofinancePatientDocument(patientData.cpfCnpj);
 
   const asaasCustomer = await findOrCreateAsaasCustomer(subApiKey, {
     name: patientData.name,

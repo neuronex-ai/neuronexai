@@ -22,6 +22,10 @@ import { formatCentsAsBRL, usePatientInsuranceAgreements } from "@/hooks/use-pat
 import { usePatientRecordDetails } from "@/hooks/use-patient-record-details";
 import { usePatients } from "@/hooks/use-patients";
 import { cn } from "@/lib/utils";
+import {
+  hasNeurofinancePatientDocument,
+  patientRegistrationPath,
+} from "@/lib/neurofinance-patient-document";
 
 interface ManualChargeModalProps {
   open: boolean;
@@ -70,6 +74,9 @@ const nextBillingDate = (billingDay?: number | null) => {
 const getManualChargeErrorMessage = (error: unknown) => {
   const candidate = error as { code?: string; message?: string } | null;
 
+  if (candidate?.code === "PATIENT_DOCUMENT_REQUIRED" || candidate?.code === "PATIENT_CPF_REQUIRED") {
+    return "Complete o CPF do paciente para gerar a cobrança NeuroFinance.";
+  }
   if (candidate?.code === "23503") {
     return "O paciente ou agendamento selecionado não está mais disponível. Atualize os dados e tente novamente.";
   }
@@ -120,7 +127,14 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
   const planType = financial?.plan_type || "not_configured";
   const isExempt = planType === "exempt";
   const packageConsumesOnly=Boolean(selectedPackage&&(selectedPackage.billing_mode||"upfront")!=="per_session");
-  const neurofinanceReady=Boolean(financialAccount.isApproved&&financialAccount.account?.charges_enabled&&patientId&&payerType==="patient");
+  const neurofinanceAccountReady=Boolean(financialAccount.isApproved&&financialAccount.account?.charges_enabled);
+  const patientDocumentReady=hasNeurofinancePatientDocument(selectedPatient);
+  const neurofinanceReady=Boolean(
+    neurofinanceAccountReady
+    && patientId
+    && payerType==="patient"
+    && patientDocumentReady,
+  );
   const isSubmitting = createEntry.isPending || transitionEntry.isPending || generateInvoice.isPending || consumePackage.isPending;
 
   const contextCards = useMemo(() => {
@@ -226,6 +240,12 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
     if (valuePerSession > 0) setAmount(String(valuePerSession.toFixed(2)).replace(".", ","));
     setNotes((current) => current || `${remaining} sessão(ões) restantes no pacote selecionado.`);
   }, [selectedPackage]);
+
+  useEffect(() => {
+    if (destination === "neurofinance" && !neurofinanceReady) {
+      setDestination("management");
+    }
+  }, [destination, neurofinanceReady]);
 
   const resetForm = () => {
     setPatientId("");
@@ -366,7 +386,26 @@ export function ManualChargeModal({ open, onOpenChange }: ManualChargeModalProps
               </Select>
             </div>
             {patientId?<div className="grid gap-4 md:grid-cols-2"><div className="space-y-2"><Label>Consulta (opcional)</Label><Select value={appointmentId||"none"} onValueChange={v=>setAppointmentId(v==="none"?"":v)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="none">Sem consulta</SelectItem>{(appointments.data||[]).slice(-20).map(a=><SelectItem key={a.id} value={a.id}>{format(new Date(a.start_time),"dd/MM/yyyy HH:mm")}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Pagador</Label><Select value={payerType} onValueChange={v=>setPayerType(v as typeof payerType)}><SelectTrigger><SelectValue/></SelectTrigger><SelectContent><SelectItem value="patient">Paciente</SelectItem>{responsible?.name?<SelectItem value="responsible">Responsável · {responsible.name}</SelectItem>:null}{activeAgreement?<SelectItem value="insurer">Convênio · {activeAgreement.name}</SelectItem>:null}</SelectContent></Select></div></div>:null}
-            {!packageConsumesOnly?<div className="space-y-2"><Label>Destino</Label><div className="grid grid-cols-3 gap-2">{([{id:"management",label:"Em aberto",icon:CalendarClock},{id:"paid",label:"Já recebido",icon:CheckCircle2},{id:"neurofinance",label:"NeuroFinance",icon:Landmark}]as const).map(x=><button key={x.id} type="button" disabled={x.id==="neurofinance"&&!neurofinanceReady} onClick={()=>setDestination(x.id)} className={cn("rounded-2xl border p-3 text-left text-xs font-semibold disabled:opacity-40",destination===x.id&&"border-foreground bg-foreground text-background")}><x.icon className="mb-3 h-4 w-4"/>{x.label}</button>)}</div></div>:null}
+            {!packageConsumesOnly?<div className="space-y-2"><Label>Destino</Label><div className="grid grid-cols-3 gap-2">{([{id:"management",label:"Em aberto",icon:CalendarClock},{id:"paid",label:"Já recebido",icon:CheckCircle2},{id:"neurofinance",label:"NeuroFinance",icon:Landmark}]as const).map(x=><button key={x.id} type="button" disabled={x.id==="neurofinance"&&!neurofinanceReady} onClick={()=>setDestination(x.id)} className={cn("rounded-2xl border p-3 text-left text-xs font-semibold disabled:opacity-40",destination===x.id&&"border-foreground bg-foreground text-background")}><x.icon className="mb-3 h-4 w-4"/>{x.label}</button>)}</div>
+              {neurofinanceAccountReady && selectedPatient && payerType === "patient" && !patientDocumentReady ? (
+                <div className="synapse-liquid-toolbar mt-2 flex flex-col gap-3 rounded-[18px] p-3 sm:flex-row sm:items-center sm:justify-between" role="status">
+                  <div className="min-w-0">
+                    <p className="text-xs font-black text-foreground">CPF necessário no NeuroFinance</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                      Complete o cadastro de {selectedPatient.name} ou salve a cobrança apenas na gestão.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => window.location.assign(patientRegistrationPath(selectedPatient))}
+                    className="h-11 shrink-0 rounded-full px-4 text-xs font-black"
+                  >
+                    Completar CPF
+                  </Button>
+                </div>
+              ) : null}
+            </div>:null}
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

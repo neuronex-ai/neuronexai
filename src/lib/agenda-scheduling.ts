@@ -35,6 +35,7 @@ export interface OccurrenceOverride {
 
 export interface GeneratedAgendaOccurrence {
   occurrenceNumber: number;
+  originalOccurrenceNumber?: number;
   startTime: string;
   endTime: string;
   durationMinutes: number;
@@ -49,6 +50,7 @@ export interface GenerateAgendaOccurrencesInput {
   durationMinutes: number;
   rule: AdvancedRecurrenceRule;
   overrides?: OccurrenceOverride[];
+  excludedOccurrenceNumbers?: number[];
   workingWeekDays?: number[];
   blockedDates?: string[];
   now?: Date;
@@ -73,6 +75,7 @@ export interface AgendaRecurrenceDraft {
   distributeUntilDate: string;
   customizeOccurrences: boolean;
   overrides: OccurrenceOverride[];
+  excludedOccurrenceNumbers: number[];
 }
 
 const MAX_FINITE_OCCURRENCES = 500;
@@ -281,6 +284,7 @@ export function generateAgendaOccurrences({
   durationMinutes,
   rule,
   overrides = [],
+  excludedOccurrenceNumbers = [],
   workingWeekDays = [1, 2, 3, 4, 5],
   blockedDates = [],
   now = new Date(),
@@ -305,7 +309,7 @@ export function generateAgendaOccurrences({
     overrides.map((override) => [override.occurrenceNumber, override]),
   );
 
-  return candidates.map(({ date, adjustmentReason }, index) => {
+  const generated: GeneratedAgendaOccurrence[] = candidates.map(({ date, adjustmentReason }, index) => {
     const occurrenceNumber = index + 1;
     const override = overridesByOccurrence.get(occurrenceNumber);
     const changedFields: string[] = [];
@@ -345,6 +349,20 @@ export function generateAgendaOccurrences({
       overrideReason: override?.reason || null,
     };
   });
+
+  const excluded = new Set(
+    excludedOccurrenceNumbers.filter(
+      (occurrenceNumber) => Number.isInteger(occurrenceNumber) && occurrenceNumber > 0,
+    ),
+  );
+
+  return generated
+    .filter((occurrence) => !excluded.has(occurrence.occurrenceNumber))
+    .map((occurrence, index) => ({
+      ...occurrence,
+      originalOccurrenceNumber: occurrence.occurrenceNumber,
+      occurrenceNumber: index + 1,
+    }));
 }
 
 export function rankSmartFitCandidates(
@@ -393,6 +411,7 @@ export const createAgendaRecurrenceDraft = (date = new Date()): AgendaRecurrence
   distributeUntilDate: "",
   customizeOccurrences: false,
   overrides: [],
+  excludedOccurrenceNumbers: [],
 });
 
 export function agendaRecurrenceDraftToRule(
@@ -437,6 +456,7 @@ export function agendaRuleToRecurrenceDraft(
     distributeUntilDate: rule.kind === "range_distribution" ? rule.customDates?.[0] || "" : "",
     customizeOccurrences: false,
     overrides: [],
+    excludedOccurrenceNumbers: [],
   };
 }
 

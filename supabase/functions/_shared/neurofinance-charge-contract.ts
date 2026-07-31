@@ -17,6 +17,24 @@ export const neurofinanceBillingType = (paymentMethod: unknown) =>
   BILLING_TYPE_BY_METHOD[String(paymentMethod || "patient_decides").toLowerCase()]
     || "UNDEFINED";
 
+export class NeurofinancePatientDocumentRequiredError extends Error {
+  readonly code = "PATIENT_DOCUMENT_REQUIRED";
+  readonly status = 422;
+
+  constructor() {
+    super("Complete o CPF do paciente para gerar a cobrança NeuroFinance.");
+    this.name = "NeurofinancePatientDocumentRequiredError";
+  }
+}
+
+export const requireNeurofinancePatientDocument = (value?: string | null) => {
+  const normalized = String(value || "").replace(/\D/g, "");
+  if (normalized.length !== 11 || /^0+$/.test(normalized)) {
+    throw new NeurofinancePatientDocumentRequiredError();
+  }
+  return normalized;
+};
+
 export const neurofinanceChargeOperationId = (
   payload: {
     operation_id?: string | null;

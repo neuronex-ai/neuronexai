@@ -82,7 +82,12 @@ export const useGenerateInvoice = () => {
 
       if (!asaasResponse.ok) {
         const errResponse = await asaasResponse.json().catch(() => ({}));
-        throw new Error(errResponse.error || `Erro de pagamento: status ${asaasResponse.status}`);
+        const paymentError = new Error(
+          errResponse.error || "Não foi possível gerar a cobrança agora.",
+        ) as Error & { code?: string; status?: number };
+        paymentError.code = errResponse.code || errResponse.details?.code;
+        paymentError.status = asaasResponse.status;
+        throw paymentError;
       }
 
       const result = await asaasResponse.json();

@@ -40,6 +40,13 @@ Deno.serve(async (request: Request) => {
   } catch (error: any) {
     const accessResponse = subscriptionAccessErrorResponse(error);
     if (accessResponse) return accessResponse;
+    if (error?.code === "PATIENT_DOCUMENT_REQUIRED") {
+      return errorResponse(
+        "Complete o CPF do paciente para gerar a cobrança NeuroFinance.",
+        422,
+        { code: "PATIENT_DOCUMENT_REQUIRED" },
+      );
+    }
     console.error("[asaas-create-payment]", error);
     return errorResponse(
       "Não foi possível criar a cobrança agora. Confira os dados e tente novamente.",

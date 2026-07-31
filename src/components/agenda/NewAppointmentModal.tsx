@@ -32,6 +32,7 @@ import {
   MapPin,
   ExternalLink,
   ReceiptText,
+  Pencil,
 } from "lucide-react";
 import { differenceInMinutes, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -122,6 +123,12 @@ import {
   isAppointmentPlanReviewRequiredError,
   type AppointmentActionPlan,
 } from "@/lib/appointment-action-plans";
+import {
+  hasNeurofinancePatientDocument,
+  patientRegistrationPath,
+} from "@/lib/neurofinance-patient-document";
+import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
+import { useNavigate } from "react-router-dom";
 
 // ─── Validação ────────────────────────────────────────────────────────
 
@@ -371,6 +378,7 @@ export function NewAppointmentModal({
   );
   const [templateName, setTemplateName] = useState("");
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("");
+  const [templateDraftName, setTemplateDraftName] = useState("");
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [smartFitSuggestions, setSmartFitSuggestions] = useState<Record<number, AgendaPlanSmartFitCandidate[]>>({});
   const [preparedSinglePlan, setPreparedSinglePlan] = useState<{
@@ -397,6 +405,7 @@ export function NewAppointmentModal({
   const bodyScrollRef = useRef<HTMLDivElement>(null);
   const wasOpenRef = useRef(false);
   const { data: patients } = usePatients();
+  const navigate = useNavigate();
   const {
     mutateAsync: createAppointment,
     prepareAsync: prepareAppointment,
@@ -425,6 +434,10 @@ export function NewAppointmentModal({
     data: seriesTemplates,
     saveTemplate,
     isSavingTemplate,
+    renameTemplate,
+    isRenamingTemplate,
+    archiveTemplate,
+    isArchivingTemplate,
   } = useAgendaSeriesTemplates();
 
   const effectiveDate = selectedDate || initialDate;
@@ -537,6 +550,7 @@ export function NewAppointmentModal({
     () => patients?.find((patient) => patient.id === selectedPatientId) || null,
     [patients, selectedPatientId],
   );
+  const hasPatientDocument = hasNeurofinancePatientDocument(selectedPatient);
   const professionalDefaultLocation = useMemo(
     () => professionalLocationFromProfile(profile),
     [profile],
@@ -592,7 +606,6 @@ export function NewAppointmentModal({
     selectedEndTime,
     selectedFormDate,
     startTime,
-    recurrenceDraft,
   ]);
 
   useEffect(() => {
@@ -607,6 +620,7 @@ export function NewAppointmentModal({
   useEffect(() => {
     setStep(1);
     setSelectedTemplateId("");
+    setTemplateDraftName("");
     setSubmissionError(null);
     setValidationAnnouncement("");
     if (eventType === "event") {
@@ -766,6 +780,7 @@ export function NewAppointmentModal({
       type: values.eventType === "session" ? values.modality : "block",
       recurrence_rule: toAgendaV2RecurrenceRule(recurrenceRule),
       overrides: toAgendaV2Overrides(recurrence.overrides),
+      excluded_occurrence_numbers: recurrence.excludedOccurrenceNumbers,
       notes: values.notes?.trim() || null,
       location: values.eventType === "event" ? eventLocation : sessionLocation,
       metadata,
@@ -782,6 +797,7 @@ export function NewAppointmentModal({
             metadata: metadata || {},
             notes: values.notes?.trim() || null,
             location: eventLocation,
+            excluded_occurrence_numbers: recurrence.excludedOccurrenceNumbers,
           }
         : {
             eventType: "session",
@@ -791,6 +807,7 @@ export function NewAppointmentModal({
             location: sessionLocation,
             metadata: metadata || {},
             notes: values.notes?.trim() || null,
+            excluded_occurrence_numbers: recurrence.excludedOccurrenceNumbers,
           },
       financial,
     };
@@ -1086,7 +1103,6 @@ export function NewAppointmentModal({
       setSeriesPreview(null);
       setSeriesPreviewFingerprint(null);
       setSeriesPreviewError(message);
-      toast.error(message);
       return null;
     }
   }, [buildAgendaPlanInput, previewAgendaPlan, recurrenceDraft]);
@@ -1131,6 +1147,15 @@ export function NewAppointmentModal({
         setStep(3);
         throw new Error("Ative uma conta NeuroFinance elegível para gerar a cobrança.");
       }
+      if (values.shouldGenerateNeurofinanceCharge && !hasPatientDocument) {
+        form.setValue("shouldGenerateNeurofinanceCharge", false);
+        setStep(3);
+        setSubmissionError(
+          "Complete o CPF do paciente para gerar a cobrança, ou continue sem cobrança NeuroFinance.",
+        );
+        setValidationAnnouncement("O CPF do paciente é necessário apenas para a cobrança NeuroFinance.");
+        return;
+      }
 
       if (values.recurrence) {
         const previewInput = buildAgendaPlanInput(values);
@@ -1141,7 +1166,7 @@ export function NewAppointmentModal({
           : await loadSeriesPreview(values);
         if (!latestPreview?.valid) {
           setStep(totalSteps);
-          toast.error("Revise as datas em conflito antes de criar a série.");
+          setSubmissionError("Revise as datas em conflito antes de criar a série.");
           return;
         }
 
@@ -1202,6 +1227,7 @@ export function NewAppointmentModal({
       form.reset();
       setRecurrenceDraft(createAgendaRecurrenceDraft(effectiveDate || new Date()));
       setSelectedTemplateId("");
+      setTemplateDraftName("");
       setTemplateName("");
       idempotencyIntentRef.current = null;
       singlePlanRequestSequenceRef.current += 1;
@@ -1227,7 +1253,6 @@ export function NewAppointmentModal({
       const message = error instanceof Error
         ? error.message
         : "Não foi possível registrar o agendamento.";
-      toast.error(message);
       setSubmissionError(message);
     }
   };
@@ -1300,7 +1325,6 @@ export function NewAppointmentModal({
       : "Não foi possível preparar o agendamento para revisão.";
     setSubmissionError(message);
     setValidationAnnouncement(message);
-    toast.error(message);
     return message;
   };
 
@@ -1430,7 +1454,6 @@ export function NewAppointmentModal({
         const message = agendaError.message || "Não foi possível preparar esta recorrência.";
         setSubmissionError(message);
         setValidationAnnouncement(message);
-        toast.error(message);
       }
       return false;
     } finally {
@@ -1501,6 +1524,7 @@ export function NewAppointmentModal({
   const applySeriesTemplate = (templateId: string) => {
     setSelectedTemplateId(templateId);
     const template = compatibleSeriesTemplates.find((item) => item.id === templateId);
+    setTemplateDraftName(template?.name || "");
     const version = [...(template?.appointment_series_template_versions || [])]
       .sort((left, right) => right.version_number - left.version_number)[0];
     if (!version) return;
@@ -1546,8 +1570,38 @@ export function NewAppointmentModal({
       }, form.getValues("date")),
       customizeOccurrences: current.customizeOccurrences,
       overrides: current.overrides,
+      excludedOccurrenceNumbers: current.excludedOccurrenceNumbers,
     }));
     toast.success(`Modelo “${template?.name}” aplicado. Revise o que desejar.`);
+  };
+
+  const handleRenameSeriesTemplate = async () => {
+    if (!selectedTemplateId) return;
+    const name = templateDraftName.trim();
+    if (!name) {
+      setSubmissionError("Dê um nome curto ao modelo.");
+      return;
+    }
+    try {
+      await renameTemplate({ templateId: selectedTemplateId, name });
+      setSubmissionError(null);
+      toast.success("Nome do modelo atualizado.");
+    } catch (error) {
+      setSubmissionError(getAppointmentPlanErrorMessage(error, "generic"));
+    }
+  };
+
+  const handleArchiveSeriesTemplate = async () => {
+    if (!selectedTemplateId) return;
+    try {
+      await archiveTemplate(selectedTemplateId);
+      setSelectedTemplateId("");
+      setTemplateDraftName("");
+      setSubmissionError(null);
+      toast.success("Modelo excluído.");
+    } catch (error) {
+      setSubmissionError(getAppointmentPlanErrorMessage(error, "generic"));
+    }
   };
 
   const handleSaveSeriesTemplate = async () => {
@@ -1614,11 +1668,60 @@ export function NewAppointmentModal({
     });
   };
 
-  const clearOccurrenceOverride = (occurrenceNumber: number) => {
-    setRecurrenceDraft((current) => ({
-      ...current,
-      overrides: current.overrides.filter((item) => item.occurrenceNumber !== occurrenceNumber),
-    }));
+  const excludeOccurrence = (
+    occurrenceNumber: number,
+    displayOccurrenceNumber: number,
+  ) => {
+    if (seriesPreview && seriesPreview.totalOccurrences <= 1) {
+      setSubmissionError(`Mantenha pelo menos um ${recurrenceTerminology.singular} na recorrência.`);
+      return;
+    }
+    if (recurrenceDraft.terminationKind === "open" && occurrenceNumber === 1) {
+      setSubmissionError(
+        `Em uma recorrência sem data final, mantenha o primeiro ${recurrenceTerminology.singular} e ajuste sua data ou horário.`,
+      );
+      return;
+    }
+    setSubmissionError(null);
+    setSmartFitSuggestions((current) => {
+      const next = { ...current };
+      delete next[displayOccurrenceNumber];
+      return next;
+    });
+    const nextDraft: AgendaRecurrenceDraft = {
+      ...recurrenceDraft,
+      excludedOccurrenceNumbers: Array.from(new Set([
+        ...recurrenceDraft.excludedOccurrenceNumbers,
+        occurrenceNumber,
+      ])).sort((left, right) => left - right),
+      overrides: recurrenceDraft.overrides.filter(
+        (item) => item.occurrenceNumber !== occurrenceNumber,
+      ),
+    };
+    const keptOccurrences = (seriesPreview?.occurrences || [])
+      .filter((item) => (
+        (item.originalOccurrenceNumber || item.occurrenceNumber) !== occurrenceNumber
+      ))
+      .map((item, index) => ({
+        ...item,
+        originalOccurrenceNumber: item.originalOccurrenceNumber || item.occurrenceNumber,
+        occurrenceNumber: index + 1,
+      }));
+    if (seriesPreview && keptOccurrences.length) {
+      const optimisticInput = buildAgendaPlanInput(form.getValues(), undefined, nextDraft);
+      setSeriesPreview({
+        ...seriesPreview,
+        totalOccurrences: keptOccurrences.length,
+        occurrences: keptOccurrences,
+        conflicts: keptOccurrences.filter((item) => item.status === "conflict"),
+        valid: keptOccurrences.every((item) => item.status !== "conflict"),
+        firstStartTime: keptOccurrences[0].startTime,
+        lastStartTime: keptOccurrences[keptOccurrences.length - 1].startTime,
+      });
+      setSeriesPreviewFingerprint(appointmentPayloadFingerprint(optimisticInput));
+    }
+    setRecurrenceDraft(nextDraft);
+    void loadSeriesPreview(form.getValues(), nextDraft);
   };
 
   const requestSmartFit = async (occurrenceNumber: number, allowShorter = false) => {
@@ -1647,6 +1750,7 @@ export function NewAppointmentModal({
   const applySmartFitCandidate = async (
     occurrenceNumber: number,
     candidate: AgendaPlanSmartFitCandidate,
+    displayOccurrenceNumber = occurrenceNumber,
   ) => {
     const nextOverride: OccurrenceOverride = {
       occurrenceNumber,
@@ -1667,7 +1771,7 @@ export function NewAppointmentModal({
       ].sort((left, right) => left.occurrenceNumber - right.occurrenceNumber),
     };
     setRecurrenceDraft(nextDraft);
-    setSmartFitSuggestions((current) => ({ ...current, [occurrenceNumber]: [] }));
+    setSmartFitSuggestions((current) => ({ ...current, [displayOccurrenceNumber]: [] }));
     await loadSeriesPreview(form.getValues(), nextDraft);
   };
 
@@ -1996,6 +2100,62 @@ export function NewAppointmentModal({
                   ))}
                 </SelectContent>
               </Select>
+              {selectedTemplateId ? (
+                <div className="synapse-liquid-toolbar mt-2 flex items-center gap-1 rounded-[16px] p-1">
+                  <Input
+                    value={templateDraftName}
+                    onChange={(event) => setTemplateDraftName(event.target.value)}
+                    className="synapse-liquid-control h-11 min-w-0 flex-1 rounded-[13px] border-0 bg-transparent px-3 text-xs font-bold shadow-none"
+                    aria-label="Nome do modelo selecionado"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void handleRenameSeriesTemplate()}
+                    disabled={isRenamingTemplate || !templateDraftName.trim()}
+                    className="synapse-liquid-control h-11 w-11 shrink-0 rounded-[13px]"
+                    aria-label="Salvar novo nome do modelo"
+                  >
+                    {isRenamingTemplate
+                      ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                      : <Pencil className="h-4 w-4" />}
+                  </Button>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={isArchivingTemplate}
+                        className="synapse-liquid-control h-11 w-11 shrink-0 rounded-[13px] text-muted-foreground hover:text-foreground"
+                        aria-label="Excluir modelo"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="end"
+                      className="agenda-menu-surface w-64 rounded-[18px] border-border/50 p-3"
+                    >
+                      <p className="text-sm font-black text-foreground">Excluir este modelo?</p>
+                      <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                        Os agendamentos já criados não serão alterados.
+                      </p>
+                      <Button
+                        type="button"
+                        onClick={() => void handleArchiveSeriesTemplate()}
+                        disabled={isArchivingTemplate}
+                        className="agenda-primary-action mt-3 h-11 w-full rounded-full text-xs font-black"
+                      >
+                        {isArchivingTemplate
+                          ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                          : "Excluir modelo"}
+                      </Button>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              ) : null}
             </div>
           ) : null}
           <AdvancedRecurrenceEditor
@@ -2478,6 +2638,11 @@ export function NewAppointmentModal({
                         checked={field.value}
                         disabled={!canUseNeurofinance || isLoadingSubscription || isLoadingFinancialAccount}
                         onCheckedChange={(checked) => {
+                          if (checked && !hasPatientDocument) {
+                            field.onChange(false);
+                            setSubmissionError(null);
+                            return;
+                          }
                           field.onChange(checked);
                           if (
                             checked
@@ -2493,6 +2658,46 @@ export function NewAppointmentModal({
                   </FormItem>
                 )}
               />
+
+              {canUseNeurofinance && selectedPatient && !hasPatientDocument ? (
+                <div
+                  className="synapse-liquid-toolbar flex flex-col gap-3 rounded-[18px] p-3 sm:flex-row sm:items-center sm:justify-between"
+                  role="status"
+                  aria-live="polite"
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="synapse-liquid-control flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] text-muted-foreground">
+                      <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-foreground">CPF necessário para a cobrança</p>
+                      <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+                        Complete o cadastro de {selectedPatient.name} ou continue sem gerar a cobrança NeuroFinance.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        form.setValue("shouldGenerateNeurofinanceCharge", false);
+                        setSubmissionError(null);
+                      }}
+                      className="synapse-liquid-control h-11 rounded-[13px] px-3 text-[11px] font-black"
+                    >
+                      Sem cobrança
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={() => navigate(patientRegistrationPath(selectedPatient))}
+                      className="agenda-primary-action h-11 rounded-full px-4 text-[11px] font-black"
+                    >
+                      Completar CPF
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
 
               <div className="flex gap-3">
                 <FormField
@@ -2744,40 +2949,14 @@ export function NewAppointmentModal({
         ) : null}
 
         {!isPreviewingAgendaPlan && seriesPreviewError ? (
-          <div className="rounded-2xl border border-red-500/25 bg-red-500/[0.07] p-4 text-sm text-red-600" role="alert">
-            {seriesPreviewError}
+          <div className="synapse-liquid-toolbar flex items-start gap-3 rounded-[18px] p-3" role="status" aria-live="polite">
+            <CircleHelp className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <p className="text-xs font-semibold leading-relaxed text-foreground">{seriesPreviewError}</p>
           </div>
         ) : null}
 
         {!isPreviewingAgendaPlan && seriesPreview ? (
           <>
-            <div
-              className={cn(
-                "rounded-2xl border p-4",
-                seriesPreview.valid
-                  ? "border-emerald-500/25 bg-emerald-500/[0.07]"
-                  : "border-amber-500/25 bg-amber-500/[0.07]",
-              )}
-            >
-              <div className="flex items-start gap-3">
-                {seriesPreview.valid ? (
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" aria-hidden="true" />
-                ) : (
-                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
-                )}
-                <div>
-                  <p className="font-bold text-foreground">
-                    {seriesPreview.totalOccurrences} {seriesPreview.totalOccurrences === 1 ? recurrenceTerminology.singular : recurrenceTerminology.plural} · {recurrenceRuleSummary(recurrenceRule)}
-                  </p>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                    {seriesPreview.valid
-                      ? "Todos os horários estão disponíveis neste momento."
-                      : `${seriesPreview.conflicts.length} ${seriesPreview.conflicts.length === 1 ? "conflito encontrado" : "conflitos encontrados"}. Volte e ajuste a data ou o horário.`}
-                  </p>
-                </div>
-              </div>
-            </div>
-
             <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               {[
                 ["Regra", recurrenceRuleSummary(recurrenceRule)],
@@ -2798,8 +2977,10 @@ export function NewAppointmentModal({
               <p className={labelBase}>Datas geradas</p>
               <ol className="grid gap-2">
                 {seriesPreview.occurrences.map((occurrence) => {
+                  const sourceOccurrenceNumber =
+                    occurrence.originalOccurrenceNumber || occurrence.occurrenceNumber;
                   const override = recurrenceDraft.overrides.find(
-                    (item) => item.occurrenceNumber === occurrence.occurrenceNumber,
+                    (item) => item.occurrenceNumber === sourceOccurrenceNumber,
                   );
                   return (
                   <li
@@ -2846,7 +3027,7 @@ export function NewAppointmentModal({
                           type="date"
                           data-override-field="date"
                           value={override?.date || format(new Date(occurrence.startTime), "yyyy-MM-dd")}
-                          onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { date: event.target.value })}
+                          onChange={(event) => updateOccurrenceOverride(sourceOccurrenceNumber, { date: event.target.value })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
                           aria-label={`Data do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         />
@@ -2854,7 +3035,7 @@ export function NewAppointmentModal({
                           type="time"
                           data-override-field="startTime"
                           value={override?.startTime || format(new Date(occurrence.startTime), "HH:mm")}
-                          onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { startTime: event.target.value })}
+                          onChange={(event) => updateOccurrenceOverride(sourceOccurrenceNumber, { startTime: event.target.value })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
                           aria-label={`Horário do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         />
@@ -2864,7 +3045,7 @@ export function NewAppointmentModal({
                           min={15}
                           max={1440}
                           value={override?.durationMinutes || occurrence.durationMinutes}
-                          onChange={(event) => updateOccurrenceOverride(occurrence.occurrenceNumber, { durationMinutes: Number(event.target.value) })}
+                          onChange={(event) => updateOccurrenceOverride(sourceOccurrenceNumber, { durationMinutes: Number(event.target.value) })}
                           className="agenda-field h-11 rounded-xl text-xs font-semibold"
                           aria-label={`Duração do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
                         />
@@ -2872,9 +3053,12 @@ export function NewAppointmentModal({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          onClick={() => clearOccurrenceOverride(occurrence.occurrenceNumber)}
+                          onClick={() => excludeOccurrence(
+                            sourceOccurrenceNumber,
+                            occurrence.occurrenceNumber,
+                          )}
                           className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full"
-                          aria-label={`Restaurar padrão do ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber}`}
+                          aria-label={`Excluir ${recurrenceTerminology.singular} ${occurrence.occurrenceNumber} desta recorrência`}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
@@ -2912,7 +3096,11 @@ export function NewAppointmentModal({
                               <button
                                 key={`${candidate.startTime}-${candidate.durationMinutes}`}
                                 type="button"
-                                onClick={() => applySmartFitCandidate(occurrence.occurrenceNumber, candidate)}
+                                onClick={() => applySmartFitCandidate(
+                                  sourceOccurrenceNumber,
+                                  candidate,
+                                  occurrence.occurrenceNumber,
+                                )}
                                 className="agenda-choice-card agenda-tactile synapse-chat-glass flex min-h-11 items-center justify-between rounded-[15px] border px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                               >
                                 <span className="text-xs font-black text-foreground">
@@ -3132,11 +3320,16 @@ export function NewAppointmentModal({
               {step === 4 && eventType === "session" && renderFinalReview()}
               {submissionError ? (
                 <div
-                  role="alert"
-                  aria-live="assertive"
-                  className="rounded-2xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive"
+                  role="status"
+                  aria-live="polite"
+                  className="synapse-liquid-toolbar flex items-start gap-3 rounded-[18px] p-3 text-sm"
                 >
-                  {submissionError}
+                  <span className="synapse-liquid-control flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] text-muted-foreground">
+                    <CircleHelp className="h-4 w-4" aria-hidden="true" />
+                  </span>
+                  <p className="min-w-0 pt-2 text-xs font-semibold leading-relaxed text-foreground">
+                    {submissionError}
+                  </p>
                 </div>
               ) : null}
             </form>

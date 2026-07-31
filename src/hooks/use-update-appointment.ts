@@ -16,6 +16,7 @@ interface UpdateAppointmentData {
   id: string;
   updates: Partial<Omit<Appointment, "id" | "user_id" | "created_at">>;
   originChannel?: AppointmentActionOriginChannel;
+  suppressErrorToast?: boolean;
 }
 
 const MATERIAL_FIELDS = new Set(["start_time", "end_time", "type", "location"]);
@@ -115,7 +116,11 @@ const updateAppointmentFn = async ({
       p_metadata_patch: editableMetadataPatch(updates.metadata),
     });
     if (error || !data) {
-      throw new Error(error?.message || "Os detalhes clínicos não puderam ser salvos.");
+      const clinicalDetailsError = new Error("Não foi possível salvar os detalhes deste agendamento.");
+      if (error) {
+        Object.assign(clinicalDetailsError, { cause: error });
+      }
+      throw clinicalDetailsError;
     }
     currentAppointment = data as Appointment;
   } else if (hasMaterialChange || cancellationRequested) {
@@ -159,7 +164,7 @@ export const useUpdateAppointment = () => {
       queryClient.setQueriesData({ queryKey: ["appointments"] }, optimistic);
       return { previousDateRangeAppointments, previousAppointments };
     },
-    onError: (error, _, context) => {
+    onError: (error, variables, context) => {
       if (context?.previousDateRangeAppointments) {
         queryClient.setQueriesData({ queryKey: ["appointmentsByDateRange"] }, context.previousDateRangeAppointments);
       }
@@ -167,7 +172,9 @@ export const useUpdateAppointment = () => {
         queryClient.setQueriesData({ queryKey: ["appointments"] }, context.previousAppointments);
       }
       console.error("[useUpdateAppointment] Falha ao atualizar agendamento", error);
-      toast.error(getUserFacingErrorMessage(error, "save"));
+      if (!variables.suppressErrorToast) {
+        toast.error(getUserFacingErrorMessage(error, "save"));
+      }
     },
     onSettled: (data) => {
       for (const queryKey of [

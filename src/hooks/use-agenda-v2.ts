@@ -14,6 +14,7 @@ import {
   type AppointmentActionPlan,
 } from "@/lib/appointment-action-plans";
 import type { AppointmentMetadata } from "@/lib/appointment-metadata";
+import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
 
 export interface AgendaV2PlanInput {
   patient_id: string | null;
@@ -45,6 +46,7 @@ export interface AgendaV2PlanInput {
     reason?: string;
     source?: "professional" | "synapse" | "availability_change";
   }>;
+  excluded_occurrence_numbers?: number[];
   notes?: string | null;
   location?: string | null;
   metadata?: AppointmentMetadata;
@@ -63,6 +65,7 @@ export interface AgendaV2PlanInput {
 
 export interface AgendaV2Occurrence {
   occurrenceNumber: number;
+  originalOccurrenceNumber?: number;
   startTime: string;
   endTime: string;
   durationMinutes: number;
@@ -162,12 +165,8 @@ export type CompletedAgendaSeriesPlan = AppointmentActionPlan & {
 };
 
 const rpcError = (error: unknown, fallback: string) => {
-  if (error && typeof error === "object") {
-    const value = error as Record<string, unknown>;
-    const message = [value.message, value.details, value.hint].filter(Boolean).map(String).join(" ");
-    if (message) return message;
-  }
-  return error instanceof Error ? error.message : fallback;
+  const message = getAppointmentPlanErrorMessage(error, "create");
+  return message || fallback;
 };
 
 export function useProfessionalAgendaTimezone() {

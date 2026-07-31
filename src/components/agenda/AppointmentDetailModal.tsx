@@ -20,6 +20,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
 import {
@@ -59,7 +64,6 @@ import {
   Banknote,
   Briefcase,
   CalendarDays,
-  CheckCircle,
   ChevronRight,
   Clock,
   Clock3,
@@ -84,6 +88,18 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type React from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { getAppointmentPlanErrorMessage } from "@/lib/appointment-action-plan-errors";
+
+type AppointmentDetailReview = {
+  updates: Partial<Appointment>;
+  changes: Array<{
+    label: string;
+    before: string;
+    after: string;
+  }>;
+  queuesGoogleSync: boolean;
+  originChannel?: "professional_app" | "synapse_text";
+};
 
 const EVENT_CATEGORIES = [
   { value: "reuniao", label: "Reunião" },
@@ -158,7 +174,8 @@ export const AppointmentDetailModal = ({
   const [professionalAction, setProfessionalAction] = useState<ProfessionalAppointmentAction | null>(null);
   const [smartFitCandidates, setSmartFitCandidates] = useState<AgendaPlanSmartFitCandidate[]>([]);
   const [allowShorterSmartFit, setAllowShorterSmartFit] = useState(false);
-  const [isWaitlistOriginExpanded, setIsWaitlistOriginExpanded] = useState(false);
+  const [detailReview, setDetailReview] = useState<AppointmentDetailReview | null>(null);
+  const [detailError, setDetailError] = useState<string | null>(null);
   const loadedAppointmentKeyRef = useRef<string | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyBackButtonRef = useRef<HTMLButtonElement>(null);
@@ -199,12 +216,10 @@ export const AppointmentDetailModal = ({
   const smartFitAvailable = new Date(appointment.end_time) > new Date()
     && !["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "");
 
-  useEffect(() => {
-    setIsWaitlistOriginExpanded(false);
-  }, [appointment.id, open]);
-
   const loadData = useCallback(async () => {
     setStep(1);
+    setDetailReview(null);
+    setDetailError(null);
     const currentMetadata = getAppointmentMetadata(appointment);
 
     setNotes(getEditableAppointmentNotes(appointment));
@@ -283,14 +298,27 @@ export const AppointmentDetailModal = ({
   };
 
   const buildTimeUpdates = () => {
+    if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime)) {
+      throw new Error("Informe os horários de início e fim.");
+    }
     const sourceDate = new Date(appointment.start_time);
     const [startHours, startMinutes] = startTime.split(":").map(Number);
     const [endHours, endMinutes] = endTime.split(":").map(Number);
+    if (
+      startHours > 23
+      || endHours > 23
+      || startMinutes > 59
+      || endMinutes > 59
+    ) {
+      throw new Error("Revise os horários informados.");
+    }
     const newStart = new Date(sourceDate);
     const newEnd = new Date(sourceDate);
     newStart.setHours(startHours, startMinutes, 0, 0);
     newEnd.setHours(endHours, endMinutes, 0, 0);
-    if (newEnd <= newStart) newEnd.setDate(newEnd.getDate() + 1);
+    if (newEnd <= newStart) {
+      throw new Error("O horário final precisa ser posterior ao início no mesmo dia.");
+    }
 
     return {
       start_time: newStart.toISOString(),
@@ -298,7 +326,7 @@ export const AppointmentDetailModal = ({
     };
   };
 
-  const saveDetails = async () => {
+  const buildDetailReview = (): AppointmentDetailReview | null => {
     const timeUpdates = buildTimeUpdates();
     let nextNotes = notes;
     let nextLocation = appointment.location;
@@ -324,6 +352,7 @@ export const AppointmentDetailModal = ({
     const typeChanged = nextType !== appointment.type;
     const locationChanged = (nextLocation || "").trim() !== (appointment.location || "").trim();
     const notesChanged = nextNotes !== (appointment.notes || "");
+    const editableNotesChanged = notes.trim() !== getEditableAppointmentNotes(appointment).trim();
     const eventMetadataChanged = isEvent && (
       (eventTitle.trim() || "Compromisso") !== (metadata.eventTitle || displayTitle || "Compromisso")
       || eventCategory !== (metadata.eventCategory || "outro")
@@ -344,9 +373,14 @@ export const AppointmentDetailModal = ({
       || sessionMetadataChanged;
 
     if (!hasAnyChange) {
-      toast.info("Nenhuma alteração para salvar.");
-      setOpen(false);
-      return;
+      return null;
+    }
+
+    if (
+      (startChanged || endChanged)
+      && new Date(timeUpdates.start_time).getTime() <= Date.now()
+    ) {
+      throw new Error("Escolha um horário futuro para reagendar.");
     }
 
     const currentSyncStatus = metadata.syncStatus === "pending_professional_review"
@@ -385,13 +419,103 @@ export const AppointmentDetailModal = ({
       updates.metadata = nextMetadata;
     }
 
-    await updateAppointment.mutateAsync({
-      id: appointment.id,
-      updates,
-    });
+    const changes: AppointmentDetailReview["changes"] = [];
+    if (startChanged || endChanged) {
+      changes.push({
+        label: "Horário",
+        before: `${format(new Date(appointment.start_time), "HH:mm")}–${format(new Date(appointment.end_time), "HH:mm")}`,
+        after: `${startTime}–${endTime}`,
+      });
+    }
+    if (isEvent && eventTitle.trim() !== (metadata.eventTitle || displayTitle || "").trim()) {
+      changes.push({
+        label: "Título",
+        before: metadata.eventTitle || displayTitle || "Compromisso",
+        after: eventTitle.trim() || "Compromisso",
+      });
+    }
+    if (isEvent && eventCategory !== (metadata.eventCategory || "outro")) {
+      changes.push({
+        label: "Categoria",
+        before: getEventCategoryLabel(metadata.eventCategory || "outro"),
+        after: getEventCategoryLabel(eventCategory),
+      });
+    }
+    if (isSession && sessionType !== (metadata.sessionType || "follow_up")) {
+      changes.push({
+        label: "Tipo de sessão",
+        before: getSessionTypeLabel(metadata.sessionType || "follow_up"),
+        after: getSessionTypeLabel(sessionType),
+      });
+    }
+    if (isSession && modality !== currentModality) {
+      changes.push({
+        label: "Modalidade",
+        before: currentModality === "online" ? "Online" : "Presencial",
+        after: modality === "online" ? "Online" : "Presencial",
+      });
+    }
+    if (locationChanged) {
+      changes.push({
+        label: "Local",
+        before: appointment.location || "Não informado",
+        after: nextLocation || "Não informado",
+      });
+    }
+    if (editableNotesChanged) {
+      changes.push({
+        label: "Notas",
+        before: getEditableAppointmentNotes(appointment).trim() ? "Com conteúdo" : "Sem notas",
+        after: notes.trim() ? "Conteúdo atualizado" : "Sem notas",
+      });
+    }
 
-    toast.success("Agendamento atualizado.");
-    setOpen(false);
+    return {
+      updates,
+      changes,
+      queuesGoogleSync: Boolean(appointment.google_event_id),
+    };
+  };
+
+  const reviewDetails = () => {
+    setDetailError(null);
+    try {
+      const review = buildDetailReview();
+      if (!review) {
+        setDetailError("Nenhuma alteração foi feita.");
+        return;
+      }
+      setDetailReview(review);
+      setStep(2);
+    } catch (error) {
+      setDetailReview(null);
+      setDetailError(
+        error instanceof Error
+          ? error.message
+          : "Revise as alterações antes de continuar.",
+      );
+    }
+  };
+
+  const saveDetails = async () => {
+    if (!detailReview) {
+      reviewDetails();
+      return;
+    }
+    setDetailError(null);
+    try {
+      await updateAppointment.mutateAsync({
+        id: appointment.id,
+        updates: detailReview.updates,
+        originChannel: detailReview.originChannel,
+        suppressErrorToast: true,
+      });
+      toast.success("Agendamento atualizado.");
+      setOpen(false);
+    } catch (error) {
+      setDetailError(getAppointmentPlanErrorMessage(error, "reschedule"));
+      setStep(1);
+    }
   };
 
   const loadSmartFitCandidates = async () => {
@@ -404,33 +528,34 @@ export const AppointmentDetailModal = ({
       });
       setSmartFitCandidates(result.candidates);
       if (!result.candidates.length) {
-        toast.info("Não há encaixe compatível nos próximos 14 dias.");
+        setDetailError("Não encontrei um encaixe compatível nos próximos 14 dias.");
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Não foi possível sugerir um reencaixe.");
+      setDetailError(getAppointmentPlanErrorMessage(error, "reschedule"));
     }
   };
 
   const applySmartFitCandidate = async (candidate: AgendaPlanSmartFitCandidate) => {
-    try {
-      await updateAppointment.mutateAsync({
-        id: appointment.id,
-        originChannel: "synapse_text",
-        updates: {
-          start_time: candidate.startTime,
-          end_time: candidate.endTime,
-        },
-      });
-      toast.success(
-        candidate.keepsFullDuration
-          ? "Reencaixe do Synapse aplicado."
-          : "Reencaixe com duração reduzida aplicado e marcado como personalizado.",
-      );
-      setOpen(false);
-    } catch {
-      // The mutation already restores optimistic state and reports the
-      // canonical action-plan error.
-    }
+    const nextMetadata: AppointmentMetadata = {
+      ...metadata,
+      durationMinutes: candidate.durationMinutes,
+    };
+    setDetailError(null);
+    setDetailReview({
+      updates: {
+        start_time: candidate.startTime,
+        end_time: candidate.endTime,
+        metadata: nextMetadata,
+      },
+      changes: [{
+        label: "Reencaixe do Synapse",
+        before: format(new Date(appointment.start_time), "dd/MM/yyyy · HH:mm"),
+        after: `${format(new Date(candidate.startTime), "dd/MM/yyyy · HH:mm")} · ${candidate.durationMinutes} min`,
+      }],
+      queuesGoogleSync: Boolean(appointment.google_event_id),
+      originChannel: "synapse_text",
+    });
+    setStep(2);
   };
 
   const handleWhatsApp = () => {
@@ -529,69 +654,81 @@ export const AppointmentDetailModal = ({
           >
         <div className="agenda-modal-header flex shrink-0 items-center justify-between border-b px-5 pb-4 pt-5 backdrop-blur-2xl sm:px-6">
           <div className="min-w-0 flex-1 pr-2">
-            <div className="flex flex-wrap items-center gap-3 mb-2">
+            <div className="mb-1">
               <h2 className="text-xl font-bold text-foreground tracking-tight">
                 {isSession ? "Ficha da Sessão" : "Ficha do Compromisso"}
               </h2>
-              <div className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-full border", statusMeta.bgClass, statusMeta.borderClass)}>
-                <div className={cn("w-1.5 h-1.5 rounded-full shrink-0", statusMeta.dotClass)} />
-                <span className={cn("text-[9px] font-black uppercase tracking-[0.1em] whitespace-nowrap", statusMeta.textClass)}>
-                  {statusMeta.label}
-                </span>
-              </div>
-              {appointment.lifecycle_status && appointment.lifecycle_status !== "created" ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/[0.07] px-2.5 py-1 text-primary">
-                  <ShieldCheck className="h-3 w-3" aria-hidden="true" />
-                  <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em]">
-                    {lifecycleLabel}
-                  </span>
-                </div>
-              ) : null}
-              {isFromWaitlist ? (
-                <motion.button
-                  layout={!shouldReduceMotion}
-                  type="button"
-                  aria-expanded={isWaitlistOriginExpanded}
-                  aria-label={isWaitlistOriginExpanded
-                    ? "Origem: lista de espera, confirmado pelo paciente. Recolher detalhes."
-                    : "Origem: lista de espera. Mostrar detalhes."}
-                  title="Origem: lista de espera"
-                  onClick={() => setIsWaitlistOriginExpanded((current) => !current)}
-                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                  className={cn(
-                    "agenda-tactile inline-flex min-h-11 max-w-full shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
-                    isWaitlistOriginExpanded ? "min-w-11" : "w-11",
-                  )}
-                >
-                  <motion.span
-                    layout={!shouldReduceMotion}
-                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className={cn(
-                      "appointment-liquid-control inline-flex min-h-8 max-w-full items-center justify-center overflow-hidden rounded-full border border-border/50 bg-muted/40 hover:bg-muted/60 dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
-                      isWaitlistOriginExpanded ? "gap-1.5 px-2.5" : "h-8 w-8 px-0",
-                    )}
-                  >
-                    <ListPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <AnimatePresence initial={false}>
-                      {isWaitlistOriginExpanded ? (
-                        <motion.span
-                          initial={shouldReduceMotion ? false : { opacity: 0, x: -4 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -4 }}
-                          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
-                          className="max-w-[min(15rem,calc(100vw-13rem))] whitespace-normal text-left text-[9px] font-black uppercase leading-tight tracking-[0.09em]"
-                        >
-                          Lista de espera · confirmado pelo paciente
-                        </motion.span>
-                      ) : null}
-                    </AnimatePresence>
-                  </motion.span>
-                </motion.button>
-              ) : null}
             </div>
             <p className="text-sm font-medium text-muted-foreground">
               {format(new Date(appointment.start_time), "dd 'de' MMMM, yyyy", { locale: ptBR })}
             </p>
+            <div
+              className="synapse-liquid-toolbar mt-3 inline-flex items-center gap-1 rounded-[16px] p-1"
+              aria-label="Contexto do agendamento"
+            >
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Status: ${statusMeta.label}`}
+                  >
+                    <span className={cn("h-2.5 w-2.5 rounded-full", statusMeta.dotClass)} aria-hidden="true" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  className="agenda-menu-surface w-auto max-w-64 rounded-[16px] border-border/50 px-3 py-2"
+                >
+                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Status</p>
+                  <p className="mt-1 text-xs font-bold text-foreground">{statusMeta.label}</p>
+                </PopoverContent>
+              </Popover>
+
+              {appointment.lifecycle_status && appointment.lifecycle_status !== "created" ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label={`Situação: ${lifecycleLabel}`}
+                    >
+                      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="agenda-menu-surface w-auto max-w-72 rounded-[16px] border-border/50 px-3 py-2"
+                  >
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Situação</p>
+                    <p className="mt-1 text-xs font-bold text-foreground">{lifecycleLabel}</p>
+                  </PopoverContent>
+                </Popover>
+              ) : null}
+
+              {isFromWaitlist ? (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-label="Origem: lista de espera. Mostrar detalhes."
+                    >
+                      <ListPlus className="h-4 w-4" aria-hidden="true" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="agenda-menu-surface w-auto max-w-72 rounded-[16px] border-border/50 px-3 py-2"
+                  >
+                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Origem</p>
+                    <p className="mt-1 text-xs font-bold text-foreground">
+                      Lista de espera · confirmado pelo paciente
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              ) : null}
+            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -631,6 +768,20 @@ export const AppointmentDetailModal = ({
                 transition={shouldReduceMotion ? { duration: 0 } : undefined}
                 className="space-y-4"
               >
+                {detailError ? (
+                  <div
+                    className="synapse-liquid-toolbar flex items-start gap-3 rounded-[18px] p-3"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <span className="synapse-liquid-control flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px]">
+                      <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    </span>
+                    <p className="pt-2 text-xs font-semibold leading-relaxed text-foreground">
+                      {detailError}
+                    </p>
+                  </div>
+                ) : null}
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <div className="appointment-liquid-card flex flex-1 items-center justify-between rounded-[22px] border border-border/45 p-4">
                     <div className="flex items-center gap-3 min-w-0">
@@ -927,20 +1078,65 @@ export const AppointmentDetailModal = ({
               </motion.div>
             ) : (
               <motion.div
-                key="success"
-                initial={shouldReduceMotion ? false : { scale: 0.98, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
+                key="review"
+                initial={shouldReduceMotion ? false : { opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
                 transition={shouldReduceMotion ? { duration: 0 } : undefined}
-                className="flex flex-col items-center text-center space-y-4 py-8"
+                className="space-y-4"
               >
-                <div className="w-20 h-20 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                  <CheckCircle className="h-10 w-10 text-emerald-500" />
+                <div className="space-y-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                    Antes de confirmar
+                  </p>
+                  <h2 className="text-xl font-black tracking-tight text-foreground">
+                    Revise as alterações
+                  </h2>
+                  <p className="text-xs leading-relaxed text-muted-foreground">
+                    Apenas os itens abaixo serão atualizados.
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <h2 className="text-2xl font-bold text-foreground">Atualizado</h2>
-                  <p className="text-muted-foreground text-sm">As informações foram salvas e sincronizadas quando aplicável.</p>
-                </div>
-                <Button onClick={() => setOpen(false)} className="agenda-primary-action agenda-tactile mt-3 h-11 rounded-full px-6 font-bold">Fechar ficha</Button>
+
+                <ol className="grid gap-2">
+                  {(detailReview?.changes || []).map((change, index) => (
+                    <li
+                      key={`${change.label}-${index}`}
+                      className="synapse-liquid-toolbar flex items-start gap-3 rounded-[18px] p-3"
+                    >
+                      <span className="synapse-liquid-control flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] text-xs font-black tabular-nums">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-black text-foreground">{change.label}</p>
+                        <div className="mt-1 grid gap-1 text-[11px] sm:grid-cols-2">
+                          <p className="truncate text-muted-foreground">
+                            <span className="font-bold">Antes:</span> {change.before}
+                          </p>
+                          <p className="truncate text-foreground">
+                            <span className="font-bold">Depois:</span> {change.after}
+                          </p>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+
+                {detailReview?.queuesGoogleSync ? (
+                  <div className="appointment-liquid-card flex items-start gap-3 rounded-[18px] border border-border/45 p-3">
+                    <Repeat className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      O Google Agenda será atualizado em segundo plano depois da confirmação.
+                    </p>
+                  </div>
+                ) : null}
+
+                {detailError ? (
+                  <div className="synapse-liquid-toolbar flex items-start gap-3 rounded-[18px] p-3" role="status" aria-live="polite">
+                    <span className="synapse-liquid-control flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px]">
+                      <FileText className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                    </span>
+                    <p className="pt-2 text-xs font-semibold text-foreground">{detailError}</p>
+                  </div>
+                ) : null}
               </motion.div>
             )}
           </AnimatePresence>
@@ -986,13 +1182,39 @@ export const AppointmentDetailModal = ({
             </Button>
 
             <Button
-              onClick={() => void saveDetails()}
+              onClick={reviewDetails}
               disabled={updateAppointment.isPending}
               className="agenda-primary-action min-h-11 w-full rounded-xl px-6 font-bold tracking-wide sm:w-auto"
             >
-              {updateAppointment.isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Salvar e Fechar"}
+              Revisar alterações
             </Button>
             </div>
+          </div>
+        )}
+        {step === 2 && (
+          <div className="agenda-modal-footer flex shrink-0 items-center justify-between gap-3 border-t p-4 backdrop-blur-2xl">
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={updateAppointment.isPending}
+              onClick={() => {
+                setDetailError(null);
+                setStep(1);
+              }}
+              className="appointment-liquid-control min-h-11 rounded-xl border border-border/45 px-5 font-bold text-muted-foreground"
+            >
+              Voltar
+            </Button>
+            <Button
+              type="button"
+              onClick={() => void saveDetails()}
+              disabled={updateAppointment.isPending || !detailReview}
+              className="agenda-primary-action min-h-11 rounded-xl px-6 font-bold tracking-wide"
+            >
+              {updateAppointment.isPending
+                ? <Loader2 className="h-5 w-5 animate-spin motion-reduce:animate-none" />
+                : "Confirmar e fechar"}
+            </Button>
           </div>
         )}
           </motion.div>
