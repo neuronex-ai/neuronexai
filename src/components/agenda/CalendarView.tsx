@@ -4,9 +4,10 @@ import { Appointment } from "@/types";
 import { format, addDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatTimeBrazil } from "@/lib/timezone";
-import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen, UsersRound, ListPlus } from "lucide-react";
+import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, UsersRound, ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
+import { Calendar } from "@/components/ui/calendar";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
 import { AgendaSettingsModal } from "./AgendaSettingsModal";
 import { cn } from "@/lib/utils";
@@ -25,13 +26,16 @@ import {
     DragCancelEvent,
     defaultDropAnimationSideEffects,
     MeasuringStrategy,
+    pointerWithin,
+    rectIntersection,
+    type CollisionDetection,
     type Announcements,
     type ScreenReaderInstructions,
 } from "@dnd-kit/core";
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState, useMemo, useEffect, useRef } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
 import { NewAppointmentModal } from "./NewAppointmentModal";
 import {
     AppointmentRescheduleConflictDialog,
@@ -60,17 +64,24 @@ import {
 // Generate time labels from 00:00 to 23:00
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const HOUR_HEIGHT = 64; // px per hour row
+const FLOATING_HEADER_CLEARANCE = 60;
+
+const compactWeekday = (day: Date) =>
+    format(day, "EEE", { locale: ptBR })
+        .replace(".", "")
+        .slice(0, 3)
+        .toLocaleUpperCase("pt-BR");
 
 interface CalendarViewProps {
     date: Date;
     onDateChange: (date: Date) => void;
     appointments: Appointment[];
     /** Coleção canônica, sem filtros visuais, usada para detectar conflitos. */
+    allAppointments?: Appointment[];
     isLoading: boolean;
     view: 'daily' | 'weekly' | 'monthly';
     onViewChange?: (view: 'daily' | 'weekly' | 'monthly') => void;
-    sidebarOpen?: boolean;
-    setSidebarOpen?: (open: boolean) => void;
+    filterControl?: ReactNode;
     waitlistOpen?: boolean;
     onWaitlistOpenChange?: (open: boolean) => void;
     waitlistCount?: number;
@@ -125,7 +136,26 @@ const AGENDA_DRAG_INSTRUCTIONS: ScreenReaderInstructions = {
     draggable: "Para reagendar, pressione Espaço ou Enter. Use as setas para escolher o horário, Espaço ou Enter para revisar, e Escape para cancelar.",
 };
 
-export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen, waitlistOpen, onWaitlistOpenChange, waitlistCount = 0 }: CalendarViewProps) => {
+const agendaCollisionDetection: CollisionDetection = (args) => {
+    const pointerCollisions = pointerWithin(args);
+    return pointerCollisions.length > 0
+        ? pointerCollisions
+        : rectIntersection(args);
+};
+
+export const CalendarView = ({
+    date,
+    onDateChange,
+    appointments,
+    allAppointments = appointments,
+    isLoading,
+    view,
+    onViewChange,
+    filterControl,
+    waitlistOpen,
+    onWaitlistOpenChange,
+    waitlistCount = 0,
+}: CalendarViewProps) => {
     const shouldReduceMotion = useReducedMotion();
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -136,6 +166,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const [rescheduleConflict, setRescheduleConflict] = useState<RescheduleConflict | null>(null);
     const rescheduleInFlightRef = useRef(false);
     const dragIdempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
+    const suppressCalendarClickRef = useRef(false);
     const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>();
     const [isMounted, setIsMounted] = useState(false);
@@ -185,7 +216,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 2,
+                distance: 6,
             }
         }),
         useSensor(TouchSensor, {
@@ -198,6 +229,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     );
 
     const handleDragStart = (event: DragStartEvent) => {
+        suppressCalendarClickRef.current = true;
         setActiveId(event.active.id as string);
     };
 
@@ -208,18 +240,24 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const handleDragCancel = (_event: DragCancelEvent) => {
         setActiveId(null);
         setOverId(null);
+        window.setTimeout(() => {
+            suppressCalendarClickRef.current = false;
+        }, 0);
     };
 
     const handleDragEnd = async (event: DragEndEvent) => {
         const { active, over } = event;
         setActiveId(null);
         setOverId(null);
+        window.setTimeout(() => {
+            suppressCalendarClickRef.current = false;
+        }, 0);
 
         if (!over || rescheduleInFlightRef.current) return;
 
         const appointmentId = active.id as string;
         const targetDate = new Date(over.id as string);
-        const appointment = appointments.find(a => a.id === appointmentId);
+        const appointment = allAppointments.find(a => a.id === appointmentId);
 
         if (!appointment) return;
 
@@ -308,8 +346,8 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     };
 
     const activeAppointment = useMemo(() =>
-        appointments.find(a => a.id === activeId),
-        [activeId, appointments]);
+        allAppointments.find(a => a.id === activeId),
+        [activeId, allAppointments]);
 
     // Determine if a specific hour is blocked for a given day
     const isHourBlocked = (day: Date, hour: number): boolean => {
@@ -385,40 +423,36 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
 
         return (
             <div className="flex h-full min-h-0 flex-1 flex-col">
-                {/* Day Headers */}
-                <div className="agenda-grid-header flex shrink-0 border-b">
-                    {/* Time gutter header */}
-                    <div className="w-16 shrink-0" />
-                    {/* Day columns headers */}
-                    {days.map(day => {
-                        const isToday = isSameDay(day, new Date());
-                        return (
-                            <div
-                                key={day.toISOString()}
-                                className={cn(
-                                    "agenda-grid-day min-w-0 flex-1 border-l py-3.5 text-center",
-                                    isToday && "agenda-grid-today"
-                                )}
-                            >
-                                <span className={cn(
-                                    "mb-1 block text-[9px] font-black uppercase tracking-[0.22em]",
-                                    isToday ? "text-foreground" : "text-muted-foreground/72",
-                                )}>
-                                    {format(day, "EEE", { locale: ptBR })}
-                                </span>
-                                <span className={cn(
-                                    "text-xl font-black tracking-[-0.045em]",
-                                    isToday ? "text-foreground" : "text-muted-foreground",
-                                )}>
-                                    {format(day, "dd")}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
+                <div className="custom-scrollbar relative h-full flex-1 overflow-y-auto overscroll-contain">
+                    <div aria-hidden="true" style={{ height: FLOATING_HEADER_CLEARANCE }} />
+                    <div
+                        className="agenda-floating-day-header pointer-events-none sticky z-30 flex shrink-0"
+                        style={{ top: FLOATING_HEADER_CLEARANCE }}
+                    >
+                        <div className="w-16 shrink-0" />
+                        {days.map(day => {
+                            const isToday = isSameDay(day, new Date());
+                            return (
+                                <div
+                                    key={day.toISOString()}
+                                    className="flex min-w-0 flex-1 justify-center px-1 py-1.5"
+                                >
+                                    <span
+                                        className={cn(
+                                            "agenda-day-pill inline-flex h-8 min-w-[72px] items-center justify-center rounded-full border px-3 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground",
+                                            isToday && "synapse-liquid-tab-active text-foreground",
+                                        )}
+                                        aria-label={format(day, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                                    >
+                                        {compactWeekday(day)}
+                                        <span className="mx-1.5 opacity-45" aria-hidden="true">·</span>
+                                        <span className="tabular-nums">{format(day, "dd")}</span>
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                {/* Time grid body */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar relative h-full">
                     <div className="flex" style={{ minHeight: HOUR_LABELS.length * HOUR_HEIGHT }}>
                         {/* Time gutter */}
                         <div className="agenda-time-gutter relative w-16 shrink-0">
@@ -460,31 +494,36 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     // ─── Render: Monthly (existing card-based layout) ─────────────────────
 
     const renderMonthlyView = () => (
-        <div className={cn(
-            "grid h-full min-h-0 flex-1 select-none gap-4",
-            "grid-cols-4 sm:grid-cols-7"
-        )}>
-            {monthDays.map(day => (
-                <MonthDroppableColumn
-                    key={day.toISOString()}
-                    id={day.toISOString()}
-                    day={day}
-                    appointments={appointments}
-                    isDraggingAny={!!activeId}
-                    activeAppointment={activeAppointment}
-                    isTarget={overId === day.toISOString()}
-                    onAddAppointment={() => {
-                        setNewAppointmentDate(day);
-                        setSelectedTimeSlot(undefined);
-                    }}
-                />
-            ))}
+        <div className="custom-scrollbar h-full min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div aria-hidden="true" style={{ height: FLOATING_HEADER_CLEARANCE }} />
+            <div className={cn(
+                "grid min-h-full select-none auto-rows-[minmax(132px,1fr)] gap-2 p-1",
+                "grid-cols-4 sm:grid-cols-7"
+            )}>
+                {monthDays.map(day => (
+                    <MonthDroppableColumn
+                        key={day.toISOString()}
+                        id={day.toISOString()}
+                        day={day}
+                        appointments={appointments}
+                        isDraggingAny={!!activeId}
+                        activeAppointment={activeAppointment}
+                        isTarget={overId === day.toISOString()}
+                        onAddAppointment={() => {
+                            if (suppressCalendarClickRef.current) return;
+                            setNewAppointmentDate(day);
+                            setSelectedTimeSlot(undefined);
+                        }}
+                    />
+                ))}
+            </div>
         </div>
     );
 
     return (
         <DndContext
             sensors={sensors}
+            collisionDetection={agendaCollisionDetection}
             accessibility={{
                 announcements: AGENDA_DRAG_ANNOUNCEMENTS,
                 screenReaderInstructions: AGENDA_DRAG_INSTRUCTIONS,
@@ -506,114 +545,96 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 aria-busy={isPreparingReschedule}
                 className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
             >
-                <header className="agenda-liquid-surface relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border p-3 text-foreground xl:flex-row xl:items-center">
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.024),transparent_38%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
-                    {/* Left side: Sidebar Toggle, Title/Date, Google Status */}
-                    <div className="relative z-10 flex flex-wrap items-center gap-4">
-                        {setSidebarOpen && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
-                                aria-label={sidebarOpen ? "Ocultar painel da agenda" : "Mostrar painel da agenda"}
-                                className="agenda-tactile notification-liquid-control hidden h-11 w-11 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:text-foreground xl:flex"
-                            >
-                                {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-                            </Button>
-                        )}
+                <header className="agenda-floating-header pointer-events-none absolute left-3 right-3 top-3 z-40 flex items-center justify-between gap-3 text-foreground">
+                    <div className="pointer-events-auto flex min-w-0 shrink items-center gap-2">
+                        {filterControl}
 
-                        <div className="flex items-baseline gap-4">
-                            <motion.div
-                                key={`${view}-${date.toISOString()}`}
-                                initial={shouldReduceMotion ? false : { opacity: 0, x: -8 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.26, ease: [0.32, 0.72, 0, 1] }}
-                            >
-                                <span className="text-4xl font-black leading-none tracking-[-0.065em] text-foreground xl:text-[2.65rem]">
-                                    {format(date, "dd")} <span className="font-black lowercase text-muted-foreground">{format(date, "MMMM", { locale: ptBR })}</span> <span className="ml-1 text-2xl font-black text-muted-foreground/55">{format(date, "yyyy")}</span>
-                                </span>
-                            </motion.div>
-                        </div>
-
-                        {/* Google Connected Badge Moved Here */}
-                        <div className="ml-2 hidden sm:block">
-                            {isLoadingGoogle ? (
-                                <div className="h-6 w-20 animate-pulse rounded-full bg-muted" />
-                            ) : isGoogleConnected ? (
-                                <div className="desktop-retina-inset flex cursor-default items-center gap-2 rounded-full border border-border/50 bg-background/64 px-2.5 py-1">
-                                    <div className="relative flex h-1.5 w-1.5">
-                                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
-                                    </div>
-                                    <span className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Conectado</span>
-                                </div>
-                            ) : (
+                        <Popover>
+                            <PopoverTrigger asChild>
                                 <Button
-                                    onClick={() => navigate('/ajustes?tab=integrations')}
-                                    className="agenda-primary-action h-11 rounded-full px-3 text-[9px] font-black uppercase tracking-widest"
+                                    type="button"
+                                    variant="ghost"
+                                    className="agenda-floating-pill agenda-tactile h-10 shrink-0 rounded-full px-3 text-[10px] font-black uppercase tracking-[0.12em] text-foreground"
+                                    aria-label={`Escolher data. Atual: ${format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
                                 >
-                                    Conectar
+                                    <motion.span
+                                        key={date.toISOString()}
+                                        initial={shouldReduceMotion ? false : { opacity: 0, y: 3 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
+                                    >
+                                        {format(date, "dd MMM yyyy", { locale: ptBR })}
+                                    </motion.span>
                                 </Button>
-                            )}
-                        </div>
+                            </PopoverTrigger>
+                            <PopoverContent
+                                align="start"
+                                sideOffset={10}
+                                className="agenda-menu-surface notification-liquid-menu w-auto rounded-[24px] border p-3"
+                            >
+                                <Calendar
+                                    mode="single"
+                                    selected={date}
+                                    onSelect={(selected) => selected && onDateChange(selected)}
+                                    locale={ptBR}
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
+
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => navigate('/ajustes?tab=integrations')}
+                            className="agenda-floating-pill agenda-tactile hidden h-10 shrink-0 rounded-full px-3 text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground sm:inline-flex"
+                            aria-label={isGoogleConnected ? "Google conectado. Abrir integrações" : "Conectar Google Agenda"}
+                        >
+                            {isLoadingGoogle ? "Conectando" : isGoogleConnected ? "Conectado" : "Conectar"}
+                        </Button>
                     </div>
 
-                    {/* Right side: Compact Actions Panel */}
-                    <div className="relative z-10 flex flex-wrap items-center gap-3">
-
-                        {/* View Switcher Controls */}
-                        {onViewChange && (
-                            <MagneticSegmentedControl
-                                id="agenda-calendar-view"
-                                indicatorId="agenda-calendar-view-indicator"
-                                value={view}
-                                onValueChange={onViewChange}
-                                ariaLabel="Visualização da agenda"
-                                behavior="single-select"
-                                options={[
-                                    { value: "daily", label: "Dia" },
-                                    { value: "weekly", label: "Sem" },
-                                    { value: "monthly", label: "Mês" },
-                                ]}
-                                className="desktop-retina-inset h-12 min-h-12 shrink-0 rounded-full border-border/50 bg-muted/36"
-                                triggerClassName="h-11 min-h-11 rounded-full px-4 py-0 text-[10px] font-black uppercase tracking-wider"
-                            />
-                        )}
-
-                        <div className="hidden h-6 w-px bg-border/65 sm:block" />
-
-                        {/* Navigation Controls */}
-                        <div className="flex items-center gap-1.5">
+                    <div className="pointer-events-auto flex shrink-0 items-center gap-2">
+                        <div className="agenda-floating-pill flex h-10 shrink-0 items-center rounded-full p-0.5">
                             <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
                                 aria-label="Mostrar período anterior"
-                                className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:text-foreground"
+                                className="notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
                             >
-                                <ChevronLeft className="h-4 w-4" />
+                                <ChevronLeft className="h-3.5 w-3.5" />
                             </Button>
+
+                            {onViewChange ? (
+                                <MagneticSegmentedControl
+                                    id="agenda-calendar-view"
+                                    indicatorId="agenda-calendar-view-indicator"
+                                    value={view}
+                                    onValueChange={onViewChange}
+                                    ariaLabel="Visualização da agenda"
+                                    behavior="single-select"
+                                    options={[
+                                        { value: "daily", label: "Dia" },
+                                        { value: "weekly", label: "Sem" },
+                                        { value: "monthly", label: "Mês" },
+                                    ]}
+                                    className="h-9 min-h-9 shrink-0 rounded-full bg-transparent p-0"
+                                    triggerClassName="h-8 min-h-8 rounded-full px-3 py-0 text-[9px] font-black uppercase tracking-[0.1em]"
+                                />
+                            ) : null}
+
                             <Button
-                                variant="ghost"
-                                onClick={() => onDateChange(new Date())}
-                                className="agenda-tactile notification-liquid-control h-11 rounded-full border border-border/50 bg-background/70 px-5 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:text-foreground"
-                            >
-                                Hoje
-                            </Button>
-                            <Button
+                                type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
                                 aria-label="Mostrar próximo período"
-                                className="agenda-tactile notification-liquid-control h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground hover:text-foreground"
+                                className="notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
                             >
-                                <ChevronRight className="h-4 w-4" />
+                                <ChevronRight className="h-3.5 w-3.5" />
                             </Button>
                         </div>
-
-                        <div className="mx-1 hidden h-6 w-px bg-border/65 sm:block" />
-
-                        {/* Settings Button */}
-                        <AgendaSettingsModal />
 
                         {onWaitlistOpenChange ? (
                             <Button
@@ -624,11 +645,11 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                                 aria-label={`Lista de espera${waitlistCount ? `, ${waitlistCount} pessoas ativas` : ""}`}
                                 aria-pressed={waitlistOpen}
                                 className={cn(
-                                    "notification-liquid-control relative h-11 w-11 rounded-full border border-border/50 bg-background/70 text-muted-foreground",
-                                    waitlistOpen && "notification-liquid-tab-active text-foreground",
+                                    "agenda-floating-pill relative h-10 w-10 rounded-full text-muted-foreground",
+                                    waitlistOpen && "synapse-liquid-tab-active text-foreground",
                                 )}
                             >
-                                <UsersRound className="h-4 w-4" />
+                                <UsersRound className="h-3.5 w-3.5" />
                                 {waitlistCount > 0 ? (
                                     <span className="notification-unread-badge absolute -right-0.5 -top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full px-1 text-[7px] font-black leading-none">
                                         {Math.min(waitlistCount, 99)}
@@ -637,12 +658,15 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                             </Button>
                         ) : null}
 
-                        {/* New Appointment Add Button */}
+                        <AgendaSettingsModal />
+
                         <Button
+                            type="button"
+                            variant="ghost"
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
                             aria-label="Criar novo agendamento"
-                            className="agenda-primary-action flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bold uppercase tracking-[0.1em]"
+                            className="agenda-floating-pill synapse-liquid-tab-active flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground"
                         >
                             <Plus className="h-4 w-4" />
                         </Button>
@@ -652,7 +676,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 {/* Main content area */}
                 <div
                     data-synapse-target="agenda-appointments"
-                    className="agenda-grid-surface flex min-h-0 flex-1 flex-col overflow-y-auto rounded-[24px] border"
+                    className="agenda-grid-surface flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border"
                 >
                     {view === 'monthly' ? renderMonthlyView() : renderTimeGridView()}
                 </div>
@@ -962,7 +986,9 @@ const MonthDroppableColumn = ({
     return (
         <div
           ref={setNodeRef}
-          onClick={onAddAppointment}
+          onClick={() => {
+            if (!isDraggingAny) onAddAppointment?.();
+          }}
           data-dragging={isDraggingAny}
           data-target={isTarget}
           className={cn(
@@ -970,20 +996,22 @@ const MonthDroppableColumn = ({
             isTarget && "z-10",
           )}
         >
-            <div className="flex-row justify-between w-full px-2 py-1 flex items-center">
+            <div className="flex w-full flex-row items-center justify-between px-1 py-1">
                 <button
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onAddAppointment?.();
+                    if (!isDraggingAny) onAddAppointment?.();
                   }}
                   className={cn(
-                    "agenda-tactile flex min-h-11 min-w-11 items-center justify-center rounded-[13px] text-[10px] font-medium",
-                    isToday ? "agenda-primary-action font-black" : "text-muted-foreground hover:bg-accent/55 hover:text-foreground",
+                    "agenda-day-pill agenda-tactile flex h-8 min-w-[70px] items-center justify-center rounded-full border px-2 text-[9px] font-black uppercase tracking-[0.1em]",
+                    isToday ? "synapse-liquid-tab-active text-foreground" : "text-muted-foreground hover:text-foreground",
                   )}
                   aria-label={`Adicionar agendamento em ${format(day, "dd 'de' MMMM", { locale: ptBR })}`}
                 >
-                    {format(day, "dd")}
+                    {compactWeekday(day)}
+                    <span className="mx-1 opacity-45" aria-hidden="true">·</span>
+                    <span className="tabular-nums">{format(day, "dd")}</span>
                 </button>
                 {dayApps.length > 0 && <div className="h-1 w-1 rounded-full bg-muted-foreground/60" />}
             </div>

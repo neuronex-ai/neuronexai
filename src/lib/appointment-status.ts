@@ -29,8 +29,8 @@ export interface AppointmentStatusMeta {
 export const APPOINTMENT_STATUS_META: Record<AppointmentStatus, AppointmentStatusMeta> = {
   unscored: {
     value: "unscored",
-    label: "Não pontuado",
-    shortLabel: "Não pontuado",
+    label: "Pendente",
+    shortLabel: "Pendente",
     description: "Ainda sem pontuação de presença.",
     color: "zinc",
     dotClass: "bg-zinc-500 dark:bg-zinc-400",
@@ -42,8 +42,8 @@ export const APPOINTMENT_STATUS_META: Record<AppointmentStatus, AppointmentStatu
   },
   attended: {
     value: "attended",
-    label: "Presença",
-    shortLabel: "Presença",
+    label: "Realizada",
+    shortLabel: "Realizada",
     description: "Sessão realizada com presença.",
     color: "emerald",
     dotClass: "bg-emerald-500",
@@ -55,8 +55,8 @@ export const APPOINTMENT_STATUS_META: Record<AppointmentStatus, AppointmentStatu
   },
   absent: {
     value: "absent",
-    label: "Ausência",
-    shortLabel: "Ausência",
+    label: "Ausente",
+    shortLabel: "Ausente",
     description: "Paciente ausente ou falta registrada.",
     color: "amber",
     dotClass: "bg-amber-500",
@@ -68,8 +68,8 @@ export const APPOINTMENT_STATUS_META: Record<AppointmentStatus, AppointmentStatu
   },
   cancelled_by_patient: {
     value: "cancelled_by_patient",
-    label: "Cancelamento pelo paciente",
-    shortLabel: "Paciente cancelou",
+    label: "Cancelada",
+    shortLabel: "Cancelada",
     description: "Cancelamento solicitado pelo paciente.",
     color: "red",
     dotClass: "bg-red-500",
@@ -81,8 +81,8 @@ export const APPOINTMENT_STATUS_META: Record<AppointmentStatus, AppointmentStatu
   },
   cancelled_by_professional: {
     value: "cancelled_by_professional",
-    label: "Cancelamento pelo profissional",
-    shortLabel: "Profissional cancelou",
+    label: "Cancelada",
+    shortLabel: "Cancelada",
     description: "Cancelamento realizado pelo profissional.",
     color: "red-dark",
     dotClass: "bg-red-800 dark:bg-red-700",
@@ -165,9 +165,9 @@ export const isBillableClinicalStatus = (
 };
 
 export const STATUS_CHART_KEYS = {
-  unscored: "Não pontuado",
-  attended: "Presença",
-  absent: "Ausência",
-  cancelled_by_patient: "Cancelamento pelo paciente",
-  cancelled_by_professional: "Cancelamento pelo Profissional",
+  unscored: "Pendente",
+  attended: "Realizada",
+  absent: "Ausente",
+  cancelled_by_patient: "Cancelada",
+  cancelled_by_professional: "Cancelada",
 } satisfies Record<AppointmentStatus, string>;

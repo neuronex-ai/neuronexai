@@ -19,10 +19,10 @@ const positiveInteger = (value: unknown) => {
 
 export const getAppointmentDetailStatusLabel = (appointment: Appointment) => {
   const clinicalStatus = normalizeAppointmentStatus(appointment.status, appointment.notes);
-  if (clinicalStatus === "attended") return "Realizado";
-  if (clinicalStatus === "absent") return "Ausência";
-  if (clinicalStatus === "cancelled_by_patient") return "Cancelado pelo paciente";
-  if (clinicalStatus === "cancelled_by_professional") return "Cancelado";
+  if (clinicalStatus === "attended") return "Realizada";
+  if (clinicalStatus === "absent") return "Ausente";
+  if (clinicalStatus === "cancelled_by_patient") return "Cancelada";
+  if (clinicalStatus === "cancelled_by_professional") return "Cancelada";
 
   const metadata = getAppointmentMetadata(appointment);
   const waitlistAccepted = isWaitlistAppointmentMetadata(metadata)
@@ -34,26 +34,26 @@ export const getAppointmentDetailStatusLabel = (appointment: Appointment) => {
   switch (lifecycleStatus) {
     case "invitation_sent":
     case "awaiting_confirmation":
-      return "Aguardando confirmação";
+      return "Pendente";
     case "awaiting_reconfirmation":
-      return "Aguardando nova confirmação";
+      return "Pendente";
     case "confirmed":
     case "reschedule_approved":
     case "reschedule_rejected":
-      return "Confirmado";
+      return "Confirmada";
     case "cancellation_requested":
-      return "Cancelamento solicitado";
+      return "Cancelando";
     case "cancelled":
-      return "Cancelado";
+      return "Cancelada";
     case "reschedule_requested":
-      return "Reagendamento solicitado";
+      return "Reagendando";
     case "in_progress":
-      return "Em atendimento";
+      return "Atendimento";
     case "completed":
     case "closed":
-      return "Realizado";
+      return "Realizada";
     case "professional_response_overdue":
-      return "Resposta pendente";
+      return "Pendente";
     default:
       break;
   }
@@ -63,7 +63,7 @@ export const getAppointmentDetailStatusLabel = (appointment: Appointment) => {
     && positiveInteger(appointment.confirmed_revision)
     && appointment.confirmed_revision === appointment.confirmation_revision
   ) {
-    return "Confirmado";
+    return "Confirmada";
   }
 
   return "Pendente";

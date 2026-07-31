@@ -19,55 +19,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import {
+  countActiveAgendaFilters,
+  EMPTY_AGENDA_FILTERS,
+  type AgendaFilterModality,
+  type AgendaFilterOrigin,
+  type AgendaFilters,
+  type AgendaFilterStatus,
+} from "@/lib/agenda-filters";
 
-export type AgendaFilterOrigin = "all" | "google" | "neuronex" | "waitlist";
-export type AgendaFilterModality = "all" | "online" | "presencial";
-export type AgendaFilterStatus =
-  | "all"
-  | "Pendente"
-  | "Confirmado"
-  | "Realizado"
-  | "Ausência"
-  | "Cancelado"
-  | "Reagendando"
-  | "Atendimento";
-
-export interface AgendaFilters {
-  patientId: string;
-  date: string;
-  dateFrom: string;
-  dateTo: string;
-  modality: AgendaFilterModality;
-  origin: AgendaFilterOrigin;
-  status: AgendaFilterStatus;
-}
-
-export const EMPTY_AGENDA_FILTERS: AgendaFilters = {
-  patientId: "all",
-  date: "",
-  dateFrom: "",
-  dateTo: "",
-  modality: "all",
-  origin: "all",
-  status: "all",
-};
-
-export const countActiveAgendaFilters = (filters: AgendaFilters) =>
-  [
-    filters.patientId !== "all",
-    Boolean(filters.date),
-    Boolean(filters.dateFrom || filters.dateTo),
-    filters.modality !== "all",
-    filters.origin !== "all",
-    filters.status !== "all",
-  ].filter(Boolean).length;
+export {
+  countActiveAgendaFilters,
+  EMPTY_AGENDA_FILTERS,
+} from "@/lib/agenda-filters";
+export type {
+  AgendaFilterModality,
+  AgendaFilterOrigin,
+  AgendaFilters,
+  AgendaFilterStatus,
+} from "@/lib/agenda-filters";
 
 const STATUS_OPTIONS: AgendaFilterStatus[] = [
   "Pendente",
-  "Confirmado",
-  "Realizado",
-  "Ausência",
-  "Cancelado",
+  "Confirmada",
+  "Realizada",
+  "Ausente",
+  "Cancelada",
+  "Cancelando",
   "Reagendando",
   "Atendimento",
 ];
@@ -156,8 +134,8 @@ export const AgendaFiltersPopover = ({
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-          <FilterField label="Paciente" className="sm:col-span-2">
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+          <FilterField label="Paciente" className="sm:col-span-3">
             <Select
               value={filters.patientId}
               onValueChange={(value) => update("patientId", value)}
@@ -186,6 +164,30 @@ export const AgendaFiltersPopover = ({
             />
           </FilterField>
 
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="pl-1 text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+              Intervalo
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Input
+                type="date"
+                value={filters.dateFrom}
+                max={filters.dateTo || undefined}
+                onChange={(event) => update("dateFrom", event.target.value)}
+                className="agenda-field h-10 rounded-[14px] text-xs font-bold"
+                aria-label="Início do intervalo"
+              />
+              <Input
+                type="date"
+                value={filters.dateTo}
+                min={filters.dateFrom || undefined}
+                onChange={(event) => update("dateTo", event.target.value)}
+                className="agenda-field h-10 rounded-[14px] text-xs font-bold"
+                aria-label="Fim do intervalo"
+              />
+            </div>
+          </div>
+
           <FilterField label="Modalidade">
             <Select
               value={filters.modality}
@@ -200,28 +202,6 @@ export const AgendaFiltersPopover = ({
                 <SelectItem value="presencial">Presencial</SelectItem>
               </SelectContent>
             </Select>
-          </FilterField>
-
-          <FilterField label="Início">
-            <Input
-              type="date"
-              value={filters.dateFrom}
-              max={filters.dateTo || undefined}
-              onChange={(event) => update("dateFrom", event.target.value)}
-              className="agenda-field h-10 rounded-[14px] text-xs font-bold"
-              aria-label="Início do intervalo"
-            />
-          </FilterField>
-
-          <FilterField label="Fim">
-            <Input
-              type="date"
-              value={filters.dateTo}
-              min={filters.dateFrom || undefined}
-              onChange={(event) => update("dateTo", event.target.value)}
-              className="agenda-field h-10 rounded-[14px] text-xs font-bold"
-              aria-label="Fim do intervalo"
-            />
           </FilterField>
 
           <FilterField label="Origem">

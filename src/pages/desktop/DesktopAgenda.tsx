@@ -11,11 +11,7 @@ import { useAppointments } from "@/hooks/use-appointments";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useAgendaRealtime } from "@/hooks/use-agenda-realtime";
-import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
-import {
-    getAppointmentDetailStatusLabel,
-    getAppointmentOriginLabel,
-} from "@/lib/appointment-detail-presentation";
+import { matchesAgendaFilters } from "@/lib/agenda-filters";
 import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
 import { ProfessionalWaitlistPanel } from "@/components/agenda/ProfessionalWaitlistPanel";
 import { useProfessionalWaitlist } from "@/hooks/use-professional-waitlist";
@@ -35,7 +31,7 @@ export default function DesktopAgenda() {
     const [filters, setFilters] = useState<AgendaFilters>(EMPTY_AGENDA_FILTERS);
     const [openedAppointmentId, setOpenedAppointmentId] = useState<string | null>(null);
 
-    const { data: appointments = [], isLoading } = useAppointments();
+    const { data: appointments = [], isLoading } = useAppointments({ includeCancelled: true });
     const { data: waitlistEntries = [] } = useProfessionalWaitlist();
     const activeWaitlistCount = waitlistEntries.filter((entry) => entry.status === "active" || entry.status === "offered").length;
 
@@ -119,38 +115,7 @@ export default function DesktopAgenda() {
     };
 
     const filteredAppointments = useMemo(() => {
-        return appointments.filter(app => {
-            const visualStatus = getAppointmentDetailStatusLabel(app);
-            const cancelled = isCancelledAppointmentStatus(app.status, app.notes);
-            if (filters.status === "all" && cancelled) return false;
-            if (filters.patientId !== "all" && app.patient_id !== filters.patientId) return false;
-            if (filters.modality !== "all" && app.type !== filters.modality) return false;
-            if (filters.status !== "all" && visualStatus !== filters.status) return false;
-
-            const origin = getAppointmentOriginLabel(app);
-            if (
-                (filters.origin === "google" && origin !== "Google Agenda")
-                || (filters.origin === "neuronex" && origin !== "NeuroNex")
-                || (filters.origin === "waitlist" && origin !== "Lista de espera")
-            ) return false;
-
-            const startsAt = new Date(app.start_time);
-            if (filters.date) {
-                const exactStart = new Date(`${filters.date}T00:00:00`);
-                const exactEnd = new Date(`${filters.date}T23:59:59.999`);
-                if (startsAt < exactStart || startsAt > exactEnd) return false;
-            }
-            if (filters.dateFrom) {
-                const rangeStart = new Date(`${filters.dateFrom}T00:00:00`);
-                if (startsAt < rangeStart) return false;
-            }
-            if (filters.dateTo) {
-                const rangeEnd = new Date(`${filters.dateTo}T23:59:59.999`);
-                if (startsAt > rangeEnd) return false;
-            }
-
-            return true;
-        });
+        return appointments.filter((appointment) => matchesAgendaFilters(appointment, filters));
     }, [appointments, filters]);
 
     return (
