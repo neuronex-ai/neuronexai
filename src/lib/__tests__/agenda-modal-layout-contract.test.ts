@@ -49,6 +49,18 @@ describe("agenda modal layout contract", () => {
     expect(styles).toContain("background-image: none !important");
   });
 
+  it("presents agenda settings as a right sidebar with magnetic sections", () => {
+    const settings = source("src/components/agenda/AgendaSettingsModal.tsx");
+
+    expect(settings).toContain("<Sheet");
+    expect(settings).toContain('side="right"');
+    expect(settings).toContain("agenda-settings-sidebar");
+    expect(settings).toContain("<MagneticSegmentedControl");
+    expect(settings).toContain('{ value: "hours", label: "Horários" }');
+    expect(settings).toContain('{ value: "rules", label: "Regras" }');
+    expect(settings).not.toContain("<AppModalShell");
+  });
+
   it("keeps the page background global and gives the waitlist its own dark material", () => {
     const page = source("src/pages/desktop/DesktopAgenda.tsx");
     const waitlist = source("src/components/agenda/ProfessionalWaitlistPanel.tsx");

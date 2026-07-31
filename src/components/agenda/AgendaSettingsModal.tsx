@@ -1,15 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, CalendarRange, Clock, Info, Loader2, Plus, RotateCcw, Save, Settings, ShieldCheck, Trash2 } from "lucide-react";
+import { AlertTriangle, CalendarRange, Info, Loader2, Plus, RotateCcw, Save, Settings, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
-import { AppModalShell, ModalHeroIcon } from "@/components/ui/app-modal-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import {
   Select,
   SelectContent,
@@ -19,6 +19,15 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import {
   appointmentPolicyFingerprint,
@@ -96,6 +105,7 @@ interface AvailabilityImpact {
 
 type AvailabilityStrategy = "keep_exceptions" | "resolve_before_save" | "keep_previous_until";
 type WaitlistMigrationStrategy = "migrate_all" | "keep_previous";
+type AgendaSettingsSection = "hours" | "rules";
 
 interface EffectiveAppointmentPolicy {
   configured: boolean;
@@ -266,6 +276,7 @@ export const AgendaSettingsModal = () => {
   const saveInFlightRef = useRef(false);
   const pendingPolicyIdempotencyKeyRef = useRef<string | null>(null);
   const [open, setOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<AgendaSettingsSection>("hours");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [workingHours, setWorkingHours] = useState<WorkingHours>({ ...DEFAULT_WORKING_HOURS });
@@ -587,20 +598,14 @@ export const AgendaSettingsModal = () => {
   };
 
   return (
-    <AppModalShell
+    <Sheet
       open={open}
-      onOpenChange={setOpen}
-      preventClose={isSaving}
-      size="lg"
-      className="agenda-modal-surface"
-      bodyClassName="agenda-modal-body"
-      headerClassName="agenda-modal-header border-b"
-      footerClassName="agenda-modal-footer"
-      eyebrow="Agenda"
-      title="Disponibilidade e regras"
-      description="Defina sua grade de atendimento e as regras comerciais usadas em novos convites."
-      heroIcon={<ModalHeroIcon icon={Clock} ariaLabel="Configurações da agenda" />}
-      trigger={
+      onOpenChange={(nextOpen) => {
+        if (isSaving && !nextOpen) return;
+        setOpen(nextOpen);
+      }}
+    >
+      <SheetTrigger asChild>
         <Button
           variant="ghost"
           size="icon"
@@ -610,34 +615,57 @@ export const AgendaSettingsModal = () => {
         >
           <Settings className="h-[18px] w-[18px]" />
         </Button>
-      }
-      footer={
-        <Button
-          onClick={handlePrimaryAction}
-          disabled={isSaving || isLoading}
-          className="agenda-primary-action h-12 w-full rounded-2xl text-[10.5px] font-black uppercase tracking-[0.16em] disabled:opacity-50"
-        >
-          {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" aria-hidden="true" />
-          )}
-          {isSaving
-            ? "Salvando..."
-            : availabilityStrategy === "resolve_before_save" && availabilityImpact?.conflictCount
-              ? "Abrir primeiro conflito"
-              : availabilityImpact?.conflictCount && !availabilityStrategy
-                ? "Escolher como continuar"
-                : "Salvar agenda e regras"}
-        </Button>
-      }
-    >
-      {isLoading ? (
-        <div className="flex min-h-[18rem] items-center justify-center" role="status" aria-label="Carregando configurações">
-          <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
+      </SheetTrigger>
+
+      <SheetContent
+        side="right"
+        aria-describedby="agenda-settings-description"
+        onEscapeKeyDown={(event) => {
+          if (isSaving) event.preventDefault();
+        }}
+        onPointerDownOutside={(event) => {
+          if (isSaving) event.preventDefault();
+        }}
+        className="agenda-settings-sidebar agenda-modal-surface flex w-[min(460px,calc(100vw-2rem))] max-w-none flex-col gap-0 overflow-hidden rounded-[30px] border p-0 motion-reduce:transition-none motion-reduce:data-[state=closed]:animate-none motion-reduce:data-[state=open]:animate-none sm:w-[460px] sm:max-w-none"
+      >
+        <SheetHeader className="agenda-modal-header shrink-0 border-b px-6 pb-4 pt-6 pr-16">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Agenda</p>
+          <SheetTitle className="text-xl font-black tracking-[-0.025em]">Configurações</SheetTitle>
+          <SheetDescription id="agenda-settings-description" className="max-w-[34ch] text-xs leading-relaxed">
+            Ajuste sua disponibilidade e as regras aplicadas aos próximos convites.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="agenda-settings-tabbar shrink-0 px-5 py-3">
+          <MagneticSegmentedControl
+            id="agenda-settings-sections"
+            indicatorId="agenda-settings-section-indicator"
+            value={activeSection}
+            onValueChange={setActiveSection}
+            ariaLabel="Seções das configurações da agenda"
+            options={[
+              { value: "hours", label: "Horários" },
+              { value: "rules", label: "Regras" },
+            ]}
+            className="synapse-liquid-toolbar grid h-12 min-h-12 w-full grid-cols-2 rounded-[18px] p-0.5"
+            triggerClassName="h-11 min-h-11 rounded-[15px] px-4 py-0 text-xs font-black"
+          />
         </div>
-      ) : (
-        <div className="space-y-5">
+
+        <div className="agenda-sidebar-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-5 pt-1 [scrollbar-gutter:stable]">
+          {isLoading ? (
+            <div className="flex min-h-[18rem] items-center justify-center" role="status" aria-label="Carregando configurações">
+              <Loader2 className="h-8 w-8 motion-safe:animate-spin text-muted-foreground" aria-hidden="true" />
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {activeSection === "hours" ? (
+                <div
+                  id="agenda-settings-sections-panel-hours"
+                  role="tabpanel"
+                  aria-labelledby="agenda-settings-sections-tab-hours"
+                  className="space-y-5"
+                >
           <section aria-labelledby="working-hours-heading" className="agenda-liquid-surface rounded-3xl border p-4 sm:p-5">
             <div className="mb-4">
               <h3 id="working-hours-heading" className="text-base font-black text-foreground">
@@ -804,6 +832,15 @@ export const AgendaSettingsModal = () => {
             </section>
           ) : null}
 
+                </div>
+              ) : (
+                <div
+                  id="agenda-settings-sections-panel-rules"
+                  role="tabpanel"
+                  aria-labelledby="agenda-settings-sections-tab-rules"
+                  className="space-y-5"
+                >
+
           <section aria-labelledby="commercial-policy-heading" className="agenda-liquid-surface rounded-3xl border p-4 sm:p-5">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-border/60 bg-background">
@@ -966,8 +1003,34 @@ export const AgendaSettingsModal = () => {
               </div>
             </fieldset>
           </section>
+                </div>
+              )}
         </div>
       )}
-    </AppModalShell>
+
+        </div>
+
+        <SheetFooter className="agenda-modal-footer shrink-0 border-t p-4 sm:px-5">
+          <Button
+            onClick={handlePrimaryAction}
+            disabled={isSaving || isLoading}
+            className="agenda-primary-action h-12 w-full rounded-2xl text-[10.5px] font-black uppercase tracking-[0.16em] disabled:opacity-50"
+          >
+            {isSaving ? (
+              <Loader2 className="mr-2 h-4 w-4 motion-safe:animate-spin" aria-hidden="true" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" aria-hidden="true" />
+            )}
+            {isSaving
+              ? "Salvando..."
+              : availabilityStrategy === "resolve_before_save" && availabilityImpact?.conflictCount
+                ? "Abrir primeiro conflito"
+                : availabilityImpact?.conflictCount && !availabilityStrategy
+                  ? "Escolher como continuar"
+                  : "Salvar configurações"}
+          </Button>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 };
