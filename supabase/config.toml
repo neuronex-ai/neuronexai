@@ -306,6 +306,11 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/send-appointment-reminder/index.ts"
 
+[functions.prepare-appointment-whatsapp-invite]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/prepare-appointment-whatsapp-invite/index.ts"
+
 [functions.review-appointment-reschedule]
 enabled = true
 verify_jwt = true

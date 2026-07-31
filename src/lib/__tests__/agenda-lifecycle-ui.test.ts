@@ -96,16 +96,18 @@ describe("Agenda lifecycle UI", () => {
     expect(manageFunction).toContain("status: 401");
   });
 
-  it("shows waitlist provenance in the detail modal and removes the ambiguous pending label", () => {
+  it("shows one status disclosure and moves origin into the detail cards", () => {
     const detail = read("src/components/agenda/AppointmentDetailModal.tsx");
     const calendar = read("src/components/agenda/CalendarView.tsx");
-    expect(detail).toContain("Lista de espera · confirmado pelo paciente");
-    expect(detail).toContain("Origem: lista de espera. Mostrar detalhes.");
-    expect(detail).toContain("PopoverTrigger");
-    expect(detail).toContain('aria-label="Contexto do agendamento"');
-    expect(detail).toContain("synapse-liquid-control flex h-11 w-11");
-    expect(detail).not.toContain("isWaitlistOriginExpanded");
-    expect(detail).toContain("agenda-menu-surface w-auto max-w-72");
+    expect(detail).toContain("getAppointmentDetailStatusLabel");
+    expect(detail).toContain("getAppointmentOriginLabel");
+    expect(detail).toContain("Abrir histórico do agendamento");
+    expect(detail).toContain('label="Origem"');
+    expect(detail).not.toContain("PopoverTrigger");
+    expect(detail).not.toContain('aria-label="Contexto do agendamento"');
+    expect(detail).not.toContain("Status do agendamento");
+    expect(detail).toContain("Detalhes da sessão");
+    expect(detail).toContain("Detalhes do evento");
     expect(detail).toContain("if (!hasAnyChange)");
     expect(detail).not.toContain("Pendente de sync");
     expect(calendar).toContain('role="img"');

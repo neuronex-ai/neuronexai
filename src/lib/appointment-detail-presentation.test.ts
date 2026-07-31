@@ -38,6 +38,13 @@ describe("appointment detail presentation", () => {
     expect(getAppointmentOriginLabel(item)).toBe("Lista de espera");
   });
 
+  it("keeps legacy Google-linked appointments identified as Google origin", () => {
+    expect(getAppointmentOriginLabel(appointment({
+      google_event_id: "google-event-1",
+      metadata: { kind: "event" },
+    }))).toBe("Google Agenda");
+  });
+
   it("prioritizes clinical outcomes over invitation state", () => {
     expect(getAppointmentDetailStatusLabel(appointment({
       status: "attended",

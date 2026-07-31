@@ -21,6 +21,7 @@ export function AppointmentProfessionalActionDialog({
   patientName,
   patientEmail,
   startTime,
+  itemKind = "session",
   action,
   open,
   onOpenChange,
@@ -30,6 +31,7 @@ export function AppointmentProfessionalActionDialog({
   patientName: string;
   patientEmail?: string | null;
   startTime: string;
+  itemKind?: "session" | "event";
   action: ProfessionalAppointmentAction | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +51,7 @@ export function AppointmentProfessionalActionDialog({
 
   if (!action) return null;
   const isArchive = action === "archive";
+  const itemLabel = itemKind === "event" ? "evento" : "agendamento";
   const data = preview.data;
   const canConfirm = Boolean(data?.canExecute && reason.trim().length >= 3 && !execute.isPending);
 
@@ -103,7 +106,7 @@ export function AppointmentProfessionalActionDialog({
             </span>
             <div>
               <DialogTitle className="text-lg font-black tracking-[-0.025em] text-foreground">
-                {isArchive ? "Remover da agenda" : "Cancelar agendamento"}
+                {isArchive ? `Arquivar ${itemLabel}` : `Cancelar ${itemLabel}`}
               </DialogTitle>
               <DialogDescription className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {isArchive
@@ -126,7 +129,9 @@ export function AppointmentProfessionalActionDialog({
           ) : (
             <>
               <div className="agenda-liquid-card rounded-[20px] border p-4">
-                <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">Agendamento</p>
+                <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+                  {itemKind === "event" ? "Evento" : "Agendamento"}
+                </p>
                 <p className="mt-2 text-sm font-bold text-foreground">{patientName}</p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {data.appointmentDate ? format(new Date(data.appointmentDate), "dd 'de' MMMM 'de' yyyy, HH:mm", { locale: ptBR }) : "Data não informada"} · {data.currentStatus}
@@ -198,7 +203,7 @@ export function AppointmentProfessionalActionDialog({
             className={`agenda-tactile min-h-11 rounded-xl px-5 font-bold ${isArchive ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-rose-600 text-white hover:bg-rose-700"}`}
           >
             {execute.isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" /> : null}
-            {isArchive ? "Confirmar remoção visual" : "Confirmar cancelamento"}
+            {isArchive ? "Confirmar arquivamento" : "Confirmar cancelamento"}
           </Button>
         </footer>
       </DialogContent>

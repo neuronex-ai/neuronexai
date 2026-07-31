@@ -61,8 +61,8 @@ describe("appointment archive and patient-record interface contract", () => {
     const dialog = read("src/components/agenda/AppointmentProfessionalActionDialog.tsx");
     const hook = read("src/hooks/use-appointment-professional-action.ts");
 
-    expect(modal).toMatch(/Remover da agenda/u);
-    expect(modal).toMatch(/Cancelar agendamento/u);
+    expect(modal).toMatch(/Arquivar \{isSession \? "agendamento" : "evento"\}/u);
+    expect(modal).toMatch(/Cancelar \{isSession \? "agendamento" : "evento"\}/u);
     expect(modal).toMatch(/AppointmentProfessionalActionDialog/u);
     expect(dialog).toMatch(/preview/u);
     expect(dialog).toMatch(/Motivo/u);

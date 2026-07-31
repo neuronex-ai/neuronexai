@@ -70,9 +70,9 @@ export const getAppointmentDetailStatusLabel = (appointment: Appointment) => {
 };
 
 export const getAppointmentOriginLabel = (appointment: Appointment) => {
-  const origin = getAppointmentMetadata(appointment).origin;
-  if (origin === "waitlist") return "Lista de espera";
-  if (origin === "google") return "Google Agenda";
+  const metadata = getAppointmentMetadata(appointment);
+  if (isWaitlistAppointmentMetadata(metadata)) return "Lista de espera";
+  if (metadata.origin === "google" || appointment.google_event_id) return "Google Agenda";
   return "NeuroNex";
 };
 

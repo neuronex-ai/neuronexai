@@ -48,7 +48,6 @@ import {
   getAppointmentRecurrencePosition,
 } from "@/lib/appointment-detail-presentation";
 import { getAppointmentDisplayTitle, getDurationString } from "@/lib/appointment-utils";
-import { formatTimeBrazil } from "@/lib/timezone";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,11 +155,13 @@ export const AppointmentDetailModal = ({
   const [allowShorterSmartFit, setAllowShorterSmartFit] = useState(false);
   const [detailReview, setDetailReview] = useState<AppointmentDetailReview | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [isPreparingWhatsappInvite, setIsPreparingWhatsappInvite] = useState(false);
   const loadedAppointmentKeyRef = useRef<string | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyBackButtonRef = useRef<HTMLButtonElement>(null);
   const shouldRestoreHistoryFocusRef = useRef(false);
   const invitationIdempotencyKeyRef = useRef<string | null>(null);
+  const whatsappInvitationIdempotencyKeyRef = useRef<string | null>(null);
 
   const navigate = useNavigate();
   const sendEmail = useSendEmail();
@@ -179,20 +180,16 @@ export const AppointmentDetailModal = ({
   const isSession = kind === "session";
   const isEvent = kind === "event";
   const displayTitle = getAppointmentDisplayTitle(appointment);
-  const statusMeta = getAppointmentStatusMeta(
-    normalizeAppointmentStatus(appointment.status, appointment.notes),
-    appointment.notes,
-  );
   const recurrence = metadata.recurrence;
-  const isFromWaitlist = isWaitlistAppointmentMetadata(metadata);
-  const syncPresentation = getAppointmentSyncPresentation(metadata.syncStatus, {
-    googleEventId: appointment.google_event_id,
-    origin: metadata.origin,
-  });
-  const lifecycleLabel = appointment.lifecycle_status
-    ? LIFECYCLE_LABELS[appointment.lifecycle_status] || "Situação do agendamento atualizada"
-    : null;
+  const detailStatusLabel = getAppointmentDetailStatusLabel(appointment);
+  const originLabel = getAppointmentOriginLabel(appointment);
+  const recurrencePosition = getAppointmentRecurrencePosition(appointment);
   const invitationBlockedByPendingRequest = Boolean(lifecycle.pendingRequest);
+  const invitationUnavailable = lifecycle.isLoading
+    || invitationBlockedByPendingRequest
+    || ["cancelled", "in_progress", "completed", "closed"].includes(
+      appointment.lifecycle_status || "",
+    );
   const smartFitAvailable = new Date(appointment.end_time) > new Date()
     && !["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "");
 
@@ -538,16 +535,60 @@ export const AppointmentDetailModal = ({
     setStep(2);
   };
 
-  const handleWhatsApp = () => {
-    if (!patientData?.phone) {
-      toast.error("Paciente sem telefone cadastrado.");
+  const handleWhatsApp = async () => {
+    setDetailError(null);
+    if (lifecycle.isLoading) {
+      setDetailError("Aguarde um instante enquanto verificamos este agendamento.");
       return;
     }
-    const phone = patientData.phone.replace(/\D/g, "");
-    const message = encodeURIComponent(
-      `Olá ${patientData.name}! Gostaria de lembrá-lo(a) da sua consulta agendada para ${format(new Date(appointment.start_time), "dd/MM")} às ${formatTimeBrazil(appointment.start_time)}.`
-    );
-    window.open(`https://wa.me/55${phone}?text=${message}`, "_blank");
+    if (invitationBlockedByPendingRequest) {
+      setDetailError("Analise o pedido de reagendamento antes de enviar uma nova confirmação.");
+      return;
+    }
+    if (!patientData?.phone) {
+      setDetailError("Adicione o WhatsApp do paciente no cadastro para enviar o convite.");
+      return;
+    }
+    const rawPhone = String(patientData.phone).replace(/\D/g, "");
+    const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
+    whatsappInvitationIdempotencyKeyRef.current ||= crypto.randomUUID();
+    setIsPreparingWhatsappInvite(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("prepare-appointment-whatsapp-invite", {
+        body: {
+          appointmentId: appointment.id,
+          idempotencyKey: whatsappInvitationIdempotencyKeyRef.current,
+        },
+      });
+      if (error) {
+        throw await normalizeEdgeFunctionError(
+          error,
+          "Não foi possível preparar o convite pelo WhatsApp.",
+        );
+      }
+      const confirmationUrl = typeof data?.confirmationUrl === "string"
+        ? data.confirmationUrl
+        : "";
+      const whatsappMessage = typeof data?.whatsappMessage === "string"
+        ? data.whatsappMessage
+        : "";
+      if (!confirmationUrl || !whatsappMessage) {
+        throw new Error("Não foi possível gerar o link de confirmação agora.");
+      }
+      whatsappInvitationIdempotencyKeyRef.current = null;
+      window.open(
+        `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`,
+        "_blank",
+        "noopener,noreferrer",
+      );
+      await lifecycle.refetch();
+      toast.success("Convite pronto para enviar no WhatsApp.");
+    } catch (error) {
+      whatsappInvitationIdempotencyKeyRef.current = null;
+      setDetailError(getUserFacingErrorMessage(error, "save"));
+    } finally {
+      setIsPreparingWhatsappInvite(false);
+    }
   };
 
   const handleSendEmail = () => {
@@ -597,6 +638,11 @@ export const AppointmentDetailModal = ({
     if (isBefore(dueDate, startOfDay(new Date()))) return { label: "Atrasado", className: "text-red-500 bg-red-500/10" };
     return { label: "Pendente", className: "text-amber-500 bg-amber-500/10" };
   }, [transactionData]);
+  const neurofinanceChargeId = String(
+    transactionData?.metadata?.neurofinance_charge_id
+    || appointment.charge_id
+    || "",
+  ).trim() || null;
 
   const methodIcon = (method?: string) => {
     switch (method) {
@@ -636,79 +682,12 @@ export const AppointmentDetailModal = ({
           <div className="min-w-0 flex-1 pr-2">
             <div className="mb-1">
               <h2 className="text-xl font-bold text-foreground tracking-tight">
-                {isSession ? "Ficha da Sessão" : "Ficha do Compromisso"}
+                {isSession ? "Detalhes da sessão" : "Detalhes do evento"}
               </h2>
             </div>
             <p className="text-sm font-medium text-muted-foreground">
               {format(new Date(appointment.start_time), "dd 'de' MMMM, yyyy", { locale: ptBR })}
             </p>
-            <div
-              className="synapse-liquid-toolbar mt-3 inline-flex items-center gap-1 rounded-[16px] p-1"
-              aria-label="Contexto do agendamento"
-            >
-              <Popover>
-                <PopoverTrigger asChild>
-                  <button
-                    type="button"
-                    className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Status: ${statusMeta.label}`}
-                  >
-                    <span className={cn("h-2.5 w-2.5 rounded-full", statusMeta.dotClass)} aria-hidden="true" />
-                  </button>
-                </PopoverTrigger>
-                <PopoverContent
-                  align="start"
-                  className="agenda-menu-surface w-auto max-w-64 rounded-[16px] border-border/50 px-3 py-2"
-                >
-                  <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Status</p>
-                  <p className="mt-1 text-xs font-bold text-foreground">{statusMeta.label}</p>
-                </PopoverContent>
-              </Popover>
-
-              {appointment.lifecycle_status && appointment.lifecycle_status !== "created" ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label={`Situação: ${lifecycleLabel}`}
-                    >
-                      <ShieldCheck className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="agenda-menu-surface w-auto max-w-72 rounded-[16px] border-border/50 px-3 py-2"
-                  >
-                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Situação</p>
-                    <p className="mt-1 text-xs font-bold text-foreground">{lifecycleLabel}</p>
-                  </PopoverContent>
-                </Popover>
-              ) : null}
-
-              {isFromWaitlist ? (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="synapse-liquid-control flex h-11 w-11 items-center justify-center rounded-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                      aria-label="Origem: lista de espera. Mostrar detalhes."
-                    >
-                      <ListPlus className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="agenda-menu-surface w-auto max-w-72 rounded-[16px] border-border/50 px-3 py-2"
-                  >
-                    <p className="text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground">Origem</p>
-                    <p className="mt-1 text-xs font-bold text-foreground">
-                      Lista de espera · confirmado pelo paciente
-                    </p>
-                  </PopoverContent>
-                </Popover>
-              ) : null}
-            </div>
           </div>
 
           <div className="flex shrink-0 items-center gap-2">
@@ -716,22 +695,75 @@ export const AppointmentDetailModal = ({
               ref={historyButtonRef}
               type="button"
               variant="ghost"
-              size="icon"
               onClick={openHistory}
-              className="appointment-liquid-control relative h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground hover:text-foreground"
-              aria-label="Abrir histórico do agendamento"
+              className="group appointment-liquid-control h-11 max-w-[180px] shrink-0 rounded-full border border-border/45 px-3 text-xs font-black text-foreground"
+              aria-label={`${detailStatusLabel}. Abrir histórico do agendamento.`}
             >
-              <Clock3 className="h-5 w-5" aria-hidden="true" />
-              {lifecycle.events.length ? (
-                <span
-                  className="absolute -right-1 -top-1 min-w-5 rounded-full bg-primary px-1 text-[10px] font-black leading-5 text-primary-foreground"
-                  aria-hidden="true"
-                >
-                  {lifecycle.events.length > 99 ? "99+" : lifecycle.events.length}
-                </span>
-              ) : null}
+              <span className="truncate">{detailStatusLabel}</span>
+              <ChevronRight
+                className="ml-1 h-3.5 w-3.5 shrink-0 -translate-x-1 opacity-0 transition-[opacity,transform] duration-200 group-hover:translate-x-0 group-hover:opacity-70 group-focus-visible:translate-x-0 group-focus-visible:opacity-70 motion-reduce:transition-none"
+                aria-hidden="true"
+              />
             </Button>
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] motion-reduce:active:scale-100" aria-label="Fechar ficha da sessão">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground hover:text-foreground"
+                  aria-label="Mais ações"
+                >
+                  <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="agenda-menu-surface desktop-retina-modal w-80 rounded-[20px] p-2 shadow-xl"
+              >
+                {isSession ? (
+                  <>
+                    <DropdownMenuItem
+                      onSelect={handleSendEmail}
+                      disabled={sendEmail.isPending || invitationUnavailable}
+                      className="min-h-11 rounded-[14px] px-3 text-sm font-medium"
+                    >
+                      {sendEmail.isPending
+                        ? <Loader2 className="mr-3 h-4 w-4 animate-spin motion-reduce:animate-none" aria-label="Preparando convite" />
+                        : <Mail className="mr-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />}
+                      Convite de confirmação por e-mail
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onSelect={() => void handleWhatsApp()}
+                      disabled={isPreparingWhatsappInvite || invitationUnavailable}
+                      className="min-h-11 rounded-[14px] px-3 text-sm font-medium"
+                    >
+                      {isPreparingWhatsappInvite
+                        ? <Loader2 className="mr-3 h-4 w-4 animate-spin motion-reduce:animate-none" aria-label="Preparando convite" />
+                        : <MessageCircle className="mr-3 h-4 w-4 text-muted-foreground" aria-hidden="true" />}
+                      Convite de confirmação por WhatsApp
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-border/45" />
+                  </>
+                ) : null}
+                <DropdownMenuItem
+                  onSelect={() => setProfessionalAction("archive")}
+                  className="min-h-11 rounded-[14px] px-3 text-sm font-medium"
+                >
+                  <Archive className="mr-3 h-4 w-4 text-amber-500" aria-hidden="true" />
+                  Arquivar {isSession ? "agendamento" : "evento"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-border/45" />
+                <DropdownMenuItem
+                  onSelect={() => setProfessionalAction("cancel")}
+                  className="min-h-11 rounded-[14px] px-3 text-sm font-medium text-rose-600 focus:bg-rose-500/10 focus:text-rose-600 dark:text-rose-300"
+                >
+                  <XCircle className="mr-3 h-4 w-4" aria-hidden="true" />
+                  Cancelar {isSession ? "agendamento" : "evento"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground transition-colors hover:text-foreground active:scale-[0.98] motion-reduce:active:scale-100" aria-label={`Fechar detalhes ${isSession ? "da sessão" : "do evento"}`}>
               <X className="h-5 w-5" aria-hidden="true" />
             </Button>
           </div>
@@ -762,8 +794,7 @@ export const AppointmentDetailModal = ({
                     </p>
                   </div>
                 ) : null}
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <div className="appointment-liquid-card flex flex-1 items-center justify-between rounded-[22px] border border-border/45 p-4">
+                <div className="appointment-liquid-card flex items-center justify-between rounded-[22px] border border-border/45 p-4">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                         {isSession ? <User className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />}
@@ -788,34 +819,6 @@ export const AppointmentDetailModal = ({
                         <ChevronRight className="h-5 w-5" />
                       </Button>
                     )}
-                  </div>
-
-                  {isSession && (
-                    <div className="flex shrink-0 gap-2 sm:flex-col">
-                      <Button variant="outline" onClick={handleWhatsApp} className="appointment-liquid-control h-11 flex-1 rounded-[16px] border-border/45 px-3 hover:text-emerald-600 sm:w-11 sm:flex-none sm:px-0" aria-label="Enviar lembrete pelo WhatsApp">
-                        <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={handleSendEmail}
-                        disabled={
-                          sendEmail.isPending ||
-                          lifecycle.isLoading ||
-                          invitationBlockedByPendingRequest ||
-                          ["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "")
-                        }
-                        className="appointment-liquid-control h-11 flex-1 rounded-[16px] border-border/45 px-3 hover:text-sky-600 sm:w-11 sm:flex-none sm:px-0"
-                        aria-label="Enviar convite de confirmação por e-mail"
-                        title={
-                          invitationBlockedByPendingRequest
-                            ? "Analise o reagendamento pendente antes de enviar uma nova confirmação"
-                            : "Enviar convite de confirmação por e-mail"
-                        }
-                      >
-                        {sendEmail.isPending ? <Loader2 className="h-4 w-4 animate-spin" aria-label="Enviando convite" /> : <Mail className="h-4 w-4" aria-hidden="true" />}
-                      </Button>
-                    </div>
-                  )}
                 </div>
 
                 {lifecycle.visibleRequest ? (
@@ -931,24 +934,47 @@ export const AppointmentDetailModal = ({
                     </div>
                   </FieldShell>
 
-                  <FieldShell label={isSession ? "Sessão" : "Origem"} icon={isSession ? <Video className="w-3.5 h-3.5" /> : <ShieldCheck className="w-3.5 h-3.5" />}>
+                  <FieldShell label={isSession ? "Sessão" : "Evento"} icon={isSession ? <Video className="w-3.5 h-3.5" /> : <CalendarDays className="w-3.5 h-3.5" />}>
                     <div className="space-y-1">
                       <p className="text-lg font-bold text-foreground tracking-tight">
                         {isSession
                           ? getSessionTypeLabel(metadata.sessionType)
-                          : metadata.origin === "google"
-                            ? "Google Agenda"
-                            : metadata.origin === "waitlist"
-                              ? "Lista de espera"
-                              : "NeuroNex"}
+                          : getEventCategoryLabel(metadata.eventCategory || eventCategory)}
                       </p>
                       <p className="text-sm font-medium text-muted-foreground">
                         {isSession
                           ? `${appointment.type === "online" ? "Online" : "Presencial"} • ${getDurationString(appointment.start_time, appointment.end_time)}`
-                          : syncPresentation.label}
+                          : getDurationString(appointment.start_time, appointment.end_time)}
                       </p>
                     </div>
                   </FieldShell>
+                </div>
+
+                <div className={cn("grid gap-3", recurrencePosition && "sm:grid-cols-2")}>
+                  <CompactDetailCard
+                    label="Origem"
+                    value={originLabel}
+                    icon={
+                      originLabel === "Lista de espera"
+                        ? <ListPlus className="h-4 w-4" aria-hidden="true" />
+                        : originLabel === "Google Agenda"
+                          ? <CalendarDays className="h-4 w-4" aria-hidden="true" />
+                          : <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                    }
+                  />
+                  {recurrencePosition ? (
+                    <CompactDetailCard
+                      label="Recorrência"
+                      value={recurrencePosition.label}
+                      ariaLabel={`Ocorrência ${recurrencePosition.accessibleLabel}`}
+                      detail={
+                        recurrence?.frequency
+                          ? RECURRENCE_LABELS[recurrence.frequency] || "Série recorrente"
+                          : "Série recorrente"
+                      }
+                      icon={<Repeat className="h-4 w-4" aria-hidden="true" />}
+                    />
+                  ) : null}
                 </div>
 
                 {isSession && (
@@ -985,60 +1011,55 @@ export const AppointmentDetailModal = ({
                   </div>
                 )}
 
-                <FieldShell label="Recorrência" icon={<Repeat className="w-3.5 h-3.5" />}>
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                    <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
-                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Frequência</p>
-                      <p className="mt-1 text-sm font-bold text-foreground">
-                        {recurrence?.enabled ? RECURRENCE_LABELS[recurrence.frequency || "weekly"] || recurrence.frequency : "Sem recorrência"}
-                      </p>
-                    </div>
-                    <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
-                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Ocorrências</p>
-                      <p className="mt-1 text-sm font-bold text-foreground">{recurrence?.enabled ? recurrence.count || 1 : 1}</p>
-                    </div>
-                    <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
-                      <p className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">Duração</p>
-                      <p className="mt-1 text-sm font-bold text-foreground">{getDurationString(appointment.start_time, appointment.end_time)}</p>
-                    </div>
-                  </div>
-                </FieldShell>
-
-                <FieldShell label="Status do agendamento" icon={<ShieldCheck className="w-3.5 h-3.5" />}>
-                  <div className="appointment-liquid-control rounded-[16px] border border-border/40 px-4 py-3">
-                    <p className="text-sm font-bold text-foreground">{statusMeta.label}</p>
-                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                      Presença, conclusão e cancelamento devem ser registrados pelas ações próprias de cada fluxo.
-                    </p>
-                  </div>
-                </FieldShell>
-
                 {isSession && transactionData && (
                   <div className="appointment-liquid-card rounded-[22px] border border-border/45 p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <span className="text-[10px] uppercase tracking-[0.2em] font-bold text-muted-foreground flex items-center gap-2 mb-2">
-                          <Banknote className="w-3.5 h-3.5" /> Cobrança
+                          <Banknote className="w-3.5 h-3.5" />
+                          {neurofinanceChargeId ? "Cobrança NeuroFinance" : "Cobrança"}
                         </span>
                         <p className="text-2xl font-light text-foreground tracking-tighter tabular-nums">
                           R$ <span className="font-bold">{Number(transactionData.amount || 0).toFixed(2).replace(".", ",")}</span>
                         </p>
+                        {recurrencePosition ? (
+                          <p className="mt-1 text-[11px] font-bold text-muted-foreground">
+                            Recorrência {recurrencePosition.label}
+                          </p>
+                        ) : null}
                       </div>
-                      <div className="flex flex-wrap gap-2">
-                        <div className="flex items-center gap-2 text-foreground font-medium text-sm bg-background/50 px-3 py-1.5 rounded-full border border-border/10">
-                          {methodIcon(transactionData.payment_method)}
-                          <span className="capitalize">{transactionData.payment_method?.replace("_", " ") || "Não definido"}</span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <div className="flex items-center gap-2 text-foreground font-medium text-sm bg-background/50 px-3 py-1.5 rounded-full border border-border/10">
+                            {methodIcon(transactionData.payment_method)}
+                            <span className="capitalize">{transactionData.payment_method?.replace("_", " ") || "Não definido"}</span>
+                          </div>
+                          {paymentStatus && (
+                            <span className={cn("px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest", paymentStatus.className)}>
+                              {paymentStatus.label}
+                            </span>
+                          )}
+                          {packageData && (
+                            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
+                              <Briefcase className="h-3 w-3" /> Via Pacote
+                            </span>
+                          )}
                         </div>
-                        {paymentStatus && (
-                          <span className={cn("px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest", paymentStatus.className)}>
-                            {paymentStatus.label}
-                          </span>
-                        )}
-                        {packageData && (
-                          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-500 text-[10px] font-black uppercase tracking-widest">
-                            <Briefcase className="h-3 w-3" /> Via Pacote
-                          </span>
-                        )}
+                        {neurofinanceChargeId ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              navigate(`/financeiro?view=cobrancas-historia&chargeId=${encodeURIComponent(neurofinanceChargeId)}`);
+                              setOpen(false);
+                            }}
+                            className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground hover:text-foreground"
+                            aria-label="Abrir detalhes desta cobrança no NeuroFinance"
+                          >
+                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                          </Button>
+                        ) : null}
                       </div>
                     </div>
                   </div>
@@ -1123,34 +1144,7 @@ export const AppointmentDetailModal = ({
         </div>
 
         {step === 1 && (
-          <div className="agenda-modal-footer flex shrink-0 flex-col gap-3 border-t p-4 backdrop-blur-2xl sm:flex-row sm:items-center sm:justify-between">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button type="button" variant="ghost" className="appointment-liquid-control min-h-11 rounded-xl border border-border/45 px-4 text-xs font-bold text-muted-foreground hover:text-foreground">
-                  <MoreHorizontal className="mr-2 h-4 w-4" aria-hidden="true" />
-                  Ações
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="agenda-menu-surface desktop-retina-modal w-72 rounded-[20px] p-2 shadow-xl">
-                <DropdownMenuItem
-                  onSelect={() => setProfessionalAction("archive")}
-                  className="min-h-11 rounded-[14px] px-3 text-sm font-medium"
-                >
-                  <Archive className="mr-3 h-4 w-4 text-amber-500" aria-hidden="true" />
-                  Remover da agenda
-                </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-border/45" />
-                <DropdownMenuItem
-                  onSelect={() => setProfessionalAction("cancel")}
-                  className="min-h-11 rounded-[14px] px-3 text-sm font-medium text-rose-600 focus:bg-rose-500/10 focus:text-rose-600 dark:text-rose-300"
-                >
-                  <XCircle className="mr-3 h-4 w-4" aria-hidden="true" />
-                  Cancelar agendamento
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="agenda-modal-footer flex shrink-0 flex-col justify-end gap-3 border-t p-4 backdrop-blur-2xl sm:flex-row sm:items-center">
             <Button
               type="button"
               variant="outline"
@@ -1168,7 +1162,6 @@ export const AppointmentDetailModal = ({
             >
               Revisar alterações
             </Button>
-            </div>
           </div>
         )}
         {step === 2 && (
@@ -1236,7 +1229,7 @@ export const AppointmentDetailModal = ({
                 size="icon"
                 onClick={() => setOpen(false)}
                 className="appointment-liquid-control h-11 w-11 shrink-0 rounded-2xl border border-border/45 text-muted-foreground transition-colors hover:text-foreground"
-                aria-label="Fechar ficha da sessão"
+                aria-label={`Fechar detalhes ${isSession ? "da sessão" : "do evento"}`}
               >
                 <X className="h-5 w-5" aria-hidden="true" />
               </Button>
@@ -1255,6 +1248,7 @@ export const AppointmentDetailModal = ({
       patientName={patientData?.name || appointment.patient_name || displayTitle}
       patientEmail={patientData?.email}
       startTime={appointment.start_time}
+      itemKind={isEvent ? "event" : "session"}
       action={professionalAction}
       open={Boolean(professionalAction)}
       onOpenChange={(nextOpen) => { if (!nextOpen) setProfessionalAction(null); }}
@@ -1266,6 +1260,38 @@ export const AppointmentDetailModal = ({
 
 const inputClassName =
   "agenda-field appointment-liquid-control h-11 w-full rounded-xl px-3 text-sm font-bold text-foreground outline-none";
+
+const CompactDetailCard = ({
+  label,
+  value,
+  detail,
+  icon,
+  ariaLabel,
+}: {
+  label: string;
+  value: string;
+  detail?: string;
+  icon: React.ReactNode;
+  ariaLabel?: string;
+}) => (
+  <div
+    className="synapse-liquid-toolbar flex min-h-16 items-center gap-3 rounded-[18px] border border-border/35 px-3 py-2.5"
+    aria-label={ariaLabel}
+  >
+    <span className="synapse-liquid-control flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] text-muted-foreground">
+      {icon}
+    </span>
+    <div className="min-w-0">
+      <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </p>
+      <p className="truncate text-sm font-black text-foreground">{value}</p>
+      {detail ? (
+        <p className="truncate text-[10px] font-semibold text-muted-foreground">{detail}</p>
+      ) : null}
+    </div>
+  </div>
+);
 
 const FieldShell = ({
   label,
