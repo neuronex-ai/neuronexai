@@ -1,13 +1,21 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { Sidebar } from "@/components/agenda/Sidebar";
 import { CalendarView } from "@/components/agenda/CalendarView";
+import {
+    AgendaFiltersPopover,
+    EMPTY_AGENDA_FILTERS,
+    type AgendaFilters,
+} from "@/components/agenda/AgendaFiltersPopover";
 import { useAppointments } from "@/hooks/use-appointments";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useAgendaRealtime } from "@/hooks/use-agenda-realtime";
 import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
+import {
+    getAppointmentDetailStatusLabel,
+    getAppointmentOriginLabel,
+} from "@/lib/appointment-detail-presentation";
 import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
 import { ProfessionalWaitlistPanel } from "@/components/agenda/ProfessionalWaitlistPanel";
 import { useProfessionalWaitlist } from "@/hooks/use-professional-waitlist";
@@ -21,12 +29,10 @@ export default function DesktopAgenda() {
     const shouldReduceMotion = useReducedMotion();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
-    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [waitlistOpen, setWaitlistOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [view, setView] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
-    const [searchQuery, setSearchQuery] = useState("");
-    const [selectedTag, setSelectedTag] = useState<string | null>(null);
+    const [filters, setFilters] = useState<AgendaFilters>(EMPTY_AGENDA_FILTERS);
     const [openedAppointmentId, setOpenedAppointmentId] = useState<string | null>(null);
 
     const { data: appointments = [], isLoading } = useAppointments();
@@ -88,18 +94,17 @@ export default function DesktopAgenda() {
     }, [appointments]);
 
     useEffect(() => {
-        if (!sidebarOpen && !waitlistOpen) return;
+        if (!waitlistOpen) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
-                setSidebarOpen(false);
                 setWaitlistOpen(false);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [sidebarOpen, waitlistOpen]);
+    }, [waitlistOpen]);
 
     const closeOpenedAppointment = () => {
         setOpenedAppointmentId(null);
@@ -115,61 +120,43 @@ export default function DesktopAgenda() {
 
     const filteredAppointments = useMemo(() => {
         return appointments.filter(app => {
-            if (isCancelledAppointmentStatus(app.status, app.notes)) return false;
-            const matchesSearch = (app.patient_name || "").toLowerCase().includes(searchQuery.toLowerCase());
-            const matchesTag = !selectedTag ||
-                (selectedTag === 'Online' && app.type === 'online') ||
-                (selectedTag === 'Presencial' && app.type === 'presencial') ||
-                (selectedTag === 'Primeira Vez' && app.notes?.toLowerCase().includes('primeira'));
-            return matchesSearch && matchesTag;
+            const visualStatus = getAppointmentDetailStatusLabel(app);
+            const cancelled = isCancelledAppointmentStatus(app.status, app.notes);
+            if (filters.status === "all" && cancelled) return false;
+            if (filters.patientId !== "all" && app.patient_id !== filters.patientId) return false;
+            if (filters.modality !== "all" && app.type !== filters.modality) return false;
+            if (filters.status !== "all" && visualStatus !== filters.status) return false;
+
+            const origin = getAppointmentOriginLabel(app);
+            if (
+                (filters.origin === "google" && origin !== "Google Agenda")
+                || (filters.origin === "neuronex" && origin !== "NeuroNex")
+                || (filters.origin === "waitlist" && origin !== "Lista de espera")
+            ) return false;
+
+            const startsAt = new Date(app.start_time);
+            if (filters.date) {
+                const exactStart = new Date(`${filters.date}T00:00:00`);
+                const exactEnd = new Date(`${filters.date}T23:59:59.999`);
+                if (startsAt < exactStart || startsAt > exactEnd) return false;
+            }
+            if (filters.dateFrom) {
+                const rangeStart = new Date(`${filters.dateFrom}T00:00:00`);
+                if (startsAt < rangeStart) return false;
+            }
+            if (filters.dateTo) {
+                const rangeEnd = new Date(`${filters.dateTo}T23:59:59.999`);
+                if (startsAt > rangeEnd) return false;
+            }
+
+            return true;
         });
-    }, [appointments, searchQuery, selectedTag]);
+    }, [appointments, filters]);
 
     return (
         <div className="desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-4 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-8 xl:px-10">
                 <div className="agenda-desktop-shell agenda-liquid-surface desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border p-2 md:p-3">
-                <AnimatePresence>
-                    {sidebarOpen && (
-                        <>
-                            <motion.button
-                                key="agenda-sidebar-dismiss"
-                                type="button"
-                                aria-label="Fechar painel da agenda"
-                                initial={shouldReduceMotion ? false : { opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
-                                onClick={() => setSidebarOpen(false)}
-                                className="absolute inset-0 z-30 hidden cursor-default bg-foreground/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-background/20 xl:block"
-                            />
-                            <motion.aside
-                                key="sidebar"
-                                initial={shouldReduceMotion ? false : { opacity: 0, x: -18, scale: 0.985 }}
-                                animate={{ opacity: 1, x: 0, scale: 1 }}
-                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -18, scale: 0.985 }}
-                                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-                                className="absolute inset-y-3 left-3 z-40 hidden min-h-0 w-[324px] flex-col overflow-hidden xl:flex"
-                            >
-                                <div className="agenda-liquid-surface relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] border p-2">
-                                    <div className="relative z-10 flex h-full min-h-0 flex-col">
-                                        <Sidebar
-                                            selectedDate={selectedDate}
-                                            onDateChange={setSelectedDate}
-                                            appointments={appointments}
-                                            searchQuery={searchQuery}
-                                            onSearchChange={setSearchQuery}
-                                            selectedTag={selectedTag}
-                                            onTagChange={setSelectedTag}
-                                            onClose={() => setSidebarOpen(false)}
-                                        />
-                                    </div>
-                                </div>
-                            </motion.aside>
-                        </>
-                    )}
-                </AnimatePresence>
-
                 <AnimatePresence>
                     {waitlistOpen ? (
                         <>
@@ -199,9 +186,9 @@ export default function DesktopAgenda() {
                         <motion.button
                             key="agenda-waitlist-edge"
                             type="button"
-                            onMouseEnter={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
-                            onFocus={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
-                            onClick={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
+                            onMouseEnter={() => setWaitlistOpen(true)}
+                            onFocus={() => setWaitlistOpen(true)}
+                            onClick={() => setWaitlistOpen(true)}
                             className="agenda-edge-trigger absolute inset-y-[18%] right-0 z-20 w-2 rounded-l-full opacity-45 hover:w-3 hover:opacity-100 focus-visible:w-3 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             aria-label={`Abrir lista de espera${activeWaitlistCount ? `, ${activeWaitlistCount} pessoas ativas` : ""}`}
                         />
@@ -214,17 +201,19 @@ export default function DesktopAgenda() {
                             date={selectedDate}
                             onDateChange={setSelectedDate}
                             appointments={filteredAppointments}
+                            allAppointments={appointments}
                             isLoading={isLoading}
                             view={view}
                             onViewChange={setView}
-                            sidebarOpen={sidebarOpen}
-                            setSidebarOpen={(open) => {
-                                if (open) setWaitlistOpen(false);
-                                setSidebarOpen(open);
-                            }}
+                            filterControl={(
+                                <AgendaFiltersPopover
+                                    appointments={appointments}
+                                    filters={filters}
+                                    onFiltersChange={setFilters}
+                                />
+                            )}
                             waitlistOpen={waitlistOpen}
                             onWaitlistOpenChange={(open) => {
-                                if (open) setSidebarOpen(false);
                                 setWaitlistOpen(open);
                             }}
                             waitlistCount={activeWaitlistCount}
