@@ -20,11 +20,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { useSendEmail } from "@/hooks/use-send-email";
 import { useAppointmentLifecycle } from "@/hooks/use-appointment-lifecycle";
 import {
@@ -34,24 +29,27 @@ import {
 import { useUpdateAppointment } from "@/hooks/use-update-appointment";
 import type { ProfessionalAppointmentAction } from "@/hooks/use-appointment-professional-action";
 import { mapFinancialEntryToTransaction } from "@/hooks/use-financial-entries";
-import { EdgeFunctionInvocationError } from "@/lib/invoke-edge-function";
 import {
-  getAppointmentStatusMeta,
-  normalizeAppointmentStatus,
-} from "@/lib/appointment-status";
+  EdgeFunctionInvocationError,
+  normalizeEdgeFunctionError,
+} from "@/lib/invoke-edge-function";
 import {
   buildEventNotes,
   getAppointmentMetadata,
-  getAppointmentSyncPresentation,
   getEditableAppointmentNotes,
   getEventCategoryLabel,
   getSessionTypeLabel,
-  isWaitlistAppointmentMetadata,
   normalizeAppointmentSyncStatus,
   type AppointmentMetadata,
 } from "@/lib/appointment-metadata";
+import {
+  getAppointmentDetailStatusLabel,
+  getAppointmentOriginLabel,
+  getAppointmentRecurrencePosition,
+} from "@/lib/appointment-detail-presentation";
 import { getAppointmentDisplayTitle, getDurationString } from "@/lib/appointment-utils";
 import { formatTimeBrazil } from "@/lib/timezone";
+import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { Appointment } from "@/types";
@@ -66,7 +64,6 @@ import {
   CalendarDays,
   ChevronRight,
   Clock,
-  Clock3,
   CreditCard,
   FileText,
   Loader2,
@@ -127,23 +124,6 @@ const RECURRENCE_LABELS: Record<string, string> = {
   weekly: "Semanal",
   biweekly: "Quinzenal",
   monthly: "Mensal",
-};
-
-const LIFECYCLE_LABELS: Record<string, string> = {
-  created: "Criado",
-  invitation_sent: "Convite enviado",
-  awaiting_confirmation: "Aguardando confirmação",
-  awaiting_reconfirmation: "Aguardando nova confirmação",
-  confirmed: "Confirmado pelo paciente",
-  cancellation_requested: "Cancelamento solicitado",
-  cancelled: "Cancelado",
-  reschedule_requested: "Reagendamento pendente",
-  reschedule_approved: "Reagendamento aprovado",
-  reschedule_rejected: "Reagendamento recusado",
-  professional_response_overdue: "Resposta profissional em atraso",
-  in_progress: "Em atendimento",
-  completed: "Realizado",
-  closed: "Encerrado",
 };
 
 export const AppointmentDetailModal = ({
