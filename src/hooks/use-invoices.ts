@@ -79,6 +79,37 @@ const selectLegacy = `
     description
 `;
 
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export const fetchInvoiceById = async (
+    userId: string,
+    invoiceId: string,
+): Promise<Invoice | null> => {
+    if (!UUID_PATTERN.test(invoiceId)) return null;
+
+    const [legacyResult, nbResult] = await Promise.all([
+        supabase
+            .from("invoices")
+            .select(selectLegacy)
+            .eq("user_id", userId)
+            .eq("id", invoiceId)
+            .maybeSingle(),
+        supabase
+            .from(NB_PAYMENTS_READ_TABLE)
+            .select(NB_PAYMENTS_SAFE_SELECT)
+            .eq("user_id", userId)
+            .eq("id", invoiceId)
+            .maybeSingle(),
+    ]);
+
+    if (nbResult.error) throw nbResult.error;
+    if (legacyResult.error) throw legacyResult.error;
+    if (nbResult.data) return mapNbPayment(normalizeNbPaymentRow(nbResult.data));
+    if (legacyResult.data) return mapLegacyInvoice(legacyResult.data);
+    return null;
+};
+
 export const fetchInvoicesPage = async (userId: string, params: InvoiceListParams = {}): Promise<InvoiceListResult> => {
     const page = Math.max(1, params.page || 1);
     const pageSize = Math.min(50, Math.max(5, params.pageSize || 25));
@@ -171,6 +202,18 @@ export const useInvoicesPage = (params: InvoiceListParams = {}) => {
         queryFn: () => fetchInvoicesPage(userId!, params),
         enabled: Boolean(userId),
         placeholderData: (previous) => previous,
+    });
+};
+
+export const useInvoiceById = (invoiceId?: string | null) => {
+    const { user } = useAuth();
+    const userId = user?.id;
+
+    return useQuery<Invoice | null, Error>({
+        queryKey: ["invoice-by-id", userId, invoiceId],
+        queryFn: () => fetchInvoiceById(userId!, invoiceId!),
+        enabled: Boolean(userId && invoiceId),
+        staleTime: 30_000,
     });
 };
 

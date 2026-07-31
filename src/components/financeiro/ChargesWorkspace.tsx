@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, parseISO } from "date-fns";
+import { useSearchParams } from "react-router-dom";
 import {
   Calendar,
   CheckCircle2,
@@ -45,6 +46,7 @@ import {
   type ChargeScope,
   type ChargeStatusFilter,
   type ChargeTypeFilter,
+  mapInvoiceToChargeRow,
   useChargesPage,
 } from "@/hooks/use-charges-page";
 import {
@@ -52,7 +54,7 @@ import {
   toFinancialPaymentMethod,
   useTransitionFinancialEntry,
 } from "@/hooks/use-financial-entries";
-import { useInvoiceActions } from "@/hooks/use-invoices";
+import { useInvoiceActions, useInvoiceById } from "@/hooks/use-invoices";
 import { usePatients } from "@/hooks/use-patients";
 import { cn, formatCurrency } from "@/lib/utils";
 import { getUserFacingErrorMessage } from "@/lib/user-facing-error";
@@ -129,6 +131,7 @@ export function ChargesWorkspace({
   initialTypeFilters = [],
   title,
 }: ChargesWorkspaceProps) {
+  const [searchParams, setSearchParams] = useSearchParams();
   const { data: patients = [] } = usePatients();
   const invoiceActions = useInvoiceActions();
   const updateEntry = useTransitionFinancialEntry();
@@ -146,6 +149,8 @@ export function ChargesWorkspace({
   const [manualModalOpen, setManualModalOpen] = useState(false);
   const [pendingDestructiveBatch, setPendingDestructiveBatch] = useState(false);
   const [pendingSingleRemoval, setPendingSingleRemoval] = useState<ChargeRow | null>(null);
+  const requestedChargeId = scope === "neurofinance" ? searchParams.get("chargeId") : null;
+  const requestedInvoice = useInvoiceById(requestedChargeId);
 
   const { data, isLoading, isFetching } = useChargesPage({
     scope,
@@ -169,6 +174,28 @@ export function ChargesWorkspace({
   const allVisibleSelected = charges.length > 0 && charges.every((charge) => selectedIds.includes(charge.id));
   const typeOptions = scope === "management" ? managementTypeOptions : neurofinanceTypeOptions;
   const selectedRows = useMemo(() => charges.filter((charge) => selectedIds.includes(charge.id)), [charges, selectedIds]);
+
+  useEffect(() => {
+    if (!requestedChargeId) return;
+    const visibleCharge = charges.find(
+      (charge) => charge.neurofinancePaymentId === requestedChargeId,
+    );
+    if (visibleCharge) {
+      setSelectedCharge(visibleCharge);
+      return;
+    }
+    if (requestedInvoice.data) {
+      setSelectedCharge(mapInvoiceToChargeRow(requestedInvoice.data));
+    }
+  }, [charges, requestedChargeId, requestedInvoice.data]);
+
+  const closeChargeDetails = () => {
+    setSelectedCharge(null);
+    if (!requestedChargeId) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("chargeId");
+    setSearchParams(nextParams, { replace: true });
+  };
 
   const patientName = (row: ChargeRow) =>
     row.patientName || patients.find((patient) => patient.id === row.patientId)?.name || (row.patientId ? "Paciente" : "Não informado");
@@ -525,7 +552,7 @@ export function ChargesWorkspace({
           charge={selectedCharge}
           title={title}
           patientName={selectedCharge ? patientName(selectedCharge) : ""}
-          onOpenChange={(open) => !open && setSelectedCharge(null)}
+          onOpenChange={(open) => !open && closeChargeDetails()}
           onCopyLink={async (row) => {
             const link = getPaymentLink(row);
             if (!link) return toast.info("Esta cobrança não possui link.");
