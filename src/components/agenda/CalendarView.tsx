@@ -4,11 +4,13 @@ import { Appointment } from "@/types";
 import { format, addDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatTimeBrazil } from "@/lib/timezone";
-import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, PanelLeftClose, PanelLeftOpen, UsersRound, ListPlus } from "lucide-react";
+import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, UsersRound, ListPlus, CalendarDays, Cloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
+import { Calendar } from "@/components/ui/calendar";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
 import { AgendaSettingsModal } from "./AgendaSettingsModal";
+import { AgendaFiltersPopover } from "./AgendaFiltersPopover";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import {
@@ -56,6 +58,10 @@ import {
     SYNAPSE_PAGE_ACTION_EVENT,
     type SynapseInterfaceAction,
 } from "@/lib/synapse-interface-actions";
+import type {
+    AgendaFilterState,
+    AgendaPatientFilterOption,
+} from "@/lib/agenda-filters";
 
 // Generate time labels from 00:00 to 23:00
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
@@ -69,8 +75,9 @@ interface CalendarViewProps {
     isLoading: boolean;
     view: 'daily' | 'weekly' | 'monthly';
     onViewChange?: (view: 'daily' | 'weekly' | 'monthly') => void;
-    sidebarOpen?: boolean;
-    setSidebarOpen?: (open: boolean) => void;
+    filters: AgendaFilterState;
+    onFiltersChange: (filters: AgendaFilterState) => void;
+    filterPatients: AgendaPatientFilterOption[];
     waitlistOpen?: boolean;
     onWaitlistOpenChange?: (open: boolean) => void;
     waitlistCount?: number;
@@ -125,7 +132,20 @@ const AGENDA_DRAG_INSTRUCTIONS: ScreenReaderInstructions = {
     draggable: "Para reagendar, pressione Espaço ou Enter. Use as setas para escolher o horário, Espaço ou Enter para revisar, e Escape para cancelar.",
 };
 
-export const CalendarView = ({ date, onDateChange, appointments, isLoading, view, onViewChange, sidebarOpen, setSidebarOpen, waitlistOpen, onWaitlistOpenChange, waitlistCount = 0 }: CalendarViewProps) => {
+export const CalendarView = ({
+    date,
+    onDateChange,
+    appointments,
+    isLoading,
+    view,
+    onViewChange,
+    filters,
+    onFiltersChange,
+    filterPatients,
+    waitlistOpen,
+    onWaitlistOpenChange,
+    waitlistCount = 0,
+}: CalendarViewProps) => {
     const shouldReduceMotion = useReducedMotion();
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -139,6 +159,7 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
     const [newAppointmentDate, setNewAppointmentDate] = useState<Date | undefined>();
     const [selectedTimeSlot, setSelectedTimeSlot] = useState<string | undefined>();
     const [isMounted, setIsMounted] = useState(false);
+    const [datePickerOpen, setDatePickerOpen] = useState(false);
     const [workingHours, setWorkingHours] = useState<WorkingHoursConfig | null>(null);
     const [availabilityVersions, setAvailabilityVersions] = useState<AvailabilityVersionConfig[] | null>(null);
 
@@ -506,21 +527,12 @@ export const CalendarView = ({ date, onDateChange, appointments, isLoading, view
                 aria-busy={isPreparingReschedule}
                 className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
             >
-                <header className="agenda-liquid-surface relative mb-3 flex shrink-0 flex-col justify-between gap-4 overflow-hidden rounded-[26px] border p-3 text-foreground xl:flex-row xl:items-center">
-                    <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(150deg,hsl(var(--foreground)/0.024),transparent_38%,hsl(var(--foreground)/0.006))] dark:bg-[linear-gradient(150deg,rgba(255,255,255,0.018),transparent_42%,rgba(255,255,255,0.004))]" />
+                <header
+                    aria-label="Controles da agenda"
+                    className="agenda-liquid-surface relative mb-2 flex shrink-0 flex-wrap items-center justify-between gap-2 rounded-[22px] border p-2 text-foreground xl:flex-nowrap"
+                >
                     {/* Left side: Sidebar Toggle, Title/Date, Google Status */}
-                    <div className="relative z-10 flex flex-wrap items-center gap-4">
-                        {setSidebarOpen && (
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setSidebarOpen(!sidebarOpen)}
-                                aria-label={sidebarOpen ? "Ocultar painel da agenda" : "Mostrar painel da agenda"}
-                                className="agenda-tactile notification-liquid-control hidden h-11 w-11 rounded-full border border-border/55 bg-background/70 text-muted-foreground hover:text-foreground xl:flex"
-                            >
-                                {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-                            </Button>
-                        )}
+                    <div className="relative z-10 flex min-w-0 flex-wrap items-center gap-2">
 
                         <div className="flex items-baseline gap-4">
                             <motion.div
