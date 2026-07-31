@@ -1,19 +1,16 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { Sidebar } from "@/components/agenda/Sidebar";
 import { CalendarView } from "@/components/agenda/CalendarView";
 import { useAppointments } from "@/hooks/use-appointments";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useAgendaRealtime } from "@/hooks/use-agenda-realtime";
+import { isCancelledAppointmentStatus } from "@/lib/appointment-status";
 import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
 import { ProfessionalWaitlistPanel } from "@/components/agenda/ProfessionalWaitlistPanel";
 import { useProfessionalWaitlist } from "@/hooks/use-professional-waitlist";
-import {
-    createEmptyAgendaFilters,
-    filterAgendaAppointments,
-    getAgendaPatientFilterOptions,
-} from "@/lib/agenda-filters";
 import {
     SYNAPSE_PAGE_ACTION_EVENT,
     type SynapseInterfaceAction,
@@ -24,10 +21,12 @@ export default function DesktopAgenda() {
     const shouldReduceMotion = useReducedMotion();
     const location = useLocation();
     const [searchParams, setSearchParams] = useSearchParams();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
     const [waitlistOpen, setWaitlistOpen] = useState(false);
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [view, setView] = useState<'daily' | 'weekly' | 'monthly'>('weekly');
-    const [filters, setFilters] = useState(createEmptyAgendaFilters);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedTag, setSelectedTag] = useState<string | null>(null);
     const [openedAppointmentId, setOpenedAppointmentId] = useState<string | null>(null);
 
     const { data: appointments = [], isLoading } = useAppointments();
@@ -89,17 +88,18 @@ export default function DesktopAgenda() {
     }, [appointments]);
 
     useEffect(() => {
-        if (!waitlistOpen) return;
+        if (!sidebarOpen && !waitlistOpen) return;
 
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === "Escape") {
+                setSidebarOpen(false);
                 setWaitlistOpen(false);
             }
         };
 
         window.addEventListener("keydown", handleKeyDown);
         return () => window.removeEventListener("keydown", handleKeyDown);
-    }, [waitlistOpen]);
+    }, [sidebarOpen, waitlistOpen]);
 
     const closeOpenedAppointment = () => {
         setOpenedAppointmentId(null);
@@ -113,20 +113,63 @@ export default function DesktopAgenda() {
         }
     };
 
-    const filterPatients = useMemo(
-        () => getAgendaPatientFilterOptions(appointments),
-        [appointments],
-    );
-
-    const filteredAppointments = useMemo(
-        () => filterAgendaAppointments(appointments, filters),
-        [appointments, filters],
-    );
+    const filteredAppointments = useMemo(() => {
+        return appointments.filter(app => {
+            if (isCancelledAppointmentStatus(app.status, app.notes)) return false;
+            const matchesSearch = (app.patient_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+            const matchesTag = !selectedTag ||
+                (selectedTag === 'Online' && app.type === 'online') ||
+                (selectedTag === 'Presencial' && app.type === 'presencial') ||
+                (selectedTag === 'Primeira Vez' && app.notes?.toLowerCase().includes('primeira'));
+            return matchesSearch && matchesTag;
+        });
+    }, [appointments, searchQuery, selectedTag]);
 
     return (
         <div className="desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-4 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-8 xl:px-10">
                 <div className="agenda-desktop-shell agenda-liquid-surface desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border p-2 md:p-3">
+                <AnimatePresence>
+                    {sidebarOpen && (
+                        <>
+                            <motion.button
+                                key="agenda-sidebar-dismiss"
+                                type="button"
+                                aria-label="Fechar painel da agenda"
+                                initial={shouldReduceMotion ? false : { opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
+                                onClick={() => setSidebarOpen(false)}
+                                className="absolute inset-0 z-30 hidden cursor-default bg-foreground/[0.018] backdrop-blur-[1px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 dark:bg-background/20 xl:block"
+                            />
+                            <motion.aside
+                                key="sidebar"
+                                initial={shouldReduceMotion ? false : { opacity: 0, x: -18, scale: 0.985 }}
+                                animate={{ opacity: 1, x: 0, scale: 1 }}
+                                exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -18, scale: 0.985 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
+                                className="absolute inset-y-3 left-3 z-40 hidden min-h-0 w-[324px] flex-col overflow-hidden xl:flex"
+                            >
+                                <div className="agenda-liquid-surface relative flex h-full min-h-0 w-full flex-col overflow-hidden rounded-[32px] border p-2">
+                                    <div className="relative z-10 flex h-full min-h-0 flex-col">
+                                        <Sidebar
+                                            selectedDate={selectedDate}
+                                            onDateChange={setSelectedDate}
+                                            appointments={appointments}
+                                            searchQuery={searchQuery}
+                                            onSearchChange={setSearchQuery}
+                                            selectedTag={selectedTag}
+                                            onTagChange={setSelectedTag}
+                                            onClose={() => setSidebarOpen(false)}
+                                        />
+                                    </div>
+                                </div>
+                            </motion.aside>
+                        </>
+                    )}
+                </AnimatePresence>
+
                 <AnimatePresence>
                     {waitlistOpen ? (
                         <>
@@ -156,9 +199,9 @@ export default function DesktopAgenda() {
                         <motion.button
                             key="agenda-waitlist-edge"
                             type="button"
-                            onMouseEnter={() => setWaitlistOpen(true)}
-                            onFocus={() => setWaitlistOpen(true)}
-                            onClick={() => setWaitlistOpen(true)}
+                            onMouseEnter={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
+                            onFocus={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
+                            onClick={() => { setSidebarOpen(false); setWaitlistOpen(true); }}
                             className="agenda-edge-trigger absolute inset-y-[18%] right-0 z-20 w-2 rounded-l-full opacity-45 hover:w-3 hover:opacity-100 focus-visible:w-3 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                             aria-label={`Abrir lista de espera${activeWaitlistCount ? `, ${activeWaitlistCount} pessoas ativas` : ""}`}
                         />
@@ -174,11 +217,16 @@ export default function DesktopAgenda() {
                             isLoading={isLoading}
                             view={view}
                             onViewChange={setView}
-                            filters={filters}
-                            onFiltersChange={setFilters}
-                            filterPatients={filterPatients}
+                            sidebarOpen={sidebarOpen}
+                            setSidebarOpen={(open) => {
+                                if (open) setWaitlistOpen(false);
+                                setSidebarOpen(open);
+                            }}
                             waitlistOpen={waitlistOpen}
-                            onWaitlistOpenChange={setWaitlistOpen}
+                            onWaitlistOpenChange={(open) => {
+                                if (open) setSidebarOpen(false);
+                                setWaitlistOpen(open);
+                            }}
                             waitlistCount={activeWaitlistCount}
                         />
                     </div>
