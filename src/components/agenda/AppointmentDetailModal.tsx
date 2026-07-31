@@ -552,6 +552,8 @@ export const AppointmentDetailModal = ({
     const rawPhone = String(patientData.phone).replace(/\D/g, "");
     const phone = rawPhone.startsWith("55") ? rawPhone : `55${rawPhone}`;
     whatsappInvitationIdempotencyKeyRef.current ||= crypto.randomUUID();
+    const invitationTab = window.open("about:blank", "_blank");
+    if (invitationTab) invitationTab.opener = null;
     setIsPreparingWhatsappInvite(true);
     try {
       const { data, error } = await supabase.functions.invoke("prepare-appointment-whatsapp-invite", {
@@ -576,14 +578,19 @@ export const AppointmentDetailModal = ({
         throw new Error("Não foi possível gerar o link de confirmação agora.");
       }
       whatsappInvitationIdempotencyKeyRef.current = null;
-      window.open(
-        `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`,
-        "_blank",
-        "noopener,noreferrer",
-      );
+      const whatsappUrl =
+        `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMessage)}`;
+      if (invitationTab) {
+        invitationTab.location.replace(whatsappUrl);
+      } else {
+        setDetailError(
+          "O convite ficou pronto, mas o navegador bloqueou a nova aba. Libere pop-ups e tente novamente.",
+        );
+      }
       await lifecycle.refetch();
       toast.success("Convite pronto para enviar no WhatsApp.");
     } catch (error) {
+      invitationTab?.close();
       whatsappInvitationIdempotencyKeyRef.current = null;
       setDetailError(getUserFacingErrorMessage(error, "save"));
     } finally {

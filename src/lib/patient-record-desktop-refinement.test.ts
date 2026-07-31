@@ -14,8 +14,8 @@ describe("patient record desktop refinement contracts", () => {
     expect(summaryTab).toContain("PatientCompleteAppointmentHistory");
     expect(financeTab).toContain("usePatientInvoices(patientId)");
     expect(financeTab).toContain('{ value: "nfse" as const, label: "NFS-e"');
-    expect(appointmentDetails).toContain("Remover da agenda");
-    expect(appointmentDetails).toContain("Cancelar agendamento");
+    expect(appointmentDetails).toContain('Arquivar {isSession ? "agendamento" : "evento"}');
+    expect(appointmentDetails).toContain('Cancelar {isSession ? "agendamento" : "evento"}');
     expect(appointmentEmail).toContain('/confirmar-agendamento/${rawToken}');
   });
 
