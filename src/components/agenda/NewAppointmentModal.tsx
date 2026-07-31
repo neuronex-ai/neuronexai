@@ -40,7 +40,6 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import {
   Form,
   FormControl,
@@ -319,32 +318,37 @@ function PillToggle({
   value,
   onChange,
 }: {
-  value: "session" | "event";
-  onChange: (v: "session" | "event") => void;
+  value: string;
+  onChange: (v: string) => void;
 }) {
+  const options = [
+    { id: "session", icon: Sparkles, label: "Sessão Clínica" },
+    { id: "event", icon: CalendarPlus, label: "Evento Geral" },
+  ] as const;
+
   return (
-    <MagneticSegmentedControl
-      id="appointment-kind"
-      indicatorId="appointment-kind-indicator"
-      value={value}
-      onValueChange={onChange}
-      ariaLabel="Tipo de agendamento"
-      behavior="single-select"
-      options={[
-        {
-          value: "session",
-          ariaLabel: "Sessão clínica",
-          label: <><Sparkles className="h-3.5 w-3.5 shrink-0" /><span>Sessão clínica</span></>,
-        },
-        {
-          value: "event",
-          ariaLabel: "Evento geral",
-          label: <><CalendarPlus className="h-3.5 w-3.5 shrink-0" /><span>Evento geral</span></>,
-        },
-      ]}
-      className="synapse-liquid-toolbar grid min-h-12 w-full grid-cols-2 rounded-[20px] p-1"
-      triggerClassName="min-h-11 rounded-[16px] px-2 py-2 text-[10px] font-black uppercase tracking-[0.12em]"
-    />
+    <div className="synapse-liquid-toolbar flex w-full gap-1 rounded-[20px] p-1">
+      {options.map((opt) => {
+        const isActive = value === opt.id;
+        return (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={cn(
+              "agenda-tactile synapse-liquid-control relative flex min-h-11 flex-1 select-none items-center justify-center gap-2 rounded-[16px] px-2 py-3 text-[10px] font-black uppercase tracking-[0.12em]",
+              isActive
+                ? "synapse-liquid-tab-active text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <opt.icon className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">{opt.label}</span>
+            <span className="sm:hidden">{opt.id === "session" ? "Sessão" : "Evento"}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
@@ -2228,7 +2232,7 @@ export function NewAppointmentModal({
                         </FormControl>
                         <label
                           htmlFor={`modality-${m.id}`}
-                          className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-[20px] border p-4 text-muted-foreground peer-data-[state=checked]:border-border peer-data-[state=checked]:text-foreground"
+                          className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-[20px] border p-4 text-muted-foreground peer-data-[state=checked]:border-foreground/25 peer-data-[state=checked]:text-foreground"
                         >
                           <m.icon className="h-6 w-6 mb-2" />
                           <span className="text-[9px] font-black uppercase tracking-widest">{m.label}</span>
@@ -2519,7 +2523,7 @@ export function NewAppointmentModal({
                           htmlFor={pkg.id}
                           className={cn(
                             cardBase,
-                            "agenda-choice-card flex cursor-pointer flex-col items-start peer-data-[state=checked]:border-border"
+                            "agenda-choice-card flex cursor-pointer flex-col items-start peer-data-[state=checked]:border-foreground/25"
                           )}
                         >
                           <div className="flex w-full items-center justify-between">
@@ -2759,7 +2763,7 @@ export function NewAppointmentModal({
                             </FormControl>
                             <label
                               htmlFor={`pay-${m.id}`}
-                              className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border p-3 text-center text-muted-foreground peer-data-[state=checked]:border-border peer-data-[state=checked]:text-foreground"
+                              className="agenda-choice-card flex min-h-24 cursor-pointer flex-col items-center justify-center rounded-2xl border p-3 text-center text-muted-foreground peer-data-[state=checked]:border-foreground/25 peer-data-[state=checked]:text-foreground"
                             >
                               <m.icon className="h-6 w-6 mb-2" />
                               <span className="text-[9px] font-black uppercase tracking-widest">{m.label}</span>

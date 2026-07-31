@@ -4,7 +4,7 @@ import { Appointment } from "@/types";
 import { format, addDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval, setHours, setMinutes, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatTimeBrazil } from "@/lib/timezone";
-import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, UsersRound, ListPlus, Plug } from "lucide-react";
+import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, UsersRound, ListPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { Calendar } from "@/components/ui/calendar";
@@ -65,7 +65,7 @@ import {
 // Generate time labels from 00:00 to 23:00
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const HOUR_HEIGHT = 64; // px per hour row
-const FLOATING_TOOLBAR_TOP = 24;
+const FLOATING_TOOLBAR_TOP = 20;
 const FLOATING_TOOLBAR_HEIGHT = 48;
 const FLOATING_TOOLBAR_GAP = 12;
 const FLOATING_HEADER_CLEARANCE = FLOATING_TOOLBAR_HEIGHT + FLOATING_TOOLBAR_GAP;
@@ -583,10 +583,10 @@ export const CalendarView = ({
                 id="agenda-main-calendar"
                 data-synapse-target="agenda-calendar"
                 aria-busy={isPreparingReschedule}
-                className="agenda-main-calendar relative z-10 flex h-full flex-col overflow-hidden bg-transparent p-6"
+                className="agenda-main-calendar relative z-10 flex h-full flex-col overflow-hidden bg-transparent p-5"
             >
                 <TooltipProvider delayDuration={450}>
-                <header className="agenda-floating-header pointer-events-none absolute left-6 right-6 top-6 z-40 flex h-12 items-center justify-between gap-4 text-foreground">
+                <header className="agenda-floating-header pointer-events-none absolute left-5 right-5 top-5 z-40 flex h-12 items-center justify-between gap-4 text-foreground">
                     <div className="agenda-toolbar-group pointer-events-auto flex min-w-0 shrink items-center gap-2.5">
                         {filterControl}
 
@@ -626,21 +626,16 @@ export const CalendarView = ({
                         <Button
                             type="button"
                             variant="ghost"
-                            size="icon"
                             onClick={() => navigate('/ajustes?tab=integrations')}
-                            className="agenda-connection-pill agenda-tactile hidden h-12 w-12 shrink-0 rounded-[18px] sm:inline-flex"
-                            data-connected={isGoogleConnected ? "true" : "false"}
-                            data-loading={isLoadingGoogle ? "true" : "false"}
-                            aria-busy={isLoadingGoogle}
+                            className="agenda-connection-pill agenda-floating-pill agenda-tactile hidden h-12 shrink-0 rounded-[18px] px-4 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground sm:inline-flex"
                             aria-label={isGoogleConnected ? "Google conectado. Abrir integrações" : "Conectar Google Agenda"}
-                            title={isGoogleConnected ? "Google conectado" : "Conectar Google Agenda"}
                         >
-                            <Plug className="h-[18px] w-[18px]" aria-hidden="true" />
+                            {isLoadingGoogle ? "Conectando" : isGoogleConnected ? "Conectado" : "Conectar"}
                         </Button>
                     </div>
 
                     <div className="agenda-toolbar-group agenda-toolbar-navigation pointer-events-auto absolute left-1/2 flex shrink-0 -translate-x-1/2 items-center gap-2.5">
-                        <div className="flex h-12 shrink-0 items-center gap-0.5">
+                        <div className="agenda-floating-pill flex h-12 shrink-0 items-center rounded-[18px] p-0.5">
                             <Tooltip>
                               <TooltipTrigger asChild>
                               <Button
@@ -649,7 +644,7 @@ export const CalendarView = ({
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
                                 aria-label="Mostrar período anterior"
-                                className="agenda-navigation-icon h-11 w-11 rounded-[14px] text-muted-foreground hover:text-foreground"
+                                className="notification-liquid-control h-11 w-11 rounded-[14px] text-muted-foreground hover:text-foreground"
                             >
                                 <ChevronLeft className="h-[18px] w-[18px]" />
                               </Button>
@@ -683,7 +678,7 @@ export const CalendarView = ({
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
                                 aria-label="Mostrar próximo período"
-                                className="agenda-navigation-icon h-11 w-11 rounded-[14px] text-muted-foreground hover:text-foreground"
+                                className="notification-liquid-control h-11 w-11 rounded-[14px] text-muted-foreground hover:text-foreground"
                             >
                                 <ChevronRight className="h-[18px] w-[18px]" />
                               </Button>
@@ -747,7 +742,7 @@ export const CalendarView = ({
                 <div
                     aria-hidden="true"
                     className={cn(
-                        "agenda-scroll-edge pointer-events-none absolute left-6 right-6 z-[35]",
+                        "agenda-scroll-edge pointer-events-none absolute left-5 right-5 z-[35]",
                         isCalendarScrolled && "is-visible",
                     )}
                     style={{ top: FLOATING_TOOLBAR_TOP + FLOATING_TOOLBAR_HEIGHT }}

@@ -11,9 +11,9 @@ describe("agenda desktop compact header contract", () => {
     const styles = source("src/index.css");
 
     expect(calendar).toContain("agenda-floating-header");
-    expect(calendar).toContain("pointer-events-none absolute left-6 right-6 top-6");
+    expect(calendar).toContain("pointer-events-none absolute left-5 right-5 top-5");
     expect(calendar).toContain("agenda-floating-pill");
-    expect(calendar).toContain("p-6");
+    expect(calendar).toContain("p-5");
     expect(calendar).toContain("h-12");
     expect(calendar).toContain("h-11");
     expect(calendar).not.toContain("<header className=\"agenda-liquid-surface");
@@ -29,8 +29,6 @@ describe("agenda desktop compact header contract", () => {
     expect(calendar).toContain("<Calendar");
     expect(calendar).toContain("subMonths(date, 1)");
     expect(calendar).toContain("addMonths(date, 1)");
-    expect(calendar).toContain("agenda-navigation-icon");
-    expect(calendar).not.toContain('className="notification-liquid-control h-11 w-11 rounded-[14px] text-muted-foreground');
     expect(calendar).not.toMatch(/>\s*Hoje\s*</u);
     expect(calendar).toContain('{ value: "daily", label: "Dia" }');
     expect(calendar).toContain('{ value: "weekly", label: "Sem" }');
@@ -51,10 +49,6 @@ describe("agenda desktop compact header contract", () => {
     expect(desktop).toContain("agenda-desktop-calendar-frame");
     expect(filters).not.toContain("agenda-filter-label");
     expect(filters).not.toContain(">Filtros<");
-    expect(calendar).toContain("<Plug");
-    expect(calendar).toContain('data-connected={isGoogleConnected ? "true" : "false"}');
-    expect(calendar).not.toContain('{isLoadingGoogle ? "Conectando"');
-    expect(desktop).not.toContain('agenda-desktop-calendar-frame relative min-h-0 flex-1 overflow-hidden rounded');
   });
 
   it("renders sticky compact weekday pills inside the same scroller", () => {
