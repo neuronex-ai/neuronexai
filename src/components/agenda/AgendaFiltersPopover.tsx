@@ -28,17 +28,6 @@ import {
   type AgendaFilterStatus,
 } from "@/lib/agenda-filters";
 
-export {
-  countActiveAgendaFilters,
-  EMPTY_AGENDA_FILTERS,
-} from "@/lib/agenda-filters";
-export type {
-  AgendaFilterModality,
-  AgendaFilterOrigin,
-  AgendaFilters,
-  AgendaFilterStatus,
-} from "@/lib/agenda-filters";
-
 const STATUS_OPTIONS: AgendaFilterStatus[] = [
   "Pendente",
   "Confirmada",

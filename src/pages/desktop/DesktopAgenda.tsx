@@ -2,16 +2,16 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { CalendarView } from "@/components/agenda/CalendarView";
-import {
-    AgendaFiltersPopover,
-    EMPTY_AGENDA_FILTERS,
-    type AgendaFilters,
-} from "@/components/agenda/AgendaFiltersPopover";
+import { AgendaFiltersPopover } from "@/components/agenda/AgendaFiltersPopover";
 import { useAppointments } from "@/hooks/use-appointments";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { useAgendaRealtime } from "@/hooks/use-agenda-realtime";
-import { matchesAgendaFilters } from "@/lib/agenda-filters";
+import {
+    EMPTY_AGENDA_FILTERS,
+    matchesAgendaFilters,
+    type AgendaFilters,
+} from "@/lib/agenda-filters";
 import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
 import { ProfessionalWaitlistPanel } from "@/components/agenda/ProfessionalWaitlistPanel";
 import { useProfessionalWaitlist } from "@/hooks/use-professional-waitlist";
