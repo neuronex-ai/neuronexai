@@ -61,6 +61,11 @@ begin
   if position('FOR UPDATE SKIP LOCKED' in upper(v_function_definition)) = 0 then
     raise exception 'appointment effect claim does not use SKIP LOCKED';
   end if;
+  if position('PREDECESSOR.QUEUE_SEQUENCE < EFFECT.QUEUE_SEQUENCE' in upper(v_function_definition)) = 0
+    or position('ORDER BY EFFECT.NEXT_ATTEMPT_AT, EFFECT.QUEUE_SEQUENCE' in upper(v_function_definition)) = 0
+  then
+    raise exception 'appointment effect claim does not preserve deterministic FIFO order';
+  end if;
 
   if not exists (
     select 1
@@ -71,6 +76,17 @@ begin
       and indexdef ilike '%where%status%pending%failed%'
   ) then
     raise exception 'appointment effect ready partial index is missing';
+  end if;
+
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'private'
+      and table_name = 'appointment_effect_outbox'
+      and column_name = 'queue_sequence'
+      and is_identity = 'YES'
+  ) then
+    raise exception 'appointment effect monotonic queue sequence is missing';
   end if;
 
   select count(*) into v_trigger_count

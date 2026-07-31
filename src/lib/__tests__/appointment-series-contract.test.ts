@@ -54,13 +54,17 @@ describe("transactional appointment series contract", () => {
     const modal = source("src/components/agenda/NewAppointmentModal.tsx");
     const addAppointmentHook = source("src/hooks/use-add-appointment.ts");
 
-    expect(modal).toContain("createAgendaSeries({");
-    expect(modal).toContain("createAppointment(appointmentPayload)");
+    expect(modal).toContain("prepareAgendaSeries({");
+    expect(modal).toContain("executePreparedAgendaSeries({");
+    expect(modal).toContain("prepared_plan: preparedSinglePlan.plan");
     expect(modal).not.toContain("createSeries({");
     expect(modal).toContain("A série e as reservas de pacote são confirmadas juntas.");
     expect(modal).not.toContain("addRecurrenceInterval");
     expect(modal).not.toMatch(/for\s*\([^)]*recurrence/i);
-    expect(addAppointmentHook).toContain('prepareAndExecuteAppointmentAction("create"');
+    expect(addAppointmentHook).toContain(
+      "appointmentData.prepared_plan || await prepareNewAppointment",
+    );
+    expect(addAppointmentHook).toContain("executeAppointmentActionPlan(prepared)");
     expect(addAppointmentHook).toContain("appointmentData.package_id || null");
   });
 });

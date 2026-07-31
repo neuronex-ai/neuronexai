@@ -13,7 +13,16 @@ const migration = readFileSync(
 describe("Agenda backend hardening contract", () => {
   it("keeps provider work private, leased, idempotent and service-role-only", () => {
     expect(migration).toContain("create table private.appointment_effect_outbox");
+    expect(migration).toContain(
+      "queue_sequence bigint generated always as identity",
+    );
     expect(migration).toContain("for update skip locked");
+    expect(migration).toContain(
+      "predecessor.queue_sequence < effect.queue_sequence",
+    );
+    expect(migration).toContain(
+      "order by effect.next_attempt_at, effect.queue_sequence",
+    );
     expect(migration).toContain("'waiting_connection'");
     expect(migration).toContain("unique (professional_id, idempotency_key)");
     expect(migration).toContain(
@@ -45,6 +54,29 @@ describe("Agenda backend hardening contract", () => {
     );
     expect(migration).toContain("series.default_config -> 'overrides'");
     expect(migration).toContain("appointments_persist_materialized_occurrence_override");
+    expect(migration).toContain(
+      "plan_config.config || coalesce(series.default_config, '{}'::jsonb)",
+    );
+    expect(migration).toContain(
+      "drop trigger if exists agenda_v2_apply_occurrence_override",
+    );
+  });
+
+  it("resolves availability independently for every generated occurrence", () => {
+    const start = migration.indexOf(
+      "create or replace function private.preview_agenda_v2_plan",
+    );
+    const end = migration.indexOf(
+      "revoke all on function private.preview_agenda_v2_plan",
+      start,
+    );
+    const body = migration.slice(start, end);
+
+    expect(start).toBeGreaterThan(-1);
+    expect(body).toContain(
+      "v_version_id := private.agenda_v2_availability_version",
+    );
+    expect(body).toContain("'availabilityVersionId', v_version_id");
   });
 
   it("materializes accepted waitlist offers as confirmed appointments", () => {

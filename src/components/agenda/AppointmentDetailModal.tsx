@@ -158,6 +158,7 @@ export const AppointmentDetailModal = ({
   const [professionalAction, setProfessionalAction] = useState<ProfessionalAppointmentAction | null>(null);
   const [smartFitCandidates, setSmartFitCandidates] = useState<AgendaPlanSmartFitCandidate[]>([]);
   const [allowShorterSmartFit, setAllowShorterSmartFit] = useState(false);
+  const [isWaitlistOriginExpanded, setIsWaitlistOriginExpanded] = useState(false);
   const loadedAppointmentKeyRef = useRef<string | null>(null);
   const historyButtonRef = useRef<HTMLButtonElement>(null);
   const historyBackButtonRef = useRef<HTMLButtonElement>(null);
@@ -197,6 +198,10 @@ export const AppointmentDetailModal = ({
   const invitationBlockedByPendingRequest = Boolean(lifecycle.pendingRequest);
   const smartFitAvailable = new Date(appointment.end_time) > new Date()
     && !["cancelled", "in_progress", "completed", "closed"].includes(appointment.lifecycle_status || "");
+
+  useEffect(() => {
+    setIsWaitlistOriginExpanded(false);
+  }, [appointment.id, open]);
 
   const loadData = useCallback(async () => {
     setStep(1);
@@ -523,7 +528,7 @@ export const AppointmentDetailModal = ({
             className="flex min-h-0 flex-1 flex-col bg-transparent"
           >
         <div className="agenda-modal-header flex shrink-0 items-center justify-between border-b px-5 pb-4 pt-5 backdrop-blur-2xl sm:px-6">
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1 pr-2">
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h2 className="text-xl font-bold text-foreground tracking-tight">
                 {isSession ? "Ficha da Sessão" : "Ficha do Compromisso"}
@@ -543,12 +548,45 @@ export const AppointmentDetailModal = ({
                 </div>
               ) : null}
               {isFromWaitlist ? (
-                <div className="flex items-center gap-1.5 rounded-full border border-sky-500/20 bg-sky-500/10 px-2.5 py-1 text-sky-700 dark:text-sky-300">
-                  <ListPlus className="h-3 w-3" aria-hidden="true" />
-                  <span className="whitespace-nowrap text-[9px] font-black uppercase tracking-[0.1em]">
-                    Lista de espera · confirmado pelo paciente
-                  </span>
-                </div>
+                <motion.button
+                  layout={!shouldReduceMotion}
+                  type="button"
+                  aria-expanded={isWaitlistOriginExpanded}
+                  aria-label={isWaitlistOriginExpanded
+                    ? "Origem: lista de espera, confirmado pelo paciente. Recolher detalhes."
+                    : "Origem: lista de espera. Mostrar detalhes."}
+                  title="Origem: lista de espera"
+                  onClick={() => setIsWaitlistOriginExpanded((current) => !current)}
+                  transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                  className={cn(
+                    "agenda-tactile inline-flex min-h-11 max-w-full shrink-0 items-center justify-center rounded-full p-1.5 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+                    isWaitlistOriginExpanded ? "min-w-11" : "w-11",
+                  )}
+                >
+                  <motion.span
+                    layout={!shouldReduceMotion}
+                    transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                    className={cn(
+                      "appointment-liquid-control inline-flex min-h-8 max-w-full items-center justify-center overflow-hidden rounded-full border border-border/50 bg-muted/40 hover:bg-muted/60 dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
+                      isWaitlistOriginExpanded ? "gap-1.5 px-2.5" : "h-8 w-8 px-0",
+                    )}
+                  >
+                    <ListPlus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    <AnimatePresence initial={false}>
+                      {isWaitlistOriginExpanded ? (
+                        <motion.span
+                          initial={shouldReduceMotion ? false : { opacity: 0, x: -4 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: -4 }}
+                          transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
+                          className="max-w-[min(15rem,calc(100vw-13rem))] whitespace-normal text-left text-[9px] font-black uppercase leading-tight tracking-[0.09em]"
+                        >
+                          Lista de espera · confirmado pelo paciente
+                        </motion.span>
+                      ) : null}
+                    </AnimatePresence>
+                  </motion.span>
+                </motion.button>
               ) : null}
             </div>
             <p className="text-sm font-medium text-muted-foreground">

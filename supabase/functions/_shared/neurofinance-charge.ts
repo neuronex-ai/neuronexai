@@ -7,7 +7,6 @@ import {
   getFinancialAccount,
   getFinancialAccountAsaasApiKey,
   supabaseAdmin,
-  type AsaasBillingType,
 } from "./asaas-client.ts";
 import {
   estimatePaymentFee,
@@ -15,16 +14,11 @@ import {
   normalizePaymentState,
 } from "./neurofinance-financial.ts";
 import { ensureFinancialEntryForCharge } from "./financial-management.ts";
+import {
+  neurofinanceBillingType,
+  neurofinanceChargeOperationId,
+} from "./neurofinance-charge-contract.ts";
 import { requireEntitlementForUser } from "./subscription-access.ts";
-
-const BILLING_TYPE_MAP: Record<string, AsaasBillingType> = {
-  pix: "PIX",
-  card: "CREDIT_CARD",
-  credit_card: "CREDIT_CARD",
-  boleto: "BOLETO",
-  patient_decides: "UNDEFINED",
-  undefined: "UNDEFINED",
-};
 
 export type NeurofinanceChargePayload = {
   patient_id?: string | null;
@@ -66,12 +60,7 @@ export async function createNeurofinanceChargeForUser(input: {
   if (!Number.isInteger(amount) || amount <= 0) {
     throw new Error("Valor da cobrança inválido.");
   }
-  const operationId = String(
-    payload.operation_id || payload.financial_entry_id || crypto.randomUUID(),
-  ).trim();
-  if (operationId.length < 8 || operationId.length > 120) {
-    throw new Error("Identificador da operação inválido.");
-  }
+  const operationId = neurofinanceChargeOperationId(payload);
 
   const resolvedMethod = payload.payment_method || payload.payment_methods?.[0] ||
     "patient_decides";
@@ -109,8 +98,7 @@ export async function createNeurofinanceChargeForUser(input: {
     email: patientData.email,
     externalReference: payload.patient_id || undefined,
   });
-  const billingType = BILLING_TYPE_MAP[String(resolvedMethod).toLowerCase()] ||
-    "UNDEFINED";
+  const billingType = neurofinanceBillingType(resolvedMethod);
   const normalizedMethod = normalizePaymentMethod(billingType);
   const feeEstimate = await estimatePaymentFee(amount, normalizedMethod, 1);
   const initialState = normalizePaymentState({ status: "PENDING" }, "PAYMENT_CREATED");

@@ -39,6 +39,14 @@ const isOnline = (appointment: Record<string, any>) =>
 
 const googleRequestReason = "Synchronizing a committed NeuroNex appointment";
 
+const googleEnv = (name: string) => {
+  try {
+    return Deno.env.get(name) || "";
+  } catch {
+    return "";
+  }
+};
+
 async function deterministicGoogleEventId(appointmentId: string) {
   const bytes = new TextEncoder().encode(`neuronex:appointment:${appointmentId}`);
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
@@ -54,8 +62,8 @@ async function refreshAccessToken(
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: Deno.env.get("GOOGLE_CLIENT_ID") || "",
-      client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET") || "",
+      client_id: googleEnv("GOOGLE_CLIENT_ID"),
+      client_secret: googleEnv("GOOGLE_CLIENT_SECRET"),
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }).toString(),
@@ -222,7 +230,6 @@ export async function syncCommittedAppointmentToGoogle(input: {
   const eventUrl = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`;
 
   if (input.operation === "cancel") {
-    if (!existingEventId) return { skipped: true, reason: "never_synced" };
     await googleFetch(`${eventUrl}?sendUpdates=all`, accessToken, { method: "DELETE" }, [404, 410]);
     return { success: true, operation: "cancel", googleEventId: eventId };
   }

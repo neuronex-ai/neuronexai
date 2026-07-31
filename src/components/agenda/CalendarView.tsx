@@ -831,8 +831,9 @@ const WaitlistOriginMark = ({ appointment, className }: { appointment: Appointme
     if (!isWaitlistAppointment(appointment)) return null;
     return (
         <span
+            role="img"
             className={cn(
-                "inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-300",
+                "appointment-liquid-control inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border/55 bg-muted/45 text-muted-foreground dark:bg-white/[0.035]",
                 className,
             )}
             aria-label="Criado pela lista de espera inteligente"

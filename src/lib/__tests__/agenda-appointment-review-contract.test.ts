@@ -47,4 +47,13 @@ describe("Agenda appointment review contract", () => {
     expect(modal).toContain("currentSingleFingerprintRef.current === intent.fingerprint");
     expect(modal).toContain("currentSingleIdempotencyKeyRef.current === idempotencyKey");
   });
+
+  it("prepares recurring plans before review and executes only the reviewed hash", () => {
+    expect(modal).toContain("prepareAgendaSeries");
+    expect(modal).toContain("prepareSeriesAppointmentForReview(form.getValues())");
+    expect(modal).toContain("preparedSeriesPlan.fingerprint !== seriesIntent.fingerprint");
+    expect(modal).toContain("executePreparedAgendaSeries({");
+    expect(modal).toContain("plan: preparedSeriesPlan.plan");
+    expect(modal).not.toContain("createAgendaSeries({");
+  });
 });

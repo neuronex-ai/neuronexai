@@ -12,6 +12,7 @@ create schema if not exists private;
 
 create table private.appointment_effect_outbox (
   id uuid primary key default gen_random_uuid(),
+  queue_sequence bigint generated always as identity not null unique,
   professional_id uuid not null references auth.users(id) on delete cascade,
   appointment_id uuid not null references public.appointments(id) on delete cascade,
   appointment_revision integer not null default 1,
@@ -67,10 +68,18 @@ create table private.appointment_effect_outbox (
 );
 
 create index appointment_effect_outbox_appointment_idx
-  on private.appointment_effect_outbox (appointment_id, created_at desc);
+  on private.appointment_effect_outbox (
+    appointment_id,
+    effect_type,
+    queue_sequence
+  );
 
 create index appointment_effect_outbox_ready_idx
-  on private.appointment_effect_outbox (effect_type, next_attempt_at, created_at)
+  on private.appointment_effect_outbox (
+    effect_type,
+    next_attempt_at,
+    queue_sequence
+  )
   where status in ('pending', 'failed');
 
 create index appointment_effect_outbox_stale_lease_idx
@@ -208,7 +217,7 @@ begin
         from private.appointment_effect_outbox predecessor
         where predecessor.appointment_id = effect.appointment_id
           and predecessor.effect_type = effect.effect_type
-          and (predecessor.created_at, predecessor.id) < (effect.created_at, effect.id)
+          and predecessor.queue_sequence < effect.queue_sequence
           and (
             predecessor.status in ('pending', 'processing', 'waiting_connection')
             or (
@@ -217,7 +226,7 @@ begin
             )
           )
       )
-    order by effect.next_attempt_at, effect.created_at, effect.id
+    order by effect.next_attempt_at, effect.queue_sequence
     limit case
       when p_outbox_id is null then least(greatest(coalesce(p_limit, 20), 1), 100)
       else 1
@@ -585,6 +594,38 @@ $$;
 revoke all on function private.appointment_has_google_connection(uuid)
   from public, anon, authenticated, service_role;
 
+create or replace function private.appointment_local_date(
+  p_professional_id uuid,
+  p_instant timestamptz
+)
+returns date
+language plpgsql
+stable
+security definer
+set search_path = pg_catalog
+as $$
+declare
+  v_timezone text := 'America/Sao_Paulo';
+begin
+  if p_instant is null then
+    return null;
+  end if;
+
+  select coalesce(version.timezone, 'America/Sao_Paulo')
+  into v_timezone
+  from public.professional_availability_versions version
+  where version.professional_id = p_professional_id
+    and version.effective_from <= p_instant
+  order by version.effective_from desc, version.version_number desc
+  limit 1;
+
+  return (p_instant at time zone coalesce(v_timezone, 'America/Sao_Paulo'))::date;
+end;
+$$;
+
+revoke all on function private.appointment_local_date(uuid, timestamptz)
+  from public, anon, authenticated, service_role;
+
 create or replace function private.appointment_google_relevant_metadata(
   p_metadata jsonb
 )
@@ -752,6 +793,7 @@ begin
     or private.appointment_google_relevant_metadata(new.metadata)
       is distinct from private.appointment_google_relevant_metadata(old.metadata)
     or new.lifecycle_status is distinct from old.lifecycle_status
+    or new.status is distinct from old.status
   );
 
   if not v_schedule_changed then
@@ -840,7 +882,7 @@ before insert on public.appointments
 for each row execute function private.prepare_appointment_external_effect_state();
 create trigger appointments_20_prepare_external_effect_state_update
 before update of
-  start_time, end_time, type, location, notes, lifecycle_status, metadata, google_event_id
+  start_time, end_time, type, location, notes, lifecycle_status, status, metadata, google_event_id
 on public.appointments
 for each row execute function private.prepare_appointment_external_effect_state();
 
@@ -866,7 +908,10 @@ declare
   v_google_state_fingerprint text;
 begin
   v_cancelled := new.lifecycle_status = 'cancelled'
-    or lower(coalesce(new.status, '')) in ('cancelled', 'canceled', 'cancelled_by_patient');
+    or lower(coalesce(new.status, '')) in (
+      'cancelled', 'canceled',
+      'cancelled_by_patient', 'cancelled_by_professional'
+    );
   v_schedule_changed := tg_op = 'INSERT' or (
     new.start_time is distinct from old.start_time
     or new.end_time is distinct from old.end_time
@@ -876,6 +921,7 @@ begin
     or private.appointment_google_relevant_metadata(new.metadata)
       is distinct from private.appointment_google_relevant_metadata(old.metadata)
     or new.lifecycle_status is distinct from old.lifecycle_status
+    or new.status is distinct from old.status
   );
 
   if not v_schedule_changed then
@@ -973,7 +1019,7 @@ begin
   );
   v_due_date := coalesce(
     nullif(v_financial ->> 'due_date', '')::date,
-    new.start_time::date
+    private.appointment_local_date(new.user_id, new.start_time)
   );
   v_operation_id := 'appointment:' || new.id::text || ':revision:'
     || v_revision::text || ':neurofinance:create';
@@ -1019,7 +1065,7 @@ create trigger appointments_80_enqueue_external_effects_insert
 after insert on public.appointments
 for each row execute function private.enqueue_appointment_external_effects();
 create trigger appointments_80_enqueue_external_effects_update
-after update of start_time, end_time, type, location, notes, lifecycle_status, metadata
+after update of start_time, end_time, type, location, notes, lifecycle_status, status, metadata
 on public.appointments
 for each row execute function private.enqueue_appointment_external_effects();
 
@@ -1053,7 +1099,10 @@ begin
     v_operation := case
       when v_appointment.lifecycle_status = 'cancelled'
         or lower(coalesce(v_appointment.status, ''))
-          in ('cancelled', 'canceled', 'cancelled_by_patient')
+          in (
+            'cancelled', 'canceled',
+            'cancelled_by_patient', 'cancelled_by_professional'
+          )
       then 'cancel'
       else 'update'
     end;
@@ -1198,12 +1247,12 @@ begin
 
     if v_occurrence_start <= now() then
       v_reason_code := 'past_time';
-      v_reason := 'A data ou o horÃ¡rio jÃ¡ passou.';
+      v_reason := 'A data ou o horário já passou.';
     elsif (v_occurrence_start at time zone v_timezone)::date
       <> (v_occurrence_end at time zone v_timezone)::date
     then
       v_reason_code := 'crosses_day';
-      v_reason := 'A sessÃ£o precisa comeÃ§ar e terminar no mesmo dia.';
+      v_reason := 'A sessão precisa começar e terminar no mesmo dia.';
     else
       v_day_key := extract(
         dow from v_occurrence_start at time zone v_timezone
@@ -1214,7 +1263,7 @@ begin
         and not coalesce((v_day_config ->> 'enabled')::boolean, false)
       then
         v_reason_code := 'outside_working_day';
-        v_reason := 'O profissional nÃ£o atende neste dia.';
+        v_reason := 'O profissional não atende neste dia.';
       elsif not v_allow_outside_working_hours
         and (
           coalesce(v_day_config ->> 'start', '') !~ '^([01][0-9]|2[0-3]):[0-5][0-9]$'
@@ -1232,7 +1281,7 @@ begin
         )
       then
         v_reason_code := 'outside_working_hours';
-        v_reason := 'O horÃ¡rio estÃ¡ fora do expediente do profissional.';
+        v_reason := 'O horário está fora do expediente do profissional.';
       elsif exists (
         select 1
         from public.appointments conflict
@@ -1248,7 +1297,7 @@ begin
           and conflict.end_time > v_occurrence_start
       ) then
         v_reason_code := 'appointment_conflict';
-        v_reason := 'JÃ¡ existe um compromisso neste horÃ¡rio.';
+        v_reason := 'Já existe um compromisso neste horário.';
       end if;
     end if;
 
@@ -1724,7 +1773,10 @@ begin
             ),
             'dueDate', coalesce(
               nullif(v_financial ->> 'due_date', '')::date,
-              v_created_appointment.start_time::date
+              private.appointment_local_date(
+                v_created_appointment.user_id,
+                v_created_appointment.start_time
+              )
             ),
             'financialEntryId', v_created_appointment.financial_entry_id,
             'operationId', v_neurofinance_operation_id,
@@ -1837,6 +1889,7 @@ declare
   v_reason_code text;
   v_reason text;
   v_version_id uuid;
+  v_first_version_id uuid;
   v_financial jsonb := '{}'::jsonb;
   v_timezone text := coalesce(
     nullif(p_input ->> 'timezone', ''),
@@ -1850,7 +1903,7 @@ begin
     where patient.id = v_patient_id
       and patient.user_id = p_professional_id
   ) then
-    raise exception 'Paciente nÃ£o encontrado.' using errcode = '42501';
+    raise exception 'Paciente não encontrado.' using errcode = '42501';
   end if;
 
   if v_package_id is not null then
@@ -1862,13 +1915,13 @@ begin
       and package.patient_id = v_patient_id;
 
     if not found then
-      raise exception 'Pacote nÃ£o encontrado para este paciente.' using errcode = 'P0002';
+      raise exception 'Pacote não encontrado para este paciente.' using errcode = 'P0002';
     end if;
     if v_package.package_status <> 'active'
       or lower(coalesce(v_package.active, 'true')) not in ('true', '1', 'yes', 'active')
       or (v_package.end_date is not null and v_package.end_date < current_date)
     then
-      raise exception 'O pacote nÃ£o estÃ¡ ativo ou estÃ¡ fora da validade.' using errcode = '22023';
+      raise exception 'O pacote não está ativo ou está fora da validade.' using errcode = '22023';
     end if;
 
     v_package_balance := greatest(
@@ -1879,9 +1932,9 @@ begin
 
   v_occurrences := private.generate_agenda_v2_occurrences(p_professional_id, p_input);
   if jsonb_array_length(v_occurrences) = 0 then
-    raise exception 'A regra nÃ£o gerou nenhuma sessÃ£o.' using errcode = '22023';
+    raise exception 'A regra não gerou nenhuma sessão.' using errcode = '22023';
   end if;
-  v_version_id := private.agenda_v2_availability_version(
+  v_first_version_id := private.agenda_v2_availability_version(
     p_professional_id,
     (v_occurrences -> 0 ->> 'startTime')::timestamptz
   );
@@ -1893,18 +1946,22 @@ begin
     v_end := (v_item ->> 'endTime')::timestamptz;
     v_local_date := (v_start at time zone v_timezone)::date;
     v_end_local_date := (v_end at time zone v_timezone)::date;
+    v_version_id := private.agenda_v2_availability_version(
+      p_professional_id,
+      v_start
+    );
     v_reason_code := null;
     v_reason := null;
 
     if v_start <= now() then
       v_reason_code := 'past_time';
-      v_reason := 'A data ou o horÃ¡rio jÃ¡ passou.';
+      v_reason := 'A data ou o horário já passou.';
     elsif v_end <= v_start then
       v_reason_code := 'invalid_time_range';
-      v_reason := 'O horÃ¡rio final precisa ser posterior ao inicial.';
+      v_reason := 'O horário final precisa ser posterior ao inicial.';
     elsif v_local_date <> v_end_local_date then
       v_reason_code := 'crosses_day';
-      v_reason := 'O compromisso precisa comeÃ§ar e terminar no mesmo dia.';
+      v_reason := 'O compromisso precisa começar e terminar no mesmo dia.';
     elsif not v_is_event
       and not private.agenda_v2_is_available(
         p_professional_id,
@@ -1929,7 +1986,7 @@ begin
           && tstzrange(v_start, v_end, '[)')
     ) then
       v_reason_code := 'appointment_conflict';
-      v_reason := 'JÃ¡ existe um compromisso neste horÃ¡rio.';
+      v_reason := 'Já existe um compromisso neste horário.';
     elsif exists (
       select 1 from public.appointment_slot_holds hold
       where hold.professional_id = p_professional_id
@@ -1939,29 +1996,30 @@ begin
           && tstzrange(v_start, v_end, '[)')
     ) then
       v_reason_code := 'slot_held';
-      v_reason := 'O horÃ¡rio estÃ¡ temporariamente reservado.';
+      v_reason := 'O horário está temporariamente reservado.';
     elsif v_package_id is not null
       and v_package.start_date is not null
       and v_local_date < v_package.start_date
     then
       v_reason_code := 'package_outside_validity';
-      v_reason := 'A sessÃ£o ocorre antes do inÃ­cio da validade do pacote.';
+      v_reason := 'A sessão ocorre antes do início da validade do pacote.';
     elsif v_package_id is not null
       and v_package.end_date is not null
       and v_local_date > v_package.end_date
     then
       v_reason_code := 'package_outside_validity';
-      v_reason := 'A sessÃ£o ultrapassa a validade do pacote.';
+      v_reason := 'A sessão ultrapassa a validade do pacote.';
     elsif v_package_id is not null and v_occurrence_index > v_package_balance then
       v_reason_code := 'package_insufficient_balance';
       v_reason := format(
-        'O pacote possui saldo para %s sessÃ£o(Ãµes), abaixo do necessÃ¡rio para esta sÃ©rie.',
+        'O pacote possui saldo para %s sessão(ões), abaixo do necessário para esta série.',
         v_package_balance
       );
     end if;
 
     v_item := v_item || jsonb_strip_nulls(jsonb_build_object(
       'status', case when v_reason_code is null then 'available' else 'conflict' end,
+      'availabilityVersionId', v_version_id,
       'reasonCode', v_reason_code,
       'reason', v_reason
     ));
@@ -1986,7 +2044,7 @@ begin
     'durationMinutes', (p_input ->> 'duration_minutes')::integer,
     'firstStartTime', v_checked -> 0 ->> 'startTime',
     'lastStartTime', v_checked -> (jsonb_array_length(v_checked) - 1) ->> 'startTime',
-    'availabilityVersionId', v_version_id,
+    'availabilityVersionId', v_first_version_id,
     'occurrences', v_checked,
     'conflicts', v_conflicts,
     'financial', v_financial,
@@ -2146,7 +2204,7 @@ begin
 
   if v_override ? 'modality' then
     if v_override ->> 'modality' not in ('presencial', 'online', 'block') then
-      raise exception 'Modalidade personalizada invÃ¡lida.' using errcode = '22023';
+      raise exception 'Modalidade personalizada inválida.' using errcode = '22023';
     end if;
     new.type := v_override ->> 'modality';
   end if;
@@ -2170,6 +2228,8 @@ revoke all on function private.apply_materialized_series_override()
   from public, anon, authenticated, service_role;
 
 drop trigger if exists agenda_v2_apply_materialized_series_override
+  on public.appointments;
+drop trigger if exists agenda_v2_apply_occurrence_override
   on public.appointments;
 create trigger agenda_v2_apply_materialized_series_override
 before insert on public.appointments
@@ -2302,7 +2362,7 @@ with plan_config as (
   order by appointment.series_id, appointment.occurrence_number nulls last, appointment.created_at
 )
 update public.appointment_series series
-set default_config = coalesce(series.default_config, '{}'::jsonb) || plan_config.config,
+set default_config = plan_config.config || coalesce(series.default_config, '{}'::jsonb),
     updated_at = now()
 from plan_config
 where series.id = plan_config.series_id;
@@ -2369,10 +2429,10 @@ begin
   where appointment.id = p_appointment_id
     and appointment.user_id = v_professional_id;
   if not found then
-    raise exception 'Agendamento nÃ£o encontrado.' using errcode = 'P0002';
+    raise exception 'Agendamento não encontrado.' using errcode = 'P0002';
   end if;
   if v_appointment.start_time is null or v_appointment.end_time is null then
-    raise exception 'Agendamento sem intervalo vÃ¡lido.' using errcode = '22023';
+    raise exception 'Agendamento sem intervalo válido.' using errcode = '22023';
   end if;
   if coalesce(v_appointment.lifecycle_status, 'created') in (
     'cancelled', 'in_progress', 'completed', 'closed'
@@ -2380,24 +2440,24 @@ begin
     'cancelled', 'canceled', 'cancelled_by_patient',
     'cancelled_by_professional', 'completed'
   ) then
-    raise exception 'Este agendamento nÃ£o pode ser reencaixado.' using errcode = '55000';
+    raise exception 'Este agendamento não pode ser reencaixado.' using errcode = '55000';
   end if;
 
   v_duration := extract(epoch from (
     v_appointment.end_time - v_appointment.start_time
   ))::integer / 60;
   if v_duration not between 15 and 1440 then
-    raise exception 'DuraÃ§Ã£o do agendamento invÃ¡lida.' using errcode = '22023';
+    raise exception 'Duração do agendamento inválida.' using errcode = '22023';
   end if;
   if p_minimum_duration_minutes not between 15 and 1440 then
-    raise exception 'DuraÃ§Ã£o mÃ­nima invÃ¡lida.' using errcode = '22023';
+    raise exception 'Duração mínima inválida.' using errcode = '22023';
   end if;
 
   v_anchor_start := coalesce(p_anchor_start, v_appointment.start_time);
   if v_anchor_start <= now()
     or v_anchor_start > now() + interval '10 years'
   then
-    raise exception 'A Ã¢ncora do reencaixe precisa ser futura e vÃ¡lida.'
+    raise exception 'A âncora do reencaixe precisa ser futura e válida.'
       using errcode = '22023';
   end if;
 
@@ -2750,10 +2810,10 @@ declare
   v_now timestamptz := now();
 begin
   if p_response not in ('accept', 'decline') then
-    raise exception 'Resposta invÃ¡lida.' using errcode = '22023';
+    raise exception 'Resposta inválida.' using errcode = '22023';
   end if;
   if p_token is null or char_length(p_token) <> 64 then
-    raise exception 'Oferta invÃ¡lida ou expirada.' using errcode = '22023';
+    raise exception 'Oferta inválida ou expirada.' using errcode = '22023';
   end if;
 
   select offer.* into v_offer
@@ -2761,7 +2821,7 @@ begin
   where offer.token_hash = encode(digest(p_token, 'sha256'), 'hex');
 
   if not found then
-    raise exception 'Oferta invÃ¡lida ou expirada.' using errcode = 'P0002';
+    raise exception 'Oferta inválida ou expirada.' using errcode = 'P0002';
   end if;
 
   -- Keep the same lock order as offer creation: entry -> appointment advisory
@@ -2883,7 +2943,10 @@ begin
     where appointment.user_id = v_offer.professional_id
       and appointment.start_time is not null
       and appointment.end_time is not null
-      and lower(coalesce(appointment.status, '')) not in ('cancelled', 'canceled')
+      and lower(coalesce(appointment.status, '')) not in (
+        'cancelled', 'canceled',
+        'cancelled_by_patient', 'cancelled_by_professional'
+      )
       and appointment.lifecycle_status <> 'cancelled'
       and tstzrange(appointment.start_time, appointment.end_time, '[)')
         && tstzrange(v_offer.offered_start_time, v_offer.offered_end_time, '[)')
@@ -2957,14 +3020,20 @@ begin
     nullif(v_snapshot ->> 'notes', ''),
     nullif(coalesce(v_snapshot ->> 'location', v_entry.location), ''),
     coalesce(v_snapshot -> 'metadata', '{}'::jsonb)
-      || jsonb_build_object(
+      || jsonb_strip_nulls(jsonb_build_object(
         'origin', 'waitlist',
         'waitlistEntryId', v_entry.id,
         'waitlistOfferId', v_offer.id,
         'waitlistAcceptedAt', v_now,
         'sessionType', coalesce(v_snapshot ->> 'sessionType', 'follow_up'),
-        'financial', v_financial
-      ),
+        'financial', v_financial,
+        'requiresFinancialReview', case
+          when lower(coalesce(v_snapshot ->> 'requiresFinancialReview', 'false'))
+            in ('true', '1', 'yes')
+          then true
+          else null
+        end
+      )),
     v_now,
     1,
     'standard',
@@ -2983,7 +3052,11 @@ begin
           then (v_snapshot ->> 'schemaVersion')::integer
         else 1
       end,
-      'financialMode', v_financial_mode
+      'financialMode', v_financial_mode,
+      'requiresFinancialReview', lower(coalesce(
+        v_snapshot ->> 'requiresFinancialReview',
+        'false'
+      )) in ('true', '1', 'yes')
     )
   ) returning id into v_appointment_id;
 
@@ -3041,11 +3114,17 @@ begin
       v_offer.patient_id,
       v_appointment_id,
       'income',
-      'SessÃ£o agendada',
-      'LanÃ§amento aprovado na oferta da lista de espera',
+      'Sessão agendada',
+      'Lançamento aprovado na oferta da lista de espera',
       v_manual_amount,
-      v_offer.offered_start_time::date,
-      v_offer.offered_start_time::date,
+      private.appointment_local_date(
+        v_offer.professional_id,
+        v_offer.offered_start_time
+      ),
+      private.appointment_local_date(
+        v_offer.professional_id,
+        v_offer.offered_start_time
+      ),
       'pending',
       coalesce(nullif(v_financial ->> 'payment_method', ''), 'manual'),
       'appointment',
@@ -3099,7 +3178,7 @@ begin
     p_category => 'agenda',
     p_severity => 'success',
     p_title => 'Vaga aceita na lista de espera',
-    p_message => 'O paciente aceitou a vaga. O novo agendamento jÃ¡ estÃ¡ disponÃ­vel na Agenda.',
+    p_message => 'O paciente aceitou a vaga. O novo agendamento já está disponível na Agenda.',
     p_action_url => '/agenda?appointmentId=' || v_appointment_id::text,
     p_priority => 'high',
     p_data => jsonb_build_object(

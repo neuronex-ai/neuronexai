@@ -18,6 +18,7 @@ describe("agenda drag reschedule review contract", () => {
     expect(calendar).toContain('originChannel: "professional_app"');
     expect(calendar).not.toContain("updateAppointment.mutateAsync({");
     expect(conflictDialog).toContain("suggestAppointmentSmartFit");
+    expect(conflictDialog).toContain("anchorStart: conflict.requestedStart");
     expect(conflictDialog).toContain('plan.status === "review_required"');
     expect(conflictDialog).toContain('plan.status === "awaiting_confirmation"');
     expect(conflictDialog).toContain("onPlanReady(plan)");

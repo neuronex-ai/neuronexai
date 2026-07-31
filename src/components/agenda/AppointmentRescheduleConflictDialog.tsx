@@ -66,6 +66,7 @@ export function AppointmentRescheduleConflictDialog({
     try {
       const result = await suggestAppointmentSmartFit({
         appointmentId: conflict.appointment.id,
+        anchorStart: conflict.requestedStart,
         allowShorter,
         minimumDurationMinutes: 30,
       });

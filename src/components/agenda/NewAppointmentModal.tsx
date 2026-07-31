@@ -666,6 +666,8 @@ export function NewAppointmentModal({
   const isSubmitting =
     isCreatingAppointment ||
     isPreparingSinglePlan ||
+    isPreparingSeriesPlan ||
+    isPreparingAgendaSeries ||
     isPreviewingAgendaPlan ||
     isCreatingAgendaSeries;
 
@@ -1143,11 +1145,22 @@ export function NewAppointmentModal({
           return;
         }
 
-        const { metadata } = buildAppointmentIntentContext(values);
-        const creationInput = buildAgendaPlanInput(values, metadata);
-        const result = await createAgendaSeries({
-          input: creationInput,
-          idempotencyKey: idempotencyKeyForPayload(creationInput),
+        const seriesIntent = buildSeriesAppointmentIntent(values);
+        if (
+          !preparedSeriesPlan
+          || preparedSeriesPlan.fingerprint !== seriesIntent.fingerprint
+          || preparedSeriesPlan.idempotencyKey !== seriesIntent.idempotencyKey
+        ) {
+          const prepared = await prepareSeriesAppointmentForReview(values);
+          if (prepared) {
+            const message = "O plano da recorrência foi atualizado. Revise o resumo e confirme novamente.";
+            setSubmissionError(message);
+            setValidationAnnouncement(message);
+          }
+          return;
+        }
+        const result = await executePreparedAgendaSeries({
+          plan: preparedSeriesPlan.plan,
         });
         toast.success(result.result.message || "Série criada com segurança.");
       } else {
@@ -1193,6 +1206,8 @@ export function NewAppointmentModal({
       idempotencyIntentRef.current = null;
       singlePlanRequestSequenceRef.current += 1;
       setPreparedSinglePlan(null);
+      seriesPlanRequestSequenceRef.current += 1;
+      setPreparedSeriesPlan(null);
       setSeriesPreview(null);
       setSeriesPreviewFingerprint(null);
       setSeriesPreviewError(null);
@@ -1345,6 +1360,128 @@ export function NewAppointmentModal({
       }
     }
   };
+
+  const prepareSeriesAppointmentForReview = useCallback(async (values: FormValues) => {
+    let intent: ReturnType<typeof buildSeriesAppointmentIntent>;
+    try {
+      intent = buildSeriesAppointmentIntent(values);
+    } catch (error) {
+      const message = error instanceof Error
+        ? error.message
+        : "Não foi possível preparar esta recorrência.";
+      setSubmissionError(message);
+      setValidationAnnouncement(message);
+      return false;
+    }
+
+    const requestSequence = ++seriesPlanRequestSequenceRef.current;
+    setPreparedSeriesPlan(null);
+    setIsPreparingSeriesPlan(true);
+    setSubmissionError(null);
+    setValidationAnnouncement("Validando o plano da recorrência.");
+
+    try {
+      const plan = await prepareAgendaSeries({
+        input: intent.input,
+        idempotencyKey: intent.idempotencyKey,
+      });
+      const isLatestDraft = requestSequence === seriesPlanRequestSequenceRef.current
+        && currentSeriesFingerprintRef.current === intent.fingerprint
+        && currentSeriesIdempotencyKeyRef.current === intent.idempotencyKey;
+      if (!isLatestDraft) return false;
+
+      setPreparedSeriesPlan({
+        fingerprint: intent.fingerprint,
+        idempotencyKey: intent.idempotencyKey,
+        plan,
+      });
+      setSubmissionError(null);
+      setValidationAnnouncement("Plano validado. Revise a recorrência antes de confirmar.");
+      return true;
+    } catch (error) {
+      if (requestSequence !== seriesPlanRequestSequenceRef.current) return false;
+      setPreparedSeriesPlan(null);
+      const agendaError = error as Error & { preview?: AgendaV2Preview };
+      if (agendaError.preview) {
+        const previewInput = buildAgendaPlanInput(values);
+        setSeriesPreview(agendaError.preview);
+        setSeriesPreviewFingerprint(appointmentPayloadFingerprint(previewInput));
+        setSeriesPreviewError(agendaError.message);
+        setStep(totalSteps);
+      }
+      if (isAppointmentPlanReviewRequiredError(error)) {
+        const issue = error.issues[0];
+        const message = issue?.message || error.message;
+        setSubmissionError(message);
+        setValidationAnnouncement(
+          issue?.occurrenceNumber
+            ? `Ocorrência ${issue.occurrenceNumber}: ${message}`
+            : message,
+        );
+        if (issue?.occurrenceNumber && bodyScrollRef.current) {
+          const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+          revealAppointmentField(
+            bodyScrollRef.current,
+            `occurrence-${issue.occurrenceNumber}`,
+            reducedMotion,
+          );
+        }
+      } else {
+        const message = agendaError.message || "Não foi possível preparar esta recorrência.";
+        setSubmissionError(message);
+        setValidationAnnouncement(message);
+        toast.error(message);
+      }
+      return false;
+    } finally {
+      if (requestSequence === seriesPlanRequestSequenceRef.current) {
+        setIsPreparingSeriesPlan(false);
+      }
+    }
+  }, [
+    buildAgendaPlanInput,
+    buildSeriesAppointmentIntent,
+    prepareAgendaSeries,
+    totalSteps,
+  ]);
+
+  useEffect(() => {
+    if (
+      !isOpen
+      || !recurrenceEnabled
+      || step !== totalSteps
+      || !seriesPreview?.valid
+      || seriesPreviewFingerprint !== currentPreviewFingerprint
+      || !currentSeriesFingerprint
+      || !currentSeriesIdempotencyKey
+    ) {
+      return;
+    }
+    if (
+      preparedSeriesPlan?.fingerprint === currentSeriesFingerprint
+      && preparedSeriesPlan.idempotencyKey === currentSeriesIdempotencyKey
+    ) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void prepareSeriesAppointmentForReview(form.getValues());
+    }, 250);
+    return () => window.clearTimeout(timeout);
+  }, [
+    currentPreviewFingerprint,
+    currentSeriesFingerprint,
+    currentSeriesIdempotencyKey,
+    form,
+    isOpen,
+    prepareSeriesAppointmentForReview,
+    preparedSeriesPlan,
+    recurrenceEnabled,
+    seriesPreview?.valid,
+    seriesPreviewFingerprint,
+    step,
+    totalSteps,
+  ]);
 
   const onInvalid = (errors: FieldErrors<FormValues>) => {
     void revealFirstInvalidField(errors);
@@ -2920,6 +3057,12 @@ export function NewAppointmentModal({
       if (recurrenceEnabled) {
         const preview = await loadSeriesPreview(form.getValues());
         if (!preview) return;
+        if (!preview.valid) {
+          nextStep();
+          return;
+        }
+        const prepared = await prepareSeriesAppointmentForReview(form.getValues());
+        if (!prepared) return;
       } else {
         const prepared = await prepareSingleAppointmentForReview(form.getValues());
         if (!prepared) return;

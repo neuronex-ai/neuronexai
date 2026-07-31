@@ -68,10 +68,12 @@ describe("Agenda lifecycle UI", () => {
 
   it("keeps drag review accessible and checks conflicts against the unfiltered collection", () => {
     const calendar = read("src/components/agenda/CalendarView.tsx");
+    const conflictDialog = read("src/components/agenda/AppointmentRescheduleConflictDialog.tsx");
     expect(calendar).toContain("useSensor(KeyboardSensor)");
     expect(calendar).toContain("accessibility={{");
-    expect(calendar).toContain("conflictAppointments.some");
     expect(calendar).toContain("new Date(newStart.getTime() + duration)");
+    expect(calendar).toContain("getAppointmentPlanIssues(plan)");
+    expect(conflictDialog).toContain("suggestAppointmentSmartFit");
     expect(calendar).toContain("<WaitlistOriginMark appointment={app}");
     expect(calendar).toContain("dragIdempotencyRef");
   });
@@ -96,9 +98,22 @@ describe("Agenda lifecycle UI", () => {
 
   it("shows waitlist provenance in the detail modal and removes the ambiguous pending label", () => {
     const detail = read("src/components/agenda/AppointmentDetailModal.tsx");
+    const calendar = read("src/components/agenda/CalendarView.tsx");
     expect(detail).toContain("Lista de espera · confirmado pelo paciente");
+    expect(detail).toContain("aria-expanded={isWaitlistOriginExpanded}");
+    expect(detail).toContain("Origem: lista de espera. Mostrar detalhes.");
+    expect(detail).toContain("inline-flex min-h-11 max-w-full");
+    expect(detail).toContain("max-w-[min(15rem,calc(100vw-13rem))]");
     expect(detail).toContain("if (!hasAnyChange)");
     expect(detail).not.toContain("Pendente de sync");
+    expect(calendar).toContain('role="img"');
+    expect(calendar).toContain('aria-label="Criado pela lista de espera inteligente"');
+  });
+
+  it("cancels the deterministic Google event even before its id was persisted locally", () => {
+    const provider = read("supabase/functions/_shared/google-calendar-provider.ts");
+    expect(provider).toContain('if (input.operation === "cancel")');
+    expect(provider).toContain("method: \"DELETE\"");
+    expect(provider).not.toContain('if (!existingEventId) return { skipped: true, reason: "never_synced" };');
   });
 });
-

@@ -382,10 +382,12 @@ export function useAgendaV2() {
   const existingAppointmentSmartFitMutation = useMutation({
     mutationFn: async ({
       appointmentId,
+      anchorStart,
       allowShorter = false,
       minimumDurationMinutes = 30,
     }: {
       appointmentId: string;
+      anchorStart?: string | null;
       allowShorter?: boolean;
       minimumDurationMinutes?: number;
     }) => {
@@ -393,6 +395,7 @@ export function useAgendaV2() {
       const database = supabase;
       const { data, error } = await database.rpc("suggest_appointment_smart_fit", {
         p_appointment_id: appointmentId,
+        p_anchor_start: anchorStart || null,
         p_search_days: 14,
         p_allow_shorter: allowShorter,
         p_minimum_duration_minutes: minimumDurationMinutes,
