@@ -441,8 +441,9 @@ export function usePatientFinancialResolution(patientId?: string | null) {
 export function useAgendaSeriesTemplates() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const templatesQueryKey = ["agenda-series-templates", user?.id] as const;
   const query = useQuery({
-    queryKey: ["agenda-series-templates", user?.id],
+    queryKey: templatesQueryKey,
     enabled: Boolean(user?.id),
     queryFn: async () => {
       const database = supabase;
@@ -487,9 +488,55 @@ export function useAgendaSeriesTemplates() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["agenda-series-templates"] }),
   });
 
+  const renameMutation = useMutation({
+    mutationFn: async ({ templateId, name }: { templateId: string; name: string }) => {
+      const normalizedName = name.trim();
+      if (!normalizedName) throw new Error("Dê um nome curto ao modelo.");
+      const { error } = await supabase
+        .from("appointment_series_templates")
+        .update({ name: normalizedName, updated_at: new Date().toISOString() })
+        .eq("id", templateId)
+        .eq("professional_id", user!.id);
+      if (error) throw new Error(rpcError(error, "Não foi possível renomear o modelo."));
+      return { templateId, name: normalizedName };
+    },
+    onSuccess: ({ templateId, name }) => {
+      queryClient.setQueryData<AgendaSeriesTemplate[]>(templatesQueryKey, (current = []) =>
+        current.map((template) => (
+          template.id === templateId
+            ? { ...template, name, updated_at: new Date().toISOString() }
+            : template
+        )),
+      );
+      void queryClient.invalidateQueries({ queryKey: ["agenda-series-templates"] });
+    },
+  });
+
+  const archiveMutation = useMutation({
+    mutationFn: async (templateId: string) => {
+      const { error } = await supabase
+        .from("appointment_series_templates")
+        .update({ is_archived: true, updated_at: new Date().toISOString() })
+        .eq("id", templateId)
+        .eq("professional_id", user!.id);
+      if (error) throw new Error(rpcError(error, "Não foi possível excluir o modelo."));
+      return templateId;
+    },
+    onSuccess: (templateId) => {
+      queryClient.setQueryData<AgendaSeriesTemplate[]>(templatesQueryKey, (current = []) =>
+        current.filter((template) => template.id !== templateId),
+      );
+      void queryClient.invalidateQueries({ queryKey: ["agenda-series-templates"] });
+    },
+  });
+
   return {
     ...query,
     saveTemplate: saveMutation.mutateAsync,
     isSavingTemplate: saveMutation.isPending,
+    renameTemplate: renameMutation.mutateAsync,
+    isRenamingTemplate: renameMutation.isPending,
+    archiveTemplate: archiveMutation.mutateAsync,
+    isArchivingTemplate: archiveMutation.isPending,
   };
 }
