@@ -11,8 +11,9 @@ describe("agenda desktop compact header contract", () => {
     const styles = source("src/index.css");
 
     expect(calendar).toContain("agenda-floating-header");
-    expect(calendar).toContain("pointer-events-none absolute left-4 right-4 top-4");
+    expect(calendar).toContain("pointer-events-none absolute left-5 right-5 top-5");
     expect(calendar).toContain("agenda-floating-pill");
+    expect(calendar).toContain("p-5");
     expect(calendar).toContain("h-12");
     expect(calendar).toContain("h-11");
     expect(calendar).not.toContain("<header className=\"agenda-liquid-surface");
@@ -46,6 +47,8 @@ describe("agenda desktop compact header contract", () => {
     expect(filters).toContain('className="agenda-field h-11');
     expect(desktop).not.toContain("agenda-desktop-shell agenda-liquid-surface");
     expect(desktop).toContain("agenda-desktop-calendar-frame");
+    expect(filters).not.toContain("agenda-filter-label");
+    expect(filters).not.toContain(">Filtros<");
   });
 
   it("renders sticky compact weekday pills inside the same scroller", () => {
