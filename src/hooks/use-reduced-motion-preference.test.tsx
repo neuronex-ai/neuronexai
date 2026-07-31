@@ -8,8 +8,11 @@ const Harness = () => (
 );
 
 describe("useReducedMotionPreference", () => {
-  afterEach(() => {
-    document.documentElement.classList.remove("reduce-motion");
+  afterEach(async () => {
+    await act(async () => {
+      document.documentElement.classList.remove("reduce-motion");
+      await Promise.resolve();
+    });
   });
 
   it("reacts to the user's internal reduced-motion preference", async () => {
