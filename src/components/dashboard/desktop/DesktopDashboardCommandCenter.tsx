@@ -229,9 +229,9 @@ const SectionHeader = ({
 );
 
 const GreetingChip = ({ label, value }: { label: string; value: string | number }) => (
-  <span className="dashboard-inverted-chip inline-flex min-h-10 items-center gap-2.5 rounded-full px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-background/62">
+  <span className="dashboard-morning-chip inline-flex min-h-10 items-center gap-2.5 rounded-full px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
     <span>{label}</span>
-    <strong className="text-sm font-black text-background tabular-nums">{value}</strong>
+    <strong className="text-sm font-black text-zinc-950 tabular-nums dark:text-white">{value}</strong>
   </span>
 );
 
@@ -286,10 +286,10 @@ const ClinicalPrepMetric = ({
   value: string | number;
   detail: string;
 }) => (
-  <div className="dashboard-inverted-metric rounded-[22px] px-4 py-3.5">
-    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-background/48">{label}</p>
-    <p className="mt-1.5 truncate text-lg font-black tracking-[-0.04em] text-background">{value}</p>
-    <p className="mt-1 truncate text-xs font-semibold text-background/58">{detail}</p>
+  <div className="dashboard-morning-metric rounded-[22px] px-4 py-3.5">
+    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-zinc-400 dark:text-zinc-500">{label}</p>
+    <p className="mt-1.5 truncate text-lg font-black tracking-[-0.04em] text-zinc-950 dark:text-white">{value}</p>
+    <p className="mt-1 truncate text-xs font-semibold text-zinc-500 dark:text-zinc-400">{detail}</p>
   </div>
 );
 
@@ -324,19 +324,19 @@ const ScheduleDetailsLayer = ({
     <div
     id={id}
     className={cn(
-      "dashboard-schedule-detail-layer absolute inset-x-4 bottom-4 top-[148px] z-10 rounded-[24px] p-3 text-white transition-[transform,opacity] duration-slow ease-apple motion-reduce:transition-none",
+      "dashboard-schedule-detail-layer absolute inset-x-4 bottom-4 top-[148px] z-10 rounded-[24px] p-3 text-zinc-950 transition-[transform,opacity] duration-slow ease-apple motion-reduce:transition-none dark:text-white",
       open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0",
     )}
   >
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 [&>p:last-child]:hidden">
-          <DetailIcon className="h-3.5 w-3.5 text-white/50" />
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/48">{detailTitle}</p>
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/42">Última sessão</p>
+          <DetailIcon className="h-3.5 w-3.5 text-zinc-400 dark:text-zinc-500" />
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">{detailTitle}</p>
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-zinc-400 dark:text-zinc-500">Última sessão</p>
         </div>
         {latestSessionNote?.created_at ? (
-          <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white/42">
+          <span className="text-[9px] font-black uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
             {format(new Date(latestSessionNote.created_at), "dd/MM", { locale: ptBR })}
           </span>
         ) : null}
@@ -347,20 +347,20 @@ const ScheduleDetailsLayer = ({
           <>
         {isLoading ? (
           <div className="space-y-2">
-            <div className="h-4 w-11/12 animate-pulse rounded-full bg-muted/45" />
-            <div className="h-4 w-9/12 animate-pulse rounded-full bg-muted/35" />
-            <div className="h-4 w-10/12 animate-pulse rounded-full bg-muted/25" />
+            <div className="h-4 w-11/12 animate-pulse rounded-full bg-zinc-200/80 dark:bg-white/10" />
+            <div className="h-4 w-9/12 animate-pulse rounded-full bg-zinc-200/60 dark:bg-white/5" />
+            <div className="h-4 w-10/12 animate-pulse rounded-full bg-zinc-200/50 dark:bg-white/[0.035]" />
           </div>
         ) : latestSummaryText ? (
-          <p className="text-xs font-semibold leading-relaxed text-white/78">{latestSummaryText}</p>
+          <p className="text-xs font-semibold leading-relaxed text-zinc-700 dark:text-white/78">{latestSummaryText}</p>
         ) : (
-          <p className="text-xs font-medium leading-relaxed text-white/50">Sem resumo confirmado para este paciente ainda.</p>
+          <p className="text-xs font-medium leading-relaxed text-zinc-500 dark:text-zinc-500">Sem resumo confirmado para este paciente ainda.</p>
         )}
 
         {!isLoading && latestSummaryText ? (
           <div className="mt-3 flex flex-wrap gap-1.5">
             {[...latestTopics, ...latestNextSteps].slice(0, 4).map((item) => (
-              <span key={item} className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
+              <span key={item} className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
                 {item}
               </span>
             ))}
@@ -371,22 +371,22 @@ const ScheduleDetailsLayer = ({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
               {appointment ? (
-                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
+                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
                   {format(new Date(appointment.start_time), "HH:mm")} - {format(new Date(appointment.end_time), "HH:mm")}
                 </span>
               ) : null}
               {metadata?.eventCategoryLabel ? (
-                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
+                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
                   {metadata.eventCategoryLabel}
                 </span>
               ) : null}
               {eventLocation ? (
-                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
+                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-zinc-500 dark:text-zinc-400">
                   {eventLocation}
                 </span>
               ) : null}
             </div>
-            <p className="text-xs font-semibold leading-relaxed text-white/78">
+            <p className="text-xs font-semibold leading-relaxed text-zinc-700 dark:text-white/78">
               {eventNotes || "Sem observações adicionais para este compromisso."}
             </p>
           </div>
@@ -455,8 +455,8 @@ const AppointmentScheduleArtifact = ({
   };
 
   return (
-    <div className="relative h-full min-h-[264px] overflow-hidden border-t border-background/10 bg-background/[0.07] p-4 [perspective:1600px] dark:border-zinc-950/10 dark:bg-zinc-950/[0.035] lg:border-l lg:border-t-0">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_62%_10%,hsl(var(--background)/0.08),transparent_30%),linear-gradient(180deg,hsl(var(--background)/0.035),transparent_48%)] opacity-75 dark:bg-[radial-gradient(circle_at_62%_10%,rgba(0,0,0,0.06),transparent_30%),linear-gradient(180deg,rgba(0,0,0,0.035),transparent_48%)]" />
+    <div className="relative h-full min-h-[264px] overflow-hidden border-t border-zinc-200 bg-zinc-50/50 p-4 [perspective:1600px] dark:border-white/5 dark:bg-black/20 lg:border-l lg:border-t-0">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.62),transparent_44%),linear-gradient(115deg,rgba(9,9,11,0.035),transparent_52%)] opacity-80 dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.025),transparent_44%),linear-gradient(115deg,rgba(255,255,255,0.018),transparent_52%)]" />
 
       <ScheduleDetailsLayer
         id={summaryPanelId}
@@ -544,7 +544,7 @@ const AppointmentScheduleArtifact = ({
               <div className={cn("grid shrink-0 gap-2 overflow-hidden transition-all duration-300 motion-reduce:transition-none", online ? "sm:grid-cols-3" : "sm:grid-cols-2", summaryOpen ? "pointer-events-none max-h-0 opacity-0" : "max-h-12 opacity-100")} onClick={(event) => event.stopPropagation()}>
                 {online ? (
                   <Button
-                    className="h-9 rounded-[14px] bg-foreground px-3 text-[8px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-950"
+                    className="h-9 rounded-full bg-zinc-950 px-4 text-[8px] font-black uppercase tracking-[0.16em] text-white shadow-sm hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100"
                     onClick={() => navigate("/teleconsulta", { state: { activeAppointmentId: nextAppointment.id } })}
                   >
                     Entrar
@@ -552,13 +552,13 @@ const AppointmentScheduleArtifact = ({
                   </Button>
                 ) : null}
                 <AppointmentDetailModal appointment={nextAppointment}>
-                  <Button variant="outline" className="h-9 rounded-[14px] px-3 text-[8px] font-black uppercase tracking-[0.16em]">
+                  <Button variant="outline" className="h-9 rounded-full border-zinc-200 bg-white px-4 text-[8px] font-black uppercase tracking-[0.16em] text-zinc-500 shadow-sm hover:bg-zinc-100 hover:text-zinc-950 dark:border-white/5 dark:bg-white/5 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white">
                     {isSession ? "Ficha" : "Detalhes"}
                   </Button>
                 </AppointmentDetailModal>
                 <Button
                   variant="outline"
-                  className="h-9 rounded-[14px] px-3 text-[8px] font-black uppercase tracking-[0.16em]"
+                  className="h-9 rounded-full border-zinc-200 bg-white px-4 text-[8px] font-black uppercase tracking-[0.16em] text-zinc-500 shadow-sm hover:bg-zinc-100 hover:text-zinc-950 dark:border-white/5 dark:bg-white/5 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white"
                   onClick={() => navigate("/agenda", { state: { openAppointmentId: nextAppointment.id } })}
                 >
                   Abrir
@@ -571,7 +571,7 @@ const AppointmentScheduleArtifact = ({
               <p className="mt-2 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground">Crie um horário ou abra a agenda para organizar a próxima sessão.</p>
               <div className="mt-4" onClick={(event) => event.stopPropagation()}>
                 <NewAppointmentModal selectedDate={today}>
-                  <Button className="h-9 rounded-[14px] bg-foreground px-4 text-[9px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-950">
+                  <Button className="h-9 rounded-full bg-zinc-950 px-5 text-[9px] font-black uppercase tracking-[0.16em] text-white shadow-sm hover:bg-zinc-900 dark:bg-white dark:text-zinc-950 dark:hover:bg-zinc-100">
                     Agendar
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -622,14 +622,14 @@ const MorningCommandPanel = ({
   }, [nextAppointment?.id]);
 
   return (
-    <DesktopWorkspacePanel highContrast className="dashboard-high-contrast-panel dashboard-morning-panel min-h-[264px] p-0">
+    <DesktopWorkspacePanel className="dashboard-morning-panel min-h-[264px] p-0">
       <div className="grid min-h-[264px] lg:grid-cols-[minmax(0,1.22fr)_minmax(390px,0.78fr)]">
         <div className="flex min-h-[264px] flex-col justify-between gap-5 p-6 lg:px-8 lg:py-6">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-background/52">
+            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-zinc-500 dark:text-zinc-400">
               {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </p>
-            <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
+            <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.055em] text-zinc-950 dark:text-white lg:text-5xl">
               Bom dia, {firstName}.
             </h1>
           </div>

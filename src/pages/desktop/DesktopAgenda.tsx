@@ -121,7 +121,7 @@ export default function DesktopAgenda() {
     return (
         <div className="desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-4 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
             <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-8 xl:px-10">
-                <div className="agenda-desktop-shell agenda-liquid-surface desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border p-2 md:p-3">
+                <div className="agenda-desktop-shell relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border border-foreground/[0.06] bg-transparent p-3 md:p-4">
                 <AnimatePresence>
                     {waitlistOpen ? (
                         <>
@@ -161,7 +161,7 @@ export default function DesktopAgenda() {
                 </AnimatePresence>
 
                 <main className="relative z-10 flex h-full min-w-0 flex-1 flex-col" data-synapse-target="daily-schedule">
-                    <div className="agenda-liquid-surface relative min-h-0 flex-1 overflow-hidden rounded-[32px] border">
+                    <div className="agenda-desktop-calendar-frame relative min-h-0 flex-1 overflow-hidden rounded-[32px] border border-foreground/[0.055] bg-transparent">
                         <CalendarView
                             date={selectedDate}
                             onDateChange={setSelectedDate}

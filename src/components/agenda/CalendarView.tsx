@@ -8,6 +8,7 @@ import { Loader2, Clock, Video, MapPin, ChevronLeft, ChevronRight, Lock, Plus, U
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { Calendar } from "@/components/ui/calendar";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
 import { AgendaSettingsModal } from "./AgendaSettingsModal";
 import { cn } from "@/lib/utils";
@@ -35,7 +36,7 @@ import {
 import { useDroppable, useDraggable } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useState, useMemo, useEffect, useRef, type ReactNode } from "react";
+import { useState, useMemo, useEffect, useRef, type ReactNode, type UIEvent } from "react";
 import { NewAppointmentModal } from "./NewAppointmentModal";
 import {
     AppointmentRescheduleConflictDialog,
@@ -64,7 +65,10 @@ import {
 // Generate time labels from 00:00 to 23:00
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const HOUR_HEIGHT = 64; // px per hour row
-const FLOATING_HEADER_CLEARANCE = 60;
+const FLOATING_TOOLBAR_TOP = 20;
+const FLOATING_TOOLBAR_HEIGHT = 48;
+const FLOATING_TOOLBAR_GAP = 12;
+const FLOATING_HEADER_CLEARANCE = FLOATING_TOOLBAR_HEIGHT + FLOATING_TOOLBAR_GAP;
 
 const compactWeekday = (day: Date) =>
     format(day, "EEE", { locale: ptBR })
@@ -162,6 +166,7 @@ export const CalendarView = ({
     const { isConnected: isGoogleConnected, isLoading: isLoadingGoogle } = useGoogleAuth();
     const [activeId, setActiveId] = useState<string | null>(null);
     const [overId, setOverId] = useState<string | null>(null);
+    const [dragOverlayWidth, setDragOverlayWidth] = useState(280);
     const [isPreparingReschedule, setIsPreparingReschedule] = useState(false);
     const [rescheduleConflict, setRescheduleConflict] = useState<RescheduleConflict | null>(null);
     const rescheduleInFlightRef = useRef(false);
@@ -172,6 +177,15 @@ export const CalendarView = ({
     const [isMounted, setIsMounted] = useState(false);
     const [workingHours, setWorkingHours] = useState<WorkingHoursConfig | null>(null);
     const [availabilityVersions, setAvailabilityVersions] = useState<AvailabilityVersionConfig[] | null>(null);
+    const [isCalendarScrolled, setIsCalendarScrolled] = useState(false);
+
+    const handleCalendarScroll = (event: UIEvent<HTMLDivElement>) => {
+        setIsCalendarScrolled(event.currentTarget.scrollTop > 4);
+    };
+
+    useEffect(() => {
+        setIsCalendarScrolled(false);
+    }, [date, view]);
 
     useEffect(() => {
         setIsMounted(true);
@@ -231,6 +245,7 @@ export const CalendarView = ({
     const handleDragStart = (event: DragStartEvent) => {
         suppressCalendarClickRef.current = true;
         setActiveId(event.active.id as string);
+        setDragOverlayWidth(event.active.rect.current.initial?.width ?? 280);
     };
 
     const handleDragOver = (event: DragOverEvent) => {
@@ -423,31 +438,52 @@ export const CalendarView = ({
 
         return (
             <div className="flex h-full min-h-0 flex-1 flex-col">
-                <div className="custom-scrollbar relative h-full flex-1 overflow-y-auto overscroll-contain">
+                <div
+                    className="custom-scrollbar relative h-full flex-1 overflow-y-auto overscroll-contain"
+                    onScroll={handleCalendarScroll}
+                >
                     <div aria-hidden="true" style={{ height: FLOATING_HEADER_CLEARANCE }} />
                     <div
-                        className="agenda-floating-day-header pointer-events-none sticky z-30 flex shrink-0"
+                        className="agenda-floating-day-header pointer-events-none sticky z-30 flex shrink-0 pb-2"
                         style={{ top: FLOATING_HEADER_CLEARANCE }}
                     >
                         <div className="w-16 shrink-0" />
                         {days.map(day => {
                             const isToday = isSameDay(day, new Date());
+                            const isSelected = isSameDay(day, date);
                             return (
                                 <div
                                     key={day.toISOString()}
-                                    className="flex min-w-0 flex-1 justify-center px-1 py-1.5"
+                                    className="flex min-w-0 flex-1 justify-center px-1"
                                 >
-                                    <span
+                                    <button
+                                        type="button"
+                                        onClick={() => onDateChange(day)}
                                         className={cn(
-                                            "agenda-day-pill inline-flex h-8 min-w-[72px] items-center justify-center rounded-full border px-3 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground",
-                                            isToday && "synapse-liquid-tab-active text-foreground",
+                                            "agenda-day-trigger pointer-events-auto relative isolate inline-flex h-11 min-w-[88px] items-center justify-center rounded-[14px] border border-transparent px-3",
+                                            "text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground",
+                                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+                                            "active:translate-y-px active:scale-[0.985] motion-reduce:active:translate-y-0 motion-reduce:active:scale-100",
+                                            (isSelected || isToday) && "text-foreground",
                                         )}
                                         aria-label={format(day, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                                        aria-pressed={isSelected}
+                                        data-today={isToday || undefined}
                                     >
-                                        {compactWeekday(day)}
-                                        <span className="mx-1.5 opacity-45" aria-hidden="true">·</span>
-                                        <span className="tabular-nums">{format(day, "dd")}</span>
-                                    </span>
+                                        {isSelected ? (
+                                            <motion.span
+                                                layoutId="agenda-selected-day-indicator"
+                                                aria-hidden="true"
+                                                className="dashboard-segment-indicator absolute inset-0 -z-10 rounded-[inherit]"
+                                                transition={shouldReduceMotion
+                                                    ? { duration: 0 }
+                                                    : { type: "spring", stiffness: 410, damping: 35, mass: 0.78 }}
+                                            />
+                                        ) : null}
+                                        <span className="relative z-10">{compactWeekday(day)}</span>
+                                        <span className="relative z-10 mx-1.5 opacity-45" aria-hidden="true">·</span>
+                                        <span className="relative z-10 tabular-nums">{format(day, "dd")}</span>
+                                    </button>
                                 </div>
                             );
                         })}
@@ -494,7 +530,10 @@ export const CalendarView = ({
     // ─── Render: Monthly (existing card-based layout) ─────────────────────
 
     const renderMonthlyView = () => (
-        <div className="custom-scrollbar h-full min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div
+            className="custom-scrollbar h-full min-h-0 flex-1 overflow-y-auto overscroll-contain"
+            onScroll={handleCalendarScroll}
+        >
             <div aria-hidden="true" style={{ height: FLOATING_HEADER_CLEARANCE }} />
             <div className={cn(
                 "grid min-h-full select-none auto-rows-[minmax(132px,1fr)] gap-2 p-1",
@@ -509,6 +548,7 @@ export const CalendarView = ({
                         isDraggingAny={!!activeId}
                         activeAppointment={activeAppointment}
                         isTarget={overId === day.toISOString()}
+                        isSelected={isSameDay(day, date)}
                         onAddAppointment={() => {
                             if (suppressCalendarClickRef.current) return;
                             setNewAppointmentDate(day);
@@ -543,10 +583,11 @@ export const CalendarView = ({
                 id="agenda-main-calendar"
                 data-synapse-target="agenda-calendar"
                 aria-busy={isPreparingReschedule}
-                className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
+                className="agenda-main-calendar relative z-10 flex h-full flex-col overflow-hidden bg-transparent p-5"
             >
-                <header className="agenda-floating-header pointer-events-none absolute left-3 right-3 top-3 z-40 flex items-center justify-between gap-3 text-foreground">
-                    <div className="pointer-events-auto flex min-w-0 shrink items-center gap-2">
+                <TooltipProvider delayDuration={450}>
+                <header className="agenda-floating-header pointer-events-none absolute left-5 right-5 top-5 z-40 flex h-12 items-center justify-between gap-4 text-foreground">
+                    <div className="agenda-toolbar-group pointer-events-auto flex min-w-0 shrink items-center gap-2.5">
                         {filterControl}
 
                         <Popover>
@@ -554,7 +595,7 @@ export const CalendarView = ({
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    className="agenda-floating-pill agenda-tactile h-10 shrink-0 rounded-full px-3 text-[10px] font-black uppercase tracking-[0.12em] text-foreground"
+                                    className="agenda-floating-pill agenda-tactile h-12 shrink-0 rounded-[18px] px-4 text-xs font-black uppercase tracking-[0.1em] text-foreground"
                                     aria-label={`Escolher data. Atual: ${format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
                                 >
                                     <motion.span
@@ -586,25 +627,30 @@ export const CalendarView = ({
                             type="button"
                             variant="ghost"
                             onClick={() => navigate('/ajustes?tab=integrations')}
-                            className="agenda-floating-pill agenda-tactile hidden h-10 shrink-0 rounded-full px-3 text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground sm:inline-flex"
+                            className="agenda-connection-pill agenda-floating-pill agenda-tactile hidden h-12 shrink-0 rounded-[18px] px-4 text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground sm:inline-flex"
                             aria-label={isGoogleConnected ? "Google conectado. Abrir integrações" : "Conectar Google Agenda"}
                         >
                             {isLoadingGoogle ? "Conectando" : isGoogleConnected ? "Conectado" : "Conectar"}
                         </Button>
                     </div>
 
-                    <div className="pointer-events-auto flex shrink-0 items-center gap-2">
-                        <div className="agenda-floating-pill flex h-10 shrink-0 items-center rounded-full p-0.5">
-                            <Button
+                    <div className="agenda-toolbar-group agenda-toolbar-navigation pointer-events-auto absolute left-1/2 flex shrink-0 -translate-x-1/2 items-center gap-2.5">
+                        <div className="agenda-floating-pill flex h-12 shrink-0 items-center rounded-[18px] p-0.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                              <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
                                 aria-label="Mostrar período anterior"
-                                className="notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                                className="notification-liquid-control h-11 w-11 rounded-[14px] text-muted-foreground hover:text-foreground"
                             >
-                                <ChevronLeft className="h-3.5 w-3.5" />
-                            </Button>
+                                <ChevronLeft className="h-[18px] w-[18px]" />
+                              </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">Período anterior</TooltipContent>
+                            </Tooltip>
 
                             {onViewChange ? (
                                 <MagneticSegmentedControl
@@ -619,25 +665,36 @@ export const CalendarView = ({
                                         { value: "weekly", label: "Sem" },
                                         { value: "monthly", label: "Mês" },
                                     ]}
-                                    className="h-9 min-h-9 shrink-0 rounded-full bg-transparent p-0"
-                                    triggerClassName="h-8 min-h-8 rounded-full px-3 py-0 text-[9px] font-black uppercase tracking-[0.1em]"
+                                    className="agenda-toolbar-segmented h-12 min-h-12 shrink-0 rounded-[18px] bg-transparent p-0"
+                                    triggerClassName="h-11 min-h-11 rounded-[14px] px-3 py-0 text-xs font-black uppercase tracking-[0.08em]"
                                 />
                             ) : null}
 
-                            <Button
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                              <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
                                 aria-label="Mostrar próximo período"
-                                className="notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                                className="notification-liquid-control h-11 w-11 rounded-[14px] text-muted-foreground hover:text-foreground"
                             >
-                                <ChevronRight className="h-3.5 w-3.5" />
-                            </Button>
+                                <ChevronRight className="h-[18px] w-[18px]" />
+                              </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">Próximo período</TooltipContent>
+                            </Tooltip>
                         </div>
 
+                    </div>
+
+                    <div className="agenda-toolbar-group pointer-events-auto flex shrink-0 items-center gap-2.5">
+
                         {onWaitlistOpenChange ? (
-                            <Button
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                              <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
@@ -645,38 +702,56 @@ export const CalendarView = ({
                                 aria-label={`Lista de espera${waitlistCount ? `, ${waitlistCount} pessoas ativas` : ""}`}
                                 aria-pressed={waitlistOpen}
                                 className={cn(
-                                    "agenda-floating-pill relative h-10 w-10 rounded-full text-muted-foreground",
+                                    "agenda-floating-pill relative h-12 w-12 rounded-[18px] text-muted-foreground",
                                     waitlistOpen && "synapse-liquid-tab-active text-foreground",
                                 )}
                             >
-                                <UsersRound className="h-3.5 w-3.5" />
+                                <UsersRound className="h-[18px] w-[18px]" />
                                 {waitlistCount > 0 ? (
                                     <span className="notification-unread-badge absolute -right-0.5 -top-0.5 flex min-h-4 min-w-4 items-center justify-center rounded-full px-1 text-[7px] font-black leading-none">
                                         {Math.min(waitlistCount, 99)}
                                     </span>
                                 ) : null}
-                            </Button>
+                              </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom">Lista de espera</TooltipContent>
+                            </Tooltip>
                         ) : null}
 
                         <AgendaSettingsModal />
 
-                        <Button
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                          <Button
                             type="button"
                             variant="ghost"
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
                             aria-label="Criar novo agendamento"
-                            className="agenda-floating-pill synapse-liquid-tab-active flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground"
+                            className="agenda-floating-pill synapse-liquid-tab-active flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] text-foreground"
                         >
-                            <Plus className="h-4 w-4" />
-                        </Button>
+                            <Plus className="h-[18px] w-[18px]" />
+                          </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">Novo agendamento</TooltipContent>
+                        </Tooltip>
                     </div>
                 </header>
+                </TooltipProvider>
+
+                <div
+                    aria-hidden="true"
+                    className={cn(
+                        "agenda-scroll-edge pointer-events-none absolute left-5 right-5 z-[35]",
+                        isCalendarScrolled && "is-visible",
+                    )}
+                    style={{ top: FLOATING_TOOLBAR_TOP + FLOATING_TOOLBAR_HEIGHT }}
+                />
 
                 {/* Main content area */}
                 <div
                     data-synapse-target="agenda-appointments"
-                    className="agenda-grid-surface flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border"
+                    className="agenda-calendar-viewport flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border"
                 >
                     {view === 'monthly' ? renderMonthlyView() : renderTimeGridView()}
                 </div>
@@ -720,8 +795,8 @@ export const CalendarView = ({
                     }}
                 >
                     {activeAppointment ? (
-                        <div style={{ width: '280px' }} className="cursor-grabbing">
-                            <div className="scale-[1.02] rotate-0 overflow-hidden rounded-[20px] shadow-2xl transition-transform duration-200 motion-reduce:scale-100 motion-reduce:transition-none">
+                        <div style={{ width: dragOverlayWidth }} className="cursor-grabbing">
+                            <div className="overflow-hidden rounded-[20px] shadow-2xl">
                                 <AppointmentCard app={activeAppointment} isOverlay />
                             </div>
                         </div>
@@ -946,6 +1021,7 @@ const MonthDroppableColumn = ({
     isDraggingAny,
     activeAppointment,
     isTarget,
+    isSelected,
     onAddAppointment
 }: {
     id: string,
@@ -954,9 +1030,11 @@ const MonthDroppableColumn = ({
     isDraggingAny?: boolean,
     activeAppointment?: Appointment,
     isTarget?: boolean,
+    isSelected?: boolean,
     onAddAppointment?: () => void,
 }) => {
     const { setNodeRef } = useDroppable({ id });
+    const shouldReduceMotion = useReducedMotion();
 
     const dayApps = useMemo(() =>
         appointments
@@ -1004,14 +1082,27 @@ const MonthDroppableColumn = ({
                     if (!isDraggingAny) onAddAppointment?.();
                   }}
                   className={cn(
-                    "agenda-day-pill agenda-tactile flex h-8 min-w-[70px] items-center justify-center rounded-full border px-2 text-[9px] font-black uppercase tracking-[0.1em]",
-                    isToday ? "synapse-liquid-tab-active text-foreground" : "text-muted-foreground hover:text-foreground",
+                    "agenda-month-day-trigger agenda-tactile relative isolate flex h-11 min-w-[82px] items-center justify-center rounded-[14px] border border-transparent px-3",
+                    "text-[10px] font-black uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground",
+                    (isSelected || isToday) && "text-foreground",
                   )}
                   aria-label={`Adicionar agendamento em ${format(day, "dd 'de' MMMM", { locale: ptBR })}`}
+                  aria-pressed={isSelected}
+                  data-today={isToday || undefined}
                 >
-                    {compactWeekday(day)}
-                    <span className="mx-1 opacity-45" aria-hidden="true">·</span>
-                    <span className="tabular-nums">{format(day, "dd")}</span>
+                    {isSelected ? (
+                      <motion.span
+                        layoutId="agenda-selected-month-day-indicator"
+                        aria-hidden="true"
+                        className="dashboard-segment-indicator absolute inset-0 -z-10 rounded-[inherit]"
+                        transition={shouldReduceMotion
+                          ? { duration: 0 }
+                          : { type: "spring", stiffness: 410, damping: 35, mass: 0.78 }}
+                      />
+                    ) : null}
+                    <span className="relative z-10">{compactWeekday(day)}</span>
+                    <span className="relative z-10 mx-1 opacity-45" aria-hidden="true">·</span>
+                    <span className="relative z-10 tabular-nums">{format(day, "dd")}</span>
                 </button>
                 {dayApps.length > 0 && <div className="h-1 w-1 rounded-full bg-muted-foreground/60" />}
             </div>
