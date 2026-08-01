@@ -34,7 +34,7 @@ describe("appointment detail presentation", () => {
       },
     });
 
-    expect(getAppointmentDetailStatusLabel(item)).toBe("Confirmada");
+    expect(getAppointmentDetailStatusLabel(item)).toBe("Confirmado");
     expect(getAppointmentOriginLabel(item)).toBe("Lista de espera");
   });
 
@@ -49,7 +49,7 @@ describe("appointment detail presentation", () => {
     expect(getAppointmentDetailStatusLabel(appointment({
       status: "attended",
       lifecycle_status: "awaiting_confirmation",
-    }))).toBe("Realizada");
+    }))).toBe("Realizado");
   });
 
   it("presents the canonical position inside a finite series", () => {

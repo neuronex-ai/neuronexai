@@ -4824,138 +4824,110 @@
   }
 
   .dashboard-morning-panel {
-    border-color: rgb(228, 228, 231);
-    background: rgb(255, 255, 255);
     box-shadow:
-      0 24px 48px -12px rgba(0, 0, 0, 0.1),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  }
-
-  .dashboard-morning-panel::before {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.72), transparent 42%),
-      linear-gradient(128deg, rgba(9, 9, 11, 0.026), transparent 54%);
-    content: '';
-  }
-
-  .dashboard-morning-panel::after {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background: repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(9, 9, 11, 0.012) 1px, transparent 2px);
-    content: '';
-    opacity: 0.28;
+      0 26px 70px -48px rgba(0, 0, 0, 0.62),
+      inset 0 1px 0 rgba(255, 255, 255, 0.045);
   }
 
   .dark .dashboard-morning-panel {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: rgb(10, 10, 11);
     box-shadow:
-      0 24px 48px -12px rgba(0, 0, 0, 0.5),
-      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      0 26px 74px -52px rgba(0, 0, 0, 0.92),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
   }
 
-  .dark .dashboard-morning-panel::before {
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 42%),
-      linear-gradient(128deg, rgba(255, 255, 255, 0.018), transparent 54%);
-  }
-
-  .dark .dashboard-morning-panel::after {
-    background: repeating-linear-gradient(90deg, transparent, transparent 1px, rgba(255, 255, 255, 0.012) 1px, transparent 2px);
-    opacity: 0.18;
-  }
-
-  .dashboard-morning-metric {
+  .dashboard-inverted-metric {
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border: 1px solid rgb(228, 228, 231);
+    border: 1px solid rgba(255, 255, 255, 0.105);
     background:
-      linear-gradient(180deg, rgba(250, 250, 250, 0.98), rgba(244, 244, 245, 0.9)),
-      linear-gradient(135deg, rgba(9, 9, 11, 0.018), transparent 52%);
+      radial-gradient(90% 72% at 12% -8%, rgba(255, 255, 255, 0.12), transparent 68%),
+      linear-gradient(155deg, rgba(255, 255, 255, 0.082), rgba(255, 255, 255, 0.045));
     box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.035),
-      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+      0 20px 46px -36px rgba(0, 0, 0, 0.82),
+      inset 0 1px 0 rgba(255, 255, 255, 0.13),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.48);
+    backdrop-filter: blur(22px) saturate(118%);
+    -webkit-backdrop-filter: blur(22px) saturate(118%);
   }
 
-  .dashboard-morning-metric::before,
-  .dashboard-morning-chip::before {
+  .dashboard-inverted-metric::before,
+  .dashboard-inverted-chip::before {
     position: absolute;
     inset: 1px;
     z-index: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: linear-gradient(112deg, rgba(255, 255, 255, 0.54), transparent 28%, transparent 74%, rgba(9, 9, 11, 0.012));
+    background: linear-gradient(112deg, rgba(255, 255, 255, 0.058), transparent 28%, transparent 72%, rgba(255, 255, 255, 0.018));
     content: '';
   }
 
-  .dashboard-morning-metric > *,
-  .dashboard-morning-chip > * {
+  .dashboard-inverted-metric > *,
+  .dashboard-inverted-chip > * {
     position: relative;
     z-index: 1;
   }
 
-  .dark .dashboard-morning-metric {
-    border-color: rgba(255, 255, 255, 0.05);
+  .dark .dashboard-inverted-metric {
+    border-color: rgba(9, 9, 11, 0.13);
     background:
-      linear-gradient(135deg, rgb(26, 26, 28), rgb(13, 13, 15)),
-      linear-gradient(155deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.022));
+      radial-gradient(90% 72% at 12% -8%, rgba(255, 255, 255, 0.68), transparent 70%),
+      linear-gradient(155deg, rgba(9, 9, 11, 0.075), rgba(9, 9, 11, 0.038));
     box-shadow:
-      0 18px 42px -34px rgba(0, 0, 0, 0.72),
-      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      0 20px 46px -38px rgba(0, 0, 0, 0.28),
+      inset 0 1px 0 rgba(255, 255, 255, 0.72),
+      inset 0 -1px 0 rgba(9, 9, 11, 0.12);
   }
 
-  .dark .dashboard-morning-metric::before,
-  .dark .dashboard-morning-chip::before {
-    background: linear-gradient(112deg, rgba(255, 255, 255, 0.045), transparent 28%, transparent 74%, rgba(255, 255, 255, 0.012));
+  .dark .dashboard-inverted-metric::before,
+  .dark .dashboard-inverted-chip::before {
+    background: linear-gradient(112deg, rgba(255, 255, 255, 0.5), transparent 26%, transparent 74%, rgba(9, 9, 11, 0.018));
   }
 
-  .dashboard-morning-chip {
+  .dashboard-inverted-chip {
     position: relative;
     isolation: isolate;
     overflow: hidden;
-    border: 1px solid rgb(228, 228, 231);
-    background: rgb(255, 255, 255);
+    border: 1px solid rgba(255, 255, 255, 0.095);
+    background:
+      radial-gradient(90% 110% at 10% -20%, rgba(255, 255, 255, 0.105), transparent 70%),
+      rgba(255, 255, 255, 0.055);
     box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.035),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+      inset 0 1px 0 rgba(255, 255, 255, 0.11),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.44),
+      0 12px 32px -28px rgba(0, 0, 0, 0.84);
+    backdrop-filter: blur(18px) saturate(115%);
+    -webkit-backdrop-filter: blur(18px) saturate(115%);
   }
 
-  .dark .dashboard-morning-chip {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.05);
+  .dark .dashboard-inverted-chip {
+    border-color: rgba(9, 9, 11, 0.12);
+    background:
+      radial-gradient(90% 110% at 10% -20%, rgba(255, 255, 255, 0.58), transparent 72%),
+      rgba(9, 9, 11, 0.052);
     box-shadow:
-      inset 0 1px 0 rgba(255, 255, 255, 0.04),
-      0 14px 32px -28px rgba(0, 0, 0, 0.86);
+      inset 0 1px 0 rgba(255, 255, 255, 0.64),
+      inset 0 -1px 0 rgba(9, 9, 11, 0.1),
+      0 12px 32px -28px rgba(0, 0, 0, 0.24);
   }
 
   @media (prefers-reduced-transparency: reduce) {
-    .dashboard-morning-panel::before,
-    .dashboard-morning-panel::after,
-    .dashboard-morning-metric::before,
-    .dashboard-morning-chip::before {
-      display: none;
+    .dashboard-inverted-metric,
+    .dashboard-inverted-chip {
+      background: rgba(255, 255, 255, 0.085) !important;
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
     }
 
-    .dashboard-morning-metric,
-    .dashboard-morning-chip {
-      background: rgb(250, 250, 250) !important;
-    }
-
-    .dark .dashboard-morning-metric,
-    .dark .dashboard-morning-chip {
-      background: rgb(24, 24, 27) !important;
+    .dark .dashboard-inverted-metric,
+    .dark .dashboard-inverted-chip {
+      background: rgba(9, 9, 11, 0.065) !important;
     }
   }
 
   @media (forced-colors: active) {
-    .dashboard-morning-panel,
-    .dashboard-morning-metric,
-    .dashboard-morning-chip {
+    .dashboard-inverted-metric,
+    .dashboard-inverted-chip {
       border: 1px solid CanvasText !important;
       color: CanvasText;
       background: Canvas !important;
@@ -4964,17 +4936,15 @@
   }
 
   .dashboard-soft-fill {
-    border: 1px solid rgb(228, 228, 231);
-    background: rgb(255, 255, 255);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.035),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
+    border: 1px solid hsl(var(--foreground) / 0.095);
+    background: hsl(var(--background) / 0.58);
+    box-shadow: inset 0 1px 0 hsl(var(--background) / 0.78);
   }
 
   .dark .dashboard-soft-fill {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.05);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    border-color: rgba(255, 255, 255, 0.074);
+    background: rgba(255, 255, 255, 0.038);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.032);
   }
 
   .dashboard-tactile {
@@ -5101,58 +5071,40 @@
   }
 
   .dashboard-schedule-card {
-    border: 1px solid rgb(228, 228, 231);
+    border: 1px solid hsl(var(--foreground) / 0.12);
     background:
-      linear-gradient(180deg, rgba(250, 250, 250, 0.98), rgba(244, 244, 245, 0.9)),
-      linear-gradient(135deg, rgba(9, 9, 11, 0.018), transparent 52%);
+      linear-gradient(180deg, hsl(var(--background) / 0.96), hsl(var(--background) / 0.82)),
+      linear-gradient(135deg, hsl(var(--foreground) / 0.028), transparent 50%);
     box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.04),
-      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+      0 28px 70px -48px hsl(var(--foreground) / 0.5),
+      inset 0 1px 0 hsl(var(--background));
   }
 
   .dark .dashboard-schedule-card {
-    border-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.09);
     background:
-      linear-gradient(135deg, rgb(26, 26, 28), rgb(13, 13, 15)),
-      linear-gradient(155deg, rgba(255, 255, 255, 0.052), rgba(255, 255, 255, 0.022));
+      linear-gradient(180deg, rgba(15, 15, 15, 0.98), rgba(7, 7, 7, 0.96)),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.026), transparent 50%);
     box-shadow:
-      0 18px 42px -34px rgba(0, 0, 0, 0.72),
-      inset 0 1px 0 rgba(255, 255, 255, 0.035);
+      0 28px 74px -48px rgba(0, 0, 0, 0.96),
+      inset 0 1px 0 rgba(255, 255, 255, 0.042);
   }
 
   .dashboard-schedule-detail-layer {
-    border: 1px solid rgb(228, 228, 231);
+    border: 1px solid rgba(255, 255, 255, 0.13);
     background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(250, 250, 250, 0.9)),
-      linear-gradient(135deg, rgba(9, 9, 11, 0.018), transparent 56%);
+      linear-gradient(180deg, rgba(15, 15, 15, 0.94), rgba(7, 7, 7, 0.92)),
+      linear-gradient(135deg, rgba(255, 255, 255, 0.036), transparent 56%);
     box-shadow:
-      0 18px 42px -34px rgba(0, 0, 0, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.96);
+      0 26px 56px -42px rgba(0, 0, 0, 0.84),
+      inset 0 1px 0 rgba(255, 255, 255, 0.05);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
 
-  .dark .dashboard-schedule-detail-layer {
-    border-color: rgba(255, 255, 255, 0.065);
-    background:
-      linear-gradient(180deg, rgba(18, 18, 20, 0.98), rgba(9, 9, 11, 0.96)),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.026), transparent 56%);
-    box-shadow:
-      0 20px 48px -34px rgba(0, 0, 0, 0.9),
-      inset 0 1px 0 rgba(255, 255, 255, 0.04);
-  }
-
   .dashboard-schedule-detail-pill {
-    border: 1px solid rgb(228, 228, 231);
-    background: rgb(255, 255, 255);
-    box-shadow:
-      0 1px 2px rgba(0, 0, 0, 0.03),
-      inset 0 1px 0 rgba(255, 255, 255, 0.95);
-  }
-
-  .dark .dashboard-schedule-detail-pill {
-    border-color: rgba(255, 255, 255, 0.05);
-    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.042);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   }
 
@@ -5227,7 +5179,6 @@
 
   .dashboard-shell-surface,
   .dashboard-panel-surface,
-  .dashboard-morning-panel,
   .dashboard-high-contrast-panel {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -6142,8 +6093,6 @@
 
 .agenda-desktop-shell {
   contain: layout paint style;
-  background: transparent !important;
-  box-shadow: none !important;
 }
 
 .agenda-sidebar-scroll {
@@ -6151,150 +6100,47 @@
 }
 
 .agenda-floating-header {
-  min-height: 48px;
+  min-height: 40px;
 }
 
-.agenda-toolbar-segmented {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
+.agenda-floating-pill,
+.agenda-day-pill {
+  border-color: hsl(var(--agenda-edge) / 0.1) !important;
+  background:
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.72), hsl(var(--agenda-surface-inset) / 0.46)),
+    hsl(var(--agenda-surface) / 0.54) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.78),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.025),
+    0 14px 32px -25px hsl(var(--agenda-shadow) / 0.48);
+  backdrop-filter: blur(24px) saturate(1.16);
+  -webkit-backdrop-filter: blur(24px) saturate(1.16);
 }
 
-.agenda-floating-pill {
-  border-color: hsl(var(--foreground) / 0.13) !important;
-  background: hsl(var(--background) / 0.82) !important;
+.agenda-day-pill {
+  background:
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.66), hsl(var(--agenda-surface-inset) / 0.4)),
+    hsl(var(--agenda-surface) / 0.46) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.72),
+    0 10px 26px -23px hsl(var(--agenda-shadow) / 0.44);
+}
+
+.dark .agenda-floating-pill,
+.dark .agenda-day-pill {
+  border-color: rgba(255, 255, 255, 0.048) !important;
+  background: rgba(10, 10, 12, 0.72) !important;
   background-image: none !important;
   box-shadow:
-    inset 0 1px 0 hsl(var(--background) / 0.92),
-    inset 0 -1px 0 hsl(var(--foreground) / 0.038),
-    0 16px 38px -28px hsl(var(--foreground) / 0.5);
-  backdrop-filter: blur(22px) saturate(1.08);
-  -webkit-backdrop-filter: blur(22px) saturate(1.08);
+    inset 0 1px 0 rgba(255, 255, 255, 0.034),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.62),
+    0 16px 34px -27px rgba(0, 0, 0, 0.96);
+  backdrop-filter: blur(26px) saturate(0.96);
+  -webkit-backdrop-filter: blur(26px) saturate(0.96);
 }
 
-.agenda-floating-pill:hover:not(:disabled) {
-  border-color: hsl(var(--foreground) / 0.18) !important;
-  background: hsl(var(--background) / 0.9) !important;
-  box-shadow:
-    inset 0 1px 0 hsl(var(--background) / 0.96),
-    inset 0 -1px 0 hsl(var(--foreground) / 0.045),
-    0 17px 40px -29px hsl(var(--foreground) / 0.55);
-}
-
-.agenda-desktop-shell :where(.agenda-floating-pill.synapse-liquid-tab-active, .agenda-floating-pill.notification-liquid-tab-active) {
-  border-color: hsl(var(--foreground) / 0.2) !important;
-  background: hsl(var(--background) / 0.96) !important;
-  background-image: none !important;
-  box-shadow:
-    inset 0 1px 0 hsl(var(--background) / 0.98),
-    inset 0 -1px 0 hsl(var(--foreground) / 0.05),
-    0 12px 30px -22px hsl(var(--foreground) / 0.58) !important;
-}
-
-.agenda-floating-day-header {
-  min-height: 52px;
-}
-
-.agenda-day-trigger,
-.agenda-month-day-trigger {
-  transition:
-    color 150ms ease,
-    border-color 150ms ease,
-    background-color 150ms ease,
-    transform 120ms ease;
-}
-
-.agenda-day-trigger[data-today='true']:not([aria-pressed='true']),
-.agenda-month-day-trigger[data-today='true']:not([aria-pressed='true']) {
-  border-color: hsl(var(--foreground) / 0.1);
-  background: hsl(var(--background) / 0.42);
-  backdrop-filter: blur(14px) saturate(1.04);
-  -webkit-backdrop-filter: blur(14px) saturate(1.04);
-}
-
-.dark .agenda-floating-pill {
-  border-color: rgba(255, 255, 255, 0.105) !important;
-  background: rgba(17, 17, 20, 0.84) !important;
-  background-image: none !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.52),
-    0 18px 38px -29px rgba(0, 0, 0, 0.96);
-  backdrop-filter: blur(24px) saturate(0.94);
-  -webkit-backdrop-filter: blur(24px) saturate(0.94);
-}
-
-.dark .agenda-floating-pill:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.15) !important;
-  background: rgba(25, 25, 29, 0.88) !important;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.075),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.56),
-    0 18px 42px -29px rgba(0, 0, 0, 0.98);
-}
-
-.dark .agenda-day-trigger[data-today='true']:not([aria-pressed='true']),
-.dark .agenda-month-day-trigger[data-today='true']:not([aria-pressed='true']) {
-  border-color: rgba(255, 255, 255, 0.07);
-  background: rgba(255, 255, 255, 0.035);
-  background-image: none;
-}
-
-.agenda-calendar-viewport,
-.agenda-desktop-calendar-frame {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.agenda-calendar-viewport {
-  border-color: hsl(var(--foreground) / 0.075) !important;
-}
-
-.dark .agenda-calendar-viewport,
-.dark .agenda-desktop-calendar-frame,
-.dark .agenda-desktop-shell {
-  border-color: rgba(255, 255, 255, 0.065) !important;
-}
-
-.agenda-scroll-edge {
-  height: 26px;
-  opacity: 0;
-  transform: translateY(-3px);
-  background: linear-gradient(180deg, hsl(var(--background) / 0.28), transparent);
-  transition: opacity 150ms ease, transform 150ms ease;
-}
-
-.agenda-scroll-edge.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.dark .agenda-scroll-edge {
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.26), transparent);
-}
-
-@media (max-width: 1100px) {
-  .agenda-connection-pill {
-    display: none !important;
-  }
-}
-
-@media (max-width: 900px) {
-  .agenda-filter-trigger {
-    width: 48px;
-    padding-inline: 0 !important;
-  }
-
-  .agenda-filter-count {
-    position: absolute;
-    right: -2px;
-    top: -2px;
-    min-width: 16px;
-    height: 16px;
-    margin-left: 0 !important;
-    padding-inline: 4px;
-    font-size: 7px;
-  }
+.dark .agenda-day-pill {
+  background: rgba(11, 11, 14, 0.64) !important;
 }
 
 .agenda-viewport-modal {
@@ -6415,22 +6261,6 @@
     0 17px 40px -31px rgba(0, 0, 0, 0.94);
 }
 
-/* Calendar cells are content containers, not Liquid Glass controls. Keeping
-   them quiet preserves the material hierarchy of the floating toolbar. */
-.agenda-month-cell {
-  border-color: hsl(var(--foreground) / 0.06) !important;
-  background: hsl(var(--card) / 0.34) !important;
-  background-image: none !important;
-  box-shadow: none !important;
-}
-
-.dark .agenda-month-cell {
-  border-color: rgba(255, 255, 255, 0.026) !important;
-  background: rgba(255, 255, 255, 0.016) !important;
-  background-image: none !important;
-  box-shadow: none !important;
-}
-
 .agenda-field,
 .agenda-modal-surface :where(input, textarea, button[role='combobox']) {
   border-color: hsl(var(--agenda-edge) / 0.1) !important;
@@ -6512,12 +6342,6 @@
     box-shadow:
       inset 0 1px 0 hsl(var(--agenda-surface) / 0.84),
       0 19px 42px -32px hsl(var(--agenda-shadow) / 0.52);
-  }
-
-  .agenda-month-cell:hover:not(:disabled) {
-    transform: none;
-    border-color: hsl(var(--foreground) / 0.105) !important;
-    box-shadow: none;
   }
 }
 
@@ -6617,10 +6441,10 @@
 .dark .appointment-detail-shell .appointment-liquid-control,
 .dark .agenda-modal-surface .appointment-liquid-control,
 .dark .agenda-modal-surface .app-modal-close {
-  border-color: rgba(255, 255, 255, 0.055) !important;
-  background: rgba(255, 255, 255, 0.032) !important;
+  border-color: rgba(255, 255, 255, 0.035) !important;
+  background: rgba(255, 255, 255, 0.025) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.026),
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
     inset 0 -1px 0 rgba(0, 0, 0, 0.52) !important;
 }
 
@@ -6629,8 +6453,8 @@
 .dark .appointment-detail-shell .appointment-liquid-control:hover:not(:disabled),
 .dark .agenda-modal-surface .appointment-liquid-control:hover:not(:disabled),
 .dark .agenda-modal-surface .app-modal-close:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.105) !important;
-  background: rgba(255, 255, 255, 0.065) !important;
+  border-color: rgba(255, 255, 255, 0.065) !important;
+  background: rgba(255, 255, 255, 0.052) !important;
 }
 
 .dark .agenda-desktop-shell .synapse-chat-glass,
@@ -6659,12 +6483,11 @@
 
 .dark .agenda-desktop-shell :where(.synapse-liquid-tab-active, .notification-liquid-tab-active),
 .dark .agenda-modal-surface :where(.synapse-liquid-tab-active, .notification-liquid-tab-active) {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.082) !important;
+  border-color: rgba(255, 255, 255, 0.065) !important;
+  background: rgba(255, 255, 255, 0.055) !important;
   background-image: none !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.055),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.52),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
     0 10px 22px -18px rgba(0, 0, 0, 0.98) !important;
 }
 
@@ -6858,8 +6681,7 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .agenda-floating-pill,
-  .agenda-day-trigger[data-today='true'],
-  .agenda-month-day-trigger[data-today='true'],
+  .agenda-day-pill,
   .agenda-liquid-surface,
   .agenda-modal-surface,
   .agenda-grid-surface,
@@ -6887,8 +6709,7 @@
 
 @media (forced-colors: active) {
   .agenda-floating-pill,
-  .agenda-day-trigger,
-  .agenda-month-day-trigger,
+  .agenda-day-pill,
   .agenda-liquid-surface,
   .agenda-modal-surface,
   .agenda-grid-surface,
@@ -6937,10 +6758,7 @@
   .agenda-appointment-card,
   .agenda-primary-action,
   .agenda-grid-slot,
-  .agenda-edge-trigger,
-  .agenda-day-trigger,
-  .agenda-month-day-trigger,
-  .agenda-scroll-edge {
+  .agenda-edge-trigger {
     transition-duration: 0.01ms !important;
     transform: none !important;
   }

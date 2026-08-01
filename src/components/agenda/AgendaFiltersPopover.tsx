@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Filter, RotateCcw } from "lucide-react";
 import type { Appointment } from "@/types";
 import { Button } from "@/components/ui/button";
-import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -52,14 +51,6 @@ export const AgendaFiltersPopover = ({
   onFiltersChange,
 }: AgendaFiltersPopoverProps) => {
   const activeCount = countActiveAgendaFilters(filters);
-  const [dateMode, setDateMode] = useState<"date" | "range">(
-    filters.dateFrom || filters.dateTo ? "range" : "date",
-  );
-
-  useEffect(() => {
-    if (filters.dateFrom || filters.dateTo) setDateMode("range");
-    else if (filters.date) setDateMode("date");
-  }, [filters.date, filters.dateFrom, filters.dateTo]);
   const patients = useMemo(() => {
     const uniquePatients = new Map<string, string>();
     appointments.forEach((appointment) => {
@@ -86,16 +77,6 @@ export const AgendaFiltersPopover = ({
     onFiltersChange(next);
   };
 
-  const changeDateMode = (mode: "date" | "range") => {
-    setDateMode(mode);
-    onFiltersChange({
-      ...filters,
-      date: mode === "date" ? filters.date : "",
-      dateFrom: mode === "range" ? filters.dateFrom : "",
-      dateTo: mode === "range" ? filters.dateTo : "",
-    });
-  };
-
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -103,15 +84,15 @@ export const AgendaFiltersPopover = ({
           type="button"
           variant="ghost"
           className={cn(
-            "agenda-filter-trigger agenda-floating-pill agenda-tactile pointer-events-auto relative flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] p-0 text-muted-foreground hover:text-foreground",
+            "agenda-floating-pill agenda-tactile pointer-events-auto h-10 shrink-0 rounded-full px-3 text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground",
             activeCount > 0 && "synapse-liquid-tab-active text-foreground",
           )}
           aria-label={activeCount ? `Filtros, ${activeCount} ativos` : "Filtros"}
-          title="Filtros"
         >
-          <Filter className="agenda-filter-icon h-[18px] w-[18px]" aria-hidden="true" />
+          <Filter className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+          Filtros
           {activeCount > 0 ? (
-            <span className="agenda-filter-count absolute -right-0.5 -top-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 text-[8px] font-black leading-none text-background">
+            <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground px-1.5 text-[8px] text-background">
               {activeCount}
             </span>
           ) : null}
@@ -135,7 +116,7 @@ export const AgendaFiltersPopover = ({
             size="icon"
             onClick={() => onFiltersChange(EMPTY_AGENDA_FILTERS)}
             disabled={activeCount === 0}
-            className="notification-liquid-control h-11 w-11 rounded-[14px]"
+            className="notification-liquid-control h-9 w-9 rounded-full"
             aria-label="Limpar filtros"
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
@@ -148,7 +129,7 @@ export const AgendaFiltersPopover = ({
               value={filters.patientId}
               onValueChange={(value) => update("patientId", value)}
             >
-              <SelectTrigger className="agenda-field h-11 rounded-[14px] text-xs font-bold">
+              <SelectTrigger className="agenda-field h-10 rounded-[14px] text-xs font-bold">
                 <SelectValue placeholder="Todos" />
               </SelectTrigger>
               <SelectContent className="agenda-menu-surface rounded-[18px]">
@@ -162,45 +143,27 @@ export const AgendaFiltersPopover = ({
             </Select>
           </FilterField>
 
-          <div className="sm:col-span-3">
-            <MagneticSegmentedControl
-              id="agenda-filter-date-mode"
-              indicatorId="agenda-filter-date-mode-indicator"
-              value={dateMode}
-              onValueChange={changeDateMode}
-              ariaLabel="Tipo de filtro por data"
-              behavior="single-select"
-              options={[
-                { value: "date", label: "Data" },
-                { value: "range", label: "Intervalo" },
-              ]}
-              className="h-12 min-h-12 w-full rounded-[18px]"
-              triggerClassName="h-11 min-h-11 flex-1 rounded-[14px] px-4 py-0 text-xs font-black"
+          <FilterField label="Data">
+            <Input
+              type="date"
+              value={filters.date}
+              onChange={(event) => update("date", event.target.value)}
+              className="agenda-field h-10 rounded-[14px] text-xs font-bold"
+              aria-label="Filtrar por uma data"
             />
-          </div>
+          </FilterField>
 
-          {dateMode === "date" ? (
-            <FilterField label="Data" className="sm:col-span-3">
-              <Input
-                type="date"
-                value={filters.date}
-                onChange={(event) => update("date", event.target.value)}
-                className="agenda-field h-11 rounded-[14px] text-xs font-bold"
-                aria-label="Filtrar por uma data"
-              />
-            </FilterField>
-          ) : (
-            <div className="space-y-1.5 sm:col-span-3">
-              <Label className="pl-1 text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">
-                Intervalo
-              </Label>
-              <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="pl-1 text-[8px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+              Intervalo
+            </Label>
+            <div className="grid grid-cols-2 gap-2">
               <Input
                 type="date"
                 value={filters.dateFrom}
                 max={filters.dateTo || undefined}
                 onChange={(event) => update("dateFrom", event.target.value)}
-                className="agenda-field h-11 rounded-[14px] text-xs font-bold"
+                className="agenda-field h-10 rounded-[14px] text-xs font-bold"
                 aria-label="Início do intervalo"
               />
               <Input
@@ -208,19 +171,18 @@ export const AgendaFiltersPopover = ({
                 value={filters.dateTo}
                 min={filters.dateFrom || undefined}
                 onChange={(event) => update("dateTo", event.target.value)}
-                className="agenda-field h-11 rounded-[14px] text-xs font-bold"
+                className="agenda-field h-10 rounded-[14px] text-xs font-bold"
                 aria-label="Fim do intervalo"
               />
-              </div>
             </div>
-          )}
+          </div>
 
           <FilterField label="Modalidade">
             <Select
               value={filters.modality}
               onValueChange={(value: AgendaFilterModality) => update("modality", value)}
             >
-              <SelectTrigger className="agenda-field h-11 rounded-[14px] text-xs font-bold">
+              <SelectTrigger className="agenda-field h-10 rounded-[14px] text-xs font-bold">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="agenda-menu-surface rounded-[18px]">
@@ -236,7 +198,7 @@ export const AgendaFiltersPopover = ({
               value={filters.origin}
               onValueChange={(value: AgendaFilterOrigin) => update("origin", value)}
             >
-              <SelectTrigger className="agenda-field h-11 rounded-[14px] text-xs font-bold">
+              <SelectTrigger className="agenda-field h-10 rounded-[14px] text-xs font-bold">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="agenda-menu-surface rounded-[18px]">
@@ -253,7 +215,7 @@ export const AgendaFiltersPopover = ({
               value={filters.status}
               onValueChange={(value: AgendaFilterStatus) => update("status", value)}
             >
-              <SelectTrigger className="agenda-field h-11 rounded-[14px] text-xs font-bold">
+              <SelectTrigger className="agenda-field h-10 rounded-[14px] text-xs font-bold">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="agenda-menu-surface rounded-[18px]">
