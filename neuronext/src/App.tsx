@@ -4,6 +4,7 @@ import { useTheme } from "next-themes";
 import { useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import Agenda from "./pages/agenda/Agenda";
+import Notes from "./pages/notes/Notes";
 
 const nav = [
   ["/", "Painel"],
@@ -43,7 +44,7 @@ function SynapsePill({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
       <div><Sparkles size={15}/><strong>Synapse</strong><button onClick={() => onOpenChange(false)}><X size={14}/></button></div>
       <p>Converse com sua clínica por texto ou voz.</p>
       <div className="synapse-input"><span>Como posso ajudar?</span><Mic size={16}/></div>
-    </motion.div>}</AnimatePresence>
+    </div>}</AnimatePresence>
     <button className="synapse-pill" onClick={() => onOpenChange(!open)}><span className="synapse-orb"><Sparkles size={16}/></span><span>Converse com sua clínica</span><Mic size={15}/></button>
   </div>;
 }
@@ -54,9 +55,9 @@ export default function App() {
   const path = window.location.pathname;
   let page: React.ReactNode = <PagePlaceholder title="Painel"/>;
   if (path.startsWith("/agenda")) page = <Agenda/>;
+  else if (path.startsWith("/notas")) page = <Notes/>;
   else if (path.startsWith("/teleconsulta")) page = <PagePlaceholder title="Teleconsulta"/>;
   else if (path.startsWith("/pacientes")) page = <PagePlaceholder title="Pacientes"/>;
-  else if (path.startsWith("/notas")) page = <PagePlaceholder title="Notas"/>;
   else if (path.startsWith("/financeiro")) page = <PagePlaceholder title="Financeiro"/>;
   return <Shell>{page}</Shell>;
 }
