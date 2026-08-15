@@ -1,6 +1,7 @@
+import { useState } from "react";
 import { addDays, addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay, startOfMonth, startOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight, Clock3, Filter, ListPlus, MapPin, Plus, Settings, Video, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Filter, ListPlus, MapPin, Plus, Settings, Video, X } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import type { Appointment } from "../../mock/appointments";
 import { AppointmentDetailModal } from "./AppointmentDetailModal";
@@ -49,16 +50,11 @@ export function CalendarView({ date, onDateChange, appointments, allAppointments
   return (
     <div className="calendar-view">
       <header className="agenda-toolbar">
-        <div className="toolbar-title">
-          <h1>Agenda</h1>
-          <span>{title}</span>
-        </div>
+        <div className="toolbar-title"><h1>Agenda</h1><span>{title}</span></div>
         <div className="toolbar-actions">
           <div className="segmented" role="tablist" aria-label="Visualização da agenda">
             {(["daily", "weekly", "monthly"] as AgendaView[]).map((item) => (
-              <button key={item} className={view === item ? "selected" : ""} onClick={() => onViewChange(item)}>
-                {item === "daily" ? "Dia" : item === "weekly" ? "Semana" : "Mês"}
-              </button>
+              <button key={item} className={view === item ? "selected" : ""} onClick={() => onViewChange(item)}>{item === "daily" ? "Dia" : item === "weekly" ? "Semana" : "Mês"}</button>
             ))}
           </div>
           <button className="soft-btn" onClick={() => setFilter(filter === "all" ? "online" : filter === "online" ? "presencial" : "all")}><Filter size={15} /> Filtros</button>
@@ -67,62 +63,29 @@ export function CalendarView({ date, onDateChange, appointments, allAppointments
           <button className="primary-btn" onClick={() => setNewOpen(true)}><Plus size={16} /> Agendar</button>
         </div>
       </header>
-
-      <div className="calendar-head">
-        <button className="icon-btn today-button" onClick={() => onDateChange(new Date())}>Hoje</button>
-        <div className="calendar-nav">
-          <button className="icon-btn" onClick={() => move(-1)} aria-label="Anterior"><ChevronLeft size={17} /></button>
-          <button className="icon-btn" onClick={() => move(1)} aria-label="Próximo"><ChevronRight size={17} /></button>
-        </div>
-      </div>
-
+      <div className="calendar-head"><button className="icon-btn today-button" onClick={() => onDateChange(new Date())}>Hoje</button><div className="calendar-nav"><button className="icon-btn" onClick={() => move(-1)} aria-label="Anterior"><ChevronLeft size={17} /></button><button className="icon-btn" onClick={() => move(1)} aria-label="Próximo"><ChevronRight size={17} /></button></div></div>
       <div className={`calendar ${view}`}>
         {days.map((day) => {
           const dayAppointments = visibleAppointments.filter((a) => isSameDay(a.start, day));
-          return (
-            <div className="day-column" key={day.toISOString()}>
-              <div className={`day-label ${isSameDay(day, new Date()) ? "today" : ""}`}>
-                <span>{format(day, "EEE", { locale: ptBR }).replace(".", "").slice(0, 3).toUpperCase()}</span>
-                <strong>{format(day, "dd")}</strong>
-              </div>
-              <div className="day-body">
-                {hours.map((hour) => <div className="slot" key={hour}><span>{String(hour).padStart(2, "0")}:00</span></div>)}
-                {dayAppointments.map((appointment) => {
-                  const top = Math.max(4, ((appointment.start.getHours() + appointment.start.getMinutes() / 60) - 8) * 64 + 2);
-                  const height = Math.max(58, ((appointment.end.getTime() - appointment.start.getTime()) / 3600000) * 64 - 4);
-                  return (
-                    <button key={appointment.id} className={`appointment ${appointment.status}`} style={{ top, minHeight: height }} onClick={() => setSelected(appointment)}>
-                      <span>{format(appointment.start, "HH:mm")} — {format(appointment.end, "HH:mm")}</span>
-                      <strong>{appointment.patientName}</strong>
-                      <small>{appointment.type === "online" ? <><Video size={11} /> Online</> : <><MapPin size={11} /> Presencial</>}</small>
-                    </button>
-                  );
-                })}
-              </div>
+          return <div className="day-column" key={day.toISOString()}>
+            <div className={`day-label ${isSameDay(day, new Date()) ? "today" : ""}`}><span>{format(day, "EEE", { locale: ptBR }).replace(".", "").slice(0, 3).toUpperCase()}</span><strong>{format(day, "dd")}</strong></div>
+            <div className="day-body">
+              {hours.map((hour) => <div className="slot" key={hour}><span>{String(hour).padStart(2, "0")}:00</span></div>)}
+              {dayAppointments.map((appointment) => {
+                const top = Math.max(4, ((appointment.start.getHours() + appointment.start.getMinutes() / 60) - 8) * 64 + 2);
+                const height = Math.max(58, ((appointment.end.getTime() - appointment.start.getTime()) / 3600000) * 64 - 4);
+                return <button key={appointment.id} className={`appointment ${appointment.status}`} style={{ top, minHeight: height }} onClick={() => setSelected(appointment)}><span>{format(appointment.start, "HH:mm")} — {format(appointment.end, "HH:mm")}</span><strong>{appointment.patientName}</strong><small>{appointment.type === "online" ? <><Video size={11} /> Online</> : <><MapPin size={11} /> Presencial</>}</small></button>;
+              })}
             </div>
-          );
+          </div>;
         })}
       </div>
-
       <AnimatePresence>
-        {waitlistOpen && (
-          <>
-            <motion.button className="waitlist-dismiss" aria-label="Fechar lista de espera" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWaitlistOpen(false)} />
-            <motion.aside className="waitlist" initial={{ opacity: 0, x: 20, scale: .985 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 20 }}>
-              <div><strong>Lista de espera</strong><button className="icon-btn" onClick={() => setWaitlistOpen(false)}><X size={15} /></button></div>
-              <p>2 pessoas aguardando encaixe.</p>
-              <div className="wait-person"><span>LR</span><div><strong>Larissa Ribeiro</strong><small>Preferência: manhã</small></div></div>
-              <div className="wait-person"><span>PS</span><div><strong>Pedro Souza</strong><small>Preferência: tarde</small></div></div>
-            </motion.aside>
-          </>
-        )}
+        {waitlistOpen && <><motion.button className="waitlist-dismiss" aria-label="Fechar lista de espera" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setWaitlistOpen(false)} /><motion.aside className="waitlist" initial={{ opacity: 0, x: 20, scale: .985 }} animate={{ opacity: 1, x: 0, scale: 1 }} exit={{ opacity: 0, x: 20 }}><div><strong>Lista de espera</strong><button className="icon-btn" onClick={() => setWaitlistOpen(false)}><X size={15} /></button></div><p>2 pessoas aguardando encaixe.</p><div className="wait-person"><span>LR</span><div><strong>Larissa Ribeiro</strong><small>Preferência: manhã</small></div></div><div className="wait-person"><span>PS</span><div><strong>Pedro Souza</strong><small>Preferência: tarde</small></div></div></motion.aside></>}
       </AnimatePresence>
-
       {selected && <AppointmentDetailModal appointment={selected} onClose={() => setSelected(null)} onUpdate={(updated) => { onAppointmentsChange(allAppointments.map((item) => item.id === updated.id ? updated : item)); setSelected(updated); }} />}
       {newOpen && <NewAppointmentModal date={date} onClose={() => setNewOpen(false)} onCreate={createAppointment} />}
       {settingsOpen && <AgendaSettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
-
-import { useState } from "react";
