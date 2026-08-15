@@ -1,6 +1,6 @@
 # Import Map
 
-`neuronext/` is now a real, standalone frontend workspace. The first slice imported is **Agenda**. The goal is to reproduce the Desktop surface and its local interactions before redesigning anything.
+`neuronext/` is a standalone frontend laboratory nested inside the existing repository. It is intentionally isolated from the production Supabase/backend. The first objective is a faithful Desktop copy; redesign work happens only after the corresponding surface is considered imported and stable.
 
 ## Standalone runtime contract
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-The Vite server is pinned to `localhost:8080`. No production environment variables, Supabase project, backend, or real integrations are required for the current slice.
+The Vite server is pinned to port `8080`. No production environment variables, Supabase project, backend, or real integrations are required for the current slice.
 
 ## Import pipeline
 
@@ -20,11 +20,11 @@ The Vite server is pinned to `localhost:8080`. No production environment variabl
 - [x] Vite entrypoint on port 8080
 - [x] TypeScript configuration
 - [x] Light/dark theme foundation
-- [x] Desktop shell placeholder
+- [x] Desktop shell
 - [x] Navbar/navigation shell
 - [x] Bottom-right Synapse text/voice pill
 
-### 1 — Agenda
+### 1 — Agenda — current phase
 - [x] Desktop Agenda page boundary
 - [x] Day / Week / Month navigation
 - [x] Date navigation and Today action
@@ -37,11 +37,15 @@ The Vite server is pinned to `localhost:8080`. No production environment variabl
 - [x] New appointment modal
 - [x] Local appointment creation
 - [x] Local appointment status update
+- [x] Agenda settings modal skeleton
+- [x] Dedicated isolated `CalendarView` composition
 - [ ] Import remaining production Agenda visual subcomponents one-by-one where they add fidelity
 - [ ] Import advanced reschedule/review/conflict dialogs
-- [ ] Import Agenda settings/category/recurrence surfaces
+- [ ] Import category/recurrence/settings surfaces that are still missing
 - [ ] Import production drag-and-drop visual behavior after its backend boundary is isolated
 - [ ] Compare the Lab visually against the current production Agenda and close fidelity gaps
+
+**Important:** the production `CalendarView` is heavily coupled to Supabase, auth, Google auth and appointment action-plan helpers. The Lab therefore reproduces its visual/calendar behavior locally rather than importing those production dependencies wholesale. This is deliberate.
 
 ### 2 — Notes / NeuroBox
 - [ ] Notes shell
@@ -92,7 +96,7 @@ The Vite server is pinned to `localhost:8080`. No production environment variabl
 - [ ] Conversation/list panels
 - [ ] Local interaction states
 
-### Explicitly excluded
+## Explicitly excluded
 
 - [ ] `/synapse-ai` Desktop application — **do not import**
 - [ ] Production Supabase client/data layer
