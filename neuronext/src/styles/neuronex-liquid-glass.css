@@ -1,0 +1,15 @@
+/* NeuroNex Desktop visual tokens — isolated from production. */
+:root{--nx-ease-spring:cubic-bezier(.175,.885,.32,1.275);--nx-ease-glass:cubic-bezier(.22,1,.36,1);--nx-duration-fast:150ms;--nx-duration-normal:300ms;--nx-glass-blur:24px;--nx-glass-saturation:180%;--nx-glass-bg:rgba(255,255,255,.75);--nx-glass-border:rgba(0,0,0,.08);--nx-shadow:0 25px 50px -12px rgba(0,0,0,.08)}
+.dark{--nx-glass-bg:rgba(20,20,25,.6);--nx-glass-border:rgba(255,255,255,.06);--nx-shadow:0 20px 40px -10px rgba(0,0,0,.5)}
+.nx-glass{background:var(--nx-glass-bg);backdrop-filter:blur(var(--nx-glass-blur)) saturate(var(--nx-glass-saturation));-webkit-backdrop-filter:blur(var(--nx-glass-blur)) saturate(var(--nx-glass-saturation));border:1px solid var(--nx-glass-border);box-shadow:var(--nx-shadow);transition:all var(--nx-duration-normal) var(--nx-ease-glass)}
+.nx-glass:hover{transform:translateY(-1px)}
+.nx-micro-press{transition:transform var(--nx-duration-fast) var(--nx-ease-spring)}
+.nx-micro-press:active{transform:scale(.97)}
+.nx-workspace-shell{position:relative;overflow:hidden;border-radius:40px;border:1px solid rgba(0,0,0,.105);background:rgba(255,255,255,.72);padding:12px;box-shadow:0 22px 90px -76px rgba(0,0,0,.42);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px)}
+.dark .nx-workspace-shell{border-color:rgba(255,255,255,.055);background:rgba(255,255,255,.02);box-shadow:0 22px 70px -60px rgba(0,0,0,.86)}
+.nx-workspace-shell:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,rgba(255,255,255,.46),transparent 42%),linear-gradient(135deg,rgba(0,0,0,.018),transparent 46%)}
+.dark .nx-workspace-shell:before{background:linear-gradient(180deg,rgba(255,255,255,.006),transparent 42%),linear-gradient(135deg,rgba(255,255,255,.006),transparent 46%)}
+.nx-workspace-panel{position:relative;overflow:hidden;border-radius:34px;border:1px solid rgba(0,0,0,.105);background:rgba(255,255,255,.74);box-shadow:0 24px 74px -56px rgba(0,0,0,.44);backdrop-filter:blur(32px);-webkit-backdrop-filter:blur(32px)}
+.dark .nx-workspace-panel{border-color:rgba(255,255,255,.08);background:rgba(255,255,255,.04);box-shadow:0 24px 68px -54px rgba(0,0,0,.9)}
+@media(min-width:768px){.nx-workspace-shell{padding:16px}}
+@media(prefers-reduced-motion:reduce){.nx-glass,.nx-micro-press{transition:none}.nx-micro-press:active{transform:none}}
