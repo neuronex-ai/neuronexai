@@ -1,89 +1,106 @@
 # Import Map
 
-This file defines the intended shape of the next import step. **No current frontend files are copied yet.**
+`neuronext/` is now a real, standalone frontend workspace. The first slice imported is **Agenda**. The goal is to reproduce the Desktop surface and its local interactions before redesigning anything.
 
-## Proposed structure
+## Standalone runtime contract
 
-```text
-neuronext/
-├── README.md
-├── DESIGN_CONTEXT.md
-├── IMPORT_MAP.md
-├── SCOPE.md
-├── app/
-│   ├── routes/
-│   └── providers/
-├── components/
-│   ├── ui/
-│   ├── layout/
-│   ├── navigation/
-│   ├── dashboard/
-│   ├── agenda/
-│   ├── patients/
-│   ├── notes/
-│   ├── financeiro/
-│   ├── teleconsulta/
-│   ├── ajustes/
-│   ├── neurozap/
-│   └── synapse-pill/
-├── pages/
-│   ├── dashboard/
-│   ├── agenda/
-│   ├── patients/
-│   ├── notes/
-│   ├── financeiro/
-│   ├── teleconsulta/
-│   ├── ajustes/
-│   └── neurozap/
-├── mock/
-│   ├── profile/
-│   ├── patients/
-│   ├── appointments/
-│   ├── notes/
-│   ├── finance/
-│   ├── notifications/
-│   └── synapse/
-├── styles/
-└── assets/
+From inside `neuronext/`:
+
+```bash
+npm install
+npm run dev
 ```
 
-## Import rule
+The Vite server is pinned to `localhost:8080`. No production environment variables, Supabase project, backend, or real integrations are required for the current slice.
 
-The next pass should follow component dependencies outward from each Desktop surface rather than blindly copying the entire repository.
+## Import pipeline
 
-For each imported area:
+### 0 — Foundation
+- [x] Standalone `package.json`
+- [x] Vite entrypoint on port 8080
+- [x] TypeScript configuration
+- [x] Light/dark theme foundation
+- [x] Desktop shell placeholder
+- [x] Navbar/navigation shell
+- [x] Bottom-right Synapse text/voice pill
 
-1. identify the current Desktop entry component;
-2. identify its visual child components;
-3. identify shared UI/layout dependencies;
-4. identify backend/data hooks;
-5. replace only the backend/data boundary with local mocks;
-6. keep visual composition and interaction behavior faithful.
+### 1 — Agenda
+- [x] Desktop Agenda page boundary
+- [x] Day / Week / Month navigation
+- [x] Date navigation and Today action
+- [x] Appointment mock data
+- [x] Appointment cards and status presentation
+- [x] Online / presencial visual states
+- [x] Local filtering interaction
+- [x] Waitlist panel interaction
+- [x] Appointment detail modal
+- [x] New appointment modal
+- [x] Local appointment creation
+- [x] Local appointment status update
+- [ ] Import remaining production Agenda visual subcomponents one-by-one where they add fidelity
+- [ ] Import advanced reschedule/review/conflict dialogs
+- [ ] Import Agenda settings/category/recurrence surfaces
+- [ ] Import production drag-and-drop visual behavior after its backend boundary is isolated
+- [ ] Compare the Lab visually against the current production Agenda and close fidelity gaps
 
-## Desktop surfaces in scope
+### 2 — Notes / NeuroBox
+- [ ] Notes shell
+- [ ] Notes list/editor
+- [ ] Tasks
+- [ ] NeuroView structure first
+- [ ] NeuroFlow structure first
+- [ ] NeuroPulse structure first
+- [ ] NeuroDrive/files structure
+- [ ] Remaining large internal interactions after the structure is stable
 
-- Dashboard
-- Agenda
-- Patients
-- Patient detail
-- Notes / NeuroBox
-- Finance UI
-- Teleconsultation UI
-- Settings
-- NeuroZap
-- Synapse bottom-right text/voice pill
+### 3 — Patient directory
+- [ ] Patient list
+- [ ] Search/filter states
+- [ ] New patient modal
+- [ ] Patient row actions
+- [ ] Empty/loading states
 
-## Explicitly not imported
+### 4 — Patient detail / prontuário
+- [ ] Patient header
+- [ ] Tabs
+- [ ] Clinical/session surfaces
+- [ ] Notes and related panels
+- [ ] Local mock patient state
 
-- `/synapse-ai` Desktop application
-- production Supabase client/data layer
-- production authentication/session behavior
-- Edge Functions
-- real financial integrations
-- real WhatsApp integrations
-- real teleconsultation infrastructure
-- production credentials or secrets
+### 5 — Finance UI
+- [ ] Finance shell/navigation
+- [ ] Gestão Financeira surfaces
+- [ ] NeuroFinance visual surfaces
+- [ ] Account/statement/payment UI
+- [ ] No real financial integration
 
-## Important distinction
+### 6 — Teleconsulta UI
+- [ ] Waiting/session states
+- [ ] Video surface
+- [ ] Controls
+- [ ] Transcript/session UI
+- [ ] No real teleconsultation infrastructure
 
-This structure is intentionally a **frontend container inside the existing repository**, not a new production application yet. It allows the first import to happen in a contained path while the rest of NeuroNex continues untouched.
+### 7 — Settings
+- [ ] Settings shell
+- [ ] Profile/preferences UI
+- [ ] Notification/settings surfaces
+- [ ] Local-only persistence where useful
+
+### 8 — NeuroZap
+- [ ] Desktop surface
+- [ ] Conversation/list panels
+- [ ] Local interaction states
+
+### Explicitly excluded
+
+- [ ] `/synapse-ai` Desktop application — **do not import**
+- [ ] Production Supabase client/data layer
+- [ ] Production authentication/session behavior
+- [ ] Edge Functions
+- [ ] Real financial integrations
+- [ ] Real WhatsApp integrations
+- [ ] Real teleconsultation infrastructure
+- [ ] Production credentials/secrets
+
+Only the **bottom-right Synapse conversation pill/launcher for text and voice** is in scope.
