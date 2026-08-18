@@ -13,11 +13,15 @@ import {
   parseAppointmentPlanReviewAction,
   requestAppointmentPlanReview,
 } from "@/lib/appointment-plan-review";
+import {
+  emitVoiceReviewAction,
+  normalizeVoiceReviewAction,
+} from "@/lib/synapse-voice-ui-protocol";
 
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
 const SYNAPSE_GLOBAL_VOICE_PROMPT =
-  "Converse em português brasileiro natural e seja breve. Consulte e navegue quando necessário. Ao receber um pedido explícito, pode preparar NeuroFlow ou NeuroPulse com as ferramentas disponíveis, sempre pedindo a confirmação exigida antes de gravar.";
+  "Converse em português brasileiro natural e seja breve. Consulte e execute ações quando necessário. Para pacotes, grupos, preparação completa ou pós-sessão, use o planejador de ações e preserve a revisão antes da confirmação. NeuroFlow e NeuroPulse só devem ser usados quando forem pedidos explicitamente.";
 
 interface UseSynapseLiveVoiceOptions {
   onConnect?: () => void;
@@ -71,6 +75,31 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
       } catch (error) {
         console.warn("[Synapse Voice] client action observer failed", error);
       }
+
+      // Action-group reviews are a voice UI protocol, not a navigation action.
+      // The Edge gateway already waits for this client-action ACK; emitting the
+      // review here makes the horizontal cards visible while preserving the
+      // pending server-side confirmation record.
+      const actionReview = normalizeVoiceReviewAction(rawAction);
+      if (actionReview?.type === "synapse_action_review") {
+        emitVoiceReviewAction(actionReview);
+        return {
+          success: true,
+          action: "review_action_group",
+          message: "Revisão do grupo aberta nos cards.",
+          durationMs: 0,
+        };
+      }
+      if (actionReview?.type === "synapse_action_review_dismiss") {
+        emitVoiceReviewAction(actionReview);
+        return {
+          success: true,
+          action: "review_action_group",
+          message: "Revisão do grupo encerrada.",
+          durationMs: 0,
+        };
+      }
+
       const appointmentPlan = parseAppointmentPlanReviewAction(rawAction);
       if (appointmentPlan) {
         requestAppointmentPlanReview(appointmentPlan);
