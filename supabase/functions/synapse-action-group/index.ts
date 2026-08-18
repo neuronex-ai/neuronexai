@@ -30,6 +30,16 @@ function adminClient() {
   return createClient(url, service, { auth: { persistSession: false } });
 }
 
+function userClient(authorization: string) {
+  const url = clean(Deno.env.get("SUPABASE_URL"), 1000);
+  const anon = clean(Deno.env.get("SUPABASE_ANON_KEY"), 8000);
+  if (!url || !anon) return null;
+  return createClient(url, anon, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false },
+  });
+}
+
 function assertGatewaySecret(req: Request) {
   const expected = clean(Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET"), 4000);
   const supplied = clean(req.headers.get("x-synapse-gateway-secret"), 4000);
@@ -37,11 +47,11 @@ function assertGatewaySecret(req: Request) {
 }
 
 async function authenticatedUser(req: Request, admin: ReturnType<typeof adminClient>) {
-  const auth = clean(req.headers.get("Authorization"), 8000);
-  if (!auth.startsWith("Bearer ")) throw new Error("Sessão ausente.");
-  const { data, error } = await admin.auth.getUser(auth.slice(7));
+  const authorization = clean(req.headers.get("Authorization"), 8000);
+  if (!authorization.startsWith("Bearer ")) throw new Error("Sessão ausente.");
+  const { data, error } = await admin.auth.getUser(authorization.slice(7));
   if (error || !data.user) throw new Error("Sessão inválida.");
-  return data.user;
+  return { user: data.user, authorization };
 }
 
 async function assertConversationOwnership(admin: any, userId: string, conversationId: string) {
@@ -63,7 +73,10 @@ Deno.serve(async (req: Request) => {
   try {
     assertGatewaySecret(req);
     const admin = adminClient();
-    const user = await authenticatedUser(req, admin);
+    const authenticated = await authenticatedUser(req, admin);
+    const user = authenticated.user;
+    const authorization = authenticated.authorization;
+    const scopedUserClient = userClient(authorization);
     const body = await req.json().catch(() => ({}));
     const action = clean(body?.action, 80);
 
@@ -83,14 +96,15 @@ Deno.serve(async (req: Request) => {
         capabilityVersion: Number(body?.capabilityVersion) || 1,
       });
 
-      // Up to four normal steps are direct by policy: execute the persisted,
-      // idempotent plan immediately and never emit a timeline.
       if (prepared.row.confirmation_policy === "direct") {
         const result = await executePersistedActionGroup({
           admin,
           userId: user.id,
           row: prepared.row,
           confirmation: "direct",
+          authorization,
+          requestOrigin: req.headers.get("origin"),
+          userClient: scopedUserClient,
         });
         return json({ ok: result.status !== "failed", direct: true, result });
       }
@@ -149,7 +163,15 @@ Deno.serve(async (req: Request) => {
       const row = await loadActionGroupRow(admin, user.id, planId, planVersion);
       if (row.plan_hash !== planHash) throw new Error("A versão/hash confirmados não correspondem ao plano atual.");
       const confirmation = clean(body?.confirmation, 20) as "direct" | "voice" | "opaque";
-      const result = await executePersistedActionGroup({ admin, userId: user.id, row, confirmation });
+      const result = await executePersistedActionGroup({
+        admin,
+        userId: user.id,
+        row,
+        confirmation,
+        authorization,
+        requestOrigin: req.headers.get("origin"),
+        userClient: scopedUserClient,
+      });
       return json({ ok: result.status !== "failed", result });
     }
 
