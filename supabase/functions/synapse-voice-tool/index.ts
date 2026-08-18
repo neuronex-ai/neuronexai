@@ -268,6 +268,53 @@ async function authenticate(request: Request): Promise<AuthResult> {
   return { authorization, admin, userClient, user };
 }
 
+function functionsUrl() {
+  return `${clean(Deno.env.get("SUPABASE_URL"), 1000).replace(/\/$/, "")}/functions/v1`;
+}
+
+function gatewaySecret() {
+  return clean(Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET"), 4000);
+}
+
+async function callActionGroup(
+  authorization: string,
+  payload: Record<string, unknown>,
+) {
+  const anonKey = clean(Deno.env.get("SUPABASE_ANON_KEY"), 8000);
+  const response = await fetch(`${functionsUrl()}/synapse-action-group`, {
+    method: "POST",
+    headers: {
+      Authorization: authorization,
+      apikey: anonKey,
+      "Content-Type": "application/json",
+      "x-synapse-gateway-secret": gatewaySecret(),
+    },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data?.error) {
+    throw new Error(clean(data?.error || data?.message, 1200) || `Falha no plano composto (${response.status}).`);
+  }
+  return data as Record<string, any>;
+}
+
+function groupSteps(value: unknown) {
+  const steps = Array.isArray(value) ? value.slice(0, 12) : [];
+  return steps.map((rawValue) => {
+    const raw = rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
+      ? rawValue as Record<string, any>
+      : {};
+    return {
+      area: clean(raw.area, 120),
+      title: clean(raw.title, 180),
+      summary: clean(raw.summary || raw.spoken_summary, 600),
+      tool_name: clean(raw.tool_name || raw.toolName, 120),
+      arguments: parseArgs(raw.arguments ?? raw.arguments_json),
+      depends_on: Array.isArray(raw.depends_on) ? raw.depends_on.slice(0, 12) : [],
+    };
+  });
+}
+
 async function logVoiceAction(
   admin: any,
   input: {
@@ -414,9 +461,18 @@ serve(async (request): Promise<Response> => {
           }),
         });
       }
-      await cancelPendingAppointmentPlan(pending.action, toolContext);
+
+      if (pending.action.toolName === "execute_action_group") {
+        await callActionGroup(auth.authorization, {
+          action: "cancel",
+          planId: pending.action.arguments.plan_id,
+          planVersion: pending.action.arguments.plan_version,
+        });
+      } else {
+        await cancelPendingAppointmentPlan(pending.action, toolContext);
+      }
       await updatePending(auth.admin, pending, "cancelled");
-      const message = "A acao pendente foi cancelada. Nenhuma alteracao foi realizada.";
+      const message = "A acao pendente foi cancelada. Nenhuma alteracao adicional foi realizada.";
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [{
         kind: "synapse_grounding",
         provider: "deepgram-agent",
@@ -481,10 +537,39 @@ serve(async (request): Promise<Response> => {
         });
       }
       await updatePending(auth.admin, pending, "executing");
-      const result = await executeConfirmedMutationV3(pending.action, toolContext);
+
+      let result: any;
+      if (pending.action.toolName === "execute_action_group") {
+        const confirmationPolicy = clean(pending.action.arguments.confirmation_policy, 20);
+        const group = await callActionGroup(auth.authorization, {
+          action: "execute",
+          planId: pending.action.arguments.plan_id,
+          planVersion: pending.action.arguments.plan_version,
+          planHash: pending.action.arguments.plan_hash,
+          confirmation: confirmationPolicy === "opaque" ? "opaque" : "voice",
+        });
+        const groupResult = group.result || {};
+        result = {
+          ok: groupResult.status !== "failed",
+          message: clean(groupResult.spokenSummary, 1200) || "Plano executado.",
+          error: groupResult.status === "failed" ? clean(groupResult.spokenSummary, 1200) || "O plano nao foi executado." : null,
+          grounded: true,
+          recordCount: Array.isArray(groupResult.steps)
+            ? groupResult.steps.filter((step: any) => step?.status === "completed").length
+            : 0,
+          data: groupResult,
+          structuredData: groupResult,
+          clientAction: groupResult.nextVisualAction || null,
+        };
+      } else {
+        result = await executeConfirmedMutationV3(pending.action, toolContext);
+      }
+
       await updatePending(auth.admin, pending, result.ok ? "executed" : "failed", result.error);
       const loadedContext = await loadConversationContext(auth.admin, auth.user.id, sessionId);
-      const nextState = updateContextFromResult(loadedContext.state, pending.action.toolName, pending.action.arguments, result);
+      const nextState = pending.action.toolName === "execute_action_group"
+        ? loadedContext.state
+        : updateContextFromResult(loadedContext.state, pending.action.toolName, pending.action.arguments, result);
       await saveConversationContext(auth.admin, auth.user.id, sessionId, nextState);
       const message = result.ok
         ? result.message || "Acao concluida."
@@ -567,6 +652,107 @@ serve(async (request): Promise<Response> => {
       return json({
         ok: true,
         content: functionContent(payload),
+      });
+    }
+
+    if (name === "prepare_action_group") {
+      const prepared = await callActionGroup(auth.authorization, {
+        action: "prepare",
+        conversationId: sessionId,
+        voiceSessionId: voiceSessionId || null,
+        title: clean(args.title, 180),
+        intent: clean(args.intent, 300),
+        spokenSummary: clean(args.spoken_summary || args.spokenSummary, 1200),
+        steps: groupSteps(args.steps),
+        capabilityVersion: 1,
+      });
+
+      if (prepared.direct) {
+        const directResult = prepared.result || {};
+        const directOk = directResult.status !== "failed";
+        const directMessage = clean(directResult.spokenSummary, 1200) ||
+          (directOk ? "Conclui as etapas solicitadas." : "Nao consegui concluir o plano solicitado.");
+        await logVoiceAction(auth.admin, {
+          userId: auth.user.id,
+          conversationId: sessionId,
+          voiceSessionId,
+          toolName: name,
+          status: directOk ? "success" : "error",
+          durationMs: Date.now() - startedAt,
+          confirmationRequired: false,
+          riskLevel: policy.riskLevel,
+          payload: { stepCount: Array.isArray(args.steps) ? args.steps.length : 0, direct: true },
+          errorMessage: directOk ? null : directMessage,
+        });
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: directOk,
+            tool: "execute_action_group",
+            label: clean(args.title, 180) || "plano do Synapse",
+            message: directMessage,
+            data: directResult,
+            error: directOk ? null : directMessage,
+            structuredData: directResult,
+          }),
+          clientAction: directResult.nextVisualAction || null,
+          structuredData: directResult,
+        });
+      }
+
+      const pendingAction = {
+        ...(prepared.pendingAction as PendingAction),
+        conversationId: sessionId,
+        voiceSessionId: voiceSessionId || null,
+      } as PendingAction;
+      const confirmationPolicy = clean(pendingAction.arguments?.confirmation_policy, 20);
+      const message = confirmationPolicy === "opaque"
+        ? `Preparei a revisao protegida: ${pendingAction.summary}. Confirme a acao para continuar.`
+        : `Preparei a revisao: ${pendingAction.summary}. Diga confirmo acao quando estiver correto.`;
+      await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [
+        pendingAction,
+        {
+          kind: "synapse_grounding",
+          provider: "deepgram-agent",
+          grounded: true,
+          toolsUsed: ["prepare_action_group"],
+          generatedAt: new Date().toISOString(),
+        },
+      ]);
+      await logVoiceAction(auth.admin, {
+        userId: auth.user.id,
+        conversationId: sessionId,
+        voiceSessionId,
+        toolName: name,
+        status: "success",
+        durationMs: Date.now() - startedAt,
+        confirmationRequired: true,
+        riskLevel: confirmationPolicy === "opaque" ? "high" : policy.riskLevel,
+        payload: {
+          stepCount: Array.isArray(args.steps) ? args.steps.length : 0,
+          planId: pendingAction.arguments?.plan_id,
+          planVersion: pendingAction.arguments?.plan_version,
+          confirmationPolicy,
+        },
+      });
+      return json({
+        ok: true,
+        content: functionContent({
+          ok: true,
+          // Gateway uses this semantic tool name to decide whether the browser
+          // challenge is mandatory. The persisted pending action remains
+          // execute_action_group with exact id/version/hash.
+          tool: confirmationPolicy === "opaque" ? "manage_action_group" : "execute_action_group",
+          label: clean(args.title, 180) || "plano do Synapse",
+          message,
+          data: prepared.plan || null,
+          confirmation_required: true,
+          confirmationRequired: true,
+          grounded: true,
+          structuredData: prepared.plan || null,
+        }),
+        clientAction: prepared.clientAction || null,
+        structuredData: prepared.plan || null,
       });
     }
 
