@@ -89,6 +89,8 @@ wss.on("connection", (client) => {
   const upstream = new WebSocket(REMOTE_GATEWAY_URL);
   const pending = [];
   let closed = false;
+  let clientBinaryFrames = 0;
+  let clientBinaryBytes = 0;
 
   const closeBoth = (code = 1000, reason = "proxy_closed") => {
     if (closed) return;
@@ -134,6 +136,12 @@ wss.on("connection", (client) => {
   });
 
   upstream.on("close", (code, reason) => {
+    console.log("[voice-agent-gateway] Edge gateway encerrado", {
+      code,
+      reason: clean(reason?.toString(), 120),
+      clientBinaryFrames,
+      clientBinaryBytes,
+    });
     if (client.readyState === WebSocket.OPEN) {
       client.close(code >= 1000 && code <= 4999 ? code : 1011, clean(reason?.toString(), 120) || "edge_gateway_closed");
     }
@@ -141,6 +149,17 @@ wss.on("connection", (client) => {
   });
 
   client.on("message", (data, isBinary) => {
+    if (isBinary) {
+      const bytes = Number(data?.byteLength ?? data?.length ?? 0);
+      clientBinaryFrames += 1;
+      clientBinaryBytes += Number.isFinite(bytes) ? bytes : 0;
+      if (clientBinaryFrames === 1) {
+        console.log("[voice-agent-gateway] primeiro frame PCM do microfone recebido", {
+          bytes,
+        });
+      }
+    }
+
     if (upstream.readyState === WebSocket.OPEN) {
       upstream.send(data, { binary: isBinary });
       return;
