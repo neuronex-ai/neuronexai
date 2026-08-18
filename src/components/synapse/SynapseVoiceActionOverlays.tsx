@@ -6,6 +6,7 @@ import {
   SYNAPSE_VOICE_REVIEW_EVENT,
   normalizeVoiceReviewAction,
   respondOpaqueConfirmation,
+  setOpaqueCaptureBlocked,
   type SynapseActionReview,
   type SynapseOpaqueConfirmationRequest,
   type SynapseReviewSegment,
@@ -205,9 +206,15 @@ const OpaqueConfirmationOverlay = ({
   const [attempts, setAttempts] = useState(0);
   const [listening, setListening] = useState(false);
 
+  useEffect(() => {
+    setOpaqueCaptureBlocked(true);
+    return () => setOpaqueCaptureBlocked(false);
+  }, [request.requestId]);
+
   const finish = useCallback((success: boolean, cancelled = false, message = "") => {
     recognitionRef.current?.abort?.();
     recognitionRef.current = null;
+    setOpaqueCaptureBlocked(false);
     respondOpaqueConfirmation({
       requestId: request.requestId,
       success,
@@ -309,6 +316,12 @@ const OpaqueConfirmationOverlay = ({
           {code}
         </div>
 
+        {attempts > 0 && attempts < 3 ? (
+          <p className="mb-3 text-xs text-muted-foreground" role="status" aria-live="polite">
+            O número ouvido não correspondeu. Tentativa {attempts} de 3.
+          </p>
+        ) : null}
+
         <div className="flex flex-col items-center gap-2">
           <button
             type="button"
@@ -326,12 +339,6 @@ const OpaqueConfirmationOverlay = ({
             Confirme clicando aqui
           </button>
         </div>
-
-        {attempts > 0 && attempts < 3 ? (
-          <p className="mt-4 text-xs text-muted-foreground" role="status" aria-live="polite">
-            O número ouvido não correspondeu. Tentativa {attempts} de 3.
-          </p>
-        ) : null}
       </motion.div>
     </motion.div>
   );
@@ -366,6 +373,7 @@ export const SynapseVoiceActionOverlays = () => {
     return () => {
       window.removeEventListener(SYNAPSE_VOICE_REVIEW_EVENT, onReview as EventListener);
       window.removeEventListener(SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT, onConfirmation as EventListener);
+      setOpaqueCaptureBlocked(false);
     };
   }, []);
 
