@@ -1,14 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Check, Mic, ShieldCheck } from "lucide-react";
+import { Check, Loader2, Mic, ShieldCheck } from "lucide-react";
 import {
   SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT,
   SYNAPSE_VOICE_REVIEW_EVENT,
+  emitActionGroupEditRequest,
   normalizeVoiceReviewAction,
   respondOpaqueConfirmation,
   setOpaqueCaptureBlocked,
   type SynapseActionReview,
   type SynapseOpaqueConfirmationRequest,
+  type SynapseReviewEditableSegment,
+  type SynapseReviewSelectSegment,
   type SynapseReviewSegment,
   type SynapseVoiceReviewAction,
 } from "@/lib/synapse-voice-ui-protocol";
@@ -129,7 +132,9 @@ const recognitionConstructor = (): RecognitionConstructor | null => {
   return scoped.SpeechRecognition || scoped.webkitSpeechRecognition || null;
 };
 
-const segmentText = (segment: SynapseReviewSegment) => {
+const fieldKey = (stepId: string, fieldId: string) => `${stepId}:${fieldId}`;
+
+const displayText = (segment: SynapseReviewSegment) => {
   if (segment.type === "text") return segment.text;
   if (segment.type === "editable") return String(segment.value ?? "");
   const selected = segment.options.find((option) => option.value === segment.value);
@@ -138,13 +143,83 @@ const segmentText = (segment: SynapseReviewSegment) => {
 
 const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
   const cards = review.data.actions;
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [rewriting, setRewriting] = useState<string | null>(null);
+  const versioned = Boolean(review.data.planId && review.data.planVersion && review.data.planHash);
+
+  const requestEdit = useCallback((stepId: string, fieldId: string, value: unknown) => {
+    if (!review.data.planId || !review.data.planVersion || !review.data.planHash) return false;
+    const emitted = emitActionGroupEditRequest({
+      reviewId: review.data.reviewId,
+      planId: review.data.planId,
+      planVersion: review.data.planVersion,
+      planHash: review.data.planHash,
+      stepId,
+      fieldId,
+      value,
+    });
+    if (emitted) setRewriting(fieldKey(stepId, fieldId));
+    return emitted;
+  }, [review]);
+
+  const editableField = (
+    stepId: string,
+    segment: SynapseReviewEditableSegment,
+  ) => {
+    const key = fieldKey(stepId, segment.fieldId);
+    const original = String(segment.value ?? "");
+    const value = drafts[key] ?? original;
+    return (
+      <label key={key} className="inline-flex max-w-full flex-col gap-1 align-middle">
+        <span className="sr-only">{segment.label}</span>
+        <input
+          value={value}
+          inputMode={(segment.inputMode as React.HTMLAttributes<HTMLInputElement>["inputMode"]) || undefined}
+          maxLength={segment.maxLength}
+          disabled={!versioned || rewriting === key}
+          onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
+          onBlur={() => {
+            if (value !== original) requestEdit(stepId, segment.fieldId, value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              if (value !== original) requestEdit(stepId, segment.fieldId, value);
+              event.currentTarget.blur();
+            }
+          }}
+          className="min-h-8 max-w-[190px] rounded-lg border border-border/70 bg-background/80 px-2 py-1 text-center text-xs text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+        />
+      </label>
+    );
+  };
+
+  const selectField = (stepId: string, segment: SynapseReviewSelectSegment) => {
+    const key = fieldKey(stepId, segment.fieldId);
+    return (
+      <label key={key} className="inline-flex max-w-full flex-col gap-1 align-middle">
+        <span className="sr-only">{segment.label}</span>
+        <select
+          value={segment.value}
+          disabled={!versioned || rewriting === key}
+          onChange={(event) => requestEdit(stepId, segment.fieldId, event.target.value)}
+          className="min-h-8 max-w-[190px] rounded-lg border border-border/70 bg-background/80 px-2 py-1 text-center text-xs text-foreground outline-none transition focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
+        >
+          {segment.options.map((option) => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+      </label>
+    );
+  };
+
   return (
     <motion.section
       initial={{ opacity: 0, y: 16, scale: 0.985 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: 10, scale: 0.99 }}
       transition={{ type: "spring", stiffness: 360, damping: 32 }}
-      className="pointer-events-auto fixed inset-x-0 bottom-28 z-[92] mx-auto w-[min(94vw,980px)] px-3"
+      className="pointer-events-auto fixed inset-x-0 bottom-28 z-[92] mx-auto w-[min(94vw,1080px)] px-3"
       aria-label="Revisão da ação do Synapse"
       aria-live="polite"
     >
@@ -152,7 +227,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
         <div className="mb-3 flex items-center justify-between gap-3 px-2 pt-1">
           <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Revisão antes de confirmar</p>
-            <p className="mt-1 text-sm text-foreground/88">Confira o que será executado. Diga “confirmo ação” quando estiver correto.</p>
+            <p className="mt-1 text-sm text-foreground/88">Confira o que será executado. Você pode editar um campo ou dizer “confirmo ação”.</p>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 rounded-full border border-border/60 bg-background/70 px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
@@ -168,18 +243,29 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: Math.min(index * 0.04, 0.2) }}
-                className="relative w-[248px] shrink-0 overflow-hidden rounded-[22px] border border-border/55 bg-card/86 p-4 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.035]"
+                className="relative w-[252px] shrink-0 overflow-hidden rounded-[22px] border border-border/55 bg-card/86 p-4 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.035]"
               >
                 <div className="mb-3 flex items-center justify-between">
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold text-background">
                     {index + 1}
                   </span>
-                  <Check className="h-4 w-4 text-muted-foreground/55" aria-hidden="true" />
+                  {rewriting?.startsWith(`${card.id}:`) ? (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground" role="status">
+                      <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                      reescrevendo
+                    </span>
+                  ) : (
+                    <Check className="h-4 w-4 text-muted-foreground/55" aria-hidden="true" />
+                  )}
                 </div>
                 <h3 className="text-center text-xs font-semibold tracking-wide text-foreground">{card.area}</h3>
-                <p className="mt-2 text-center text-sm leading-5 text-muted-foreground">
-                  {card.segments.map(segmentText).join("").replace(/\s+/g, " ").trim()}
-                </p>
+                <div className="mt-2 flex min-h-12 flex-wrap items-center justify-center gap-1 text-center text-sm leading-5 text-muted-foreground">
+                  {card.segments.map((segment, segmentIndex) => {
+                    if (segment.type === "editable") return editableField(card.id, segment);
+                    if (segment.type === "select") return selectField(card.id, segment);
+                    return <span key={`${card.id}:text:${segmentIndex}`}>{displayText(segment)}</span>;
+                  })}
+                </div>
                 <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-foreground/18 to-transparent" />
               </motion.article>
             ))}
@@ -187,7 +273,9 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
         </div>
 
         <p className="mt-2 px-2 text-[11px] leading-4 text-muted-foreground/80">
-          Edição de campos só será habilitada quando a versão visível puder atualizar o plano executável com hash novo. Até lá, a revisão é somente leitura para evitar confirmar dados diferentes dos que serão executados.
+          {versioned
+            ? `Versão ${review.data.planVersion}. Toda edição cria uma nova versão antes da confirmação.`
+            : "Esta revisão é somente leitura porque não recebeu identidade/versionamento seguro do plano."}
         </p>
       </div>
     </motion.section>
@@ -282,8 +370,7 @@ const OpaqueConfirmationOverlay = ({
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      finish(false, true, "Confirmação cancelada no navegador.");
+      if (event.key === "Escape") finish(false, true, "Confirmação cancelada no navegador.");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
