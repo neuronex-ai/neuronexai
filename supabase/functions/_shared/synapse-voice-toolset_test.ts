@@ -18,17 +18,13 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
 
-  equal(functions.length, 16, "quantidade de funções de voz");
+  equal(functions.length, 14, "quantidade de funções de voz");
   equal(
     SYNAPSE_VOICE_TOOLSET_VERSION,
-    "neuronex.voice-core.v7",
+    "neuronex.voice-core.v8",
     "versão do payload de sessão",
   );
-  equal(
-    functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS,
-    true,
-    "limite do gateway",
-  );
+  equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "primeira função exclusiva de voz");
   equal(names[1], "cancel_pending_action", "segunda função exclusiva de voz");
@@ -37,34 +33,30 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) {
     equal(names.includes(required), true, `ferramenta ${required}`);
   }
-  equal(
-    names.includes(SYNAPSE_VOICE_DISPATCH_TOOL_NAME),
-    true,
-    "ponte para o catalogo completo",
-  );
+  equal(names.includes(SYNAPSE_VOICE_DISPATCH_TOOL_NAME), true, "ponte para o catalogo completo");
   equal(names.includes("search_workspace"), true, "busca unificada no núcleo");
   equal(names.includes("get_workspace_overview"), false, "overview movido ao dispatcher");
-  equal(names.includes("get_dashboard_schedule"), false, "agenda simples movida ao dispatcher para abrir vaga ao planner");
+  equal(names.includes("get_dashboard_schedule"), false, "agenda simples permanece no dispatcher");
+  equal(names.includes("create_neuroflow_from_patient_history"), false, "NeuroFlow fora do núcleo direto");
+  equal(names.includes("create_neuropulse_cause_effect_diagram"), false, "NeuroPulse fora do núcleo direto");
 });
 
-Deno.test("ponte de voz alcanca capacidades permitidas fora do nucleo sem liberar exclusoes", () => {
+Deno.test("ponte de voz alcança capacidades permitidas fora do núcleo sem liberar exclusões", () => {
   const functions = buildSynapseVoiceFunctions();
-  const dispatch = functions.find((tool) =>
-    tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME
-  );
+  const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
 
-  for (
-    const name of [
-      "create_appointment",
-      "reschedule_appointment",
-      "get_notes_desktop_overview",
-      "get_financial_summary",
-      "send_patient_email",
-      "get_teleconsultation_readiness",
-      "get_dashboard_schedule",
-    ]
-  ) {
+  for (const name of [
+    "create_appointment",
+    "reschedule_appointment",
+    "get_notes_desktop_overview",
+    "get_financial_summary",
+    "send_patient_email",
+    "get_teleconsultation_readiness",
+    "get_dashboard_schedule",
+    "create_neuroflow_from_patient_history",
+    "create_neuropulse_cause_effect_diagram",
+  ]) {
     equal(delegatedNames.includes(name), true, `capacidade delegada ${name}`);
   }
 
@@ -85,24 +77,16 @@ Deno.test("todo o catálogo V3 está no núcleo, dispatcher ou bloqueado por pol
   }
 });
 
-Deno.test("NeuroView, NeuroFlow e NeuroPulse chegam ao Deepgram com schema real", () => {
+Deno.test("NeuroView fica direto; NeuroFlow e NeuroPulse exigem seleção explícita pelo dispatcher", () => {
   const functions = buildSynapseVoiceFunctions();
-  for (
-    const name of [
-      "analyze_neuroview_patient_patterns",
-      "create_neuroflow_from_patient_history",
-      "create_neuropulse_cause_effect_diagram",
-    ]
-  ) {
-    const tool = functions.find((candidate) => candidate.name === name);
-    equal(Boolean(tool), true, `registro de ${name}`);
-    equal(tool?.parameters?.type, "object", `schema de ${name}`);
-    equal(
-      Boolean(tool?.parameters?.properties?.patient_name),
-      true,
-      `patient_name em ${name}`,
-    );
-  }
+  const neuroview = functions.find((candidate) => candidate.name === "analyze_neuroview_patient_patterns");
+  equal(Boolean(neuroview), true, "NeuroView direto");
+  equal(Boolean(neuroview?.parameters?.properties?.patient_name), true, "patient_name em NeuroView");
+
+  const dispatch = functions.find((candidate) => candidate.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
+  const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
+  equal(delegatedNames.includes("create_neuroflow_from_patient_history"), true, "NeuroFlow delegado");
+  equal(delegatedNames.includes("create_neuropulse_cause_effect_diagram"), true, "NeuroPulse delegado");
 });
 
 Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco para o servidor", () => {
@@ -115,23 +99,15 @@ Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco
   equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
+  equal(String(tool?.description || "").includes("Nao confunda pacote/grupo/sequencia operacional com NeuroFlow"), true, "planner diferencia grupo operacional de NeuroFlow");
 });
 
 Deno.test("navegação assistida expõe as superfícies read-first do Desktop", () => {
   const functions = buildSynapseVoiceFunctions();
-  const navigation = functions.find((tool) =>
-    tool.name === "request_interface_action"
-  );
+  const navigation = functions.find((tool) => tool.name === "request_interface_action");
   const elements = navigation?.parameters?.properties?.element?.enum || [];
 
-  for (
-    const element of [
-      "dashboard_agenda",
-      "agenda_calendar",
-      "patient_summary",
-      "finance_entries",
-    ]
-  ) {
+  for (const element of ["dashboard_agenda", "agenda_calendar", "patient_summary", "finance_entries"]) {
     equal(elements.includes(element), true, `superfície ${element}`);
   }
 
