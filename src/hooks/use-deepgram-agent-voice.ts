@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analysePcm16, PcmAudioPlayer, SILENT_PCM_SIGNAL, type PcmAudioSignal } from "@/lib/pcm-audio-player";
+import { emitVoiceReviewAction } from "@/lib/synapse-voice-ui-protocol";
 import type {
   SynapseVoiceFunctionStatus,
   SynapseVoicePhase,
@@ -602,6 +603,11 @@ export function useDeepgramAgentVoice({
   const handleGatewayMessage = useCallback((payload: Record<string, unknown>) => {
     const type = clean(payload.type, 80);
 
+    if (type === "review_action") {
+      emitVoiceReviewAction(payload.action);
+      return;
+    }
+
     if (type === "gateway_status") {
       const status = clean(payload.status, 80);
       const nextConversationId = typeof payload.conversationId === "string"
@@ -852,6 +858,10 @@ export function useDeepgramAgentVoice({
             voiceSessionId: nextVoiceSessionId,
             systemInstruction,
             language,
+            voiceUiCapabilities: {
+              version: 1,
+              capabilities: ["review_action:v1", "opaque_confirmation:v1", "screen_context:v1"],
+            },
             context: {
               ...(context || {}),
               ...(override?.context || {}),
