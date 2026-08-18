@@ -5,6 +5,7 @@ import {
   type SynapseActionGroupStep,
   type SynapseEditableField,
 } from "../_shared/synapse-action-group.ts";
+import { loadAgendaActionContext } from "../_shared/agenda-action-context.ts";
 import { validateVoiceToolCall } from "../_shared/synapse-voice-policy.ts";
 import {
   enrichToolArguments,
@@ -69,10 +70,61 @@ function editableFieldsFor(toolName: string, args: Record<string, any>): Synapse
   return fields;
 }
 
-function riskForTool(toolName: string, riskLevel: string) {
-  if (/neurofinance/i.test(toolName)) return "neurofinance" as const;
-  if (riskLevel === "high") return "critical" as const;
+function financialMode(args: Record<string, any>) {
+  return clean(args.financial_mode || args.financial?.mode || args.payment_config?.financial_mode, 40).toLowerCase();
+}
+
+function riskForTool(toolName: string, args: Record<string, any>) {
+  const mode = financialMode(args);
+  if (/neurofinance/i.test(toolName) || mode === "neurofinance") return "neurofinance" as const;
+  if (toolName === "create_fiscal_invoice") return "critical" as const;
+  if (toolName === "cancel_appointment") {
+    const scope = clean(args.scope || args.cancel_scope || args.series_scope, 60).toLowerCase();
+    if (["series", "whole_series", "all", "from_here", "future"].includes(scope)) return "critical" as const;
+  }
   return "normal" as const;
+}
+
+const AGENDA_PREFLIGHT_TOOLS = new Set([
+  "create_appointment",
+  "reschedule_appointment",
+  "cancel_appointment",
+  "create_financial_entry",
+  "create_neurofinance_charge",
+  "create_fiscal_invoice",
+  "send_appointment_reminder",
+  "send_patient_email",
+]);
+
+async function assertAgendaPreflight(admin: any, userId: string, toolName: string, args: Record<string, any>) {
+  if (!AGENDA_PREFLIGHT_TOOLS.has(toolName)) return;
+  const patientId = clean(args.patient_id || args.patientId, 120) || null;
+  const agenda = await loadAgendaActionContext({ admin, professionalId: userId, patientId });
+  if (!agenda.entitlement.canUseCurrentAccess) {
+    throw new Error("O acesso atual não permite executar esta ação da Agenda.");
+  }
+
+  const mode = financialMode(args);
+  if (mode === "manual") return; // escolha explícita do psicólogo é autoritativa.
+
+  if (toolName === "create_neurofinance_charge" || mode === "neurofinance") {
+    if (!agenda.neurofinance.availableByPlan) throw new Error("NeuroFinance não está disponível no plano atual. Use lançamento manual.");
+    if (!agenda.neurofinance.accountExists) throw new Error("A conta NeuroFinance ainda não foi configurada. Use lançamento manual ou conclua o cadastro.");
+    if (!agenda.neurofinance.allowed) {
+      if (agenda.patient && agenda.patient.cpf !== "valid") {
+        throw new Error("A cobrança NeuroFinance precisa de CPF válido do paciente. O lançamento manual continua disponível.");
+      }
+      throw new Error("A conta NeuroFinance não está operacional para cobranças agora. Use lançamento manual ou regularize a conta.");
+    }
+  }
+
+  if (mode === "package" && !agenda.allowedFinancialModes.includes("package")) {
+    throw new Error("Não há pacote ativo com sessão disponível para este paciente.");
+  }
+
+  if (toolName === "send_patient_email" && !agenda.google.gmail.scopePresent) {
+    throw new Error("O Gmail conectado não possui escopo de envio. Reconecte o Google antes de enviar este e-mail.");
+  }
 }
 
 export async function buildActionGroupSteps(input: {
@@ -107,6 +159,8 @@ export async function buildActionGroupSteps(input: {
       rawArgs,
       context.state,
     );
+    await assertAgendaPreflight(input.admin, input.userId, toolName, enriched.args);
+
     const stepId = safeStepId(raw.step_id || raw.stepId, `step-${index + 1}`);
     const dependencyIndexes = Array.isArray(raw.depends_on) ? raw.depends_on : [];
     const dependencies = dependencyIndexes
@@ -122,7 +176,7 @@ export async function buildActionGroupSteps(input: {
       title: clean(raw.title, 180) || `Etapa ${index + 1}`,
       spokenSummary: clean(raw.summary || raw.spoken_summary, 600) || `Executar ${toolName.replace(/_/g, " ")}.`,
       actionType: clean(raw.action_type || toolName, 120),
-      risk: riskForTool(toolName, policy.riskLevel),
+      risk: riskForTool(toolName, enriched.args),
       dependencies,
       expectedEffect: clean(raw.expected_effect, 160) || (policy.executor === "interface" ? "interface" : "persist_record"),
       editableFields: editableFieldsFor(toolName, enriched.args),
@@ -154,6 +208,32 @@ export function rowPendingAction(row: any): PendingAction {
   };
 }
 
+function reviewSegments(card: any) {
+  const fields = Array.isArray(card.editableFields) ? card.editableFields : [];
+  return [
+    { type: "text", text: clean(card.summary, 600) },
+    ...fields.map((field: any) => field.type === "select" && Array.isArray(field.options)
+      ? {
+          type: "select",
+          fieldId: clean(field.fieldId, 120),
+          label: clean(field.label, 120),
+          value: String(field.value ?? ""),
+          options: field.options.map((option: any) => ({
+            value: clean(option.value, 120),
+            label: clean(option.label, 120),
+          })).filter((option: any) => option.value),
+        }
+      : {
+          type: "editable",
+          fieldId: clean(field.fieldId, 120),
+          label: clean(field.label, 120),
+          value: field.value,
+          inputMode: ["number", "money"].includes(clean(field.type, 40)) ? "decimal" : undefined,
+          maxLength: field.type === "text" ? 2000 : undefined,
+        }),
+  ];
+}
+
 export function rowReviewClientAction(row: any) {
   const review = row.review_public && typeof row.review_public === "object" ? row.review_public : {};
   const cards = Array.isArray(review.cards) ? review.cards : [];
@@ -169,7 +249,7 @@ export function rowReviewClientAction(row: any) {
       actions: cards.map((card: any) => ({
         id: clean(card.id, 120),
         area: clean(card.area, 120) || "Ação",
-        segments: [{ type: "text", text: clean(card.summary, 600) }],
+        segments: reviewSegments(card),
       })),
     },
   };
