@@ -48,9 +48,13 @@ export async function executePersistedActionGroup(input: {
   userId: string;
   row: any;
   confirmation: "direct" | "voice" | "opaque";
+  authorization: string;
+  requestOrigin?: string | null;
+  userClient?: any;
 }) {
   const row = input.row;
   if (!/^[a-f0-9]{64}$/i.test(clean(row.plan_hash, 64))) throw new Error("Hash do plano inválido.");
+  if (!clean(input.authorization, 8000).startsWith("Bearer ")) throw new Error("Sessão ausente para executar o plano.");
   if (new Date(row.expires_at).getTime() <= Date.now()) {
     await saveExecutionState(input.admin, row, row.result_internal || {}, "expired");
     throw new Error("O plano expirou. Prepare uma revisão nova antes de executar.");
@@ -110,6 +114,9 @@ export async function executePersistedActionGroup(input: {
         admin: input.admin,
         userId: input.userId,
         sessionId: row.conversation_id,
+        authorization: input.authorization,
+        requestOrigin: input.requestOrigin || null,
+        userClient: input.userClient,
         channel: "voice" as const,
         voiceSessionId: row.voice_session_id,
         toolCallId: `${row.plan_id}:${row.plan_version}:${step.stepId}`,
