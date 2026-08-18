@@ -1,3 +1,10 @@
+import {
+  assertNoLegacyElevenLabsMultiLanguageCode,
+  normalizeLegacyElevenLabsMultilingualSettings,
+  SYNAPSE_ELEVENLABS_LANGUAGE,
+  SYNAPSE_ELEVENLABS_MODEL_ID,
+} from "../_shared/synapse-voice-settings.ts";
+
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization,x-client-info,apikey,content-type",
@@ -110,7 +117,7 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   if (!thinkChain.length || thinkChain.some((item) => !item || typeof item !== "object")) {
     throw new Error("Settings de voz inválidos: agent.think ausente.");
   }
-  for (const rawThink of thinkChain) {
+  for (const [index, rawThink] of thinkChain.entries()) {
     const think = rawThink as Record<string, unknown>;
     const thinkProvider = think.provider as Record<string, unknown> | undefined;
     if (!thinkProvider || typeof thinkProvider !== "object") {
@@ -120,8 +127,13 @@ function validateAgentSettings(settings: Record<string, unknown>) {
     if (!MANAGED_THINK_MODELS.has(providerKey) || think.endpoint) {
       throw new Error("Settings de voz inválidos: apenas LLMs gerenciados aprovados são permitidos.");
     }
-    if (!clean(think.prompt, 8000)) throw new Error("Settings de voz inválidos: prompt ausente.");
-    if (!Array.isArray(think.functions) || think.functions.length > MAX_VOICE_FUNCTIONS) {
+    if (index === 0 && !clean(think.prompt, 8000)) {
+      throw new Error("Settings de voz inválidos: prompt primário ausente.");
+    }
+    if (index === 0 && !Array.isArray(think.functions)) {
+      throw new Error("Settings de voz inválidos: ferramentas do modelo primário ausentes.");
+    }
+    if (Array.isArray(think.functions) && think.functions.length > MAX_VOICE_FUNCTIONS) {
       throw new Error("Settings de voz inválidos: conjunto de ferramentas excede o núcleo permitido.");
     }
   }
@@ -147,28 +159,39 @@ function validateAgentSettings(settings: Record<string, unknown>) {
   if (speakChain.length !== 2 || speakChain.some((item) => !item || typeof item !== "object")) {
     throw new Error("Settings de voz inválidos: cadeia Azure/ElevenLabs ausente.");
   }
-  const azureSpeak = speakChain[0] as Record<string, unknown>;
+
+  // Backward compatibility for clients/deployments that still send the old
+  // `eleven_labs.language_code = "multi"` shape. The normalized settings are
+  // then checked again before they can be forwarded to Deepgram.
+  normalizeLegacyElevenLabsMultilingualSettings(settings);
+  assertNoLegacyElevenLabsMultiLanguageCode(settings);
+
+  const elevenSpeak = speakChain[0] as Record<string, unknown>;
   const fallbackSpeak = speakChain[1] as Record<string, unknown>;
-  const azureProvider = azureSpeak.provider as Record<string, unknown> | undefined;
-  const azureEndpoint = azureSpeak.endpoint as Record<string, unknown> | undefined;
-  const azureHeaders = azureEndpoint?.headers as Record<string, unknown> | undefined;
+  const elevenProvider = elevenSpeak.provider as Record<string, unknown> | undefined;
+  const elevenEndpoint = elevenSpeak.endpoint as Record<string, unknown> | undefined;
+  const elevenHeaders = elevenEndpoint?.headers as Record<string, unknown> | undefined;
+  const elevenModelId = clean(elevenProvider?.model_id, 120).toLowerCase();
+  const elevenLanguage = clean(elevenProvider?.language, 40).toLowerCase();
+
   const fallbackProvider = fallbackSpeak.provider as Record<string, unknown> | undefined;
   const fallbackEndpoint = fallbackSpeak.endpoint as Record<string, unknown> | undefined;
   const fallbackHeaders = fallbackEndpoint?.headers as Record<string, unknown> | undefined;
   if (
-    azureProvider?.type !== "open_ai" ||
-    !clean(azureEndpoint?.url, 1000).includes("/functions/v1/synapse-voice-azure-tts") ||
-    !clean(azureHeaders?.["x-synapse-tts-secret"], 8000)
+    elevenProvider?.type !== "eleven_labs" ||
+    elevenModelId !== SYNAPSE_ELEVENLABS_MODEL_ID ||
+    elevenLanguage !== SYNAPSE_ELEVENLABS_LANGUAGE ||
+    !clean(elevenEndpoint?.url, 1000).includes("api.elevenlabs.io/v1/text-to-speech/") ||
+    !clean(elevenHeaders?.["xi-api-key"], 8000)
   ) {
-    throw new Error("Settings de voz inválidos: adaptador Azure Speech incompleto.");
+    throw new Error("Settings de voz inválidos: ElevenLabs multilíngue principal ausente.");
   }
   if (
-    fallbackProvider?.type !== "eleven_labs" ||
-    clean(fallbackProvider?.language_code, 40).toLowerCase() !== "pt-br" ||
-    !clean(fallbackEndpoint?.url, 1000).includes("api.elevenlabs.io/v1/text-to-speech/") ||
-    !clean(fallbackHeaders?.["xi-api-key"], 8000)
+    fallbackProvider?.type !== "open_ai" ||
+    !clean(fallbackEndpoint?.url, 1000).includes("/functions/v1/synapse-voice-azure-tts") ||
+    !clean(fallbackHeaders?.["x-synapse-tts-secret"], 8000)
   ) {
-    throw new Error("Settings de voz inválidos: fallback ElevenLabs pt-BR ausente.");
+    throw new Error("Settings de voz inválidos: fallback Azure Speech incompleto.");
   }
   agent.speak = speakChain;
   return settings;
@@ -211,6 +234,15 @@ const TOOL_TIMEOUT_MS = Number(Deno.env.get("SYNAPSE_VOICE_TOOL_TIMEOUT_MS") || 
 const CLIENT_ACTION_ACK_TIMEOUT_MS = Number(
   Deno.env.get("SYNAPSE_VOICE_CLIENT_ACTION_ACK_TIMEOUT_MS") || "20000",
 );
+const CONFIRMATION_CHALLENGE_ACK_TIMEOUT_MS = Number(
+  Deno.env.get("SYNAPSE_VOICE_CONFIRMATION_CHALLENGE_TIMEOUT_MS") || "60000",
+);
+
+const OPAQUE_CONFIRMATION_TOOLS = new Set([
+  "manage_action_group",
+  "create_neurofinance_charge",
+  "create_fiscal_invoice",
+]);
 
 const TOOL_LABELS: Record<string, string> = {
   confirm_pending_action: "confirmacao pendente",
@@ -264,6 +296,165 @@ const safeJsonParse = (value: unknown): Record<string, unknown> => {
   } catch {
     return {};
   }
+};
+
+const delegatedTool = (name: string, args: Record<string, unknown> = {}) => {
+  if (name !== "execute_synapse_tool") return { name, args };
+  return {
+    name: clean(args.tool_name || args.toolName, 120),
+    args: safeJsonParse(args.arguments || args.args || args.arguments_json),
+  };
+};
+
+const needsOpaqueConfirmation = (toolName: string, args: Record<string, unknown> = {}) => {
+  if (OPAQUE_CONFIRMATION_TOOLS.has(toolName)) return true;
+  if (toolName !== "create_appointment") return false;
+  const financial = args.financial && typeof args.financial === "object"
+    ? args.financial as Record<string, unknown>
+    : {};
+  const financialMode = clean(args.financial_mode || financial.mode, 40).toLowerCase();
+  const occurrenceCount = Number(args.occurrence_count || 1);
+  return financialMode === "neurofinance"
+    || financialMode === "package"
+    || args.create_charge === true
+    || Number.isFinite(occurrenceCount) && occurrenceCount >= 6;
+};
+
+const canExecuteWithoutReview = (
+  name: string,
+  args: Record<string, unknown> = {},
+  payload: Record<string, unknown> = {},
+) => {
+  const delegated = delegatedTool(name, args);
+  const toolName = clean(payload.tool || delegated.name, 120);
+  if (["create_session_note", "create_financial_entry"].includes(toolName)) return true;
+  if (toolName !== "create_appointment") return false;
+  const financial = delegated.args.financial && typeof delegated.args.financial === "object"
+    ? delegated.args.financial as Record<string, unknown>
+    : {};
+  const financialMode = clean(delegated.args.financial_mode || financial.mode, 40).toLowerCase();
+  const occurrenceCount = Number(delegated.args.occurrence_count || 1);
+  return (!Number.isFinite(occurrenceCount) || occurrenceCount <= 1)
+    && !["neurofinance", "package"].includes(financialMode)
+    && delegated.args.create_charge !== true
+    && delegated.args.fiscal_automation_enabled !== true;
+};
+
+const money = (value: unknown) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount)) return "R$ 0,00";
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(amount);
+};
+
+type ReviewSegment = Record<string, unknown>;
+type ReviewAction = {
+  id: string;
+  area: string;
+  segments: ReviewSegment[];
+};
+
+const pendingActionReview = (
+  name: string,
+  args: Record<string, unknown> = {},
+  payload: Record<string, unknown> = {},
+) => {
+  const delegated = delegatedTool(name, args);
+  const toolName = clean(payload.tool || delegated.name, 120);
+  const toolArgs = delegated.args;
+  const reviewId = crypto.randomUUID();
+  const editable = (
+    fieldId: string,
+    label: string,
+    value: unknown,
+    extra: Record<string, unknown> = {},
+  ) => ({
+    type: "editable",
+    fieldId,
+    label,
+    value: clean(value, Number(extra.maxLength) || 4000),
+    ...extra,
+  });
+  let actions: ReviewAction[] = [];
+
+  if (toolName === "send_patient_email") {
+    actions = [
+      {
+        id: "email-subject",
+        area: "E-mail",
+        segments: [
+          { type: "text", text: "Assunto: " },
+          editable("subject", "título", toolArgs.subject, { maxLength: 180 }),
+        ],
+      },
+      {
+        id: "email-body",
+        area: "E-mail",
+        segments: [
+          { type: "text", text: "Mensagem: " },
+          editable("body", "corpo do e-mail", toolArgs.body, { maxLength: 4000 }),
+        ],
+      },
+    ];
+  } else if (toolName === "create_neurofinance_charge") {
+    const rawPaymentMethod = clean(toolArgs.payment_method, 40).toLowerCase();
+    const paymentMethod = ["pix", "boleto", "card", "undefined"].includes(rawPaymentMethod)
+      ? rawPaymentMethod
+      : "undefined";
+    actions = [
+      {
+        id: "neurofinance-charge",
+        area: "NeuroFinance",
+        segments: [
+          { type: "text", text: "Cobrança de " },
+          editable("amount", "valor", money(toolArgs.amount), { inputMode: "decimal", maxLength: 24 }),
+          { type: "text", text: " via " },
+          {
+            type: "select",
+            fieldId: "payment_method",
+            label: "meio de pagamento",
+            value: paymentMethod,
+            options: [
+              { value: "pix", label: "Pix" },
+              { value: "boleto", label: "Boleto" },
+              { value: "card", label: "Cartão" },
+              { value: "undefined", label: "A definir" },
+            ],
+          },
+          { type: "text", text: "." },
+        ],
+      },
+      {
+        id: "neurofinance-due-date",
+        area: "Vencimento",
+        segments: [
+          { type: "text", text: "Vence em " },
+          editable("due_date", "data de vencimento", toolArgs.due_date, { maxLength: 20 }),
+          { type: "text", text: "." },
+        ],
+      },
+    ];
+  } else if (toolName === "create_fiscal_invoice") {
+    actions = [{
+      id: "fiscal-document",
+      area: "Fiscal",
+      segments: [
+        { type: "text", text: "Documento de " },
+        editable("amount", "valor", money(toolArgs.amount), { inputMode: "decimal", maxLength: 24 }),
+        { type: "text", text: " por " },
+        editable("description", "descrição", toolArgs.description, { maxLength: 180 }),
+        { type: "text", text: "." },
+      ],
+    }];
+  }
+
+  if (!actions.length) return null;
+  return {
+    type: "synapse_action_review",
+    data: { reviewId, toolName, actions },
+  };
 };
 
 const titleizeTool = (value: unknown) => {
@@ -340,7 +531,7 @@ const isTransientError = (value: unknown) => {
   return /timeout|timed out|temporari|temporary|network|socket|fetch|econn|5\d\d|rate limit|too many|indisponivel|instavel|oscila|gateway|service unavailable/.test(text);
 };
 
-const normalizeToolPayload = (name: string, result: Record<string, unknown>) => {
+const normalizeToolPayload = (name: string, result: Record<string, unknown>): Record<string, any> => {
   const parsed = safeJsonParse(result?.content ?? result);
   const explicitOk = parsed.ok;
   const hasError = Boolean(parsed.error || result?.error);
@@ -366,6 +557,12 @@ const normalizeToolPayload = (name: string, result: Record<string, unknown>) => 
     grounded: Boolean(parsed.grounded),
     recordCount: Number(parsed.recordCount || 0),
     structuredData: parsed.structuredData || null,
+    primary_committed: Boolean(parsed.primary_committed ?? parsed.primaryCommitted),
+    primaryCommitted: Boolean(parsed.primary_committed ?? parsed.primaryCommitted),
+    warnings: Array.isArray(parsed.warnings) ? parsed.warnings.slice(0, 20) : [],
+    effectStatus: parsed.effectStatus && typeof parsed.effectStatus === "object"
+      ? parsed.effectStatus
+      : {},
   };
 };
 
@@ -416,15 +613,28 @@ const applyClientActionResult = (
   };
 
   if (success) return { ...payload, client_action: clientAction };
+
+  if (name === "request_interface_action" || payload.tool === "manage_action_group") {
+    return {
+      ...payload,
+      ok: false,
+      spoken_summary: message,
+      message,
+      retryable: result?.timed_out === true,
+      needs_clarification: false,
+      error: message,
+      error_code: result?.timed_out === true ? "client_action_timeout" : "client_action_failed",
+      client_action: clientAction,
+    };
+  }
+
+  const warnings = Array.isArray(payload?.warnings)
+    ? [...payload.warnings, message]
+    : [message];
   return {
     ...payload,
-    ok: false,
-    spoken_summary: message,
-    message,
-    retryable: result?.timed_out === true,
-    needs_clarification: false,
-    error: message,
-    error_code: result?.timed_out === true ? "client_action_timeout" : "client_action_failed",
+    warning: message,
+    warnings,
     client_action: clientAction,
   };
 };
@@ -443,6 +653,11 @@ type VoiceTask = {
   message: string;
 };
 
+type PendingConfirmation = {
+  toolName: string;
+  opaque: boolean;
+};
+
 const clientTask = (task?: VoiceTask | null) => task
   ? {
       id: task.id,
@@ -455,7 +670,7 @@ const clientTask = (task?: VoiceTask | null) => task
     }
   : null;
 
-class EdgeVoiceFunctionRunner {
+export class EdgeVoiceFunctionRunner {
   private sendDeepgram: (payload: unknown) => void;
   private sendClient: (payload: unknown) => void;
   private invokeTool: (input: {
@@ -470,6 +685,7 @@ class EdgeVoiceFunctionRunner {
     string,
     { finish: (result: Record<string, unknown>) => void }
   >();
+  private pendingConfirmation: PendingConfirmation | null = null;
   private lastInterruptionAt = 0;
   private queue: Promise<void> = Promise.resolve();
 
@@ -503,7 +719,11 @@ class EdgeVoiceFunctionRunner {
     return true;
   }
 
-  awaitClientAction(task: VoiceTask, action: unknown) {
+  awaitClientAction(
+    task: VoiceTask,
+    action: unknown,
+    requestedTimeoutMs = CLIENT_ACTION_ACK_TIMEOUT_MS,
+  ) {
     return new Promise<Record<string, unknown>>((resolve) => {
       let settled = false;
       const finish = (result: Record<string, unknown>) => {
@@ -521,8 +741,8 @@ class EdgeVoiceFunctionRunner {
         cancelled: true,
         message: "A acao visual foi cancelada antes de concluir.",
       });
-      const timeoutMs = Number.isFinite(CLIENT_ACTION_ACK_TIMEOUT_MS)
-        ? Math.max(1000, CLIENT_ACTION_ACK_TIMEOUT_MS)
+      const timeoutMs = Number.isFinite(requestedTimeoutMs)
+        ? Math.max(1000, requestedTimeoutMs)
         : 20000;
       const timer = setTimeout(() => finish({
         success: false,
@@ -652,16 +872,90 @@ class EdgeVoiceFunctionRunner {
     let keepAwaitingConfirmation = false;
 
     try {
-      const { result, payload } = await this.invokeWithRetry(task);
+      if (name === "confirm_pending_action" && this.pendingConfirmation?.opaque) {
+        this.sendDeepgram({
+          type: "InjectAgentMessage",
+          message: "Repita o número no centro da sua tela.",
+        });
+        const challengeResult = await this.awaitClientAction(task, {
+          type: "synapse_confirmation_challenge",
+          data: { challengeId: crypto.randomUUID() },
+        }, CONFIRMATION_CHALLENGE_ACK_TIMEOUT_MS);
+        if (controller.signal.aborted) throw makeAbortError();
+        if (!challengeResult.success) {
+          const message = challengeResult.cancelled
+            ? "A confirmação foi cancelada. A ação continua pendente."
+            : "O número não foi confirmado. A ação continua pendente.";
+          const payload = {
+            ok: false,
+            tool: name,
+            spoken_summary: message,
+            message,
+            retryable: false,
+            needs_clarification: false,
+            confirmation_required: true,
+            cancelled: Boolean(challengeResult.cancelled),
+            data: null,
+            error: message,
+          };
+          this.sendFunctionResponse(id, name, payload, thoughtSignature);
+          this.sendStatus(task, challengeResult.cancelled ? "cancelled" : "failed", {
+            message,
+            confirmation_required: true,
+          });
+          this.sendVoiceState("awaiting_confirmation", task, {
+            message,
+            confirmationRequired: true,
+          });
+          keepAwaitingConfirmation = true;
+          return;
+        }
+      }
+
+      let { result, payload } = await this.invokeWithRetry(task);
       if (controller.signal.aborted) throw makeAbortError();
+
+      if (payload.ok && payload.confirmation_required && canExecuteWithoutReview(name, args, payload)) {
+        result = await this.invokeTool({
+          id: `${id}:assisted-execution`,
+          name: "confirm_pending_action",
+          arguments: {},
+          signal: controller.signal,
+        });
+        payload = normalizeToolPayload("confirm_pending_action", result);
+        payload.assisted_execution = true;
+      }
 
       if (result?.clientAction) {
         const clientActionResult = await this.awaitClientAction(task, result.clientAction);
         if (controller.signal.aborted) throw makeAbortError();
         Object.assign(payload, applyClientActionResult(name, payload, clientActionResult));
       }
-      if (task.interrupted && payload.ok) {
-        payload.interrupted = true;
+      if (task.interrupted && payload.ok) payload.interrupted = true;
+
+      if (payload.ok && payload.confirmation_required) {
+        const delegated = delegatedTool(name, args);
+        const confirmedToolName = clean(payload.tool || delegated.name, 120);
+        this.pendingConfirmation = {
+          toolName: confirmedToolName,
+          opaque: needsOpaqueConfirmation(confirmedToolName, delegated.args),
+        };
+        if (!result?.clientAction) {
+          const reviewAction = pendingActionReview(name, args, payload);
+          if (reviewAction) {
+            payload.review = {
+              step_count: reviewAction.data.actions.length,
+              areas: reviewAction.data.actions.map((action) => action.area),
+            };
+            this.sendClient({ type: "review_action", action: reviewAction });
+          }
+        }
+      } else if (payload.ok && ["confirm_pending_action", "cancel_pending_action"].includes(name)) {
+        this.pendingConfirmation = null;
+        this.sendClient({
+          type: "review_action",
+          action: { type: "synapse_action_review_dismiss" },
+        });
       }
 
       this.sendFunctionResponse(id, name, payload, thoughtSignature);
@@ -867,7 +1161,13 @@ class EdgeSynapseVoiceSession {
       ttsProvider: sessionConfig.ttsProvider,
       functionsCount: sessionConfig.functionsCount,
       outputSampleRate: sessionConfig.outputSampleRate,
-      azureTtsAdapterConfigured: Boolean((settings as any)?.agent?.speak?.[0]?.endpoint?.url),
+      azureTtsAdapterConfigured: Boolean(
+        Array.isArray((settings as any)?.agent?.speak) &&
+          (settings as any).agent.speak.some((item: any) =>
+            item?.provider?.type === "open_ai" &&
+            String(item?.endpoint?.url || "").includes("/functions/v1/synapse-voice-azure-tts")
+          )
+      ),
     });
 
     this.connectDeepgram(clean(sessionConfig.deepgramUrl, 500) || DEFAULT_DEEPGRAM_URL, settings as Record<string, unknown>);
@@ -1208,12 +1508,13 @@ Deno.serve((request) => {
       ok: true,
       service: "synapse-voice-gateway",
       runtime: "supabase-edge",
-      voicePath: "deepgram-managed-gpt54mini-azure-speech-elevenlabs-pt-br-fallback",
+      voicePath: "deepgram-managed-gpt54mini-elevenlabs-pt-br-azure-speech-fallback",
       thinkPrimary: "open_ai/gpt-5.4-mini",
       thinkFallback: "google/gemini-3.5-flash",
       thinkLastResort: "anthropic/claude-haiku-4-5",
-      speakPrimary: "azure-speech",
-      speakFallback: "deepgram-managed-elevenlabs-pt-br",
+      speakPrimary: "deepgram-managed-elevenlabs-pt-br",
+      speakFallback: "azure-speech",
+      elevenLanguageMode: SYNAPSE_ELEVENLABS_LANGUAGE,
       deepgramConfigured: Boolean(Deno.env.get("DEEPGRAM_API_KEY")),
       supabaseConfigured: Boolean(Deno.env.get("SUPABASE_URL") && anonKey()),
       gatewaySecretConfigured: Boolean(gatewaySecret()),
