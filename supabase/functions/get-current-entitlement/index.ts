@@ -22,7 +22,13 @@ Deno.serve(async (req: Request) => {
       user_metadata: user.user_metadata,
     });
 
-    return jsonResponse(entitlement);
+    // Compatibility field only. Access is always derived from the effective
+    // entitlement, configured features and limits. Neither a specific e-mail
+    // nor admin_override may bypass feature gates in the client.
+    return jsonResponse({
+      ...entitlement,
+      isDevAccount: false,
+    });
   } catch (error) {
     console.error("get-current-entitlement:error", error);
     return errorResponse("Nao foi possivel carregar sua assinatura.", 500);
