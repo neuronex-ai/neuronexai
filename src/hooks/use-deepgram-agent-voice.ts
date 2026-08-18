@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analysePcm16, PcmAudioPlayer, SILENT_PCM_SIGNAL, type PcmAudioSignal } from "@/lib/pcm-audio-player";
-import { emitVoiceReviewAction } from "@/lib/synapse-voice-ui-protocol";
+import {
+  SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT,
+  emitVoiceReviewAction,
+  type SynapseOpaqueCaptureBlock,
+} from "@/lib/synapse-voice-ui-protocol";
 import type {
   SynapseVoiceFunctionStatus,
   SynapseVoicePhase,
@@ -233,6 +237,7 @@ export function useDeepgramAgentVoice({
   const volumeRef = useRef(0);
   const inputSignalRef = useRef<PcmAudioSignal>(SILENT_PCM_SIGNAL);
   const firstInputFrameLoggedRef = useRef(false);
+  const opaqueCaptureBlockedRef = useRef(false);
   const lastAudioStateUpdateRef = useRef(0);
   const sessionIdRef = useRef<string | null>(sessionId || null);
   const conversationIdRef = useRef<string | null>(conversationId || sessionId || null);
@@ -286,6 +291,21 @@ export function useDeepgramAgentVoice({
     voiceSessionIdRef.current = voiceSessionId;
     setCurrentVoiceSessionId(voiceSessionId);
   }, [voiceSessionId]);
+
+  useEffect(() => {
+    const onOpaqueCaptureBlock = (event: Event) => {
+      const detail = (event as CustomEvent<SynapseOpaqueCaptureBlock>).detail;
+      opaqueCaptureBlockedRef.current = Boolean(detail?.blocked);
+      if (detail?.blocked) {
+        console.info("[Synapse Voice] Deepgram microphone forwarding paused for opaque confirmation");
+      }
+    };
+    window.addEventListener(SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT, onOpaqueCaptureBlock as EventListener);
+    return () => {
+      window.removeEventListener(SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT, onOpaqueCaptureBlock as EventListener);
+      opaqueCaptureBlockedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!activeTool) return undefined;
@@ -419,6 +439,7 @@ export function useDeepgramAgentVoice({
     activeRef.current = false;
     readyRef.current = false;
     listeningRef.current = false;
+    opaqueCaptureBlockedRef.current = false;
     const pending = pendingStartRef.current;
     if (pending) {
       pendingStartRef.current = null;
@@ -484,6 +505,7 @@ export function useDeepgramAgentVoice({
       if (payload.type !== "audio" || !payload.audio) return;
       const signal = analysePcm16(payload.audio, effectiveInputSampleRate);
       setLevel(Number(payload.level || signal.rms || 0), signal);
+      if (opaqueCaptureBlockedRef.current) return;
       const ws = wsRef.current;
       if (!activeRef.current || !readyRef.current || !listeningRef.current) return;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
@@ -516,10 +538,21 @@ export function useDeepgramAgentVoice({
       throw new Error(`O capturador de áudio ficou ${context.state}. Clique novamente para liberar o microfone.`);
     }
 
+    const track = stream.getAudioTracks()[0];
+    const trackSettings = track?.getSettings?.() || {};
     console.info("[Synapse Voice] microphone capture running", {
       sampleRate: context.sampleRate,
       targetSampleRate: effectiveInputSampleRate,
       frameMs: effectiveFrameMs,
+      microphone: {
+        label: track?.label || "",
+        enabled: track?.enabled ?? false,
+        muted: track?.muted ?? false,
+        readyState: track?.readyState || "",
+        deviceId: trackSettings.deviceId ? "available" : "",
+        channelCount: trackSettings.channelCount,
+        sampleRate: trackSettings.sampleRate,
+      },
     });
 
     streamRef.current = stream;
@@ -783,6 +816,7 @@ export function useDeepgramAgentVoice({
     readyRef.current = false;
     listeningRef.current = true;
     firstInputFrameLoggedRef.current = false;
+    opaqueCaptureBlockedRef.current = false;
     setIsListening(false);
     setIsProcessing(true);
     setIsSpeaking(false);
@@ -823,6 +857,7 @@ export function useDeepgramAgentVoice({
     ws.onclose = () => {
       const wasReady = readyRef.current;
       readyRef.current = false;
+      opaqueCaptureBlockedRef.current = false;
       setIsConnected(false);
       setIsListening(false);
       setIsProcessing(false);
@@ -916,7 +951,7 @@ export function useDeepgramAgentVoice({
 
   const sendTextMessage = useCallback((text: string) => {
     const message = clean(text, 2000);
-    if (!message) return;
+    if (!message || opaqueCaptureBlockedRef.current) return;
     const ws = wsRef.current;
     if (!ws || ws.readyState !== WebSocket.OPEN) return;
     ws.send(JSON.stringify({ type: "inject_user_message", message }));
