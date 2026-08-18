@@ -45,3 +45,31 @@ Deno.test("troca uma voz inacessível por uma voz inglesa masculina acessível",
   equal(selected?.voiceId, "english-male", "fallback inglês acessível");
   equal(selected?.selection, "accessible_english", "origem da seleção");
 });
+
+Deno.test("prefere voz masculina profissional a voz casual quando ambas são acessíveis", () => {
+  const selected = selectAccessibleElevenLabsVoice([
+    {
+      voice_id: "roger",
+      name: "Roger - Laid-Back, Casual, Resonant",
+      category: "premade",
+      labels: {
+        language: "en-US",
+        gender: "male",
+        description: "laid-back casual resonant",
+      },
+    },
+    {
+      voice_id: "professional",
+      name: "Professional Narrator",
+      category: "premade",
+      labels: {
+        language: "en-US",
+        gender: "male",
+        description: "professional confident warm clear narrator",
+      },
+    },
+  ], "missing-voice");
+
+  equal(selected?.voiceId, "professional", "voz profissional acessível");
+  equal(selected?.selection, "accessible_english", "origem da seleção profissional");
+});
