@@ -32,6 +32,55 @@ const isMaleVoice = (voice: ElevenLabsVoiceSummary) =>
 const usableVoice = (voice: ElevenLabsVoiceSummary) =>
   Boolean(clean(voice.voice_id, 160));
 
+const voiceDescriptor = (voice: ElevenLabsVoiceSummary) =>
+  normalize([
+    voice.name,
+    voice.category,
+    ...Object.values(voice.labels || {}),
+  ].filter(Boolean).join(" "));
+
+const professionalVoiceScore = (voice: ElevenLabsVoiceSummary) => {
+  const descriptor = voiceDescriptor(voice);
+  let score = 0;
+
+  if (isMaleVoice(voice)) score += 20;
+  if (isEnglishVoice(voice)) score += 10;
+  if (normalize(voice.category) === "premade") score += 3;
+
+  const positivePatterns: Array<[RegExp, number]> = [
+    [/professional|corporate|business|executive/, 12],
+    [/confident|authoritative|assured|commanding/, 10],
+    [/calm|grounded|steady|balanced/, 8],
+    [/warm|empathetic|reassuring|trustworthy/, 7],
+    [/deep|resonant|baritone|rich/, 6],
+    [/narrat|broadcast|news|presenter|documentary/, 6],
+    [/middle.?aged|mature/, 4],
+    [/clear|articulate|crisp/, 4],
+  ];
+  const negativePatterns: Array<[RegExp, number]> = [
+    [/laid.?back|casual|relaxed/, -12],
+    [/playful|quirky|funny|comedic|cartoon/, -12],
+    [/character|anime|gaming|villain|monster/, -10],
+    [/child|kid|teen|young/, -7],
+    [/raspy|whisper|breathy/, -4],
+  ];
+
+  for (const [pattern, weight] of positivePatterns) {
+    if (pattern.test(descriptor)) score += weight;
+  }
+  for (const [pattern, weight] of negativePatterns) {
+    if (pattern.test(descriptor)) score += weight;
+  }
+  return score;
+};
+
+const bestByScore = (voices: ElevenLabsVoiceSummary[]) =>
+  [...voices].sort((left, right) => {
+    const scoreDelta = professionalVoiceScore(right) - professionalVoiceScore(left);
+    if (scoreDelta !== 0) return scoreDelta;
+    return normalize(left.name).localeCompare(normalize(right.name));
+  })[0];
+
 export function selectAccessibleElevenLabsVoice(
   voices: ElevenLabsVoiceSummary[],
   configuredVoiceId = "",
@@ -42,10 +91,12 @@ export function selectAccessibleElevenLabsVoice(
     ? available.find((voice) => clean(voice.voice_id, 160) === configured)
     : undefined;
 
+  const englishMale = available.filter((voice) => isEnglishVoice(voice) && isMaleVoice(voice));
+  const english = available.filter(isEnglishVoice);
   const selected = configuredVoice ||
-    available.find((voice) => isEnglishVoice(voice) && isMaleVoice(voice)) ||
-    available.find(isEnglishVoice) ||
-    available[0];
+    bestByScore(englishMale) ||
+    bestByScore(english) ||
+    bestByScore(available);
 
   if (!selected?.voice_id) return null;
   return {
