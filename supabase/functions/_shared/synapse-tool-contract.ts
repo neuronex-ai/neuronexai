@@ -171,6 +171,33 @@ export function getSynapseToolPolicy(
     };
   }
 
+  if (name === "prepare_action_group") {
+    return {
+      name,
+      riskLevel: "medium",
+      // Preparing persists an immutable review plan but does not itself apply
+      // the requested business mutations. Confirmation policy is derived by
+      // the server from the real child tools and step count.
+      confirmationRequired: false,
+      voiceAvailability: "direct",
+      executor: "mutation",
+      telemetry: "metadata-only",
+    };
+  }
+
+  // execute_action_group is intentionally server-internal. The model must
+  // reach it only through confirm_pending_action + exact plan id/version/hash.
+  if (name === "execute_action_group") {
+    return {
+      name,
+      riskLevel: "high",
+      confirmationRequired: true,
+      voiceAvailability: "blocked",
+      executor: "mutation",
+      telemetry: "metadata-only",
+    };
+  }
+
   if (READ_TOOLS.has(name)) {
     return {
       name,
