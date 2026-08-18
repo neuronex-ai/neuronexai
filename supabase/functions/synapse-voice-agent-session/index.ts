@@ -5,6 +5,10 @@ import {
   ensureVoiceConversation,
   ensureVoiceSessionRecord,
 } from "../_shared/synapse-voice-session.ts";
+import {
+  SYNAPSE_ELEVENLABS_LANGUAGE,
+  SYNAPSE_ELEVENLABS_MODEL_ID,
+} from "../_shared/synapse-voice-settings.ts";
 import { loadConversationContext } from "../synapse-text-fallback/entity-context.ts";
 import {
   buildSynapseVoiceFunctions,
@@ -34,10 +38,7 @@ const SYNAPSE_VOICE_THINK_TEMPERATURE = 0.25;
 const AZURE_TTS_ADAPTER_PATH = "/functions/v1/synapse-voice-azure-tts";
 const OPENAI_COMPATIBLE_TTS_MODEL = "tts-1";
 const OPENAI_COMPATIBLE_TTS_VOICE = "alloy";
-const DEFAULT_AZURE_TTS_VOICE = "pt-BR-MacerioMultilingualNeural";
-const DEFAULT_ELEVENLABS_MODEL_ID = "eleven_turbo_v2_5";
 const DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID = "NQ10OlqJ7vYH6XwegHSW";
-const DEFAULT_ELEVENLABS_LANGUAGE_CODE = "pt-BR";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
@@ -61,7 +62,7 @@ function ttsAdapterSecret() {
 
 function elevenLabsApiKey() {
   const value = clean(Deno.env.get("ELEVENLABS_API_KEY") || Deno.env.get("ELEVEN_LABS_API_KEY"), 8000);
-  if (!value) throw new Error("Chave da ElevenLabs não configurada para o fallback de voz.");
+  if (!value) throw new Error("Chave da ElevenLabs não configurada para a voz principal.");
   return value;
 }
 
@@ -114,18 +115,19 @@ function professionalNameFromProfile(profile: any) {
 }
 
 async function loadProfessionalProfile(admin: any, userId: string) {
-  const { data, error } = await admin
-    .from("profiles")
-    .select("first_name,last_name,full_name,clinic_name")
-    .eq("id", userId)
-    .maybeSingle();
+  const [{ data, error }, { data: preferences }] = await Promise.all([
+    admin.from("profiles").select("first_name,last_name,full_name,clinic_name").eq("id", userId).maybeSingle(),
+    admin.from("user_preferences").select("timezone,language").eq("user_id", userId).maybeSingle(),
+  ]);
   if (error) {
     console.warn("[synapse-voice-agent-session] profile load failed", error.message);
-    return { professionalName: "" };
+    return { professionalName: "", timezone: "America/Sao_Paulo", locale: "pt-BR" };
   }
   return {
     professionalName: professionalNameFromProfile(data),
     clinicName: clean(data?.clinic_name, 160),
+    timezone: clean(preferences?.timezone || "America/Sao_Paulo", 80),
+    locale: clean(preferences?.language || "pt-BR", 20),
   };
 }
 
@@ -200,23 +202,31 @@ async function loadRecentAgentContext(admin: any, userId: string, conversationId
   return messages.slice(-12);
 }
 
-function buildSpeakConfig() {
-  const azureVoice = clean(Deno.env.get("AZURE_SPEECH_VOICE") || DEFAULT_AZURE_TTS_VOICE, 160);
+function buildSpeakConfig(timezone = "America/Sao_Paulo") {
   const elevenLabsVoice = clean(
     Deno.env.get("SYNAPSE_VOICE_TTS_PT_BR_VOICE_ID") ||
       DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
     160,
   );
-  const elevenLabsModel = clean(
-    Deno.env.get("SYNAPSE_VOICE_TTS_MODEL_ID") || DEFAULT_ELEVENLABS_MODEL_ID,
-    120,
-  );
-  const elevenLabsLanguage = clean(
-    Deno.env.get("SYNAPSE_VOICE_TTS_LANGUAGE_CODE") || DEFAULT_ELEVENLABS_LANGUAGE_CODE,
-    40,
-  );
+  // Keep the actual voice model in code, not in a mutable deployment secret.
+  // This makes every new session deterministic while the provider is tested.
+  const elevenLabsModel = SYNAPSE_ELEVENLABS_MODEL_ID;
+  const elevenLabsProvider: Record<string, string> = {
+    type: "eleven_labs",
+    model_id: elevenLabsModel,
+    language: SYNAPSE_ELEVENLABS_LANGUAGE,
+  };
+  // `multi` is a Deepgram third-party TTS provider setting, not an ElevenLabs
+  // language_code. The system prompt controls pt-BR delivery.
   return {
     speak: [
+      {
+        provider: elevenLabsProvider,
+        endpoint: {
+          url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(elevenLabsVoice)}/multi-stream-input`,
+          headers: { "xi-api-key": elevenLabsApiKey() },
+        },
+      },
       {
         provider: {
           type: "open_ai",
@@ -225,23 +235,15 @@ function buildSpeakConfig() {
         },
         endpoint: {
           url: azureTtsAdapterUrl(),
-          headers: { "x-synapse-tts-secret": ttsAdapterSecret() },
-        },
-      },
-      {
-        provider: {
-          type: "eleven_labs",
-          model_id: elevenLabsModel,
-          language_code: elevenLabsLanguage,
-        },
-        endpoint: {
-          url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(elevenLabsVoice)}/multi-stream-input`,
-          headers: { "xi-api-key": elevenLabsApiKey() },
+          headers: {
+            "x-synapse-tts-secret": ttsAdapterSecret(),
+            "x-synapse-timezone": clean(timezone, 80) || "America/Sao_Paulo",
+          },
         },
       },
     ],
-    ttsProvider: "azure-speech+deepgram-elevenlabs-pt-br-fallback",
-    ttsVoice: azureVoice,
+    ttsProvider: "deepgram-elevenlabs-pt-br+azure-speech-fallback",
+    ttsVoice: elevenLabsVoice,
   };
 }
 
@@ -272,7 +274,7 @@ function buildThinkConfig(
         temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
       },
       prompt,
-      functions,
+      functions: portableFunctions,
     },
     {
       provider: {
@@ -280,8 +282,6 @@ function buildThinkConfig(
         model: FALLBACK_THINK_MODEL,
         temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
       },
-      prompt,
-      functions: portableFunctions,
     },
     {
       provider: {
@@ -289,8 +289,6 @@ function buildThinkConfig(
         model: LAST_RESORT_THINK_MODEL,
         temperature: SYNAPSE_VOICE_THINK_TEMPERATURE,
       },
-      prompt,
-      functions: portableFunctions,
     },
   ];
 }
@@ -300,8 +298,9 @@ function buildAgentSettings(
   context: Record<string, unknown>,
   functions: Array<Record<string, unknown>>,
   contextMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  timezone = "America/Sao_Paulo",
 ) {
-  const { speak, ttsProvider, ttsVoice } = buildSpeakConfig();
+  const { speak, ttsProvider, ttsVoice } = buildSpeakConfig(timezone);
   const listenModel = Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi";
   const listenProvider: Record<string, unknown> = {
     type: "deepgram",
@@ -327,32 +326,34 @@ function buildAgentSettings(
   const inputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_INPUT_SAMPLE_RATE") || "48000");
   const outputSampleRate = Number(Deno.env.get("SYNAPSE_VOICE_OUTPUT_SAMPLE_RATE") || "24000");
 
-  return {
-    settings: {
-      type: "Settings",
-      tags: ["neuronex", "synapse", "voice", "pt-BR"],
-      flags: { history: envFlag("SYNAPSE_VOICE_HISTORY", true) },
-      audio: {
-        input: {
-          encoding: "linear16",
-          sample_rate: inputSampleRate,
-        },
-        output: {
-          encoding: "linear16",
-          sample_rate: outputSampleRate,
-          container: "none",
-        },
+  const settings = {
+    type: "Settings",
+    tags: ["neuronex", "synapse", "voice", "pt-BR"],
+    flags: { history: envFlag("SYNAPSE_VOICE_HISTORY", true) },
+    audio: {
+      input: {
+        encoding: "linear16",
+        sample_rate: inputSampleRate,
       },
-      agent: {
-        context: contextMessages.length ? { messages: contextMessages } : undefined,
-        listen: {
-          provider: listenProvider,
-        },
-        think: buildThinkConfig(prompt, functions),
-        speak,
-        greeting: clean(context?.greeting, 280) || undefined,
+      output: {
+        encoding: "linear16",
+        sample_rate: outputSampleRate,
+        container: "none",
       },
     },
+    agent: {
+      context: contextMessages.length ? { messages: contextMessages } : undefined,
+      listen: {
+        provider: listenProvider,
+      },
+      think: buildThinkConfig(prompt, functions),
+      speak,
+      greeting: clean(context?.greeting, 280) || undefined,
+    },
+  };
+
+  return {
+    settings,
     metadata: {
       listenModel,
       listenLanguage: Deno.env.get("DEEPGRAM_LISTEN_LANGUAGE") || "pt-BR",
@@ -365,6 +366,8 @@ function buildAgentSettings(
       lastResortThinkModel: LAST_RESORT_THINK_MODEL,
       historyEnabled: envFlag("SYNAPSE_VOICE_HISTORY", true),
       functionsCount: functions.length,
+      promptCharacters: prompt.length,
+      settingsCharacters: JSON.stringify(settings).length,
     },
   };
 }
@@ -424,7 +427,7 @@ serve(async (request) => {
       professionalName: profile.professionalName,
       pendingActionSummary,
     });
-    const { settings, metadata } = buildAgentSettings(prompt, context, functions, contextMessages);
+    const { settings, metadata } = buildAgentSettings(prompt, context, functions, contextMessages, profile.timezone);
     const voiceSessionId = await ensureVoiceSessionRecord(
       admin,
       user.id,
@@ -441,6 +444,8 @@ serve(async (request) => {
           includeSettings,
           route: clean(context.route || context.currentContext, 180),
           functionsCount: metadata.functionsCount,
+          promptCharacters: metadata.promptCharacters,
+          settingsCharacters: metadata.settingsCharacters,
           toolsetVersion: SYNAPSE_VOICE_TOOLSET_VERSION,
         },
       },
