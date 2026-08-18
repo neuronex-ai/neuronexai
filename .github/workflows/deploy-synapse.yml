@@ -62,6 +62,7 @@ env:
     synapse-voice-azure-tts
     synapse-voice-gateway
     synapse-voice-tool
+    synapse-action-group
     synapse-whatsapp-in
     neurozap-evolution
     whatsapp-send
