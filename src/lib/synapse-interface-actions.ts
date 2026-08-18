@@ -4,6 +4,7 @@ import {
   safeSynapseDestination,
   type SynapseDestination,
 } from "@/lib/synapse-destinations";
+import { requestOpaqueConfirmation } from "@/lib/synapse-voice-ui-protocol";
 
 export type SynapseInterfaceActionName =
   | "navigate"
@@ -552,8 +553,25 @@ export async function executeSynapseInterfaceAction(rawAction: unknown, options:
   channel: "text" | "voice";
   onLifecycle?: (event: SynapseActionLifecycleEvent) => void;
 }): Promise<SynapseActionExecutionResult> {
-  const action = normalizeSynapseClientAction(rawAction);
   const startedAt = performance.now();
+  const protocolAction = rawAction && typeof rawAction === "object"
+    ? rawAction as Record<string, unknown>
+    : null;
+  if (protocolAction?.type === "synapse_confirmation_challenge") {
+    const data = protocolAction.data && typeof protocolAction.data === "object"
+      ? protocolAction.data as Record<string, unknown>
+      : {};
+    const result = await requestOpaqueConfirmation(data.challengeId);
+    return {
+      success: result.success,
+      cancelled: Boolean(result.cancelled),
+      action: "navigate",
+      message: result.message,
+      durationMs: Math.round(performance.now() - startedAt),
+    };
+  }
+
+  const action = normalizeSynapseClientAction(rawAction);
   if (!action) return { success: false, action: "navigate", message: "Ação de interface inválida.", durationMs: 0 };
   cancelSynapseInterfaceAction();
   const controller = new AbortController();
