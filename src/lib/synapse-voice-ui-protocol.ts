@@ -1,6 +1,7 @@
 export const SYNAPSE_VOICE_REVIEW_EVENT = "synapse:voice-review-action";
 export const SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT = "synapse:opaque-confirmation-request";
 export const SYNAPSE_OPAQUE_CONFIRM_RESPONSE_EVENT = "synapse:opaque-confirmation-response";
+export const SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT = "synapse:opaque-capture-block";
 
 export type SynapseReviewTextSegment = {
   type: "text";
@@ -60,6 +61,10 @@ export type SynapseOpaqueConfirmationResponse = {
   success: boolean;
   cancelled?: boolean;
   message?: string;
+};
+
+export type SynapseOpaqueCaptureBlock = {
+  blocked: boolean;
 };
 
 const asRecord = (value: unknown): Record<string, unknown> | null =>
@@ -149,6 +154,13 @@ export const emitVoiceReviewAction = (value: unknown) => {
     detail: action,
   }));
   return true;
+};
+
+export const setOpaqueCaptureBlocked = (blocked: boolean) => {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent<SynapseOpaqueCaptureBlock>(SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT, {
+    detail: { blocked },
+  }));
 };
 
 export const requestOpaqueConfirmation = async (
