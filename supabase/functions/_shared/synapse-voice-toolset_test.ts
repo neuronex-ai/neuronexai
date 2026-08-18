@@ -21,7 +21,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(functions.length, 16, "quantidade de funções de voz");
   equal(
     SYNAPSE_VOICE_TOOLSET_VERSION,
-    "neuronex.voice-core.v6",
+    "neuronex.voice-core.v7",
     "versão do payload de sessão",
   );
   equal(
@@ -32,6 +32,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "primeira função exclusiva de voz");
   equal(names[1], "cancel_pending_action", "segunda função exclusiva de voz");
+  equal(names[2], "prepare_action_group", "planejador persistido exclusivo de voz");
 
   for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) {
     equal(names.includes(required), true, `ferramenta ${required}`);
@@ -43,6 +44,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   );
   equal(names.includes("search_workspace"), true, "busca unificada no núcleo");
   equal(names.includes("get_workspace_overview"), false, "overview movido ao dispatcher");
+  equal(names.includes("get_dashboard_schedule"), false, "agenda simples movida ao dispatcher para abrir vaga ao planner");
 });
 
 Deno.test("ponte de voz alcanca capacidades permitidas fora do nucleo sem liberar exclusoes", () => {
@@ -60,6 +62,7 @@ Deno.test("ponte de voz alcanca capacidades permitidas fora do nucleo sem libera
       "get_financial_summary",
       "send_patient_email",
       "get_teleconsultation_readiness",
+      "get_dashboard_schedule",
     ]
   ) {
     equal(delegatedNames.includes(name), true, `capacidade delegada ${name}`);
@@ -100,6 +103,18 @@ Deno.test("NeuroView, NeuroFlow e NeuroPulse chegam ao Deepgram com schema real"
       `patient_name em ${name}`,
     );
   }
+});
+
+Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco para o servidor", () => {
+  const tool = buildSynapseVoiceFunctions().find((candidate) => candidate.name === "prepare_action_group");
+  equal(Boolean(tool), true, "planner registrado");
+  equal(tool?.parameters?.properties?.steps?.minItems, 1, "mínimo de etapas");
+  equal(tool?.parameters?.properties?.steps?.maxItems, 12, "máximo de etapas");
+  const stepProperties = tool?.parameters?.properties?.steps?.items?.properties || {};
+  equal(Boolean(stepProperties.tool_name), true, "ferramenta executável por etapa");
+  equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
+  equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
+  equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
 });
 
 Deno.test("navegação assistida expõe as superfícies read-first do Desktop", () => {
