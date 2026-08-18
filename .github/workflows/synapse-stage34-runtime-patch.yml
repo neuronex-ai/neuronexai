@@ -97,11 +97,7 @@ jobs:
         error: message,
         error_code: "voice_ui_capability_missing",
       }, thoughtSignature);
-      this.sendClient({
-        type: "gateway_warning",
-        errorType: "capability_error",
-        error: message,
-      });
+      this.sendClient({ type: "gateway_warning", errorType: "capability_error", error: message });
       return;
     }
 
@@ -121,11 +117,7 @@ jobs:
         error: message,
         error_code: "opaque_confirmation_capability_missing",
       }, thoughtSignature);
-      this.sendClient({
-        type: "gateway_warning",
-        errorType: "capability_error",
-        error: message,
-      });
+      this.sendClient({ type: "gateway_warning", errorType: "capability_error", error: message });
       return;
     }
 
@@ -234,8 +226,7 @@ const VOICE_UI_CAPABILITIES = {
           text = text.replace(old, new, 1)
           hook.write_text(text)
 
-          workflow = Path('.github/workflows/synapse-stage34-runtime-patch.yml')
-          workflow.unlink()
+          Path('.github/workflows/synapse-stage34-runtime-patch.yml').unlink()
 
       - name: Commit runtime patch
         run: |
@@ -244,3 +235,5 @@ const VOICE_UI_CAPABILITIES = {
           git add supabase/functions/synapse-voice-gateway/index.ts src/hooks/use-deepgram-agent-voice.ts .github/workflows/synapse-stage34-runtime-patch.yml
           git commit -m "Close Edge review protocol and capability handshake"
           git push origin HEAD:agent/synapse-plan-stage2-action-group-runtime
+
+# trigger-existing-workflow
