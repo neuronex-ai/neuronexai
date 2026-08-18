@@ -231,6 +231,7 @@ export function useDeepgramAgentVoice({
   const listeningRef = useRef(false);
   const volumeRef = useRef(0);
   const inputSignalRef = useRef<PcmAudioSignal>(SILENT_PCM_SIGNAL);
+  const firstInputFrameLoggedRef = useRef(false);
   const lastAudioStateUpdateRef = useRef(0);
   const sessionIdRef = useRef<string | null>(sessionId || null);
   const conversationIdRef = useRef<string | null>(conversationId || sessionId || null);
@@ -389,6 +390,7 @@ export function useDeepgramAgentVoice({
     silentGainRef.current = null;
     streamRef.current = null;
     inputContextRef.current = null;
+    firstInputFrameLoggedRef.current = false;
     setLevel(0);
   }, [setLevel]);
 
@@ -463,11 +465,14 @@ export function useDeepgramAgentVoice({
     await context.audioWorklet.addModule("/worklets/deepgram-agent-recorder.js");
 
     const source = context.createMediaStreamSource(stream);
-    const configuredFrameMs = Number(import.meta.env.VITE_SYNAPSE_VOICE_FRAME_MS || "20");
+    const configuredFrameMs = Number(import.meta.env.VITE_SYNAPSE_VOICE_FRAME_MS || "80");
+    const effectiveFrameMs = Number.isFinite(configuredFrameMs) && configuredFrameMs > 0
+      ? Math.min(120, Math.max(80, configuredFrameMs))
+      : 80;
     const worklet = new AudioWorkletNode(context, "deepgram-agent-recorder", {
       processorOptions: {
         targetSampleRate: effectiveInputSampleRate,
-        frameMs: Number.isFinite(configuredFrameMs) && configuredFrameMs > 0 ? configuredFrameMs : 20,
+        frameMs: effectiveFrameMs,
       },
     });
     const silentGain = context.createGain();
@@ -481,12 +486,40 @@ export function useDeepgramAgentVoice({
       const ws = wsRef.current;
       if (!activeRef.current || !readyRef.current || !listeningRef.current) return;
       if (!ws || ws.readyState !== WebSocket.OPEN) return;
+      if (!firstInputFrameLoggedRef.current) {
+        firstInputFrameLoggedRef.current = true;
+        console.info("[Synapse Voice] first microphone PCM frame", {
+          bytes: payload.audio.byteLength,
+          sampleRate: effectiveInputSampleRate,
+          frameMs: effectiveFrameMs,
+          audioContextState: context.state,
+        });
+      }
       ws.send(payload.audio);
     };
 
     source.connect(worklet);
     worklet.connect(silentGain);
     silentGain.connect(context.destination);
+
+    if (context.state !== "running") {
+      await context.resume().catch(() => undefined);
+    }
+    if (context.state !== "running") {
+      worklet.port.close();
+      worklet.disconnect();
+      source.disconnect();
+      silentGain.disconnect();
+      stream.getTracks().forEach((track) => track.stop());
+      await context.close().catch(() => undefined);
+      throw new Error(`O capturador de áudio ficou ${context.state}. Clique novamente para liberar o microfone.`);
+    }
+
+    console.info("[Synapse Voice] microphone capture running", {
+      sampleRate: context.sampleRate,
+      targetSampleRate: effectiveInputSampleRate,
+      frameMs: effectiveFrameMs,
+    });
 
     streamRef.current = stream;
     inputContextRef.current = context;
@@ -743,6 +776,7 @@ export function useDeepgramAgentVoice({
     activeRef.current = true;
     readyRef.current = false;
     listeningRef.current = true;
+    firstInputFrameLoggedRef.current = false;
     setIsListening(false);
     setIsProcessing(true);
     setIsSpeaking(false);
