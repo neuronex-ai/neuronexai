@@ -2,7 +2,7 @@ import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v6";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v7";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 /**
@@ -13,7 +13,7 @@ export const SYNAPSE_VOICE_CORE_TOOL_NAMES = [
   "get_system_help",
   "search_workspace",
   "get_dashboard_daily_briefing",
-  "get_dashboard_schedule",
+  // get_dashboard_schedule remains reachable through execute_synapse_tool.
   "search_patients",
   "get_patient_details",
   "get_clinical_history",
@@ -45,6 +45,72 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
       properties: {
         reason: { type: "string" },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "prepare_action_group",
+    description: [
+      "Prepara um plano persistido quando o profissional pede varios RESULTADOS executaveis no mesmo comando.",
+      "Consultas internas, validacoes e carregamento de contexto nao contam como etapas.",
+      "Use especialmente para cinco ou mais resultados. Para acao critica ou NeuroFinance, o servidor exige revisao mesmo com menos etapas.",
+      "Nao execute as etapas separadamente antes de preparar o grupo.",
+    ].join(" "),
+    parameters: {
+      type: "object",
+      properties: {
+        title: {
+          type: "string",
+          description: "Titulo humano curto do plano, como Pos-sessao de Mariana.",
+        },
+        intent: {
+          type: "string",
+          description: "Intencao estavel e curta, como post_session_bundle ou preparation_bundle.",
+        },
+        spoken_summary: {
+          type: "string",
+          description: "Uma frase curta explicando o conjunto que sera revisado.",
+        },
+        steps: {
+          type: "array",
+          minItems: 1,
+          maxItems: 12,
+          items: {
+            type: "object",
+            properties: {
+              area: {
+                type: "string",
+                description: "Area humana, por exemplo Agenda, Financeiro, Documento, Comunicacao, Notas ou Interface.",
+              },
+              title: {
+                type: "string",
+                description: "Titulo curto da etapa.",
+              },
+              summary: {
+                type: "string",
+                description: "Frase curta que deve aparecer no mini-card.",
+              },
+              tool_name: {
+                type: "string",
+                description: "Nome exato de uma ferramenta executavel do catalogo do Synapse.",
+              },
+              arguments: {
+                type: "object",
+                description: "Argumentos humanos/canonicos ja conhecidos. Nao invente IDs internos.",
+                additionalProperties: true,
+              },
+              depends_on: {
+                type: "array",
+                items: { type: "integer" },
+                description: "Numeros 1-based de etapas anteriores das quais esta etapa depende.",
+              },
+            },
+            required: ["area", "title", "summary", "tool_name"],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ["title", "intent", "spoken_summary", "steps"],
       additionalProperties: false,
     },
   },
