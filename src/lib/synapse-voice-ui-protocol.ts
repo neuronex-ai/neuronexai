@@ -1,4 +1,5 @@
 export const SYNAPSE_VOICE_REVIEW_EVENT = "synapse:voice-review-action";
+export const SYNAPSE_ACTION_GROUP_EDIT_REQUEST_EVENT = "synapse:action-group-edit-request";
 export const SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT = "synapse:opaque-confirmation-request";
 export const SYNAPSE_OPAQUE_CONFIRM_RESPONSE_EVENT = "synapse:opaque-confirmation-response";
 export const SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT = "synapse:opaque-capture-block";
@@ -41,6 +42,10 @@ export type SynapseActionReview = {
   data: {
     reviewId: string;
     toolName?: string;
+    planId?: string;
+    planVersion?: number;
+    planHash?: string;
+    confirmationPolicy?: "direct" | "voice" | "opaque";
     actions: SynapseReviewCard[];
   };
 };
@@ -50,6 +55,16 @@ export type SynapseActionReviewDismiss = {
 };
 
 export type SynapseVoiceReviewAction = SynapseActionReview | SynapseActionReviewDismiss;
+
+export type SynapseActionGroupEditRequest = {
+  reviewId: string;
+  planId: string;
+  planVersion: number;
+  planHash: string;
+  stepId: string;
+  fieldId: string;
+  value: unknown;
+};
 
 export type SynapseOpaqueConfirmationRequest = {
   requestId: string;
@@ -71,6 +86,16 @@ const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
     : null;
+
+const safePlanVersion = (value: unknown) => {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 100 ? parsed : undefined;
+};
+
+const safePlanHash = (value: unknown) => {
+  const hash = String(value || "").trim().slice(0, 64);
+  return /^[a-f0-9]{64}$/i.test(hash) ? hash : undefined;
+};
 
 export const normalizeVoiceReviewAction = (value: unknown): SynapseVoiceReviewAction | null => {
   const record = asRecord(value);
@@ -137,11 +162,23 @@ export const normalizeVoiceReviewAction = (value: unknown): SynapseVoiceReviewAc
   });
 
   if (!actions.length) return null;
+  const planId = String(data?.planId || "").trim().slice(0, 160) || undefined;
+  const planVersion = safePlanVersion(data?.planVersion);
+  const planHash = safePlanHash(data?.planHash);
+  const rawPolicy = String(data?.confirmationPolicy || "").trim();
+  const confirmationPolicy = ["direct", "voice", "opaque"].includes(rawPolicy)
+    ? rawPolicy as "direct" | "voice" | "opaque"
+    : undefined;
+
   return {
     type: "synapse_action_review",
     data: {
       reviewId,
       toolName: String(data?.toolName || "").trim().slice(0, 120) || undefined,
+      planId,
+      planVersion,
+      planHash,
+      confirmationPolicy,
       actions,
     },
   };
@@ -152,6 +189,28 @@ export const emitVoiceReviewAction = (value: unknown) => {
   if (!action || typeof window === "undefined") return false;
   window.dispatchEvent(new CustomEvent<SynapseVoiceReviewAction>(SYNAPSE_VOICE_REVIEW_EVENT, {
     detail: action,
+  }));
+  return true;
+};
+
+export const emitActionGroupEditRequest = (request: SynapseActionGroupEditRequest) => {
+  if (typeof window === "undefined") return false;
+  const planVersion = safePlanVersion(request.planVersion);
+  const planHash = safePlanHash(request.planHash);
+  const planId = String(request.planId || "").trim().slice(0, 160);
+  const stepId = String(request.stepId || "").trim().slice(0, 160);
+  const fieldId = String(request.fieldId || "").trim().slice(0, 120);
+  if (!planId || !planVersion || !planHash || !stepId || !fieldId) return false;
+  window.dispatchEvent(new CustomEvent<SynapseActionGroupEditRequest>(SYNAPSE_ACTION_GROUP_EDIT_REQUEST_EVENT, {
+    detail: {
+      reviewId: String(request.reviewId || "").slice(0, 160),
+      planId,
+      planVersion,
+      planHash,
+      stepId,
+      fieldId,
+      value: request.value,
+    },
   }));
   return true;
 };
