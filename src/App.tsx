@@ -16,6 +16,7 @@ import { TrialExpiredUpsell } from "@/components/subscription/TrialExpiredUpsell
 import { CookieConsent } from "@/components/landing/CookieConsent";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { NeuroFinancePostOnboardingGate } from "@/components/financeiro/NeuroFinancePostOnboardingGate";
+import { SynapseVoiceActionOverlays } from "@/components/synapse/SynapseVoiceActionOverlays";
 import { lazy, Suspense, ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
@@ -231,6 +232,7 @@ const SharedRoutes = () => {
 const OperationalApplication = () => (
   <AIProvider>
     <SynapseProvider>
+      <SynapseVoiceActionOverlays />
       <SubscriptionProvider>
         <TourProvider>
           <NeuroFinancePostOnboardingGate />
