@@ -2,6 +2,7 @@ name: Validate and deploy Synapse and subscription Edge Functions
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "supabase/functions/synapse-*/**"
       - "supabase/functions/gemini-text-chat/**"
@@ -73,13 +74,13 @@ env:
 
 jobs:
   patch_stage34:
-    if: github.event_name == 'pull_request' && github.head_ref == 'agent/synapse-plan-stage2-action-group-runtime'
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.ref == 'agent/synapse-plan-stage2-action-group-runtime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout feature branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: agent/synapse-plan-stage2-action-group-runtime
           fetch-depth: 0
 
       - name: Patch review, edit and capability bridges
@@ -87,7 +88,6 @@ jobs:
         run: |
           from pathlib import Path
 
-          # --- Edge gateway: capability handshake, native review transport and UI edits.
           gateway = Path('supabase/functions/synapse-voice-gateway/index.ts')
           text = gateway.read_text()
           old = '''  private pendingConfirmation: PendingConfirmation | null = null;
@@ -130,11 +130,7 @@ jobs:
 
   async handleActionGroupEdit(event: Record<string, unknown>) {
     if (!this.supportsClientCapability("action_group:v1") || !this.supportsClientCapability("review_action:v1")) {
-      this.sendClient({
-        type: "gateway_warning",
-        errorType: "capability_error",
-        error: "A edição segura dos cards não está disponível neste navegador.",
-      });
+      this.sendClient({ type: "gateway_warning", errorType: "capability_error", error: "A edição segura dos cards não está disponível neste navegador." });
       return;
     }
     const id = `ui-edit:${crypto.randomUUID()}`;
@@ -146,30 +142,17 @@ jobs:
       field_id: clean(event.fieldId || event.field_id, 120),
       value: event.value,
     };
-    this.sendClient({
-      type: "function_status",
-      status: "progress",
-      id,
-      name: "edit_action_group",
-      label: "Revisão do plano",
-      message: "Reescrevendo a revisão.",
-      startedAt: Date.now(),
-    });
+    this.sendClient({ type: "function_status", status: "progress", id, name: "edit_action_group", label: "Revisão do plano", message: "Reescrevendo a revisão.", startedAt: Date.now() });
     try {
       const result = await this.invokeTool({ id, name: "edit_action_group", arguments: args });
       const payload = normalizeToolPayload("edit_action_group", result);
       const clientAction = result?.clientAction && typeof result.clientAction === "object"
         ? result.clientAction as Record<string, unknown>
         : null;
-      if (payload.ok && clientAction?.type === "synapse_action_review") {
-        this.sendClient({ type: "review_action", action: clientAction });
-      }
+      if (payload.ok && clientAction?.type === "synapse_action_review") this.sendClient({ type: "review_action", action: clientAction });
       if (payload.ok && payload.confirmation_required) {
         const toolName = clean(payload.tool, 120);
-        this.pendingConfirmation = {
-          toolName,
-          opaque: needsOpaqueConfirmation(toolName, {}),
-        };
+        this.pendingConfirmation = { toolName, opaque: needsOpaqueConfirmation(toolName, {}) };
       }
       this.sendClient({
         type: "function_status",
@@ -182,15 +165,7 @@ jobs:
         error: payload.error || undefined,
       });
     } catch (error) {
-      this.sendClient({
-        type: "function_status",
-        status: "failed",
-        id,
-        name: "edit_action_group",
-        label: "Revisão do plano",
-        message: "Não consegui aplicar essa edição à revisão atual.",
-        error: clean(error instanceof Error ? error.message : error, 800),
-      });
+      this.sendClient({ type: "function_status", status: "failed", id, name: "edit_action_group", label: "Revisão do plano", message: "Não consegui aplicar essa edição à revisão atual.", error: clean(error instanceof Error ? error.message : error, 800) });
     }
   }
 
@@ -207,42 +182,16 @@ jobs:
           new = '''    if (!name) return;
     if (!this.claimCall(id, name, args)) return;
 
-    if (
-      name === "prepare_action_group" &&
-      (!this.supportsClientCapability("action_group:v1") || !this.supportsClientCapability("review_action:v1"))
-    ) {
+    if (name === "prepare_action_group" && (!this.supportsClientCapability("action_group:v1") || !this.supportsClientCapability("review_action:v1"))) {
       const message = "O navegador conectado não suporta a revisão assistida necessária para executar este grupo com segurança.";
-      this.sendFunctionResponse(id, name, {
-        ok: false,
-        tool: name,
-        spoken_summary: message,
-        message,
-        retryable: false,
-        needs_clarification: false,
-        confirmation_required: false,
-        error: message,
-        error_code: "voice_ui_capability_missing",
-      }, thoughtSignature);
+      this.sendFunctionResponse(id, name, { ok: false, tool: name, spoken_summary: message, message, retryable: false, needs_clarification: false, confirmation_required: false, error: message, error_code: "voice_ui_capability_missing" }, thoughtSignature);
       this.sendClient({ type: "gateway_warning", errorType: "capability_error", error: message });
       return;
     }
 
-    if (
-      name === "confirm_pending_action" &&
-      this.pendingConfirmation?.opaque &&
-      !this.supportsClientCapability("opaque_confirmation:v1")
-    ) {
+    if (name === "confirm_pending_action" && this.pendingConfirmation?.opaque && !this.supportsClientCapability("opaque_confirmation:v1")) {
       const message = "A confirmação protegida não está disponível neste navegador; a ação não foi executada.";
-      this.sendFunctionResponse(id, name, {
-        ok: false,
-        tool: name,
-        spoken_summary: message,
-        message,
-        retryable: false,
-        confirmation_required: true,
-        error: message,
-        error_code: "opaque_confirmation_capability_missing",
-      }, thoughtSignature);
+      this.sendFunctionResponse(id, name, { ok: false, tool: name, spoken_summary: message, message, retryable: false, confirmation_required: true, error: message, error_code: "opaque_confirmation_capability_missing" }, thoughtSignature);
       this.sendClient({ type: "gateway_warning", errorType: "capability_error", error: message });
       return;
     }
@@ -265,23 +214,11 @@ jobs:
         if (protocolAction?.type === "synapse_action_review") {
           if (!this.supportsClientCapability("review_action:v1")) {
             const message = "A revisão visual obrigatória não está disponível neste navegador; a ação não foi executada.";
-            Object.assign(payload, {
-              ok: false,
-              spoken_summary: message,
-              message,
-              retryable: false,
-              error: message,
-              error_code: "review_action_capability_missing",
-            });
+            Object.assign(payload, { ok: false, spoken_summary: message, message, retryable: false, error: message, error_code: "review_action_capability_missing" });
           } else {
-            const reviewData = protocolAction.data && typeof protocolAction.data === "object"
-              ? protocolAction.data as Record<string, any>
-              : {};
+            const reviewData = protocolAction.data && typeof protocolAction.data === "object" ? protocolAction.data as Record<string, any> : {};
             const reviewActions = Array.isArray(reviewData.actions) ? reviewData.actions : [];
-            payload.review = {
-              step_count: reviewActions.length,
-              areas: reviewActions.map((item: any) => clean(item?.area, 120)).filter(Boolean),
-            };
+            payload.review = { step_count: reviewActions.length, areas: reviewActions.map((item: any) => clean(item?.area, 120)).filter(Boolean) };
             this.sendClient({ type: "review_action", action: protocolAction });
           }
         } else {
@@ -304,7 +241,7 @@ jobs:
 
     const sessionConfig = await this.fetchSessionConfig(payload);
 '''
-          assert old in text, 'gateway start capability anchor missing'
+          assert old in text, 'gateway start anchor missing'
           text = text.replace(old, new, 1)
 
           old = '''  injectUserMessage(message: unknown) {
@@ -341,7 +278,6 @@ jobs:
           text = text.replace(old, new, 1)
           gateway.write_text(text)
 
-          # --- Browser hook: advertise action groups and forward click edits through the secure WS.
           hook = Path('src/hooks/use-deepgram-agent-voice.ts')
           text = hook.read_text()
           old = '''import {
@@ -365,16 +301,11 @@ jobs:
           new = '''const DEFAULT_GATEWAY_URL = "ws://localhost:8789/v1/synapse/voice";
 const VOICE_UI_CAPABILITIES = {
   version: 1,
-  capabilities: [
-    "action_group:v1",
-    "review_action:v1",
-    "opaque_confirmation:v1",
-    "screen_context:v1",
-  ],
+  capabilities: ["action_group:v1", "review_action:v1", "opaque_confirmation:v1", "screen_context:v1"],
 } as const;
 
 '''
-          assert old in text, 'hook capabilities constant anchor missing'
+          assert old in text, 'hook capability constant anchor missing'
           text = text.replace(old, new, 1)
 
           old = '''    window.addEventListener(SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT, onOpaqueCaptureBlock as EventListener);
@@ -419,11 +350,10 @@ const VOICE_UI_CAPABILITIES = {
 '''
           new = '''            voiceUiCapabilities: VOICE_UI_CAPABILITIES,
 '''
-          assert old in text, 'hook start capability anchor missing'
+          assert old in text, 'hook start anchor missing'
           text = text.replace(old, new, 1)
           hook.write_text(text)
 
-          # --- Voice tool: edit only the currently pending persisted plan.
           voice_tool = Path('supabase/functions/synapse-voice-tool/index.ts')
           text = voice_tool.read_text()
           old = '''function groupSteps(value: unknown) {
@@ -469,15 +399,9 @@ const normalizeReviewKey = (value: unknown) => String(value ?? "")
   .replace(/[^a-z0-9]+/g, " ")
   .trim();
 
-async function replacePendingAction(
-  admin: any,
-  pending: PendingReference,
-  nextAction: PendingAction,
-) {
+async function replacePendingAction(admin: any, pending: PendingReference, nextAction: PendingAction) {
   const attachments = pending.attachments.map((item: any) =>
-    item?.kind === "synapse_pending_action" && item?.actionId === pending.action.actionId
-      ? nextAction
-      : item
+    item?.kind === "synapse_pending_action" && item?.actionId === pending.action.actionId ? nextAction : item
   );
   const { error } = await admin.from("messages").update({ attachments }).eq("id", pending.row.id);
   if (error) throw error;
@@ -492,18 +416,8 @@ async function logVoiceAction(
 '''
           new = '''    if (name === "edit_action_group") {
       if (!pending || pending.action.toolName !== "execute_action_group") {
-        return json({
-          ok: true,
-          content: functionContent({
-            ok: false,
-            tool: name,
-            message: "Não há uma revisão de grupo pendente para editar.",
-            needs_clarification: false,
-            retryable: false,
-          }),
-        });
+        return json({ ok: true, content: functionContent({ ok: false, tool: name, message: "Não há uma revisão de grupo pendente para editar.", needs_clarification: false, retryable: false }) });
       }
-
       const pendingArgs = pending.action.arguments || {};
       const planId = clean(pendingArgs.plan_id, 120);
       const planVersion = Number(pendingArgs.plan_version);
@@ -511,41 +425,18 @@ async function logVoiceAction(
       const requestedPlanId = clean(args.plan_id, 120);
       const requestedPlanVersion = Number(args.plan_version || 0);
       const requestedPlanHash = clean(args.plan_hash, 64);
-      if (
-        (requestedPlanId && requestedPlanId !== planId) ||
-        (requestedPlanVersion && requestedPlanVersion !== planVersion) ||
-        (requestedPlanHash && requestedPlanHash !== planHash)
-      ) {
-        return json({
-          ok: true,
-          content: functionContent({
-            ok: false,
-            tool: name,
-            message: "Essa edição pertence a uma versão antiga da revisão. Use os cards que estão visíveis agora.",
-            needs_clarification: false,
-            retryable: false,
-            error_code: "stale_action_group_review",
-          }),
-        });
+      if ((requestedPlanId && requestedPlanId !== planId) || (requestedPlanVersion && requestedPlanVersion !== planVersion) || (requestedPlanHash && requestedPlanHash !== planHash)) {
+        return json({ ok: true, content: functionContent({ ok: false, tool: name, message: "Essa edição pertence a uma versão antiga da revisão. Use os cards que estão visíveis agora.", needs_clarification: false, retryable: false, error_code: "stale_action_group_review" }) });
       }
-
-      const current = await callActionGroup(auth.authorization, {
-        action: "get",
-        planId,
-        planVersion,
-      });
+      const current = await callActionGroup(auth.authorization, { action: "get", planId, planVersion });
       const cards = Array.isArray(current?.plan?.cards) ? current.plan.cards : [];
       const explicitStepId = clean(args.step_id, 120);
       const stepNumber = Number(args.step_number || 0);
       const requestedArea = normalizeReviewKey(args.area);
       let candidateCards = cards;
-      if (explicitStepId) {
-        candidateCards = cards.filter((card: any) => clean(card?.id, 120) === explicitStepId);
-      } else if (Number.isInteger(stepNumber) && stepNumber >= 1 && stepNumber <= cards.length) {
-        candidateCards = [cards[stepNumber - 1]];
-      } else if (requestedArea) {
-        candidateCards = cards.filter((card: any) => normalizeReviewKey(card?.area).includes(requestedArea));
-      }
+      if (explicitStepId) candidateCards = cards.filter((card: any) => clean(card?.id, 120) === explicitStepId);
+      else if (Number.isInteger(stepNumber) && stepNumber >= 1 && stepNumber <= cards.length) candidateCards = [cards[stepNumber - 1]];
+      else if (requestedArea) candidateCards = cards.filter((card: any) => normalizeReviewKey(card?.area).includes(requestedArea));
 
       const explicitFieldId = clean(args.field_id, 120);
       const requestedField = normalizeReviewKey(args.field);
@@ -556,80 +447,31 @@ async function logVoiceAction(
           const fieldId = clean(field?.fieldId, 120);
           const label = normalizeReviewKey(field?.label);
           const idKey = normalizeReviewKey(fieldId);
-          const matches = explicitFieldId
-            ? fieldId === explicitFieldId
-            : requestedField && (label === requestedField || label.includes(requestedField) || idKey === requestedField || idKey.includes(requestedField));
+          const matches = explicitFieldId ? fieldId === explicitFieldId : requestedField && (label === requestedField || label.includes(requestedField) || idKey === requestedField || idKey.includes(requestedField));
           if (matches) fieldMatches.push({ card, field, index });
         }
       }
-
       if (fieldMatches.length !== 1) {
-        const message = fieldMatches.length > 1
-          ? "Encontrei esse campo em mais de um card. Diga o número do card que quer alterar."
-          : "Não encontrei esse campo entre os valores editáveis da revisão atual.";
-        return json({
-          ok: true,
-          content: functionContent({
-            ok: false,
-            tool: name,
-            message,
-            needs_clarification: true,
-            retryable: false,
-          }),
-        });
+        const message = fieldMatches.length > 1 ? "Encontrei esse campo em mais de um card. Diga o número do card que quer alterar." : "Não encontrei esse campo entre os valores editáveis da revisão atual.";
+        return json({ ok: true, content: functionContent({ ok: false, tool: name, message, needs_clarification: true, retryable: false }) });
       }
-
       const match = fieldMatches[0];
       const updated = await callActionGroup(auth.authorization, {
         action: "edit",
         planId,
         planVersion,
         planHash,
-        edits: [{
-          step_id: clean(match.card?.id, 120),
-          field_id: clean(match.field?.fieldId, 120),
-          value: args.value,
-        }],
+        edits: [{ step_id: clean(match.card?.id, 120), field_id: clean(match.field?.fieldId, 120), value: args.value }],
       });
-      const nextPending = {
-        ...(updated.pendingAction as PendingAction),
-        conversationId: sessionId,
-        voiceSessionId: voiceSessionId || null,
-      } as PendingAction;
+      const nextPending = { ...(updated.pendingAction as PendingAction), conversationId: sessionId, voiceSessionId: voiceSessionId || null } as PendingAction;
       await replacePendingAction(auth.admin, pending, nextPending);
       const confirmationPolicy = clean(nextPending.arguments?.confirmation_policy, 20);
       const nextVersion = Number(nextPending.arguments?.plan_version || planVersion + 1);
       const message = `Atualizei ${clean(match.field?.label, 120) || "o campo"} no card ${match.index + 1}. A revisão agora está na versão ${nextVersion}; confirme somente esta versão.`;
-      await logVoiceAction(auth.admin, {
-        userId: auth.user.id,
-        conversationId: sessionId,
-        voiceSessionId,
-        toolName: name,
-        status: "success",
-        durationMs: Date.now() - startedAt,
-        confirmationRequired: true,
-        riskLevel: confirmationPolicy === "opaque" ? "high" : policy.riskLevel,
-        payload: {
-          planId,
-          previousVersion: planVersion,
-          nextVersion,
-          stepId: match.card?.id,
-          fieldId: match.field?.fieldId,
-        },
-      });
+      await logVoiceAction(auth.admin, { userId: auth.user.id, conversationId: sessionId, voiceSessionId, toolName: name, status: "success", durationMs: Date.now() - startedAt, confirmationRequired: true, riskLevel: confirmationPolicy === "opaque" ? "high" : policy.riskLevel, payload: { planId, previousVersion: planVersion, nextVersion, stepId: match.card?.id, fieldId: match.field?.fieldId } });
       return json({
         ok: true,
-        content: functionContent({
-          ok: true,
-          tool: confirmationPolicy === "opaque" ? "manage_action_group" : "execute_action_group",
-          label: "revisão do plano",
-          message,
-          data: updated.plan || null,
-          confirmation_required: true,
-          confirmationRequired: true,
-          grounded: true,
-          structuredData: updated.plan || null,
-        }),
+        content: functionContent({ ok: true, tool: confirmationPolicy === "opaque" ? "manage_action_group" : "execute_action_group", label: "revisão do plano", message, data: updated.plan || null, confirmation_required: true, confirmationRequired: true, grounded: true, structuredData: updated.plan || null }),
         clientAction: updated.clientAction || null,
         structuredData: updated.plan || null,
       });
@@ -641,14 +483,7 @@ async function logVoiceAction(
           text = text.replace(old, new, 1)
           voice_tool.write_text(text)
 
-      - name: Validate patched files
-        run: |
-          deno --version || true
-          grep -q 'action_group:v1' src/hooks/use-deepgram-agent-voice.ts
-          grep -q 'handleActionGroupEdit' supabase/functions/synapse-voice-gateway/index.ts
-          grep -q 'name === "edit_action_group"' supabase/functions/synapse-voice-tool/index.ts
-
-      - name: Commit patched bridge and restore workflow
+      - name: Restore workflow, remove helper and commit patch
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -656,7 +491,7 @@ async function logVoiceAction(
           rm -f .github/workflows/synapse-stage34-runtime-patch.yml
           git add supabase/functions/synapse-voice-gateway/index.ts supabase/functions/synapse-voice-tool/index.ts src/hooks/use-deepgram-agent-voice.ts .github/workflows/deploy-synapse.yml .github/workflows/synapse-stage34-runtime-patch.yml
           git commit -m "Close Synapse action-group review and edit loop"
-          git push origin HEAD:${{ github.head_ref }}
+          git push origin HEAD:agent/synapse-plan-stage2-action-group-runtime
 
   validate:
     runs-on: ubuntu-latest
