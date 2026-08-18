@@ -74,7 +74,6 @@ export async function resolveAccessibleElevenLabsVoice(options: {
 
   const url = new URL("https://api.elevenlabs.io/v2/voices");
   url.searchParams.set("page_size", "100");
-  url.searchParams.set("voice_type", "non-community");
   url.searchParams.set("include_total_count", "false");
 
   const response = await fetch(url, {
@@ -94,7 +93,7 @@ export async function resolveAccessibleElevenLabsVoice(options: {
   const selected = selectAccessibleElevenLabsVoice(voices, options.configuredVoiceId);
   if (!selected) {
     throw new Error(
-      "Nenhuma voz ElevenLabs utilizável está acessível por esta API key. Crie/salve uma voz pessoal compatível ou use uma chave com acesso TTS.",
+      "Nenhuma voz ElevenLabs utilizável está acessível por esta API key. Crie/salve uma voz compatível ou use uma chave com acesso TTS.",
     );
   }
 
