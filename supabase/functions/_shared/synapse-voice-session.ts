@@ -159,7 +159,14 @@ export async function updateVoiceSession(
     .eq("user_id", userId);
   if (error) throw error;
 
-  if (["ended", "error", "cancelled"].includes(patch.status || "")) {
+  // Preserve sessions that reached the active voice pipeline even when they
+  // produced no transcript. These rows are the only durable diagnostics for
+  // silent microphone/TTS failures. Only remove an empty conversation when a
+  // session was cancelled before settings were successfully applied.
+  const shouldDeleteEmptyConversation =
+    patch.status === "cancelled" && patch.metadata?.settingsApplied !== true;
+
+  if (shouldDeleteEmptyConversation) {
     const { data: voiceSession } = await admin
       .from("synapse_voice_sessions")
       .select("conversation_id")
