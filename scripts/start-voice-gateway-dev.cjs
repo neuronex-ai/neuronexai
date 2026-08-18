@@ -32,32 +32,19 @@ function checkHealth() {
 }
 
 (async () => {
-  if (process.argv.includes("--local")) {
-    console.error("[voice-agent-gateway] --local foi removido. O Synapse de voz tem somente o caminho Deepgram Agent + ElevenLabs.");
-    process.exit(1);
-  }
-
   const health = await checkHealth();
   if (health) {
-    const missing = Array.isArray(health.missing)
-      ? health.missing
-      : [
-          health.deepgramConfigured === false ? "DEEPGRAM_API_KEY" : "",
-          health.supabaseConfigured === false ? "SUPABASE_URL/VITE_SUPABASE_URL ou SUPABASE_ANON_KEY/VITE_SUPABASE_ANON_KEY" : "",
-          health.gatewaySecretConfigured === false ? "SYNAPSE_VOICE_GATEWAY_SECRET" : "",
-        ].filter(Boolean);
-    if (missing.length) {
-      console.error(`[voice-agent-gateway] ja existe um gateway em http://localhost:${port}, mas ele esta sem: ${missing.join(", ")}.`);
-      console.error("[voice-agent-gateway] pare esse processo antigo e reinicie o dev server com as secrets server-side corretas.");
+    if (health.runtime !== "node-local-edge-proxy") {
+      console.error(`[voice-agent-gateway] ja existe um gateway antigo em http://localhost:${port}.`);
+      console.error("[voice-agent-gateway] pare esse processo e reinicie o dev server para usar o proxy do runtime Edge canônico.");
       process.exit(1);
     }
-    console.log(`[voice-agent-gateway] already running on ws://localhost:${port}/v1/synapse/voice`);
-    console.log("[voice-agent-gateway] reusing existing process; stop it before restarting with new env values.");
+    console.log(`[voice-agent-gateway] local Edge proxy already running on ws://localhost:${port}/v1/synapse/voice`);
     setInterval(() => undefined, 2 ** 30);
     return;
   }
 
-  const child = spawn(process.execPath, ["server/voice-agent-gateway/index.js"], {
+  const child = spawn(process.execPath, ["server/voice-agent-gateway/edge-proxy.js"], {
     cwd: process.cwd(),
     stdio: "inherit",
     env: process.env,
