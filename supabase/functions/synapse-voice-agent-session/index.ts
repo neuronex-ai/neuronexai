@@ -9,6 +9,7 @@ import {
   SYNAPSE_ELEVENLABS_LANGUAGE,
   SYNAPSE_ELEVENLABS_MODEL_ID,
 } from "../_shared/synapse-voice-settings.ts";
+import { resolveAccessibleElevenLabsVoice } from "../_shared/elevenlabs-voice.ts";
 import { loadConversationContext } from "../synapse-text-fallback/entity-context.ts";
 import {
   buildSynapseVoiceFunctions,
@@ -202,14 +203,11 @@ async function loadRecentAgentContext(admin: any, userId: string, conversationId
   return messages.slice(-12);
 }
 
-function buildSpeakConfig(timezone = "America/Sao_Paulo") {
-  const elevenLabsVoice = clean(
-    Deno.env.get("SYNAPSE_VOICE_TTS_PT_BR_VOICE_ID") ||
-      DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
-    160,
-  );
-  // Keep the actual voice model in code, not in a mutable deployment secret.
-  // This makes every new session deterministic while the provider is tested.
+function buildSpeakConfig(
+  timezone = "America/Sao_Paulo",
+  resolvedElevenLabsVoiceId = DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
+) {
+  const elevenLabsVoice = clean(resolvedElevenLabsVoiceId, 160);
   const elevenLabsModel = SYNAPSE_ELEVENLABS_MODEL_ID;
   const elevenLabsProvider: Record<string, string> = {
     type: "eleven_labs",
@@ -217,7 +215,7 @@ function buildSpeakConfig(timezone = "America/Sao_Paulo") {
     language: SYNAPSE_ELEVENLABS_LANGUAGE,
   };
   // `multi` is a Deepgram third-party TTS provider setting, not an ElevenLabs
-  // language_code. The system prompt controls pt-BR delivery.
+  // `language_code` value in our Settings payload. Deepgram maps it internally.
   return {
     speak: [
       {
@@ -242,7 +240,7 @@ function buildSpeakConfig(timezone = "America/Sao_Paulo") {
         },
       },
     ],
-    ttsProvider: "deepgram-elevenlabs-pt-br+azure-speech-fallback",
+    ttsProvider: "deepgram-elevenlabs-multi+azure-speech-fallback",
     ttsVoice: elevenLabsVoice,
   };
 }
@@ -299,8 +297,9 @@ function buildAgentSettings(
   functions: Array<Record<string, unknown>>,
   contextMessages: Array<{ role: "user" | "assistant"; content: string }>,
   timezone = "America/Sao_Paulo",
+  resolvedElevenLabsVoiceId = DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
 ) {
-  const { speak, ttsProvider, ttsVoice } = buildSpeakConfig(timezone);
+  const { speak, ttsProvider, ttsVoice } = buildSpeakConfig(timezone, resolvedElevenLabsVoiceId);
   const listenModel = Deno.env.get("DEEPGRAM_LISTEN_MODEL") || "flux-general-multi";
   const listenProvider: Record<string, unknown> = {
     type: "deepgram",
@@ -427,7 +426,31 @@ serve(async (request) => {
       professionalName: profile.professionalName,
       pendingActionSummary,
     });
-    const { settings, metadata } = buildAgentSettings(prompt, context, functions, contextMessages, profile.timezone);
+
+    const configuredVoiceId = clean(
+      Deno.env.get("SYNAPSE_VOICE_TTS_PT_BR_VOICE_ID") || DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
+      160,
+    );
+    const resolvedVoice = await resolveAccessibleElevenLabsVoice({
+      apiKey: elevenLabsApiKey(),
+      configuredVoiceId,
+    });
+    console.info("[synapse-voice-agent-session] ElevenLabs voice resolved", {
+      configuredVoiceId,
+      voiceId: resolvedVoice.voiceId,
+      voiceName: resolvedVoice.name,
+      category: resolvedVoice.category,
+      selection: resolvedVoice.selection,
+    });
+
+    const { settings, metadata } = buildAgentSettings(
+      prompt,
+      context,
+      functions,
+      contextMessages,
+      profile.timezone,
+      resolvedVoice.voiceId,
+    );
     const voiceSessionId = await ensureVoiceSessionRecord(
       admin,
       user.id,
@@ -446,6 +469,9 @@ serve(async (request) => {
           functionsCount: metadata.functionsCount,
           promptCharacters: metadata.promptCharacters,
           settingsCharacters: metadata.settingsCharacters,
+          voiceSelection: resolvedVoice.selection,
+          voiceName: resolvedVoice.name,
+          voiceCategory: resolvedVoice.category,
           toolsetVersion: SYNAPSE_VOICE_TOOLSET_VERSION,
         },
       },
@@ -461,7 +487,9 @@ serve(async (request) => {
       deepgramUrl: includeSettings ? Deno.env.get("DEEPGRAM_AGENT_URL") || DEFAULT_DEEPGRAM_URL : undefined,
       expiresAt,
       model: metadata.thinkModel,
-      voiceName: metadata.ttsVoice,
+      voiceName: resolvedVoice.name,
+      voiceId: metadata.ttsVoice,
+      voiceSelection: resolvedVoice.selection,
       listenModel: metadata.listenModel,
       listenLanguage: metadata.listenLanguage,
       ttsProvider: metadata.ttsProvider,
