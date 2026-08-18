@@ -9,26 +9,21 @@ import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 import { SYNAPSE_VOICE_BLOCKED_TOOL_NAMES } from "./synapse-tool-contract.ts";
 
 const equal = (actual: unknown, expected: unknown, message: string) => {
-  if (actual !== expected) {
-    throw new Error(`${message}: esperado ${expected}, recebido ${actual}`);
-  }
+  if (actual !== expected) throw new Error(`${message}: esperado ${expected}, recebido ${actual}`);
 };
 
 Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", () => {
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
 
-  equal(functions.length, 14, "quantidade de funções de voz");
-  equal(
-    SYNAPSE_VOICE_TOOLSET_VERSION,
-    "neuronex.voice-core.v8",
-    "versão do payload de sessão",
-  );
+  equal(functions.length, 15, "quantidade de funções de voz");
+  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v9", "versão do payload de sessão");
   equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "primeira função exclusiva de voz");
   equal(names[1], "cancel_pending_action", "segunda função exclusiva de voz");
-  equal(names[2], "prepare_action_group", "planejador persistido exclusivo de voz");
+  equal(names[2], "edit_action_group", "edição versionada exclusiva de voz");
+  equal(names[3], "prepare_action_group", "planejador persistido exclusivo de voz");
 
   for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) {
     equal(names.includes(required), true, `ferramenta ${required}`);
@@ -100,6 +95,15 @@ Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
   equal(String(tool?.description || "").includes("Nao confunda pacote/grupo/sequencia operacional com NeuroFlow"), true, "planner diferencia grupo operacional de NeuroFlow");
+});
+
+Deno.test("edit_action_group só altera campo allowlisted de uma revisão pendente", () => {
+  const tool = buildSynapseVoiceFunctions().find((candidate) => candidate.name === "edit_action_group");
+  equal(Boolean(tool), true, "editor registrado");
+  equal(Boolean(tool?.parameters?.properties?.step_number), true, "card pode ser referenciado por número");
+  equal(Boolean(tool?.parameters?.properties?.field), true, "campo humano obrigatório");
+  equal(Boolean(tool?.parameters?.properties?.value), true, "novo valor obrigatório");
+  equal(Boolean(tool?.parameters?.properties?.plan_hash), false, "modelo nunca escolhe hash");
 });
 
 Deno.test("navegação assistida expõe as superfícies read-first do Desktop", () => {
