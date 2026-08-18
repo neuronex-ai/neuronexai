@@ -61,6 +61,40 @@ function jsonResponse(res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function exactArrayBuffer(data) {
+  if (data instanceof ArrayBuffer) return data;
+  if (ArrayBuffer.isView(data)) {
+    return data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+  }
+  return data;
+}
+
+function pcm16Stats(data) {
+  const bytes = Buffer.isBuffer(data)
+    ? data
+    : data instanceof ArrayBuffer
+      ? Buffer.from(data)
+      : ArrayBuffer.isView(data)
+        ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
+        : null;
+  if (!bytes || bytes.byteLength < 2) return { rms: 0, peak: 0 };
+
+  let sumSquares = 0;
+  let peak = 0;
+  let samples = 0;
+  for (let offset = 0; offset + 1 < bytes.byteLength; offset += 2) {
+    const sample = bytes.readInt16LE(offset);
+    const normalized = sample / 32768;
+    sumSquares += normalized * normalized;
+    peak = Math.max(peak, Math.abs(normalized));
+    samples += 1;
+  }
+  return {
+    rms: samples ? Math.sqrt(sumSquares / samples) : 0,
+    peak,
+  };
+}
+
 const server = http.createServer((req, res) => {
   if (req.url === "/health" || req.url === `${PATHNAME}/health`) {
     jsonResponse(res, 200, {
@@ -91,6 +125,9 @@ wss.on("connection", (client) => {
   let closed = false;
   let clientBinaryFrames = 0;
   let clientBinaryBytes = 0;
+  let maxInputRms = 0;
+  let maxInputPeak = 0;
+  let speechLogged = false;
 
   const closeBoth = (code = 1000, reason = "proxy_closed") => {
     if (closed) return;
@@ -118,7 +155,7 @@ wss.on("connection", (client) => {
     });
     while (pending.length && upstream.readyState === WebSocket.OPEN) {
       const frame = pending.shift();
-      upstream.send(frame.data, { binary: frame.isBinary });
+      upstream.send(frame.isBinary ? exactArrayBuffer(frame.data) : frame.data, { binary: frame.isBinary });
     }
   });
 
@@ -141,6 +178,8 @@ wss.on("connection", (client) => {
       reason: clean(reason?.toString(), 120),
       clientBinaryFrames,
       clientBinaryBytes,
+      maxInputRms: Number(maxInputRms.toFixed(5)),
+      maxInputPeak: Number(maxInputPeak.toFixed(5)),
     });
     if (client.readyState === WebSocket.OPEN) {
       client.close(code >= 1000 && code <= 4999 ? code : 1011, clean(reason?.toString(), 120) || "edge_gateway_closed");
@@ -149,23 +188,38 @@ wss.on("connection", (client) => {
   });
 
   client.on("message", (data, isBinary) => {
+    const outbound = isBinary ? exactArrayBuffer(data) : data;
     if (isBinary) {
       const bytes = Number(data?.byteLength ?? data?.length ?? 0);
+      const stats = pcm16Stats(data);
       clientBinaryFrames += 1;
       clientBinaryBytes += Number.isFinite(bytes) ? bytes : 0;
+      maxInputRms = Math.max(maxInputRms, stats.rms);
+      maxInputPeak = Math.max(maxInputPeak, stats.peak);
       if (clientBinaryFrames === 1) {
         console.log("[voice-agent-gateway] primeiro frame PCM do microfone recebido", {
           bytes,
+          rms: Number(stats.rms.toFixed(5)),
+          peak: Number(stats.peak.toFixed(5)),
+          forwardedAs: outbound instanceof ArrayBuffer ? "ArrayBuffer" : typeof outbound,
+        });
+      }
+      if (!speechLogged && stats.rms >= 0.01 && stats.peak >= 0.03) {
+        speechLogged = true;
+        console.log("[voice-agent-gateway] fala detectada no PCM do microfone", {
+          frame: clientBinaryFrames,
+          rms: Number(stats.rms.toFixed(5)),
+          peak: Number(stats.peak.toFixed(5)),
         });
       }
     }
 
     if (upstream.readyState === WebSocket.OPEN) {
-      upstream.send(data, { binary: isBinary });
+      upstream.send(outbound, { binary: isBinary });
       return;
     }
     if (upstream.readyState === WebSocket.CONNECTING) {
-      pending.push({ data, isBinary });
+      pending.push({ data: outbound, isBinary });
       if (pending.length > 256) closeBoth(1013, "proxy_queue_overflow");
     }
   });
