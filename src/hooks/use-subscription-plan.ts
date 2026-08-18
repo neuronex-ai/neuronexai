@@ -82,7 +82,7 @@ export const useSubscriptionPlan = (): UseSubscriptionPlanReturn => {
                 features,
                 limits: entitlement?.limits || {},
                 rawFeatures: entitlement?.rawFeatures || {},
-                isDevAccount: Boolean(entitlement?.isDevAccount),
+                isDevAccount: false,
                 subscriptionId: entitlement?.subscriptionId,
                 checkoutSessionId: entitlement?.checkoutSessionId,
                 checkoutUrl: entitlement?.checkoutUrl,
@@ -104,7 +104,6 @@ export const useSubscriptionPlan = (): UseSubscriptionPlanReturn => {
 
     const canAccess = (feature: FeatureKey): boolean => {
         if (!data) return false;
-        if (data.isDevAccount) return true;
         if (!data.canUseCurrentAccess) return false;
 
         const featureMap: Record<FeatureKey, keyof PlanFeatures | 'maxPatients'> = {
@@ -127,7 +126,6 @@ export const useSubscriptionPlan = (): UseSubscriptionPlanReturn => {
 
     const canAddPatient = (currentPatientCount: number): boolean => {
         if (!data) return false;
-        if (data.isDevAccount) return true;
         if (!data.canUseCurrentAccess) return false;
 
         const maxPatients = data.features.maxPatients;
