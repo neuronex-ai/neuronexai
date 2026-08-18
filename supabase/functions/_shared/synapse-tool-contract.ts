@@ -171,13 +171,12 @@ export function getSynapseToolPolicy(
     };
   }
 
-  if (name === "prepare_action_group") {
+  if (name === "prepare_action_group" || name === "edit_action_group") {
     return {
       name,
       riskLevel: "medium",
-      // Preparing persists an immutable review plan but does not itself apply
-      // the requested business mutations. Confirmation policy is derived by
-      // the server from the real child tools and step count.
+      // Preparation/editing only persists a new immutable review version; the
+      // requested business effects still require the server-derived policy.
       confirmationRequired: false,
       voiceAvailability: "direct",
       executor: "mutation",
