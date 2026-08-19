@@ -18,11 +18,13 @@ The professional explicitly asked for a reviewed group. Instead of using `prepar
 
 A subsequent `list_patients` succeeded with six records and included both Carlos and Josué Silveira, proving that the patient failures were argument propagation failures rather than missing patient records.
 
+The durable conversation state at the end of this session contained only `lastTool=list_patients`; no active patient had ever been established because every earlier patient-scoped call arrived empty. This created a circular failure: the resolver could use durable patient context only after a successful patient-aware call, but the model was failing to send the patient argument needed to create that context.
+
 When the assistant then offered to assemble the Josué package and the professional answered `Eu quero, pode fazer`, `synapse-voice-tool` v79 returned HTTP 500 at 2026-08-19T19:31:04Z before any review plan was persisted. The assistant consequently emitted the vague `não recebi um retorno confiável` fallback.
 
 ## P0 corrections
 
-- read-only steps accidentally supplied inside the raw package are treated as preflight/context and omitted from the executable timeline instead of aborting the group;
+- read-only steps inside a raw package are treated as preflight/context and omitted from the executable timeline instead of aborting the group;
 - executable steps are renumbered after preflight filtering and dependency references survive the filtering;
 - every explicit `prepare_action_group` opens a versioned review;
 - critical/NeuroFinance groups retain opaque confirmation;
@@ -45,7 +47,7 @@ The Desktop path is present: the voice hook consumes `review_action`, while the 
 
 ## Verification
 
-Regression coverage locks v10 mutation routing, planner canonical argument exposure, direct patient-name requirements, read-preflight filtering and conversation fact recovery. GitHub Actions type-checks `synapse-voice-tool`, `synapse-voice-agent-session` and `synapse-voice-gateway` on every branch head before any optional deployment.
+Regression coverage locks v10 mutation routing, planner canonical argument exposure, direct patient-name requirements, read-preflight filtering and conversation fact recovery. The toolset regression also guards against uncontrolled settings-size growth. GitHub Actions type-checks `synapse-voice-tool`, `synapse-voice-agent-session` and `synapse-voice-gateway` before any optional deployment.
 
 ## Deployment note
 
