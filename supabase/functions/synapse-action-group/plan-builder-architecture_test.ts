@@ -19,3 +19,7 @@ Deno.test("cards de agenda editam os argumentos canônicos atuais", () => {
   assertIncludes('push("datetime", "data e horário"', "create_appointment deve editar datetime");
   assertIncludes('push("new_datetime", "nova data e horário"', "reschedule deve editar new_datetime");
 });
+
+Deno.test("pacote sem mutações não se disfarça de execução", () => {
+  assertIncludes("O pacote ficou sem ações executáveis depois dos preflights", "erro recuperável para pacote sem ações");
+});
