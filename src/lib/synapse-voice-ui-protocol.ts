@@ -1,5 +1,6 @@
 export const SYNAPSE_VOICE_REVIEW_EVENT = "synapse:voice-review-action";
 export const SYNAPSE_ACTION_GROUP_EDIT_REQUEST_EVENT = "synapse:action-group-edit-request";
+export const SYNAPSE_ACTION_GROUP_EDIT_RESULT_EVENT = "synapse:action-group-edit-result";
 export const SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT = "synapse:opaque-confirmation-request";
 export const SYNAPSE_OPAQUE_CONFIRM_RESPONSE_EVENT = "synapse:opaque-confirmation-response";
 export const SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT = "synapse:opaque-capture-block";
@@ -64,6 +65,14 @@ export type SynapseActionGroupEditRequest = {
   stepId: string;
   fieldId: string;
   value: unknown;
+};
+
+export type SynapseActionGroupEditResult = {
+  reviewId: string;
+  stepId: string;
+  fieldId: string;
+  success: boolean;
+  message?: string;
 };
 
 export type SynapseOpaqueConfirmationRequest = {
@@ -210,6 +219,24 @@ export const emitActionGroupEditRequest = (request: SynapseActionGroupEditReques
       stepId,
       fieldId,
       value: request.value,
+    },
+  }));
+  return true;
+};
+
+export const emitActionGroupEditResult = (result: SynapseActionGroupEditResult) => {
+  if (typeof window === "undefined") return false;
+  const reviewId = String(result.reviewId || "").trim().slice(0, 160);
+  const stepId = String(result.stepId || "").trim().slice(0, 160);
+  const fieldId = String(result.fieldId || "").trim().slice(0, 120);
+  if (!reviewId || !stepId || !fieldId) return false;
+  window.dispatchEvent(new CustomEvent<SynapseActionGroupEditResult>(SYNAPSE_ACTION_GROUP_EDIT_RESULT_EVENT, {
+    detail: {
+      reviewId,
+      stepId,
+      fieldId,
+      success: result.success === true,
+      message: String(result.message || "").slice(0, 500),
     },
   }));
   return true;
