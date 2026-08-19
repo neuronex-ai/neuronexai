@@ -29,7 +29,7 @@ When the assistant then offered to assemble the Josué package and the professio
 - action-group `tool_name` is constrained to canonical voice-allowed executable/interface tools;
 - voice toolset v10 removes generic operational mutations from `execute_synapse_tool`; note creation, financial entries, email, Agenda mutations and similar effects must now pass through `prepare_action_group`;
 - NeuroFlow/NeuroPulse remain delegated only as explicit named-product exceptions;
-- `prepare_action_group.steps[].arguments` is now required and exposes the union of real canonical argument fields from the executable tools instead of an unconstrained empty object;
+- `prepare_action_group.steps[].arguments` is required and exposes canonical argument fields from the real executable tool schemas;
 - direct patient-centered read tools require `patient_name` explicitly in the Deepgram schema;
 - the action-group builder deterministically recovers the most recent explicit patient mention from user-authored conversation messages when a planned patient-scoped step still omits `patient_name`; matching is against real patients owned by the account, with first-name fallback only when unique;
 - the builder can recover an explicitly spoken recent monetary amount, including forms such as `R$ 150`, `150 reais` and `cento e cinquenta reais`, for a financial card whose model arguments omitted the amount;
@@ -45,7 +45,7 @@ The Desktop path is present: the voice hook consumes `review_action`, while the 
 
 ## Verification
 
-Current branch head is validated by GitHub Actions for Stage 3/4 Deno type-check. Regression coverage now locks v10 mutation routing, planner canonical argument exposure, direct patient-name requirements, read-preflight filtering and conversation fact recovery.
+Regression coverage locks v10 mutation routing, planner canonical argument exposure, direct patient-name requirements, read-preflight filtering and conversation fact recovery. GitHub Actions type-checks `synapse-voice-tool`, `synapse-voice-agent-session` and `synapse-voice-gateway` on every branch head before any optional deployment.
 
 ## Deployment note
 
