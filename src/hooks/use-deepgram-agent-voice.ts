@@ -2,8 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { analysePcm16, PcmAudioPlayer, SILENT_PCM_SIGNAL, type PcmAudioSignal } from "@/lib/pcm-audio-player";
 import {
+  SYNAPSE_ACTION_GROUP_EDIT_REQUEST_EVENT,
   SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT,
+  emitActionGroupEditResult,
   emitVoiceReviewAction,
+  type SynapseActionGroupEditRequest,
   type SynapseOpaqueCaptureBlock,
 } from "@/lib/synapse-voice-ui-protocol";
 import type {
@@ -165,6 +168,9 @@ const TOOL_LABELS: Record<string, string> = {
   analyze_neuroview_patient_patterns: "Análise no NeuroView",
   create_neuroflow_from_patient_history: "Criação no NeuroFlow",
   create_neuropulse_cause_effect_diagram: "Diagrama no NeuroPulse",
+  prepare_action_group: "Preparando ações",
+  execute_action_group: "Executando ações",
+  manage_action_group: "Revisão protegida",
   confirm_pending_action: "Confirmação da ação",
   cancel_pending_action: "Cancelamento da ação",
 };
@@ -305,6 +311,39 @@ export function useDeepgramAgentVoice({
       window.removeEventListener(SYNAPSE_OPAQUE_CAPTURE_BLOCK_EVENT, onOpaqueCaptureBlock as EventListener);
       opaqueCaptureBlockedRef.current = false;
     };
+  }, []);
+
+  useEffect(() => {
+    const onActionGroupEditRequest = (event: Event) => {
+      const detail = (event as CustomEvent<SynapseActionGroupEditRequest>).detail;
+      if (!detail?.reviewId || !detail?.planId || !detail?.planVersion || !detail?.planHash || !detail?.stepId || !detail?.fieldId) {
+        return;
+      }
+      const socket = wsRef.current;
+      if (!socket || socket.readyState !== WebSocket.OPEN || !readyRef.current) {
+        emitActionGroupEditResult({
+          reviewId: detail.reviewId,
+          stepId: detail.stepId,
+          fieldId: detail.fieldId,
+          success: false,
+          message: "A conexão de voz ainda não está pronta para atualizar esta revisão.",
+        });
+        return;
+      }
+      socket.send(JSON.stringify({
+        type: "action_group_edit_request",
+        requestId: globalThis.crypto?.randomUUID?.() || `action-edit-${Date.now()}`,
+        reviewId: detail.reviewId,
+        planId: detail.planId,
+        planVersion: detail.planVersion,
+        planHash: detail.planHash,
+        stepId: detail.stepId,
+        fieldId: detail.fieldId,
+        value: detail.value,
+      }));
+    };
+    window.addEventListener(SYNAPSE_ACTION_GROUP_EDIT_REQUEST_EVENT, onActionGroupEditRequest as EventListener);
+    return () => window.removeEventListener(SYNAPSE_ACTION_GROUP_EDIT_REQUEST_EVENT, onActionGroupEditRequest as EventListener);
   }, []);
 
   useEffect(() => {
@@ -641,6 +680,17 @@ export function useDeepgramAgentVoice({
       return;
     }
 
+    if (type === "action_group_edit_result") {
+      emitActionGroupEditResult({
+        reviewId: clean(payload.reviewId || payload.review_id, 160),
+        stepId: clean(payload.stepId || payload.step_id, 160),
+        fieldId: clean(payload.fieldId || payload.field_id, 120),
+        success: payload.success === true,
+        message: clean(payload.message, 500),
+      });
+      return;
+    }
+
     if (type === "gateway_status") {
       const status = clean(payload.status, 80);
       const nextConversationId = typeof payload.conversationId === "string"
@@ -895,7 +945,7 @@ export function useDeepgramAgentVoice({
             language,
             voiceUiCapabilities: {
               version: 1,
-              capabilities: ["review_action:v1", "opaque_confirmation:v1", "screen_context:v1"],
+              capabilities: ["review_action:v1", "action_group_edit:v1", "opaque_confirmation:v1", "screen_context:v1"],
             },
             context: {
               ...(context || {}),
