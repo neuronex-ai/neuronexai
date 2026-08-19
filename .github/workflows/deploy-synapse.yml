@@ -52,6 +52,9 @@ concurrency:
 env:
   SUPABASE_PROJECT_REF: krewdaklcyzqfxkkgvqr
   SUPABASE_CLI_VERSION: 2.109.1
+  # Action-group is embedded in synapse-voice-tool because this Sandbox is at
+  # its Edge Function quota. Keeping it out of this list prevents a failing
+  # attempt to allocate a new function slot while preserving the same runtime.
   EDGE_FUNCTIONS: >-
     synapse-text-fallback
     gemini-text-chat
@@ -60,7 +63,6 @@ env:
     synapse-voice-azure-tts
     synapse-voice-gateway
     synapse-voice-tool
-    synapse-action-group
     synapse-whatsapp-in
     neurozap-evolution
     whatsapp-send
@@ -94,6 +96,46 @@ jobs:
 
       - name: Run Edge Function tests without external side effects
         run: deno test --frozen supabase/functions
+
+  # Narrow Sandbox-only deployment for this feature branch. It intentionally
+  # deploys just the two voice functions changed by Stage 3/4 and performs its
+  # own transitive type-check, so the known unrelated repository-wide Node type
+  # test failure cannot hide the runtime fix from manual validation.
+  deploy_stage34_voice_sandbox:
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.head_ref == 'agent/synapse-plan-stage2-action-group-runtime' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.2
+
+      - name: Type-check Stage 3/4 voice runtime
+        run: |
+          deno check supabase/functions/synapse-voice-tool/index.ts
+          deno check supabase/functions/synapse-voice-agent-session/index.ts
+
+      - name: Validate deployment secret
+        run: test -n "${SUPABASE_ACCESS_TOKEN:-}"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy Stage 3/4 voice runtime to Sandbox
+        shell: bash
+        run: |
+          npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-tool --project-ref "${SUPABASE_PROJECT_REF}"
+          npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-agent-session --project-ref "${SUPABASE_PROJECT_REF}"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
   deploy:
     if: github.event_name != 'pull_request'
