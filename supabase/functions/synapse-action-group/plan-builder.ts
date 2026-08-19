@@ -5,16 +5,88 @@ import {
   type SynapseActionGroupStep,
   type SynapseEditableField,
 } from "../_shared/synapse-action-group.ts";
+import {
+  normalizeActionGroupStepIdentity,
+  type ActionGroupStepIdentitySource,
+} from "../_shared/synapse-action-kind.ts";
 import { loadAgendaActionContext } from "../_shared/agenda-action-context.ts";
 import { validateVoiceToolCall } from "../_shared/synapse-voice-policy.ts";
 import {
+  EntityResolutionError,
   enrichToolArguments,
   loadConversationContext,
+  saveConversationContext,
 } from "../synapse-text-fallback/entity-context.ts";
 import type { PendingAction } from "../synapse-text-fallback/executor.ts";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export type ActionGroupPreparationErrorCode =
+  | "group_step_type_missing"
+  | "group_tool_not_allowed"
+  | "group_no_executable_steps"
+  | "patient_required"
+  | "patient_not_found"
+  | "patient_ambiguous"
+  | "amount_required"
+  | "appointment_datetime_required"
+  | "integration_required"
+  | "preflight_blocked"
+  | "plan_validation_failed"
+  | "plan_persistence_failed";
+
+export type ActionGroupStepClassification =
+  | "executable"
+  | "preflight_read"
+  | "invalid"
+  | "unsupported"
+  | "blocked";
+
+export interface ActionGroupBuildWarning {
+  index: number;
+  classification: Exclude<ActionGroupStepClassification, "executable">;
+  errorCode: ActionGroupPreparationErrorCode;
+  source: ActionGroupStepIdentitySource | null;
+  actionKind: string | null;
+  canonicalTool: string | null;
+  argumentKeys: string[];
+  message: string;
+}
+
+export class ActionGroupPreparationError extends Error {
+  code: ActionGroupPreparationErrorCode;
+  failedStepIndex: number | null;
+  blockedSteps: ActionGroupBuildWarning[];
+  needsClarification: boolean;
+  retryable = false;
+
+  constructor(
+    code: ActionGroupPreparationErrorCode,
+    message: string,
+    options: {
+      failedStepIndex?: number | null;
+      blockedSteps?: ActionGroupBuildWarning[];
+      needsClarification?: boolean;
+    } = {},
+  ) {
+    super(message);
+    this.name = "ActionGroupPreparationError";
+    this.code = code;
+    this.failedStepIndex = options.failedStepIndex ?? null;
+    this.blockedSteps = options.blockedSteps || [];
+    this.needsClarification = options.needsClarification ?? [
+      "group_step_type_missing",
+      "patient_required",
+      "patient_not_found",
+      "patient_ambiguous",
+      "amount_required",
+      "appointment_datetime_required",
+      "integration_required",
+      "preflight_blocked",
+    ].includes(code);
+  }
+}
 
 const safeStepId = (value: unknown, fallback: string) => {
   const id = clean(value, 120);
@@ -30,9 +102,6 @@ const normalizeLookup = (value: unknown) =>
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-
-const containsPhrase = (text: string, phrase: string) =>
-  Boolean(phrase && ` ${text} `.includes(` ${phrase} `));
 
 const PATIENT_SCOPED_GROUP_TOOLS = new Set([
   "update_patient",
@@ -130,66 +199,27 @@ function explicitAmountFromText(value: unknown) {
   const tokens = normalized.split(" ").filter(Boolean);
   const realIndex = tokens.findIndex((token) => token === "real" || token === "reais");
   if (realIndex < 1) return null;
-  const numberWindow = tokens.slice(Math.max(0, realIndex - 8), realIndex);
-  return parseNumberWords(numberWindow);
+  return parseNumberWords(tokens.slice(Math.max(0, realIndex - 8), realIndex));
 }
 
-async function recoverRecentConversationFacts(admin: any, userId: string, conversationId: string) {
-  const { data: rows, error: rowsError } = await admin
+async function recoverRecentExplicitAmount(admin: any, userId: string, conversationId: string) {
+  const { data: rows, error } = await admin
     .from("messages")
     .select("content,created_at")
     .eq("user_id", userId)
     .eq("session_id", conversationId)
     .eq("role", "user")
     .order("created_at", { ascending: false })
-    .limit(12);
-  if (rowsError) {
-    console.warn("[synapse-action-group] recent user messages unavailable", rowsError.message);
-    return { patient: null as any, amount: null as number | null };
+    .limit(8);
+  if (error) {
+    console.warn("[synapse-action-group] recent user messages unavailable", error.message);
+    return null;
   }
-
-  const recentRows = rows || [];
-  let amount: number | null = null;
-  for (const row of recentRows) {
-    amount ??= explicitAmountFromText(row?.content);
-    if (amount !== null) break;
+  for (const row of rows || []) {
+    const amount = explicitAmountFromText(row?.content);
+    if (amount !== null) return amount;
   }
-
-  const { data: patients, error: patientsError } = await admin
-    .from("patients")
-    .select("id,name,status")
-    .eq("user_id", userId)
-    .limit(300);
-  if (patientsError) {
-    console.warn("[synapse-action-group] patient fallback unavailable", patientsError.message);
-    return { patient: null as any, amount };
-  }
-
-  const ownedPatients = (patients || [])
-    .map((patient: any) => ({ ...patient, normalizedName: normalizeLookup(patient?.name) }))
-    .filter((patient: any) => patient.normalizedName);
-  const firstNameOwners = new Map<string, any[]>();
-  for (const patient of ownedPatients) {
-    const first = patient.normalizedName.split(" ")[0];
-    if (!first || first.length < 3) continue;
-    firstNameOwners.set(first, [...(firstNameOwners.get(first) || []), patient]);
-  }
-
-  for (const row of recentRows) {
-    const text = normalizeLookup(row?.content);
-    if (!text) continue;
-    const fullMatches = ownedPatients.filter((patient: any) => containsPhrase(text, patient.normalizedName));
-    if (fullMatches.length === 1) return { patient: fullMatches[0], amount };
-    if (fullMatches.length > 1) continue;
-
-    const firstMatches = Array.from(firstNameOwners.entries())
-      .filter(([first, owners]) => owners.length === 1 && containsPhrase(text, first))
-      .map(([, owners]) => owners[0]);
-    const uniqueFirstMatches = Array.from(new Map(firstMatches.map((patient: any) => [patient.id, patient])).values());
-    if (uniqueFirstMatches.length === 1) return { patient: uniqueFirstMatches[0], amount };
-  }
-
-  return { patient: null as any, amount };
+  return null;
 }
 
 function editableFieldsFor(toolName: string, args: Record<string, any>): SynapseEditableField[] {
@@ -274,60 +304,169 @@ async function assertAgendaPreflight(admin: any, userId: string, toolName: strin
   const patientId = clean(args.patient_id || args.patientId, 120) || null;
   const agenda = await loadAgendaActionContext({ admin, professionalId: userId, patientId });
   if (!agenda.entitlement.canUseCurrentAccess) {
-    throw new Error("O acesso atual não permite executar esta ação da Agenda.");
+    throw new ActionGroupPreparationError("preflight_blocked", "O acesso atual não permite executar esta ação da Agenda.");
   }
 
   const mode = financialMode(args);
   if (mode === "manual") return;
 
   if (toolName === "create_neurofinance_charge" || mode === "neurofinance") {
-    if (!agenda.neurofinance.availableByPlan) throw new Error("NeuroFinance não está disponível no plano atual. Use lançamento manual.");
-    if (!agenda.neurofinance.accountExists) throw new Error("A conta NeuroFinance ainda não foi configurada. Use lançamento manual ou conclua o cadastro.");
+    if (!agenda.neurofinance.availableByPlan) {
+      throw new ActionGroupPreparationError("integration_required", "NeuroFinance não está disponível no plano atual. Use lançamento manual.");
+    }
+    if (!agenda.neurofinance.accountExists) {
+      throw new ActionGroupPreparationError("integration_required", "A conta NeuroFinance ainda não foi configurada. Use lançamento manual ou conclua o cadastro.");
+    }
     if (!agenda.neurofinance.allowed) {
       if (agenda.patient && agenda.patient.cpf !== "valid") {
-        throw new Error("A cobrança NeuroFinance precisa de CPF válido do paciente. O lançamento manual continua disponível.");
+        throw new ActionGroupPreparationError("preflight_blocked", "A cobrança NeuroFinance precisa de CPF válido do paciente. O lançamento manual continua disponível.");
       }
-      throw new Error("A conta NeuroFinance não está operacional para cobranças agora. Use lançamento manual ou regularize a conta.");
+      throw new ActionGroupPreparationError("preflight_blocked", "A conta NeuroFinance não está operacional para cobranças agora. Use lançamento manual ou regularize a conta.");
     }
   }
 
   if (mode === "package" && !agenda.allowedFinancialModes.includes("package")) {
-    throw new Error("Não há pacote ativo com sessão disponível para este paciente.");
+    throw new ActionGroupPreparationError("preflight_blocked", "Não há pacote ativo com sessão disponível para este paciente.");
   }
 
   if (toolName === "send_patient_email" && !agenda.google.gmail.scopePresent) {
-    throw new Error("O Gmail conectado não possui escopo de envio. Reconecte o Google antes de enviar este e-mail.");
+    throw new ActionGroupPreparationError("integration_required", "O Gmail não está conectado com permissão de envio.");
   }
 }
 
-export async function buildActionGroupSteps(input: {
+function validateRequiredActionArguments(toolName: string, args: Record<string, any>) {
+  if (["create_financial_entry", "create_neurofinance_charge", "create_fiscal_invoice"].includes(toolName)) {
+    const amount = Number(args.amount ?? args.value);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new ActionGroupPreparationError("amount_required", "Não consegui preparar o lançamento porque faltou um valor financeiro válido.");
+    }
+  }
+  if (toolName === "create_appointment") {
+    const datetime = clean(args.datetime || args.start_time || args.startTime, 120);
+    if (!datetime) {
+      throw new ActionGroupPreparationError("appointment_datetime_required", "Não consegui preparar o agendamento porque faltou a data e o horário.");
+    }
+  }
+  if (toolName === "create_session_note" && !clean(args.notes, 5000)) {
+    throw new ActionGroupPreparationError("plan_validation_failed", "Não consegui preparar a anotação porque faltou o texto da anotação.");
+  }
+  if (toolName === "send_patient_email" && (!clean(args.subject, 500) || !clean(args.body, 10000))) {
+    throw new ActionGroupPreparationError("plan_validation_failed", "Não consegui preparar o e-mail porque faltou o título ou o corpo da mensagem.");
+  }
+}
+
+export function normalizeActionGroupStep(rawValue: unknown, rawIndex = 0) {
+  const raw = rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
+    ? rawValue as Record<string, any>
+    : {};
+  const identity = normalizeActionGroupStepIdentity(raw);
+  const args = raw.arguments && typeof raw.arguments === "object" && !Array.isArray(raw.arguments)
+    ? { ...(raw.arguments as Record<string, any>) }
+    : {};
+  return {
+    index: rawIndex + 1,
+    raw,
+    kind: identity.kind,
+    canonicalToolName: identity.canonicalToolName,
+    source: identity.source,
+    rawIdentity: identity.rawIdentity,
+    hasIdentityField: identity.hasIdentityField,
+    args,
+    argumentKeys: Object.keys(args).sort().slice(0, 80),
+  };
+}
+
+function preparationErrorCode(error: unknown): ActionGroupPreparationErrorCode {
+  if (error instanceof ActionGroupPreparationError) return error.code;
+  if (error instanceof EntityResolutionError) {
+    if (error.code === "patient_name_required") return "patient_required";
+    if (error.code === "patient_ambiguous") return "patient_ambiguous";
+    return "patient_not_found";
+  }
+  const text = clean(error instanceof Error ? error.message : error, 1200).toLowerCase();
+  if (/gmail|google|integra/.test(text)) return "integration_required";
+  if (/valor|amount/.test(text)) return "amount_required";
+  if (/data|hor[aá]rio|datetime/.test(text)) return "appointment_datetime_required";
+  return "plan_validation_failed";
+}
+
+function warningFor(
+  normalized: ReturnType<typeof normalizeActionGroupStep>,
+  classification: Exclude<ActionGroupStepClassification, "executable">,
+  errorCode: ActionGroupPreparationErrorCode,
+  message: string,
+): ActionGroupBuildWarning {
+  return {
+    index: normalized.index,
+    classification,
+    errorCode,
+    source: normalized.source,
+    actionKind: normalized.kind,
+    canonicalTool: normalized.canonicalToolName,
+    argumentKeys: normalized.argumentKeys,
+    message: clean(message, 600),
+  };
+}
+
+async function buildActionGroupStepSet(input: {
   admin: any;
   userId: string;
   conversationId: string;
   rawSteps: unknown[];
 }) {
   const context = await loadConversationContext(input.admin, input.userId, input.conversationId);
-  const recentFacts = await recoverRecentConversationFacts(input.admin, input.userId, input.conversationId);
-  const fallbackPatientName = clean(context.state.activePatientName, 180) || clean(recentFacts.patient?.name, 180);
+  const recentAmount = await recoverRecentExplicitAmount(input.admin, input.userId, input.conversationId);
+  const fallbackPatientName = clean(context.state.activePatientName, 180);
   const steps: SynapseActionGroupStep[] = [];
+  const warnings: ActionGroupBuildWarning[] = [];
+  const preflights: ActionGroupBuildWarning[] = [];
   const stepIdByRawIndex = new Map<number, string>();
+  let resolvedPatient: { id?: string; name?: string } | null = null;
 
   for (const [index, rawValue] of input.rawSteps.entries()) {
-    const raw = rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
-      ? rawValue as Record<string, any>
-      : {};
-    const toolName = clean(raw.tool_name || raw.toolName, 120);
-    if (!toolName || ["prepare_action_group", "execute_action_group", "confirm_pending_action", "cancel_pending_action"].includes(toolName)) {
-      throw new Error(`Etapa ${index + 1} sem ferramenta executável válida.`);
+    const normalized = normalizeActionGroupStep(rawValue, index);
+    const raw = normalized.raw;
+    const toolName = clean(normalized.canonicalToolName, 120);
+
+    if (!toolName) {
+      const code: ActionGroupPreparationErrorCode = normalized.hasIdentityField
+        ? "group_tool_not_allowed"
+        : "group_step_type_missing";
+      warnings.push(warningFor(
+        normalized,
+        normalized.hasIdentityField ? "unsupported" : "invalid",
+        code,
+        normalized.hasIdentityField
+          ? `Etapa ${index + 1} usa um tipo de ação não permitido.`
+          : `Etapa ${index + 1} veio sem tipo de ação.`,
+      ));
+      continue;
     }
-    const policy = validateVoiceToolCall(toolName);
 
-    if (policy.executor === "read") continue;
+    if (["prepare_action_group", "execute_action_group", "confirm_pending_action", "cancel_pending_action"].includes(toolName)) {
+      warnings.push(warningFor(normalized, "unsupported", "group_tool_not_allowed", `Etapa ${index + 1} usa uma ação interna não permitida.`));
+      continue;
+    }
 
-    const rawArgs = raw.arguments && typeof raw.arguments === "object" && !Array.isArray(raw.arguments)
-      ? { ...(raw.arguments as Record<string, any>) }
-      : {};
+    let policy: ReturnType<typeof validateVoiceToolCall>;
+    try {
+      policy = validateVoiceToolCall(toolName);
+    } catch (error) {
+      warnings.push(warningFor(
+        normalized,
+        "unsupported",
+        "group_tool_not_allowed",
+        clean(error instanceof Error ? error.message : error, 600) || `Etapa ${index + 1} não é permitida por voz.`,
+      ));
+      continue;
+    }
 
+    if (policy.executor === "read") {
+      preflights.push(warningFor(normalized, "preflight_read", "plan_validation_failed", `Etapa ${index + 1} classificada como consulta/preflight; não vira card.`));
+      continue;
+    }
+
+    const rawArgs = { ...normalized.args };
     if (
       PATIENT_SCOPED_GROUP_TOOLS.has(toolName) &&
       !clean(rawArgs.patient_id || rawArgs.patientId, 120) &&
@@ -340,22 +479,43 @@ export async function buildActionGroupSteps(input: {
     if (
       ["create_financial_entry", "create_neurofinance_charge", "create_fiscal_invoice"].includes(toolName) &&
       !Number(rawArgs.amount || rawArgs.value) &&
-      recentFacts.amount
+      recentAmount
     ) {
-      rawArgs.amount = recentFacts.amount;
+      rawArgs.amount = recentAmount;
     }
     if (toolName === "create_financial_entry" && !clean(rawArgs.title, 180)) {
       rawArgs.title = clean(raw.title || raw.summary, 180) || "Lançamento manual";
     }
 
-    const enriched = await enrichToolArguments(
-      input.admin,
-      input.userId,
-      toolName,
-      rawArgs,
-      context.state,
-    );
-    await assertAgendaPreflight(input.admin, input.userId, toolName, enriched.args);
+    let enriched: Awaited<ReturnType<typeof enrichToolArguments>>;
+    try {
+      enriched = await enrichToolArguments(
+        input.admin,
+        input.userId,
+        toolName,
+        rawArgs,
+        context.state,
+      );
+      validateRequiredActionArguments(toolName, enriched.args);
+      await assertAgendaPreflight(input.admin, input.userId, toolName, enriched.args);
+    } catch (error) {
+      const code = preparationErrorCode(error);
+      const message = clean(error instanceof Error ? error.message : error, 1200) || "A etapa foi bloqueada durante a validação.";
+      const blocked = warningFor(normalized, "blocked", code, message);
+      throw new ActionGroupPreparationError(code, message, {
+        failedStepIndex: index + 1,
+        blockedSteps: [...warnings, blocked],
+        needsClarification: error instanceof ActionGroupPreparationError
+          ? error.needsClarification
+          : true,
+      });
+    }
+
+    if (enriched.patient?.id) {
+      resolvedPatient = { id: enriched.patient.id, name: enriched.patient.name };
+      context.state.activePatientId = enriched.patient.id;
+      context.state.activePatientName = enriched.patient.name;
+    }
 
     const order = steps.length + 1;
     const stepId = safeStepId(raw.step_id || raw.stepId, `step-${order}`);
@@ -370,10 +530,10 @@ export async function buildActionGroupSteps(input: {
     steps.push({
       stepId,
       order,
-      area: clean(raw.area, 120) || (toolName.includes("appointment") ? "Agenda" : toolName.includes("finance") || toolName.includes("charge") ? "Financeiro" : "Ação"),
+      area: clean(raw.area, 120) || (toolName.includes("appointment") ? "Agenda" : toolName.includes("finance") || toolName.includes("charge") ? "Financeiro" : toolName === "request_interface_action" ? "Interface" : "Ação"),
       title: clean(raw.title, 180) || `Etapa ${order}`,
-      spokenSummary: clean(raw.summary || raw.spoken_summary, 600) || `Executar ${toolName.replace(/_/g, " ")}.`,
-      actionType: clean(raw.action_type || toolName, 120),
+      spokenSummary: clean(raw.summary || raw.spoken_summary, 600) || `Preparar ${String(normalized.kind || toolName).replace(/_/g, " ")}.`,
+      actionType: clean(normalized.kind || toolName, 120),
       risk: riskForTool(toolName, enriched.args),
       dependencies,
       expectedEffect: clean(raw.expected_effect, 160) || (policy.executor === "interface" ? "interface" : "persist_record"),
@@ -386,10 +546,33 @@ export async function buildActionGroupSteps(input: {
     });
   }
 
-  if (!steps.length) {
-    throw new Error("O pacote ficou sem ações executáveis depois dos preflights. Faça as consultas e prepare pelo menos uma ação para revisão.");
+  if (resolvedPatient?.id) {
+    await saveConversationContext(input.admin, input.userId, input.conversationId, context.state);
   }
-  return steps;
+
+  if (!steps.length) {
+    const first = warnings[0];
+    throw new ActionGroupPreparationError(
+      first?.errorCode || "group_no_executable_steps",
+      first?.message || "O pacote ficou sem ações executáveis depois dos preflights. Faça as consultas e prepare pelo menos uma ação para revisão.",
+      {
+        failedStepIndex: first?.index || null,
+        blockedSteps: warnings,
+        needsClarification: Boolean(first),
+      },
+    );
+  }
+
+  return { steps, warnings, preflights };
+}
+
+export async function buildActionGroupSteps(input: {
+  admin: any;
+  userId: string;
+  conversationId: string;
+  rawSteps: unknown[];
+}) {
+  return (await buildActionGroupStepSet(input)).steps;
 }
 
 export function rowPendingAction(row: any): PendingAction {
@@ -448,6 +631,7 @@ export function rowReviewClientAction(row: any) {
       planVersion: row.plan_version,
       planHash: row.plan_hash,
       confirmationPolicy: row.confirmation_policy,
+      warnings: Array.isArray(review.warnings) ? review.warnings : [],
       actions: cards.map((card: any) => ({
         id: clean(card.id, 120),
         area: clean(card.area, 120) || "Ação",
@@ -474,10 +658,10 @@ export async function persistActionGroupPlan(admin: any, plan: SynapseActionGrou
       .eq("idempotency_key", plan.idempotencyKey)
       .eq("plan_version", plan.planVersion)
       .maybeSingle();
-    if (existingError) throw existingError;
+    if (existingError) throw new ActionGroupPreparationError("plan_persistence_failed", existingError.message);
     if (existing) return existing;
   }
-  throw error;
+  throw new ActionGroupPreparationError("plan_persistence_failed", clean(error.message, 1200) || "Não consegui persistir a revisão do plano.");
 }
 
 export async function prepareAndPersistActionGroup(input: {
@@ -491,24 +675,45 @@ export async function prepareAndPersistActionGroup(input: {
   rawSteps: unknown[];
   capabilityVersion?: number;
 }) {
-  const steps = await buildActionGroupSteps({
+  const built = await buildActionGroupStepSet({
     admin: input.admin,
     userId: input.userId,
     conversationId: input.conversationId,
     rawSteps: input.rawSteps,
   });
-  const plan = await prepareSynapseActionGroupPlan({
-    professionalId: input.userId,
-    conversationId: input.conversationId,
-    voiceSessionId: input.voiceSessionId || null,
-    title: clean(input.title, 180) || "Plano do Synapse",
-    intent: clean(input.intent, 300) || "action_group",
-    spokenSummary: clean(input.spokenSummary, 1200) || "Preparei as etapas solicitadas.",
-    steps,
-    capabilityVersion: Number(input.capabilityVersion) || 1,
-  });
+  let plan: SynapseActionGroupPlan;
+  try {
+    plan = await prepareSynapseActionGroupPlan({
+      professionalId: input.userId,
+      conversationId: input.conversationId,
+      voiceSessionId: input.voiceSessionId || null,
+      title: clean(input.title, 180) || "Plano do Synapse",
+      intent: clean(input.intent, 300) || "action_group",
+      spokenSummary: clean(input.spokenSummary, 1200) || "Preparei as etapas solicitadas.",
+      steps: built.steps,
+      capabilityVersion: Number(input.capabilityVersion) || 1,
+    });
+  } catch (error) {
+    throw new ActionGroupPreparationError(
+      preparationErrorCode(error),
+      clean(error instanceof Error ? error.message : error, 1200) || "A validação do plano falhou.",
+    );
+  }
+
+  if (built.warnings.length) {
+    (plan.reviewPublic as any).warnings = built.warnings;
+  }
+  if (built.preflights.length) {
+    (plan.reviewPublic as any).preflights = built.preflights.map((item) => ({
+      index: item.index,
+      classification: item.classification,
+      canonicalTool: item.canonicalTool,
+      source: item.source,
+    }));
+  }
+
   const row = await persistActionGroupPlan(input.admin, plan);
-  return { plan, row };
+  return { plan, row, warnings: built.warnings, preflights: built.preflights };
 }
 
 export async function loadActionGroupRow(admin: any, userId: string, planId: string, planVersion: number) {
