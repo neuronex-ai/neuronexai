@@ -258,16 +258,18 @@ export function buildSynapseVoiceFunctions() {
     });
   if (!delegatedTools.length) throw new Error("Catalogo delegado de voz ausente.");
 
-  const executableActionGroupTools = availableTools
-    .filter((tool) => tool.name)
-    .filter((tool) => {
-      try {
-        return validateVoiceToolCall(tool.name).executor !== "read";
-      } catch {
-        return false;
-      }
-    })
-    .map((tool) => tool.name);
+  const executableActionGroupTools = Array.from(new Set(
+    availableTools
+      .filter((tool) => tool.name)
+      .filter((tool) => {
+        try {
+          return validateVoiceToolCall(tool.name).executor !== "read";
+        } catch {
+          return false;
+        }
+      })
+      .map((tool) => tool.name),
+  ));
   if (!executableActionGroupTools.length) throw new Error("Catalogo executavel de grupos ausente.");
 
   const voiceOnlyTools = SYNAPSE_VOICE_ONLY_TOOLS.map((tool) =>
