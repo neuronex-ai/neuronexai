@@ -2,7 +2,7 @@ import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v9";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v8";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 /**
@@ -18,6 +18,7 @@ export const SYNAPSE_VOICE_CORE_TOOL_NAMES = [
   "get_system_help",
   "search_workspace",
   "get_dashboard_daily_briefing",
+  // get_dashboard_schedule remains reachable through execute_synapse_tool.
   "search_patients",
   "get_patient_details",
   "get_clinical_history",
@@ -44,40 +45,9 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
       "Use quando o profissional cancelar uma acao pendente ou uma execucao em andamento.",
     parameters: {
       type: "object",
-      properties: { reason: { type: "string" } },
-      additionalProperties: false,
-    },
-  },
-  {
-    name: "edit_action_group",
-    description: [
-      "Edita a revisao de um grupo que ja esta visivel e aguardando confirmacao.",
-      "Use quando o profissional disser algo como 'no card 2 mude o valor para 180', 'troque o horario do primeiro para 15h' ou 'use Pix na cobranca'.",
-      "Informe step_number e o nome humano do campo quando souber. O servidor resolve apenas campos editaveis allowlisted, cria nova versao/hash e devolve a revisao atualizada.",
-      "Nunca use esta ferramenta se nao houver grupo pendente, e nunca confirme a versao antiga depois de editar.",
-    ].join(" "),
-    parameters: {
-      type: "object",
       properties: {
-        step_number: {
-          type: "integer",
-          minimum: 1,
-          maximum: 12,
-          description: "Numero do mini-card da esquerda para a direita.",
-        },
-        area: {
-          type: "string",
-          description: "Area humana do card, usada quando o numero nao foi dito.",
-        },
-        field: {
-          type: "string",
-          description: "Nome humano do campo, como valor, horario, duracao, financeiro, vencimento, titulo ou corpo.",
-        },
-        value: {
-          description: "Novo valor solicitado pelo profissional.",
-        },
+        reason: { type: "string" },
       },
-      required: ["field", "value"],
       additionalProperties: false,
     },
   },
@@ -117,7 +87,10 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
                 type: "string",
                 description: "Area humana, por exemplo Agenda, Financeiro, Documento, Comunicacao, Notas ou Interface.",
               },
-              title: { type: "string", description: "Titulo curto da etapa." },
+              title: {
+                type: "string",
+                description: "Titulo curto da etapa.",
+              },
               summary: {
                 type: "string",
                 description: "Frase curta que deve aparecer no mini-card horizontal.",
@@ -178,7 +151,9 @@ function buildDispatchTool(
   delegatedTools: Array<{ name: string; description: string; parameters: Record<string, unknown> }>,
 ) {
   const catalog = delegatedTools
-    .map((tool) => `${tool.name} [${parameterSignature(tool.parameters)}]: ${compactDescription(tool.description, 140)}`)
+    .map((tool) =>
+      `${tool.name} [${parameterSignature(tool.parameters)}]: ${compactDescription(tool.description, 140)}`
+    )
     .join("\n");
 
   return {
@@ -227,7 +202,9 @@ export function buildSynapseVoiceFunctions() {
 
   const selectedNames = new Set(selectedTools.map((tool) => tool.name));
   const missing = SYNAPSE_VOICE_CORE_TOOL_NAMES.filter((name) => !selectedNames.has(name));
-  if (missing.length) throw new Error(`Ferramentas essenciais de voz ausentes: ${missing.join(", ")}.`);
+  if (missing.length) {
+    throw new Error(`Ferramentas essenciais de voz ausentes: ${missing.join(", ")}.`);
+  }
 
   const delegatedTools = availableTools
     .filter((tool) => tool.name && !coreNames.has(tool.name))
