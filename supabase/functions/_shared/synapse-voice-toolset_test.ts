@@ -107,8 +107,8 @@ Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só re
   equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
-  equal(String(tool?.description || "").includes("qualquer criação, alteração, envio ou pacote operacional"), true, "planner é rota única de mutação operacional por voz");
-  equal(String(tool?.description || "").includes("Não confunda pacote/grupo/sequência operacional com NeuroFlow"), true, "planner diferencia grupo operacional de NeuroFlow");
+  equal(String(tool?.description || "").includes("Rota obrigatoria para qualquer criacao, alteracao, envio ou pacote operacional"), true, "planner é rota única de mutação operacional por voz");
+  equal(String(tool?.description || "").includes("NeuroFlow so quando citado explicitamente"), true, "planner diferencia grupo operacional de NeuroFlow");
 });
 
 Deno.test("edit_action_group só altera campo allowlisted de uma revisão pendente", () => {
