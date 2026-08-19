@@ -53,7 +53,7 @@ Deno.test("hash estável ignora ordem de chaves de objetos", () => {
   equal(stableJson({ b: 2, a: { d: 4, c: 3 } }), stableJson({ a: { c: 3, d: 4 }, b: 2 }), "json canônico");
 });
 
-Deno.test("plano preparado é versionado, hasheado e não guarda comando bruto na idempotência", async () => {
+Deno.test("plano preparado é versionado, hasheado e fica aguardando confirmação", async () => {
   const plan = await prepareSynapseActionGroupPlan({
     professionalId: "11111111-1111-4111-8111-111111111111",
     conversationId: "22222222-2222-4222-8222-222222222222",
@@ -65,6 +65,7 @@ Deno.test("plano preparado é versionado, hasheado e não guarda comando bruto n
   });
 
   equal(plan.confirmationPolicy, "voice", "política persistida");
+  equal(plan.status, "awaiting_confirmation", "grupo aguarda revisão/confirmação");
   equal(plan.planHash.length, 64, "hash SHA-256");
   equal(plan.idempotencyKey.length, 64, "idempotência SHA-256");
   equal(plan.reviewPublic.planHash, plan.planHash, "hash visível corresponde ao executável");
