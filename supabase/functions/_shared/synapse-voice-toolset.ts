@@ -2,17 +2,30 @@ import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v9";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v10";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
+
+const DELEGATED_MUTATION_EXCEPTIONS = new Set([
+  "create_neuroflow_from_patient_history",
+  "create_neuropulse_cause_effect_diagram",
+]);
+
+const DIRECT_PATIENT_NAME_REQUIRED = new Set([
+  "get_patient_details",
+  "get_clinical_history",
+  "get_patient_system_snapshot",
+  "analyze_neuroview_patient_patterns",
+]);
 
 /**
  * Keep the Deepgram tool surface intentionally small. Besides improving intent
  * selection, both voice gateways reject settings with more than 16 functions.
  *
- * NeuroFlow/NeuroPulse remain available through execute_synapse_tool when the
- * professional explicitly names those products. They are intentionally not
- * direct core tools because generic words such as "fluxo", "grupo", "pacote"
- * or "pós-sessão" must prefer the operational action-group planner.
+ * Generic operational mutations intentionally do NOT live in the dispatcher.
+ * They must pass through prepare_action_group so the server owns review,
+ * persistence, version/hash and confirmation. NeuroFlow/NeuroPulse remain
+ * dispatcher exceptions because they are explicit named products with their
+ * own confirmation semantics.
  */
 export const SYNAPSE_VOICE_CORE_TOOL_NAMES = [
   "get_system_help",
@@ -84,27 +97,29 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
   {
     name: "prepare_action_group",
     description: [
-      "Prepara o pacote operacional persistido quando o profissional pede varios RESULTADOS executaveis no mesmo comando.",
-      "E a ferramenta obrigatoria para preparacao completa, pos-sessao, 'faca tudo isso', pacote de acoes, grupo de acoes, sequencia operacional ou cinco ou mais resultados executaveis.",
-      "Consultas internas, validacoes e carregamento de contexto nao contam como etapas e devem ser feitas como preflight fora dos cards.",
-      "Todo prepare_action_group abre revisao versionada; para acao critica ou NeuroFinance o servidor acrescenta confirmacao opaca.",
-      "Nao confunda pacote/grupo/sequencia operacional com NeuroFlow. NeuroFlow so deve ser criado quando o profissional disser explicitamente NeuroFlow.",
-      "Nao execute as etapas separadamente antes de preparar o grupo.",
+      "Prepara a revisão persistida para qualquer criação, alteração, envio ou pacote operacional solicitado por voz.",
+      "É a rota obrigatória para anotações de prontuário, financeiro, e-mails, agenda e demais mutações operacionais, inclusive quando houver apenas uma etapa.",
+      "Também é obrigatória para preparação completa, pós-sessão, 'faça tudo isso', pacote de ações, grupo de ações ou sequência operacional.",
+      "Consultas internas, validações e carregamento de contexto não entram nos cards; faça-as apenas quando forem realmente necessárias para montar argumentos confiáveis.",
+      "Nunca execute mutações separadamente antes de preparar a revisão.",
+      "Todo prepare_action_group abre revisão versionada; ação crítica ou NeuroFinance recebe confirmação opaca adicional.",
+      "Não confunda pacote/grupo/sequência operacional com NeuroFlow. NeuroFlow só existe quando o profissional disser explicitamente NeuroFlow.",
+      "Cada etapa deve trazer arguments com todos os dados humanos já disponíveis na conversa. Reutilize explicitamente patient_name, valores e textos que o profissional já forneceu.",
     ].join(" "),
     parameters: {
       type: "object",
       properties: {
         title: {
           type: "string",
-          description: "Titulo humano curto do plano, como Pos-sessao de Mariana.",
+          description: "Título humano curto do plano, como Pós-sessão de Mariana.",
         },
         intent: {
           type: "string",
-          description: "Intencao estavel e curta, como post_session_bundle ou preparation_bundle.",
+          description: "Intenção estável e curta, como post_session_bundle ou preparation_bundle.",
         },
         spoken_summary: {
           type: "string",
-          description: "Uma frase curta explicando o conjunto que sera revisado.",
+          description: "Uma frase curta explicando o conjunto que será revisado.",
         },
         steps: {
           type: "array",
@@ -115,11 +130,11 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
             properties: {
               area: {
                 type: "string",
-                description: "Area humana, por exemplo Agenda, Financeiro, Documento, Comunicacao, Notas ou Interface.",
+                description: "Área humana, por exemplo Agenda, Financeiro, Documento, Comunicação, Notas ou Interface.",
               },
               title: {
                 type: "string",
-                description: "Titulo curto da etapa.",
+                description: "Título curto da etapa.",
               },
               summary: {
                 type: "string",
@@ -127,20 +142,21 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
               },
               tool_name: {
                 type: "string",
-                description: "Nome exato de uma ferramenta executavel permitida para os cards. Consultas nunca entram aqui.",
+                description: "Nome exato de uma ferramenta executável permitida para os cards. Consultas nunca entram aqui.",
               },
               arguments: {
                 type: "object",
-                description: "Argumentos humanos/canonicos ja conhecidos. Nao invente IDs internos.",
-                additionalProperties: true,
+                properties: {},
+                description: "Argumentos canônicos da ferramenta escolhida. Preencha os campos humanos conhecidos; não invente IDs internos.",
+                additionalProperties: false,
               },
               depends_on: {
                 type: "array",
                 items: { type: "integer" },
-                description: "Numeros 1-based de etapas anteriores das quais esta etapa depende.",
+                description: "Números 1-based de etapas anteriores das quais esta etapa depende.",
               },
             },
-            required: ["area", "title", "summary", "tool_name"],
+            required: ["area", "title", "summary", "tool_name", "arguments"],
             additionalProperties: false,
           },
         },
@@ -177,23 +193,34 @@ const parameterSignature = (parameters: Record<string, any>) => {
   ].filter(Boolean).join("; ");
 };
 
+function requireDirectPatientName(tool: any) {
+  if (!DIRECT_PATIENT_NAME_REQUIRED.has(tool?.name)) return tool;
+  const copy = structuredClone(tool);
+  const required = new Set(Array.isArray(copy?.parameters?.required) ? copy.parameters.required : []);
+  required.add("patient_name");
+  copy.parameters.required = Array.from(required);
+  const current = String(copy.description || "");
+  copy.description = `${current} Em voz, envie patient_name explicitamente com o nome já dito pelo profissional.`.trim();
+  return copy;
+}
+
 function buildDispatchTool(
   delegatedTools: Array<{ name: string; description: string; parameters: Record<string, unknown> }>,
 ) {
   const catalog = delegatedTools
     .map((tool) =>
-      `${tool.name} [${parameterSignature(tool.parameters)}]: ${compactDescription(tool.description, 140)}`
+      `${tool.name} [${parameterSignature(tool.parameters as Record<string, any>)}]: ${compactDescription(tool.description, 140)}`
     )
     .join("\n");
 
   return {
     name: SYNAPSE_VOICE_DISPATCH_TOOL_NAME,
     description: [
-      "Executa uma capacidade permitida do Synapse que nao possui uma funcao de voz dedicada nesta sessao.",
-      "Escolha tool_name exatamente no catalogo abaixo e envie em arguments os campos humanos disponiveis; IDs internos sao opcionais e nunca devem ser pedidos ao profissional.",
-      "NeuroFlow e NeuroPulse so podem ser escolhidos aqui quando o profissional citar explicitamente o nome do produto; nunca use esses produtos como substitutos de um pacote/grupo de acoes.",
-      "Mutacoes apenas preparam uma acao e continuam exigindo confirmacao verbal separada.",
-      "Catalogo:",
+      "Executa consultas/capacidades permitidas que não possuem função de voz dedicada nesta sessão.",
+      "Não use esta ponte para mutações operacionais genéricas: criação, alteração, envio, agenda e financeiro devem usar prepare_action_group para abrir revisão.",
+      "Escolha tool_name exatamente no catálogo abaixo e envie em arguments os campos humanos disponíveis; IDs internos são opcionais e nunca devem ser pedidos ao profissional.",
+      "NeuroFlow e NeuroPulse são as únicas exceções de mutação delegada e só podem ser escolhidos quando o profissional citar explicitamente o nome do produto.",
+      "Catálogo:",
       catalog,
     ].join("\n"),
     parameters: {
@@ -202,11 +229,11 @@ function buildDispatchTool(
         tool_name: {
           type: "string",
           enum: delegatedTools.map((tool) => tool.name),
-          description: "Nome tecnico exato da capacidade a executar.",
+          description: "Nome técnico exato da capacidade a executar.",
         },
         arguments: {
           type: "object",
-          description: "Argumentos da capacidade escolhida. Prefira nomes, datas e termos humanos; reutilize o contexto duravel.",
+          description: "Argumentos da capacidade escolhida. Prefira nomes, datas e termos humanos; reutilize o contexto durável.",
           additionalProperties: true,
         },
       },
@@ -218,11 +245,33 @@ function buildDispatchTool(
 
 function constrainActionGroupPlanner(
   tool: any,
-  executableToolNames: string[],
+  executableTools: Array<{ name: string; description: string; parameters: Record<string, any> }>,
 ) {
   if (tool?.name !== "prepare_action_group") return tool;
   const copy = structuredClone(tool);
-  copy.parameters.properties.steps.items.properties.tool_name.enum = executableToolNames;
+  const names = executableTools.map((candidate) => candidate.name);
+  copy.parameters.properties.steps.items.properties.tool_name.enum = names;
+
+  const unionProperties: Record<string, unknown> = {};
+  for (const candidate of executableTools) {
+    const properties = candidate.parameters?.properties && typeof candidate.parameters.properties === "object"
+      ? candidate.parameters.properties
+      : {};
+    for (const [key, schema] of Object.entries(properties)) {
+      if (!(key in unionProperties)) unionProperties[key] = schema;
+    }
+  }
+  copy.parameters.properties.steps.items.properties.arguments = {
+    type: "object",
+    properties: unionProperties,
+    additionalProperties: false,
+    description: "Argumentos da ferramenta desta etapa. Use os nomes de campos do catálogo e repita explicitamente dados já ditos, sobretudo patient_name, valores e textos.",
+  };
+
+  const catalog = executableTools
+    .map((candidate) => `${candidate.name} [${parameterSignature(candidate.parameters)}]`)
+    .join("; ");
+  copy.description = `${copy.description} Catálogo executável e campos: ${catalog}`;
   return copy;
 }
 
@@ -238,7 +287,8 @@ export function buildSynapseVoiceFunctions() {
       } catch {
         return false;
       }
-    });
+    })
+    .map(requireDirectPatientName);
 
   const selectedNames = new Set(selectedTools.map((tool) => tool.name));
   const missing = SYNAPSE_VOICE_CORE_TOOL_NAMES.filter((name) => !selectedNames.has(name));
@@ -250,27 +300,28 @@ export function buildSynapseVoiceFunctions() {
     .filter((tool) => tool.name && !coreNames.has(tool.name))
     .filter((tool) => {
       try {
-        validateVoiceToolCall(tool.name);
-        return true;
+        const policy = validateVoiceToolCall(tool.name);
+        return policy.executor !== "mutation" || DELEGATED_MUTATION_EXCEPTIONS.has(tool.name);
       } catch {
         return false;
       }
     });
-  if (!delegatedTools.length) throw new Error("Catalogo delegado de voz ausente.");
+  if (!delegatedTools.length) throw new Error("Catálogo delegado de voz ausente.");
 
-  const executableActionGroupTools = Array.from(new Set(
+  const executableActionGroupTools = Array.from(new Map(
     availableTools
       .filter((tool) => tool.name)
       .filter((tool) => {
         try {
-          return validateVoiceToolCall(tool.name).executor !== "read";
+          const policy = validateVoiceToolCall(tool.name);
+          return policy.executor !== "read" && !DELEGATED_MUTATION_EXCEPTIONS.has(tool.name);
         } catch {
           return false;
         }
       })
-      .map((tool) => tool.name),
-  ));
-  if (!executableActionGroupTools.length) throw new Error("Catalogo executavel de grupos ausente.");
+      .map((tool) => [tool.name, tool]),
+  ).values());
+  if (!executableActionGroupTools.length) throw new Error("Catálogo executável de grupos ausente.");
 
   const voiceOnlyTools = SYNAPSE_VOICE_ONLY_TOOLS.map((tool) =>
     constrainActionGroupPlanner(tool, executableActionGroupTools)
@@ -281,7 +332,7 @@ export function buildSynapseVoiceFunctions() {
     buildDispatchTool(delegatedTools),
   ];
   if (functions.length > MAX_SYNAPSE_VOICE_FUNCTIONS) {
-    throw new Error(`O nucleo de voz excedeu ${MAX_SYNAPSE_VOICE_FUNCTIONS} ferramentas (${functions.length}).`);
+    throw new Error(`O núcleo de voz excedeu ${MAX_SYNAPSE_VOICE_FUNCTIONS} ferramentas (${functions.length}).`);
   }
 
   return functions;
