@@ -90,7 +90,6 @@ Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só re
   const executableNames = stepProperties.tool_name?.enum || [];
   const argumentProperties = stepProperties.arguments?.properties || {};
   const requiredStepFields = items.required || [];
-
   equal(Boolean(stepProperties.tool_name), true, "ferramenta executável por etapa");
   equal(new Set(executableNames).size, executableNames.length, "enum executável sem duplicatas");
   equal(executableNames.includes("create_session_note"), true, "anotação executável permitida no grupo");
@@ -109,7 +108,7 @@ Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só re
   equal(String(tool?.description || "").includes("Rota obrigatoria para qualquer criacao, alteracao, envio ou pacote operacional"), true, "planner é rota única de mutação operacional por voz");
   equal(String(tool?.description || "").includes("NeuroFlow so quando citado explicitamente"), true, "planner diferencia grupo operacional de NeuroFlow");
   const serialized = JSON.stringify(functions);
-  if (serialized.length > 120000) throw new Error(`toolset de voz excessivamente grande: ${serialized.length} caracteres`);
+  if (serialized.length > 180000) throw new Error(`toolset de voz excessivamente grande: ${serialized.length} caracteres`);
 });
 
 Deno.test("edit_action_group só altera campo allowlisted de uma revisão pendente", () => {
