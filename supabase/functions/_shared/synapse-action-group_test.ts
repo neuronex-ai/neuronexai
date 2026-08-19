@@ -28,11 +28,9 @@ const step = (index: number, risk: "normal" | "critical" | "neurofinance" = "nor
   arguments: { internal_secret_shape: `server-only-${index}` },
 });
 
-Deno.test("quatro etapas normais executam direto sem timeline obrigatória", () => {
-  equal(resolveConfirmationPolicy([1, 2, 3, 4].map((index) => step(index))), "direct", "política de quatro etapas");
-});
-
-Deno.test("cinco etapas normais exigem timeline e confirmação por voz", () => {
+Deno.test("grupo explícito normal sempre exige mini-cards e confirmação por voz", () => {
+  equal(resolveConfirmationPolicy([step(1)]), "voice", "política de uma etapa em grupo explícito");
+  equal(resolveConfirmationPolicy([1, 2, 3, 4].map((index) => step(index))), "voice", "política de quatro etapas em grupo explícito");
   equal(resolveConfirmationPolicy([1, 2, 3, 4, 5].map((index) => step(index))), "voice", "política de cinco etapas");
 });
 
