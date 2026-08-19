@@ -14,7 +14,11 @@ describe("Synapse opaque confirmation contract", () => {
   it("keeps the challenge number browser-only", () => {
     expect(source).toContain("setOpaqueCaptureBlocked(true)");
     expect(source).toContain("Número confirmado localmente no navegador.");
-    expect(source).not.toContain("challengeNumber: code");
-    expect(source).not.toContain("code: code");
+    const respondCall = source.match(/respondOpaqueConfirmation\(\{[\s\S]*?\}\);/)?.[0] || "";
+    expect(respondCall).toContain("requestId");
+    expect(respondCall).toContain("success");
+    expect(respondCall).toContain("cancelled");
+    expect(respondCall).not.toContain("code");
+    expect(respondCall).not.toContain("challengeNumber");
   });
 });
