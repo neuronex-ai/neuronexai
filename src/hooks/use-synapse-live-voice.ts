@@ -13,6 +13,7 @@ import {
   parseAppointmentPlanReviewAction,
   requestAppointmentPlanReview,
 } from "@/lib/appointment-plan-review";
+import { loadPendingVoiceActionReview } from "@/lib/synapse-pending-action-review";
 import {
   emitVoiceReviewAction,
   normalizeVoiceReviewAction,
@@ -21,7 +22,7 @@ import {
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
 const SYNAPSE_GLOBAL_VOICE_PROMPT =
-  "Converse em português brasileiro natural e seja breve. Consulte e execute ações quando necessário. Para pacotes, grupos, preparação completa ou pós-sessão, use o planejador de ações e preserve a revisão antes da confirmação. NeuroFlow e NeuroPulse só devem ser usados quando forem pedidos explicitamente.";
+  "Converse em português brasileiro natural e seja breve. Consulte e execute ações quando necessário. Para qualquer mutação operacional, inclusive uma única ação, use o planejador de ações e preserve a revisão antes da confirmação. NeuroFlow e NeuroPulse só devem ser usados quando forem pedidos explicitamente.";
 
 interface UseSynapseLiveVoiceOptions {
   onConnect?: () => void;
@@ -148,6 +149,21 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
     const error = voice.error || voiceConfigError;
     if (error) optionsRef.current?.onError?.(error);
   }, [voice.error, voiceConfigError]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    let cancelled = false;
+    void loadPendingVoiceActionReview(conversationId)
+      .then((review) => {
+        if (!cancelled && review) emitVoiceReviewAction(review);
+      })
+      .catch((error) => {
+        console.warn("[Synapse Voice] pending review recovery failed", error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [conversationId]);
 
   useEffect(() => {
     if (voice.isConnected && !connectedRef.current) {
