@@ -36,7 +36,6 @@ Deno.test("dispatcher não permite mais mutações operacionais genéricas", () 
   const functions = buildSynapseVoiceFunctions();
   const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
-
   for (const name of ["get_notes_desktop_overview", "get_financial_summary", "get_teleconsultation_readiness", "get_dashboard_schedule", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram"]) {
     equal(delegatedNames.includes(name), true, `capacidade delegada ${name}`);
   }
@@ -81,7 +80,8 @@ Deno.test("NeuroView fica direto; NeuroFlow e NeuroPulse exigem seleção explí
 });
 
 Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só recebe resultados executáveis", () => {
-  const tool = buildSynapseVoiceFunctions().find((candidate) => candidate.name === "prepare_action_group");
+  const functions = buildSynapseVoiceFunctions();
+  const tool = functions.find((candidate) => candidate.name === "prepare_action_group");
   equal(Boolean(tool), true, "planner registrado");
   equal(tool?.parameters?.properties?.steps?.minItems, 1, "mínimo de etapas");
   equal(tool?.parameters?.properties?.steps?.maxItems, 12, "máximo de etapas");
@@ -99,7 +99,6 @@ Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só re
   equal(executableNames.includes("request_interface_action"), true, "navegação final permitida no grupo");
   equal(executableNames.includes("get_calendar"), false, "consulta de agenda proibida nos cards");
   equal(executableNames.includes("get_patient_details"), false, "consulta de paciente proibida nos cards");
-
   for (const field of ["patient_name", "notes", "amount", "entry_type", "subject", "body", "action", "destination"]) {
     equal(Boolean(argumentProperties[field]), true, `planner expõe argumento ${field}`);
   }
@@ -109,6 +108,8 @@ Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só re
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
   equal(String(tool?.description || "").includes("Rota obrigatoria para qualquer criacao, alteracao, envio ou pacote operacional"), true, "planner é rota única de mutação operacional por voz");
   equal(String(tool?.description || "").includes("NeuroFlow so quando citado explicitamente"), true, "planner diferencia grupo operacional de NeuroFlow");
+  const serialized = JSON.stringify(functions);
+  if (serialized.length > 120000) throw new Error(`toolset de voz excessivamente grande: ${serialized.length} caracteres`);
 });
 
 Deno.test("edit_action_group só altera campo allowlisted de uma revisão pendente", () => {
