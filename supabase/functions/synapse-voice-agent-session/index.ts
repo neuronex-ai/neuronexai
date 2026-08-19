@@ -43,6 +43,12 @@ const DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID = "NQ10OlqJ7vYH6XwegHSW";
 
 const clean = (value: unknown, max = 2000) => String(value ?? "").trim().slice(0, max);
 
+type DeepgramHistoryMessage = {
+  type: "History";
+  role: "user" | "assistant";
+  content: string;
+};
+
 const envFlag = (name: string, fallback = false) => {
   const value = clean(Deno.env.get(name), 40).toLowerCase();
   if (!value) return fallback;
@@ -165,7 +171,7 @@ async function loadPendingActionSummary(admin: any, userId: string, conversation
 async function loadRecentAgentContext(admin: any, userId: string, conversationId: string) {
   const { data, error } = await admin
     .from("synapse_voice_turns")
-    .select("role,transcript,response_text,tool_name,metadata,created_at")
+    .select("role,transcript,response_text,created_at")
     .eq("user_id", userId)
     .eq("conversation_id", conversationId)
     .eq("is_final", true)
@@ -176,9 +182,8 @@ async function loadRecentAgentContext(admin: any, userId: string, conversationId
     return [];
   }
 
-  let toolPairs = 0;
   let size = 0;
-  const messages: Array<{ role: "user" | "assistant"; content: string }> = [];
+  const messages: DeepgramHistoryMessage[] = [];
   for (const row of [...(data || [])].reverse()) {
     let role: "user" | "assistant";
     let content = "";
@@ -188,16 +193,13 @@ async function loadRecentAgentContext(admin: any, userId: string, conversationId
     } else if (row.role === "assistant") {
       role = "assistant";
       content = clean(row.response_text, 1600);
-    } else if (row.role === "tool" && toolPairs < 4) {
-      role = "assistant";
-      const metadata = row.metadata && typeof row.metadata === "object" ? row.metadata : {};
-      content = clean(`[Resultado seguro da função ${row.tool_name || "Synapse"}: ${JSON.stringify(metadata)}]`, 900);
-      toolPairs += 1;
     } else {
+      // Tool rows use a different Deepgram History schema. Omit them until we
+      // persist the exact function-call request/response pair required by the provider.
       continue;
     }
     if (!content || size + content.length > 12000) continue;
-    messages.push({ role, content });
+    messages.push({ type: "History", role, content });
     size += content.length;
   }
   return messages.slice(-12);
@@ -295,7 +297,7 @@ function buildAgentSettings(
   prompt: string,
   context: Record<string, unknown>,
   functions: Array<Record<string, unknown>>,
-  contextMessages: Array<{ role: "user" | "assistant"; content: string }>,
+  contextMessages: DeepgramHistoryMessage[],
   timezone = "America/Sao_Paulo",
   resolvedElevenLabsVoiceId = DEFAULT_ELEVENLABS_PT_BR_MALE_VOICE_ID,
 ) {
