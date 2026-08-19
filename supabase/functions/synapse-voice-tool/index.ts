@@ -394,6 +394,109 @@ async function callActionGroup(
   throw new Error("Acao de plano composto invalida.");
 }
 
+const normalizeLookup = (value: unknown) =>
+  clean(value, 160)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+
+function resolveSpokenActionGroupEdit(row: any, args: Record<string, any>) {
+  const stepNumber = Number(args.step_number ?? args.stepNumber);
+  if (!Number.isInteger(stepNumber) || stepNumber < 1 || stepNumber > 12) {
+    throw new Error("Diga qual número de etapa da revisão deseja alterar.");
+  }
+  const review = row?.review_public && typeof row.review_public === "object" ? row.review_public : {};
+  const cards = Array.isArray(review.cards) ? review.cards : [];
+  const card = cards.find((candidate: any) => Number(candidate?.order) === stepNumber) || cards[stepNumber - 1];
+  if (!card) throw new Error(`A revisão atual não possui a etapa ${stepNumber}.`);
+
+  const fields = Array.isArray(card.editableFields) ? card.editableFields : [];
+  const requested = normalizeLookup(args.field);
+  if (!requested) throw new Error("Diga qual campo visível deseja alterar.");
+  const exact = fields.filter((field: any) => {
+    const id = normalizeLookup(field?.fieldId);
+    const label = normalizeLookup(field?.label);
+    return requested === id || requested === label;
+  });
+  const candidates = exact.length
+    ? exact
+    : fields.filter((field: any) => {
+        const id = normalizeLookup(field?.fieldId);
+        const label = normalizeLookup(field?.label);
+        return Boolean(
+          (id && (id.includes(requested) || requested.includes(id))) ||
+          (label && (label.includes(requested) || requested.includes(label)))
+        );
+      });
+  if (candidates.length !== 1) {
+    const available = fields.map((field: any) => clean(field?.label || field?.fieldId, 80)).filter(Boolean);
+    throw new Error(
+      candidates.length > 1
+        ? `O campo ficou ambíguo na etapa ${stepNumber}. Diga exatamente um destes: ${available.join(", ")}.`
+        : `Esse campo não é editável na etapa ${stepNumber}. Campos disponíveis: ${available.join(", ") || "nenhum"}.`,
+    );
+  }
+  return {
+    stepNumber,
+    fieldLabel: clean(candidates[0]?.label || candidates[0]?.fieldId, 120),
+    edit: {
+      step_id: clean(card.id, 120),
+      field_id: clean(candidates[0]?.fieldId, 120),
+      value: args.value,
+    },
+  };
+}
+
+async function persistPendingActionGroupEdits(input: {
+  authorization: string;
+  admin: any;
+  userId: string;
+  sessionId: string;
+  voiceSessionId?: string | null;
+  pending: PendingReference;
+  edits: Array<{ step_id: string; field_id: string; value: unknown }>;
+  startedAt: number;
+}) {
+  const planId = clean(input.pending.action.arguments.plan_id, 120);
+  const planVersion = Number(input.pending.action.arguments.plan_version);
+  const planHash = clean(input.pending.action.arguments.plan_hash, 64);
+  const edited = await callActionGroup(input.authorization, {
+    action: "edit",
+    planId,
+    planVersion,
+    planHash,
+    edits: input.edits,
+  });
+  const nextPendingAction = {
+    ...(edited.pendingAction as PendingAction),
+    conversationId: input.sessionId,
+    voiceSessionId: input.voiceSessionId || null,
+  } as PendingAction;
+  await replacePending(input.admin, input.pending, nextPendingAction);
+
+  const nextPolicy = clean(nextPendingAction.arguments.confirmation_policy, 20);
+  await logVoiceAction(input.admin, {
+    userId: input.userId,
+    conversationId: input.sessionId,
+    voiceSessionId: input.voiceSessionId,
+    toolName: "edit_action_group",
+    status: "success",
+    durationMs: Date.now() - input.startedAt,
+    confirmationRequired: true,
+    riskLevel: nextPolicy === "opaque" ? "high" : "normal",
+    payload: {
+      planId,
+      fromVersion: planVersion,
+      toVersion: nextPendingAction.arguments.plan_version,
+      confirmationPolicy: nextPolicy,
+      editedFields: input.edits.map((edit) => ({ stepId: edit.step_id, fieldId: edit.field_id })),
+    },
+  });
+  return { edited, nextPendingAction, nextPolicy };
+}
+
 function groupSteps(value: unknown) {
   const steps = Array.isArray(value) ? value.slice(0, 12) : [];
   return steps.map((rawValue) => {
@@ -555,44 +658,22 @@ serve(async (request): Promise<Response> => {
         return json({ error: "Campo editavel ausente." }, 400);
       }
 
-      const edited = await callActionGroup(auth.authorization, {
-        action: "edit",
-        planId,
-        planVersion,
-        planHash,
-        edits: rawEdits,
-      });
-      const nextPendingAction = {
-        ...(edited.pendingAction as PendingAction),
-        conversationId: sessionId,
-        voiceSessionId: voiceSessionId || null,
-      } as PendingAction;
-      await replacePending(auth.admin, pending, nextPendingAction);
-
-      const nextPolicy = clean(nextPendingAction.arguments.confirmation_policy, 20);
-      await logVoiceAction(auth.admin, {
+      const persisted = await persistPendingActionGroupEdits({
+        authorization: auth.authorization,
+        admin: auth.admin,
         userId: auth.user.id,
-        conversationId: sessionId,
-        voiceSessionId,
-        toolName: "edit_action_group",
-        status: "success",
-        durationMs: Date.now() - startedAt,
-        confirmationRequired: true,
-        riskLevel: nextPolicy === "opaque" ? "high" : "normal",
-        payload: {
-          planId,
-          fromVersion: planVersion,
-          toVersion: nextPendingAction.arguments.plan_version,
-          confirmationPolicy: nextPolicy,
-          editedFields: rawEdits.map((edit: any) => ({ stepId: edit.step_id, fieldId: edit.field_id })),
-        },
+        sessionId,
+        voiceSessionId: voiceSessionId || null,
+        pending,
+        edits: rawEdits,
+        startedAt,
       });
       return json({
         ok: true,
         message: "Revisao atualizada.",
-        plan: edited.plan || null,
-        pendingAction: nextPendingAction,
-        clientAction: edited.clientAction || null,
+        plan: persisted.edited.plan || null,
+        pendingAction: persisted.nextPendingAction,
+        clientAction: persisted.edited.clientAction || null,
       });
     }
 
@@ -800,8 +881,98 @@ serve(async (request): Promise<Response> => {
       });
     }
     const startedAt = Date.now();
-    let policy: ReturnType<typeof validateVoiceToolCall>;
 
+    if (name === "edit_action_group") {
+      if (!pending || pending.action.toolName !== "execute_action_group") {
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: false,
+            tool: name,
+            message: "Nao ha uma revisao de grupo pendente para editar nesta conversa.",
+            needs_clarification: false,
+            retryable: false,
+          }),
+        });
+      }
+      if (pending.action.conversationId && pending.action.conversationId !== sessionId) {
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: false,
+            tool: name,
+            message: "A revisao pendente pertence a outra conversa e nao foi alterada.",
+            needs_clarification: false,
+            retryable: false,
+          }),
+        });
+      }
+
+      try {
+        const currentRow = await loadActionGroupRow(
+          auth.admin,
+          auth.user.id,
+          clean(pending.action.arguments.plan_id, 120),
+          Number(pending.action.arguments.plan_version),
+        );
+        const resolved = resolveSpokenActionGroupEdit(currentRow, args);
+        const persisted = await persistPendingActionGroupEdits({
+          authorization: auth.authorization,
+          admin: auth.admin,
+          userId: auth.user.id,
+          sessionId,
+          voiceSessionId: voiceSessionId || null,
+          pending,
+          edits: [resolved.edit],
+          startedAt,
+        });
+        const message = `Atualizei ${resolved.fieldLabel} da etapa ${resolved.stepNumber}. Confira a nova versao antes de confirmar.`;
+        const confirmationTool = persisted.nextPolicy === "opaque" ? "manage_action_group" : "execute_action_group";
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: true,
+            tool: confirmationTool,
+            label: "revisao de acoes",
+            message,
+            data: persisted.edited.plan || null,
+            confirmation_required: true,
+            confirmationRequired: true,
+            grounded: true,
+            structuredData: persisted.edited.plan || null,
+          }),
+          clientAction: persisted.edited.clientAction || null,
+          structuredData: persisted.edited.plan || null,
+        });
+      } catch (editError) {
+        const message = clean(editError instanceof Error ? editError.message : editError, 1200) || "Nao consegui atualizar esse campo.";
+        await logVoiceAction(auth.admin, {
+          userId: auth.user.id,
+          conversationId: sessionId,
+          voiceSessionId,
+          toolName: name,
+          status: "error",
+          durationMs: Date.now() - startedAt,
+          confirmationRequired: true,
+          riskLevel: "normal",
+          payload: { arguments: args },
+          errorMessage: message,
+        });
+        return json({
+          ok: true,
+          content: functionContent({
+            ok: false,
+            tool: name,
+            message,
+            needs_clarification: true,
+            retryable: false,
+            confirmation_required: true,
+          }),
+        });
+      }
+    }
+
+    let policy: ReturnType<typeof validateVoiceToolCall>;
     try {
       policy = validateVoiceToolCall(name);
     } catch (policyError) {
