@@ -11,17 +11,28 @@ on:
       - "supabase/functions/synapse-text-fallback/**"
       - "supabase/functions/_shared/**"
       - ".github/workflows/synapse-runtime-bundle-upload.yml"
+  pull_request:
+    paths:
+      - "supabase/functions/synapse-voice-tool/**"
+      - "supabase/functions/synapse-voice-gateway/**"
+      - "supabase/functions/synapse-action-group/**"
+      - "supabase/functions/synapse-text-fallback/**"
+      - "supabase/functions/_shared/**"
+      - ".github/workflows/synapse-runtime-bundle-upload.yml"
 
 permissions:
   contents: read
 
 jobs:
   bundle-and-upload:
+    if: github.event_name == 'push' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout branch
+      - name: Checkout branch runtime
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
 
       - name: Set up Deno
         uses: denoland/setup-deno@v2
