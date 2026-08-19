@@ -151,12 +151,19 @@ export function resolveActionGroupRisk(steps: SynapseActionGroupStep[]): Synapse
   return "normal";
 }
 
+/**
+ * Action groups are an explicit review surface. Small normal mutations that do
+ * not need review stay on their individual tool path and never enter this
+ * planner. Once prepare_action_group is chosen, the professional must always
+ * see the versioned mini-card review before execution. Critical/NeuroFinance
+ * groups additionally require the browser-only opaque challenge.
+ */
 export function resolveConfirmationPolicy(
   steps: SynapseActionGroupStep[],
 ): SynapseConfirmationPolicy {
   const risk = resolveActionGroupRisk(steps);
   if (risk === "critical" || risk === "neurofinance") return "opaque";
-  return steps.length >= 5 ? "voice" : "direct";
+  return "voice";
 }
 
 export function validateActionGroupSteps(steps: SynapseActionGroupStep[]) {
