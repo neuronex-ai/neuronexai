@@ -160,9 +160,6 @@ function validateAgentSettings(settings: Record<string, unknown>) {
     throw new Error("Settings de voz inválidos: cadeia Azure/ElevenLabs ausente.");
   }
 
-  // Backward compatibility for clients/deployments that still send the old
-  // `eleven_labs.language_code = "multi"` shape. The normalized settings are
-  // then checked again before they can be forwarded to Deepgram.
   normalizeLegacyElevenLabsMultilingualSettings(settings);
   assertNoLegacyElevenLabsMultiLanguageCode(settings);
 
@@ -247,6 +244,9 @@ const OPAQUE_CONFIRMATION_TOOLS = new Set([
 const TOOL_LABELS: Record<string, string> = {
   confirm_pending_action: "confirmacao pendente",
   cancel_pending_action: "cancelamento pendente",
+  prepare_action_group: "preparacao de acoes",
+  execute_action_group: "execucao de acoes",
+  manage_action_group: "revisao protegida",
   navigate_system: "navegacao",
   search_patients: "busca de paciente",
   list_patients: "lista de pacientes",
@@ -717,6 +717,13 @@ export class EdgeVoiceFunctionRunner {
       durationMs: event?.durationMs ?? event?.duration_ms,
     });
     return true;
+  }
+
+  setPendingConfirmation(toolName: string, opaque: boolean) {
+    this.pendingConfirmation = {
+      toolName: clean(toolName, 120) || "execute_action_group",
+      opaque,
+    };
   }
 
   awaitClientAction(
@@ -1355,6 +1362,74 @@ class EdgeSynapseVoiceSession {
     return data;
   }
 
+  async editActionGroup(payload: Record<string, unknown>) {
+    const reviewId = clean(payload.reviewId || payload.review_id, 160);
+    const stepId = clean(payload.stepId || payload.step_id, 160);
+    const fieldId = clean(payload.fieldId || payload.field_id, 120);
+    const resultBase = { reviewId, stepId, fieldId };
+    if (!this.settingsApplied || !this.conversationId || !reviewId || !stepId || !fieldId) {
+      this.sendClient({
+        type: "action_group_edit_result",
+        ...resultBase,
+        success: false,
+        message: "A revisão não está pronta para ser atualizada.",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch(`${functionsUrl()}/synapse-voice-tool`, {
+        method: "POST",
+        headers: {
+          Authorization: this.authorization,
+          apikey: anonKey(),
+          "Content-Type": "application/json",
+          "x-synapse-gateway-secret": gatewaySecret(),
+        },
+        body: JSON.stringify({
+          action: "edit_action_group",
+          requestId: clean(payload.requestId || payload.request_id, 120),
+          conversationId: this.conversationId,
+          sessionId: this.conversationId,
+          voiceSessionId: this.voiceSessionId,
+          planId: clean(payload.planId || payload.plan_id, 160),
+          planVersion: Number(payload.planVersion || payload.plan_version),
+          planHash: clean(payload.planHash || payload.plan_hash, 64),
+          stepId,
+          fieldId,
+          value: payload.value,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error || data?.ok !== true) {
+        throw new Error(data?.error || data?.message || `Não consegui atualizar a revisão (${response.status}).`);
+      }
+
+      const reviewAction = data?.clientAction && typeof data.clientAction === "object"
+        ? data.clientAction as Record<string, any>
+        : null;
+      const confirmationPolicy = clean(reviewAction?.data?.confirmationPolicy, 20);
+      if (confirmationPolicy) {
+        this.runner.setPendingConfirmation("execute_action_group", confirmationPolicy === "opaque");
+      }
+
+      this.sendClient({
+        type: "action_group_edit_result",
+        ...resultBase,
+        success: true,
+        message: clean(data?.message, 500) || "Revisão atualizada.",
+      });
+      if (reviewAction) this.sendClient({ type: "review_action", action: reviewAction });
+    } catch (error) {
+      this.sendClient({
+        type: "action_group_edit_result",
+        ...resultBase,
+        success: false,
+        message: clean(error instanceof Error ? error.message : error, 500) || "Não consegui atualizar este campo.",
+      });
+    }
+  }
+
   async updateVoiceSession(status: string, extra: Record<string, unknown> = {}) {
     if (!this.voiceSessionId || !this.conversationId) return;
     const extraMetadata = extra.metadata && typeof extra.metadata === "object" ? extra.metadata as Record<string, unknown> : {};
@@ -1430,8 +1505,8 @@ class EdgeSynapseVoiceSession {
 
   injectUserMessage(message: unknown) {
     const text = clean(message, 2000);
-    if (!text) return;
-    this.sendDeepgram({ type: "InjectUserMessage", message: text });
+    if (!text || !this.settingsApplied) return;
+    this.sendDeepgram({ type: "InjectUserMessage", content: text });
   }
 
   startKeepAlive() {
@@ -1464,6 +1539,11 @@ class EdgeSynapseVoiceSession {
 
     if (payload.type === "inject_user_message") {
       this.injectUserMessage(payload.message);
+      return;
+    }
+
+    if (payload.type === "action_group_edit_request") {
+      void this.editActionGroup(payload as Record<string, unknown>);
       return;
     }
 
