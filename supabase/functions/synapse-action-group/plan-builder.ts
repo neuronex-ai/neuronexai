@@ -36,7 +36,7 @@ function editableFieldsFor(toolName: string, args: Record<string, any>): Synapse
   };
 
   if (toolName === "create_appointment") {
-    push("start_time", "horário", "time", args.start_time || args.startTime);
+    push("datetime", "data e horário", "text", args.datetime || args.start_time || args.startTime);
     push("duration_minutes", "duração", "number", args.duration_minutes || args.durationMinutes);
     push("price", "valor", "money", args.price);
     push("financial_mode", "financeiro", "select", args.financial_mode || args.financial?.mode, [
@@ -45,11 +45,11 @@ function editableFieldsFor(toolName: string, args: Record<string, any>): Synapse
       { value: "package", label: "Pacote" },
     ]);
   } else if (toolName === "reschedule_appointment") {
-    push("new_start_time", "novo horário", "time", args.new_start_time || args.start_time);
+    push("new_datetime", "nova data e horário", "text", args.new_datetime || args.new_start_time || args.start_time);
     push("duration_minutes", "duração", "number", args.duration_minutes);
   } else if (toolName === "create_financial_entry") {
     push("amount", "valor", "money", args.amount || args.value);
-    push("description", "descrição", "text", args.description);
+    push("description", "descrição", "text", args.description || args.title);
   } else if (toolName === "create_neurofinance_charge") {
     push("amount", "valor", "money", args.amount);
     push("due_date", "vencimento", "date", args.due_date);
@@ -105,7 +105,7 @@ async function assertAgendaPreflight(admin: any, userId: string, toolName: strin
   }
 
   const mode = financialMode(args);
-  if (mode === "manual") return; // escolha explícita do psicólogo é autoritativa.
+  if (mode === "manual") return;
 
   if (toolName === "create_neurofinance_charge" || mode === "neurofinance") {
     if (!agenda.neurofinance.availableByPlan) throw new Error("NeuroFinance não está disponível no plano atual. Use lançamento manual.");
@@ -135,6 +135,7 @@ export async function buildActionGroupSteps(input: {
 }) {
   const context = await loadConversationContext(input.admin, input.userId, input.conversationId);
   const steps: SynapseActionGroupStep[] = [];
+  const stepIdByRawIndex = new Map<number, string>();
 
   for (const [index, rawValue] of input.rawSteps.entries()) {
     const raw = rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
@@ -145,9 +146,13 @@ export async function buildActionGroupSteps(input: {
       throw new Error(`Etapa ${index + 1} sem ferramenta executável válida.`);
     }
     const policy = validateVoiceToolCall(toolName);
-    if (policy.executor === "read") {
-      throw new Error(`A etapa ${index + 1} usa ${toolName}, que é consulta/preflight e não conta como etapa executável.`);
-    }
+
+    // The model may include a requested lookup (for example "verifique a próxima
+    // sessão") inside the raw package. Read-only tools are preflight/context,
+    // not executable timeline cards. Silently omit them instead of failing the
+    // whole package with HTTP 500. Any read the user explicitly asked for can
+    // still be performed by the model before/after the reviewed mutations.
+    if (policy.executor === "read") continue;
 
     const rawArgs = raw.arguments && typeof raw.arguments === "object" && !Array.isArray(raw.arguments)
       ? raw.arguments as Record<string, any>
@@ -161,19 +166,21 @@ export async function buildActionGroupSteps(input: {
     );
     await assertAgendaPreflight(input.admin, input.userId, toolName, enriched.args);
 
-    const stepId = safeStepId(raw.step_id || raw.stepId, `step-${index + 1}`);
+    const order = steps.length + 1;
+    const stepId = safeStepId(raw.step_id || raw.stepId, `step-${order}`);
+    stepIdByRawIndex.set(index + 1, stepId);
     const dependencyIndexes = Array.isArray(raw.depends_on) ? raw.depends_on : [];
     const dependencies = dependencyIndexes
       .map((value: unknown) => Number(value))
       .filter((value: number) => Number.isInteger(value) && value >= 1 && value <= index)
-      .map((value: number) => steps[value - 1]?.stepId)
+      .map((value: number) => stepIdByRawIndex.get(value))
       .filter(Boolean) as string[];
 
     steps.push({
       stepId,
-      order: index + 1,
+      order,
       area: clean(raw.area, 120) || (toolName.includes("appointment") ? "Agenda" : toolName.includes("finance") || toolName.includes("charge") ? "Financeiro" : "Ação"),
-      title: clean(raw.title, 180) || `Etapa ${index + 1}`,
+      title: clean(raw.title, 180) || `Etapa ${order}`,
       spokenSummary: clean(raw.summary || raw.spoken_summary, 600) || `Executar ${toolName.replace(/_/g, " ")}.`,
       actionType: clean(raw.action_type || toolName, 120),
       risk: riskForTool(toolName, enriched.args),
@@ -186,6 +193,10 @@ export async function buildActionGroupSteps(input: {
         ? raw.canonical_plan_ref
         : undefined,
     });
+  }
+
+  if (!steps.length) {
+    throw new Error("O pacote ficou sem ações executáveis depois dos preflights. Faça as consultas e prepare pelo menos uma ação para revisão.");
   }
   return steps;
 }
