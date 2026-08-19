@@ -98,9 +98,9 @@ jobs:
         run: deno test --frozen supabase/functions
 
   # Narrow Sandbox-only deployment for this feature branch. It intentionally
-  # deploys just the two voice functions changed by Stage 3/4 and performs its
-  # own transitive type-check, so the known unrelated repository-wide Node type
-  # test failure cannot hide the runtime fix from manual validation.
+  # deploys only the voice session/tool/gateway runtime changed by Stage 3/4 and
+  # performs its own transitive type-check, so unrelated repository-wide Node
+  # type failures cannot hide this runtime validation.
   deploy_stage34_voice_sandbox:
     if: >-
       github.event_name == 'pull_request' &&
@@ -123,6 +123,7 @@ jobs:
         run: |
           deno check supabase/functions/synapse-voice-tool/index.ts
           deno check supabase/functions/synapse-voice-agent-session/index.ts
+          deno check supabase/functions/synapse-voice-gateway/index.ts
 
       - name: Validate deployment secret
         run: test -n "${SUPABASE_ACCESS_TOKEN:-}"
@@ -134,6 +135,7 @@ jobs:
         run: |
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-tool --project-ref "${SUPABASE_PROJECT_REF}"
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-agent-session --project-ref "${SUPABASE_PROJECT_REF}"
+          npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-gateway --project-ref "${SUPABASE_PROJECT_REF}"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
