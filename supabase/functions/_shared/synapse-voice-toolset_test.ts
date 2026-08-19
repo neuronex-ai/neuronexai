@@ -16,7 +16,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
   equal(functions.length, 15, "quantidade de funções de voz");
-  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v9", "versão do payload de sessão");
+  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v10", "versão do payload de sessão");
   equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "primeira função exclusiva de voz");
@@ -24,7 +24,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(names[2], "edit_action_group", "edição versionada exclusiva de voz");
   equal(names[3], "prepare_action_group", "planejador persistido exclusivo de voz");
   for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) equal(names.includes(required), true, `ferramenta ${required}`);
-  equal(names.includes(SYNAPSE_VOICE_DISPATCH_TOOL_NAME), true, "ponte para o catalogo completo");
+  equal(names.includes(SYNAPSE_VOICE_DISPATCH_TOOL_NAME), true, "ponte de consultas/capacidades delegadas");
   equal(names.includes("search_workspace"), true, "busca unificada no núcleo");
   equal(names.includes("get_workspace_overview"), false, "overview movido ao dispatcher");
   equal(names.includes("get_dashboard_schedule"), false, "agenda simples permanece no dispatcher");
@@ -32,25 +32,40 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(names.includes("create_neuropulse_cause_effect_diagram"), false, "NeuroPulse fora do núcleo direto");
 });
 
-Deno.test("ponte de voz alcança capacidades permitidas fora do núcleo sem liberar exclusões", () => {
+Deno.test("dispatcher não permite mais mutações operacionais genéricas", () => {
   const functions = buildSynapseVoiceFunctions();
   const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
-  for (const name of ["create_appointment", "reschedule_appointment", "get_notes_desktop_overview", "get_financial_summary", "send_patient_email", "get_teleconsultation_readiness", "get_dashboard_schedule", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram"]) {
+
+  for (const name of ["get_notes_desktop_overview", "get_financial_summary", "get_teleconsultation_readiness", "get_dashboard_schedule", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram"]) {
     equal(delegatedNames.includes(name), true, `capacidade delegada ${name}`);
+  }
+  for (const name of ["create_session_note", "create_appointment", "reschedule_appointment", "create_financial_entry", "send_patient_email"]) {
+    equal(delegatedNames.includes(name), false, `mutação operacional ${name} deve passar pelo planner`);
   }
   for (const name of ["delete_file", "delete_task", "neurofinance_refund"]) equal(delegatedNames.includes(name), false, `capacidade bloqueada ${name}`);
 });
 
-Deno.test("todo o catálogo V3 está no núcleo, dispatcher ou bloqueado por política", () => {
+Deno.test("todo catálogo V3 está no núcleo, dispatcher, planner ou bloqueado", () => {
   const functions = buildSynapseVoiceFunctions();
   const direct = new Set(functions.map((tool) => tool.name));
   const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegated = new Set(dispatch?.parameters?.properties?.tool_name?.enum || []);
+  const planner = functions.find((tool) => tool.name === "prepare_action_group");
+  const planned = new Set(planner?.parameters?.properties?.steps?.items?.properties?.tool_name?.enum || []);
   const blocked = new Set<string>(SYNAPSE_VOICE_BLOCKED_TOOL_NAMES);
   for (const tool of AGENT_TOOLS_V3) {
     const name = tool.function.name;
-    equal(direct.has(name) || delegated.has(name) || blocked.has(name), true, `cobertura de ${name}`);
+    equal(direct.has(name) || delegated.has(name) || planned.has(name) || blocked.has(name), true, `cobertura de ${name}`);
+  }
+});
+
+Deno.test("ferramentas diretas centradas em paciente exigem patient_name explícito", () => {
+  const functions = buildSynapseVoiceFunctions();
+  for (const name of ["get_patient_details", "get_clinical_history", "get_patient_system_snapshot", "analyze_neuroview_patient_patterns"]) {
+    const tool = functions.find((candidate) => candidate.name === name);
+    const required = tool?.parameters?.required || [];
+    equal(required.includes("patient_name"), true, `${name} exige patient_name em voz`);
   }
 });
 
@@ -65,13 +80,17 @@ Deno.test("NeuroView fica direto; NeuroFlow e NeuroPulse exigem seleção explí
   equal(delegatedNames.includes("create_neuropulse_cause_effect_diagram"), true, "NeuroPulse delegado");
 });
 
-Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco para o servidor", () => {
+Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só recebe resultados executáveis", () => {
   const tool = buildSynapseVoiceFunctions().find((candidate) => candidate.name === "prepare_action_group");
   equal(Boolean(tool), true, "planner registrado");
   equal(tool?.parameters?.properties?.steps?.minItems, 1, "mínimo de etapas");
   equal(tool?.parameters?.properties?.steps?.maxItems, 12, "máximo de etapas");
-  const stepProperties = tool?.parameters?.properties?.steps?.items?.properties || {};
+  const items = tool?.parameters?.properties?.steps?.items || {};
+  const stepProperties = items.properties || {};
   const executableNames = stepProperties.tool_name?.enum || [];
+  const argumentProperties = stepProperties.arguments?.properties || {};
+  const requiredStepFields = items.required || [];
+
   equal(Boolean(stepProperties.tool_name), true, "ferramenta executável por etapa");
   equal(new Set(executableNames).size, executableNames.length, "enum executável sem duplicatas");
   equal(executableNames.includes("create_session_note"), true, "anotação executável permitida no grupo");
@@ -80,11 +99,16 @@ Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco
   equal(executableNames.includes("request_interface_action"), true, "navegação final permitida no grupo");
   equal(executableNames.includes("get_calendar"), false, "consulta de agenda proibida nos cards");
   equal(executableNames.includes("get_patient_details"), false, "consulta de paciente proibida nos cards");
+
+  for (const field of ["patient_name", "notes", "amount", "entry_type", "subject", "body", "action", "destination"]) {
+    equal(Boolean(argumentProperties[field]), true, `planner expõe argumento ${field}`);
+  }
+  equal(requiredStepFields.includes("arguments"), true, "cada etapa deve trazer arguments explicitamente");
   equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
-  equal(String(tool?.description || "").includes("Todo prepare_action_group abre revisao versionada"), true, "planner promete revisão para todo grupo explícito");
-  equal(String(tool?.description || "").includes("Nao confunda pacote/grupo/sequencia operacional com NeuroFlow"), true, "planner diferencia grupo operacional de NeuroFlow");
+  equal(String(tool?.description || "").includes("qualquer criação, alteração, envio ou pacote operacional"), true, "planner é rota única de mutação operacional por voz");
+  equal(String(tool?.description || "").includes("Não confunda pacote/grupo/sequência operacional com NeuroFlow"), true, "planner diferencia grupo operacional de NeuroFlow");
 });
 
 Deno.test("edit_action_group só altera campo allowlisted de uma revisão pendente", () => {
