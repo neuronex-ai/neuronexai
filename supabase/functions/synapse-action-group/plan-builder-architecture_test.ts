@@ -23,3 +23,17 @@ Deno.test("cards de agenda editam os argumentos canônicos atuais", () => {
 Deno.test("pacote sem mutações não se disfarça de execução", () => {
   assertIncludes("O pacote ficou sem ações executáveis depois dos preflights", "erro recuperável para pacote sem ações");
 });
+
+Deno.test("planner recupera somente fatos explícitos recentes da fala do profissional", () => {
+  assertIncludes('.eq("role", "user")', "fallback deve ler apenas mensagens do profissional");
+  assertIncludes('.from("patients")', "fallback deve comparar com pacientes reais da conta");
+  assertIncludes("uniqueFirstMatches.length === 1", "primeiro nome só pode resolver quando for único");
+  assertIncludes("rawArgs.patient_name = fallbackPatientName", "patient_name ausente deve reutilizar paciente explícito/durável");
+  assertIncludes("explicitAmountFromText", "valor explícito recente deve poder preencher o card financeiro");
+  assertIncludes("cento: 100", "parser deve compreender valores falados como cento e cinquenta reais");
+  assertExcludes('.eq("role", "assistant")', "fallback não pode escolher paciente apenas porque o Synapse o citou");
+});
+
+Deno.test("anotação de prontuário expõe conteúdo editável no card", () => {
+  assertIncludes('push("notes", "anotação"', "create_session_note deve mostrar notes para revisão");
+});
