@@ -22,6 +22,176 @@ const safeStepId = (value: unknown, fallback: string) => {
   return fallback;
 };
 
+const normalizeLookup = (value: unknown) =>
+  clean(value, 2000)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const containsPhrase = (text: string, phrase: string) =>
+  Boolean(phrase && ` ${text} `.includes(` ${phrase} `));
+
+const PATIENT_SCOPED_GROUP_TOOLS = new Set([
+  "update_patient",
+  "update_patient_basic_info",
+  "inactivate_patient",
+  "create_session_note",
+  "create_appointment",
+  "reschedule_appointment",
+  "cancel_appointment",
+  "create_personal_note",
+  "link_file_to_patient",
+  "create_financial_entry",
+  "create_neurofinance_charge",
+  "create_fiscal_invoice",
+  "send_appointment_reminder",
+  "send_patient_email",
+  "request_interface_action",
+]);
+
+const NUMBER_WORDS: Record<string, number> = {
+  zero: 0,
+  um: 1,
+  uma: 1,
+  dois: 2,
+  duas: 2,
+  tres: 3,
+  quatro: 4,
+  cinco: 5,
+  seis: 6,
+  sete: 7,
+  oito: 8,
+  nove: 9,
+  dez: 10,
+  onze: 11,
+  doze: 12,
+  treze: 13,
+  catorze: 14,
+  quatorze: 14,
+  quinze: 15,
+  dezesseis: 16,
+  dezessete: 17,
+  dezoito: 18,
+  dezenove: 19,
+  vinte: 20,
+  trinta: 30,
+  quarenta: 40,
+  cinquenta: 50,
+  sessenta: 60,
+  setenta: 70,
+  oitenta: 80,
+  noventa: 90,
+  cem: 100,
+  cento: 100,
+  duzentos: 200,
+  trezentos: 300,
+  quatrocentos: 400,
+  quinhentos: 500,
+  seiscentos: 600,
+  setecentos: 700,
+  oitocentos: 800,
+  novecentos: 900,
+};
+
+function parseNumberWords(tokens: string[]) {
+  let total = 0;
+  let current = 0;
+  let consumed = false;
+  for (const token of tokens) {
+    if (token === "e") continue;
+    if (token === "mil") {
+      total += (current || 1) * 1000;
+      current = 0;
+      consumed = true;
+      continue;
+    }
+    const value = NUMBER_WORDS[token];
+    if (value === undefined) continue;
+    current += value;
+    consumed = true;
+  }
+  const result = total + current;
+  return consumed && Number.isFinite(result) && result > 0 ? result : null;
+}
+
+function explicitAmountFromText(value: unknown) {
+  const raw = clean(value, 3000).toLowerCase();
+  if (!raw) return null;
+  const numeric = raw.match(/(?:r\$\s*)?(\d{1,9}(?:[.,]\d{1,2})?)\s*(?:reais?|real)\b/i);
+  if (numeric) {
+    const amount = Number(numeric[1].replace(".", "").replace(",", "."));
+    if (Number.isFinite(amount) && amount > 0) return amount;
+  }
+
+  const normalized = normalizeLookup(raw);
+  const tokens = normalized.split(" ").filter(Boolean);
+  const realIndex = tokens.findIndex((token) => token === "real" || token === "reais");
+  if (realIndex < 1) return null;
+  const numberWindow = tokens.slice(Math.max(0, realIndex - 8), realIndex);
+  return parseNumberWords(numberWindow);
+}
+
+async function recoverRecentConversationFacts(admin: any, userId: string, conversationId: string) {
+  const { data: rows, error: rowsError } = await admin
+    .from("messages")
+    .select("content,created_at")
+    .eq("user_id", userId)
+    .eq("session_id", conversationId)
+    .eq("role", "user")
+    .order("created_at", { ascending: false })
+    .limit(12);
+  if (rowsError) {
+    console.warn("[synapse-action-group] recent user messages unavailable", rowsError.message);
+    return { patient: null as any, amount: null as number | null };
+  }
+
+  const recentRows = rows || [];
+  let amount: number | null = null;
+  for (const row of recentRows) {
+    amount ??= explicitAmountFromText(row?.content);
+    if (amount !== null) break;
+  }
+
+  const { data: patients, error: patientsError } = await admin
+    .from("patients")
+    .select("id,name,status")
+    .eq("user_id", userId)
+    .limit(300);
+  if (patientsError) {
+    console.warn("[synapse-action-group] patient fallback unavailable", patientsError.message);
+    return { patient: null as any, amount };
+  }
+
+  const ownedPatients = (patients || [])
+    .map((patient: any) => ({ ...patient, normalizedName: normalizeLookup(patient?.name) }))
+    .filter((patient: any) => patient.normalizedName);
+  const firstNameOwners = new Map<string, any[]>();
+  for (const patient of ownedPatients) {
+    const first = patient.normalizedName.split(" ")[0];
+    if (!first || first.length < 3) continue;
+    firstNameOwners.set(first, [...(firstNameOwners.get(first) || []), patient]);
+  }
+
+  for (const row of recentRows) {
+    const text = normalizeLookup(row?.content);
+    if (!text) continue;
+    const fullMatches = ownedPatients.filter((patient: any) => containsPhrase(text, patient.normalizedName));
+    if (fullMatches.length === 1) return { patient: fullMatches[0], amount };
+    if (fullMatches.length > 1) continue;
+
+    const firstMatches = Array.from(firstNameOwners.entries())
+      .filter(([first, owners]) => owners.length === 1 && containsPhrase(text, first))
+      .map(([, owners]) => owners[0]);
+    const uniqueFirstMatches = Array.from(new Map(firstMatches.map((patient: any) => [patient.id, patient])).values());
+    if (uniqueFirstMatches.length === 1) return { patient: uniqueFirstMatches[0], amount };
+  }
+
+  return { patient: null as any, amount };
+}
+
 function editableFieldsFor(toolName: string, args: Record<string, any>): SynapseEditableField[] {
   const fields: SynapseEditableField[] = [];
   const push = (
@@ -35,18 +205,21 @@ function editableFieldsFor(toolName: string, args: Record<string, any>): Synapse
     fields.push({ fieldId, label, type, value, ...(options?.length ? { options } : {}) });
   };
 
-  if (toolName === "create_appointment") {
+  if (toolName === "create_session_note") {
+    push("notes", "anotação", "text", args.notes);
+  } else if (toolName === "create_appointment") {
     push("datetime", "data e horário", "text", args.datetime || args.start_time || args.startTime);
     push("duration_minutes", "duração", "number", args.duration_minutes || args.durationMinutes);
-    push("price", "valor", "money", args.price);
+    push("price", "valor", "money", args.price || args.value_per_session);
     push("financial_mode", "financeiro", "select", args.financial_mode || args.financial?.mode, [
+      { value: "none", label: "Sem financeiro" },
       { value: "manual", label: "Manual" },
       { value: "neurofinance", label: "NeuroFinance" },
       { value: "package", label: "Pacote" },
     ]);
   } else if (toolName === "reschedule_appointment") {
     push("new_datetime", "nova data e horário", "text", args.new_datetime || args.new_start_time || args.start_time);
-    push("duration_minutes", "duração", "number", args.duration_minutes);
+    push("new_duration_minutes", "duração", "number", args.new_duration_minutes || args.duration_minutes);
   } else if (toolName === "create_financial_entry") {
     push("amount", "valor", "money", args.amount || args.value);
     push("description", "descrição", "text", args.description || args.title);
@@ -134,6 +307,8 @@ export async function buildActionGroupSteps(input: {
   rawSteps: unknown[];
 }) {
   const context = await loadConversationContext(input.admin, input.userId, input.conversationId);
+  const recentFacts = await recoverRecentConversationFacts(input.admin, input.userId, input.conversationId);
+  const fallbackPatientName = clean(context.state.activePatientName, 180) || clean(recentFacts.patient?.name, 180);
   const steps: SynapseActionGroupStep[] = [];
   const stepIdByRawIndex = new Map<number, string>();
 
@@ -147,16 +322,32 @@ export async function buildActionGroupSteps(input: {
     }
     const policy = validateVoiceToolCall(toolName);
 
-    // The model may include a requested lookup (for example "verifique a próxima
-    // sessão") inside the raw package. Read-only tools are preflight/context,
-    // not executable timeline cards. Silently omit them instead of failing the
-    // whole package with HTTP 500. Any read the user explicitly asked for can
-    // still be performed by the model before/after the reviewed mutations.
     if (policy.executor === "read") continue;
 
     const rawArgs = raw.arguments && typeof raw.arguments === "object" && !Array.isArray(raw.arguments)
-      ? raw.arguments as Record<string, any>
+      ? { ...(raw.arguments as Record<string, any>) }
       : {};
+
+    if (
+      PATIENT_SCOPED_GROUP_TOOLS.has(toolName) &&
+      !clean(rawArgs.patient_id || rawArgs.patientId, 120) &&
+      !clean(rawArgs.patient_name || rawArgs.patientName, 180) &&
+      fallbackPatientName
+    ) {
+      rawArgs.patient_name = fallbackPatientName;
+    }
+
+    if (
+      ["create_financial_entry", "create_neurofinance_charge", "create_fiscal_invoice"].includes(toolName) &&
+      !Number(rawArgs.amount || rawArgs.value) &&
+      recentFacts.amount
+    ) {
+      rawArgs.amount = recentFacts.amount;
+    }
+    if (toolName === "create_financial_entry" && !clean(rawArgs.title, 180)) {
+      rawArgs.title = clean(raw.title || raw.summary, 180) || "Lançamento manual";
+    }
+
     const enriched = await enrichToolArguments(
       input.admin,
       input.userId,
