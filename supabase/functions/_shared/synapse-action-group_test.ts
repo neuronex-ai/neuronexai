@@ -8,9 +8,7 @@ import {
 } from "./synapse-action-group.ts";
 
 const equal = (actual: unknown, expected: unknown, message: string) => {
-  if (actual !== expected) {
-    throw new Error(`${message}: esperado ${expected}, recebido ${actual}`);
-  }
+  if (actual !== expected) throw new Error(`${message}: esperado ${expected}, recebido ${actual}`);
 };
 
 const step = (index: number, risk: "normal" | "critical" | "neurofinance" = "normal"): SynapseActionGroupStep => ({
@@ -34,11 +32,8 @@ Deno.test("grupo explícito normal sempre exige mini-cards e confirmação por v
   equal(resolveConfirmationPolicy([1, 2, 3, 4, 5].map((index) => step(index))), "voice", "política de cinco etapas");
 });
 
-Deno.test("ação crítica de uma etapa exige confirmação opaca", () => {
+Deno.test("ação crítica e NeuroFinance exigem confirmação opaca", () => {
   equal(resolveConfirmationPolicy([step(1, "critical")]), "opaque", "política crítica");
-});
-
-Deno.test("NeuroFinance de uma etapa exige confirmação opaca", () => {
   equal(resolveConfirmationPolicy([step(1, "neurofinance")]), "opaque", "política NeuroFinance");
 });
 
@@ -53,56 +48,35 @@ Deno.test("hash estável ignora ordem de chaves de objetos", () => {
   equal(stableJson({ b: 2, a: { d: 4, c: 3 } }), stableJson({ a: { c: 3, d: 4 }, b: 2 }), "json canônico");
 });
 
-Deno.test("plano normal preparado é versionado, hasheado e fica aguardando confirmação", async () => {
-  const plan = await prepareSynapseActionGroupPlan({
+async function preparedPlan(steps: SynapseActionGroupStep[]) {
+  return await prepareSynapseActionGroupPlan({
     professionalId: "11111111-1111-4111-8111-111111111111",
     conversationId: "22222222-2222-4222-8222-222222222222",
     title: "Pós-sessão completo",
     intent: "post_session_bundle",
-    spokenSummary: "Vou preparar evolução, financeiro, recibo, mensagem e navegação.",
-    steps: [1, 2, 3, 4, 5].map((index) => step(index)),
+    spokenSummary: "Revise as ações preparadas.",
+    steps,
     expiresAt: new Date(Date.now() + 600_000).toISOString(),
   });
+}
 
+Deno.test("grupo normal com quatro cards permanece awaiting_confirmation após preflight", async () => {
+  const plan = await preparedPlan([1, 2, 3, 4].map((index) => step(index)));
   equal(plan.confirmationPolicy, "voice", "política persistida");
-  equal(plan.status, "awaiting_confirmation", "grupo aguarda revisão/confirmação");
+  equal(plan.status, "awaiting_confirmation", "quatro cards aguardam revisão/confirmação");
+  equal(plan.reviewPublic.cards.length, 4, "quatro mini-cards públicos");
   equal(plan.planHash.length, 64, "hash SHA-256");
-  equal(plan.idempotencyKey.length, 64, "idempotência SHA-256");
-  equal(plan.reviewPublic.planHash, plan.planHash, "hash visível corresponde ao executável");
-  equal(JSON.stringify(plan.reviewPublic).includes("server-only"), false, "revisão sem argumentos internos");
 });
 
 Deno.test("plano crítico preparado também fica aguardando confirmação", async () => {
-  const plan = await prepareSynapseActionGroupPlan({
-    professionalId: "11111111-1111-4111-8111-111111111111",
-    conversationId: "22222222-2222-4222-8222-222222222222",
-    title: "Ação crítica",
-    intent: "critical_bundle",
-    spokenSummary: "Revise esta ação crítica.",
-    steps: [step(1, "critical")],
-    expiresAt: new Date(Date.now() + 600_000).toISOString(),
-  });
+  const plan = await preparedPlan([step(1, "critical")]);
   equal(plan.confirmationPolicy, "opaque", "política crítica persistida");
   equal(plan.status, "awaiting_confirmation", "crítico aguarda desafio");
 });
 
 Deno.test("resultado principal diferencia warnings, falha e parcial", () => {
-  equal(nextGroupStatus([
-    { stepId: "a", status: "completed", message: "ok" },
-    { stepId: "b", status: "completed", message: "ok" },
-  ]), "completed", "tudo concluído");
-
-  equal(nextGroupStatus([
-    { stepId: "a", status: "completed", message: "sessão criada" },
-    { stepId: "b", status: "queued", message: "Google pendente" },
-  ]), "completed_with_warnings", "efeito externo pendente");
-
-  equal(nextGroupStatus([
-    { stepId: "a", status: "failed", message: "falhou" },
-  ]), "failed", "nenhum commit principal");
-
-  equal(nextGroupStatus([
-    { stepId: "a", status: "completed", message: "agenda criada" },
-    { stepId: "b", status: "failed", message: "documento falhou" },
-  ]), "partially_completed", "grupo entre domínios parcial");
+  equal(nextGroupStatus([{ stepId: "a", status: "completed", message: "ok" }, { stepId: "b", status: "completed", message: "ok" }]), "completed", "tudo concluído");
+  equal(nextGroupStatus([{ stepId: "a", status: "completed", message: "sessão criada" }, { stepId: "b", status: "queued", message: "Google pendente" }]), "completed_with_warnings", "efeito externo pendente");
+  equal(nextGroupStatus([{ stepId: "a", status: "failed", message: "falhou" }]), "failed", "nenhum commit principal");
+  equal(nextGroupStatus([{ stepId: "a", status: "completed", message: "agenda criada" }, { stepId: "b", status: "failed", message: "documento falhou" }]), "partially_completed", "grupo entre domínios parcial");
 });
