@@ -34,6 +34,10 @@ Deno.test("planner recupera somente fatos explícitos recentes da fala do profis
   assertExcludes('.eq("role", "assistant")', "fallback não pode escolher paciente apenas porque o Synapse o citou");
 });
 
+Deno.test("contexto durável confirmado tem precedência sobre inferência recente", () => {
+  assertIncludes("clean(context.state.activePatientName, 180) || clean(recentFacts.patient?.name, 180)", "paciente durável deve vencer fallback de conversa");
+});
+
 Deno.test("anotação de prontuário expõe conteúdo editável no card", () => {
   assertIncludes('push("notes", "anotação"', "create_session_note deve mostrar notes para revisão");
 });
