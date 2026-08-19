@@ -5,6 +5,7 @@ import {
   SYNAPSE_VOICE_DISPATCH_TOOL_NAME,
   SYNAPSE_VOICE_TOOLSET_VERSION,
 } from "./synapse-voice-toolset.ts";
+import { canonicalToolForActionKind } from "./synapse-action-kind.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 import { SYNAPSE_VOICE_BLOCKED_TOOL_NAMES } from "./synapse-tool-contract.ts";
 
@@ -16,7 +17,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
   equal(functions.length, 15, "quantidade de funções de voz");
-  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v10", "versão do payload de sessão");
+  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v11", "versão do payload de sessão");
   equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "primeira função exclusiva de voz");
@@ -51,7 +52,8 @@ Deno.test("todo catálogo V3 está no núcleo, dispatcher, planner ou bloqueado"
   const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegated = new Set(dispatch?.parameters?.properties?.tool_name?.enum || []);
   const planner = functions.find((tool) => tool.name === "prepare_action_group");
-  const planned = new Set(planner?.parameters?.properties?.steps?.items?.properties?.tool_name?.enum || []);
+  const actionKinds = planner?.parameters?.properties?.steps?.items?.properties?.action_kind?.enum || [];
+  const planned = new Set(actionKinds.map((kind: unknown) => canonicalToolForActionKind(kind)).filter(Boolean));
   const blocked = new Set<string>(SYNAPSE_VOICE_BLOCKED_TOOL_NAMES);
   for (const tool of AGENT_TOOLS_V3) {
     const name = tool.function.name;
@@ -79,7 +81,7 @@ Deno.test("NeuroView fica direto; NeuroFlow e NeuroPulse exigem seleção explí
   equal(delegatedNames.includes("create_neuropulse_cause_effect_diagram"), true, "NeuroPulse delegado");
 });
 
-Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só recebe resultados executáveis", () => {
+Deno.test("prepare_action_group expõe action_kind e argumentos reais sem nomes internos", () => {
   const functions = buildSynapseVoiceFunctions();
   const tool = functions.find((candidate) => candidate.name === "prepare_action_group");
   equal(Boolean(tool), true, "planner registrado");
@@ -87,26 +89,28 @@ Deno.test("prepare_action_group expõe argumentos reais das ferramentas e só re
   equal(tool?.parameters?.properties?.steps?.maxItems, 12, "máximo de etapas");
   const items = tool?.parameters?.properties?.steps?.items || {};
   const stepProperties = items.properties || {};
-  const executableNames = stepProperties.tool_name?.enum || [];
+  const actionKinds = stepProperties.action_kind?.enum || [];
   const argumentProperties = stepProperties.arguments?.properties || {};
   const requiredStepFields = items.required || [];
-  equal(Boolean(stepProperties.tool_name), true, "ferramenta executável por etapa");
-  equal(new Set(executableNames).size, executableNames.length, "enum executável sem duplicatas");
-  equal(executableNames.includes("create_session_note"), true, "anotação executável permitida no grupo");
-  equal(executableNames.includes("create_financial_entry"), true, "financeiro executável permitido no grupo");
-  equal(executableNames.includes("send_patient_email"), true, "comunicação executável permitida no grupo");
-  equal(executableNames.includes("request_interface_action"), true, "navegação final permitida no grupo");
-  equal(executableNames.includes("get_calendar"), false, "consulta de agenda proibida nos cards");
-  equal(executableNames.includes("get_patient_details"), false, "consulta de paciente proibida nos cards");
+  equal(Boolean(stepProperties.action_kind), true, "action_kind por etapa");
+  equal(Boolean(stepProperties.tool_name), false, "nome interno não aparece no contrato do modelo");
+  equal(new Set(actionKinds).size, actionKinds.length, "enum action_kind sem duplicatas");
+  for (const kind of ["session_note", "manual_financial_entry", "patient_email", "appointment_create", "patient_record_open", "neurofinance_charge", "fiscal_invoice"]) {
+    equal(actionKinds.includes(kind), true, `action_kind ${kind}`);
+  }
   for (const field of ["patient_name", "notes", "amount", "entry_type", "subject", "body", "action", "destination"]) {
     equal(Boolean(argumentProperties[field]), true, `planner expõe argumento ${field}`);
   }
+  equal(requiredStepFields.includes("action_kind"), true, "cada etapa exige intenção estável");
   equal(requiredStepFields.includes("arguments"), true, "cada etapa deve trazer arguments explicitamente");
+  equal(requiredStepFields.includes("area"), false, "área pode ser derivada pelo servidor");
+  equal(requiredStepFields.includes("title"), false, "título pode ser derivado pelo servidor");
+  equal(requiredStepFields.includes("summary"), false, "resumo pode ser derivado pelo servidor");
   equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
-  equal(String(tool?.description || "").includes("Rota obrigatoria para qualquer criacao, alteracao, envio ou pacote operacional"), true, "planner é rota única de mutação operacional por voz");
-  equal(String(tool?.description || "").includes("NeuroFlow so quando citado explicitamente"), true, "planner diferencia grupo operacional de NeuroFlow");
+  equal(String(tool?.description || "").includes("servidor escolhe a ferramenta canonica"), true, "implementação canônica pertence ao servidor");
+  equal(String(tool?.description || "").includes("NeuroFlow e NeuroPulse usam suas rotas explicitas"), true, "planner diferencia workflows dedicados");
   const serialized = JSON.stringify(functions);
   if (serialized.length > 180000) throw new Error(`toolset de voz excessivamente grande: ${serialized.length} caracteres`);
 });
