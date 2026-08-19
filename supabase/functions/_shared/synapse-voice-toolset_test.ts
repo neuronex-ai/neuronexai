@@ -101,6 +101,7 @@ Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco
   equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
+  equal(String(tool?.description || "").includes("Todo prepare_action_group abre revisao versionada"), true, "planner promete revisão para todo grupo explícito");
   equal(String(tool?.description || "").includes("Nao confunda pacote/grupo/sequencia operacional com NeuroFlow"), true, "planner diferencia grupo operacional de NeuroFlow");
 });
 
