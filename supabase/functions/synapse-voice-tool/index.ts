@@ -23,6 +23,15 @@ import {
   voiceConversationTitle,
 } from "../_shared/synapse-voice-session.ts";
 import { SYNAPSE_VOICE_DISPATCH_TOOL_NAME } from "../_shared/synapse-voice-toolset.ts";
+import {
+  cancelPersistedActionGroup,
+  editPersistedActionGroup,
+  loadActionGroupRow,
+  prepareAndPersistActionGroup,
+  rowPendingAction,
+  rowReviewClientAction,
+} from "../synapse-action-group/plan-builder.ts";
+import { executePersistedActionGroup } from "../synapse-action-group/plan-executor.ts";
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -268,34 +277,111 @@ async function authenticate(request: Request): Promise<AuthResult> {
   return { authorization, admin, userClient, user };
 }
 
-function functionsUrl() {
-  return `${clean(Deno.env.get("SUPABASE_URL"), 1000).replace(/\/$/, "")}/functions/v1`;
-}
-
-function gatewaySecret() {
-  return clean(Deno.env.get("SYNAPSE_VOICE_GATEWAY_SECRET"), 4000);
-}
-
 async function callActionGroup(
   authorization: string,
   payload: Record<string, unknown>,
 ) {
+  const supabaseUrl = clean(Deno.env.get("SUPABASE_URL"), 1000);
   const anonKey = clean(Deno.env.get("SUPABASE_ANON_KEY"), 8000);
-  const response = await fetch(`${functionsUrl()}/synapse-action-group`, {
-    method: "POST",
-    headers: {
-      Authorization: authorization,
-      apikey: anonKey,
-      "Content-Type": "application/json",
-      "x-synapse-gateway-secret": gatewaySecret(),
-    },
-    body: JSON.stringify(payload),
+  const serviceKey = clean(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), 8000);
+  if (!supabaseUrl || !anonKey || !serviceKey) throw new Error("Supabase nao configurado para o plano composto.");
+  if (!authorization.startsWith("Bearer ")) throw new Error("Sessao ausente para o plano composto.");
+
+  const admin = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authorization } },
+    auth: { persistSession: false },
   });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok || data?.error) {
-    throw new Error(clean(data?.error || data?.message, 1200) || `Falha no plano composto (${response.status}).`);
+  const { data: authData, error: authError } = await admin.auth.getUser(authorization.slice(7));
+  if (authError || !authData.user) throw new Error("Sessao invalida para o plano composto.");
+  const userId = authData.user.id;
+  const action = clean(payload.action, 80);
+
+  if (action === "prepare") {
+    const conversationId = clean(payload.conversationId || payload.sessionId, 120);
+    const prepared = await prepareAndPersistActionGroup({
+      admin,
+      userId,
+      conversationId,
+      voiceSessionId: clean(payload.voiceSessionId, 120) || null,
+      title: clean(payload.title, 180),
+      intent: clean(payload.intent, 300),
+      spokenSummary: clean(payload.spokenSummary || payload.summary, 1200),
+      rawSteps: Array.isArray(payload.steps) ? payload.steps.slice(0, 12) : [],
+      capabilityVersion: Number(payload.capabilityVersion) || 1,
+    });
+
+    if (prepared.row.confirmation_policy === "direct") {
+      const result = await executePersistedActionGroup({
+        admin,
+        userId,
+        row: prepared.row,
+        confirmation: "direct",
+        authorization,
+        requestOrigin: null,
+        userClient,
+      });
+      return { ok: result.status !== "failed", direct: true, result };
+    }
+
+    return {
+      ok: true,
+      direct: false,
+      plan: prepared.row.review_public,
+      pendingAction: rowPendingAction(prepared.row),
+      clientAction: rowReviewClientAction(prepared.row),
+    };
   }
-  return data as Record<string, any>;
+
+  const planId = clean(payload.planId || payload.plan_id, 120);
+  const planVersion = Number(payload.planVersion || payload.plan_version);
+
+  if (action === "get") {
+    const row = await loadActionGroupRow(admin, userId, planId, planVersion);
+    return { ok: true, plan: row.review_public, status: row.status, result: row.result_internal };
+  }
+
+  if (action === "edit") {
+    const next = await editPersistedActionGroup({
+      admin,
+      userId,
+      planId,
+      planVersion,
+      planHash: clean(payload.planHash || payload.plan_hash, 64),
+      edits: Array.isArray(payload.edits) ? payload.edits : [],
+    });
+    return {
+      ok: true,
+      plan: next.row.review_public,
+      pendingAction: rowPendingAction(next.row),
+      clientAction: rowReviewClientAction(next.row),
+    };
+  }
+
+  if (action === "cancel") {
+    const row = await loadActionGroupRow(admin, userId, planId, planVersion);
+    await cancelPersistedActionGroup(admin, userId, row);
+    return { ok: true, status: "cancelled" };
+  }
+
+  if (action === "execute") {
+    const planHash = clean(payload.planHash || payload.plan_hash, 64);
+    const row = await loadActionGroupRow(admin, userId, planId, planVersion);
+    if (row.plan_hash !== planHash) throw new Error("A versao/hash confirmados nao correspondem ao plano atual.");
+    const confirmation = clean(payload.confirmation, 20) as "direct" | "voice" | "opaque";
+    const result = await executePersistedActionGroup({
+      admin,
+      userId,
+      row,
+      confirmation,
+      authorization,
+      requestOrigin: null,
+      userClient,
+    });
+    return { ok: result.status !== "failed", result };
+  }
+
+  throw new Error("Acao de plano composto invalida.");
 }
 
 function groupSteps(value: unknown) {
@@ -739,9 +825,6 @@ serve(async (request): Promise<Response> => {
         ok: true,
         content: functionContent({
           ok: true,
-          // Gateway uses this semantic tool name to decide whether the browser
-          // challenge is mandatory. The persisted pending action remains
-          // execute_action_group with exact id/version/hash.
           tool: confirmationPolicy === "opaque" ? "manage_action_group" : "execute_action_group",
           label: clean(args.title, 180) || "plano do Synapse",
           message,
