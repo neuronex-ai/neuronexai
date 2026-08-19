@@ -298,6 +298,45 @@ const safeJsonParse = (value: unknown): Record<string, unknown> => {
   }
 };
 
+const functionCallShape = (fn: Record<string, unknown>) => {
+  const rawArguments = typeof fn.arguments === "string"
+    ? fn.arguments
+    : fn.arguments && typeof fn.arguments === "object"
+      ? JSON.stringify(fn.arguments)
+      : "";
+  let parsed: Record<string, unknown> = {};
+  let parseSuccess = true;
+  try {
+    parsed = rawArguments ? safeJsonParse(rawArguments) : {};
+    if (rawArguments && !Object.keys(parsed).length && rawArguments.trim() !== "{}") parseSuccess = false;
+  } catch {
+    parseSuccess = false;
+  }
+  const rawSteps = Array.isArray(parsed.steps) ? parsed.steps.slice(0, 12) : [];
+  return {
+    callId: clean(fn.id, 120) || null,
+    functionName: clean(fn.name, 120) || null,
+    argumentJsonLength: rawArguments.length,
+    parseSuccess,
+    stepCount: rawSteps.length,
+    steps: rawSteps.map((rawValue, index) => {
+      const step = rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)
+        ? rawValue as Record<string, unknown>
+        : {};
+      const args = step.arguments && typeof step.arguments === "object" && !Array.isArray(step.arguments)
+        ? step.arguments as Record<string, unknown>
+        : {};
+      return {
+        index: index + 1,
+        actionKind: clean(step.action_kind || step.actionKind, 120) || null,
+        toolName: clean(step.tool_name || step.toolName, 120) || null,
+        stepKeys: Object.keys(step).sort().slice(0, 40),
+        argumentKeys: Object.keys(args).sort().slice(0, 80),
+      };
+    }),
+  };
+};
+
 const delegatedTool = (name: string, args: Record<string, unknown> = {}) => {
   if (name !== "execute_synapse_tool") return { name, args };
   return {
@@ -318,26 +357,6 @@ const needsOpaqueConfirmation = (toolName: string, args: Record<string, unknown>
     || financialMode === "package"
     || args.create_charge === true
     || Number.isFinite(occurrenceCount) && occurrenceCount >= 6;
-};
-
-const canExecuteWithoutReview = (
-  name: string,
-  args: Record<string, unknown> = {},
-  payload: Record<string, unknown> = {},
-) => {
-  const delegated = delegatedTool(name, args);
-  const toolName = clean(payload.tool || delegated.name, 120);
-  if (["create_session_note", "create_financial_entry"].includes(toolName)) return true;
-  if (toolName !== "create_appointment") return false;
-  const financial = delegated.args.financial && typeof delegated.args.financial === "object"
-    ? delegated.args.financial as Record<string, unknown>
-    : {};
-  const financialMode = clean(delegated.args.financial_mode || financial.mode, 40).toLowerCase();
-  const occurrenceCount = Number(delegated.args.occurrence_count || 1);
-  return (!Number.isFinite(occurrenceCount) || occurrenceCount <= 1)
-    && !["neurofinance", "package"].includes(financialMode)
-    && delegated.args.create_charge !== true
-    && delegated.args.fiscal_automation_enabled !== true;
 };
 
 const money = (value: unknown) => {
@@ -554,9 +573,16 @@ const normalizeToolPayload = (name: string, result: Record<string, unknown>): Re
     interrupted: Boolean(parsed.interrupted),
     data: parsed.data ?? null,
     error: ok ? null : clean(parsed.error || spoken, 1200),
+    error_code: ok ? null : clean(parsed.error_code || parsed.errorCode, 80) || "tool_failed",
+    failed_step_index: parsed.failed_step_index ?? parsed.failedStepIndex ?? null,
+    blocked_steps: Array.isArray(parsed.blocked_steps)
+      ? parsed.blocked_steps.slice(0, 12)
+      : Array.isArray(parsed.blockedSteps)
+        ? parsed.blockedSteps.slice(0, 12)
+        : [],
     grounded: Boolean(parsed.grounded),
     recordCount: Number(parsed.recordCount || 0),
-    structuredData: parsed.structuredData || null,
+    structuredData: parsed.structuredData || result?.structuredData || null,
     primary_committed: Boolean(parsed.primary_committed ?? parsed.primaryCommitted),
     primaryCommitted: Boolean(parsed.primary_committed ?? parsed.primaryCommitted),
     warnings: Array.isArray(parsed.warnings) ? parsed.warnings.slice(0, 20) : [],
@@ -568,22 +594,26 @@ const normalizeToolPayload = (name: string, result: Record<string, unknown>): Re
 
 const failurePayload = (name: string, error: unknown, aborted: boolean) => {
   const typed = error as { name?: string; message?: string };
+  const transient = !aborted && isTransientError(error);
   const message = aborted
     ? "A acao foi cancelada antes de concluir."
     : typed?.name === "TimeoutError"
-      ? "Essa consulta demorou mais que o esperado e nao voltou com seguranca. Posso tentar de novo em seguida."
-      : "Tentei consultar aqui, mas nao recebi um retorno confiavel. Posso tentar de novo?";
+      ? "A consulta demorou mais que o esperado. Nenhuma ação adicional foi executada."
+      : transient
+        ? "Falha técnica temporária ao executar esta etapa. Nenhuma ação adicional foi executada."
+        : "Falha técnica ao executar esta etapa. Nenhuma ação adicional foi executada.";
   return {
     ok: false,
     tool: name,
     cancelled: aborted,
     spoken_summary: message,
     message,
-    retryable: !aborted && isTransientError(error),
+    retryable: transient,
     needs_clarification: false,
     confirmation_required: false,
     data: null,
     error: aborted ? null : message,
+    error_code: aborted ? "cancelled" : transient ? "transient_runtime_failure" : "runtime_failure",
     internal_error: aborted ? null : clean(typed?.message || error, 1200),
   };
 };
@@ -848,6 +878,8 @@ export class EdgeVoiceFunctionRunner {
 
   async runFunction(fn: Record<string, unknown>) {
     if (fn.client_side === false) return;
+    const rawShape = functionCallShape(fn);
+    console.info("[synapse-voice-gateway] FunctionCallRequest shape", rawShape);
     const id = clean(fn.id || crypto.randomUUID(), 120);
     const name = clean(fn.name, 120);
     const thoughtSignature = clean(fn.thought_signature, 4000);
@@ -919,19 +951,8 @@ export class EdgeVoiceFunctionRunner {
         }
       }
 
-      let { result, payload } = await this.invokeWithRetry(task);
+      const { result, payload } = await this.invokeWithRetry(task);
       if (controller.signal.aborted) throw makeAbortError();
-
-      if (payload.ok && payload.confirmation_required && canExecuteWithoutReview(name, args, payload)) {
-        result = await this.invokeTool({
-          id: `${id}:assisted-execution`,
-          name: "confirm_pending_action",
-          arguments: {},
-          signal: controller.signal,
-        });
-        payload = normalizeToolPayload("confirm_pending_action", result);
-        payload.assisted_execution = true;
-      }
 
       if (result?.clientAction) {
         const clientActionResult = await this.awaitClientAction(task, result.clientAction);
@@ -971,6 +992,7 @@ export class EdgeVoiceFunctionRunner {
       this.sendStatus(task, payload.ok ? completedStatus : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,
+        error_code: payload.error_code || undefined,
         retryable: payload.retryable,
         needs_clarification: payload.needs_clarification,
         confirmation_required: payload.confirmation_required,
@@ -978,7 +1000,11 @@ export class EdgeVoiceFunctionRunner {
       this.sendVoiceState(
         payload.ok ? (payload.confirmation_required ? "awaiting_confirmation" : "tool_completed") : "tool_failed",
         task,
-        { message: payload.spoken_summary, confirmationRequired: payload.confirmation_required },
+        {
+          message: payload.spoken_summary,
+          errorCode: payload.error_code || null,
+          confirmationRequired: payload.confirmation_required,
+        },
       );
     } catch (error) {
       const aborted = controller.signal.aborted || (error as { name?: string })?.name === "AbortError";
@@ -987,10 +1013,12 @@ export class EdgeVoiceFunctionRunner {
       this.sendStatus(task, aborted ? "cancelled" : "failed", {
         message: payload.spoken_summary,
         error: payload.error || undefined,
+        error_code: payload.error_code || undefined,
         retryable: payload.retryable,
       });
       this.sendVoiceState(aborted ? "tool_cancelled" : "tool_failed", task, {
         message: payload.spoken_summary,
+        errorCode: payload.error_code || null,
       });
     } finally {
       for (const timer of task.timers) clearTimeout(timer);
