@@ -15,7 +15,6 @@ const equal = (actual: unknown, expected: unknown, message: string) => {
 Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", () => {
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
-
   equal(functions.length, 15, "quantidade de funções de voz");
   equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v9", "versão do payload de sessão");
   equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
@@ -24,10 +23,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   equal(names[1], "cancel_pending_action", "segunda função exclusiva de voz");
   equal(names[2], "edit_action_group", "edição versionada exclusiva de voz");
   equal(names[3], "prepare_action_group", "planejador persistido exclusivo de voz");
-
-  for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) {
-    equal(names.includes(required), true, `ferramenta ${required}`);
-  }
+  for (const required of SYNAPSE_VOICE_CORE_TOOL_NAMES) equal(names.includes(required), true, `ferramenta ${required}`);
   equal(names.includes(SYNAPSE_VOICE_DISPATCH_TOOL_NAME), true, "ponte para o catalogo completo");
   equal(names.includes("search_workspace"), true, "busca unificada no núcleo");
   equal(names.includes("get_workspace_overview"), false, "overview movido ao dispatcher");
@@ -40,24 +36,10 @@ Deno.test("ponte de voz alcança capacidades permitidas fora do núcleo sem libe
   const functions = buildSynapseVoiceFunctions();
   const dispatch = functions.find((tool) => tool.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
-
-  for (const name of [
-    "create_appointment",
-    "reschedule_appointment",
-    "get_notes_desktop_overview",
-    "get_financial_summary",
-    "send_patient_email",
-    "get_teleconsultation_readiness",
-    "get_dashboard_schedule",
-    "create_neuroflow_from_patient_history",
-    "create_neuropulse_cause_effect_diagram",
-  ]) {
+  for (const name of ["create_appointment", "reschedule_appointment", "get_notes_desktop_overview", "get_financial_summary", "send_patient_email", "get_teleconsultation_readiness", "get_dashboard_schedule", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram"]) {
     equal(delegatedNames.includes(name), true, `capacidade delegada ${name}`);
   }
-
-  for (const name of ["delete_file", "delete_task", "neurofinance_refund"]) {
-    equal(delegatedNames.includes(name), false, `capacidade bloqueada ${name}`);
-  }
+  for (const name of ["delete_file", "delete_task", "neurofinance_refund"]) equal(delegatedNames.includes(name), false, `capacidade bloqueada ${name}`);
 });
 
 Deno.test("todo o catálogo V3 está no núcleo, dispatcher ou bloqueado por política", () => {
@@ -77,7 +59,6 @@ Deno.test("NeuroView fica direto; NeuroFlow e NeuroPulse exigem seleção explí
   const neuroview = functions.find((candidate) => candidate.name === "analyze_neuroview_patient_patterns");
   equal(Boolean(neuroview), true, "NeuroView direto");
   equal(Boolean(neuroview?.parameters?.properties?.patient_name), true, "patient_name em NeuroView");
-
   const dispatch = functions.find((candidate) => candidate.name === SYNAPSE_VOICE_DISPATCH_TOOL_NAME);
   const delegatedNames = dispatch?.parameters?.properties?.tool_name?.enum || [];
   equal(delegatedNames.includes("create_neuroflow_from_patient_history"), true, "NeuroFlow delegado");
@@ -92,6 +73,7 @@ Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco
   const stepProperties = tool?.parameters?.properties?.steps?.items?.properties || {};
   const executableNames = stepProperties.tool_name?.enum || [];
   equal(Boolean(stepProperties.tool_name), true, "ferramenta executável por etapa");
+  equal(new Set(executableNames).size, executableNames.length, "enum executável sem duplicatas");
   equal(executableNames.includes("create_session_note"), true, "anotação executável permitida no grupo");
   equal(executableNames.includes("create_financial_entry"), true, "financeiro executável permitido no grupo");
   equal(executableNames.includes("send_patient_email"), true, "comunicação executável permitida no grupo");
@@ -118,11 +100,7 @@ Deno.test("navegação assistida expõe as superfícies read-first do Desktop", 
   const functions = buildSynapseVoiceFunctions();
   const navigation = functions.find((tool) => tool.name === "request_interface_action");
   const elements = navigation?.parameters?.properties?.element?.enum || [];
-
-  for (const element of ["dashboard_agenda", "agenda_calendar", "patient_summary", "finance_entries"]) {
-    equal(elements.includes(element), true, `superfície ${element}`);
-  }
-
+  for (const element of ["dashboard_agenda", "agenda_calendar", "patient_summary", "finance_entries"]) equal(elements.includes(element), true, `superfície ${element}`);
   const actions = navigation?.parameters?.properties?.action?.enum || [];
   const destinations = navigation?.parameters?.properties?.destination?.enum || [];
   const scopes = navigation?.parameters?.properties?.neuroview_scope?.enum || [];
@@ -132,14 +110,5 @@ Deno.test("navegação assistida expõe as superfícies read-first do Desktop", 
   equal(modes.join(","), "2d,3d", "modos do NeuroView");
   equal(Boolean(navigation?.parameters?.properties?.neuroview_node_ids), true, "IDs do subgrafo");
   equal(Boolean(navigation?.parameters?.properties?.neuroview_focus_node_id), true, "node focal");
-  for (const destination of [
-    "patient.sessions.pending",
-    "notes.files.patients",
-    "finance.extrato.assinaturas",
-    "teleconsultation.notes",
-    "settings.integrations",
-    "global.search",
-  ]) {
-    equal(destinations.includes(destination), true, `destino profundo ${destination}`);
-  }
+  for (const destination of ["patient.sessions.pending", "notes.files.patients", "finance.extrato.assinaturas", "teleconsultation.notes", "settings.integrations", "global.search"]) equal(destinations.includes(destination), true, `destino profundo ${destination}`);
 });
