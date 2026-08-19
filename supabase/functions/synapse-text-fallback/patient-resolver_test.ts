@@ -3,6 +3,7 @@ import {
   normalizePatientName,
   resolvePatientByName,
   resolvePatientCandidates,
+  scorePatientCandidate,
   type PatientCandidate,
 } from "./patient-resolver.ts";
 import { normalizeSynapseError } from "../_shared/synapse-errors.ts";
@@ -63,6 +64,16 @@ Deno.test("pede esclarecimento entre homônimas e usa o contexto durável para d
   const explicitOther = resolvePatientCandidates("Maria", homonyms, { preferredPatientId: "patient-nathalia" });
   equal(explicitOther.status, "resolved", "troca explícita de paciente");
   if (explicitOther.status === "resolved") equal(explicitOther.patient.id, "patient-maria", "nova paciente");
+});
+
+Deno.test("José ouvido para Josué produz candidato seguro ou uma única clarificação, nunca not_found", () => {
+  const josue: PatientCandidate = { id: "patient-josue", name: "Josué Silveira", status: "active" };
+  const score = scorePatientCandidate("José Silveira", josue);
+  if (score < 65) throw new Error(`similaridade fonética insuficiente para José/Josué: ${score}`);
+  const resolution = resolvePatientCandidates("José Silveira", [josue]);
+  if (resolution.status === "not_found") throw new Error("José/Josué não pode virar patient_not_found com candidato plausível único.");
+  if (resolution.status === "resolved") equal(resolution.patient.id, josue.id, "paciente fonético");
+  if (resolution.status === "ambiguous") equal(resolution.candidates[0]?.id, josue.id, "candidato para clarificação");
 });
 
 Deno.test("uma busca com resultado único atualiza o paciente canônico da conversa", () => {
