@@ -2,7 +2,7 @@ import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v8";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v9";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 /**
@@ -48,6 +48,36 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
       properties: {
         reason: { type: "string" },
       },
+      additionalProperties: false,
+    },
+  },
+  {
+    name: "edit_action_group",
+    description: [
+      "Edita um campo visível de uma revisão de grupo que já está pendente nesta conversa.",
+      "Use quando o profissional disser para mudar/corrigir um detalhe de um dos mini-cards antes de confirmar.",
+      "Identifique o card pelo número exibido e o campo pelo nome humano mostrado na revisão, como horario, valor, descricao, vencimento ou meio de pagamento.",
+      "Nunca invente plan_id, versao ou hash: o servidor vincula a edição à revisão pendente atual e gera uma nova versão segura.",
+    ].join(" "),
+    parameters: {
+      type: "object",
+      properties: {
+        step_number: {
+          type: "integer",
+          minimum: 1,
+          maximum: 12,
+          description: "Número 1-based do mini-card exibido na revisão.",
+        },
+        field: {
+          type: "string",
+          description: "Nome humano do campo visível a alterar, por exemplo valor ou horario.",
+        },
+        value: {
+          type: "string",
+          description: "Novo valor dito pelo profissional, preservado em formato humano para validação do servidor.",
+        },
+      },
+      required: ["step_number", "field", "value"],
       additionalProperties: false,
     },
   },
