@@ -1,8 +1,12 @@
 import { validateVoiceToolCall } from "./synapse-voice-policy.ts";
+import {
+  SYNAPSE_ACTION_KIND_ENTRIES,
+  type SynapseActionKind,
+} from "./synapse-action-kind.ts";
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v10";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v11";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 const DELEGATED_MUTATION_EXCEPTIONS = new Set([
@@ -64,10 +68,11 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
     name: "prepare_action_group",
     description: [
       "Rota obrigatoria para qualquer criacao, alteracao, envio ou pacote operacional por voz, inclusive uma unica etapa.",
-      "Tambem use para pos-sessao, faca tudo isso, pacote, grupo ou sequencia operacional.",
+      "Expresse cada efeito por action_kind; o servidor escolhe a ferramenta canonica. Nunca envie nomes internos de ferramenta.",
       "Consultas/validacoes sao preflight e nao viram cards. Nunca execute mutacoes separadamente antes da revisao.",
       "Cada etapa deve trazer arguments com os dados humanos ja ditos, especialmente patient_name, valores e textos.",
-      "Todo plano abre revisao versionada; critico/NeuroFinance recebe confirmacao opaca. NeuroFlow so quando citado explicitamente.",
+      "Area, titulo e resumo sao opcionais: o servidor deriva defaults seguros quando faltarem.",
+      "Todo plano abre revisao versionada; critico/NeuroFinance recebe confirmacao opaca. NeuroFlow e NeuroPulse usam suas rotas explicitas.",
     ].join(" "),
     parameters: {
       type: "object",
@@ -82,18 +87,18 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
           items: {
             type: "object",
             properties: {
-              area: { type: "string" },
-              title: { type: "string" },
-              summary: { type: "string" },
-              tool_name: { type: "string" },
+              action_kind: { type: "string" },
               arguments: {
                 type: "object",
                 properties: {},
                 additionalProperties: false,
               },
+              area: { type: "string" },
+              title: { type: "string" },
+              summary: { type: "string" },
               depends_on: { type: "array", items: { type: "integer" } },
             },
-            required: ["area", "title", "summary", "tool_name", "arguments"],
+            required: ["action_kind", "arguments"],
             additionalProperties: false,
           },
         },
@@ -172,11 +177,20 @@ function constrainActionGroupPlanner(
 ) {
   if (tool?.name !== "prepare_action_group") return tool;
   const copy = structuredClone(tool);
-  copy.parameters.properties.steps.items.properties.tool_name.enum = executableTools.map((candidate) => candidate.name);
+  const executableByName = new Map(executableTools.map((candidate) => [candidate.name, candidate]));
+  const supportedKinds = SYNAPSE_ACTION_KIND_ENTRIES.filter(([, canonicalTool]) =>
+    executableByName.has(canonicalTool)
+  );
+  if (!supportedKinds.length) throw new Error("Catalogo action_kind executavel ausente.");
+
+  copy.parameters.properties.steps.items.properties.action_kind.enum = supportedKinds.map(([kind]) => kind);
+  copy.parameters.properties.steps.items.properties.action_kind.description =
+    "Intencao operacional estavel. O servidor converte action_kind para a implementacao canonica.";
 
   const unionProperties: Record<string, unknown> = {};
-  for (const candidate of executableTools) {
-    const properties = candidate.parameters?.properties && typeof candidate.parameters.properties === "object"
+  for (const [, canonicalTool] of supportedKinds) {
+    const candidate = executableByName.get(canonicalTool);
+    const properties = candidate?.parameters?.properties && typeof candidate.parameters.properties === "object"
       ? candidate.parameters.properties
       : {};
     for (const [key, schema] of Object.entries(properties)) {
@@ -187,7 +201,7 @@ function constrainActionGroupPlanner(
     type: "object",
     properties: unionProperties,
     additionalProperties: false,
-    description: "Argumentos canonicos da etapa; repita dados ja ditos como patient_name, valores, textos, datas e destino.",
+    description: "Dados humanos da etapa; repita patient_name, valores, textos, datas e destino que o profissional informou.",
   };
   return copy;
 }
