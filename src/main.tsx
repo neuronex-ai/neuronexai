@@ -55,6 +55,12 @@ const root = createRoot(rootElement);
 
 async function bootstrap() {
   try {
+    if (window.location.pathname === "/confirmar-alteracao-agenda") {
+      const { default: AgendaChangeResponse } = await import("./pages/public/AgendaChangeResponse.tsx");
+      root.render(<AgendaChangeResponse />);
+      return;
+    }
+
     const { default: App } = await import("./App.tsx");
     root.render(<App />);
   } catch (error) {
