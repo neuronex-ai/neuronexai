@@ -23,7 +23,9 @@ import {
   voiceConversationTitle,
 } from "../_shared/synapse-voice-session.ts";
 import { SYNAPSE_VOICE_DISPATCH_TOOL_NAME } from "../_shared/synapse-voice-toolset.ts";
+import { normalizeActionGroupStepIdentity } from "../_shared/synapse-action-kind.ts";
 import {
+  ActionGroupPreparationError,
   cancelPersistedActionGroup,
   editPersistedActionGroup,
   loadActionGroupRow,
@@ -321,25 +323,14 @@ async function callActionGroup(
       capabilityVersion: Number(payload.capabilityVersion) || 1,
     });
 
-    if (prepared.row.confirmation_policy === "direct") {
-      const result = await executePersistedActionGroup({
-        admin,
-        userId,
-        row: prepared.row,
-        confirmation: "direct",
-        authorization,
-        requestOrigin: null,
-        userClient,
-      });
-      return { ok: result.status !== "failed", direct: true, result };
-    }
-
     return {
       ok: true,
       direct: false,
       plan: prepared.row.review_public,
       pendingAction: rowPendingAction(prepared.row),
       clientAction: rowReviewClientAction(prepared.row),
+      warnings: prepared.warnings || [],
+      preflights: prepared.preflights || [],
     };
   }
 
@@ -378,7 +369,8 @@ async function callActionGroup(
     const planHash = clean(payload.planHash || payload.plan_hash, 64);
     const row = await loadActionGroupRow(admin, userId, planId, planVersion);
     if (row.plan_hash !== planHash) throw new Error("A versao/hash confirmados nao correspondem ao plano atual.");
-    const confirmation = clean(payload.confirmation, 20) as "direct" | "voice" | "opaque";
+    const requestedConfirmation = clean(payload.confirmation, 20);
+    const confirmation = requestedConfirmation === "opaque" ? "opaque" : "voice";
     const result = await executePersistedActionGroup({
       admin,
       userId,
@@ -507,9 +499,28 @@ function groupSteps(value: unknown) {
       area: clean(raw.area, 120),
       title: clean(raw.title, 180),
       summary: clean(raw.summary || raw.spoken_summary, 600),
-      tool_name: clean(raw.tool_name || raw.toolName, 120),
+      ...(raw.action_kind !== undefined ? { action_kind: clean(raw.action_kind, 120) } : {}),
+      ...(raw.actionKind !== undefined ? { actionKind: clean(raw.actionKind, 120) } : {}),
+      ...(raw.tool_name !== undefined ? { tool_name: clean(raw.tool_name, 120) } : {}),
+      ...(raw.toolName !== undefined ? { toolName: clean(raw.toolName, 120) } : {}),
+      ...(raw.action_type !== undefined ? { action_type: clean(raw.action_type, 120) } : {}),
+      ...(raw.actionType !== undefined ? { actionType: clean(raw.actionType, 120) } : {}),
       arguments: parseArgs(raw.arguments ?? raw.arguments_json),
       depends_on: Array.isArray(raw.depends_on) ? raw.depends_on.slice(0, 12) : [],
+    };
+  });
+}
+
+function safeGroupStepShape(steps: ReturnType<typeof groupSteps>) {
+  return steps.map((step, index) => {
+    const identity = normalizeActionGroupStepIdentity(step);
+    const args = parseArgs(step.arguments);
+    return {
+      index: index + 1,
+      kind: identity.kind,
+      canonicalTool: identity.canonicalToolName,
+      source: identity.source,
+      argumentKeys: Object.keys(args).sort().slice(0, 80),
     };
   });
 }
@@ -995,47 +1006,77 @@ serve(async (request): Promise<Response> => {
     }
 
     if (name === "prepare_action_group") {
-      const prepared = await callActionGroup(auth.authorization, {
-        action: "prepare",
+      const preparedSteps = groupSteps(args.steps);
+      const safeSteps = safeGroupStepShape(preparedSteps);
+      const callId = clean(body.callId || body.id, 120) || null;
+      await logVoiceAction(auth.admin, {
+        userId: auth.user.id,
         conversationId: sessionId,
-        voiceSessionId: voiceSessionId || null,
-        title: clean(args.title, 180),
-        intent: clean(args.intent, 300),
-        spokenSummary: clean(args.spoken_summary || args.spokenSummary, 1200),
-        steps: groupSteps(args.steps),
-        capabilityVersion: 1,
+        voiceSessionId,
+        toolName: name,
+        status: "success",
+        durationMs: Date.now() - startedAt,
+        confirmationRequired: true,
+        riskLevel: policy.riskLevel,
+        payload: {
+          phase: "received",
+          callId,
+          stepCount: preparedSteps.length,
+          steps: safeSteps,
+          patientResolver: "canonical_entity_context",
+        },
       });
 
-      if (prepared.direct) {
-        const directResult = prepared.result || {};
-        const directOk = directResult.status !== "failed";
-        const directMessage = clean(directResult.spokenSummary, 1200) ||
-          (directOk ? "Conclui as etapas solicitadas." : "Nao consegui concluir o plano solicitado.");
+      let prepared: any;
+      try {
+        prepared = await callActionGroup(auth.authorization, {
+          action: "prepare",
+          conversationId: sessionId,
+          voiceSessionId: voiceSessionId || null,
+          title: clean(args.title, 180),
+          intent: clean(args.intent, 300),
+          spokenSummary: clean(args.spoken_summary || args.spokenSummary, 1200),
+          steps: preparedSteps,
+          capabilityVersion: 1,
+        });
+      } catch (prepareError) {
+        const domain = prepareError instanceof ActionGroupPreparationError ? prepareError : null;
+        const message = clean(prepareError instanceof Error ? prepareError.message : prepareError, 1200) || "Falha ao preparar a revisão. Nenhuma ação foi executada.";
+        const errorCode = domain?.code || "plan_validation_failed";
         await logVoiceAction(auth.admin, {
           userId: auth.user.id,
           conversationId: sessionId,
           voiceSessionId,
           toolName: name,
-          status: directOk ? "success" : "error",
+          status: "error",
           durationMs: Date.now() - startedAt,
           confirmationRequired: false,
           riskLevel: policy.riskLevel,
-          payload: { stepCount: Array.isArray(args.steps) ? args.steps.length : 0, direct: true },
-          errorMessage: directOk ? null : directMessage,
+          payload: {
+            phase: "rejected",
+            callId,
+            stepCount: preparedSteps.length,
+            steps: safeSteps,
+            failedStep: domain?.failedStepIndex ?? null,
+            blockedSteps: domain?.blockedSteps || [],
+            errorCode,
+          },
+          errorMessage: message,
         });
+        const structuredError = {
+          ok: false,
+          tool: "prepare_action_group",
+          error_code: errorCode,
+          spoken_summary: message,
+          needs_clarification: domain?.needsClarification ?? true,
+          retryable: false,
+          failed_step_index: domain?.failedStepIndex ?? null,
+          blocked_steps: domain?.blockedSteps || [],
+        };
         return json({
           ok: true,
-          content: functionContent({
-            ok: directOk,
-            tool: "execute_action_group",
-            label: clean(args.title, 180) || "plano do Synapse",
-            message: directMessage,
-            data: directResult,
-            error: directOk ? null : directMessage,
-            structuredData: directResult,
-          }),
-          clientAction: directResult.nextVisualAction || null,
-          structuredData: directResult,
+          content: functionContent(structuredError),
+          structuredData: structuredError,
         });
       }
 
@@ -1045,9 +1086,13 @@ serve(async (request): Promise<Response> => {
         voiceSessionId: voiceSessionId || null,
       } as PendingAction;
       const confirmationPolicy = clean(pendingAction.arguments?.confirmation_policy, 20);
+      const warningCount = Array.isArray(prepared.warnings) ? prepared.warnings.length : 0;
+      const warningSuffix = warningCount
+        ? ` Descartei ${warningCount} etapa${warningCount === 1 ? "" : "s"} inválida${warningCount === 1 ? "" : "s"}; revise os cards antes de confirmar.`
+        : "";
       const message = confirmationPolicy === "opaque"
-        ? `Preparei a revisao protegida: ${pendingAction.summary}. Confirme a acao para continuar.`
-        : `Preparei a revisao: ${pendingAction.summary}. Diga confirmo acao quando estiver correto.`;
+        ? `Preparei a revisao protegida: ${pendingAction.summary}.${warningSuffix} Confirme a acao para continuar.`
+        : `Preparei a revisao: ${pendingAction.summary}.${warningSuffix} Diga confirmo acao quando estiver correto.`;
       await saveMessage(auth.admin, auth.user.id, sessionId, "assistant", message, [
         pendingAction,
         {
@@ -1068,7 +1113,11 @@ serve(async (request): Promise<Response> => {
         confirmationRequired: true,
         riskLevel: confirmationPolicy === "opaque" ? "high" : policy.riskLevel,
         payload: {
-          stepCount: Array.isArray(args.steps) ? args.steps.length : 0,
+          phase: "persisted",
+          callId,
+          stepCount: preparedSteps.length,
+          executableStepCount: prepared.plan?.stepCount || prepared.plan?.cards?.length || 0,
+          warningCount,
           planId: pendingAction.arguments?.plan_id,
           planVersion: pendingAction.arguments?.plan_version,
           confirmationPolicy,
