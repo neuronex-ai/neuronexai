@@ -126,6 +126,16 @@ async function updatePending(admin: any, pending: PendingReference, status: Pend
   await admin.from("messages").update({ attachments }).eq("id", pending.row.id);
 }
 
+async function replacePending(admin: any, pending: PendingReference, nextAction: PendingAction) {
+  const attachments = pending.attachments.map((item: any) =>
+    item?.kind === "synapse_pending_action" && item?.actionId === pending.action.actionId
+      ? nextAction
+      : item
+  );
+  const { error } = await admin.from("messages").update({ attachments }).eq("id", pending.row.id);
+  if (error) throw error;
+}
+
 async function loadRows(admin: any, userId: string, sessionId: string) {
   const { data, error } = await admin
     .from("messages")
@@ -513,6 +523,78 @@ serve(async (request): Promise<Response> => {
       toolCallId: clean(body.callId || body.id, 120) || null,
       correlationId: clean(body.requestId || body.request_id || body.callId || body.id, 120) || null,
     };
+
+    if (action === "edit_action_group") {
+      const startedAt = Date.now();
+      if (!pending || pending.action.toolName !== "execute_action_group") {
+        return json({ error: "Nao ha uma revisao de grupo pendente para editar." }, 409);
+      }
+      if (pending.action.conversationId && pending.action.conversationId !== sessionId) {
+        return json({ error: "A revisao pendente pertence a outra conversa." }, 409);
+      }
+
+      const planId = clean(body.planId || body.plan_id, 120);
+      const planVersion = Number(body.planVersion || body.plan_version);
+      const planHash = clean(body.planHash || body.plan_hash, 64);
+      if (
+        planId !== clean(pending.action.arguments.plan_id, 120) ||
+        planVersion !== Number(pending.action.arguments.plan_version) ||
+        planHash !== clean(pending.action.arguments.plan_hash, 64)
+      ) {
+        return json({ error: "A revisao mudou. Edite a versao atualmente visivel." }, 409);
+      }
+
+      const rawEdits = Array.isArray(body.edits)
+        ? body.edits.slice(0, 30)
+        : [{
+            step_id: clean(body.stepId || body.step_id, 120),
+            field_id: clean(body.fieldId || body.field_id, 120),
+            value: body.value,
+          }];
+      if (!rawEdits.length || rawEdits.some((edit: any) => !clean(edit?.step_id, 120) || !clean(edit?.field_id, 120))) {
+        return json({ error: "Campo editavel ausente." }, 400);
+      }
+
+      const edited = await callActionGroup(auth.authorization, {
+        action: "edit",
+        planId,
+        planVersion,
+        planHash,
+        edits: rawEdits,
+      });
+      const nextPendingAction = {
+        ...(edited.pendingAction as PendingAction),
+        conversationId: sessionId,
+        voiceSessionId: voiceSessionId || null,
+      } as PendingAction;
+      await replacePending(auth.admin, pending, nextPendingAction);
+
+      const nextPolicy = clean(nextPendingAction.arguments.confirmation_policy, 20);
+      await logVoiceAction(auth.admin, {
+        userId: auth.user.id,
+        conversationId: sessionId,
+        voiceSessionId,
+        toolName: "edit_action_group",
+        status: "success",
+        durationMs: Date.now() - startedAt,
+        confirmationRequired: true,
+        riskLevel: nextPolicy === "opaque" ? "high" : "normal",
+        payload: {
+          planId,
+          fromVersion: planVersion,
+          toVersion: nextPendingAction.arguments.plan_version,
+          confirmationPolicy: nextPolicy,
+          editedFields: rawEdits.map((edit: any) => ({ stepId: edit.step_id, fieldId: edit.field_id })),
+        },
+      });
+      return json({
+        ok: true,
+        message: "Revisao atualizada.",
+        plan: edited.plan || null,
+        pendingAction: nextPendingAction,
+        clientAction: edited.clientAction || null,
+      });
+    }
 
     if (action === "cancel_pending_action" || clean(body.name, 120) === "cancel_pending_action") {
       const startedAt = Date.now();
