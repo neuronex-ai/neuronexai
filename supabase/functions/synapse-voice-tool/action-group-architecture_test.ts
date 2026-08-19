@@ -26,3 +26,10 @@ Deno.test("synapse-voice-tool executa action-group em processo e não depende de
     equal(source.includes(forbidden), false, `dependência HTTP legada ${forbidden}`);
   }
 });
+
+Deno.test("prepare_action_group mantém revisão versionada no caminho de voz", () => {
+  equal(source.includes('if (name === "prepare_action_group")'), true, "handler do planner");
+  equal(source.includes("prepared.pendingAction"), true, "ação pendente persistida");
+  equal(source.includes("prepared.clientAction"), true, "revisão enviada ao Desktop");
+  equal(source.includes('tool: confirmationPolicy === "opaque" ? "manage_action_group" : "execute_action_group"'), true, "classe de confirmação exposta ao gateway");
+});
