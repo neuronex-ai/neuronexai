@@ -53,7 +53,7 @@ Deno.test("hash estável ignora ordem de chaves de objetos", () => {
   equal(stableJson({ b: 2, a: { d: 4, c: 3 } }), stableJson({ a: { c: 3, d: 4 }, b: 2 }), "json canônico");
 });
 
-Deno.test("plano preparado é versionado, hasheado e fica aguardando confirmação", async () => {
+Deno.test("plano normal preparado é versionado, hasheado e fica aguardando confirmação", async () => {
   const plan = await prepareSynapseActionGroupPlan({
     professionalId: "11111111-1111-4111-8111-111111111111",
     conversationId: "22222222-2222-4222-8222-222222222222",
@@ -70,6 +70,20 @@ Deno.test("plano preparado é versionado, hasheado e fica aguardando confirmaç�
   equal(plan.idempotencyKey.length, 64, "idempotência SHA-256");
   equal(plan.reviewPublic.planHash, plan.planHash, "hash visível corresponde ao executável");
   equal(JSON.stringify(plan.reviewPublic).includes("server-only"), false, "revisão sem argumentos internos");
+});
+
+Deno.test("plano crítico preparado também fica aguardando confirmação", async () => {
+  const plan = await prepareSynapseActionGroupPlan({
+    professionalId: "11111111-1111-4111-8111-111111111111",
+    conversationId: "22222222-2222-4222-8222-222222222222",
+    title: "Ação crítica",
+    intent: "critical_bundle",
+    spokenSummary: "Revise esta ação crítica.",
+    steps: [step(1, "critical")],
+    expiresAt: new Date(Date.now() + 600_000).toISOString(),
+  });
+  equal(plan.confirmationPolicy, "opaque", "política crítica persistida");
+  equal(plan.status, "awaiting_confirmation", "crítico aguarda desafio");
 });
 
 Deno.test("resultado principal diferencia warnings, falha e parcial", () => {
