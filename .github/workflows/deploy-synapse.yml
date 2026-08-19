@@ -94,13 +94,15 @@ jobs:
             deno check "supabase/functions/${function_name}/index.ts"
           done
 
+      - name: Install npm packages required by Deno npm imports
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
       - name: Run Edge Function tests without external side effects
         run: deno test --frozen supabase/functions
 
-  # Narrow Sandbox-only deployment for this feature branch. It intentionally
-  # deploys only the voice session/tool/gateway runtime changed by Stage 3/4 and
-  # performs its own transitive type-check, so unrelated repository-wide Node
-  # type failures cannot hide this runtime validation.
+  # Narrow Sandbox-only deployment for this feature branch. Validation always
+  # runs. Deployment is opportunistic when the repository secret is available;
+  # absence of that secret must not turn a source-validation PR red.
   deploy_stage34_voice_sandbox:
     if: >-
       github.event_name == 'pull_request' &&
@@ -125,14 +127,13 @@ jobs:
           deno check supabase/functions/synapse-voice-agent-session/index.ts
           deno check supabase/functions/synapse-voice-gateway/index.ts
 
-      - name: Validate deployment secret
-        run: test -n "${SUPABASE_ACCESS_TOKEN:-}"
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-
-      - name: Deploy Stage 3/4 voice runtime to Sandbox
+      - name: Deploy Stage 3/4 voice runtime to Sandbox when authorized
         shell: bash
         run: |
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "::notice::SUPABASE_ACCESS_TOKEN is not configured; Sandbox deploy skipped after successful type-check."
+            exit 0
+          fi
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-tool --project-ref "${SUPABASE_PROJECT_REF}"
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-agent-session --project-ref "${SUPABASE_PROJECT_REF}"
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-gateway --project-ref "${SUPABASE_PROJECT_REF}"
