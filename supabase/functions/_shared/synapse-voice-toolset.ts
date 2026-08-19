@@ -86,8 +86,8 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
     description: [
       "Prepara o pacote operacional persistido quando o profissional pede varios RESULTADOS executaveis no mesmo comando.",
       "E a ferramenta obrigatoria para preparacao completa, pos-sessao, 'faca tudo isso', pacote de acoes, grupo de acoes, sequencia operacional ou cinco ou mais resultados executaveis.",
-      "Consultas internas, validacoes e carregamento de contexto nao contam como etapas.",
-      "Para acao critica ou NeuroFinance, o servidor exige revisao mesmo com menos etapas.",
+      "Consultas internas, validacoes e carregamento de contexto nao contam como etapas e devem ser feitas como preflight fora dos cards.",
+      "Todo prepare_action_group abre revisao versionada; para acao critica ou NeuroFinance o servidor acrescenta confirmacao opaca.",
       "Nao confunda pacote/grupo/sequencia operacional com NeuroFlow. NeuroFlow so deve ser criado quando o profissional disser explicitamente NeuroFlow.",
       "Nao execute as etapas separadamente antes de preparar o grupo.",
     ].join(" "),
@@ -127,7 +127,7 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
               },
               tool_name: {
                 type: "string",
-                description: "Nome exato de uma ferramenta executavel do catalogo do Synapse.",
+                description: "Nome exato de uma ferramenta executavel permitida para os cards. Consultas nunca entram aqui.",
               },
               arguments: {
                 type: "object",
@@ -216,6 +216,16 @@ function buildDispatchTool(
   };
 }
 
+function constrainActionGroupPlanner(
+  tool: any,
+  executableToolNames: string[],
+) {
+  if (tool?.name !== "prepare_action_group") return tool;
+  const copy = structuredClone(tool);
+  copy.parameters.properties.steps.items.properties.tool_name.enum = executableToolNames;
+  return copy;
+}
+
 export function buildSynapseVoiceFunctions() {
   const coreNames = new Set<string>(SYNAPSE_VOICE_CORE_TOOL_NAMES);
   const availableTools = AGENT_TOOLS_V3.map(toDeepgramFunction);
@@ -248,8 +258,23 @@ export function buildSynapseVoiceFunctions() {
     });
   if (!delegatedTools.length) throw new Error("Catalogo delegado de voz ausente.");
 
+  const executableActionGroupTools = availableTools
+    .filter((tool) => tool.name)
+    .filter((tool) => {
+      try {
+        return validateVoiceToolCall(tool.name).executor !== "read";
+      } catch {
+        return false;
+      }
+    })
+    .map((tool) => tool.name);
+  if (!executableActionGroupTools.length) throw new Error("Catalogo executavel de grupos ausente.");
+
+  const voiceOnlyTools = SYNAPSE_VOICE_ONLY_TOOLS.map((tool) =>
+    constrainActionGroupPlanner(tool, executableActionGroupTools)
+  );
   const functions = [
-    ...SYNAPSE_VOICE_ONLY_TOOLS,
+    ...voiceOnlyTools,
     ...selectedTools,
     buildDispatchTool(delegatedTools),
   ];
