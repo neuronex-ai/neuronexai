@@ -28,10 +28,18 @@ type ItemDecision = {
   requestedStartTime?: string;
 };
 
+type AgendaResponsePayload = {
+  ok?: boolean;
+  found?: boolean;
+  batch?: AgendaChangeBatch;
+  error?: string;
+  error_code?: string;
+};
+
 const clean = (value: unknown, max = 500) => String(value ?? "").trim().slice(0, max);
 const validToken = (value: unknown) => {
   const token = clean(value, 256);
-  return token.length >= 16 && /^[A-Za-z0-9_-]+$/.test(token) ? token : "";
+  return token.length >= 32 && /^[A-Za-z0-9_-]+$/.test(token) ? token : "";
 };
 
 const formatDateTime = (value: unknown) => {
@@ -43,6 +51,14 @@ const formatDateTime = (value: unknown) => {
     timeStyle: "short",
   }).format(date);
 };
+
+async function agendaResponse(body: Record<string, unknown>) {
+  const { data, error } = await supabase.functions.invoke("agenda-change-response", { body });
+  if (error) throw error;
+  const payload = (data || {}) as AgendaResponsePayload;
+  if (payload.ok === false) throw new Error(payload.error || "Não foi possível processar esta revisão agora.");
+  return payload;
+}
 
 export default function AgendaChangeResponse() {
   const token = useMemo(() => validToken(new URLSearchParams(window.location.search).get("token")), []);
@@ -62,29 +78,29 @@ export default function AgendaChangeResponse() {
         setLoading(false);
         return;
       }
-      const { data, error: rpcError } = await (supabase as any).rpc("get_agenda_change_batch_public", {
-        p_token: token,
-      });
-      if (cancelled) return;
-      if (rpcError) {
-        setError("Não foi possível carregar esta revisão agora.");
+      try {
+        const payload = await agendaResponse({ action: "get", token });
+        if (cancelled) return;
+        if (!payload.found || !payload.batch) {
+          setError("Este link não está mais disponível.");
+          setLoading(false);
+          return;
+        }
+        const next = payload.batch;
+        setBatch(next);
+        const defaults: Record<string, ItemDecision> = {};
+        for (const item of next.items || []) {
+          if (item?.id && item.status === "pending") defaults[item.id] = { decision: "accept" };
+        }
+        setDecisions(defaults);
+        setCompleted(next.status === "completed");
         setLoading(false);
-        return;
+      } catch {
+        if (!cancelled) {
+          setError("Não foi possível carregar esta revisão agora.");
+          setLoading(false);
+        }
       }
-      if (!data) {
-        setError("Este link não está mais disponível.");
-        setLoading(false);
-        return;
-      }
-      const next = data as AgendaChangeBatch;
-      setBatch(next);
-      const defaults: Record<string, ItemDecision> = {};
-      for (const item of next.items || []) {
-        if (item?.id && item.status === "pending") defaults[item.id] = { decision: "accept" };
-      }
-      setDecisions(defaults);
-      setCompleted(next.status === "completed");
-      setLoading(false);
     };
     void load();
     return () => {
@@ -129,25 +145,26 @@ export default function AgendaChangeResponse() {
 
     setSubmitting(true);
     setError("");
-    const { error: rpcError } = await (supabase as any).rpc("process_agenda_change_batch_response_public", {
-      p_token: token,
-      p_decisions: payload,
-      p_comment: clean(comment, 1000) || null,
-    });
-    if (rpcError) {
-      const message = clean(rpcError.message, 500).toLowerCase();
+    try {
+      await agendaResponse({
+        action: "respond",
+        token,
+        decisions: payload,
+        comment: clean(comment, 1000) || null,
+      });
+      setCompleted(true);
+      setSubmitting(false);
+    } catch (rpcError) {
+      const message = clean(rpcError instanceof Error ? rpcError.message : rpcError, 500).toLowerCase();
       setError(
-        /expired|invalid|window/.test(message)
+        /expired|invalid|window|disponível/.test(message)
           ? "Este link não está mais disponível para resposta."
-          : /requested time|no longer available/.test(message)
+          : /horário|available/.test(message)
             ? "O horário escolhido não está mais disponível. Recarregue a página e escolha outro."
             : "Não foi possível registrar sua resposta agora.",
       );
       setSubmitting(false);
-      return;
     }
-    setCompleted(true);
-    setSubmitting(false);
   };
 
   return (
