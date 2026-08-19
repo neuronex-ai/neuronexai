@@ -333,7 +333,7 @@ export async function prepareSynapseActionGroupPlan(
     spokenSummary,
     confirmationPolicy,
     riskLevel,
-    status: confirmationPolicy === "direct" ? "executing" : "awaiting_confirmation",
+    status: "awaiting_confirmation",
     steps: draft.steps,
     reviewPublic,
     expiresAt,
