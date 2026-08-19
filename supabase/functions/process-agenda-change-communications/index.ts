@@ -4,7 +4,6 @@ import {
   escapeHtml,
 } from "../_shared/email-delivery.ts";
 import {
-  appPublicUrl,
   appointmentAdminClient,
   appointmentTokenHash,
   generateAppointmentToken,
@@ -52,6 +51,12 @@ const formatDateTime = (value: unknown) => {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
+};
+
+const responseEndpointUrl = (rawToken: string) => {
+  const supabaseUrl = clean(Deno.env.get("SUPABASE_URL"), 1000).replace(/\/$/, "");
+  if (!supabaseUrl) throw new Error("SUPABASE_URL unavailable for agenda response link");
+  return `${supabaseUrl}/functions/v1/agenda-change-response?token=${encodeURIComponent(rawToken)}`;
 };
 
 const buildEmail = (row: AgendaChangeOutboxRow, actionUrl: string) => {
@@ -154,7 +159,7 @@ serve(async (request) => {
       });
       if (prepared.error) throw prepared.error;
 
-      const actionUrl = `${appPublicUrl().replace(/\/$/, "")}/confirmar-alteracao-agenda/${encodeURIComponent(rawToken)}`;
+      const actionUrl = responseEndpointUrl(rawToken);
       const copy = buildEmail(row, actionUrl);
       const account = await db.auth.admin.getUserById(row.professionalId);
       if (account.error) throw account.error;
