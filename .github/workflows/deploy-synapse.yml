@@ -5,6 +5,7 @@ on:
     paths:
       - "supabase/functions/synapse-*/**"
       - "supabase/functions/process-agenda-change-communications/**"
+      - "supabase/functions/agenda-change-response/**"
       - "supabase/functions/gemini-text-chat/**"
       - "supabase/functions/neurozap-evolution/**"
       - "supabase/functions/whatsapp-send/**"
@@ -27,6 +28,7 @@ on:
     paths:
       - "supabase/functions/synapse-*/**"
       - "supabase/functions/process-agenda-change-communications/**"
+      - "supabase/functions/agenda-change-response/**"
       - "supabase/functions/gemini-text-chat/**"
       - "supabase/functions/neurozap-evolution/**"
       - "supabase/functions/whatsapp-send/**"
@@ -74,6 +76,7 @@ env:
     subscription-maintenance
     asaas-invoices
     process-agenda-change-communications
+    agenda-change-response
 
 jobs:
   validate:
@@ -102,9 +105,6 @@ jobs:
       - name: Run Edge Function tests without external side effects
         run: deno test --allow-read --frozen supabase/functions
 
-  # Narrow Sandbox-only deployment for this feature branch. Validation always
-  # runs. Deployment is opportunistic when the repository secret is available;
-  # absence of that secret must not turn a source-validation PR red.
   deploy_stage34_voice_sandbox:
     if: >-
       github.event_name == 'pull_request' &&
@@ -129,6 +129,7 @@ jobs:
           deno check supabase/functions/synapse-voice-agent-session/index.ts
           deno check supabase/functions/synapse-voice-gateway/index.ts
           deno check supabase/functions/process-agenda-change-communications/index.ts
+          deno check supabase/functions/agenda-change-response/index.ts
 
       - name: Deploy Stage 3/4 runtime to Sandbox when authorized
         shell: bash
@@ -141,6 +142,7 @@ jobs:
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-agent-session --project-ref "${SUPABASE_PROJECT_REF}"
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy synapse-voice-gateway --project-ref "${SUPABASE_PROJECT_REF}"
           npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy process-agenda-change-communications --no-verify-jwt --project-ref "${SUPABASE_PROJECT_REF}"
+          npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy agenda-change-response --no-verify-jwt --project-ref "${SUPABASE_PROJECT_REF}"
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
@@ -163,7 +165,7 @@ jobs:
         run: |
           for function_name in ${EDGE_FUNCTIONS}; do
             echo "Deploying ${function_name}"
-            if [ "${function_name}" = "process-agenda-change-communications" ]; then
+            if [ "${function_name}" = "process-agenda-change-communications" ] || [ "${function_name}" = "agenda-change-response" ]; then
               npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy "${function_name}" --no-verify-jwt --project-ref "${SUPABASE_PROJECT_REF}"
             else
               npx --yes "supabase@${SUPABASE_CLI_VERSION}" functions deploy "${function_name}" --project-ref "${SUPABASE_PROJECT_REF}"
