@@ -98,7 +98,7 @@ jobs:
         run: npm ci --ignore-scripts --no-audit --no-fund
 
       - name: Run Edge Function tests without external side effects
-        run: deno test --frozen supabase/functions
+        run: deno test --allow-read --frozen supabase/functions
 
   # Narrow Sandbox-only deployment for this feature branch. Validation always
   # runs. Deployment is opportunistic when the repository secret is available;
