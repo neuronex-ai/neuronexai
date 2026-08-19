@@ -72,11 +72,16 @@ const normalizeSpeech = (value: string) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const validChallengeNumber = (value: number) => Number.isInteger(value) && value >= 1 && value <= 999;
+
 const parseSpokenNumber = (value: string) => {
   const normalized = normalizeSpeech(value);
   if (!normalized) return null;
   const digits = normalized.replace(/\D/g, "");
-  if (/^\d{3,4}$/.test(digits)) return Number(digits);
+  if (/^\d{1,3}$/.test(digits)) {
+    const numeric = Number(digits);
+    return validChallengeNumber(numeric) ? numeric : null;
+  }
 
   const tokens = normalized.split(/[\s-]+/).filter((token) => token && token !== "e");
   if (!tokens.length) return null;
@@ -97,13 +102,13 @@ const parseSpokenNumber = (value: string) => {
     consumed = true;
   }
   const result = total + current;
-  return consumed && Number.isFinite(result) ? result : null;
+  return consumed && validChallengeNumber(result) ? result : null;
 };
 
 const challengeNumber = () => {
   const array = new Uint32Array(1);
   globalThis.crypto.getRandomValues(array);
-  return 100 + (array[0] % 900);
+  return 1 + (array[0] % 999);
 };
 
 type RecognitionResultEvent = {
@@ -417,7 +422,7 @@ const OpaqueConfirmationOverlay = ({
 
   const confirmTypedCode = useCallback(() => {
     const numeric = Number(typedCode.replace(/\D/g, ""));
-    if (numeric === code) {
+    if (validChallengeNumber(numeric) && numeric === code) {
       finish(true, false, "Número confirmado localmente no navegador.");
       return;
     }
@@ -498,7 +503,7 @@ const OpaqueConfirmationOverlay = ({
               value={typedCode}
               onChange={(event) => setTypedCode(event.target.value.replace(/\D/g, "").slice(0, 3))}
               onKeyDown={(event) => {
-                if (event.key === "Enter" && typedCode.length === 3) confirmTypedCode();
+                if (event.key === "Enter" && typedCode.length >= 1) confirmTypedCode();
               }}
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -511,7 +516,7 @@ const OpaqueConfirmationOverlay = ({
             <button
               type="button"
               onClick={confirmTypedCode}
-              disabled={typedCode.length !== 3}
+              disabled={typedCode.length < 1}
               className="min-h-11 shrink-0 rounded-full bg-foreground px-5 text-sm font-semibold text-background shadow-sm outline-none transition-[opacity,transform,box-shadow] duration-150 hover:opacity-90 active:scale-[0.985] focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-35 motion-reduce:transform-none"
             >
               Confirmar
