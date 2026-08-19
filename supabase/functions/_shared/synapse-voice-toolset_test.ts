@@ -90,7 +90,14 @@ Deno.test("prepare_action_group só recebe resultados executáveis e deixa risco
   equal(tool?.parameters?.properties?.steps?.minItems, 1, "mínimo de etapas");
   equal(tool?.parameters?.properties?.steps?.maxItems, 12, "máximo de etapas");
   const stepProperties = tool?.parameters?.properties?.steps?.items?.properties || {};
+  const executableNames = stepProperties.tool_name?.enum || [];
   equal(Boolean(stepProperties.tool_name), true, "ferramenta executável por etapa");
+  equal(executableNames.includes("create_session_note"), true, "anotação executável permitida no grupo");
+  equal(executableNames.includes("create_financial_entry"), true, "financeiro executável permitido no grupo");
+  equal(executableNames.includes("send_patient_email"), true, "comunicação executável permitida no grupo");
+  equal(executableNames.includes("request_interface_action"), true, "navegação final permitida no grupo");
+  equal(executableNames.includes("get_calendar"), false, "consulta de agenda proibida nos cards");
+  equal(executableNames.includes("get_patient_details"), false, "consulta de paciente proibida nos cards");
   equal(Boolean(stepProperties.depends_on), true, "dependências explícitas");
   equal(Boolean(stepProperties.risk), false, "modelo não escolhe risco");
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
