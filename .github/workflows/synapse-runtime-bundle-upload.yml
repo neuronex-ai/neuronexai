@@ -1,0 +1,63 @@
+name: Bundle Synapse Stage 3/4 runtime for Sandbox
+
+on:
+  push:
+    branches:
+      - agent/synapse-plan-stage2-action-group-runtime
+    paths:
+      - "supabase/functions/synapse-voice-tool/**"
+      - "supabase/functions/synapse-voice-gateway/**"
+      - "supabase/functions/synapse-action-group/**"
+      - "supabase/functions/synapse-text-fallback/**"
+      - "supabase/functions/_shared/**"
+      - ".github/workflows/synapse-runtime-bundle-upload.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  bundle-and-upload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.2
+
+      - name: Type-check runtime entries
+        run: |
+          deno check supabase/functions/synapse-voice-tool/index.ts
+          deno check supabase/functions/synapse-voice-gateway/index.ts
+
+      - name: Bundle exact branch runtime
+        run: |
+          deno bundle --platform=deno --minify -o /tmp/synapse-voice-tool.bundle.js supabase/functions/synapse-voice-tool/index.ts
+          deno bundle --platform=deno --minify -o /tmp/synapse-voice-gateway.bundle.js supabase/functions/synapse-voice-gateway/index.ts
+          wc -c /tmp/synapse-voice-tool.bundle.js /tmp/synapse-voice-gateway.bundle.js
+
+      - name: Upload bundles to protected Sandbox cache
+        env:
+          GH_RUNTIME_TOKEN: ${{ github.token }}
+          UPLOAD_URL: https://krewdaklcyzqfxkkgvqr.supabase.co/functions/v1/synapse-voice-tool
+        shell: bash
+        run: |
+          set -euo pipefail
+          upload_bundle() {
+            local name="$1"
+            local file="$2"
+            local sha
+            sha="$(sha256sum "$file" | awk '{print $1}')"
+            curl --fail-with-body --retry 2 --retry-all-errors \
+              -X POST "$UPLOAD_URL" \
+              -H "Authorization: Bearer ${GH_RUNTIME_TOKEN}" \
+              -H "Content-Type: application/javascript" \
+              -H "x-runtime-name: ${name}" \
+              -H "x-runtime-sha: ${sha}" \
+              --data-binary "@${file}"
+          }
+          upload_bundle synapse-voice-tool /tmp/synapse-voice-tool.bundle.js
+          upload_bundle synapse-voice-gateway /tmp/synapse-voice-gateway.bundle.js
