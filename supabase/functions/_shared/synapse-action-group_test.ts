@@ -1,4 +1,5 @@
 import {
+  actionGroupRow,
   nextGroupStatus,
   prepareSynapseActionGroupPlan,
   publicReviewCards,
@@ -59,6 +60,13 @@ async function preparedPlan(steps: SynapseActionGroupStep[]) {
     expiresAt: new Date(Date.now() + 600_000).toISOString(),
   });
 }
+
+Deno.test("persistência não depende de capability_version no schema cache do PostgREST", async () => {
+  const plan = await preparedPlan([step(1)]);
+  equal(plan.capabilityVersion, 1, "capability version permanece no plano interno");
+  const row = actionGroupRow(plan) as Record<string, unknown>;
+  equal("capability_version" in row, false, "write REST usa default do banco e não depende do cache da coluna");
+});
 
 Deno.test("grupo normal com quatro cards permanece awaiting_confirmation após preflight", async () => {
   const plan = await preparedPlan([1, 2, 3, 4].map((index) => step(index)));
