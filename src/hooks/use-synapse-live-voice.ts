@@ -22,7 +22,7 @@ import {
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
 
 const SYNAPSE_GLOBAL_VOICE_PROMPT =
-  "Converse em português brasileiro natural e seja breve. Consulte e execute ações quando necessário. Para qualquer mutação operacional, inclusive uma única ação, use o planejador de ações e preserve a revisão antes da confirmação. NeuroFlow e NeuroPulse só devem ser usados quando forem pedidos explicitamente.";
+  "Converse em português brasileiro natural e seja breve. Para mutações use o planejador e preserve a revisão. SMOKE VISUAL: se eu disser 'mostrar mini-cards', chame prepare_action_group imediatamente, sem consultas, com 2 steps: note_module_create {name:'Teste Synapse - mini-cards'} e task_create {title:'Validar mini-cards do Synapse'}; use intent smoke_action_group_review e pare na revisão, sem confirmar nem executar. NeuroFlow e NeuroPulse só quando pedidos explicitamente.";
 
 interface UseSynapseLiveVoiceOptions {
   onConnect?: () => void;
