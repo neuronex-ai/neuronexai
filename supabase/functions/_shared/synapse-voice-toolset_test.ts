@@ -17,7 +17,7 @@ Deno.test("núcleo Deepgram permanece curado e dentro do limite dos gateways", (
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
   equal(functions.length, 15, "quantidade de funções de voz");
-  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v11", "versão do payload de sessão");
+  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v12-smoke-review", "versão do payload de sessão");
   equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "primeira função exclusiva de voz");
@@ -95,10 +95,10 @@ Deno.test("prepare_action_group expõe action_kind e argumentos reais sem nomes 
   equal(Boolean(stepProperties.action_kind), true, "action_kind por etapa");
   equal(Boolean(stepProperties.tool_name), false, "nome interno não aparece no contrato do modelo");
   equal(new Set(actionKinds).size, actionKinds.length, "enum action_kind sem duplicatas");
-  for (const kind of ["session_note", "manual_financial_entry", "patient_email", "appointment_create", "patient_record_open", "neurofinance_charge", "fiscal_invoice"]) {
+  for (const kind of ["session_note", "manual_financial_entry", "patient_email", "appointment_create", "patient_record_open", "neurofinance_charge", "fiscal_invoice", "note_module_create", "task_create"]) {
     equal(actionKinds.includes(kind), true, `action_kind ${kind}`);
   }
-  for (const field of ["patient_name", "notes", "amount", "entry_type", "subject", "body", "action", "destination"]) {
+  for (const field of ["patient_name", "notes", "amount", "entry_type", "subject", "body", "action", "destination", "name", "title"]) {
     equal(Boolean(argumentProperties[field]), true, `planner expõe argumento ${field}`);
   }
   equal(requiredStepFields.includes("action_kind"), true, "cada etapa exige intenção estável");
@@ -111,6 +111,10 @@ Deno.test("prepare_action_group expõe action_kind e argumentos reais sem nomes 
   equal(Boolean(stepProperties.confirmation_policy), false, "modelo não escolhe confirmação");
   equal(String(tool?.description || "").includes("servidor escolhe a ferramenta canonica"), true, "implementação canônica pertence ao servidor");
   equal(String(tool?.description || "").includes("NeuroFlow e NeuroPulse usam suas rotas explicitas"), true, "planner diferencia workflows dedicados");
+  equal(String(tool?.description || "").includes("SMOKE VISUAL"), true, "planner documenta o atalho visual dos mini-cards");
+  equal(String(tool?.description || "").includes("smoke_action_group_review"), true, "planner fixa a intenção do smoke review");
+  equal(String(tool?.description || "").includes("note_module_create"), true, "smoke usa módulo simples");
+  equal(String(tool?.description || "").includes("task_create"), true, "smoke usa tarefa simples");
   const serialized = JSON.stringify(functions);
   if (serialized.length > 180000) throw new Error(`toolset de voz excessivamente grande: ${serialized.length} caracteres`);
 });
