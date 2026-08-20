@@ -356,7 +356,10 @@ export function actionGroupRow(plan: SynapseActionGroupPlan) {
     status: plan.status,
     confirmation_policy: plan.confirmationPolicy,
     risk_level: plan.riskLevel,
-    capability_version: plan.capabilityVersion,
+    // capability_version is intentionally omitted from the PostgREST write payload.
+    // The current schema defines DEFAULT 1, while the runtime keeps the version in
+    // the signed/hashable plan. This avoids PGRST schema-cache failures after the
+    // column is added but before the Data API cache has refreshed.
     step_count: plan.steps.length,
     steps_internal: plan.steps,
     review_public: plan.reviewPublic,
