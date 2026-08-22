@@ -259,12 +259,7 @@ function App() {
     <MotionConfig reducedMotion="user">
       <QueryClientProvider client={queryClient}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true,
-            }}
-          >
+          <BrowserRouter>
             <SessionContextProvider>
               <PublicSeoManager />
               <ScrollToTop />
