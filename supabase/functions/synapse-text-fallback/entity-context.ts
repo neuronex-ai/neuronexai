@@ -1,3 +1,7 @@
+import {
+  canonicalizeSaoPauloDateTime,
+  resolveNaturalSaoPauloDateTime,
+} from "../_shared/brazil-datetime.ts";
 import { normalizePatientName, resolvePatientByName } from "./patient-resolver.ts";
 
 export interface ConfirmedPatientAlias {
@@ -48,14 +52,27 @@ const safeId = (value: unknown) => {
   const id = clean(value, 100);
   return /^[a-zA-Z0-9_-]{6,100}$/.test(id) ? id : "";
 };
+const EPHEMERAL_SESSION_ID = "__synapseSessionId";
+
+function stateWithSessionId(state: SynapseConversationState, sessionId: string) {
+  Object.defineProperty(state, EPHEMERAL_SESSION_ID, {
+    value: sessionId,
+    enumerable: false,
+    configurable: true,
+  });
+  return state;
+}
 
 export async function loadConversationContext(admin: any, userId: string, sessionId: string): Promise<LoadedConversationContext> {
   const { data, error } = await admin.from("chat_sessions").select("context_state,memory_summary,memory_updated_at").eq("id", sessionId).eq("user_id", userId).maybeSingle();
   if (error) {
     console.warn("[synapse-context] Durable context columns unavailable:", error.message);
-    return { state: {}, memorySummary: "", memoryUpdatedAt: null, persistenceAvailable: false };
+    return { state: stateWithSessionId({}, sessionId), memorySummary: "", memoryUpdatedAt: null, persistenceAvailable: false };
   }
-  return { state: data?.context_state && typeof data.context_state === "object" ? data.context_state : {}, memorySummary: clean(data?.memory_summary, 12000), memoryUpdatedAt: data?.memory_updated_at || null, persistenceAvailable: true };
+  const state = data?.context_state && typeof data.context_state === "object"
+    ? { ...data.context_state }
+    : {};
+  return { state: stateWithSessionId(state, sessionId), memorySummary: clean(data?.memory_summary, 12000), memoryUpdatedAt: data?.memory_updated_at || null, persistenceAvailable: true };
 }
 
 export async function saveConversationContext(admin: any, userId: string, sessionId: string, state: SynapseConversationState, memorySummary?: string) {
@@ -167,9 +184,54 @@ const NOTE_CONTEXT_TOOLS = new Set([
 ]);
 const TASK_CONTEXT_TOOLS = new Set(["get_task_details", "update_task", "complete_task", "reopen_task", "move_task_category", "delete_task"]);
 const FILE_CONTEXT_TOOLS = new Set(["get_file_details", "link_file_to_patient", "unlink_file_from_patient", "delete_file"]);
+const AGENDA_DATETIME_TOOLS = new Set(["create_appointment", "reschedule_appointment"]);
+
+async function recoverRecentAgendaDateTime(admin: any, userId: string, state: SynapseConversationState) {
+  const sessionId = clean((state as any)[EPHEMERAL_SESSION_ID], 120);
+  if (!sessionId) return null;
+  const { data: rows, error } = await admin
+    .from("messages")
+    .select("content,created_at")
+    .eq("user_id", userId)
+    .eq("session_id", sessionId)
+    .eq("role", "user")
+    .order("created_at", { ascending: false })
+    .limit(8);
+  if (error) {
+    console.warn("[synapse-context] recent agenda datetime unavailable:", error.message);
+    return null;
+  }
+  for (const row of rows || []) {
+    const reference = row?.created_at ? new Date(row.created_at) : new Date();
+    if (Number.isNaN(reference.getTime())) continue;
+    if (Date.now() - reference.getTime() > 20 * 60_000) continue;
+    const resolved = resolveNaturalSaoPauloDateTime(row?.content, reference);
+    if (resolved) return resolved.iso;
+  }
+  return null;
+}
+
+async function normalizeAgendaDateTimeArguments(
+  admin: any,
+  userId: string,
+  toolName: string,
+  args: Record<string, any>,
+  state: SynapseConversationState,
+) {
+  if (!AGENDA_DATETIME_TOOLS.has(toolName)) return args;
+  const recovered = await recoverRecentAgendaDateTime(admin, userId, state);
+  if (toolName === "create_appointment") {
+    const existing = args.datetime || args.start_time || args.startTime;
+    const canonical = recovered || canonicalizeSaoPauloDateTime(existing);
+    return canonical ? { ...args, datetime: canonical } : args;
+  }
+  const existing = args.new_datetime || args.new_start_time || args.start_time;
+  const canonical = recovered || canonicalizeSaoPauloDateTime(existing);
+  return canonical ? { ...args, new_datetime: canonical } : args;
+}
 
 export async function enrichToolArguments(admin: any, userId: string, toolName: string, originalArgs: Record<string, any>, state: SynapseConversationState, searchClient?: any) {
-  let args = { ...originalArgs };
+  let args = await normalizeAgendaDateTimeArguments(admin, userId, toolName, { ...originalArgs }, state);
   let patient: any = null;
   let appointment: any = null;
   if (PATIENT_REQUIRED_TOOLS.has(toolName) || PATIENT_OPTIONAL_TOOLS.has(toolName)) {
