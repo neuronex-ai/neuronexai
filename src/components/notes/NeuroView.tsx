@@ -191,6 +191,14 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
     const [isPatientSidebarOpen, setIsPatientSidebarOpen] = useState(true);
 
     useEffect(() => {
+        const syncFullscreenState = () => {
+            setIsFullscreen(document.fullscreenElement === containerRef.current);
+        };
+        document.addEventListener("fullscreenchange", syncFullscreenState);
+        return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
+    }, []);
+
+    useEffect(() => {
         const targetNodeIds = new Set(targetGraphData.nodes.map((node) => node.id));
         const targetLinkKeys = new Set(targetGraphData.links.map(getLinkKey));
 
@@ -865,6 +873,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                             darkMode={isDarkMode}
                             profile={neuroView3DCapability?.profile || "light"}
                             reducedMotion={Boolean(shouldReduceMotion)}
+                            isFullscreen={isFullscreen}
+                            onToggleFullscreen={handleFullscreen}
                             emphasizedNodeIds={emphasizedNodeIds}
                             detailsOpen={Boolean(selectedNote || selectedPatient)}
                             onCloseDetails={handle3DCloseDetails}

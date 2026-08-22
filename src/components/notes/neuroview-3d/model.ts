@@ -274,7 +274,6 @@ export const getVisibleNodeIds = (
 
 export const getActivityIntensity = (graph: GraphSnapshot, now = Date.now()) => {
   const timestamps = new Map<string, number>();
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const adjacency = buildAdjacency(graph);
 
   graph.nodes.forEach((node) => {

@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowLeft, CircleDot, Crosshair, ListTree, Orbit } from "lucide-react";
+import { ArrowLeft, CircleDot, Crosshair, ListTree, Maximize, Minimize, Orbit, RotateCcw, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import {
   Sheet,
   SheetContent,
@@ -24,6 +26,8 @@ import {
 } from "./model";
 import {
   createNeuroViewScene,
+  DEFAULT_NEUROVIEW_DYNAMICS,
+  type NeuroViewDynamicsSettings,
   type NeuroViewSceneController,
   type NeuroViewSceneProfile,
 } from "./three-scene";
@@ -34,6 +38,8 @@ type NeuroView3DProps = {
   darkMode: boolean;
   profile: NeuroViewSceneProfile;
   reducedMotion: boolean;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
   emphasizedNodeIds?: ReadonlySet<string>;
   detailsOpen?: boolean;
   onCloseDetails?: () => void;
@@ -69,6 +75,8 @@ export const NeuroView3D = ({
   darkMode,
   profile,
   reducedMotion,
+  isFullscreen,
+  onToggleFullscreen,
   emphasizedNodeIds,
   detailsOpen = false,
   onCloseDetails,
@@ -79,11 +87,14 @@ export const NeuroView3D = ({
   const sceneContainerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<NeuroViewSceneController | null>(null);
   const initialDarkModeRef = useRef(darkMode);
+  const dynamicsRef = useRef<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
   const [focusedPatientId, setFocusedPatientId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [dynamicsOpen, setDynamicsOpen] = useState(false);
+  const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
   const [sceneError, setSceneError] = useState<string | null>(null);
   const [announcement, setAnnouncement] = useState("NeuroView 3d pronto.");
 
@@ -146,6 +157,7 @@ export const NeuroView3D = ({
         onSceneError: (message) => setSceneError(message),
       });
       controllerRef.current = controller;
+      controller.setDynamics(dynamicsRef.current);
       return () => {
         controller.dispose();
         if (controllerRef.current === controller) controllerRef.current = null;
@@ -163,7 +175,8 @@ export const NeuroView3D = ({
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (navigatorOpen) return;
+      if (navigatorOpen || dynamicsOpen) return;
+      if (isFullscreen || document.fullscreenElement) return;
       if (detailsOpen) {
         event.preventDefault();
         onCloseDetails?.();
@@ -181,7 +194,7 @@ export const NeuroView3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, focusedPatientId, navigatorOpen, onBack, onClearPatient, onCloseDetails]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, navigatorOpen, onBack, onClearPatient, onCloseDetails]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -194,6 +207,22 @@ export const NeuroView3D = ({
     setFocusedPatientId(null);
     onClearPatient?.();
     setAnnouncement("Panorama completo restaurado.");
+  };
+
+  const updateDynamics = (key: keyof NeuroViewDynamicsSettings, value: number) => {
+    const next = { ...dynamicsRef.current, [key]: value };
+    dynamicsRef.current = next;
+    setDynamicsState(next);
+    controllerRef.current?.setDynamics(next);
+  };
+
+  const restoreDynamics = () => {
+    const defaults = { ...DEFAULT_NEUROVIEW_DYNAMICS };
+    dynamicsRef.current = defaults;
+    setDynamicsState(defaults);
+    controllerRef.current?.setDynamics(defaults);
+    controllerRef.current?.resetDynamics();
+    setAnnouncement("Dinâmica e posições do NeuroView 3d restauradas.");
   };
 
   const handleNodeListKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -260,6 +289,127 @@ export const NeuroView3D = ({
         </div>
 
         <div className="pointer-events-auto flex items-center gap-2">
+          <Popover open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                aria-label="Ajustar dinâmica do NeuroView 3d"
+                className={cn(
+                  "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+                  darkMode
+                    ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                    : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+                )}
+              >
+                <Settings2 className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={10}
+              className={cn(
+                "w-[310px] rounded-[24px] border p-0 shadow-2xl backdrop-blur-3xl",
+                darkMode
+                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
+                  : "border-black/10 bg-white/92 text-zinc-950",
+              )}
+            >
+              <div className={cn("border-b px-4 pb-3 pt-4", darkMode ? "border-white/8" : "border-black/8")}>
+                <p className="text-sm font-semibold tracking-[-0.01em]">Dinâmica espacial</p>
+                <p className={cn("mt-1 text-[11px] leading-relaxed", darkMode ? "text-white/48" : "text-zinc-500")}>
+                  Arraste qualquer esfera para esticar seus filamentos e fixá-la no espaço.
+                </p>
+              </div>
+              <div className="space-y-5 p-4">
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="font-medium">Gravidade central</span>
+                    <output className={darkMode ? "text-white/52" : "text-zinc-500"}>{dynamics.centralGravity}%</output>
+                  </div>
+                  <Slider
+                    value={[dynamics.centralGravity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    aria-label="Gravidade central"
+                    aria-valuetext={`${dynamics.centralGravity} por cento`}
+                    onValueChange={([value]) => updateDynamics("centralGravity", value)}
+                    onValueCommit={() => setAnnouncement(`Gravidade central ajustada para ${dynamicsRef.current.centralGravity} por cento.`)}
+                    className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:border-0"
+                  />
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="font-medium">Elasticidade</span>
+                    <output className={darkMode ? "text-white/52" : "text-zinc-500"}>{dynamics.elasticity}%</output>
+                  </div>
+                  <Slider
+                    value={[dynamics.elasticity]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    aria-label="Elasticidade dos filamentos"
+                    aria-valuetext={`${dynamics.elasticity} por cento`}
+                    onValueChange={([value]) => updateDynamics("elasticity", value)}
+                    onValueCommit={() => setAnnouncement(`Elasticidade ajustada para ${dynamicsRef.current.elasticity} por cento.`)}
+                    className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:border-0"
+                  />
+                </div>
+
+                <div className="space-y-2.5">
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="font-medium">Distância das conexões</span>
+                    <output className={darkMode ? "text-white/52" : "text-zinc-500"}>
+                      {(0.55 + dynamics.connectionDistance * 0.009).toFixed(2).replace(".", ",")}×
+                    </output>
+                  </div>
+                  <Slider
+                    value={[dynamics.connectionDistance]}
+                    min={0}
+                    max={100}
+                    step={1}
+                    aria-label="Distância entre as conexões"
+                    aria-valuetext={`${(0.55 + dynamics.connectionDistance * 0.009).toFixed(2)} vezes`}
+                    onValueChange={([value]) => updateDynamics("connectionDistance", value)}
+                    onValueCommit={() => setAnnouncement("Distância entre as conexões ajustada.")}
+                    className="[&_[role=slider]]:h-4 [&_[role=slider]]:w-4 [&_[role=slider]]:border-0"
+                  />
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={restoreDynamics}
+                  className={cn(
+                    "min-h-10 w-full rounded-xl text-xs",
+                    darkMode ? "border-white/10 bg-white/[0.035] hover:bg-white/10" : "border-black/10 bg-black/[0.025] hover:bg-black/[0.06]",
+                  )}
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  Restaurar dinâmica
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={onToggleFullscreen}
+            aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}
+            title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            className={cn(
+              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+              darkMode
+                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+            )}
+          >
+            {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+          </Button>
           {focusedPatientId ? (
             <Button
               type="button"

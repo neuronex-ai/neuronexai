@@ -24,6 +24,18 @@ import {
 
 export type NeuroViewSceneProfile = "full" | "light";
 
+export type NeuroViewDynamicsSettings = {
+  centralGravity: number;
+  elasticity: number;
+  connectionDistance: number;
+};
+
+export const DEFAULT_NEUROVIEW_DYNAMICS: NeuroViewDynamicsSettings = {
+  centralGravity: 32,
+  elasticity: 58,
+  connectionDistance: 50,
+};
+
 type SceneOptions = {
   container: HTMLDivElement;
   graph: GraphSnapshot;
@@ -39,6 +51,8 @@ type SceneOptions = {
 export type NeuroViewSceneController = {
   setView: (filter: NeuroView3DFilter, focusedPatientId: string | null, darkMode: boolean) => void;
   setHighlight: (nodeId: string | null) => void;
+  setDynamics: (settings: NeuroViewDynamicsSettings) => void;
+  resetDynamics: () => void;
   resetCamera: () => void;
   dispose: () => void;
 };
@@ -54,6 +68,8 @@ type NodeRecord = {
   currentBrightness: number;
   startBrightness: number;
   targetBrightness: number;
+  velocity: THREE.Vector3;
+  pinned: boolean;
   label: CSS2DObject;
 };
 
@@ -69,11 +85,12 @@ type MeshGroup = {
 const PANORAMA_CAMERA = new THREE.Vector3(0, 7, 116);
 const PANORAMA_TARGET = new THREE.Vector3(0, 0, 0);
 
-const baseNodeScale = (node: GraphNode) => {
-  if (node.type === "patient") return 2.55;
-  if (node.type === "flow") return 1.65;
-  if (node.type === "note") return 1.28;
-  return 0.78;
+const baseNodeScale = (node: GraphNode, darkMode: boolean) => {
+  const darkModeReduction = darkMode ? 0.9 : 1;
+  if (node.type === "patient") return 1.9 * darkModeReduction;
+  if (node.type === "flow") return 1.24 * darkModeReduction;
+  if (node.type === "note") return 0.96 * darkModeReduction;
+  return 0.59 * darkModeReduction;
 };
 
 const nodeColor = (node: GraphNode, darkMode: boolean) => {
@@ -95,6 +112,31 @@ const easeInOutCubic = (value: number) =>
   value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
 
 const pointToVector = (point: SpatialPoint) => new THREE.Vector3(point.x, point.y, point.z);
+
+const clampDynamics = (settings: NeuroViewDynamicsSettings): NeuroViewDynamicsSettings => ({
+  centralGravity: THREE.MathUtils.clamp(settings.centralGravity, 0, 100),
+  elasticity: THREE.MathUtils.clamp(settings.elasticity, 0, 100),
+  connectionDistance: THREE.MathUtils.clamp(settings.connectionDistance, 0, 100),
+});
+
+const connectionDistanceScale = (value: number) => 0.55 + THREE.MathUtils.clamp(value, 0, 100) * 0.009;
+
+const organicSeed = (value: string) => {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return ((hash >>> 0) % 10_000) / 10_000;
+};
+
+type EdgeRecord = {
+  sourceId: string;
+  targetId: string;
+  edgeId: string;
+  bend: number;
+  twist: number;
+};
 
 const makeGeometry = (type: GraphNode["type"], profile: NeuroViewSceneProfile) => {
   const detail = profile === "full" ? 3 : 2;
@@ -154,6 +196,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let renderRequested = false;
   let hoveredNodeId: string | null = null;
   let pointerStart: { x: number; y: number } | null = null;
+  let draggedNodeId: string | null = null;
+  let dragMoved = false;
+  let dynamics = { ...DEFAULT_NEUROVIEW_DYNAMICS };
+  let activeLayoutPositions = new Map<string, SpatialPoint>();
+  let layoutTransitionActive = true;
+  let physicsActive = false;
+  let physicsLastAt = performance.now();
+  let settledPhysicsFrames = 0;
   let savedPanoramaCamera = PANORAMA_CAMERA.clone();
   let savedPanoramaTarget = PANORAMA_TARGET.clone();
 
@@ -166,6 +216,17 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const dummy = new THREE.Object3D();
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2(2, 2);
+  const dragPlane = new THREE.Plane();
+  const dragHit = new THREE.Vector3();
+  const dragOffset = new THREE.Vector3();
+  const cameraDirection = new THREE.Vector3();
+  const edgeDirection = new THREE.Vector3();
+  const edgeNormal = new THREE.Vector3();
+  const edgeBinormal = new THREE.Vector3();
+  const edgeControlA = new THREE.Vector3();
+  const edgeControlB = new THREE.Vector3();
+  const edgePointA = new THREE.Vector3();
+  const edgePointB = new THREE.Vector3();
 
   const scene = new THREE.Scene();
   scene.background = null;
@@ -257,13 +318,16 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       target: pointToVector(layout.panorama.get(node.id) || { x: 0, y: 0, z: 0 }),
       currentScale: 0.04,
       startScale: 0.04,
-      targetScale: baseNodeScale(node),
+      targetScale: baseNodeScale(node, darkMode),
       currentBrightness: 0,
       startBrightness: 0,
       targetBrightness: activity.get(node.id) || 0.28,
+      velocity: new THREE.Vector3(),
+      pinned: false,
       label,
     });
   });
+  activeLayoutPositions = layout.panorama;
 
   groupsByType.forEach((nodes, type) => {
     const geometry = makeGeometry(type, profile);
@@ -304,21 +368,45 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     scene.add(halo, mesh);
   });
 
-  const edgePositions = new Float32Array(graph.links.length * 6);
-  const edgeColors = new Float32Array(graph.links.length * 6);
+  const edgeRecords = graph.links.flatMap<EdgeRecord>((link) => {
+    const sourceId = getGraphEndpointId(link.source);
+    const targetId = getGraphEndpointId(link.target);
+    if (!sourceId || !targetId) return [];
+    const key = getGraphEdgeId(sourceId, targetId);
+    return [{
+      sourceId,
+      targetId,
+      edgeId: key,
+      bend: organicSeed(`${key}:bend`) * 2 - 1,
+      twist: organicSeed(`${key}:twist`) * 2 - 1,
+    }];
+  });
+  const edgeSegmentCount = profile === "full" ? 10 : 6;
+  const edgePositions = new Float32Array(edgeRecords.length * edgeSegmentCount * 6);
+  const edgeColors = new Float32Array(edgeRecords.length * edgeSegmentCount * 6);
   const edgeGeometry = new THREE.BufferGeometry();
   edgeGeometry.setAttribute("position", new THREE.BufferAttribute(edgePositions, 3));
   edgeGeometry.setAttribute("color", new THREE.BufferAttribute(edgeColors, 3));
   const edgeMaterial = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: darkMode ? 0.72 : 0.54,
+    opacity: darkMode ? 0.88 : 0.62,
     blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: false,
   });
+  const edgeGlowMaterial = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: darkMode ? 0.3 : 0.12,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+  });
   const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
+  const edgeGlowLines = new THREE.LineSegments(edgeGeometry, edgeGlowMaterial);
   edgeLines.frustumCulled = false;
-  scene.add(edgeLines);
+  edgeGlowLines.frustumCulled = false;
+  edgeGlowLines.renderOrder = -1;
+  scene.add(edgeGlowLines, edgeLines);
 
   let composer: EffectComposer | null = null;
   let bloom: UnrealBloomPass | null = null;
@@ -382,8 +470,10 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     keyLight.intensity = darkMode ? 4.2 : 4.8;
     rimLight.color.set(darkMode ? 0x6dcff0 : 0x77b7c9);
     rimLight.intensity = darkMode ? 68 : 38;
-    edgeMaterial.opacity = darkMode ? 0.72 : 0.54;
+    edgeMaterial.opacity = darkMode ? 0.88 : 0.62;
     edgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
+    edgeMaterial.needsUpdate = true;
+    edgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
     if (bloom) bloom.strength = darkMode ? 0.34 : 0.11;
     groups.forEach((group) => {
       group.haloMaterial.opacity = darkMode ? 0.16 : 0.08;
@@ -401,18 +491,25 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     nextFocusedSubgraph: Set<string>,
     duration: number,
   ) => {
+    activeLayoutPositions = positions;
     transitionStartedAt = performance.now();
     transitionDuration = Math.max(1, duration);
+    layoutTransitionActive = true;
+    physicsActive = false;
     animationUntil = Math.max(animationUntil, transitionStartedAt + transitionDuration + 48);
+    const distanceScale = connectionDistanceScale(dynamics.connectionDistance);
 
     records.forEach((record, id) => {
       record.start.copy(record.current);
-      record.target.copy(pointToVector(positions.get(id) || { x: 0, y: 0, z: 0 }));
+      if (!record.pinned) {
+        record.target.copy(pointToVector(positions.get(id) || { x: 0, y: 0, z: 0 }).multiplyScalar(distanceScale));
+      }
       record.startScale = record.currentScale;
       record.startBrightness = record.currentBrightness;
+      record.velocity.set(0, 0, 0);
       const visible = nextVisibleIds.has(id);
       const legible = !focusedPatientId || nextFocusedSubgraph.has(id);
-      record.targetScale = visible ? baseNodeScale(record.node) * (legible ? 1 : 0.2) : 0.001;
+      record.targetScale = visible ? baseNodeScale(record.node, darkMode) * (legible ? 1 : 0.2) : 0.001;
       record.targetBrightness = visible
         ? (activity.get(id) || 0.28) * (legible ? 1 : 0.07)
         : 0;
@@ -437,16 +534,96 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     });
   };
 
+  const wakePhysics = (duration = 2200) => {
+    if (reducedMotion) return;
+    physicsActive = true;
+    settledPhysicsFrames = 0;
+    physicsLastAt = performance.now();
+    animationUntil = Math.max(animationUntil, physicsLastAt + duration);
+  };
+
+  const integratePhysics = (now: number) => {
+    if (!physicsActive || reducedMotion) return false;
+    const deltaSeconds = Math.min(0.032, Math.max(0.001, (now - physicsLastAt) / 1000));
+    physicsLastAt = now;
+    const gravity = dynamics.centralGravity / 100;
+    const elasticity = dynamics.elasticity / 100;
+    const distanceScale = connectionDistanceScale(dynamics.connectionDistance);
+    const anchorStrength = 1.35 + elasticity * 0.45;
+    const gravityStrength = gravity * 0.72;
+    const springStrength = 0.62 + elasticity * 2.35;
+
+    records.forEach((record, id) => {
+      const visible = visibleNodeIds.has(id);
+      const inFocus = !focusedPatientId || focusedSubgraphIds.has(id);
+      if (!visible || !inFocus || record.pinned) {
+        record.velocity.set(0, 0, 0);
+        return;
+      }
+      record.velocity.addScaledVector(edgePointA.copy(record.target).sub(record.current), anchorStrength * deltaSeconds);
+      record.velocity.addScaledVector(record.current, -gravityStrength * deltaSeconds);
+    });
+
+    edgeRecords.forEach((edge) => {
+      const source = records.get(edge.sourceId);
+      const target = records.get(edge.targetId);
+      if (!source || !target) return;
+      const visible = visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId);
+      const inFocus = !focusedPatientId
+        || (focusedSubgraphIds.has(edge.sourceId) && focusedSubgraphIds.has(edge.targetId));
+      if (!visible || !inFocus) return;
+
+      edgeDirection.copy(target.current).sub(source.current);
+      const currentLength = Math.max(0.001, edgeDirection.length());
+      const sourceBase = activeLayoutPositions.get(edge.sourceId);
+      const targetBase = activeLayoutPositions.get(edge.targetId);
+      const baseLength = sourceBase && targetBase
+        ? Math.hypot(targetBase.x - sourceBase.x, targetBase.y - sourceBase.y, targetBase.z - sourceBase.z)
+        : currentLength;
+      const restLength = Math.max(2.2, baseLength * distanceScale);
+      const force = (currentLength - restLength) * springStrength;
+      edgeDirection.multiplyScalar(1 / currentLength);
+      if (!source.pinned) source.velocity.addScaledVector(edgeDirection, force * deltaSeconds);
+      if (!target.pinned) target.velocity.addScaledVector(edgeDirection, -force * deltaSeconds);
+    });
+
+    const damping = Math.exp(-(5.4 - elasticity * 2.45) * deltaSeconds);
+    let maximumSpeed = 0;
+    records.forEach((record, id) => {
+      const visible = visibleNodeIds.has(id);
+      const inFocus = !focusedPatientId || focusedSubgraphIds.has(id);
+      if (!visible || !inFocus || record.pinned) return;
+      record.velocity.multiplyScalar(damping);
+      const speed = record.velocity.length();
+      if (speed > 38) record.velocity.multiplyScalar(38 / speed);
+      record.current.addScaledVector(record.velocity, deltaSeconds);
+      maximumSpeed = Math.max(maximumSpeed, record.velocity.length());
+    });
+
+    settledPhysicsFrames = maximumSpeed < 0.025 ? settledPhysicsFrames + 1 : 0;
+    if (settledPhysicsFrames >= 14) physicsActive = false;
+    return physicsActive;
+  };
+
   const updateInstances = (now: number) => {
-    const progress = Math.min(1, (now - transitionStartedAt) / transitionDuration);
+    const progress = layoutTransitionActive
+      ? Math.min(1, (now - transitionStartedAt) / transitionDuration)
+      : 1;
     const eased = reducedMotion ? 1 : easeInOutCubic(progress);
     const background = backgroundColor(darkMode);
 
-    records.forEach((record) => {
-      record.current.lerpVectors(record.start, record.target, eased);
-      record.currentScale = THREE.MathUtils.lerp(record.startScale, record.targetScale, eased);
-      record.currentBrightness = THREE.MathUtils.lerp(record.startBrightness, record.targetBrightness, eased);
-    });
+    if (layoutTransitionActive) {
+      records.forEach((record) => {
+        record.current.lerpVectors(record.start, record.target, eased);
+        record.currentScale = THREE.MathUtils.lerp(record.startScale, record.targetScale, eased);
+        record.currentBrightness = THREE.MathUtils.lerp(record.startBrightness, record.targetBrightness, eased);
+      });
+      if (progress >= 1) {
+        layoutTransitionActive = false;
+        wakePhysics(1800);
+      }
+    }
+    const physicsMoving = integratePhysics(now);
 
     groups.forEach((group) => {
       group.ids.forEach((id, index) => {
@@ -476,51 +653,91 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       if (group.halo.instanceColor) group.halo.instanceColor.needsUpdate = true;
     });
 
-    graph.links.forEach((link, index) => {
-      const sourceId = getGraphEndpointId(link.source);
-      const targetId = getGraphEndpointId(link.target);
-      const source = sourceId ? records.get(sourceId) : null;
-      const target = targetId ? records.get(targetId) : null;
-      if (!source || !target || !sourceId || !targetId) return;
-      const offset = index * 6;
-      edgePositions[offset] = source.current.x;
-      edgePositions[offset + 1] = source.current.y;
-      edgePositions[offset + 2] = source.current.z;
-      edgePositions[offset + 3] = target.current.x;
-      edgePositions[offset + 4] = target.current.y;
-      edgePositions[offset + 5] = target.current.z;
+    edgeRecords.forEach((edge, edgeIndex) => {
+      const source = records.get(edge.sourceId);
+      const target = records.get(edge.targetId);
+      if (!source || !target) return;
 
-      const edgeId = getGraphEdgeId(sourceId, targetId);
-      const active = highlightedEdgeIds.has(edgeId);
-      const visible = visibleNodeIds.has(sourceId) && visibleNodeIds.has(targetId);
-      const focusVisible = !focusedPatientId || (focusedSubgraphIds.has(sourceId) && focusedSubgraphIds.has(targetId));
+      edgeDirection.copy(target.current).sub(source.current);
+      const edgeLength = Math.max(0.001, edgeDirection.length());
+      const tangent = edgeDirection.clone().multiplyScalar(1 / edgeLength);
+      edgeNormal.set(edge.bend, 0.75 + Math.abs(edge.twist) * 0.35, edge.twist).normalize();
+      edgeNormal.crossVectors(tangent, edgeNormal);
+      if (edgeNormal.lengthSq() < 0.01) edgeNormal.crossVectors(tangent, camera.up);
+      edgeNormal.normalize();
+      edgeBinormal.crossVectors(tangent, edgeNormal).normalize();
+      const bendAmount = THREE.MathUtils.clamp(edgeLength * (0.075 + Math.abs(edge.bend) * 0.035), 0.45, 4.6);
+      edgeControlA.copy(source.current)
+        .addScaledVector(edgeDirection, 0.32)
+        .addScaledVector(edgeNormal, bendAmount * (edge.bend < 0 ? -1 : 1))
+        .addScaledVector(edgeBinormal, bendAmount * edge.twist * 0.34);
+      edgeControlB.copy(source.current)
+        .addScaledVector(edgeDirection, 0.68)
+        .addScaledVector(edgeNormal, bendAmount * (edge.bend < 0 ? -0.72 : 0.72))
+        .addScaledVector(edgeBinormal, -bendAmount * edge.twist * 0.28);
+
+      const active = highlightedEdgeIds.has(edge.edgeId);
+      const visible = visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId);
+      const focusVisible = !focusedPatientId
+        || (focusedSubgraphIds.has(edge.sourceId) && focusedSubgraphIds.has(edge.targetId));
       const base = active
-        ? new THREE.Color(darkMode ? "#d9f6ff" : "#087f9e")
-        : new THREE.Color(darkMode ? "#30343b" : "#a9a39a");
-      const intensity = !visible ? 0 : !focusVisible ? 0.025 : highlightedNodeIds.size && !active ? 0.12 : active ? 1 : 0.42;
+        ? new THREE.Color(darkMode ? "#eafcff" : "#087f9e")
+        : new THREE.Color(darkMode ? "#f4f7f8" : "#88857f");
+      const intensity = !visible
+        ? 0
+        : !focusVisible
+          ? 0.018
+          : highlightedNodeIds.size && !active
+            ? (darkMode ? 0.035 : 0.08)
+            : active
+              ? (darkMode ? 1.8 : 1.15)
+              : (darkMode ? 0.105 : 0.36);
       base.multiplyScalar(intensity);
-      edgeColors[offset] = base.r;
-      edgeColors[offset + 1] = base.g;
-      edgeColors[offset + 2] = base.b;
-      edgeColors[offset + 3] = base.r;
-      edgeColors[offset + 4] = base.g;
-      edgeColors[offset + 5] = base.b;
+
+      for (let segment = 0; segment < edgeSegmentCount; segment += 1) {
+        const t0 = segment / edgeSegmentCount;
+        const t1 = (segment + 1) / edgeSegmentCount;
+        const inverse0 = 1 - t0;
+        const inverse1 = 1 - t1;
+        edgePointA.copy(source.current).multiplyScalar(inverse0 ** 3)
+          .addScaledVector(edgeControlA, 3 * inverse0 ** 2 * t0)
+          .addScaledVector(edgeControlB, 3 * inverse0 * t0 ** 2)
+          .addScaledVector(target.current, t0 ** 3);
+        edgePointB.copy(source.current).multiplyScalar(inverse1 ** 3)
+          .addScaledVector(edgeControlA, 3 * inverse1 ** 2 * t1)
+          .addScaledVector(edgeControlB, 3 * inverse1 * t1 ** 2)
+          .addScaledVector(target.current, t1 ** 3);
+        const offset = (edgeIndex * edgeSegmentCount + segment) * 6;
+        edgePositions[offset] = edgePointA.x;
+        edgePositions[offset + 1] = edgePointA.y;
+        edgePositions[offset + 2] = edgePointA.z;
+        edgePositions[offset + 3] = edgePointB.x;
+        edgePositions[offset + 4] = edgePointB.y;
+        edgePositions[offset + 5] = edgePointB.z;
+        edgeColors[offset] = base.r;
+        edgeColors[offset + 1] = base.g;
+        edgeColors[offset + 2] = base.b;
+        edgeColors[offset + 3] = base.r;
+        edgeColors[offset + 4] = base.g;
+        edgeColors[offset + 5] = base.b;
+      }
     });
     (edgeGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
     (edgeGeometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
     updateLabels();
+    return physicsMoving;
   };
 
   const render = (now: number) => {
     renderRequested = false;
     if (disposed) return;
     const animatingCamera = updateCameraTween(now);
-    updateInstances(now);
+    const physicsMoving = updateInstances(now);
     const controlsChanged = controls.update();
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelsRenderer.render(scene, camera);
-    if (now < animationUntil || animatingCamera || controlsChanged) requestRender();
+    if (now < animationUntil || animatingCamera || controlsChanged || physicsMoving) requestRender();
   };
 
   function requestRender(duration = 0) {
@@ -538,8 +755,18 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       highlightedEdgeIds = new Set();
     } else {
       const path = findShortestClinicalPath(graph, nodeId, focusedPatientId);
-      highlightedNodeIds = path.nodeIds;
-      highlightedEdgeIds = path.edgeIds;
+      highlightedNodeIds = new Set(path.nodeIds);
+      highlightedEdgeIds = new Set(path.edgeIds);
+      edgeRecords.forEach((edge) => {
+        if (edge.sourceId !== nodeId && edge.targetId !== nodeId) return;
+        const neighborId = edge.sourceId === nodeId ? edge.targetId : edge.sourceId;
+        const visible = visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId);
+        const inFocus = !focusedPatientId
+          || (focusedSubgraphIds.has(edge.sourceId) && focusedSubgraphIds.has(edge.targetId));
+        if (!visible || !inFocus) return;
+        highlightedEdgeIds.add(edge.edgeId);
+        highlightedNodeIds.add(neighborId);
+      });
     }
     requestRender(80);
   };
@@ -547,8 +774,15 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const setView = (nextFilter: NeuroView3DFilter, nextFocusedPatientId: string | null, nextDarkMode: boolean) => {
     if (filter === nextFilter && focusedPatientId === nextFocusedPatientId && darkMode === nextDarkMode) return;
     const previousFocus = focusedPatientId;
+    const layoutChanged = filter !== nextFilter || focusedPatientId !== nextFocusedPatientId;
     filter = nextFilter;
     focusedPatientId = nextFocusedPatientId;
+    if (layoutChanged) {
+      records.forEach((record) => {
+        record.pinned = false;
+        record.velocity.set(0, 0, 0);
+      });
+    }
     visibleNodeIds = getVisibleNodeIds(graph, filter);
     if (focusedPatientId) {
       visibleNodeIds.add(focusedPatientId);
@@ -581,6 +815,42 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     requestRender(duration + 100);
   };
 
+  const setDynamics = (nextSettings: NeuroViewDynamicsSettings) => {
+    const normalized = clampDynamics(nextSettings);
+    const changed = normalized.centralGravity !== dynamics.centralGravity
+      || normalized.elasticity !== dynamics.elasticity
+      || normalized.connectionDistance !== dynamics.connectionDistance;
+    if (!changed) return;
+    const distanceChanged = normalized.connectionDistance !== dynamics.connectionDistance;
+    dynamics = normalized;
+    if (distanceChanged) {
+      applyTransitionTargets(
+        activeLayoutPositions,
+        visibleNodeIds,
+        focusedSubgraphIds,
+        reducedMotion ? 1 : 260,
+      );
+      requestRender(reducedMotion ? 40 : 420);
+    } else {
+      wakePhysics(2600);
+      requestRender(2600);
+    }
+  };
+
+  const resetDynamics = () => {
+    records.forEach((record) => {
+      record.pinned = false;
+      record.velocity.set(0, 0, 0);
+    });
+    applyTransitionTargets(
+      activeLayoutPositions,
+      visibleNodeIds,
+      focusedSubgraphIds,
+      reducedMotion ? 1 : 420,
+    );
+    requestRender(reducedMotion ? 40 : 2300);
+  };
+
   const resetCamera = () => {
     if (focusedPatientId) {
       const direction = camera.position.clone().sub(controls.target).normalize();
@@ -602,11 +872,15 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     requestRender(80);
   };
 
-  const findNodeAtPointer = (event: PointerEvent) => {
+  const updatePointerRay = (event: PointerEvent) => {
     const rect = renderer.domElement.getBoundingClientRect();
     pointer.x = ((event.clientX - rect.left) / Math.max(1, rect.width)) * 2 - 1;
     pointer.y = -((event.clientY - rect.top) / Math.max(1, rect.height)) * 2 + 1;
     raycaster.setFromCamera(pointer, camera);
+  };
+
+  const findNodeAtPointer = (event: PointerEvent) => {
+    updatePointerRay(event);
     const intersections = raycaster.intersectObjects(Array.from(meshLookup.keys()), false);
     for (const intersection of intersections) {
       if (!(intersection.object instanceof THREE.InstancedMesh) || intersection.instanceId === undefined) continue;
@@ -619,38 +893,101 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   };
 
   const handlePointerMove = (event: PointerEvent) => {
+    if (draggedNodeId) {
+      const record = records.get(draggedNodeId);
+      if (!record) return;
+      updatePointerRay(event);
+      if (!raycaster.ray.intersectPlane(dragPlane, dragHit)) return;
+      const nextPosition = dragHit.sub(dragOffset);
+      const start = pointerStart;
+      dragMoved = dragMoved || Boolean(start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 3);
+      if (!dragMoved) return;
+      layoutTransitionActive = false;
+      physicsActive = false;
+      record.current.copy(nextPosition);
+      record.start.copy(nextPosition);
+      record.target.copy(nextPosition);
+      record.velocity.set(0, 0, 0);
+      record.pinned = true;
+      renderer.domElement.style.cursor = "grabbing";
+      requestRender(100);
+      return;
+    }
     if (pointerStart && Math.hypot(event.clientX - pointerStart.x, event.clientY - pointerStart.y) > 5) return;
     const nodeId = findNodeAtPointer(event);
     if (nodeId === hoveredNodeId) return;
     hoveredNodeId = nodeId;
-    renderer.domElement.style.cursor = nodeId ? "pointer" : "grab";
+    renderer.domElement.style.cursor = "grab";
     setHighlight(nodeId);
     onHoverNode(nodeId);
   };
   const handlePointerDown = (event: PointerEvent) => {
+    if (event.button !== 0) return;
     pointerStart = { x: event.clientX, y: event.clientY };
+    dragMoved = false;
+    const nodeId = findNodeAtPointer(event);
+    const record = nodeId ? records.get(nodeId) : null;
+    if (!nodeId || !record) return;
+    draggedNodeId = nodeId;
+    controls.enabled = false;
+    camera.getWorldDirection(cameraDirection);
+    dragPlane.setFromNormalAndCoplanarPoint(cameraDirection, record.current);
+    updatePointerRay(event);
+    if (raycaster.ray.intersectPlane(dragPlane, dragHit)) dragOffset.copy(dragHit).sub(record.current);
+    else dragOffset.set(0, 0, 0);
+    renderer.domElement.setPointerCapture?.(event.pointerId);
+    renderer.domElement.style.cursor = "grabbing";
+    event.preventDefault();
+    event.stopImmediatePropagation();
   };
   const handlePointerUp = (event: PointerEvent) => {
     const start = pointerStart;
     pointerStart = null;
+    const releasedNodeId = draggedNodeId;
+    draggedNodeId = null;
+    controls.enabled = true;
+    if (renderer.domElement.hasPointerCapture?.(event.pointerId)) {
+      renderer.domElement.releasePointerCapture(event.pointerId);
+    }
+    renderer.domElement.style.cursor = "grab";
+    if (dragMoved) {
+      dragMoved = false;
+      wakePhysics(3200);
+      requestRender(3200);
+      return;
+    }
+    dragMoved = false;
     if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) return;
     const nodeId = findNodeAtPointer(event);
-    const node = nodeId ? nodeById.get(nodeId) : null;
+    const node = nodeId && nodeId === releasedNodeId ? nodeById.get(nodeId) : null;
     if (node) onActivateNode(node);
   };
   const handlePointerLeave = () => {
+    if (draggedNodeId) return;
     pointerStart = null;
     hoveredNodeId = null;
     renderer.domElement.style.cursor = "grab";
     setHighlight(null);
     onHoverNode(null);
   };
+  const handlePointerCancel = (event: PointerEvent) => {
+    pointerStart = null;
+    draggedNodeId = null;
+    dragMoved = false;
+    controls.enabled = true;
+    if (renderer.domElement.hasPointerCapture?.(event.pointerId)) {
+      renderer.domElement.releasePointerCapture(event.pointerId);
+    }
+    renderer.domElement.style.cursor = "grab";
+    requestRender(80);
+  };
 
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(container);
   renderer.domElement.addEventListener("pointermove", handlePointerMove);
-  renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+  renderer.domElement.addEventListener("pointerdown", handlePointerDown, true);
   renderer.domElement.addEventListener("pointerup", handlePointerUp);
+  renderer.domElement.addEventListener("pointercancel", handlePointerCancel);
   renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
   controls.addEventListener("change", () => requestRender(180));
   controls.addEventListener("end", () => {
@@ -669,6 +1006,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   return {
     setView,
     setHighlight,
+    setDynamics,
+    resetDynamics,
     resetCamera,
     dispose: () => {
       if (disposed) return;
@@ -676,8 +1015,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       if (frameId) cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener("pointermove", handlePointerMove);
-      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown, true);
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+      renderer.domElement.removeEventListener("pointercancel", handlePointerCancel);
       renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
       renderer.domElement.removeEventListener("webglcontextlost", handleContextLost);
       controls.dispose();
@@ -692,9 +1032,11 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         group.material.dispose();
         group.haloMaterial.dispose();
       });
+      edgeGlowLines.removeFromParent();
       edgeLines.removeFromParent();
       edgeGeometry.dispose();
       edgeMaterial.dispose();
+      edgeGlowMaterial.dispose();
       composer?.dispose();
       environmentTarget?.dispose();
       scene.environment = null;
