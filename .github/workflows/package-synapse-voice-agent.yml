@@ -1,0 +1,44 @@
+name: Package Synapse voice agent
+
+on:
+  pull_request:
+    paths:
+      - "supabase/functions/synapse-voice-agent-session/**"
+      - "supabase/functions/_shared/**"
+      - "supabase/functions/synapse-text-fallback/**"
+      - ".github/workflows/package-synapse-voice-agent.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Bundle local voice-agent modules
+        run: |
+          npx --yes esbuild@0.25.9 \
+            supabase/functions/synapse-voice-agent-session/index.ts \
+            --bundle \
+            --format=esm \
+            --platform=neutral \
+            --target=es2022 \
+            '--external:https://*' \
+            '--external:http://*' \
+            '--external:jsr:*' \
+            '--external:npm:*' \
+            --outfile=/tmp/synapse-voice-agent-session.bundle.ts
+
+      - name: Upload deployable voice-agent bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: synapse-voice-agent-session-bundle
+          path: /tmp/synapse-voice-agent-session.bundle.ts
+          if-no-files-found: error
+          retention-days: 1
