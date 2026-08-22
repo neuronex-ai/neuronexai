@@ -46,6 +46,7 @@ export interface Patient {
   payer_name?: string | null;
   payer_cpf?: string | null;
   risk_score?: number;
+  risk_score_scale?: 10 | 100;
   avatar_url?: string | null;
   medications?: Medication[] | null;
 }

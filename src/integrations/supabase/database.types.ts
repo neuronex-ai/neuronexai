@@ -5517,6 +5517,7 @@ export type Database = {
           relative_relationship: string | null
           rg: string | null
           risk_score: number | null
+          risk_score_scale: number
           social_name: string | null
           state: string | null
           status: string | null
@@ -5567,6 +5568,7 @@ export type Database = {
           relative_relationship?: string | null
           rg?: string | null
           risk_score?: number | null
+          risk_score_scale?: number
           social_name?: string | null
           state?: string | null
           status?: string | null
@@ -5617,6 +5619,7 @@ export type Database = {
           relative_relationship?: string | null
           rg?: string | null
           risk_score?: number | null
+          risk_score_scale?: number
           social_name?: string | null
           state?: string | null
           status?: string | null

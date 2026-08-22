@@ -184,7 +184,7 @@ Roadmap de Teleconsulta:
 | Tarefas | Visualizações **Kanban**, **Lista** e **Grade**; filtros **Todas**, **Pendentes** e **Concluídas**; criar ação, prazo, contexto, arrastar cards e colunas. | Ativo |
 | Notion | Listagem de páginas conectadas e importação para nota. | Ativo |
 | Drive/NeuroDrive | Sub-abas **Meus Arquivos** e **Arquivos de Pacientes**; lista/grid, busca, upload, vínculo com paciente, prévia, download, exclusão e renomeação. | Ativo |
-| NeuroView | Grafo 2D, modo 3D Universe, escopos all/patient/subgraph, busca, foco em nó, detalhes e análise de conexões. | Ativo |
+| NeuroView | Grafo 2D, NeuroView 3d, escopos all/patient/subgraph, busca, foco em nó, detalhes e análise de conexões. | Ativo |
 | NeuroFlow | Cofre de fluxos, canvas/editor, prévia, edição, fluxos gerados ou importados e navegação a partir do Synapse. | Ativo |
 | NeuroPulse | Lentes clínicas, texto clínico para diagrama Mermaid, normalização, geração por IA e salvamento como nota. | Ativo |
 

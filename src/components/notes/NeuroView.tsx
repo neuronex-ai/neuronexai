@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, useMemo, useCallback } from "react";
 import ForceGraph2D, { ForceGraphMethods } from "react-force-graph-2d";
 import { forceCollide, forceRadial, forceX, forceY } from "d3-force";
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { NeuroConfig, NeuroViewControls } from "./NeuroViewControls";
 import { NeuroViewSidebar } from "./NeuroViewSidebar";
 import { GraphNode, GraphLink } from "./graph/graph-types";
@@ -10,11 +11,13 @@ import { useGraphData } from "./graph/use-graph-data";
 import { lerp, drawNode, drawLink } from "./graph/canvas-renderers";
 import { GraphDetailsPanel } from "./graph/GraphDetailsPanel";
 import { PersonalNote, Patient } from "@/types";
-import { NeuroViewUniverse } from "./NeuroViewUniverse";
 import { useTheme } from "@/hooks/use-theme";
 import { useSynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/use-synapse-notes-agent-run";
 import { useReducedMotion } from "framer-motion";
 import type { SynapseNeuroViewDirective } from "@/lib/synapse-interface-actions";
+import { detectNeuroViewHardware, type NeuroViewHardwareCapability } from "./neuroview-3d/webgl-support";
+
+const NeuroView3D = lazy(() => import("./neuroview-3d/NeuroView3D"));
 
 // --- DEFAULT CONFIG ---
 const DEFAULT_CONFIG: NeuroConfig = {
@@ -83,6 +86,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
     const { run, activeEvent, eventsLoaded } = useSynapseNotesAgentRun(synapseRunId);
     // Universe mode
     const [isUniverseMode, setIsUniverseMode] = useState(false);
+    const [neuroView3DCapability, setNeuroView3DCapability] = useState<NeuroViewHardwareCapability | null>(null);
+    const [webglFallbackMessage, setWebglFallbackMessage] = useState<string | null>(null);
 
     // 1. Refs
     const graphRef = useRef<ForceGraphMethods>();
@@ -317,6 +322,18 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
         }, {});
     }, [graphData.nodes]);
 
+    const spatialGraphData = useMemo(() => {
+        const visibleIds = new Set(targetGraphData.nodes.map((node) => node.id));
+        return {
+            nodes: graphData.nodes.filter((node) => visibleIds.has(node.id)),
+            links: graphData.links.filter((link) => {
+                const sourceId = getEndpointId(link.source);
+                const targetId = getEndpointId(link.target);
+                return Boolean(sourceId && targetId && visibleIds.has(sourceId) && visibleIds.has(targetId));
+            }),
+        };
+    }, [graphData.links, graphData.nodes, targetGraphData.nodes]);
+
     const activeFocusNodeId = useMemo(() => {
         if (synapseDirective?.focusNodeId) return synapseDirective.focusNodeId;
         if (activeEvent?.event_type === "focus_node") return String(activeEvent.payload.nodeId || "");
@@ -402,6 +419,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
 
     // 4. Animation Loop
     useEffect(() => {
+        if (isUniverseMode) return;
         const animate = () => {
             timeRef.current = shouldReduceMotion ? 0 : timeRef.current + 0.016;
             const lerpFactor = shouldReduceMotion ? 1 : 0.15;
@@ -444,7 +462,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
         return () => {
             if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
         };
-    }, [graphData.nodes, graphData.links, effectiveHoverNode, shouldReduceMotion]);
+    }, [effectiveHoverNode, graphData.links, graphData.nodes, isUniverseMode, shouldReduceMotion]);
 
     // 5. Interaction Handlers
     const handleNodeClick = useCallback((node: GraphNode) => {
@@ -468,6 +486,42 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             }));
         }
     }, [shouldReduceMotion]);
+
+    const handleEnterNeuroView3D = useCallback(() => {
+        const capability = detectNeuroViewHardware(Boolean(shouldReduceMotion));
+        setNeuroView3DCapability(capability);
+        if (!capability.available) {
+            setWebglFallbackMessage("O WebGL não está disponível nesta máquina. O NeuroView plano foi preservado.");
+            return;
+        }
+        setWebglFallbackMessage(null);
+        setIsUniverseMode(true);
+    }, [shouldReduceMotion]);
+
+    const handle3DSelectNote = useCallback((note: PersonalNote) => {
+        setSelectedNote(note);
+        setSelectedPatient(null);
+    }, []);
+
+    const handle3DSelectPatient = useCallback((patient: Patient) => {
+        setSelectedPatient(patient);
+        setSelectedNote(null);
+    }, []);
+
+    const handle3DClearPatient = useCallback(() => {
+        setSelectedPatient(null);
+    }, []);
+
+    const handle3DCloseDetails = useCallback(() => {
+        setSelectedNote(null);
+        setSelectedPatient(null);
+    }, []);
+
+    const handleExitNeuroView3D = useCallback(() => {
+        setSelectedNote(null);
+        setSelectedPatient(null);
+        setIsUniverseMode(false);
+    }, []);
 
     const handleFullscreen = () => {
         if (!containerRef.current) return;
@@ -716,8 +770,9 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                 </div>
             )}
 
-            <div className="absolute inset-0 z-10 overflow-hidden">
-                <ForceGraph2D
+            {!isUniverseMode ? (
+                <div className="absolute inset-0 z-10 overflow-hidden">
+                    <ForceGraph2D
                     ref={graphRef}
                     graphData={graphData}
                     width={Math.max(1, graphSize.width)}
@@ -754,8 +809,9 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                     cooldownTicks={260}
                     warmupTicks={110}
                     onEngineStop={() => graphRef.current?.zoomToFit(shouldReduceMotion ? 0 : 600, 80)}
-                />
-            </div>
+                    />
+                </div>
+            ) : null}
 
             <GraphDetailsPanel
                 selectedNote={selectedNote}
@@ -770,33 +826,53 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             />
 
             {!isUniverseMode && (
-                <button
+                <Button
                     type="button"
-                    onClick={() => setIsUniverseMode(true)}
-                    className="absolute right-5 top-5 z-40 rounded-[18px] border border-white/[0.1] bg-white/[0.075] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/72 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 [.light_&]:border-black/[0.08] [.light_&]:bg-white/72 [.light_&]:text-zinc-700 [.light_&]:shadow-[0_22px_64px_-38px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.65)] [.light_&]:hover:bg-white [.light_&]:hover:text-zinc-950 [.light_&]:focus-visible:ring-zinc-950/35 [.light_&]:focus-visible:ring-offset-white"
-                    aria-label="Abrir NeuroView em modo 3D"
+                    variant="outline"
+                    onClick={handleEnterNeuroView3D}
+                    className="absolute right-5 top-5 z-40 min-h-11 rounded-[18px] border border-white/[0.1] bg-white/[0.075] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/72 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 [.light_&]:border-black/[0.08] [.light_&]:bg-white/72 [.light_&]:text-zinc-700 [.light_&]:shadow-[0_22px_64px_-38px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.65)] [.light_&]:hover:bg-white [.light_&]:hover:text-zinc-950 [.light_&]:focus-visible:ring-zinc-950/35 [.light_&]:focus-visible:ring-offset-white"
+                    aria-label="Abrir NeuroView 3d"
                 >
-                    Modo 3D
-                </button>
+                    NeuroView 3d
+                </Button>
             )}
 
-            {/* Universe 3D Overlay */}
+            {!isUniverseMode && webglFallbackMessage ? (
+                <div
+                    role="status"
+                    className="absolute right-5 top-[74px] z-40 max-w-xs rounded-2xl border border-border/20 bg-background/88 px-4 py-3 text-xs text-muted-foreground shadow-xl backdrop-blur-xl"
+                >
+                    {webglFallbackMessage}
+                </div>
+            ) : null}
+
+            {/* NeuroView 3d is intentionally lazy-loaded only after entering the spatial scene. */}
             {isUniverseMode && (
-                <div className="absolute inset-0 z-[80]">
-                    <NeuroViewUniverse
-                        onBack={() => setIsUniverseMode(false)}
-                        searchQuery={searchQuery}
-                        graphData={targetGraphData}
-                        emphasizedNodeIds={emphasizedNodeIds}
-                        onSelectNote={(note) => {
-                            setSelectedNote(note);
-                            setSelectedPatient(null);
-                        }}
-                        onSelectPatient={(patient) => {
-                            setSelectedPatient(patient);
-                            setSelectedNote(null);
-                        }}
-                    />
+                <div className="absolute inset-0 z-[60]">
+                    <Suspense
+                        fallback={(
+                            <div className="absolute inset-0 flex items-center justify-center bg-background/96 backdrop-blur-xl">
+                                <div className="flex flex-col items-center gap-3" role="status">
+                                    <Loader2 className="h-7 w-7 animate-spin text-foreground motion-reduce:animate-none" />
+                                    <p className="text-xs font-semibold tracking-wide text-muted-foreground">Preparando NeuroView 3d…</p>
+                                </div>
+                            </div>
+                        )}
+                    >
+                        <NeuroView3D
+                            onBack={handleExitNeuroView3D}
+                            graphData={spatialGraphData}
+                            darkMode={isDarkMode}
+                            profile={neuroView3DCapability?.profile || "light"}
+                            reducedMotion={Boolean(shouldReduceMotion)}
+                            emphasizedNodeIds={emphasizedNodeIds}
+                            detailsOpen={Boolean(selectedNote || selectedPatient)}
+                            onCloseDetails={handle3DCloseDetails}
+                            onSelectNote={handle3DSelectNote}
+                            onSelectPatient={handle3DSelectPatient}
+                            onClearPatient={handle3DClearPatient}
+                        />
+                    </Suspense>
                 </div>
             )}
         </div>
