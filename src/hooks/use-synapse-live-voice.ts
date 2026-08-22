@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAI } from "@/context/AIContext";
 import { useSynapseVoice } from "@/hooks/use-synapse-voice";
 import { useVoiceConfig } from "@/hooks/use-voice-config";
+import { useTheme } from "@/hooks/use-theme";
 import {
   executeSynapseInterfaceAction,
   isCurrentCancelledSynapseAction,
@@ -14,6 +15,10 @@ import {
   requestAppointmentPlanReview,
 } from "@/lib/appointment-plan-review";
 import { loadPendingVoiceActionReview } from "@/lib/synapse-pending-action-review";
+import {
+  resolveSynapseThemeTarget,
+  synapseThemeDirectiveFromAction,
+} from "@/lib/synapse-theme-directive";
 import {
   emitVoiceReviewAction,
   normalizeVoiceReviewAction,
@@ -34,6 +39,7 @@ interface UseSynapseLiveVoiceOptions {
 
 export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const navigate = useNavigate();
+  const { theme, transitionToTheme } = useTheme();
   const { currentContext, activePatientId, contextSummary } = useAI();
   const voiceContext = useMemo(() => ({
     currentContext,
@@ -117,6 +123,18 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
           success: false,
           action: "navigate",
           message: "A interface recebeu uma acao invalida.",
+          durationMs: 0,
+        };
+      }
+
+      const themeDirective = synapseThemeDirectiveFromAction(action);
+      if (themeDirective) {
+        const targetTheme = resolveSynapseThemeTarget(themeDirective, theme);
+        if (targetTheme !== theme) transitionToTheme(targetTheme);
+        return {
+          success: true,
+          action: "navigate",
+          message: `Tema alterado para modo ${targetTheme === "dark" ? "escuro" : "claro"}.`,
           durationMs: 0,
         };
       }
