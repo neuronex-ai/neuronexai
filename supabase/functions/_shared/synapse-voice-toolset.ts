@@ -6,7 +6,7 @@ import {
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v12-smoke-review";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v12-theme-stable";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 const DELEGATED_MUTATION_EXCEPTIONS = new Set([
@@ -119,19 +119,12 @@ const toDeepgramFunction = (tool: any) => {
   };
 };
 
-const parameterSignature = (parameters: Record<string, any>) => {
-  const properties = parameters?.properties && typeof parameters.properties === "object"
-    ? Object.keys(parameters.properties)
-    : [];
-  const required = Array.isArray(parameters?.required)
-    ? parameters.required.map((value: unknown) => String(value))
-    : [];
-  const optional = properties.filter((name) => !required.includes(name));
-  return [
-    required.length ? `obrigatorios=${required.join(",")}` : "obrigatorios=nenhum",
-    optional.length ? `opcionais=${optional.join(",")}` : "",
-  ].filter(Boolean).join("; ");
-};
+function exposeDesktopThemeControl(tool: any) {
+  if (tool?.name !== "request_interface_action") return tool;
+  const copy = structuredClone(tool);
+  copy.description = `${String(copy.description || "")} Tema do Desktop: claro/escuro/alternar usa action='navigate', target='synapse' e query='__synapse_theme:light', '__synapse_theme:dark' ou '__synapse_theme:toggle'.`.trim();
+  return copy;
+}
 
 function requireDirectPatientName(tool: any) {
   if (!DIRECT_PATIENT_NAME_REQUIRED.has(tool?.name)) return tool;
@@ -220,7 +213,8 @@ export function buildSynapseVoiceFunctions() {
         return false;
       }
     })
-    .map(requireDirectPatientName);
+    .map(requireDirectPatientName)
+    .map(exposeDesktopThemeControl);
 
   const selectedNames = new Set(selectedTools.map((tool) => tool.name));
   const missing = SYNAPSE_VOICE_CORE_TOOL_NAMES.filter((name) => !selectedNames.has(name));
