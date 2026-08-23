@@ -16,6 +16,7 @@ import { useSynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/us
 import { useReducedMotion } from "framer-motion";
 import type { SynapseNeuroViewDirective } from "@/lib/synapse-interface-actions";
 import { detectNeuroViewHardware, type NeuroViewHardwareCapability } from "./neuroview-3d/webgl-support";
+import { buildHoverEquivalentHighlight } from "./neuroview-3d/model";
 import type { EvidenceNode } from "./clinical-evidence/evidence-types";
 
 const NeuroView3D = lazy(() => import("./neuroview-3d/NeuroView3D"));
@@ -31,7 +32,8 @@ const DEFAULT_CONFIG: NeuroConfig = {
     showTags: true
 };
 
-const NEUROVIEW_CONFIG_STORAGE_KEY = "neuronex:desktop:neuroview:physics:v1";
+// Dedicated to the planar D3 scene. The Three.js dynamics never read or write this state.
+const NEUROVIEW_2D_CONFIG_STORAGE_KEY = "neuronex:desktop:neuroview:physics:v1";
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -39,7 +41,7 @@ const readStoredNeuroConfig = (): NeuroConfig => {
     if (typeof window === "undefined") return DEFAULT_CONFIG;
 
     try {
-        const raw = window.localStorage.getItem(NEUROVIEW_CONFIG_STORAGE_KEY);
+        const raw = window.localStorage.getItem(NEUROVIEW_2D_CONFIG_STORAGE_KEY);
         if (!raw) return DEFAULT_CONFIG;
 
         const parsed = JSON.parse(raw) as Partial<NeuroConfig>;
@@ -190,6 +192,16 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
         }
         return emphasis;
     }, [neuroViewScope, requestedNodeIds, synapseDirective?.focusNodeId, targetGraphData.nodes]);
+    const spatialPatientNodeId = synapsePatientId ? `pat-${synapsePatientId}` : null;
+    const spatialEmphasizedNodeIds = useMemo(() => {
+        if (neuroViewScope !== "patient" || !spatialPatientNodeId) return emphasizedNodeIds;
+        const visibleIds = new Set(targetGraphData.nodes.map((node) => node.id));
+        return visibleIds.has(spatialPatientNodeId)
+            ? new Set([spatialPatientNodeId])
+            : new Set<string>();
+    }, [emphasizedNodeIds, neuroViewScope, spatialPatientNodeId, targetGraphData.nodes]);
+    const spatialFocusNodeId = synapseDirective?.focusNodeId
+        || (neuroViewScope === "patient" ? spatialPatientNodeId : null);
     const [graphData, setGraphData] = useState<{ nodes: GraphNode[]; links: GraphLink[] }>({ nodes: [], links: [] });
 
     // 3. UI State
@@ -342,15 +354,29 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
 
     const spatialGraphData = useMemo(() => {
         const visibleIds = new Set(targetGraphData.nodes.map((node) => node.id));
+        const constrainedPatientNodeId = spatialPatientNodeId
+            && (neuroViewScope === "patient" || neuroViewScope === "subgraph")
+            && completeGraphData.nodes.some((node) => node.id === spatialPatientNodeId)
+            ? spatialPatientNodeId
+            : null;
+        const highlightContext = buildHoverEquivalentHighlight(
+            completeGraphData,
+            spatialEmphasizedNodeIds,
+            constrainedPatientNodeId,
+        );
+        highlightContext.nodeIds.forEach((nodeId) => visibleIds.add(nodeId));
+        const animatedNodeById = new Map(graphData.nodes.map((node) => [node.id, node]));
         return {
-            nodes: graphData.nodes.filter((node) => visibleIds.has(node.id)),
-            links: graphData.links.filter((link) => {
+            nodes: completeGraphData.nodes
+                .filter((node) => visibleIds.has(node.id))
+                .map((node) => animatedNodeById.get(node.id) || node),
+            links: completeGraphData.links.filter((link) => {
                 const sourceId = getEndpointId(link.source);
                 const targetId = getEndpointId(link.target);
                 return Boolean(sourceId && targetId && visibleIds.has(sourceId) && visibleIds.has(targetId));
             }),
         };
-    }, [graphData.links, graphData.nodes, targetGraphData.nodes]);
+    }, [completeGraphData, graphData.nodes, neuroViewScope, spatialEmphasizedNodeIds, spatialPatientNodeId, targetGraphData.nodes]);
 
     const activeFocusNodeId = useMemo(() => {
         if (synapseDirective?.focusNodeId) return synapseDirective.focusNodeId;
@@ -429,7 +455,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
 
     useEffect(() => {
         try {
-            window.localStorage.setItem(NEUROVIEW_CONFIG_STORAGE_KEY, JSON.stringify(config));
+            window.localStorage.setItem(NEUROVIEW_2D_CONFIG_STORAGE_KEY, JSON.stringify(config));
         } catch {
             // Storage can be unavailable in private/restricted browser contexts.
         }
@@ -897,7 +923,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                             reducedMotion={Boolean(shouldReduceMotion)}
                             isFullscreen={isFullscreen}
                             onToggleFullscreen={handleFullscreen}
-                            emphasizedNodeIds={emphasizedNodeIds}
+                            emphasizedNodeIds={spatialEmphasizedNodeIds}
+                            focusNodeId={spatialFocusNodeId}
                             detailsOpen={Boolean(selectedNote || selectedPatient)}
                             onCloseDetails={handle3DCloseDetails}
                             onSelectNote={handle3DSelectNote}

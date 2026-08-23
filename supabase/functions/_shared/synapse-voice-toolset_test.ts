@@ -115,12 +115,15 @@ Deno.test("edit_action_group mantém contrato simples e seguro", () => {
   equal(Boolean(tool?.parameters?.properties?.plan_hash), false, "hash não é model-facing");
 });
 
-Deno.test("request_interface_action preserva navegação e tema sem novo prompt global", () => {
+Deno.test("request_interface_action preserva navegação, tema e grupos do NeuroView 3D", () => {
   const navigation = buildSynapseVoiceFunctions().find((tool) => tool.name === "request_interface_action");
   const description = String(navigation?.description || "");
   equal(description.includes("__synapse_theme:light"), true, "diretiva light");
   equal(description.includes("__synapse_theme:dark"), true, "diretiva dark");
   equal(description.includes("__synapse_theme:toggle"), true, "diretiva toggle");
+  equal(description.includes("várias notas"), true, "grupo de notas 3D");
+  equal(description.includes("uma tag"), true, "grupo por tag 3D");
+  equal(description.includes("sem desfazer o grupo"), true, "foco preserva o grupo");
   const actions = navigation?.parameters?.properties?.action?.enum || [];
   const destinations = navigation?.parameters?.properties?.destination?.enum || [];
   equal(actions.includes("open_neuroview_reasoning"), true, "NeuroView contínuo");

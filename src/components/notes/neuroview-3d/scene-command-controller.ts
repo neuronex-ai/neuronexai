@@ -8,6 +8,7 @@ export type NeuroViewSceneCommand =
   | { type: "set-lens"; lens: NeuroViewLens }
   | { type: "set-time-window"; window: NeuroViewTimeWindow }
   | { type: "highlight-path"; nodeId: string | null }
+  | { type: "highlight-nodes"; nodeIds: string[]; focusNodeId?: string }
   | { type: "set-physics"; settings: NeuroViewDynamicsSettings }
   | { type: "explain-gravity"; nodeId: string }
   | { type: "enter-fullscreen" }

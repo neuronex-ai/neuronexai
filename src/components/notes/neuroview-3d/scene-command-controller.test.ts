@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { NeuroViewSceneCommandController } from "./scene-command-controller";
 
@@ -33,5 +33,27 @@ describe("NeuroView scene command controller", () => {
     });
     detach();
   });
-});
 
+  it("preserves grouped note and tag highlights until the scene is ready", async () => {
+    const controller = new NeuroViewSceneCommandController();
+    const pending = controller.dispatch({
+      type: "highlight-nodes",
+      nodeIds: ["note-a", "note-b", "tag-anxiety"],
+      focusNodeId: "note-a",
+    });
+    const execute = vi.fn(async (command) => ({
+      ok: true as const,
+      command: command.type,
+      message: "group highlighted",
+    }));
+
+    controller.attach({ execute });
+
+    await expect(pending).resolves.toMatchObject({ command: "highlight-nodes" });
+    expect(execute).toHaveBeenCalledWith({
+      type: "highlight-nodes",
+      nodeIds: ["note-a", "note-b", "tag-anxiety"],
+      focusNodeId: "note-a",
+    });
+  });
+});

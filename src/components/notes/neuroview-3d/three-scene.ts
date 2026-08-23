@@ -1288,27 +1288,27 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     frameId = requestAnimationFrame(render);
   }
 
+  const applyHighlightSeeds = (seedNodeIds: Iterable<string>) => {
+    const highlight = buildHoverEquivalentHighlight(graph, seedNodeIds, focusedPatientId);
+    const isSceneVisible = (nodeId: string) => visibleNodeIds.has(nodeId)
+      && (!focusedPatientId || focusedSubgraphIds.has(nodeId));
+    highlightedNodeIds = new Set(Array.from(highlight.nodeIds).filter(isSceneVisible));
+    highlightedEdgeIds = new Set(edgeRecords
+      .filter((edge) => highlight.edgeIds.has(edge.edgeId)
+        && isSceneVisible(edge.sourceId)
+        && isSceneVisible(edge.targetId))
+      .map((edge) => edge.edgeId));
+    requestRender(80);
+  };
+
   const setHighlight = (nodeId: string | null) => {
     highlightedNodeId = nodeId;
-    if (!nodeId) {
-      highlightedNodeIds = new Set(options.emphasizedNodeIds || []);
-      highlightedEdgeIds = new Set();
-    } else {
-      const path = findShortestClinicalPath(graph, nodeId, focusedPatientId);
-      highlightedNodeIds = new Set(path.nodeIds);
-      highlightedEdgeIds = new Set(path.edgeIds);
-      edgeRecords.forEach((edge) => {
-        if (edge.sourceId !== nodeId && edge.targetId !== nodeId) return;
-        const neighborId = edge.sourceId === nodeId ? edge.targetId : edge.sourceId;
-        const visible = visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId);
-        const inFocus = !focusedPatientId
-          || (focusedSubgraphIds.has(edge.sourceId) && focusedSubgraphIds.has(edge.targetId));
-        if (!visible || !inFocus) return;
-        highlightedEdgeIds.add(edge.edgeId);
-        highlightedNodeIds.add(neighborId);
-      });
-    }
-    requestRender(80);
+    applyHighlightSeeds(nodeId ? [nodeId] : persistentHighlightNodeIds);
+  };
+
+  const setHighlightSelection = (nodeIds: Iterable<string>) => {
+    persistentHighlightNodeIds = new Set(Array.from(nodeIds).filter((nodeId) => nodeById.has(nodeId)));
+    applyHighlightSeeds(highlightedNodeId ? [highlightedNodeId] : persistentHighlightNodeIds);
   };
 
   const setView = (nextFilter: NeuroView3DFilter, nextFocusedPatientId: string | null, nextDarkMode: boolean) => {
@@ -1350,7 +1350,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     } else if (previousFocus && !focusedPatientId) {
       beginCameraTween(savedPanoramaCamera, savedPanoramaTarget, reducedMotion ? 0 : 650);
     }
-    if (highlightedNodeId) setHighlight(highlightedNodeId);
+    applyHighlightSeeds(highlightedNodeId ? [highlightedNodeId] : persistentHighlightNodeIds);
     requestRender(duration + 100);
   };
 
@@ -1358,6 +1358,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     if (lens === nextLens) return;
     lens = nextLens;
     visibleNodeIds = getStateVisibleNodeIds();
+    applyHighlightSeeds(highlightedNodeId ? [highlightedNodeId] : persistentHighlightNodeIds);
     applyTransitionTargets(
       activeLayoutPositions,
       visibleNodeIds,
@@ -1375,6 +1376,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     if (timeWindow.start === normalized.start && timeWindow.end === normalized.end) return;
     timeWindow = normalized;
     visibleNodeIds = getStateVisibleNodeIds();
+    applyHighlightSeeds(highlightedNodeId ? [highlightedNodeId] : persistentHighlightNodeIds);
     applyTransitionTargets(
       activeLayoutPositions,
       visibleNodeIds,
@@ -1384,7 +1386,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     requestRender(reducedMotion ? 60 : 360);
   };
 
-  const focusNode = (nodeId: string) => {
+  const frameNode = (nodeId: string) => {
     const record = records.get(nodeId);
     if (!record || !visibleNodeIds.has(nodeId)) return;
     const direction = camera.position.clone().sub(controls.target).normalize();
@@ -1394,8 +1396,12 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       record.current.clone(),
       reducedMotion ? 0 : 560,
     );
-    setHighlight(nodeId);
     requestRender(640);
+  };
+
+  const focusNode = (nodeId: string) => {
+    frameNode(nodeId);
+    setHighlight(nodeId);
   };
 
   const setDynamics = (nextSettings: NeuroViewDynamicsSettings) => {
@@ -1718,14 +1724,17 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   resize();
   updateSceneTheme();
   applyTransitionTargets(layout.panorama, visibleNodeIds, focusedSubgraphIds, reducedMotion ? 120 : 900);
+  setHighlightSelection(persistentHighlightNodeIds);
   requestRender(reducedMotion ? 160 : 980);
 
   return {
     setView,
     setHighlight,
+    setHighlightSelection,
     setDynamics,
     resetDynamics,
     resetCamera,
+    frameNode,
     focusNode,
     setLens,
     setTimeWindow,

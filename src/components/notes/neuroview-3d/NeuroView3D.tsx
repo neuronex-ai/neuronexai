@@ -60,6 +60,7 @@ type NeuroView3DProps = {
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   emphasizedNodeIds?: ReadonlySet<string>;
+  focusNodeId?: string | null;
   detailsOpen?: boolean;
   onCloseDetails?: () => void;
   onSelectNote?: (note: PersonalNote) => void;
@@ -129,6 +130,7 @@ export const NeuroView3D = ({
   isFullscreen,
   onToggleFullscreen,
   emphasizedNodeIds,
+  focusNodeId = null,
   detailsOpen = false,
   onCloseDetails,
   onSelectNote,
@@ -143,6 +145,8 @@ export const NeuroView3D = ({
   const initialDarkModeRef = useRef(darkMode);
   const dynamicsRef = useRef<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
   const autoRotateRef = useRef(!reducedMotion);
+  const emphasizedNodeIdsRef = useRef<ReadonlySet<string>>(emphasizedNodeIds || new Set());
+  const focusNodeIdRef = useRef<string | null>(focusNodeId);
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
   const [lens, setLens] = useState<NeuroViewLens>("panorama");
@@ -201,6 +205,8 @@ export const NeuroView3D = ({
   const inspectedNode = (hoveredNodeId ? nodeById.get(hoveredNodeId) : null)
     || (selectedNodeId ? nodeById.get(selectedNodeId) : null)
     || null;
+  emphasizedNodeIdsRef.current = emphasizedNodeIds || new Set();
+  focusNodeIdRef.current = focusNodeId;
 
   const activateNode = useCallback((node: GraphNode) => {
     setSelectedNodeId(node.id);
@@ -242,7 +248,7 @@ export const NeuroView3D = ({
         darkMode: initialDarkModeRef.current,
         profile,
         reducedMotion,
-        emphasizedNodeIds,
+        emphasizedNodeIds: emphasizedNodeIdsRef.current,
         onHoverNode: setHoveredNodeId,
         onActivateNode: activateNode,
         onSceneError: (message) => setSceneError(message),
@@ -250,6 +256,8 @@ export const NeuroView3D = ({
       controllerRef.current = controller;
       controller.setDynamics(dynamicsRef.current);
       controller.setAutoRotate(autoRotateRef.current && !reducedMotion);
+      controller.setHighlightSelection(emphasizedNodeIdsRef.current);
+      if (focusNodeIdRef.current) controller.frameNode(focusNodeIdRef.current);
       return () => {
         controller.dispose();
         if (controllerRef.current === controller) controllerRef.current = null;
@@ -258,7 +266,15 @@ export const NeuroView3D = ({
       setSceneError(error instanceof Error ? error.message : "Não foi possível iniciar o NeuroView 3d.");
       return undefined;
     }
-  }, [activateNode, emphasizedNodeIds, graphData, profile, reducedMotion]);
+  }, [activateNode, graphData, profile, reducedMotion]);
+
+  useEffect(() => {
+    controllerRef.current?.setHighlightSelection(emphasizedNodeIds || []);
+  }, [emphasizedNodeIds]);
+
+  useEffect(() => {
+    if (focusNodeId) controllerRef.current?.frameNode(focusNodeId);
+  }, [focusNodeId]);
 
   useEffect(() => {
     controllerRef.current?.setView(filter, focusedPatientId, darkMode);
@@ -454,11 +470,16 @@ export const NeuroView3D = ({
         scene.setHighlight(command.nodeId);
         return ok("Caminho clínico atualizado.");
       }
+      if (command.type === "highlight-nodes") {
+        scene.setHighlightSelection(command.nodeIds);
+        if (command.focusNodeId) scene.frameNode(command.focusNodeId);
+        return ok(`${command.nodeIds.length} entidades clínicas ressaltadas no NeuroView 3d.`);
+      }
       if (command.type === "set-physics") {
         dynamicsRef.current = command.settings;
         setDynamicsState(command.settings);
         scene.setDynamics(command.settings);
-        return ok("Dinâmica espacial atualizada.");
+        return ok("Física exclusiva da cena 3D atualizada.");
       }
       if (command.type === "explain-gravity") {
         const node = nodeById.get(command.nodeId)

@@ -122,7 +122,7 @@ const toDeepgramFunction = (tool: any) => {
 function exposeDesktopThemeControl(tool: any) {
   if (tool?.name !== "request_interface_action") return tool;
   const copy = structuredClone(tool);
-  copy.description = `${String(copy.description || "")} Tema do Desktop: claro/escuro/alternar usa action='navigate', target='synapse' e query='__synapse_theme:light', '__synapse_theme:dark' ou '__synapse_theme:toggle'.`.trim();
+  copy.description = `${String(copy.description || "")} Tema do Desktop: claro/escuro/alternar usa action='navigate', target='synapse' e query='__synapse_theme:light', '__synapse_theme:dark' ou '__synapse_theme:toggle'. NeuroView 3D: patient ressalta paciente e notas como hover; neuroview_node_ids aceita uma nota, várias notas ou uma tag; scope=all mantém o panorama e subgraph isola o grupo; neuroview_focus_node_id move a câmera sem desfazer o grupo.`.trim();
   return copy;
 }
 

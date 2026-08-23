@@ -144,8 +144,8 @@ export const AGENT_TOOLS = [
     notes_view: { type: "string", enum: ["notes", "tasks", "files", "notion", "neuroview", "neuroflow", "neuropulse"] },
     neuroview_scope: { type: "string", enum: ["all", "patient", "subgraph"], description: "Escopo visual: grafo completo, grafo isolado do paciente ou subgrafo pelos IDs retornados anteriormente." },
     neuroview_mode: { type: "string", enum: ["2d", "3d"], description: "Modo de visualização do mesmo grafo selecionado." },
-    neuroview_node_ids: { type: "array", items: { type: "string" }, maxItems: 80, description: "IDs internos exatos de nodes retornados por analyze_neuroview_patient_patterns. Nunca invente nem leia estes IDs em voz alta." },
-    neuroview_focus_node_id: { type: "string", description: "ID interno exato do node que deve receber o foco da câmera." },
+    neuroview_node_ids: { type: "array", items: { type: "string" }, maxItems: 80, description: "IDs internos exatos retornados pela análise. No 3D, uma nota reproduz seu hover; várias notas unem os caminhos; uma tag ressalta seu grupo relacionado. Nunca invente nem leia estes IDs em voz alta." },
+    neuroview_focus_node_id: { type: "string", description: "ID interno exato que recebe o enquadramento da câmera sem desfazer o grupo ressaltado." },
     element: { type: "string", enum: [
       "next_appointment", "daily_schedule", "dashboard_agenda", "dashboard_pending", "dashboard_finance",
       "agenda_calendar", "agenda_appointments", "patient_header", "patient_summary", "patient_sessions",
