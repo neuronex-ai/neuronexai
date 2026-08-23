@@ -342,6 +342,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const edgePointA = new THREE.Vector3();
   const edgePointB = new THREE.Vector3();
   const edgeBundleAnchor = new THREE.Vector3();
+  const collisionNormal = new THREE.Vector3();
 
   const scene = new THREE.Scene();
   scene.background = null;
@@ -952,6 +953,88 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     return physicsActive;
   };
 
+  const resolveNodeIntersections = () => {
+    const candidates = Array.from(records.entries()).filter(([id, record]) => (
+      visibleNodeIds.has(id)
+      && (!focusedPatientId || focusedSubgraphIds.has(id))
+      && record.currentReveal > 0.015
+      && record.currentScale > 0.015
+    ));
+    if (candidates.length < 2) return false;
+
+    const maximumRadius = candidates.reduce(
+      (largest, [, record]) => Math.max(largest, record.currentScale),
+      0.5,
+    );
+    const cellSize = Math.max(2.25, maximumRadius * 2.08);
+    let adjusted = false;
+
+    for (let pass = 0; pass < 3; pass += 1) {
+      const cells = new Map<string, Array<[string, NodeRecord]>>();
+      candidates.forEach(([id, record]) => {
+        const cellX = Math.floor(record.current.x / cellSize);
+        const cellY = Math.floor(record.current.y / cellSize);
+        const cellZ = Math.floor(record.current.z / cellSize);
+
+        for (let offsetX = -1; offsetX <= 1; offsetX += 1) {
+          for (let offsetY = -1; offsetY <= 1; offsetY += 1) {
+            for (let offsetZ = -1; offsetZ <= 1; offsetZ += 1) {
+              const neighbors = cells.get(`${cellX + offsetX}:${cellY + offsetY}:${cellZ + offsetZ}`);
+              if (!neighbors) continue;
+              neighbors.forEach(([otherId, other]) => {
+                const minimumDistance = record.currentScale + other.currentScale + 0.08;
+                collisionNormal.copy(other.current).sub(record.current);
+                let distance = collisionNormal.length();
+                if (distance >= minimumDistance - 0.0005) return;
+                if (distance < 0.0001) {
+                  const orderedKey = id < otherId ? `${id}:${otherId}` : `${otherId}:${id}`;
+                  const azimuth = organicSeed(`${orderedKey}:azimuth`) * Math.PI * 2;
+                  const vertical = organicSeed(`${orderedKey}:vertical`) * 1.6 - 0.8;
+                  const horizontal = Math.sqrt(Math.max(0.001, 1 - vertical * vertical));
+                  collisionNormal.set(Math.cos(azimuth) * horizontal, Math.sin(azimuth) * horizontal, vertical);
+                  distance = 0;
+                } else {
+                  collisionNormal.multiplyScalar(1 / distance);
+                }
+
+                let recordWeight = record.pinned ? 0 : 1;
+                let otherWeight = other.pinned ? 0 : 1;
+                if (recordWeight + otherWeight === 0) {
+                  if (draggedNodeId === id) otherWeight = 1;
+                  else if (draggedNodeId === otherId) recordWeight = 1;
+                  else {
+                    recordWeight = 1;
+                    otherWeight = 1;
+                  }
+                }
+                const totalWeight = recordWeight + otherWeight;
+                const penetration = minimumDistance - distance;
+                record.current.addScaledVector(collisionNormal, -penetration * recordWeight / totalWeight);
+                other.current.addScaledVector(collisionNormal, penetration * otherWeight / totalWeight);
+
+                const relativeNormalSpeed = other.velocity.dot(collisionNormal) - record.velocity.dot(collisionNormal);
+                if (relativeNormalSpeed < 0) {
+                  const impulse = -relativeNormalSpeed / totalWeight;
+                  record.velocity.addScaledVector(collisionNormal, -impulse * recordWeight);
+                  other.velocity.addScaledVector(collisionNormal, impulse * otherWeight);
+                }
+                if (record.pinned && recordWeight > 0) record.target.copy(record.current);
+                if (other.pinned && otherWeight > 0) other.target.copy(other.current);
+                adjusted = true;
+              });
+            }
+          }
+        }
+
+        const key = `${cellX}:${cellY}:${cellZ}`;
+        const cell = cells.get(key) || [];
+        cell.push([id, record]);
+        cells.set(key, cell);
+      });
+    }
+    return adjusted;
+  };
+
   const updateInstances = (now: number) => {
     const transitionElapsed = now - transitionStartedAt;
     const background = backgroundColor(darkMode);
@@ -975,6 +1058,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       }
     }
     const physicsMoving = integratePhysics(now);
+    const collisionAdjusted = resolveNodeIntersections();
     const cameraDistance = camera.position.distanceTo(controls.target);
 
     groups.forEach((group) => {
@@ -1072,24 +1156,18 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
 
       const active = highlightedEdgeIds.has(edge.edgeId);
       const visible = visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId);
+      const edgeReveal = Math.min(source.currentReveal, target.currentReveal);
       const focusVisible = !focusedPatientId
         || (focusedSubgraphIds.has(edge.sourceId) && focusedSubgraphIds.has(edge.targetId));
-      const artifactNode = nodeById.get(edge.sourceId)?.type === "patient"
-        ? nodeById.get(edge.targetId)
-        : nodeById.get(edge.targetId)?.type === "patient"
-          ? nodeById.get(edge.sourceId)
-          : null;
-      const artifactGravity = artifactNode ? getNodeEvidence(artifactNode)?.gravity.score || 0 : 0;
-      const farTrunk = Boolean(edge.bundleKey) && artifactGravity >= 0.56;
       const inactiveVisible = visible
         && focusVisible
         && lens !== "attention"
-        && (cameraDistance < 92 || farTrunk || active);
+        && edgeReveal > 0.001;
       const inactiveIntensity = highlightedNodeIds.size && !active
-        ? (darkMode ? 0.018 : 0.08)
+        ? (darkMode ? 0.01 : 0.08)
         : cameraDistance >= 92
-          ? (darkMode ? 0.034 : 0.18)
-          : darkMode ? 0.052 : 0.36;
+          ? (darkMode ? 0.012 : 0.14)
+          : darkMode ? 0.038 : 0.3;
       const inactiveColor = new THREE.Color(darkMode ? "#ffffff" : "#88857f").multiplyScalar(inactiveIntensity);
       const activeVisible = active && visible && focusVisible;
       const activeColor = new THREE.Color(darkMode ? "#eafcff" : "#087f9e").multiplyScalar(darkMode ? 1.8 : 1.15);
@@ -1108,13 +1186,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
           .addScaledVector(edgeControlB, 3 * inverse1 * t1 ** 2)
           .addScaledVector(target.current, t1 ** 3);
         const offset = (edgeIndex * edgeSegmentCount + segment) * 6;
-        const inactiveEnd = inactiveVisible ? edgePointB : edgePointA;
+        const segmentReveal = THREE.MathUtils.clamp(edgeReveal * edgeSegmentCount - segment, 0, 1);
+        const inactiveReveal = inactiveVisible ? segmentReveal : 0;
         inactiveEdgePositions[offset] = edgePointA.x;
         inactiveEdgePositions[offset + 1] = edgePointA.y;
         inactiveEdgePositions[offset + 2] = edgePointA.z;
-        inactiveEdgePositions[offset + 3] = inactiveEnd.x;
-        inactiveEdgePositions[offset + 4] = inactiveEnd.y;
-        inactiveEdgePositions[offset + 5] = inactiveEnd.z;
+        inactiveEdgePositions[offset + 3] = THREE.MathUtils.lerp(edgePointA.x, edgePointB.x, inactiveReveal);
+        inactiveEdgePositions[offset + 4] = THREE.MathUtils.lerp(edgePointA.y, edgePointB.y, inactiveReveal);
+        inactiveEdgePositions[offset + 5] = THREE.MathUtils.lerp(edgePointA.z, edgePointB.z, inactiveReveal);
         inactiveEdgeColors[offset] = inactiveColor.r;
         inactiveEdgeColors[offset + 1] = inactiveColor.g;
         inactiveEdgeColors[offset + 2] = inactiveColor.b;
@@ -1122,13 +1201,13 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         inactiveEdgeColors[offset + 4] = inactiveColor.g;
         inactiveEdgeColors[offset + 5] = inactiveColor.b;
 
-        const activeEnd = activeVisible ? edgePointB : edgePointA;
+        const activeReveal = activeVisible ? segmentReveal : 0;
         activeEdgePositions[offset] = edgePointA.x;
         activeEdgePositions[offset + 1] = edgePointA.y;
         activeEdgePositions[offset + 2] = edgePointA.z;
-        activeEdgePositions[offset + 3] = activeEnd.x;
-        activeEdgePositions[offset + 4] = activeEnd.y;
-        activeEdgePositions[offset + 5] = activeEnd.z;
+        activeEdgePositions[offset + 3] = THREE.MathUtils.lerp(edgePointA.x, edgePointB.x, activeReveal);
+        activeEdgePositions[offset + 4] = THREE.MathUtils.lerp(edgePointA.y, edgePointB.y, activeReveal);
+        activeEdgePositions[offset + 5] = THREE.MathUtils.lerp(edgePointA.z, edgePointB.z, activeReveal);
         activeEdgeColors[offset] = activeColor.r;
         activeEdgeColors[offset + 1] = activeColor.g;
         activeEdgeColors[offset + 2] = activeColor.b;
@@ -1144,7 +1223,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     (activeEdgeGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
     (activeEdgeGeometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
     updateLabels();
-    return physicsMoving;
+    return physicsMoving || collisionAdjusted;
   };
 
   const render = (now: number) => {
