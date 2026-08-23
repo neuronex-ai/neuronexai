@@ -55,7 +55,7 @@ describe("bloco Mermaid do editor de notas", () => {
     ].join("\n"));
     const document = generateJSON(html, extensions);
 
-    expect(document.content?.map((node) => node.type)).toEqual([
+    expect(document.content?.map((node: { type: string }) => node.type)).toEqual([
       "heading",
       "heading",
       "mermaid",
