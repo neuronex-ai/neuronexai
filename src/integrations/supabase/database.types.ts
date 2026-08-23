@@ -3416,6 +3416,93 @@ export type Database = {
           },
         ]
       }
+      neuroview_evidence_index: {
+        Row: {
+          action_completed: boolean
+          action_due_at: string | null
+          id: string
+          is_actionable: boolean
+          metadata: Json
+          occurred_at: string
+          patient_id: string | null
+          reviewed: boolean
+          source_id: string
+          source_type: string
+          tags: string[]
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_completed?: boolean
+          action_due_at?: string | null
+          id?: string
+          is_actionable?: boolean
+          metadata?: Json
+          occurred_at: string
+          patient_id?: string | null
+          reviewed?: boolean
+          source_id: string
+          source_type: string
+          tags?: string[]
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_completed?: boolean
+          action_due_at?: string | null
+          id?: string
+          is_actionable?: boolean
+          metadata?: Json
+          occurred_at?: string
+          patient_id?: string | null
+          reviewed?: boolean
+          source_id?: string
+          source_type?: string
+          tags?: string[]
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      neuroview_evidence_overrides: {
+        Row: {
+          id: string
+          is_hidden: boolean
+          is_pinned: boolean
+          priority: number
+          source_id: string
+          source_type: string
+          theme_override: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_hidden?: boolean
+          is_pinned?: boolean
+          priority?: number
+          source_id: string
+          source_type: string
+          theme_override?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_hidden?: boolean
+          is_pinned?: boolean
+          priority?: number
+          source_id?: string
+          source_type?: string
+          theme_override?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       neuro_pulse_entries: {
         Row: {
           created_at: string

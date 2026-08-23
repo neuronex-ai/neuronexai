@@ -1,4 +1,5 @@
 import type { GraphLink, GraphNode } from "../graph/graph-types";
+import type { EvidenceNode } from "../clinical-evidence/evidence-types";
 
 export type NeuroView3DFilter = "all" | "patients" | "recent" | "risk";
 
@@ -16,6 +17,15 @@ export type ClinicalPath = {
 
 const DAY_MS = 86_400_000;
 const RECENT_WINDOW_MS = 30 * DAY_MS;
+
+export const getNodeEvidence = (node: GraphNode): EvidenceNode | null => {
+  const evidence = node.data?.evidence;
+  return evidence && typeof evidence === "object" ? evidence as EvidenceNode : null;
+};
+
+const isClinicalArtifact = (node: GraphNode) => (
+  node.type === "note" || node.type === "flow" || node.type === "evidence"
+);
 
 export const getGraphEndpointId = (endpoint: GraphLink["source"] | GraphLink["target"]) =>
   typeof endpoint === "string" ? endpoint : endpoint?.id;
@@ -92,7 +102,7 @@ export const getPatientSubgraphIds = (graph: GraphSnapshot, patientNodeId: strin
   const ids = new Set<string>([patientNodeId]);
 
   graph.nodes.forEach((node) => {
-    if ((node.type === "note" || node.type === "flow") && String(node.data?.patient_id || "") === patientId) {
+    if (isClinicalArtifact(node) && String(node.data?.patient_id || "") === patientId) {
       ids.add(node.id);
     }
   });
@@ -100,12 +110,12 @@ export const getPatientSubgraphIds = (graph: GraphSnapshot, patientNodeId: strin
   const adjacency = buildAdjacency(graph);
   adjacency.get(patientNodeId)?.forEach(({ id }) => {
     const neighbor = nodeById.get(id);
-    if (neighbor?.type === "note" || neighbor?.type === "flow") ids.add(id);
+    if (neighbor && isClinicalArtifact(neighbor)) ids.add(id);
   });
 
   Array.from(ids).forEach((id) => {
     const node = nodeById.get(id);
-    if (node?.type !== "note" && node?.type !== "flow") return;
+    if (!node || !isClinicalArtifact(node)) return;
     adjacency.get(id)?.forEach(({ id: neighborId }) => {
       if (nodeById.get(neighborId)?.type === "tag") ids.add(neighborId);
     });
@@ -183,8 +193,9 @@ export const findShortestClinicalPath = (
 };
 
 const timestampForNode = (node: GraphNode) => {
-  if (node.type !== "note" && node.type !== "flow") return null;
-  const value = node.data?.updated_at || node.data?.created_at;
+  if (!isClinicalArtifact(node)) return null;
+  const evidence = getNodeEvidence(node);
+  const value = evidence?.occurredAt || node.data?.updated_at || node.data?.created_at;
   const timestamp = value ? new Date(value).getTime() : Number.NaN;
   return Number.isFinite(timestamp) ? timestamp : null;
 };
@@ -214,7 +225,7 @@ const addArtifactsAndTagsForPatients = (
   );
 
   graph.nodes.forEach((node) => {
-    if ((node.type === "note" || node.type === "flow") && patientIds.has(String(node.data?.patient_id || ""))) {
+    if (isClinicalArtifact(node) && patientIds.has(String(node.data?.patient_id || ""))) {
       included.add(node.id);
     }
   });
@@ -222,7 +233,7 @@ const addArtifactsAndTagsForPatients = (
   const adjacency = buildAdjacency(graph);
   Array.from(included).forEach((id) => {
     const node = nodeById.get(id);
-    if (node?.type !== "note" && node?.type !== "flow") return;
+    if (!node || !isClinicalArtifact(node)) return;
     adjacency.get(id)?.forEach(({ id: neighborId }) => {
       if (nodeById.get(neighborId)?.type === "tag") included.add(neighborId);
     });
@@ -299,23 +310,56 @@ export const getActivityIntensity = (graph: GraphSnapshot, now = Date.now()) => 
   );
 };
 
-const relatedPatientDirection = (
-  node: GraphNode,
-  patientDirections: Map<string, SpatialPoint>,
-  adjacency: ReturnType<typeof buildAdjacency>,
-  nodeById: Map<string, GraphNode>,
-) => {
-  const patientId = String(node.data?.patient_id || "");
-  if (patientId && patientDirections.has(`pat-${patientId}`)) return patientDirections.get(`pat-${patientId}`);
-  const directPatient = adjacency.get(node.id)?.find(({ id }) => nodeById.get(id)?.type === "patient");
-  return directPatient ? patientDirections.get(directPatient.id) : undefined;
+const themeForNode = (node: GraphNode) => {
+  const evidence = getNodeEvidence(node);
+  if (evidence?.theme) return evidence.theme;
+  const tags = node.data?.tags;
+  if (Array.isArray(tags) && typeof tags[0] === "string") return tags[0];
+  return node.type;
+};
+
+const semanticGravityForNode = (node: GraphNode, now = Date.now()) => {
+  const evidence = getNodeEvidence(node);
+  if (evidence) return evidence.gravity.score;
+  const timestamp = timestampForNode(node);
+  if (timestamp === null) return node.type === "flow" ? 0.48 : 0.28;
+  const ageDays = Math.max(0, (now - timestamp) / DAY_MS);
+  const recency = Math.pow(0.5, ageDays / 30);
+  return Math.min(1, 0.3 * recency + (node.type === "flow" ? 0.22 : 0.08));
+};
+
+const timestampRange = (graph: GraphSnapshot) => {
+  const timestamps = graph.nodes
+    .map(timestampForNode)
+    .filter((value): value is number => value !== null);
+  return {
+    oldest: timestamps.length ? Math.min(...timestamps) : Date.now(),
+    newest: timestamps.length ? Math.max(...timestamps) : Date.now(),
+  };
+};
+
+const chronologyDepth = (node: GraphNode, oldest: number, newest: number) => {
+  const timestamp = timestampForNode(node);
+  if (timestamp === null || newest <= oldest) return 0;
+  return ((timestamp - oldest) / (newest - oldest) - 0.5) * 15;
+};
+
+const evidenceOffset = (node: GraphNode, oldest: number, newest: number, focusScale = 1): SpatialPoint => {
+  const theta = hashUnit(themeForNode(node), "clinical-theme") * Math.PI * 2;
+  const gravity = semanticGravityForNode(node);
+  const radius = (20 - gravity * 12) * focusScale;
+  return {
+    x: Math.cos(theta) * radius,
+    y: Math.sin(theta) * radius,
+    z: chronologyDepth(node, oldest, newest) * focusScale,
+  };
 };
 
 export const computeSpatialLayout = (graph: GraphSnapshot) => {
   const panorama = new Map<string, SpatialPoint>();
   const flat = new Map<string, SpatialPoint>();
-  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const adjacency = buildAdjacency(graph);
+  const { oldest, newest } = timestampRange(graph);
   const maxFlatExtent = Math.max(
     1,
     ...graph.nodes.flatMap((node) => [Math.abs(Number(node.x) || 0), Math.abs(Number(node.y) || 0)]),
@@ -329,22 +373,28 @@ export const computeSpatialLayout = (graph: GraphSnapshot) => {
     });
   });
 
-  const patientDirections = new Map<string, SpatialPoint>();
-  graph.nodes.filter((node) => node.type === "patient").forEach((node) => {
-    const flatPoint = flat.get(node.id) || { x: 0, y: 0, z: 0 };
-    const direction = normalizePoint({
-      x: flatPoint.x || seededDirection(node.id).x,
-      y: flatPoint.y || seededDirection(node.id).y,
-      z: (hashUnit(node.id, "patient-z") - 0.5) * 7,
-    });
-    patientDirections.set(node.id, direction);
-    panorama.set(node.id, multiplyPoint(direction, 8));
+  const patients = graph.nodes
+    .filter((node) => node.type === "patient")
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const goldenAngle = Math.PI * (3 - Math.sqrt(5));
+  patients.forEach((node, index) => {
+    const normalizedIndex = (index + 0.65) / Math.max(1, patients.length);
+    const radius = Math.sqrt(normalizedIndex) * 29;
+    const angle = index * goldenAngle + hashUnit(node.id, "patient-angle") * 0.28;
+    const point = {
+      x: Math.cos(angle) * radius,
+      y: Math.sin(angle) * radius,
+      z: (hashUnit(node.id, "patient-z") - 0.5) * 5,
+    };
+    panorama.set(node.id, point);
   });
 
-  graph.nodes.filter((node) => node.type === "flow" || node.type === "note").forEach((node) => {
-    const patientDirection = relatedPatientDirection(node, patientDirections, adjacency, nodeById) || seededDirection(node.id);
-    const radius = node.type === "flow" ? 19 : 30;
-    panorama.set(node.id, multiplyPoint(directionNear(patientDirection, node.id, node.type === "flow" ? 0.42 : 0.68), radius));
+  graph.nodes.filter(isClinicalArtifact).forEach((node) => {
+    const patientId = String(node.data?.patient_id || "");
+    const patientPoint = patientId ? panorama.get(`pat-${patientId}`) : undefined;
+    const offset = evidenceOffset(node, oldest, newest);
+    if (patientPoint) panorama.set(node.id, addPoint(patientPoint, offset));
+    else panorama.set(node.id, addPoint(multiplyPoint(seededDirection(node.id), 24), offset));
   });
 
   graph.nodes.filter((node) => node.type === "tag").forEach((node) => {
@@ -355,7 +405,9 @@ export const computeSpatialLayout = (graph: GraphSnapshot) => {
     const direction = connectedPoints.length
       ? directionNear(normalizePoint(average), node.id, 0.28)
       : seededDirection(node.id);
-    panorama.set(node.id, multiplyPoint(direction, 43));
+    panorama.set(node.id, connectedPoints.length
+      ? multiplyPoint(average, 1 / connectedPoints.length)
+      : multiplyPoint(direction, 43));
   });
 
   graph.nodes.forEach((node) => {
@@ -373,17 +425,25 @@ export const computeFocusedLayout = (
   const focused = new Map<string, SpatialPoint>();
   const subgraphIds = getPatientSubgraphIds(graph, patientNodeId);
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const adjacency = buildAdjacency(graph);
+  const { oldest, newest } = timestampRange(graph);
+
+  focused.set(patientNodeId, { x: 0, y: 0, z: 0 });
+  graph.nodes.filter((node) => subgraphIds.has(node.id) && isClinicalArtifact(node)).forEach((node) => {
+    focused.set(node.id, evidenceOffset(node, oldest, newest, 0.9));
+  });
+  graph.nodes.filter((node) => subgraphIds.has(node.id) && node.type === "tag").forEach((node) => {
+    const connectedPoints = (adjacency.get(node.id) || [])
+      .filter(({ id }) => subgraphIds.has(id))
+      .map(({ id }) => focused.get(id))
+      .filter((point): point is SpatialPoint => Boolean(point));
+    focused.set(node.id, connectedPoints.length
+      ? multiplyPoint(connectedPoints.reduce(addPoint, { x: 0, y: 0, z: 0 }), 1 / connectedPoints.length)
+      : multiplyPoint(seededDirection(`${patientNodeId}:${node.id}`), 22));
+  });
 
   graph.nodes.forEach((node) => {
-    if (node.id === patientNodeId) {
-      focused.set(node.id, { x: 0, y: 0, z: 0 });
-      return;
-    }
-    if (subgraphIds.has(node.id)) {
-      const radius = node.type === "flow" ? 9 : node.type === "note" ? 15 : 22;
-      focused.set(node.id, multiplyPoint(seededDirection(`${patientNodeId}:${node.id}`), radius));
-      return;
-    }
+    if (focused.has(node.id)) return;
     const base = panorama.get(node.id) || seededDirection(node.id);
     const direction = normalizePoint(base);
     const distance = nodeById.get(node.id)?.type === "patient" ? 68 : 78;

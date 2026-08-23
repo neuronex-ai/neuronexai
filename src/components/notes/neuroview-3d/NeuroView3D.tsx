@@ -17,9 +17,11 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { PersonalNote, Patient } from "@/types";
+import type { EvidenceNode, EvidenceSource, NeuroViewLens } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import {
   getPatientSubgraphIds,
+  getNodeEvidence,
   getVisibleNodeIds,
   type GraphSnapshot,
   type NeuroView3DFilter,
@@ -31,6 +33,12 @@ import {
   type NeuroViewSceneController,
   type NeuroViewSceneProfile,
 } from "./three-scene";
+import { NeuroViewInsightsPanel } from "./NeuroViewInsightsPanel";
+import {
+  neuroViewSceneCommands,
+  type NeuroViewSceneCommand,
+  type NeuroViewCommandResult,
+} from "./scene-command-controller";
 
 type NeuroView3DProps = {
   onBack: () => void;
@@ -46,6 +54,16 @@ type NeuroView3DProps = {
   onSelectNote?: (note: PersonalNote) => void;
   onSelectPatient?: (patient: Patient) => void;
   onClearPatient?: () => void;
+  evidence?: EvidenceNode[];
+  evidenceAvailable?: boolean;
+  onUpdateEvidenceOverride?: (update: {
+    sourceType: EvidenceSource;
+    sourceId: string;
+    priority?: number;
+    isPinned?: boolean;
+    isHidden?: boolean;
+    themeOverride?: string | null;
+  }) => Promise<void>;
 };
 
 const FILTER_OPTIONS = [
@@ -55,11 +73,19 @@ const FILTER_OPTIONS = [
   { value: "risk", label: "Em risco" },
 ] as const;
 
+const LENS_OPTIONS = [
+  { value: "panorama", label: "Panorama" },
+  { value: "session-prep", label: "Preparar sessão" },
+  { value: "patterns", label: "Padrões" },
+  { value: "attention", label: "Radar vivo" },
+] as const;
+
 const NODE_TYPE_LABEL: Record<GraphNode["type"], string> = {
   patient: "Paciente",
   flow: "Fluxo",
   note: "Nota",
   tag: "Tag",
+  evidence: "Evidência",
 };
 
 const NODE_TYPE_ORDER: Record<GraphNode["type"], number> = {
@@ -67,6 +93,7 @@ const NODE_TYPE_ORDER: Record<GraphNode["type"], number> = {
   flow: 1,
   note: 2,
   tag: 3,
+  evidence: 2,
 };
 
 export const NeuroView3D = ({
@@ -83,6 +110,9 @@ export const NeuroView3D = ({
   onSelectNote,
   onSelectPatient,
   onClearPatient,
+  evidence = [],
+  evidenceAvailable = false,
+  onUpdateEvidenceOverride,
 }: NeuroView3DProps) => {
   const sceneContainerRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<NeuroViewSceneController | null>(null);
@@ -90,8 +120,11 @@ export const NeuroView3D = ({
   const dynamicsRef = useRef<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
+  const [lens, setLens] = useState<NeuroViewLens>("panorama");
   const [focusedPatientId, setFocusedPatientId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [timeProgress, setTimeProgress] = useState(100);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [dynamicsOpen, setDynamicsOpen] = useState(false);
   const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
@@ -102,12 +135,32 @@ export const NeuroView3D = ({
     () => new Map(graphData.nodes.map((node) => [node.id, node])),
     [graphData.nodes],
   );
+  const evidenceTimeExtent = useMemo(() => {
+    const timestamps = evidence
+      .map((item) => new Date(item.occurredAt).getTime())
+      .filter(Number.isFinite);
+    return timestamps.length
+      ? { min: Math.min(...timestamps), max: Math.max(...timestamps) }
+      : null;
+  }, [evidence]);
+  const timeEnd = useMemo(() => {
+    if (lens !== "patterns" || !evidenceTimeExtent) return null;
+    return evidenceTimeExtent.min
+      + (evidenceTimeExtent.max - evidenceTimeExtent.min) * (timeProgress / 100);
+  }, [evidenceTimeExtent, lens, timeProgress]);
   const visibleNodeIds = useMemo(() => {
     const ids = getVisibleNodeIds(graphData, filter);
-    if (!focusedPatientId) return ids;
-    const focusedIds = getPatientSubgraphIds(graphData, focusedPatientId);
-    return new Set(Array.from(ids).filter((id) => focusedIds.has(id)).concat(focusedPatientId));
-  }, [filter, focusedPatientId, graphData]);
+    const focusedIds = focusedPatientId ? getPatientSubgraphIds(graphData, focusedPatientId) : null;
+    const scoped = focusedIds
+      ? new Set(Array.from(ids).filter((id) => focusedIds.has(id)).concat(focusedPatientId as string))
+      : ids;
+    if (timeEnd === null) return scoped;
+    return new Set(Array.from(scoped).filter((id) => {
+      const node = nodeById.get(id);
+      const item = node ? getNodeEvidence(node) : null;
+      return !item || new Date(item.occurredAt).getTime() <= timeEnd;
+    }));
+  }, [filter, focusedPatientId, graphData, nodeById, timeEnd]);
   const visibleNodes = useMemo(
     () => graphData.nodes
       .filter((node) => visibleNodeIds.has(node.id))
@@ -116,8 +169,12 @@ export const NeuroView3D = ({
     [graphData.nodes, visibleNodeIds],
   );
   const focusedPatient = focusedPatientId ? nodeById.get(focusedPatientId) : null;
+  const inspectedNode = (hoveredNodeId ? nodeById.get(hoveredNodeId) : null)
+    || (selectedNodeId ? nodeById.get(selectedNodeId) : null)
+    || null;
 
   const activateNode = useCallback((node: GraphNode) => {
+    setSelectedNodeId(node.id);
     if (node.type === "patient") {
       setFocusedPatientId(node.id);
       setAnnouncement(`${node.label} centralizado. O subgrafo clínico está em foco.`);
@@ -134,6 +191,11 @@ export const NeuroView3D = ({
       window.dispatchEvent(new CustomEvent("neuroflow:navigate", {
         detail: { flowId: node.data?.id },
       }));
+      return;
+    }
+    if (node.type === "evidence") {
+      controllerRef.current?.focusNode(node.id);
+      setAnnouncement(`Evidência ${node.label} enquadrada. Abra Por que está aqui para ver a composição da gravidade.`);
       return;
     }
     controllerRef.current?.setHighlight(node.id);
@@ -173,6 +235,14 @@ export const NeuroView3D = ({
   }, [darkMode, filter, focusedPatientId]);
 
   useEffect(() => {
+    controllerRef.current?.setLens(lens);
+  }, [lens]);
+
+  useEffect(() => {
+    controllerRef.current?.setTimeWindow(lens === "patterns" ? { end: timeEnd } : {});
+  }, [lens, timeEnd]);
+
+  useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (navigatorOpen || dynamicsOpen) return;
@@ -180,6 +250,13 @@ export const NeuroView3D = ({
       if (detailsOpen) {
         event.preventDefault();
         onCloseDetails?.();
+        return;
+      }
+      if (selectedNodeId) {
+        event.preventDefault();
+        setSelectedNodeId(null);
+        controllerRef.current?.setHighlight(null);
+        setAnnouncement("Inspetor clínico fechado.");
         return;
       }
       if (focusedPatientId) {
@@ -194,7 +271,7 @@ export const NeuroView3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, navigatorOpen, onBack, onClearPatient, onCloseDetails]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, navigatorOpen, onBack, onClearPatient, onCloseDetails, selectedNodeId]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -202,6 +279,24 @@ export const NeuroView3D = ({
     onClearPatient?.();
     setAnnouncement(`Filtro ${FILTER_OPTIONS.find((option) => option.value === nextFilter)?.label} aplicado.`);
   };
+
+  const handleLensChange = useCallback((nextLens: NeuroViewLens) => {
+    setLens(nextLens);
+    setSelectedNodeId(null);
+    if (nextLens === "attention") {
+      setFocusedPatientId(null);
+      onClearPatient?.();
+      setAnnouncement("Radar vivo aberto. Os halos mostram somente sinais objetivos de atenção.");
+      return;
+    }
+    if ((nextLens === "session-prep" || nextLens === "patterns") && !focusedPatientId) {
+      setNavigatorOpen(true);
+      setAnnouncement("Escolha um paciente para abrir esta lente clínica.");
+      return;
+    }
+    const label = LENS_OPTIONS.find((option) => option.value === nextLens)?.label || "Panorama";
+    setAnnouncement(`Lente ${label} aplicada.`);
+  }, [focusedPatientId, onClearPatient]);
 
   const returnToPanorama = () => {
     setFocusedPatientId(null);
@@ -237,6 +332,84 @@ export const NeuroView3D = ({
     if (target) nodeButtonRefs.current.get(target.id)?.focus();
   };
 
+  const inspectNode = useCallback((nodeId: string) => {
+    const node = nodeById.get(nodeId)
+      || graphData.nodes.find((candidate) => getNodeEvidence(candidate)?.id === nodeId);
+    if (!node) return;
+    activateNode(node);
+    controllerRef.current?.setHighlight(node.id);
+  }, [activateNode, graphData.nodes, nodeById]);
+
+  useEffect(() => neuroViewSceneCommands.attach({
+    execute: async (command: NeuroViewSceneCommand): Promise<NeuroViewCommandResult> => {
+      const scene = controllerRef.current;
+      if (!scene) throw new Error("A cena do NeuroView 3d ainda não está pronta.");
+      const ok = (message: string, gravity?: NeuroViewCommandResult["gravity"]): NeuroViewCommandResult => ({
+        ok: true,
+        command: command.type,
+        message,
+        gravity,
+      });
+      if (command.type === "prepare-session" || command.type === "select-patient") {
+        const node = nodeById.get(`pat-${command.patientId}`);
+        if (!node) throw new Error("Paciente não encontrado no NeuroView.");
+        if (command.type === "prepare-session") setLens("session-prep");
+        setFocusedPatientId(node.id);
+        setSelectedNodeId(node.id);
+        onSelectPatient?.(node.data as Patient);
+        scene.focusNode(node.id);
+        return ok(command.type === "prepare-session" ? "Preparação de sessão aberta." : "Paciente centralizado.");
+      }
+      if (command.type === "focus-evidence") {
+        const node = nodeById.get(command.nodeId)
+          || graphData.nodes.find((candidate) => getNodeEvidence(candidate)?.id === command.nodeId);
+        if (!node) throw new Error("Evidência não encontrada no NeuroView.");
+        setSelectedNodeId(node.id);
+        scene.focusNode(node.id);
+        scene.setHighlight(node.id);
+        return ok("Evidência enquadrada.");
+      }
+      if (command.type === "set-lens") {
+        handleLensChange(command.lens);
+        scene.setLens(command.lens);
+        return ok("Lente clínica atualizada.");
+      }
+      if (command.type === "set-time-window") {
+        scene.setTimeWindow(command.window);
+        return ok("Janela temporal atualizada.");
+      }
+      if (command.type === "highlight-path") {
+        scene.setHighlight(command.nodeId);
+        return ok("Caminho clínico atualizado.");
+      }
+      if (command.type === "set-physics") {
+        dynamicsRef.current = command.settings;
+        setDynamicsState(command.settings);
+        scene.setDynamics(command.settings);
+        return ok("Dinâmica espacial atualizada.");
+      }
+      if (command.type === "explain-gravity") {
+        const node = nodeById.get(command.nodeId)
+          || graphData.nodes.find((candidate) => getNodeEvidence(candidate)?.id === command.nodeId);
+        if (!node) throw new Error("Esta entidade não foi encontrada na cena atual.");
+        const item = getNodeEvidence(node);
+        if (!item) throw new Error("Esta entidade não possui composição de gravidade.");
+        setSelectedNodeId(node.id);
+        return ok("Composição de gravidade aberta.", item.gravity);
+      }
+      if (command.type === "enter-fullscreen") {
+        if (!isFullscreen && !document.fullscreenElement) onToggleFullscreen();
+        return ok("NeuroView 3d em tela cheia.");
+      }
+      setLens("panorama");
+      setFocusedPatientId(null);
+      setSelectedNodeId(null);
+      onClearPatient?.();
+      scene.resetCamera();
+      return ok("Panorama completo restaurado.");
+    },
+  }), [graphData.nodes, handleLensChange, isFullscreen, nodeById, onClearPatient, onSelectPatient, onToggleFullscreen]);
+
   return (
     <div
       className={cn(
@@ -271,21 +444,39 @@ export const NeuroView3D = ({
           <span className="hidden sm:inline">NeuroView plano</span>
         </Button>
 
-        <div
-          className={cn(
-            "pointer-events-auto rounded-[20px] border p-1 shadow-2xl backdrop-blur-2xl",
-            darkMode ? "border-white/10 bg-black/46" : "border-black/10 bg-white/74",
-          )}
-        >
-          <MagneticSegmentedControl
-            value={filter}
-            onValueChange={handleFilterChange}
-            options={FILTER_OPTIONS}
-            ariaLabel="Filtrar NeuroView 3d"
-            behavior="single-select"
-            className="min-h-11 bg-transparent"
-            triggerClassName="min-h-10 px-3 text-xs lg:px-4"
-          />
+        <div className="pointer-events-auto flex flex-col items-center gap-2">
+          <div
+            className={cn(
+              "rounded-[20px] border p-1 shadow-2xl backdrop-blur-2xl",
+              darkMode ? "border-white/10 bg-black/52" : "border-black/10 bg-white/78",
+            )}
+          >
+            <MagneticSegmentedControl
+              value={lens}
+              onValueChange={handleLensChange}
+              options={LENS_OPTIONS}
+              ariaLabel="Escolher lente clínica do NeuroView 3d"
+              behavior="single-select"
+              className="min-h-11 bg-transparent"
+              triggerClassName="min-h-10 px-3 text-[11px] xl:px-4"
+            />
+          </div>
+          <div
+            className={cn(
+              "rounded-[18px] border p-1 shadow-xl backdrop-blur-2xl",
+              darkMode ? "border-white/8 bg-black/38" : "border-black/8 bg-white/66",
+            )}
+          >
+            <MagneticSegmentedControl
+              value={filter}
+              onValueChange={handleFilterChange}
+              options={FILTER_OPTIONS}
+              ariaLabel="Filtrar NeuroView 3d"
+              behavior="single-select"
+              className="min-h-9 bg-transparent"
+              triggerClassName="min-h-8 px-2.5 text-[10px] lg:px-3"
+            />
+          </div>
         </div>
 
         <div className="pointer-events-auto flex items-center gap-2">
@@ -459,6 +650,54 @@ export const NeuroView3D = ({
         </div>
       </header>
 
+      <div className="pointer-events-none absolute right-5 top-[88px] z-30">
+        <NeuroViewInsightsPanel
+          darkMode={darkMode}
+          lens={lens}
+          focusedPatient={focusedPatient || null}
+          inspectedNode={inspectedNode}
+          graphNodes={graphData.nodes}
+          evidence={evidence}
+          timeEnd={timeEnd}
+          evidenceAvailable={evidenceAvailable}
+          onInspectNode={inspectNode}
+          onUpdateOverride={onUpdateEvidenceOverride}
+          onAnnounce={setAnnouncement}
+        />
+      </div>
+
+      {lens === "patterns" && evidenceTimeExtent ? (
+        <div className={cn(
+          "absolute bottom-[72px] left-1/2 z-30 w-[min(520px,calc(100%-3rem))] -translate-x-1/2 rounded-[22px] border px-4 py-3 shadow-2xl backdrop-blur-3xl",
+          darkMode ? "border-white/10 bg-black/58" : "border-black/10 bg-white/82",
+        )}>
+          <div className="mb-2 flex items-center justify-between gap-4 text-[10px] font-medium">
+            <span className={darkMode ? "text-white/52" : "text-zinc-500"}>História clínica</span>
+            <output className="font-semibold">
+              Até {new Intl.DateTimeFormat("pt-BR", { month: "short", year: "numeric" }).format(new Date(timeEnd || evidenceTimeExtent.max))}
+            </output>
+          </div>
+          <Slider
+            value={[timeProgress]}
+            min={0}
+            max={100}
+            step={1}
+            aria-label="Percorrer a história clínica no tempo"
+            onValueChange={([value]) => setTimeProgress(value)}
+            onValueCommit={() => setAnnouncement("Linha do tempo clínica atualizada.")}
+          />
+        </div>
+      ) : null}
+
+      {!inspectedNode && lens === "panorama" ? (
+        <div className={cn(
+          "pointer-events-none absolute left-1/2 top-[126px] z-20 -translate-x-1/2 rounded-full border px-3.5 py-2 text-[9px] font-medium tracking-wide backdrop-blur-xl",
+          darkMode ? "border-white/7 bg-black/28 text-white/42" : "border-black/7 bg-white/48 text-zinc-500",
+        )}>
+          Distância = densidade · profundidade = tempo · direção = tema revisado
+        </div>
+      ) : null}
+
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 p-5">
         <div
           className={cn(
@@ -475,11 +714,11 @@ export const NeuroView3D = ({
           )}
           aria-hidden="true"
         >
-          {(["patient", "flow", "note", "tag"] as const).map((type) => (
+          {(["patient", "flow", "note", "evidence", "tag"] as const).map((type) => (
             <span key={type} className="inline-flex items-center gap-1.5">
               <CircleDot className={cn(
                 "h-3 w-3",
-                type === "flow" ? "text-cyan-500" : type === "patient" ? "text-current" : "opacity-60",
+                type === "flow" ? "text-cyan-500" : type === "evidence" ? "text-violet-400" : type === "patient" ? "text-current" : "opacity-60",
               )} />
               {NODE_TYPE_LABEL[type]}
             </span>
@@ -559,7 +798,7 @@ export const NeuroView3D = ({
                     >
                       <span className={cn(
                         "h-2.5 w-2.5 shrink-0 rounded-full",
-                        node.type === "flow" ? "bg-cyan-400" : node.type === "patient" ? darkMode ? "bg-white" : "bg-zinc-800" : "bg-current opacity-45",
+                        node.type === "flow" ? "bg-cyan-400" : node.type === "evidence" ? "bg-violet-400" : node.type === "patient" ? darkMode ? "bg-white" : "bg-zinc-800" : "bg-current opacity-45",
                       )} />
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-semibold">{node.label || "Sem título"}</span>

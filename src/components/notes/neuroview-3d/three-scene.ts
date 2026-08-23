@@ -6,7 +6,11 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { LineMaterial } from "three/addons/lines/LineMaterial.js";
+import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
+import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
 
+import type { NeuroViewLens, NeuroViewTimeWindow } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import {
   computeFocusedLayout,
@@ -16,6 +20,7 @@ import {
   getGraphEdgeId,
   getGraphEndpointId,
   getPatientSubgraphIds,
+  getNodeEvidence,
   getVisibleNodeIds,
   type GraphSnapshot,
   type NeuroView3DFilter,
@@ -54,6 +59,9 @@ export type NeuroViewSceneController = {
   setDynamics: (settings: NeuroViewDynamicsSettings) => void;
   resetDynamics: () => void;
   resetCamera: () => void;
+  focusNode: (nodeId: string) => void;
+  setLens: (lens: NeuroViewLens) => void;
+  setTimeWindow: (window: NeuroViewTimeWindow) => void;
   dispose: () => void;
 };
 
@@ -77,6 +85,7 @@ type MeshGroup = {
   ids: string[];
   mesh: THREE.InstancedMesh;
   halo: THREE.InstancedMesh;
+  hit: THREE.InstancedMesh;
   geometry: THREE.BufferGeometry;
   material: THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
   haloMaterial: THREE.MeshBasicMaterial;
@@ -86,10 +95,11 @@ const PANORAMA_CAMERA = new THREE.Vector3(0, 7, 116);
 const PANORAMA_TARGET = new THREE.Vector3(0, 0, 0);
 
 const baseNodeScale = (node: GraphNode, darkMode: boolean) => {
-  const darkModeReduction = darkMode ? 0.9 : 1;
+  const darkModeReduction = darkMode ? 0.828 : 1;
   if (node.type === "patient") return 1.9 * darkModeReduction;
   if (node.type === "flow") return 1.24 * darkModeReduction;
   if (node.type === "note") return 0.96 * darkModeReduction;
+  if (node.type === "evidence") return 0.76 * darkModeReduction;
   return 0.59 * darkModeReduction;
 };
 
@@ -98,11 +108,13 @@ const nodeColor = (node: GraphNode, darkMode: boolean) => {
     if (node.type === "patient") return new THREE.Color("#f5f5f7");
     if (node.type === "flow") return new THREE.Color("#75d8f5");
     if (node.type === "note") return new THREE.Color("#bbb8b5");
+    if (node.type === "evidence") return new THREE.Color("#c9bcff");
     return new THREE.Color("#86818b");
   }
   if (node.type === "patient") return new THREE.Color("#202027");
   if (node.type === "flow") return new THREE.Color("#087f9e");
   if (node.type === "note") return new THREE.Color("#625e66");
+  if (node.type === "evidence") return new THREE.Color("#6653a6");
   return new THREE.Color("#8a8179");
 };
 
@@ -136,12 +148,15 @@ type EdgeRecord = {
   edgeId: string;
   bend: number;
   twist: number;
+  bundleKey: string | null;
+  patientNodeId: string | null;
 };
 
 const makeGeometry = (type: GraphNode["type"], profile: NeuroViewSceneProfile) => {
   const detail = profile === "full" ? 3 : 2;
   if (type === "flow") return new THREE.OctahedronGeometry(1, profile === "full" ? 2 : 1);
   if (type === "note") return new THREE.IcosahedronGeometry(1, detail);
+  if (type === "evidence") return new THREE.DodecahedronGeometry(1, profile === "full" ? 2 : 1);
   if (type === "tag") return new THREE.SphereGeometry(1, profile === "full" ? 18 : 12, profile === "full" ? 12 : 8);
   return new THREE.SphereGeometry(1, profile === "full" ? 36 : 22, profile === "full" ? 24 : 14);
 };
@@ -181,6 +196,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     onSceneError,
   } = options;
   let darkMode = options.darkMode;
+  let lens: NeuroViewLens = "panorama";
+  let timeWindow: NeuroViewTimeWindow = {};
   let disposed = false;
   let filter: NeuroView3DFilter = "all";
   let focusedPatientId: string | null = null;
@@ -213,6 +230,13 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const records = new Map<string, NodeRecord>();
   const groups = new Map<GraphNode["type"], MeshGroup>();
   const meshLookup = new Map<THREE.InstancedMesh, string[]>();
+  const hitGeometry = new THREE.SphereGeometry(1, 10, 8);
+  const hitMaterial = new THREE.MeshBasicMaterial({
+    transparent: true,
+    opacity: 0,
+    depthWrite: false,
+    colorWrite: false,
+  });
   const dummy = new THREE.Object3D();
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2(2, 2);
@@ -227,6 +251,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const edgeControlB = new THREE.Vector3();
   const edgePointA = new THREE.Vector3();
   const edgePointB = new THREE.Vector3();
+  const edgeBundleAnchor = new THREE.Vector3();
 
   const scene = new THREE.Scene();
   scene.background = null;
@@ -323,7 +348,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       startBrightness: 0,
       targetBrightness: activity.get(node.id) || 0.28,
       velocity: new THREE.Vector3(),
-      pinned: false,
+      pinned: Boolean(getNodeEvidence(node)?.pinned),
       label,
     });
   });
@@ -357,56 +382,122 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     });
     const mesh = new THREE.InstancedMesh(geometry, material, nodes.length);
     const halo = new THREE.InstancedMesh(geometry, haloMaterial, nodes.length);
+    const hit = new THREE.InstancedMesh(hitGeometry, hitMaterial, nodes.length);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     halo.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    hit.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled = false;
     halo.frustumCulled = false;
+    hit.frustumCulled = false;
     halo.raycast = () => undefined;
     const ids = nodes.map((node) => node.id);
-    groups.set(type, { ids, mesh, halo, geometry, material, haloMaterial });
-    meshLookup.set(mesh, ids);
-    scene.add(halo, mesh);
+    groups.set(type, { ids, mesh, halo, hit, geometry, material, haloMaterial });
+    meshLookup.set(hit, ids);
+    scene.add(halo, mesh, hit);
   });
+
+  const attentionHaloColors: Record<string, number> = {
+    "recorded-risk": 0xfb7185,
+    "overdue-action": 0xfcd34d,
+    "pending-review": 0xc4b5fd,
+    "observed-mood-change": 0x67e8f9,
+  };
+  const attentionHalos = graph.nodes
+    .filter((node) => node.type === "patient" && Array.isArray(node.data?.attentionReasons) && node.data.attentionReasons.length)
+    .map((node) => {
+      const group = new THREE.Group();
+      const reasons = (node.data.attentionReasons as Array<{ type: string }>).slice(0, 4);
+      const geometries: THREE.RingGeometry[] = [];
+      const materials: THREE.MeshBasicMaterial[] = [];
+      reasons.forEach((reason, index) => {
+        const start = index * (Math.PI * 2 / reasons.length) + 0.08;
+        const length = Math.PI * 2 / reasons.length - 0.16;
+        const geometry = new THREE.RingGeometry(2.52, 2.64, 28, 1, start, length);
+        const material = new THREE.MeshBasicMaterial({
+          color: attentionHaloColors[reason.type] || 0xffffff,
+          transparent: true,
+          opacity: darkMode ? 0.74 : 0.62,
+          depthTest: false,
+          depthWrite: false,
+          side: THREE.DoubleSide,
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.renderOrder = 5;
+        group.add(mesh);
+        geometries.push(geometry);
+        materials.push(material);
+      });
+      scene.add(group);
+      return { nodeId: node.id, group, geometries, materials };
+    });
 
   const edgeRecords = graph.links.flatMap<EdgeRecord>((link) => {
     const sourceId = getGraphEndpointId(link.source);
     const targetId = getGraphEndpointId(link.target);
     if (!sourceId || !targetId) return [];
     const key = getGraphEdgeId(sourceId, targetId);
+    const sourceNode = nodeById.get(sourceId);
+    const targetNode = nodeById.get(targetId);
+    const patientNode = sourceNode?.type === "patient" ? sourceNode : targetNode?.type === "patient" ? targetNode : null;
+    const artifactNode = sourceNode?.type === "patient" ? targetNode : targetNode?.type === "patient" ? sourceNode : null;
+    const evidence = artifactNode ? getNodeEvidence(artifactNode) : null;
+    const theme = evidence?.theme || (Array.isArray(artifactNode?.data?.tags) ? artifactNode?.data?.tags[0] : null);
     return [{
       sourceId,
       targetId,
       edgeId: key,
       bend: organicSeed(`${key}:bend`) * 2 - 1,
       twist: organicSeed(`${key}:twist`) * 2 - 1,
+      bundleKey: patientNode && theme ? `${patientNode.id}:${theme}` : null,
+      patientNodeId: patientNode?.id || null,
     }];
   });
   const edgeSegmentCount = profile === "full" ? 10 : 6;
-  const edgePositions = new Float32Array(edgeRecords.length * edgeSegmentCount * 6);
-  const edgeColors = new Float32Array(edgeRecords.length * edgeSegmentCount * 6);
-  const edgeGeometry = new THREE.BufferGeometry();
-  edgeGeometry.setAttribute("position", new THREE.BufferAttribute(edgePositions, 3));
-  edgeGeometry.setAttribute("color", new THREE.BufferAttribute(edgeColors, 3));
-  const edgeMaterial = new THREE.LineBasicMaterial({
+  const edgeArrayLength = edgeRecords.length * edgeSegmentCount * 6;
+  const inactiveEdgePositions = new Float32Array(edgeArrayLength);
+  const inactiveEdgeColors = new Float32Array(edgeArrayLength);
+  const activeEdgePositions = new Float32Array(edgeArrayLength);
+  const activeEdgeColors = new Float32Array(edgeArrayLength);
+  const inactiveEdgeGeometry = new LineSegmentsGeometry();
+  inactiveEdgeGeometry.setPositions(inactiveEdgePositions);
+  inactiveEdgeGeometry.setColors(inactiveEdgeColors);
+  const inactiveEdgeMaterial = new LineMaterial({
+    color: 0xffffff,
     vertexColors: true,
+    linewidth: 0.68,
     transparent: true,
-    opacity: darkMode ? 0.88 : 0.62,
+    opacity: 1,
+    alphaToCoverage: true,
     blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: false,
   });
-  const edgeGlowMaterial = new THREE.LineBasicMaterial({
+  const inactiveEdgeLines = new LineSegments2(inactiveEdgeGeometry, inactiveEdgeMaterial);
+  inactiveEdgeLines.frustumCulled = false;
+  inactiveEdgeLines.renderOrder = -2;
+
+  const activeEdgeGeometry = new THREE.BufferGeometry();
+  activeEdgeGeometry.setAttribute("position", new THREE.BufferAttribute(activeEdgePositions, 3));
+  activeEdgeGeometry.setAttribute("color", new THREE.BufferAttribute(activeEdgeColors, 3));
+  const activeEdgeMaterial = new THREE.LineBasicMaterial({
+    vertexColors: true,
+    transparent: true,
+    opacity: darkMode ? 0.88 : 0.72,
+    blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending,
+    depthWrite: false,
+  });
+  const activeEdgeGlowMaterial = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
     opacity: darkMode ? 0.3 : 0.12,
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  const edgeLines = new THREE.LineSegments(edgeGeometry, edgeMaterial);
-  const edgeGlowLines = new THREE.LineSegments(edgeGeometry, edgeGlowMaterial);
-  edgeLines.frustumCulled = false;
-  edgeGlowLines.frustumCulled = false;
-  edgeGlowLines.renderOrder = -1;
-  scene.add(edgeGlowLines, edgeLines);
+  const activeEdgeLines = new THREE.LineSegments(activeEdgeGeometry, activeEdgeMaterial);
+  const activeEdgeGlowLines = new THREE.LineSegments(activeEdgeGeometry, activeEdgeGlowMaterial);
+  activeEdgeLines.frustumCulled = false;
+  activeEdgeGlowLines.frustumCulled = false;
+  activeEdgeGlowLines.renderOrder = -1;
+  scene.add(inactiveEdgeLines, activeEdgeGlowLines, activeEdgeLines);
 
   let composer: EffectComposer | null = null;
   let bloom: UnrealBloomPass | null = null;
@@ -470,10 +561,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     keyLight.intensity = darkMode ? 4.2 : 4.8;
     rimLight.color.set(darkMode ? 0x6dcff0 : 0x77b7c9);
     rimLight.intensity = darkMode ? 68 : 38;
-    edgeMaterial.opacity = darkMode ? 0.88 : 0.62;
-    edgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
-    edgeMaterial.needsUpdate = true;
-    edgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
+    inactiveEdgeMaterial.linewidth = darkMode ? 0.68 : 1;
+    inactiveEdgeMaterial.opacity = darkMode ? 1 : 0.72;
+    inactiveEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
+    inactiveEdgeMaterial.needsUpdate = true;
+    activeEdgeMaterial.opacity = darkMode ? 0.88 : 0.72;
+    activeEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
+    activeEdgeMaterial.needsUpdate = true;
+    activeEdgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
     if (bloom) bloom.strength = darkMode ? 0.34 : 0.11;
     groups.forEach((group) => {
       group.haloMaterial.opacity = darkMode ? 0.16 : 0.08;
@@ -482,7 +577,41 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         group.material.metalness = darkMode ? 0.16 : 0.05;
       }
     });
+    attentionHalos.forEach((halo) => halo.materials.forEach((material) => {
+      material.opacity = darkMode ? 0.74 : 0.62;
+    }));
     records.forEach((record) => updateLabelTheme(record, darkMode));
+  };
+
+  const getStateVisibleNodeIds = () => {
+    const ids = getVisibleNodeIds(graph, filter);
+    if (focusedPatientId) {
+      const subgraph = getPatientSubgraphIds(graph, focusedPatientId);
+      Array.from(ids).forEach((id) => {
+        if (!subgraph.has(id)) ids.delete(id);
+      });
+      ids.add(focusedPatientId);
+    }
+    const start = timeWindow.start ?? null;
+    const end = timeWindow.end ?? null;
+    if (start !== null || end !== null) {
+      records.forEach((record, id) => {
+        const evidence = getNodeEvidence(record.node);
+        if (!evidence) return;
+        const timestamp = new Date(evidence.occurredAt).getTime();
+        if ((start !== null && timestamp < start) || (end !== null && timestamp > end)) ids.delete(id);
+      });
+      graph.nodes.filter((node) => node.type === "tag").forEach((node) => {
+        const hasVisibleNeighbor = graph.links.some((link) => {
+          const sourceId = getGraphEndpointId(link.source);
+          const targetId = getGraphEndpointId(link.target);
+          return (sourceId === node.id && targetId && ids.has(targetId))
+            || (targetId === node.id && sourceId && ids.has(sourceId));
+        });
+        if (!hasVisibleNeighbor) ids.delete(node.id);
+      });
+    }
+    return ids;
   };
 
   const applyTransitionTargets = (
@@ -519,8 +648,11 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const updateLabels = () => {
     const pathActive = highlightedNodeIds.size > 0;
     const focusedCount = focusedSubgraphIds.size;
+    const cameraDistance = camera.position.distanceTo(controls.target);
+    const candidates: Array<{ record: NodeRecord; id: string; priority: number; point: THREE.Vector3 }> = [];
     records.forEach((record, id) => {
       record.label.position.copy(record.current);
+      record.label.element.style.opacity = "0";
       const visible = visibleNodeIds.has(id);
       const inFocus = !focusedPatientId || focusedSubgraphIds.has(id);
       const pathVisible = highlightedNodeIds.has(id);
@@ -528,9 +660,38 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       const showFocusedArtifact = Boolean(focusedPatientId)
         && inFocus
         && (focusedCount <= 60 || record.node.type !== "tag");
-      const show = visible && inFocus && (pathVisible || showPanoramaPatient || showFocusedArtifact);
-      record.label.element.style.opacity = show ? (pathActive && !pathVisible ? "0.3" : "1") : "0";
-      record.label.element.style.transform = pathVisible ? "scale(1.04)" : "scale(1)";
+      const evidence = getNodeEvidence(record.node);
+      const semanticLabel = lens === "attention"
+        ? record.node.type === "patient"
+        : cameraDistance >= 92
+          ? record.node.type === "patient"
+          : cameraDistance >= 62
+            ? record.node.type === "patient" || record.node.type === "flow" || record.node.type === "tag" || Boolean(evidence && evidence.gravity.score >= 0.62)
+            : showPanoramaPatient || showFocusedArtifact;
+      const show = visible && inFocus && (pathVisible || semanticLabel);
+      if (!show) return;
+      const priority = pathVisible ? 120
+        : record.node.type === "patient" ? 100
+          : record.node.type === "flow" ? 72
+            : record.node.type === "tag" ? 64
+              : 40 + (evidence?.gravity.score || 0) * 30;
+      const point = record.current.clone().project(camera);
+      candidates.push({ record, id, priority, point });
+    });
+    const occupied: Array<{ left: number; right: number; top: number; bottom: number }> = [];
+    const width = Math.max(1, container.clientWidth);
+    const height = Math.max(1, container.clientHeight);
+    candidates.sort((left, right) => right.priority - left.priority).forEach(({ record, id, point }) => {
+      if (point.z < -1 || point.z > 1) return;
+      const centerX = (point.x * 0.5 + 0.5) * width;
+      const centerY = (-point.y * 0.5 + 0.5) * height;
+      const labelWidth = Math.min(220, Math.max(70, (record.node.label || "").length * 6.2 + 22));
+      const box = { left: centerX - labelWidth / 2, right: centerX + labelWidth / 2, top: centerY - 14, bottom: centerY + 14 };
+      const collision = occupied.some((other) => !(box.right < other.left || box.left > other.right || box.bottom < other.top || box.top > other.bottom));
+      if (collision && !highlightedNodeIds.has(id)) return;
+      occupied.push(box);
+      record.label.element.style.opacity = pathActive && !highlightedNodeIds.has(id) ? "0.3" : "1";
+      record.label.element.style.transform = highlightedNodeIds.has(id) ? "scale(1.04)" : "scale(1)";
     });
   };
 
@@ -597,6 +758,13 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       const speed = record.velocity.length();
       if (speed > 38) record.velocity.multiplyScalar(38 / speed);
       record.current.addScaledVector(record.velocity, deltaSeconds);
+      const maximumSemanticDrift = record.node.type === "patient" ? 5.5 : record.node.type === "tag" ? 8 : 6.5;
+      edgePointA.copy(record.current).sub(record.target);
+      if (edgePointA.lengthSq() > maximumSemanticDrift * maximumSemanticDrift) {
+        edgePointA.setLength(maximumSemanticDrift);
+        record.current.copy(record.target).add(edgePointA);
+        record.velocity.multiplyScalar(0.42);
+      }
       maximumSpeed = Math.max(maximumSpeed, record.velocity.length());
     });
 
@@ -624,6 +792,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       }
     }
     const physicsMoving = integratePhysics(now);
+    const cameraDistance = camera.position.distanceTo(controls.target);
 
     groups.forEach((group) => {
       group.ids.forEach((id, index) => {
@@ -631,7 +800,17 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         if (!record) return;
         const highlighted = highlightedNodeIds.has(id);
         const dimForPath = highlightedNodeIds.size > 0 && !highlighted;
-        const displayScale = record.currentScale * (highlighted ? 1.24 : 1);
+        const evidence = getNodeEvidence(record.node);
+        let semanticScale = 1;
+        if (lens === "attention" && record.node.type !== "patient" && !highlighted) {
+          semanticScale = 0.001;
+        } else if (!focusedPatientId && cameraDistance >= 92 && record.node.type !== "patient" && !highlighted) {
+          semanticScale = evidence && evidence.gravity.score >= 0.72 ? 0.26 : 0.025;
+        } else if (!focusedPatientId && cameraDistance >= 62 && record.node.type !== "patient" && !highlighted) {
+          if (record.node.type === "tag" || record.node.type === "flow") semanticScale = 0.74;
+          else semanticScale = evidence ? THREE.MathUtils.lerp(0.18, 0.82, evidence.gravity.score) : 0.34;
+        }
+        const displayScale = record.currentScale * semanticScale * (highlighted ? 1.24 : 1);
         dummy.position.copy(record.current);
         dummy.scale.setScalar(Math.max(0.001, displayScale));
         dummy.updateMatrix();
@@ -641,7 +820,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         dummy.updateMatrix();
         group.halo.setMatrixAt(index, dummy.matrix);
 
-        const brightness = Math.max(0, record.currentBrightness * (highlighted ? 1.34 : dimForPath ? 0.18 : 1));
+        const hitScale = semanticScale > 0.08
+          ? Math.max(displayScale * 1.58, record.node.type === "patient" ? 2.65 : 1.16)
+          : 0.001;
+        dummy.scale.setScalar(hitScale);
+        dummy.updateMatrix();
+        group.hit.setMatrixAt(index, dummy.matrix);
+
+        const brightness = Math.max(0, record.currentBrightness * semanticScale * (highlighted ? 1.34 : dimForPath ? 0.18 : 1));
         const color = nodeColor(record.node, darkMode).multiplyScalar(brightness);
         if (dimForPath) color.lerp(background, 0.58);
         group.mesh.setColorAt(index, color);
@@ -649,8 +835,21 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       });
       group.mesh.instanceMatrix.needsUpdate = true;
       group.halo.instanceMatrix.needsUpdate = true;
+      group.hit.instanceMatrix.needsUpdate = true;
       if (group.mesh.instanceColor) group.mesh.instanceColor.needsUpdate = true;
       if (group.halo.instanceColor) group.halo.instanceColor.needsUpdate = true;
+    });
+
+    attentionHalos.forEach((halo) => {
+      const record = records.get(halo.nodeId);
+      if (!record) return;
+      halo.group.visible = visibleNodeIds.has(halo.nodeId)
+        && (!focusedPatientId || focusedPatientId === halo.nodeId)
+        && (lens === "attention" || cameraDistance >= 68 || focusedPatientId === halo.nodeId);
+      halo.group.position.copy(record.current);
+      halo.group.quaternion.copy(camera.quaternion);
+      const haloScale = lens === "attention" ? 1.12 : 0.94;
+      halo.group.scale.setScalar(Math.max(0.001, record.currentScale / Math.max(0.1, baseNodeScale(record.node, darkMode)) * haloScale));
     });
 
     edgeRecords.forEach((edge, edgeIndex) => {
@@ -676,23 +875,41 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         .addScaledVector(edgeNormal, bendAmount * (edge.bend < 0 ? -0.72 : 0.72))
         .addScaledVector(edgeBinormal, -bendAmount * edge.twist * 0.28);
 
+      if (edge.bundleKey && edge.patientNodeId && cameraDistance > 58) {
+        const patientRecord = records.get(edge.patientNodeId);
+        if (patientRecord) {
+          const angle = organicSeed(`${edge.bundleKey}:angle`) * Math.PI * 2;
+          const depth = (organicSeed(`${edge.bundleKey}:depth`) - 0.5) * 4;
+          edgeBundleAnchor.set(Math.cos(angle) * 8, Math.sin(angle) * 8, depth).add(patientRecord.current);
+          const bundleStrength = THREE.MathUtils.clamp((cameraDistance - 58) / 46, 0, 0.82);
+          edgeControlA.lerp(edgeBundleAnchor, bundleStrength);
+          edgeControlB.lerp(edgeBundleAnchor, bundleStrength * 0.58);
+        }
+      }
+
       const active = highlightedEdgeIds.has(edge.edgeId);
       const visible = visibleNodeIds.has(edge.sourceId) && visibleNodeIds.has(edge.targetId);
       const focusVisible = !focusedPatientId
         || (focusedSubgraphIds.has(edge.sourceId) && focusedSubgraphIds.has(edge.targetId));
-      const base = active
-        ? new THREE.Color(darkMode ? "#eafcff" : "#087f9e")
-        : new THREE.Color(darkMode ? "#f4f7f8" : "#88857f");
-      const intensity = !visible
-        ? 0
-        : !focusVisible
-          ? 0.018
-          : highlightedNodeIds.size && !active
-            ? (darkMode ? 0.035 : 0.08)
-            : active
-              ? (darkMode ? 1.8 : 1.15)
-              : (darkMode ? 0.105 : 0.36);
-      base.multiplyScalar(intensity);
+      const artifactNode = nodeById.get(edge.sourceId)?.type === "patient"
+        ? nodeById.get(edge.targetId)
+        : nodeById.get(edge.targetId)?.type === "patient"
+          ? nodeById.get(edge.sourceId)
+          : null;
+      const artifactGravity = artifactNode ? getNodeEvidence(artifactNode)?.gravity.score || 0 : 0;
+      const farTrunk = Boolean(edge.bundleKey) && artifactGravity >= 0.56;
+      const inactiveVisible = visible
+        && focusVisible
+        && lens !== "attention"
+        && (cameraDistance < 92 || farTrunk || active);
+      const inactiveIntensity = highlightedNodeIds.size && !active
+        ? (darkMode ? 0.018 : 0.08)
+        : cameraDistance >= 92
+          ? (darkMode ? 0.034 : 0.18)
+          : darkMode ? 0.052 : 0.36;
+      const inactiveColor = new THREE.Color(darkMode ? "#ffffff" : "#88857f").multiplyScalar(inactiveIntensity);
+      const activeVisible = active && visible && focusVisible;
+      const activeColor = new THREE.Color(darkMode ? "#eafcff" : "#087f9e").multiplyScalar(darkMode ? 1.8 : 1.15);
 
       for (let segment = 0; segment < edgeSegmentCount; segment += 1) {
         const t0 = segment / edgeSegmentCount;
@@ -708,22 +925,41 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
           .addScaledVector(edgeControlB, 3 * inverse1 * t1 ** 2)
           .addScaledVector(target.current, t1 ** 3);
         const offset = (edgeIndex * edgeSegmentCount + segment) * 6;
-        edgePositions[offset] = edgePointA.x;
-        edgePositions[offset + 1] = edgePointA.y;
-        edgePositions[offset + 2] = edgePointA.z;
-        edgePositions[offset + 3] = edgePointB.x;
-        edgePositions[offset + 4] = edgePointB.y;
-        edgePositions[offset + 5] = edgePointB.z;
-        edgeColors[offset] = base.r;
-        edgeColors[offset + 1] = base.g;
-        edgeColors[offset + 2] = base.b;
-        edgeColors[offset + 3] = base.r;
-        edgeColors[offset + 4] = base.g;
-        edgeColors[offset + 5] = base.b;
+        const inactiveEnd = inactiveVisible ? edgePointB : edgePointA;
+        inactiveEdgePositions[offset] = edgePointA.x;
+        inactiveEdgePositions[offset + 1] = edgePointA.y;
+        inactiveEdgePositions[offset + 2] = edgePointA.z;
+        inactiveEdgePositions[offset + 3] = inactiveEnd.x;
+        inactiveEdgePositions[offset + 4] = inactiveEnd.y;
+        inactiveEdgePositions[offset + 5] = inactiveEnd.z;
+        inactiveEdgeColors[offset] = inactiveColor.r;
+        inactiveEdgeColors[offset + 1] = inactiveColor.g;
+        inactiveEdgeColors[offset + 2] = inactiveColor.b;
+        inactiveEdgeColors[offset + 3] = inactiveColor.r;
+        inactiveEdgeColors[offset + 4] = inactiveColor.g;
+        inactiveEdgeColors[offset + 5] = inactiveColor.b;
+
+        const activeEnd = activeVisible ? edgePointB : edgePointA;
+        activeEdgePositions[offset] = edgePointA.x;
+        activeEdgePositions[offset + 1] = edgePointA.y;
+        activeEdgePositions[offset + 2] = edgePointA.z;
+        activeEdgePositions[offset + 3] = activeEnd.x;
+        activeEdgePositions[offset + 4] = activeEnd.y;
+        activeEdgePositions[offset + 5] = activeEnd.z;
+        activeEdgeColors[offset] = activeColor.r;
+        activeEdgeColors[offset + 1] = activeColor.g;
+        activeEdgeColors[offset + 2] = activeColor.b;
+        activeEdgeColors[offset + 3] = activeColor.r;
+        activeEdgeColors[offset + 4] = activeColor.g;
+        activeEdgeColors[offset + 5] = activeColor.b;
       }
     });
-    (edgeGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
-    (edgeGeometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
+    const inactiveStart = inactiveEdgeGeometry.getAttribute("instanceStart") as THREE.InterleavedBufferAttribute;
+    const inactiveColorStart = inactiveEdgeGeometry.getAttribute("instanceColorStart") as THREE.InterleavedBufferAttribute;
+    inactiveStart.data.needsUpdate = true;
+    inactiveColorStart.data.needsUpdate = true;
+    (activeEdgeGeometry.getAttribute("position") as THREE.BufferAttribute).needsUpdate = true;
+    (activeEdgeGeometry.getAttribute("color") as THREE.BufferAttribute).needsUpdate = true;
     updateLabels();
     return physicsMoving;
   };
@@ -779,17 +1015,16 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     focusedPatientId = nextFocusedPatientId;
     if (layoutChanged) {
       records.forEach((record) => {
-        record.pinned = false;
+        record.pinned = Boolean(getNodeEvidence(record.node)?.pinned);
         record.velocity.set(0, 0, 0);
       });
     }
-    visibleNodeIds = getVisibleNodeIds(graph, filter);
     if (focusedPatientId) {
-      visibleNodeIds.add(focusedPatientId);
       focusedSubgraphIds = getPatientSubgraphIds(graph, focusedPatientId);
     } else {
       focusedSubgraphIds = new Set();
     }
+    visibleNodeIds = getStateVisibleNodeIds();
 
     if (darkMode !== nextDarkMode) {
       darkMode = nextDarkMode;
@@ -813,6 +1048,50 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     }
     if (highlightedNodeId) setHighlight(highlightedNodeId);
     requestRender(duration + 100);
+  };
+
+  const setLens = (nextLens: NeuroViewLens) => {
+    if (lens === nextLens) return;
+    lens = nextLens;
+    visibleNodeIds = getStateVisibleNodeIds();
+    applyTransitionTargets(
+      activeLayoutPositions,
+      visibleNodeIds,
+      focusedSubgraphIds,
+      reducedMotion ? 1 : 320,
+    );
+    requestRender(reducedMotion ? 60 : 460);
+  };
+
+  const setTimeWindow = (nextWindow: NeuroViewTimeWindow) => {
+    const normalized = {
+      start: Number.isFinite(nextWindow.start) ? nextWindow.start : null,
+      end: Number.isFinite(nextWindow.end) ? nextWindow.end : null,
+    };
+    if (timeWindow.start === normalized.start && timeWindow.end === normalized.end) return;
+    timeWindow = normalized;
+    visibleNodeIds = getStateVisibleNodeIds();
+    applyTransitionTargets(
+      activeLayoutPositions,
+      visibleNodeIds,
+      focusedSubgraphIds,
+      reducedMotion ? 1 : 220,
+    );
+    requestRender(reducedMotion ? 60 : 360);
+  };
+
+  const focusNode = (nodeId: string) => {
+    const record = records.get(nodeId);
+    if (!record || !visibleNodeIds.has(nodeId)) return;
+    const direction = camera.position.clone().sub(controls.target).normalize();
+    const distance = record.node.type === "patient" ? 34 : 24;
+    beginCameraTween(
+      record.current.clone().addScaledVector(direction.lengthSq() > 0.1 ? direction : new THREE.Vector3(0, 0, 1), distance),
+      record.current.clone(),
+      reducedMotion ? 0 : 560,
+    );
+    setHighlight(nodeId);
+    requestRender(640);
   };
 
   const setDynamics = (nextSettings: NeuroViewDynamicsSettings) => {
@@ -839,7 +1118,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
 
   const resetDynamics = () => {
     records.forEach((record) => {
-      record.pinned = false;
+      record.pinned = Boolean(getNodeEvidence(record.node)?.pinned);
       record.velocity.set(0, 0, 0);
     });
     applyTransitionTargets(
@@ -1009,6 +1288,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     setDynamics,
     resetDynamics,
     resetCamera,
+    focusNode,
+    setLens,
+    setTimeWindow,
     dispose: () => {
       if (disposed) return;
       disposed = true;
@@ -1028,15 +1310,26 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       groups.forEach((group) => {
         group.mesh.removeFromParent();
         group.halo.removeFromParent();
+        group.hit.removeFromParent();
         group.geometry.dispose();
         group.material.dispose();
         group.haloMaterial.dispose();
       });
-      edgeGlowLines.removeFromParent();
-      edgeLines.removeFromParent();
-      edgeGeometry.dispose();
-      edgeMaterial.dispose();
-      edgeGlowMaterial.dispose();
+      attentionHalos.forEach((halo) => {
+        halo.group.removeFromParent();
+        halo.geometries.forEach((geometry) => geometry.dispose());
+        halo.materials.forEach((material) => material.dispose());
+      });
+      hitGeometry.dispose();
+      hitMaterial.dispose();
+      inactiveEdgeLines.removeFromParent();
+      activeEdgeGlowLines.removeFromParent();
+      activeEdgeLines.removeFromParent();
+      inactiveEdgeGeometry.dispose();
+      inactiveEdgeMaterial.dispose();
+      activeEdgeGeometry.dispose();
+      activeEdgeMaterial.dispose();
+      activeEdgeGlowMaterial.dispose();
       composer?.dispose();
       environmentTarget?.dispose();
       scene.environment = null;

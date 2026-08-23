@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, X, FileText, Edit2, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, X, FileText, Edit2, Save, Trash2, Sparkles } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PersonalNote, Patient } from "@/types";
@@ -8,12 +8,16 @@ import { useState, useEffect } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { htmlToPlainText, plainTextToNoteHtml, noteExcerpt } from "@/lib/note-content";
+import type { EvidenceNode } from "../clinical-evidence/evidence-types";
+import { getEvidenceSourceLabel } from "../clinical-evidence/evidence-model";
 
 interface GraphDetailsPanelProps {
   selectedNote: PersonalNote | null;
   selectedPatient: Patient | null;
+  selectedEvidence?: EvidenceNode | null;
   onCloseNote: () => void;
   onClosePatient: () => void;
+  onCloseEvidence?: () => void;
   onDeleteNote: (id: string) => void;
   onUpdateNote: (id: string, updates: Partial<PersonalNote>) => void;
   onSelectNote: (note: PersonalNote) => void;
@@ -40,8 +44,10 @@ const panelVariants = {
 export const GraphDetailsPanel = ({
   selectedNote,
   selectedPatient,
+  selectedEvidence = null,
   onCloseNote,
   onClosePatient,
+  onCloseEvidence,
   onDeleteNote,
   onUpdateNote,
   onSelectNote,
@@ -71,6 +77,52 @@ export const GraphDetailsPanel = ({
 
   return (
     <>
+      <AnimatePresence mode="wait">
+        {selectedEvidence && (
+          <motion.div
+            key="evidence-panel"
+            variants={panelVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            className="absolute bottom-5 right-5 top-20 z-[70] flex w-[390px] flex-col pointer-events-none"
+          >
+            <div className="pointer-events-auto flex flex-1 flex-col overflow-hidden rounded-[24px] border border-border/10 bg-card/90 shadow-2xl ring-1 ring-border/5 backdrop-blur-2xl dark:border-white/10 dark:bg-[#0A0A0B]/90 dark:ring-white/5">
+              <div className="flex items-start justify-between gap-4 border-b border-border/10 px-6 py-5 dark:border-white/5">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground"><Sparkles className="h-3.5 w-3.5" /> Por que está aqui?</div>
+                  <h3 className="mt-2 truncate text-sm font-bold">{selectedEvidence.title}</h3>
+                  <p className="mt-1 text-[10px] text-muted-foreground">{getEvidenceSourceLabel(selectedEvidence.sourceType)} · {selectedEvidence.theme}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onCloseEvidence} aria-label="Fechar explicação da evidência" className="h-8 w-8 rounded-lg"><X className="h-4 w-4" /></Button>
+              </div>
+              <div className="flex-1 space-y-5 overflow-y-auto p-6">
+                {!selectedEvidence.reviewed ? (
+                  <p className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-3 text-xs leading-relaxed">Aguardando revisão; esta evidência ainda não altera a gravidade.</p>
+                ) : null}
+                <div className="flex items-end justify-between gap-4">
+                  <span className="text-xs font-medium">Densidade de evidências</span>
+                  <strong className="text-2xl tracking-[-0.04em]">{Math.round(selectedEvidence.gravity.score * 100)}%</strong>
+                </div>
+                {([
+                  ["Recência", selectedEvidence.gravity.recency],
+                  ["Recorrência", selectedEvidence.gravity.recurrence],
+                  ["Diversidade de fontes", selectedEvidence.gravity.sourceDiversity],
+                  ["Ação pendente", selectedEvidence.gravity.actionability],
+                  ["Prioridade profissional", selectedEvidence.gravity.clinicianPriority],
+                ] as const).map(([label, value]) => (
+                  <div key={label} className="space-y-1.5">
+                    <div className="flex justify-between text-[10px]"><span className="text-muted-foreground">{label}</span><span>{Math.round(value * 100)}%</span></div>
+                    <div className="h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-foreground/70" style={{ width: `${value * 100}%` }} /></div>
+                  </div>
+                ))}
+                <p className="border-t border-border/10 pt-4 text-[11px] leading-relaxed text-muted-foreground dark:border-white/5">A posição combina somente fatos rastreáveis. Risco registrado permanece uma dimensão separada.</p>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* FLOATING GLASS PANEL - Note Detail */}
       <AnimatePresence mode="wait">
         {selectedNote && (

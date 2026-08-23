@@ -16,6 +16,7 @@ import { useSynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/us
 import { useReducedMotion } from "framer-motion";
 import type { SynapseNeuroViewDirective } from "@/lib/synapse-interface-actions";
 import { detectNeuroViewHardware, type NeuroViewHardwareCapability } from "./neuroview-3d/webgl-support";
+import type { EvidenceNode } from "./clinical-evidence/evidence-types";
 
 const NeuroView3D = lazy(() => import("./neuroview-3d/NeuroView3D"));
 
@@ -107,7 +108,15 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             : config
     ), [config, synapseDirective, synapsePatientId, synapseRunId]);
 
-    const { graphData: completeGraphData, notes, patients, isLoading } = useGraphData({ config: graphConfig, searchQuery });
+    const {
+        graphData: completeGraphData,
+        notes,
+        patients,
+        evidence,
+        isEvidenceAvailable,
+        updateEvidenceOverride,
+        isLoading,
+    } = useGraphData({ config: graphConfig, searchQuery });
     const activeTrace = useMemo(() => run?.trace || asTrace(synapseTrace), [run?.trace, synapseTrace]);
     const traceNodeIds = useMemo(() => (
         (activeTrace?.nodes || [])
@@ -147,7 +156,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             if (!neighborId) return;
             ids.add(neighborId);
             const neighbor = nodeById.get(neighborId);
-            if (neighbor?.type === "note" || neighbor?.type === "flow") clinicalArtifactIds.add(neighborId);
+            if (neighbor?.type === "note" || neighbor?.type === "flow" || neighbor?.type === "evidence") clinicalArtifactIds.add(neighborId);
         });
         completeGraphData.links.forEach((link) => {
             const sourceId = getEndpointId(link.source);
@@ -187,6 +196,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [selectedNote, setSelectedNote] = useState<PersonalNote | null>(null);
     const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+    const [selectedEvidence, setSelectedEvidence] = useState<EvidenceNode | null>(null);
     const [hoverNode, setHoverNode] = useState<GraphNode | null>(null);
     const [isPatientSidebarOpen, setIsPatientSidebarOpen] = useState(true);
 
@@ -483,15 +493,22 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
         if (node.type === 'patient') {
             setSelectedPatient(node.data);
             setSelectedNote(null);
+            setSelectedEvidence(null);
         } else if (node.type === 'note') {
             setSelectedNote(node.data);
             setSelectedPatient(null);
+            setSelectedEvidence(null);
         } else if (node.type === 'flow') {
             setSelectedNote(null);
             setSelectedPatient(null);
+            setSelectedEvidence(null);
             window.dispatchEvent(new CustomEvent("neuroflow:navigate", {
                 detail: { flowId: node.data?.id },
             }));
+        } else if (node.type === 'evidence' && node.data?.evidence) {
+            setSelectedEvidence(node.data.evidence as EvidenceNode);
+            setSelectedNote(null);
+            setSelectedPatient(null);
         }
     }, [shouldReduceMotion]);
 
@@ -503,6 +520,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             return;
         }
         setWebglFallbackMessage(null);
+        setSelectedEvidence(null);
         setIsUniverseMode(true);
     }, [shouldReduceMotion]);
 
@@ -703,6 +721,8 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             fg.d3Force('y', forceY(0).strength(config.centerForce * 0.22));
             fg.d3Force('radial', forceRadial((node: any) => {
                 if (node.type === "patient") return 72;
+                const evidenceDensity = Number(node.data?.evidence?.gravity?.score);
+                if (Number.isFinite(evidenceDensity)) return 112 + (1 - evidenceDensity) * 108;
                 if (node.type === "flow") return 132;
                 if (node.type === "note") return 165;
                 return 240;
@@ -710,7 +730,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
 
             // Collision to prevent overlap
             fg.d3Force('collide', forceCollide((node: any) => {
-                const radius = node.type === 'patient' ? 15 : (node.type === 'flow' ? 12 : (node.type === 'note' ? 10 : 7));
+                const radius = node.type === 'patient' ? 15 : (node.type === 'flow' ? 12 : (node.type === 'note' ? 10 : (node.type === 'evidence' ? 8 : 7)));
                 return radius + Math.max(0, node.currentRadius || 0);
             }).strength(0.66).iterations(2));
 
@@ -824,8 +844,10 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
             <GraphDetailsPanel
                 selectedNote={selectedNote}
                 selectedPatient={selectedPatient}
+                selectedEvidence={selectedEvidence}
                 onCloseNote={() => setSelectedNote(null)}
                 onClosePatient={() => setSelectedPatient(null)}
+                onCloseEvidence={() => setSelectedEvidence(null)}
                 onDeleteNote={(id) => { deleteNote(id); setSelectedNote(null); }}
                 onUpdateNote={(id, updates) => updateNote({ id, updates })}
                 onSelectNote={(note) => { setSelectedNote(note); setSelectedPatient(null); }}
@@ -881,6 +903,9 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                             onSelectNote={handle3DSelectNote}
                             onSelectPatient={handle3DSelectPatient}
                             onClearPatient={handle3DClearPatient}
+                            evidence={evidence}
+                            evidenceAvailable={isEvidenceAvailable}
+                            onUpdateEvidenceOverride={updateEvidenceOverride}
                         />
                     </Suspense>
                 </div>

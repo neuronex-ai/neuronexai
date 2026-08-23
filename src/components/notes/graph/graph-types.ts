@@ -3,7 +3,7 @@ import { NodeObject, LinkObject } from "react-force-graph-2d";
 export interface GraphNode extends NodeObject {
   id: string;
   label: string;
-  type: 'patient' | 'note' | 'tag' | 'flow';
+  type: 'patient' | 'note' | 'tag' | 'flow' | 'evidence';
   val: number;
   color: string;
   imgUrl?: string | null;
@@ -47,6 +47,7 @@ export const GRAPH_COLORS = {
   patient: "#FFFFFF",
   note: "#A8A29E", // stone-400
   flow: "#7DD3FC", // sky-300
+  evidence: "#C4B5FD", // violet-300
   tag: "#78716C", // stone-500
   highlight: "#FFFFFF",
   background: "#020204",

@@ -118,31 +118,63 @@ describe("NeuroView 3d graph model", () => {
     );
   });
 
-  it("starts on the flat plane and places semantic types on progressively larger shells", () => {
+  it("starts on the flat plane and maps density to radius and chronology to depth", () => {
+    const evidence = (sourceId: string, score: number, occurredAt: string) => ({
+      id: `session_note:${sourceId}`,
+      sourceId,
+      sourceType: "session_note" as const,
+      patientId: "a",
+      title: sourceId,
+      occurredAt,
+      updatedAt: occurredAt,
+      tags: ["ansiedade"],
+      reviewed: true,
+      isActionable: false,
+      actionDueAt: null,
+      actionCompleted: false,
+      priority: 0,
+      pinned: false,
+      hidden: false,
+      theme: "Ansiedade",
+      metadata: {},
+      gravity: {
+        recency: score,
+        recurrence: score,
+        sourceDiversity: score,
+        actionability: 0,
+        clinicianPriority: 0,
+        score,
+        eligible: true,
+      },
+    });
     const graph: GraphSnapshot = {
       nodes: [
         node("pat-a", "patient", { id: "a" }, { x: -50, y: 10 }),
-        node("flow-a", "flow", { patient_id: "a" }, { x: 10, y: 20 }),
-        node("note-a", "note", { patient_id: "a" }, { x: 40, y: -20 }),
+        node("evidence-high", "evidence", {
+          patient_id: "a",
+          evidence: evidence("high", 0.92, "2026-08-22T12:00:00.000Z"),
+        }, { x: 10, y: 20 }),
+        node("evidence-low", "evidence", {
+          patient_id: "a",
+          evidence: evidence("low", 0.08, "2026-01-01T12:00:00.000Z"),
+        }, { x: 40, y: -20 }),
         node("tag-a", "tag", {}, { x: 50, y: 30 }),
       ],
       links: [
-        link("pat-a", "flow-a"),
-        link("pat-a", "note-a"),
-        link("note-a", "tag-a"),
+        link("pat-a", "evidence-high"),
+        link("pat-a", "evidence-low"),
+        link("evidence-high", "tag-a"),
       ],
     };
 
     const layout = computeSpatialLayout(graph);
     expect(Array.from(layout.flat.values()).every((point) => point.z === 0)).toBe(true);
-    const radius = (id: string) => {
+    const distanceFromPatient = (id: string) => {
       const point = layout.panorama.get(id)!;
-      return Math.hypot(point.x, point.y, point.z);
+      const patient = layout.panorama.get("pat-a")!;
+      return Math.hypot(point.x - patient.x, point.y - patient.y, point.z - patient.z);
     };
-    expect(radius("pat-a")).toBeCloseTo(8, 4);
-    expect(radius("flow-a")).toBeCloseTo(19, 4);
-    expect(radius("note-a")).toBeCloseTo(30, 4);
-    expect(radius("tag-a")).toBeCloseTo(43, 4);
+    expect(distanceFromPatient("evidence-high")).toBeLessThan(distanceFromPatient("evidence-low"));
+    expect(layout.panorama.get("evidence-high")!.z).toBeGreaterThan(layout.panorama.get("evidence-low")!.z);
   });
 });
-

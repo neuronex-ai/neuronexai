@@ -50,6 +50,7 @@ const getNodeBase = (node: GraphNode) => {
   if (node.type === "patient") return { radius: 6, glow: 26 };
   if (node.type === "flow") return { radius: 5.2, glow: 22 };
   if (node.type === "note") return { radius: 4.2, glow: 18 };
+  if (node.type === "evidence") return { radius: 3.5, glow: 15 };
   return { radius: 2.8, glow: 12 };
 };
 

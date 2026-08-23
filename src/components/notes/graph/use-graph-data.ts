@@ -6,6 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseStoredNeuroFlowWorkflow } from "@/lib/neuroflow-workflow";
 import { GraphNode, GraphLink, GRAPH_COLORS } from "./graph-types";
 import { NeuroConfig } from "../NeuroViewControls";
+import { useNeuroViewEvidence } from "../clinical-evidence/use-neuroview-evidence";
+import { buildAttentionReasons } from "../clinical-evidence/evidence-model";
 
 interface UseGraphDataProps {
   config: NeuroConfig;
@@ -22,6 +24,12 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
   const { user } = useAuth();
   const { notes, isLoading: loadingNotes } = usePersonalNotes();
   const { data: patients, isLoading: loadingPatients } = usePatients();
+  const {
+    evidence,
+    isAvailable: isEvidenceAvailable,
+    isLoading: loadingEvidence,
+    updateOverride: updateEvidenceOverride,
+  } = useNeuroViewEvidence();
   const [flows, setFlows] = useState<any[]>([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
   
@@ -110,14 +118,15 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
       if (n.type === 'note' && !config.showNotes) return;
       if (n.type === 'tag' && !config.showTags) return;
       if (n.type === 'flow' && !config.showNotes) return;
+      if (n.type === 'evidence' && !config.showNotes) return;
 
-      const baseRadius = n.type === 'patient' ? 6 : (n.type === 'flow' ? 5.2 : (n.type === 'note' ? 4.2 : 2.8));
-      const baseGlow = n.type === 'patient' ? 24 : (n.type === 'flow' ? 22 : (n.type === 'note' ? 16 : 10));
+      const baseRadius = n.type === 'patient' ? 6 : (n.type === 'flow' ? 5.2 : (n.type === 'note' ? 4.2 : (n.type === 'evidence' ? 3.5 : 2.8)));
+      const baseGlow = n.type === 'patient' ? 24 : (n.type === 'flow' ? 22 : (n.type === 'note' ? 16 : (n.type === 'evidence' ? 14 : 10)));
       const pulseSeed = Array.from(String(n.id)).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 997;
 
       const node: GraphNode = {
         ...n,
-        val: n.type === 'patient' ? 22 : (n.type === 'flow' ? 15 : (n.type === 'note' ? 11 : 5)),
+        val: n.type === 'patient' ? 22 : (n.type === 'flow' ? 15 : (n.type === 'note' ? 11 : (n.type === 'evidence' ? 8 : 5))),
         neighbors: [],
         links: [],
         imgObj: n.imgUrl ? getOrLoadImage(n.imgUrl) : undefined,
@@ -137,6 +146,9 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
 
     const normalizedSearch = normalizeSearchText(searchQuery.trim());
     const matchedPatientIds = new Set<string>();
+    const hiddenEvidenceKeys = new Set(
+      evidence.filter((item) => item.hidden).map((item) => `${item.sourceType}:${item.sourceId}`),
+    );
 
     patients.forEach((patient) => {
       if (!normalizedSearch || normalizeSearchText(patient.name).includes(normalizedSearch)) {
@@ -145,6 +157,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     });
 
     const visibleNotes = notes.filter(n => {
+      if (hiddenEvidenceKeys.has(`personal_note:${n.id}`)) return false;
       if (!normalizedSearch) return true;
 
       const patient = n.patient_id ? patients.find(p => p.id === n.patient_id) : null;
@@ -155,6 +168,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     });
 
     const visibleFlows = flows.filter(flow => {
+      if (hiddenEvidenceKeys.has(`flow:${flow.id}`)) return false;
       if (!normalizedSearch) return true;
 
       const patient = flow.patient_id ? patients.find(p => p.id === flow.patient_id) : null;
@@ -164,6 +178,16 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
         Boolean(normalizeSearchText(patient?.name).includes(normalizedSearch));
     });
 
+    const visibleEvidence = evidence.filter((item) => {
+      if (item.hidden) return false;
+      if (!normalizedSearch) return true;
+      const patient = item.patientId ? patients.find((candidate) => candidate.id === item.patientId) : null;
+      return normalizeSearchText(item.title).includes(normalizedSearch)
+        || normalizeSearchText(item.theme).includes(normalizedSearch)
+        || item.tags.some((tag) => normalizeSearchText(tag).includes(normalizedSearch))
+        || Boolean(normalizeSearchText(patient?.name).includes(normalizedSearch));
+    });
+
     const visiblePatientIds = new Set<string>(matchedPatientIds);
     visibleNotes.forEach((note) => {
       if (note.patient_id) visiblePatientIds.add(note.patient_id);
@@ -171,6 +195,12 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     visibleFlows.forEach((flow) => {
       if (flow.patient_id) visiblePatientIds.add(flow.patient_id);
     });
+    visibleEvidence.forEach((item) => {
+      if (item.patientId) visiblePatientIds.add(item.patientId);
+    });
+    const attentionByPatientId = new Map(
+      patients.map((patient) => [patient.id, buildAttentionReasons(patient, evidence)]),
+    );
 
     // Add Patients
     patients.forEach(p => {
@@ -182,7 +212,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
         type: 'patient',
         color: '#FFFFFF',
         imgUrl: p.avatar_url,
-        data: p
+        data: { ...p, attentionReasons: attentionByPatientId.get(p.id) || [] }
       });
     });
 
@@ -252,6 +282,50 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
         });
     });
 
+    visibleEvidence.forEach((item) => {
+      const existingNodeId = item.sourceType === "personal_note"
+        ? `note-${item.sourceId}`
+        : item.sourceType === "flow"
+          ? `flow-${item.sourceId}`
+          : null;
+      if (existingNodeId && map[existingNodeId]) {
+        map[existingNodeId].data = { ...map[existingNodeId].data, evidence: item };
+        return;
+      }
+      if (!item.patientId || !addedIds.has(`pat-${item.patientId}`)) return;
+
+      const evidenceId = `evidence-${item.sourceType}-${item.sourceId}`;
+      addNode({
+        id: evidenceId,
+        label: item.title,
+        type: 'evidence',
+        color: GRAPH_COLORS.evidence,
+        data: {
+          evidence: item,
+          patient_id: item.patientId,
+          updated_at: item.updatedAt,
+          created_at: item.occurredAt,
+        },
+      });
+      if (!addedIds.has(evidenceId)) return;
+      links.push({
+        source: `pat-${item.patientId}`,
+        target: evidenceId,
+        value: 1.4 + item.gravity.score * 1.8,
+        revealProgress: 1,
+        revealTarget: 1,
+      });
+      item.tags.forEach((tag) => {
+        const tagId = `tag-${tag}`;
+        if (!addedIds.has(tagId)) {
+          addNode({ id: tagId, label: `#${tag}`, type: 'tag', color: GRAPH_COLORS.tag });
+        }
+        if (addedIds.has(tagId)) {
+          links.push({ source: evidenceId, target: tagId, value: 1, revealProgress: 1, revealTarget: 1 });
+        }
+      });
+    });
+
     // Compute Neighbors for highlighting logic
     links.forEach(link => {
       const a = map[link.source as string];
@@ -266,7 +340,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     });
 
     return { graphData: { nodes, links }, nodeMap: map };
-  }, [notes, patients, flows, config, searchQuery]);
+  }, [notes, patients, flows, evidence, config, searchQuery]);
 
   // Continuously save positions to ref to persist across re-renders
   useEffect(() => {
@@ -294,6 +368,9 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     notes,
     patients,
     flows,
-    isLoading: loadingNotes || loadingPatients || loadingFlows
+    evidence,
+    isEvidenceAvailable,
+    updateEvidenceOverride,
+    isLoading: loadingNotes || loadingPatients || loadingFlows || loadingEvidence
   };
 };
