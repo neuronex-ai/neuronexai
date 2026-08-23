@@ -6,6 +6,7 @@ import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
+import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
 import { LineMaterial } from "three/addons/lines/LineMaterial.js";
 import { LineSegments2 } from "three/addons/lines/LineSegments2.js";
 import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js";
@@ -87,7 +88,7 @@ type MeshGroup = {
   halo: THREE.InstancedMesh;
   hit: THREE.InstancedMesh;
   geometry: THREE.BufferGeometry;
-  material: THREE.MeshPhysicalMaterial | THREE.MeshStandardMaterial;
+  material: THREE.MeshPhysicalMaterial;
   haloMaterial: THREE.MeshBasicMaterial;
 };
 
@@ -153,12 +154,14 @@ type EdgeRecord = {
 };
 
 const makeGeometry = (type: GraphNode["type"], profile: NeuroViewSceneProfile) => {
-  const detail = profile === "full" ? 3 : 2;
-  if (type === "flow") return new THREE.OctahedronGeometry(1, profile === "full" ? 2 : 1);
-  if (type === "note") return new THREE.IcosahedronGeometry(1, detail);
-  if (type === "evidence") return new THREE.DodecahedronGeometry(1, profile === "full" ? 2 : 1);
-  if (type === "tag") return new THREE.SphereGeometry(1, profile === "full" ? 18 : 12, profile === "full" ? 12 : 8);
-  return new THREE.SphereGeometry(1, profile === "full" ? 36 : 22, profile === "full" ? 24 : 14);
+  let geometry: THREE.BufferGeometry;
+  if (type === "flow") geometry = new THREE.OctahedronGeometry(1, profile === "full" ? 3 : 1);
+  else if (type === "note") geometry = new THREE.IcosahedronGeometry(1, profile === "full" ? 4 : 2);
+  else if (type === "evidence") geometry = new THREE.DodecahedronGeometry(1, profile === "full" ? 3 : 1);
+  else if (type === "tag") geometry = new THREE.SphereGeometry(1, profile === "full" ? 32 : 12, profile === "full" ? 24 : 8);
+  else geometry = new THREE.SphereGeometry(1, profile === "full" ? 64 : 22, profile === "full" ? 48 : 14);
+  geometry.computeVertexNormals();
+  return geometry;
 };
 
 const makeLabel = (node: GraphNode, darkMode: boolean) => {
@@ -211,6 +214,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let frameId = 0;
   let animationUntil = transitionStartedAt + transitionDuration;
   let renderRequested = false;
+  let controlsInteractionActive = false;
   let hoveredNodeId: string | null = null;
   let pointerStart: { x: number; y: number } | null = null;
   let draggedNodeId: string | null = null;
@@ -271,7 +275,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     onSceneError(error instanceof Error ? error.message : "WebGL indisponível.");
     throw error;
   }
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, profile === "full" ? 1.75 : 1.1));
+  const renderPixelRatio = Math.min(window.devicePixelRatio || 1, profile === "full" ? 2 : 1.1);
+  renderer.setPixelRatio(renderPixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = darkMode ? 1.18 : 0.94;
@@ -283,6 +288,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   renderer.domElement.style.width = "100%";
   renderer.domElement.style.height = "100%";
   renderer.domElement.style.touchAction = "none";
+  renderer.domElement.style.imageRendering = "auto";
   container.appendChild(renderer.domElement);
   const handleContextLost = (event: Event) => {
     event.preventDefault();
@@ -309,19 +315,25 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   controls.target.copy(PANORAMA_TARGET);
   controls.update();
 
-  const hemisphere = new THREE.HemisphereLight(darkMode ? 0xe9f5ff : 0xffffff, darkMode ? 0x101018 : 0xc8c1b8, darkMode ? 2.15 : 2.5);
-  const keyLight = new THREE.DirectionalLight(darkMode ? 0xd9efff : 0xffffff, darkMode ? 4.2 : 4.8);
-  keyLight.position.set(-26, 32, 38);
-  const rimLight = new THREE.PointLight(darkMode ? 0x6dcff0 : 0x77b7c9, darkMode ? 68 : 38, 150, 2);
+  RectAreaLightUniformsLib.init();
+  const hemisphere = new THREE.HemisphereLight(darkMode ? 0xe9f5ff : 0xffffff, darkMode ? 0x101018 : 0xc8c1b8, darkMode ? 1.32 : 1.7);
+  const keyLight = new THREE.RectAreaLight(darkMode ? 0xe8f6ff : 0xffffff, darkMode ? 14 : 11, 42, 30);
+  keyLight.position.set(-28, 34, 44);
+  keyLight.lookAt(0, 0, 0);
+  const fillLight = new THREE.RectAreaLight(darkMode ? 0x78d7f4 : 0xaadce8, darkMode ? 8.5 : 6.5, 28, 38);
+  fillLight.position.set(34, -16, 30);
+  fillLight.lookAt(0, 0, 0);
+  const rimLight = new THREE.PointLight(darkMode ? 0x9fe7ff : 0x77b7c9, darkMode ? 34 : 24, 170, 2);
   rimLight.position.set(30, -12, 32);
-  scene.add(hemisphere, keyLight, rimLight);
+  scene.add(hemisphere, keyLight, fillLight, rimLight);
 
   let environmentTarget: THREE.WebGLRenderTarget | null = null;
   if (profile === "full") {
     const pmrem = new THREE.PMREMGenerator(renderer);
     const roomEnvironment = new RoomEnvironment();
-    environmentTarget = pmrem.fromScene(roomEnvironment, 0.04);
+    environmentTarget = pmrem.fromScene(roomEnvironment, 0.055);
     scene.environment = environmentTarget.texture;
+    scene.environmentIntensity = darkMode ? 0.82 : 0.68;
     roomEnvironment.dispose();
     pmrem.dispose();
   }
@@ -356,21 +368,25 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
 
   groupsByType.forEach((nodes, type) => {
     const geometry = makeGeometry(type, profile);
-    const material = type === "patient"
-      ? new THREE.MeshPhysicalMaterial({
-          color: 0xffffff,
-          vertexColors: true,
-          roughness: darkMode ? 0.2 : 0.34,
-          metalness: darkMode ? 0.16 : 0.05,
-          clearcoat: 1,
-          clearcoatRoughness: 0.18,
-        })
-      : new THREE.MeshStandardMaterial({
-          color: 0xffffff,
-          vertexColors: true,
-          roughness: type === "flow" ? 0.28 : 0.48,
-          metalness: type === "flow" ? 0.2 : 0.04,
-        });
+    const material = new THREE.MeshPhysicalMaterial({
+      color: 0xffffff,
+      vertexColors: true,
+      roughness: type === "patient"
+        ? (darkMode ? 0.14 : 0.27)
+        : type === "flow"
+          ? (darkMode ? 0.2 : 0.31)
+          : (darkMode ? 0.34 : 0.46),
+      metalness: type === "patient" ? (darkMode ? 0.3 : 0.1) : type === "flow" ? 0.22 : 0.07,
+      clearcoat: type === "patient" ? 1 : 0.82,
+      clearcoatRoughness: type === "patient" ? 0.075 : 0.14,
+      ior: 1.48,
+      reflectivity: darkMode ? 0.82 : 0.62,
+      envMapIntensity: profile === "full" ? (darkMode ? 1.36 : 1.08) : 0.44,
+      sheen: darkMode ? 0.12 : 0.05,
+      sheenColor: new THREE.Color(darkMode ? 0x9fe8ff : 0xd8f4fb),
+      sheenRoughness: 0.42,
+      specularIntensity: darkMode ? 1 : 0.78,
+    });
     const haloMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       vertexColors: true,
@@ -502,9 +518,18 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let composer: EffectComposer | null = null;
   let bloom: UnrealBloomPass | null = null;
   if (profile === "full") {
-    composer = new EffectComposer(renderer);
+    const composerTarget = new THREE.WebGLRenderTarget(1, 1, {
+      type: THREE.HalfFloatType,
+      minFilter: THREE.LinearFilter,
+      magFilter: THREE.LinearFilter,
+      depthBuffer: true,
+      stencilBuffer: false,
+      samples: Math.min(4, renderer.capabilities.maxSamples),
+    });
+    composer = new EffectComposer(renderer, composerTarget);
+    composer.setPixelRatio(renderPixelRatio);
     composer.addPass(new RenderPass(scene, camera));
-    bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), darkMode ? 0.34 : 0.11, 0.55, 0.86);
+    bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), darkMode ? 0.28 : 0.09, 0.36, 0.9);
     composer.addPass(bloom);
     composer.addPass(new OutputPass());
   }
@@ -556,11 +581,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     renderer.toneMappingExposure = darkMode ? 1.18 : 0.94;
     hemisphere.color.set(darkMode ? 0xe9f5ff : 0xffffff);
     hemisphere.groundColor.set(darkMode ? 0x101018 : 0xc8c1b8);
-    hemisphere.intensity = darkMode ? 2.15 : 2.5;
-    keyLight.color.set(darkMode ? 0xd9efff : 0xffffff);
-    keyLight.intensity = darkMode ? 4.2 : 4.8;
-    rimLight.color.set(darkMode ? 0x6dcff0 : 0x77b7c9);
-    rimLight.intensity = darkMode ? 68 : 38;
+    hemisphere.intensity = darkMode ? 1.32 : 1.7;
+    keyLight.color.set(darkMode ? 0xe8f6ff : 0xffffff);
+    keyLight.intensity = darkMode ? 14 : 11;
+    fillLight.color.set(darkMode ? 0x78d7f4 : 0xaadce8);
+    fillLight.intensity = darkMode ? 8.5 : 6.5;
+    rimLight.color.set(darkMode ? 0x9fe7ff : 0x77b7c9);
+    rimLight.intensity = darkMode ? 34 : 24;
+    scene.environmentIntensity = profile === "full" ? (darkMode ? 0.82 : 0.68) : 1;
     inactiveEdgeMaterial.linewidth = darkMode ? 0.68 : 1;
     inactiveEdgeMaterial.opacity = darkMode ? 1 : 0.72;
     inactiveEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
@@ -569,13 +597,21 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     activeEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
     activeEdgeMaterial.needsUpdate = true;
     activeEdgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
-    if (bloom) bloom.strength = darkMode ? 0.34 : 0.11;
-    groups.forEach((group) => {
+    if (bloom) bloom.strength = darkMode ? 0.28 : 0.09;
+    groups.forEach((group, type) => {
       group.haloMaterial.opacity = darkMode ? 0.16 : 0.08;
-      if (group.material instanceof THREE.MeshPhysicalMaterial) {
-        group.material.roughness = darkMode ? 0.2 : 0.34;
-        group.material.metalness = darkMode ? 0.16 : 0.05;
-      }
+      group.material.roughness = type === "patient"
+        ? (darkMode ? 0.14 : 0.27)
+        : type === "flow"
+          ? (darkMode ? 0.2 : 0.31)
+          : (darkMode ? 0.34 : 0.46);
+      group.material.metalness = type === "patient" ? (darkMode ? 0.3 : 0.1) : type === "flow" ? 0.22 : 0.07;
+      group.material.reflectivity = darkMode ? 0.82 : 0.62;
+      group.material.envMapIntensity = profile === "full" ? (darkMode ? 1.36 : 1.08) : 0.44;
+      group.material.sheen = darkMode ? 0.12 : 0.05;
+      group.material.sheenColor.set(darkMode ? 0x9fe8ff : 0xd8f4fb);
+      group.material.specularIntensity = darkMode ? 1 : 0.78;
+      group.material.needsUpdate = true;
     });
     attentionHalos.forEach((halo) => halo.materials.forEach((material) => {
       material.opacity = darkMode ? 0.74 : 0.62;
@@ -973,7 +1009,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelsRenderer.render(scene, camera);
-    if (now < animationUntil || animatingCamera || controlsChanged || physicsMoving) requestRender();
+    if (now < animationUntil || animatingCamera || controlsChanged || physicsMoving || controlsInteractionActive) requestRender();
   };
 
   function requestRender(duration = 0) {
@@ -1261,6 +1297,22 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     requestRender(80);
   };
 
+  const handleControlsStart = () => {
+    controlsInteractionActive = true;
+    requestRender();
+  };
+  const handleControlsChange = () => {
+    requestRender();
+  };
+  const handleControlsEnd = () => {
+    controlsInteractionActive = false;
+    if (!focusedPatientId) {
+      savedPanoramaCamera = camera.position.clone();
+      savedPanoramaTarget = controls.target.clone();
+    }
+    requestRender(280);
+  };
+
   const resizeObserver = new ResizeObserver(resize);
   resizeObserver.observe(container);
   renderer.domElement.addEventListener("pointermove", handlePointerMove);
@@ -1268,14 +1320,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   renderer.domElement.addEventListener("pointerup", handlePointerUp);
   renderer.domElement.addEventListener("pointercancel", handlePointerCancel);
   renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
-  controls.addEventListener("change", () => requestRender(180));
-  controls.addEventListener("end", () => {
-    if (!focusedPatientId) {
-      savedPanoramaCamera = camera.position.clone();
-      savedPanoramaTarget = controls.target.clone();
-    }
-    requestRender(280);
-  });
+  controls.addEventListener("start", handleControlsStart);
+  controls.addEventListener("change", handleControlsChange);
+  controls.addEventListener("end", handleControlsEnd);
 
   resize();
   updateSceneTheme();
@@ -1302,6 +1349,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       renderer.domElement.removeEventListener("pointercancel", handlePointerCancel);
       renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
       renderer.domElement.removeEventListener("webglcontextlost", handleContextLost);
+      controls.removeEventListener("start", handleControlsStart);
+      controls.removeEventListener("change", handleControlsChange);
+      controls.removeEventListener("end", handleControlsEnd);
       controls.dispose();
       records.forEach((record) => {
         record.label.removeFromParent();

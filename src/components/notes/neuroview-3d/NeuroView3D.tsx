@@ -1,9 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowLeft, CircleDot, Crosshair, ListTree, Maximize, Minimize, Orbit, RotateCcw, Settings2 } from "lucide-react";
+import { ArrowLeft, CircleDot, Crosshair, Info, ListFilter, ListTree, Maximize, Minimize, Orbit, RotateCcw, Settings2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -74,10 +83,10 @@ const FILTER_OPTIONS = [
 ] as const;
 
 const LENS_OPTIONS = [
-  { value: "panorama", label: "Panorama" },
-  { value: "session-prep", label: "Preparar sessão" },
-  { value: "patterns", label: "Padrões" },
-  { value: "attention", label: "Radar vivo" },
+  { value: "panorama", label: "Panorama", description: "Visão espacial completa" },
+  { value: "session-prep", label: "Preparar sessão", description: "Mudanças e próximos passos" },
+  { value: "patterns", label: "Padrões", description: "Trajetória clínica no tempo" },
+  { value: "attention", label: "Radar vivo", description: "Sinais objetivos de atenção" },
 ] as const;
 
 const NODE_TYPE_LABEL: Record<GraphNode["type"], string> = {
@@ -126,6 +135,8 @@ export const NeuroView3D = ({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [timeProgress, setTimeProgress] = useState(100);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [lensMenuOpen, setLensMenuOpen] = useState(false);
+  const [priorityInfoOpen, setPriorityInfoOpen] = useState(false);
   const [dynamicsOpen, setDynamicsOpen] = useState(false);
   const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
   const [sceneError, setSceneError] = useState<string | null>(null);
@@ -245,7 +256,7 @@ export const NeuroView3D = ({
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (navigatorOpen || dynamicsOpen) return;
+      if (navigatorOpen || dynamicsOpen || lensMenuOpen || priorityInfoOpen) return;
       if (isFullscreen || document.fullscreenElement) return;
       if (detailsOpen) {
         event.preventDefault();
@@ -271,7 +282,7 @@ export const NeuroView3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, navigatorOpen, onBack, onClearPatient, onCloseDetails, selectedNodeId]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, lensMenuOpen, navigatorOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -444,27 +455,11 @@ export const NeuroView3D = ({
           <span className="hidden sm:inline">NeuroView plano</span>
         </Button>
 
-        <div className="pointer-events-auto flex flex-col items-center gap-2">
+        <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 lg:top-5">
           <div
             className={cn(
               "rounded-[20px] border p-1 shadow-2xl backdrop-blur-2xl",
               darkMode ? "border-white/10 bg-black/52" : "border-black/10 bg-white/78",
-            )}
-          >
-            <MagneticSegmentedControl
-              value={lens}
-              onValueChange={handleLensChange}
-              options={LENS_OPTIONS}
-              ariaLabel="Escolher lente clínica do NeuroView 3d"
-              behavior="single-select"
-              className="min-h-11 bg-transparent"
-              triggerClassName="min-h-10 px-3 text-[11px] xl:px-4"
-            />
-          </div>
-          <div
-            className={cn(
-              "rounded-[18px] border p-1 shadow-xl backdrop-blur-2xl",
-              darkMode ? "border-white/8 bg-black/38" : "border-black/8 bg-white/66",
             )}
           >
             <MagneticSegmentedControl
@@ -473,13 +468,117 @@ export const NeuroView3D = ({
               options={FILTER_OPTIONS}
               ariaLabel="Filtrar NeuroView 3d"
               behavior="single-select"
-              className="min-h-9 bg-transparent"
-              triggerClassName="min-h-8 px-2.5 text-[10px] lg:px-3"
+              className="min-h-11 bg-transparent"
+              triggerClassName="min-h-10 px-3 text-[11px] xl:px-4"
             />
           </div>
+          <Popover open={priorityInfoOpen} onOpenChange={setPriorityInfoOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                aria-label="Como a priorização do NeuroView é calculada"
+                title="Como a priorização é calculada"
+                className={cn(
+                  "h-8 w-8 shrink-0 rounded-full border shadow-lg backdrop-blur-2xl",
+                  darkMode
+                    ? "border-white/10 bg-black/42 text-white/66 hover:bg-white/10 hover:text-white"
+                    : "border-black/10 bg-white/72 text-zinc-600 hover:bg-white hover:text-zinc-950",
+                )}
+              >
+                <Info className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="center"
+              sideOffset={10}
+              className={cn(
+                "w-[320px] rounded-[22px] border p-4 shadow-2xl backdrop-blur-3xl",
+                darkMode
+                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
+                  : "border-black/10 bg-white/94 text-zinc-950",
+              )}
+            >
+              <p className="text-sm font-semibold tracking-[-0.01em]">Como a priorização é calculada</p>
+              <p className={cn("mt-1.5 text-[11px] leading-relaxed", darkMode ? "text-white/50" : "text-zinc-500")}>
+                Cada evidência recebe uma gravidade explicável, sem criar novas inferências clínicas.
+              </p>
+              <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-[11px]">
+                {[
+                  ["Recência", "30%"],
+                  ["Recorrência temática", "25%"],
+                  ["Diversidade de fontes", "20%"],
+                  ["Ação pendente", "15%"],
+                  ["Prioridade do psicólogo", "10%"],
+                ].map(([label, value]) => (
+                  <div key={label} className="contents">
+                    <dt className={darkMode ? "text-white/68" : "text-zinc-700"}>{label}</dt>
+                    <dd className="font-semibold tabular-nums">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+              <p className={cn("mt-3 border-t pt-3 text-[10px] leading-relaxed", darkMode ? "border-white/8 text-white/42" : "border-black/8 text-zinc-500")}>
+                Mais gravidade aproxima a evidência do paciente. Profundidade representa tempo e direção representa o tema revisado. Risco permanece uma dimensão independente.
+              </p>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="pointer-events-auto flex items-center gap-2">
+          <DropdownMenu open={lensMenuOpen} onOpenChange={setLensMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                aria-label={`Escolher lente clínica. Atual: ${LENS_OPTIONS.find((option) => option.value === lens)?.label}`}
+                title="Lentes clínicas"
+                className={cn(
+                  "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+                  darkMode
+                    ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                    : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+                )}
+              >
+                <ListFilter className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={10}
+              className={cn(
+                "w-[260px] rounded-[20px] border p-2 shadow-2xl backdrop-blur-3xl",
+                darkMode
+                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
+                  : "border-black/10 bg-white/94 text-zinc-950",
+              )}
+            >
+              <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">
+                Lente clínica
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+              <DropdownMenuRadioGroup value={lens} onValueChange={(value) => handleLensChange(value as NeuroViewLens)}>
+                {LENS_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem
+                    key={option.value}
+                    value={option.value}
+                    className={cn(
+                      "my-0.5 min-h-12 rounded-xl pl-8 pr-3",
+                      darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                    )}
+                  >
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-xs font-semibold">{option.label}</span>
+                      <span className={cn("text-[10px] font-normal", darkMode ? "text-white/42" : "text-zinc-500")}>
+                        {option.description}
+                      </span>
+                    </span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Popover open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -686,15 +785,6 @@ export const NeuroView3D = ({
             onValueChange={([value]) => setTimeProgress(value)}
             onValueCommit={() => setAnnouncement("Linha do tempo clínica atualizada.")}
           />
-        </div>
-      ) : null}
-
-      {!inspectedNode && lens === "panorama" ? (
-        <div className={cn(
-          "pointer-events-none absolute left-1/2 top-[126px] z-20 -translate-x-1/2 rounded-full border px-3.5 py-2 text-[9px] font-medium tracking-wide backdrop-blur-xl",
-          darkMode ? "border-white/7 bg-black/28 text-white/42" : "border-black/7 bg-white/48 text-zinc-500",
-        )}>
-          Distância = densidade · profundidade = tempo · direção = tema revisado
         </div>
       ) : null}
 
