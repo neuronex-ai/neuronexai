@@ -179,6 +179,26 @@ export const drawNode = (
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
 
+    if (!performanceMode) {
+      const microHighlight = ctx.createRadialGradient(
+        x - radius * 0.38,
+        y - radius * 0.42,
+        0,
+        x - radius * 0.3,
+        y - radius * 0.34,
+        radius * 0.68,
+      );
+      microHighlight.addColorStop(0, isDarkMode ? "rgba(255,255,255,0.34)" : "rgba(255,255,255,0.48)");
+      microHighlight.addColorStop(0.38, isDarkMode ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.14)");
+      microHighlight.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.globalAlpha = (node.currentOpacity || 1) * (isConnectedChain ? 0.72 : 0.46);
+      ctx.fillStyle = microHighlight;
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.94, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = node.currentOpacity || 1;
+    }
+
     ctx.shadowBlur = 0;
     ctx.strokeStyle = isDarkMode ? "rgba(255,255,255,0.2)" : "rgba(24,24,27,0.13)";
     ctx.lineWidth = 0.65 / globalScale;
@@ -275,9 +295,9 @@ export const drawLink = (
   const hasEmphasis = Boolean(emphasizedNodeIds?.size);
   const isActive = isConnectedToHover || isEmphasized;
   const dimmed = Boolean((hoverNode || hasEmphasis) && !isActive);
-  const baseOpacity = isDarkMode ? 0.18 : 0.22;
-  const targetOpacity = (dimmed ? 0.04 : (isActive ? 0.78 : baseOpacity)) * reveal;
-  const targetWidth = ((isActive ? 1.65 : 0.58) + (link.value || 1) * 0.08) / globalScale;
+  const baseOpacity = isDarkMode ? 0.12 : 0.18;
+  const targetOpacity = (dimmed ? 0.025 : (isActive ? 0.82 : baseOpacity)) * reveal;
+  const targetWidth = ((isActive ? 1.5 : 0.46) + (link.value || 1) * 0.065) / globalScale;
 
   link.currentOpacity = link.currentOpacity ?? targetOpacity;
   link.currentWidth = link.currentWidth ?? targetWidth;
@@ -301,6 +321,8 @@ export const drawLink = (
 
   ctx.save();
   ctx.globalAlpha = link.currentOpacity;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
   ctx.beginPath();
   ctx.moveTo(sx!, sy!);
   ctx.quadraticCurveTo(cx, cy, tx!, ty!);
@@ -324,7 +346,7 @@ export const drawLink = (
   if (!performanceMode && !dimmed && reveal > 0.45) {
     const pulseT = (time * 0.17 + seed) % 1;
     const pulse = quadraticPoint(sx!, sy!, cx, cy, tx!, ty!, pulseT);
-    const pulseAlpha = (isActive ? 0.54 : 0.16) * (link.currentOpacity || 1);
+    const pulseAlpha = (isActive ? 0.58 : 0.1) * (link.currentOpacity || 1);
     const pulseRadius = (isActive ? 3.1 : 1.8) / Math.max(globalScale, 0.6);
 
     ctx.globalAlpha = pulseAlpha;
