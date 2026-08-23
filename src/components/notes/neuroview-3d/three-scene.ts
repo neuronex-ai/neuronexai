@@ -16,9 +16,9 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import type { NeuroViewLens, NeuroViewTimeWindow } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import {
+  buildHoverEquivalentHighlight,
   computeFocusedLayout,
   computeSpatialLayout,
-  findShortestClinicalPath,
   getActivityIntensity,
   getGraphEdgeId,
   getGraphEndpointId,
@@ -71,9 +71,11 @@ type SceneOptions = {
 export type NeuroViewSceneController = {
   setView: (filter: NeuroView3DFilter, focusedPatientId: string | null, darkMode: boolean) => void;
   setHighlight: (nodeId: string | null) => void;
+  setHighlightSelection: (nodeIds: Iterable<string>) => void;
   setDynamics: (settings: NeuroViewDynamicsSettings) => void;
   resetDynamics: () => void;
   resetCamera: () => void;
+  frameNode: (nodeId: string) => void;
   focusNode: (nodeId: string) => void;
   setLens: (lens: NeuroViewLens) => void;
   setTimeWindow: (window: NeuroViewTimeWindow) => void;
@@ -306,7 +308,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let filter: NeuroView3DFilter = "all";
   let focusedPatientId: string | null = null;
   let highlightedNodeId: string | null = null;
-  let highlightedNodeIds = new Set<string>(options.emphasizedNodeIds || []);
+  let persistentHighlightNodeIds = new Set<string>(options.emphasizedNodeIds || []);
+  let highlightedNodeIds = new Set<string>();
   let highlightedEdgeIds = new Set<string>();
   let visibleNodeIds = getVisibleNodeIds(graph, filter);
   let focusedSubgraphIds = new Set<string>();

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GraphLink, GraphNode } from "../graph/graph-types";
 import {
+  buildHoverEquivalentHighlight,
   computeSpatialLayout,
   findShortestClinicalPath,
   getGraphEdgeId,
@@ -61,6 +62,59 @@ describe("NeuroView 3d graph model", () => {
 
     const focusedPath = findShortestClinicalPath(graph, "tag-shared", "pat-a");
     expect(focusedPath.nodeIds).toEqual(new Set(["tag-shared", "note-a", "pat-a"]));
+  });
+
+  it("reproduces patient hover for Synapse-linked notes", () => {
+    const graph: GraphSnapshot = {
+      nodes: [
+        node("pat-a", "patient", { id: "a" }),
+        node("note-a", "note", { patient_id: "a" }),
+        node("note-b", "note", { patient_id: "a" }),
+        node("tag-theme", "tag"),
+      ],
+      links: [
+        link("pat-a", "note-a"),
+        link("pat-a", "note-b"),
+        link("note-a", "tag-theme"),
+      ],
+    };
+
+    const highlight = buildHoverEquivalentHighlight(graph, ["pat-a"]);
+
+    expect(highlight.nodeIds).toEqual(new Set(["pat-a", "note-a", "note-b"]));
+    expect(highlight.edgeIds).toEqual(new Set([
+      getGraphEdgeId("pat-a", "note-a"),
+      getGraphEdgeId("pat-a", "note-b"),
+    ]));
+  });
+
+  it("combines note groups and resolves one tag inside the requested patient", () => {
+    const graph: GraphSnapshot = {
+      nodes: [
+        node("pat-a", "patient", { id: "a" }),
+        node("pat-b", "patient", { id: "b" }),
+        node("note-a", "note", { patient_id: "a" }),
+        node("note-b", "note", { patient_id: "a" }),
+        node("note-other", "note", { patient_id: "b" }),
+        node("tag-shared", "tag"),
+      ],
+      links: [
+        link("pat-a", "note-a"),
+        link("pat-a", "note-b"),
+        link("pat-b", "note-other"),
+        link("note-a", "tag-shared"),
+        link("note-b", "tag-shared"),
+        link("note-other", "tag-shared"),
+      ],
+    };
+
+    const noteGroup = buildHoverEquivalentHighlight(graph, ["note-a", "note-b"], "pat-a");
+    expect(noteGroup.nodeIds).toEqual(new Set(["note-a", "pat-a", "tag-shared", "note-b"]));
+    expect(noteGroup.nodeIds.has("note-other")).toBe(false);
+
+    const tagGroup = buildHoverEquivalentHighlight(graph, ["tag-shared"], "pat-a");
+    expect(tagGroup.nodeIds).toEqual(new Set(["tag-shared", "note-a", "pat-a", "note-b"]));
+    expect(tagGroup.nodeIds.has("pat-b")).toBe(false);
   });
 
   it("uses inclusive 30-day recency boundaries", () => {
