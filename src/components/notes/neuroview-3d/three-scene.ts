@@ -296,6 +296,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let transitionDuration = reducedMotion ? 120 : 900;
   let transitionStaggerMax = 0;
   let frameId = 0;
+  let lastRenderAt = performance.now();
   let animationUntil = transitionStartedAt + transitionDuration;
   let renderRequested = false;
   let controlsInteractionActive = false;
@@ -1229,13 +1230,15 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const render = (now: number) => {
     renderRequested = false;
     if (disposed) return;
+    const deltaSeconds = Math.min(0.05, Math.max(0.001, (now - lastRenderAt) / 1000));
+    lastRenderAt = now;
     const animatingCamera = updateCameraTween(now);
     const physicsMoving = updateInstances(now);
-    const controlsChanged = controls.update();
+    const controlsChanged = controls.update(deltaSeconds);
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelsRenderer.render(scene, camera);
-    if (now < animationUntil || animatingCamera || controlsChanged || physicsMoving || controlsInteractionActive) requestRender();
+    if (now < animationUntil || animatingCamera || controlsChanged || physicsMoving || controlsInteractionActive || autoRotate) requestRender();
   };
 
   function requestRender(duration = 0) {
@@ -1400,6 +1403,94 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       beginCameraTween(PANORAMA_CAMERA, PANORAMA_TARGET, reducedMotion ? 0 : 520);
     }
     requestRender(600);
+  };
+
+  const setAutoRotate = (enabled: boolean) => {
+    autoRotate = enabled && !reducedMotion;
+    controls.autoRotate = autoRotate;
+    lastRenderAt = performance.now();
+    requestRender(autoRotate ? 120 : 320);
+  };
+
+  const playEmergence = () => {
+    if (reducedMotion) {
+      applyTransitionTargets(activeLayoutPositions, visibleNodeIds, focusedSubgraphIds, 1);
+      requestRender(80);
+      return;
+    }
+
+    const adjacency = new Map<string, string[]>();
+    records.forEach((_, id) => adjacency.set(id, []));
+    edgeRecords.forEach((edge) => {
+      adjacency.get(edge.sourceId)?.push(edge.targetId);
+      adjacency.get(edge.targetId)?.push(edge.sourceId);
+    });
+    adjacency.forEach((neighbors) => neighbors.sort((left, right) => left.localeCompare(right)));
+
+    const roots = Array.from(records.entries())
+      .filter(([id, record]) => visibleNodeIds.has(id) && record.node.type === "patient")
+      .map(([id]) => id)
+      .sort((left, right) => left.localeCompare(right));
+    const fallbackRoot = Array.from(visibleNodeIds).sort((left, right) => left.localeCompare(right))[0];
+    const queue = (roots.length ? roots : fallbackRoot ? [fallbackRoot] : []).map((id) => ({ id, depth: 0, rootId: id }));
+    const depthById = new Map<string, number>();
+    const rootById = new Map<string, string>();
+    queue.forEach(({ id, rootId }) => {
+      depthById.set(id, 0);
+      rootById.set(id, rootId);
+    });
+    for (let index = 0; index < queue.length; index += 1) {
+      const current = queue[index];
+      adjacency.get(current.id)?.forEach((neighborId) => {
+        if (!visibleNodeIds.has(neighborId) || depthById.has(neighborId)) return;
+        depthById.set(neighborId, current.depth + 1);
+        rootById.set(neighborId, current.rootId);
+        queue.push({ id: neighborId, depth: current.depth + 1, rootId: current.rootId });
+      });
+    }
+
+    const orderedIds = Array.from(visibleNodeIds).sort((left, right) => (
+      (depthById.get(left) ?? 99) - (depthById.get(right) ?? 99)
+      || left.localeCompare(right)
+    ));
+    const distanceScale = connectionDistanceScale(dynamics.connectionDistance);
+    transitionStartedAt = performance.now();
+    transitionDuration = 760;
+    transitionStaggerMax = Math.min(1_650, Math.max(0, (orderedIds.length - 1) * 34));
+    layoutTransitionActive = true;
+    physicsActive = false;
+    settledPhysicsFrames = 0;
+
+    const orderById = new Map(orderedIds.map((id, index) => [id, index]));
+    records.forEach((record, id) => {
+      const visible = visibleNodeIds.has(id) && (!focusedPatientId || focusedSubgraphIds.has(id));
+      const root = records.get(rootById.get(id) || "");
+      const startPosition = record.node.type === "patient" || record.pinned
+        ? record.current
+        : root?.current || controls.target;
+      record.start.copy(startPosition);
+      record.current.copy(startPosition);
+      if (!record.pinned) {
+        record.target.copy(pointToVector(activeLayoutPositions.get(id) || { x: 0, y: 0, z: 0 }).multiplyScalar(distanceScale));
+      }
+      record.currentScale = visible ? 0.018 : 0.001;
+      record.startScale = record.currentScale;
+      record.targetScale = visible ? baseNodeScale(record.node, darkMode) : 0.001;
+      record.currentBrightness = 0;
+      record.startBrightness = 0;
+      record.targetBrightness = visible ? activity.get(id) || 0.28 : 0;
+      record.currentReveal = 0;
+      record.startReveal = 0;
+      record.targetReveal = visible ? 1 : 0;
+      record.transitionDelay = visible ? Math.min(1_650, (orderById.get(id) || 0) * 34) : 0;
+      record.velocity.set(0, 0, 0);
+    });
+
+    animationUntil = Math.max(
+      animationUntil,
+      transitionStartedAt + transitionDuration + transitionStaggerMax + 1_100,
+    );
+    requestRender(transitionDuration + transitionStaggerMax + 1_100);
   };
 
   const resize = () => {
@@ -1574,6 +1665,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     focusNode,
     setLens,
     setTimeWindow,
+    setAutoRotate,
+    playEmergence,
     dispose: () => {
       if (disposed) return;
       disposed = true;

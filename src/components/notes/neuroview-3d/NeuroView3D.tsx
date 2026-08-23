@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowLeft, CircleDot, Crosshair, Info, ListFilter, ListTree, Maximize, Minimize, Orbit, RotateCcw, Settings2 } from "lucide-react";
+import { ArrowLeft, CircleDot, Crosshair, Info, ListFilter, ListTree, Maximize, Minimize, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -127,6 +127,7 @@ export const NeuroView3D = ({
   const controllerRef = useRef<NeuroViewSceneController | null>(null);
   const initialDarkModeRef = useRef(darkMode);
   const dynamicsRef = useRef<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
+  const autoRotateRef = useRef(!reducedMotion);
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
   const [lens, setLens] = useState<NeuroViewLens>("panorama");
@@ -137,6 +138,7 @@ export const NeuroView3D = ({
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [lensMenuOpen, setLensMenuOpen] = useState(false);
   const [priorityInfoOpen, setPriorityInfoOpen] = useState(false);
+  const [autoRotate, setAutoRotateState] = useState(!reducedMotion);
   const [dynamicsOpen, setDynamicsOpen] = useState(false);
   const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
   const [sceneError, setSceneError] = useState<string | null>(null);
@@ -231,6 +233,7 @@ export const NeuroView3D = ({
       });
       controllerRef.current = controller;
       controller.setDynamics(dynamicsRef.current);
+      controller.setAutoRotate(autoRotateRef.current && !reducedMotion);
       return () => {
         controller.dispose();
         if (controllerRef.current === controller) controllerRef.current = null;
@@ -252,6 +255,13 @@ export const NeuroView3D = ({
   useEffect(() => {
     controllerRef.current?.setTimeWindow(lens === "patterns" ? { end: timeEnd } : {});
   }, [lens, timeEnd]);
+
+  useEffect(() => {
+    if (!reducedMotion) return;
+    autoRotateRef.current = false;
+    setAutoRotateState(false);
+    controllerRef.current?.setAutoRotate(false);
+  }, [reducedMotion]);
 
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
@@ -329,6 +339,25 @@ export const NeuroView3D = ({
     controllerRef.current?.setDynamics(defaults);
     controllerRef.current?.resetDynamics();
     setAnnouncement("Dinâmica e posições do NeuroView 3d restauradas.");
+  };
+
+  const toggleAutoRotate = () => {
+    if (reducedMotion) {
+      setAnnouncement("A rotação automática permanece pausada pela preferência de movimento reduzido.");
+      return;
+    }
+    const next = !autoRotateRef.current;
+    autoRotateRef.current = next;
+    setAutoRotateState(next);
+    controllerRef.current?.setAutoRotate(next);
+    setAnnouncement(next ? "Rotação automática iniciada." : "Rotação automática pausada.");
+  };
+
+  const playEmergence = () => {
+    controllerRef.current?.playEmergence();
+    setAnnouncement(reducedMotion
+      ? "Rede neural reorganizada sem animação."
+      : "A rede neural está emergindo progressivamente a partir dos pacientes.");
   };
 
   const handleNodeListKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -579,6 +608,40 @@ export const NeuroView3D = ({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={toggleAutoRotate}
+            aria-label={autoRotate ? "Pausar rotação automática" : "Iniciar rotação automática"}
+            aria-pressed={autoRotate}
+            title={reducedMotion ? "Pausado por movimento reduzido" : autoRotate ? "Pausar rotação" : "Iniciar rotação"}
+            className={cn(
+              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+              darkMode
+                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+              autoRotate && (darkMode ? "bg-white/[0.12] text-cyan-100" : "bg-cyan-950/[0.08] text-cyan-950"),
+            )}
+          >
+            {autoRotate ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={playEmergence}
+            aria-label="Animar surgimento orgânico da rede neural"
+            title="Brotar rede neural"
+            className={cn(
+              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+              darkMode
+                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+            )}
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
           <Popover open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
             <PopoverTrigger asChild>
               <Button
