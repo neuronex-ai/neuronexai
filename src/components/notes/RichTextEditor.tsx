@@ -19,6 +19,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Typography from '@tiptap/extension-typography';
 import Underline from '@tiptap/extension-underline';
 import { BubbleMenu, EditorContent, ReactRenderer, useEditor } from '@tiptap/react';
+import { DOMParser as ProseMirrorDOMParser } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import {
     AlignCenter, AlignJustify, AlignLeft, AlignRight, Bold, CheckSquare, Code, Heading1,
@@ -30,6 +31,8 @@ import {
 import { useEffect, useRef } from "react";
 import { toast } from 'sonner';
 import tippy from 'tippy.js';
+import { extractStandaloneMermaidCode } from '@/lib/mermaid-content';
+import { isLikelyMarkdown, renderNoteMarkdownToHtml } from '@/lib/note-markdown';
 import { createSlashSuggestion, SlashCommands } from './editor-extensions';
 import { MentionList } from './editor-suggestion-lists';
 import {
@@ -246,10 +249,11 @@ export const RichTextEditor = ({
         const text = event.clipboardData?.getData('text/plain');
         if (text) {
           // Detect Mermaid
-          if (text.includes('graph ') || text.includes('sequenceDiagram') || text.includes('classDiagram')) {
+          const mermaidCode = extractStandaloneMermaidCode(text);
+          if (mermaidCode) {
             event.preventDefault();
             const { schema } = view.state;
-            const node = schema.nodes.mermaid.create({ code: text });
+            const node = schema.nodes.mermaid.create({ code: mermaidCode });
             const transaction = view.state.tr.replaceSelectionWith(node);
             view.dispatch(transaction);
             toast.success("Diagrama detectado e incorporado!");
@@ -273,8 +277,34 @@ export const RichTextEditor = ({
             }
           }
 
+          // Convert pasted Markdown into native editor nodes. Mermaid fences
+          // inside a larger Markdown document are parsed by MermaidNode.
+          if (isLikelyMarkdown(text)) {
+            event.preventDefault();
+            const container = document.createElement('div');
+            container.innerHTML = renderNoteMarkdownToHtml(text);
+
+            container.querySelectorAll<HTMLInputElement>('li > input[type="checkbox"]').forEach((checkbox) => {
+              const listItem = checkbox.closest('li');
+              const list = listItem?.parentElement;
+              if (!listItem || !list) return;
+
+              listItem.dataset.type = 'taskItem';
+              listItem.dataset.checked = String(checkbox.checked);
+              list.dataset.type = 'taskList';
+              checkbox.remove();
+            });
+
+            const slice = ProseMirrorDOMParser
+              .fromSchema(view.state.schema)
+              .parseSlice(container, { preserveWhitespace: true });
+            view.dispatch(view.state.tr.replaceSelection(slice).scrollIntoView());
+            toast.success("Markdown formatado no editor!");
+            return true;
+          }
+
           // Detect large blocks of Markdown or HTML for Snippet Card
-          const isLargeSnippet = text.length > 100 && (text.includes('<div') || text.includes('---') || text.includes('# ') || text.includes('```'));
+          const isLargeSnippet = text.length > 100 && /<(?:div|section|article|main|table|style)\b/i.test(text);
           if (isLargeSnippet) {
             const confirmSnippet = window.confirm("Detectamos um bloco de código/formatação largo. Deseja incorporá-lo como um Snippet Card?");
             if (confirmSnippet) {

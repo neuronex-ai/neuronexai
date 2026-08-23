@@ -1,8 +1,8 @@
 import { Node, mergeAttributes } from '@tiptap/core';
 import { ReactNodeViewRenderer, NodeViewContent, NodeViewWrapper } from '@tiptap/react';
-import { useEffect, useRef, useState } from 'react';
-import mermaid from 'mermaid';
+import { useEffect, useId, useRef, useState } from 'react';
 import { cn } from '@/lib/utils';
+import { extractMermaidCode, isLikelyMermaid } from '@/lib/mermaid-content';
 import {
   XAxis,
   CartesianGrid,
@@ -18,6 +18,7 @@ import {
   MoveDiagonal2, ExternalLink, FileText, Lightbulb, ChevronRight, Sigma
 } from 'lucide-react';
 import { useTheme } from '@/hooks/use-theme';
+import { MermaidDiagram } from './MermaidDiagram';
 
 // --- Extension: Clinical Chart ---
 export const ClinicalChartNode = Node.create({
@@ -743,22 +744,45 @@ export const MermaidNode = Node.create({
   name: 'mermaid',
   group: 'block',
   atom: true,
+  priority: 1000,
 
   addAttributes() {
     return {
-      code: { default: 'graph TD\nA[Início] --> B{Decisão}\nB -- Sim --> C[Resultado 1]\nB -- Não --> D[Resultado 2]' }
+      code: {
+        default: 'graph TD\nA[Início] --> B{Decisão}\nB -- Sim --> C[Resultado 1]\nB -- Não --> D[Resultado 2]',
+        rendered: false,
+      }
     };
   },
 
   parseHTML() {
     return [{
       tag: 'pre',
-      getAttrs: node => (node as HTMLElement).classList.contains('mermaid') && null,
+      priority: 1000,
+      getAttrs: node => {
+        const element = node as HTMLElement;
+        const codeElement = element.querySelector('code');
+        const rawCode = codeElement?.textContent || element.textContent || '';
+        const hasMermaidMarker = element.classList.contains('mermaid')
+          || element.dataset.mermaidDiagram === 'true'
+          || codeElement?.classList.contains('language-mermaid');
+        const code = extractMermaidCode(rawCode) || rawCode.replace(/[\u200B-\u200D\uFEFF]/g, '').trim();
+
+        if (!hasMermaidMarker && !isLikelyMermaid(code)) return false;
+        return { code };
+      },
     }];
   },
 
-  renderHTML({ HTMLAttributes }) {
-    return ['pre', mergeAttributes(HTMLAttributes, { class: 'mermaid' }), 0];
+  renderHTML({ node, HTMLAttributes }) {
+    return [
+      'pre',
+      mergeAttributes(HTMLAttributes, {
+        class: 'mermaid',
+        'data-mermaid-diagram': 'true',
+      }),
+      ['code', { class: 'language-mermaid' }, node.attrs.code],
+    ];
   },
 
   addNodeView() {
@@ -768,87 +792,66 @@ export const MermaidNode = Node.create({
 
 const MermaidComponent = ({ node, updateAttributes, deleteNode }: any) => {
   const { code } = node.attrs;
-  const { theme } = useTheme();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    mermaid.initialize({
-      startOnLoad: false,
-      theme: theme === 'dark' ? 'dark' : 'default',
-      securityLevel: 'loose',
-    });
-  }, [theme]);
-
-  useEffect(() => {
-    const renderDiagram = async () => {
-      if (containerRef.current) {
-        try {
-          setError(null);
-          // Generate a unique ID for each mermaid diagram
-          const id = `mermaid-${Math.random().toString(36).substr(2, 9)}`;
-          const { svg } = await mermaid.render(id, code);
-          containerRef.current.innerHTML = svg;
-        } catch (e) {
-          console.error("Mermaid error:", e);
-          setError("Erro ao renderizar diagrama. Verifique a sintaxe.");
-        }
-      }
-    };
-
-    renderDiagram();
-  }, [code]);
+  const [isSourceVisible, setIsSourceVisible] = useState(false);
+  const sourceId = useId();
 
   return (
-    <NodeViewWrapper className="my-10 group/mermaid">
-      <div className="relative p-8 rounded-[40px] bg-zinc-50 dark:bg-[#0A0A0B]/60 backdrop-blur-3xl border border-zinc-200 dark:border-white/10 overflow-hidden transition-all duration-500 hover:border-primary/40 hover:shadow-xl dark:hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
-
-        <div className="flex items-center justify-between mb-6">
+    <NodeViewWrapper className="my-8 group/mermaid">
+      <section className="relative overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-50/80 shadow-sm dark:border-white/10 dark:bg-[#0A0A0B]/70">
+        <div className="flex min-h-14 items-center justify-between gap-4 border-b border-zinc-200 px-5 py-3 dark:border-white/10">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-primary/10 border border-primary/20 text-primary">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Share2 className="h-4 w-4" />
             </div>
-            <div className="space-y-0.5">
-              <h4 className="text-sm font-black uppercase tracking-[0.2em] text-zinc-900 dark:text-white">Fluxograma NeuroCore</h4>
-              <p className="text-[10px] font-bold text-zinc-400 dark:text-white/20 uppercase tracking-widest">Visualização em Tempo Real</p>
+            <div>
+              <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Diagrama Mermaid</h4>
+              <p className="text-xs text-zinc-500 dark:text-zinc-400">Visualização da estrutura da nota</p>
             </div>
           </div>
 
-          <button
-            onClick={deleteNode}
-            className="p-3 rounded-2xl bg-white/5 border border-white/5 text-white/20 hover:text-rose-500 hover:bg-rose-500/10 hover:border-rose-500/20 opacity-0 group-hover/mermaid:opacity-100 transition-all font-sans"
-          >
-            <Trash2 className="h-4 w-4 rotate-0" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              aria-expanded={isSourceVisible}
+              onClick={() => setIsSourceVisible((visible) => !visible)}
+              className="inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-xs font-medium text-zinc-600 outline-none transition-colors hover:bg-zinc-200/70 focus-visible:ring-2 focus-visible:ring-primary/50 dark:text-zinc-300 dark:hover:bg-white/10"
+            >
+              <Code className="h-4 w-4" aria-hidden="true" />
+              {isSourceVisible ? 'Ocultar código' : 'Editar código'}
+            </button>
+            <button
+              type="button"
+              aria-label="Remover diagrama"
+              onClick={deleteNode}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-zinc-500 outline-none transition-colors hover:bg-rose-500/10 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-primary/50 dark:text-zinc-400 dark:hover:text-rose-400"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
 
-        <div className="flex flex-col gap-6">
-          {/* Diagram Container */}
-          <div className="bg-white/40 dark:bg-white/[0.02] rounded-[32px] p-8 min-h-[200px] flex items-center justify-center border border-zinc-200 dark:border-white/5 relative overflow-auto custom-scrollbar">
-            {error ? (
-              <div className="text-rose-500 text-xs font-bold uppercase tracking-widest flex items-center gap-2">
-                <Activity className="h-4 w-4" />
-                {error}
-              </div>
-            ) : (
-              <div ref={containerRef} className="mermaid-svg-container w-full flex justify-center" />
-            )}
+        <div className="p-4 sm:p-5">
+          <div className="h-[360px] min-h-[240px] overflow-hidden rounded-2xl border border-zinc-200 bg-white dark:border-white/5 dark:bg-[#060606]">
+            <MermaidDiagram chart={code} compact layoutKey={code.length} />
           </div>
 
-          {/* Code Editor */}
-          <div className="relative group/code">
+          {isSourceVisible && (
+            <div className="mt-4">
+              <label className="mb-2 block text-xs font-medium text-zinc-600 dark:text-zinc-300" htmlFor={sourceId}>
+                Código Mermaid
+              </label>
             <textarea
+              id={sourceId}
               value={code}
               onChange={(e) => updateAttributes({ code: e.target.value })}
               placeholder="Insira o código Mermaid aqui..."
-              className="w-full min-h-[120px] bg-black/40 border border-white/10 rounded-2xl p-4 text-xs font-mono text-primary/70 focus:outline-none focus:border-primary/40 transition-all custom-scrollbar resize-none"
+              spellCheck={false}
+              className="min-h-[160px] w-full resize-y rounded-2xl border border-zinc-200 bg-white p-4 font-mono text-xs leading-6 text-zinc-800 outline-none transition-colors focus:border-primary/50 focus:ring-2 focus:ring-primary/20 dark:border-white/10 dark:bg-black/40 dark:text-zinc-200"
             />
-            <div className="absolute top-3 right-4 px-2 py-1 bg-black/60 rounded-md border border-white/5 text-[9px] font-black uppercase tracking-widest text-white/30">
-              Mermaid Syntax
             </div>
-          </div>
+          )}
         </div>
-      </div>
+      </section>
     </NodeViewWrapper>
   );
 };

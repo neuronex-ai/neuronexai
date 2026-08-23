@@ -1,7 +1,7 @@
 import { htmlToPlainText } from "@/lib/note-content";
 
 const MERMAID_START =
-  /\b(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|requirementDiagram|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|block-beta)\b/i;
+  /(?:^|\n)\s*(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|journey|gantt|pie|mindmap|timeline|quadrantChart|requirementDiagram|gitGraph|C4Context|C4Container|C4Component|C4Dynamic|C4Deployment|block-beta|sankey-beta|xychart-beta|architecture-beta|kanban|packet|radar-beta)\b/i;
 
 const decodeHtmlEntities = (value: string) => htmlToPlainText(value || "");
 
@@ -52,6 +52,18 @@ export const extractMermaidCode = (value?: string | null): string | null => {
   }
 
   return null;
+};
+
+export const extractStandaloneMermaidCode = (value?: string | null): string | null => {
+  if (!value?.trim()) return null;
+
+  const normalized = String(value).trim();
+  const isOnlyFence = /^```(?:mermaid)?\s*[\s\S]*?```\s*$/i.test(normalized);
+  if (isOnlyFence) return extractMermaidCode(normalized);
+
+  const start = normalizeCandidate(normalized).match(MERMAID_START);
+  if (start?.index !== 0) return null;
+  return extractMermaidCode(normalized);
 };
 
 const mermaidLabel = (value: string) =>

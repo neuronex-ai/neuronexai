@@ -1,7 +1,8 @@
 import { Button } from "@/components/ui/button";
+import { useTheme } from "@/hooks/use-theme";
+import { renderMermaidSvg } from "@/lib/mermaid-renderer";
 import { cn } from "@/lib/utils";
 import { AlertTriangle, Code, Loader2, RotateCcw, ZoomIn, ZoomOut } from "lucide-react";
-import mermaid from "mermaid";
 import { useEffect, useRef, useState } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 
@@ -21,60 +22,37 @@ export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = 
   const [svg, setSvg] = useState("");
   const [error, setError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { theme } = useTheme();
 
   useEffect(() => {
-    try {
-      const isDark = document.documentElement.classList.contains("dark");
-
-      mermaid.initialize({
-        startOnLoad: false,
-        suppressErrorRendering: true,
-        theme: "base",
-        themeVariables: {
-          darkMode: isDark,
-          background: isDark ? "#080808" : "#ffffff",
-          primaryColor: isDark ? "#151515" : "#ffffff",
-          primaryTextColor: isDark ? "#ffffff" : "#09090b",
-          primaryBorderColor: isDark ? "#3f3f46" : "#3f3f46",
-          lineColor: isDark ? "#71717a" : "#a1a1aa",
-          textColor: isDark ? "#e4e4e7" : "#27272a",
-          mainBkg: isDark ? "#151515" : "#ffffff",
-          nodeBorder: isDark ? "#3f3f46" : "#3f3f46",
-          clusterBkg: isDark ? "#0d0d0d" : "#ffffff",
-          clusterBorder: isDark ? "#333333" : "#e4e4e7",
-          defaultLinkColor: isDark ? "#71717a" : "#a1a1aa",
-          fontFamily: "Inter, sans-serif",
-        },
-        flowchart: {
-          htmlLabels: true,
-          curve: "basis",
-        },
-      });
-    } catch (e) {
-      console.error("Mermaid init error", e);
-    }
-  }, []);
-
-  useEffect(() => {
-    const renderChart = async () => {
-      if (!chart) return;
+    let cancelled = false;
+    const debounceId = window.setTimeout(() => {
+      if (!chart.trim()) {
+        setSvg("");
+        setError("O diagrama ainda não possui conteúdo.");
+        return;
+      }
 
       setError(null);
       setSvg("");
 
-      try {
-        const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        const cleanChart = chart.replace(/[\u200B-\u200D\uFEFF]/g, "");
-        const { svg } = await mermaid.render(id, cleanChart);
-        setSvg(svg);
-      } catch (e) {
-        console.error("Mermaid Render Error:", e);
-        setError("Não foi possível renderizar a estrutura lógica gerada.");
-      }
-    };
+      void renderMermaidSvg(chart, theme).then(
+        (nextSvg) => {
+          if (!cancelled) setSvg(nextSvg);
+        },
+        (renderError) => {
+          if (cancelled) return;
+          console.error("Mermaid Render Error:", renderError);
+          setError("Não foi possível montar o diagrama. Revise a sintaxe Mermaid.");
+        },
+      );
+    }, 180);
 
-    void renderChart();
-  }, [chart]);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(debounceId);
+    };
+  }, [chart, theme]);
 
   useEffect(() => {
     if (!svg || !containerRef.current || !progressiveReveal) return;
@@ -106,6 +84,7 @@ export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = 
   if (error) {
     return (
       <div
+        role="alert"
         className={cn(
           "flex h-full flex-col items-center justify-center rounded-xl border border-rose-500/20 bg-zinc-50 text-center dark:bg-[#0F0F11]/50",
           compact ? "m-0 p-4" : "m-4 p-8",
@@ -137,8 +116,8 @@ export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = 
   if (!svg) {
     return (
       <div className={cn("flex h-full flex-col items-center justify-center gap-4", className)}>
-        <Loader2 className={cn("animate-spin text-zinc-900/20 dark:text-white/20", compact ? "h-5 w-5" : "h-8 w-8")} />
-        <span className={cn("animate-pulse font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-600", compact ? "text-[8px]" : "text-[10px]")}>
+        <Loader2 aria-hidden="true" className={cn("animate-spin motion-reduce:animate-none text-zinc-900/20 dark:text-white/20", compact ? "h-5 w-5" : "h-8 w-8")} />
+        <span role="status" aria-live="polite" className={cn("font-bold uppercase tracking-widest text-zinc-500 dark:text-zinc-600", compact ? "text-[8px]" : "text-[10px]")}>
           Construindo gráfico...
         </span>
       </div>
@@ -147,6 +126,8 @@ export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = 
 
   return (
     <div
+      role="group"
+      aria-label="Diagrama Mermaid interativo"
       className={cn("group relative flex h-full min-h-0 w-full min-w-0 overflow-hidden bg-white dark:bg-[#060606]", compact && "rounded-2xl", className)}
       ref={containerRef}
     >
@@ -166,13 +147,16 @@ export const MermaidDiagram = ({ chart, compact = false, className, layoutKey = 
               <div className="absolute bottom-6 right-6 z-20 flex translate-y-2 flex-col gap-2 opacity-0 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100">
                 <div className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white/90 p-1 shadow-2xl backdrop-blur-xl dark:border-white/10 dark:bg-[#151518]/90">
                   <Button variant="ghost" size="icon" onClick={() => zoomIn()} className="h-8 w-8 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white">
+                    <span className="sr-only">Ampliar diagrama</span>
                     <ZoomIn className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" onClick={() => zoomOut()} className="h-8 w-8 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white">
+                    <span className="sr-only">Reduzir diagrama</span>
                     <ZoomOut className="h-4 w-4" />
                   </Button>
                   <div className="my-0.5 h-px w-full bg-zinc-200 dark:bg-white/10" />
                   <Button variant="ghost" size="icon" onClick={() => resetTransform()} className="h-8 w-8 rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-white/10 dark:hover:text-white">
+                    <span className="sr-only">Restaurar enquadramento do diagrama</span>
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 </div>
