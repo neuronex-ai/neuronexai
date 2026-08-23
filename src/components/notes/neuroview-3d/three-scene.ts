@@ -38,6 +38,18 @@ export type NeuroViewDynamicsSettings = {
   connectionDistance: number;
 };
 
+export type NeuroViewCameraAction =
+  | "orbit-left"
+  | "orbit-right"
+  | "orbit-up"
+  | "orbit-down"
+  | "dolly-in"
+  | "dolly-out"
+  | "strafe-left"
+  | "strafe-right"
+  | "elevate-up"
+  | "elevate-down";
+
 export const DEFAULT_NEUROVIEW_DYNAMICS: NeuroViewDynamicsSettings = {
   centralGravity: 32,
   elasticity: 58,
@@ -66,6 +78,7 @@ export type NeuroViewSceneController = {
   setLens: (lens: NeuroViewLens) => void;
   setTimeWindow: (window: NeuroViewTimeWindow) => void;
   setAutoRotate: (enabled: boolean) => void;
+  moveCamera: (action: NeuroViewCameraAction) => void;
   playEmergence: () => void;
   dispose: () => void;
 };
@@ -88,6 +101,8 @@ type NodeRecord = {
   velocity: THREE.Vector3;
   pinned: boolean;
   label: CSS2DObject;
+  labelPresentation: "hidden" | "dimmed" | "visible";
+  labelEmphasized: boolean;
 };
 
 type MeshGroup = {
@@ -259,6 +274,9 @@ const makeLabel = (node: GraphNode, darkMode: boolean) => {
   element.style.background = darkMode ? "rgba(17,17,20,0.78)" : "rgba(255,255,255,0.78)";
   element.style.color = darkMode ? "rgba(250,250,252,0.9)" : "rgba(25,25,31,0.88)";
   element.style.opacity = "0";
+  element.style.contain = "layout paint style";
+  element.style.willChange = "transform, opacity, scale";
+  element.style.backfaceVisibility = "hidden";
   const label = new CSS2DObject(element);
   label.center.set(0.5, -0.45);
   return label;
@@ -464,6 +482,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       velocity: new THREE.Vector3(),
       pinned: Boolean(getNodeEvidence(node)?.pinned),
       label,
+      labelPresentation: "hidden",
+      labelEmphasized: false,
     });
   });
   activeLayoutPositions = layout.panorama;
@@ -830,10 +850,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     const pathActive = highlightedNodeIds.size > 0;
     const focusedCount = focusedSubgraphIds.size;
     const cameraDistance = camera.position.distanceTo(controls.target);
-    const candidates: Array<{ record: NodeRecord; id: string; priority: number; point: THREE.Vector3 }> = [];
+    const candidates: Array<{ id: string; priority: number }> = [];
     records.forEach((record, id) => {
       record.label.position.copy(record.current);
-      record.label.element.style.opacity = "0";
       const visible = visibleNodeIds.has(id);
       const inFocus = !focusedPatientId || focusedSubgraphIds.has(id);
       const pathVisible = highlightedNodeIds.has(id);
@@ -856,23 +875,40 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
           : record.node.type === "flow" ? 72
             : record.node.type === "tag" ? 64
               : 40 + (evidence?.gravity.score || 0) * 30;
-      const point = record.current.clone().project(camera);
-      candidates.push({ record, id, priority, point });
+      candidates.push({ id, priority });
     });
-    const occupied: Array<{ left: number; right: number; top: number; bottom: number }> = [];
-    const width = Math.max(1, container.clientWidth);
-    const height = Math.max(1, container.clientHeight);
-    candidates.sort((left, right) => right.priority - left.priority).forEach(({ record, id, point }) => {
-      if (point.z < -1 || point.z > 1) return;
-      const centerX = (point.x * 0.5 + 0.5) * width;
-      const centerY = (-point.y * 0.5 + 0.5) * height;
-      const labelWidth = Math.min(220, Math.max(70, (record.node.label || "").length * 6.2 + 22));
-      const box = { left: centerX - labelWidth / 2, right: centerX + labelWidth / 2, top: centerY - 14, bottom: centerY + 14 };
-      const collision = occupied.some((other) => !(box.right < other.left || box.left > other.right || box.bottom < other.top || box.top > other.bottom));
-      if (collision && !highlightedNodeIds.has(id)) return;
-      occupied.push(box);
-      record.label.element.style.opacity = pathActive && !highlightedNodeIds.has(id) ? "0.3" : "1";
-      record.label.element.style.transform = highlightedNodeIds.has(id) ? "scale(1.04)" : "scale(1)";
+
+    // O conjunto de rótulos é deliberadamente independente do azimute da câmera.
+    // Isso impede que a rotação automática alterne nomes a cada colisão em tela.
+    const labelBudget = lens === "attention"
+      ? 24
+      : cameraDistance >= 92
+        ? 18
+        : cameraDistance >= 62
+          ? 32
+          : focusedPatientId
+            ? 56
+            : 44;
+    candidates.sort((left, right) => right.priority - left.priority || left.id.localeCompare(right.id));
+    const selectedIds = new Set(candidates.slice(0, labelBudget).map(({ id }) => id));
+    highlightedNodeIds.forEach((id) => {
+      if (visibleNodeIds.has(id) && (!focusedPatientId || focusedSubgraphIds.has(id))) selectedIds.add(id);
+    });
+
+    records.forEach((record, id) => {
+      const emphasized = highlightedNodeIds.has(id);
+      const presentation = selectedIds.has(id)
+        ? pathActive && !emphasized ? "dimmed" : "visible"
+        : "hidden";
+      if (record.labelPresentation !== presentation) {
+        record.labelPresentation = presentation;
+        record.label.element.style.opacity = presentation === "hidden" ? "0" : presentation === "dimmed" ? "0.3" : "1";
+        record.label.element.style.visibility = presentation === "hidden" ? "hidden" : "visible";
+      }
+      if (record.labelEmphasized !== emphasized) {
+        record.labelEmphasized = emphasized;
+        record.label.element.style.scale = emphasized ? "1.04" : "1";
+      }
     });
   };
 
@@ -1412,6 +1448,31 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     requestRender(autoRotate ? 120 : 320);
   };
 
+  const moveCamera = (action: NeuroViewCameraAction) => {
+    cameraTween.active = false;
+    const orbitStep = THREE.MathUtils.degToRad(4.5);
+    const dollyScale = 0.9;
+    const panStep = 34;
+
+    if (action === "orbit-left") controls.rotateLeft(orbitStep);
+    else if (action === "orbit-right") controls.rotateLeft(-orbitStep);
+    else if (action === "orbit-up") controls.rotateUp(orbitStep);
+    else if (action === "orbit-down") controls.rotateUp(-orbitStep);
+    else if (action === "dolly-in") controls.dollyIn(dollyScale);
+    else if (action === "dolly-out") controls.dollyOut(dollyScale);
+    else if (action === "strafe-left") controls.pan(panStep, 0);
+    else if (action === "strafe-right") controls.pan(-panStep, 0);
+    else if (action === "elevate-up") controls.pan(0, panStep);
+    else controls.pan(0, -panStep);
+
+    if (!focusedPatientId) {
+      savedPanoramaCamera.copy(camera.position);
+      savedPanoramaTarget.copy(controls.target);
+    }
+    lastRenderAt = performance.now();
+    requestRender(reducedMotion ? 80 : 520);
+  };
+
   const playEmergence = () => {
     if (reducedMotion) {
       applyTransitionTargets(activeLayoutPositions, visibleNodeIds, focusedSubgraphIds, 1);
@@ -1666,6 +1727,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     setLens,
     setTimeWindow,
     setAutoRotate,
+    moveCamera,
     playEmergence,
     dispose: () => {
       if (disposed) return;

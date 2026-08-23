@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowLeft, CircleDot, Crosshair, Info, ListFilter, ListTree, Maximize, Minimize, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
+import { ArrowLeft, CircleDot, Crosshair, Info, Keyboard, ListFilter, ListTree, Maximize, Minimize, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,10 +38,12 @@ import {
 import {
   createNeuroViewScene,
   DEFAULT_NEUROVIEW_DYNAMICS,
+  type NeuroViewCameraAction,
   type NeuroViewDynamicsSettings,
   type NeuroViewSceneController,
   type NeuroViewSceneProfile,
 } from "./three-scene";
+import { getNeuroViewCameraAction } from "./keyboard-navigation";
 import { NeuroViewInsightsPanel } from "./NeuroViewInsightsPanel";
 import {
   neuroViewSceneCommands,
@@ -105,6 +107,19 @@ const NODE_TYPE_ORDER: Record<GraphNode["type"], number> = {
   evidence: 2,
 };
 
+const CAMERA_ACTION_ANNOUNCEMENT: Record<NeuroViewCameraAction, string> = {
+  "orbit-left": "rotação para a esquerda",
+  "orbit-right": "rotação para a direita",
+  "orbit-up": "rotação para cima",
+  "orbit-down": "rotação para baixo",
+  "dolly-in": "aproximação",
+  "dolly-out": "afastamento",
+  "strafe-left": "deslocamento para a esquerda",
+  "strafe-right": "deslocamento para a direita",
+  "elevate-up": "elevação da câmera",
+  "elevate-down": "descida da câmera",
+};
+
 export const NeuroView3D = ({
   onBack,
   graphData,
@@ -138,6 +153,7 @@ export const NeuroView3D = ({
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [lensMenuOpen, setLensMenuOpen] = useState(false);
   const [priorityInfoOpen, setPriorityInfoOpen] = useState(false);
+  const [keyboardHelpOpen, setKeyboardHelpOpen] = useState(false);
   const [autoRotate, setAutoRotateState] = useState(!reducedMotion);
   const [dynamicsOpen, setDynamicsOpen] = useState(false);
   const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
@@ -266,7 +282,7 @@ export const NeuroView3D = ({
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (navigatorOpen || dynamicsOpen || lensMenuOpen || priorityInfoOpen) return;
+      if (navigatorOpen || dynamicsOpen || lensMenuOpen || priorityInfoOpen || keyboardHelpOpen) return;
       if (isFullscreen || document.fullscreenElement) return;
       if (detailsOpen) {
         event.preventDefault();
@@ -292,7 +308,7 @@ export const NeuroView3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, lensMenuOpen, navigatorOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, keyboardHelpOpen, lensMenuOpen, navigatorOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -358,6 +374,22 @@ export const NeuroView3D = ({
     setAnnouncement(reducedMotion
       ? "Rede neural reorganizada sem animação."
       : "A rede neural está emergindo progressivamente a partir dos pacientes.");
+  };
+
+  const handleSceneKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    const action = getNeuroViewCameraAction(event);
+    if (!action) return;
+    event.preventDefault();
+    controllerRef.current?.moveCamera(action);
+    if (!event.repeat) setAnnouncement(`Câmera em ${CAMERA_ACTION_ANNOUNCEMENT[action]}.`);
+  };
+
+  const focusSceneForKeyboard = () => {
+    setKeyboardHelpOpen(false);
+    requestAnimationFrame(() => {
+      sceneContainerRef.current?.focus({ preventScroll: true });
+      setAnnouncement("Navegação da câmera ativa. Use as setas e W A S D.");
+    });
   };
 
   const handleNodeListKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
@@ -466,7 +498,23 @@ export const NeuroView3D = ({
             : "bg-[radial-gradient(circle_at_50%_36%,rgba(255,255,255,0.98),transparent_39%),radial-gradient(circle_at_76%_18%,rgba(92,158,174,0.12),transparent_28%),linear-gradient(180deg,#f8f7f3_0%,#e9e5dd_100%)]",
         )}
       />
-      <div ref={sceneContainerRef} className="absolute inset-0 z-10" />
+      <div
+        ref={sceneContainerRef}
+        tabIndex={0}
+        role="region"
+        aria-label="Grafo clínico tridimensional interativo"
+        aria-describedby="neuroview-3d-keyboard-instructions"
+        aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown W A S D Shift+W Shift+S"
+        onKeyDown={handleSceneKeyDown}
+        onPointerDownCapture={(event) => event.currentTarget.focus({ preventScroll: true })}
+        className={cn(
+          "absolute inset-0 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset",
+          darkMode ? "focus-visible:ring-cyan-100/72" : "focus-visible:ring-cyan-800/58",
+        )}
+      />
+      <p id="neuroview-3d-keyboard-instructions" className="sr-only">
+        Use as setas para rotacionar, W e S para aproximar ou afastar, A e D para deslocar lateralmente e Shift com W ou S para subir ou descer a câmera.
+      </p>
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-4 lg:p-5">
         <Button
@@ -745,6 +793,70 @@ export const NeuroView3D = ({
                   Restaurar dinâmica
                 </Button>
               </div>
+            </PopoverContent>
+          </Popover>
+          <Popover open={keyboardHelpOpen} onOpenChange={setKeyboardHelpOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                aria-label="Ver controles de teclado do NeuroView 3d"
+                title="Controles de teclado"
+                className={cn(
+                  "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+                  darkMode
+                    ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                    : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+                )}
+              >
+                <Keyboard className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              align="end"
+              sideOffset={10}
+              className={cn(
+                "w-[330px] rounded-[24px] border p-4 shadow-2xl backdrop-blur-3xl",
+                darkMode
+                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
+                  : "border-black/10 bg-white/94 text-zinc-950",
+              )}
+            >
+              <p className="text-sm font-semibold tracking-[-0.01em]">Navegação por teclado</p>
+              <p className={cn("mt-1 text-[11px] leading-relaxed", darkMode ? "text-white/48" : "text-zinc-500")}>
+                A câmera responde enquanto a visualização 3D estiver em foco.
+              </p>
+              <dl className="mt-3 space-y-2.5 text-[11px]">
+                {[
+                  ["←  →  ↑  ↓", "Rotacionar a câmera"],
+                  ["W  S", "Aproximar ou afastar"],
+                  ["A  D", "Mover para os lados"],
+                  ["Shift + W  S", "Subir ou descer"],
+                ].map(([keys, description]) => (
+                  <div key={keys} className="flex items-center justify-between gap-4">
+                    <dt>
+                      <kbd className={cn(
+                        "inline-flex min-h-7 items-center rounded-lg border px-2 font-mono text-[10px] font-semibold shadow-sm",
+                        darkMode ? "border-white/12 bg-white/[0.055]" : "border-black/10 bg-black/[0.035]",
+                      )}>
+                        {keys}
+                      </kbd>
+                    </dt>
+                    <dd className={cn("text-right", darkMode ? "text-white/62" : "text-zinc-600")}>{description}</dd>
+                  </div>
+                ))}
+              </dl>
+              <Button
+                type="button"
+                onClick={focusSceneForKeyboard}
+                className={cn(
+                  "mt-4 min-h-10 w-full rounded-xl text-xs",
+                  darkMode ? "bg-white text-black hover:bg-white/90" : "bg-zinc-950 text-white hover:bg-zinc-800",
+                )}
+              >
+                Focar visualização
+              </Button>
             </PopoverContent>
           </Popover>
           <Button
