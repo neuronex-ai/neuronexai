@@ -4,8 +4,8 @@ import { forceCollide, forceRadial, forceX, forceY } from "d3-force";
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
 import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { NeuroConfig, NeuroViewControls } from "./NeuroViewControls";
-import { NeuroViewSidebar } from "./NeuroViewSidebar";
+import { NeuroConfig, NeuroVisionControls } from "./NeuroViewControls";
+import { NeuroVisionSidebar } from "./NeuroViewSidebar";
 import { GraphNode, GraphLink } from "./graph/graph-types";
 import { useGraphData } from "./graph/use-graph-data";
 import { lerp, drawNode, drawLink } from "./graph/canvas-renderers";
@@ -15,11 +15,11 @@ import { useTheme } from "@/hooks/use-theme";
 import { useSynapseNotesAgentRun, type SynapseNotesAgentTrace } from "@/hooks/use-synapse-notes-agent-run";
 import { useReducedMotion } from "framer-motion";
 import type { SynapseNeuroViewDirective } from "@/lib/synapse-interface-actions";
-import { detectNeuroViewHardware, type NeuroViewHardwareCapability } from "./neuroview-3d/webgl-support";
+import { detectNeuroVisionHardware, type NeuroVisionHardwareCapability } from "./neuroview-3d/webgl-support";
 import { buildHoverEquivalentHighlight } from "./neuroview-3d/model";
 import type { EvidenceNode } from "./clinical-evidence/evidence-types";
 
-const NeuroView3D = lazy(() => import("./neuroview-3d/NeuroView3D"));
+const NeuroVision3D = lazy(() => import("./neuroview-3d/NeuroView3D"));
 
 // --- DEFAULT CONFIG ---
 const DEFAULT_CONFIG: NeuroConfig = {
@@ -72,7 +72,7 @@ const getLinkKey = (link: GraphLink) => {
     return `${sourceId || "unknown"}->${targetId || "unknown"}`;
 };
 
-interface NeuroViewProps {
+interface NeuroVisionProps {
     synapseRunId?: string | null;
     synapsePatientId?: string | null;
     synapseTrace?: unknown;
@@ -82,14 +82,14 @@ interface NeuroViewProps {
 const asTrace = (value: unknown): SynapseNotesAgentTrace | null =>
     value && typeof value === "object" ? value as SynapseNotesAgentTrace : null;
 
-export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synapseDirective }: NeuroViewProps) => {
+export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, synapseDirective }: NeuroVisionProps) => {
     const { theme } = useTheme();
     const isDarkMode = theme === "dark";
     const shouldReduceMotion = useReducedMotion();
     const { run, activeEvent, eventsLoaded } = useSynapseNotesAgentRun(synapseRunId);
     // Universe mode
     const [isUniverseMode, setIsUniverseMode] = useState(false);
-    const [neuroView3DCapability, setNeuroView3DCapability] = useState<NeuroViewHardwareCapability | null>(null);
+    const [neuroView3DCapability, setNeuroView3DCapability] = useState<NeuroVisionHardwareCapability | null>(null);
     const [webglFallbackMessage, setWebglFallbackMessage] = useState<string | null>(null);
 
     // 1. Refs
@@ -539,10 +539,10 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
     }, [shouldReduceMotion]);
 
     const handleEnterNeuroView3D = useCallback(() => {
-        const capability = detectNeuroViewHardware(Boolean(shouldReduceMotion));
+        const capability = detectNeuroVisionHardware(Boolean(shouldReduceMotion));
         setNeuroView3DCapability(capability);
         if (!capability.available) {
-            setWebglFallbackMessage("O WebGL não está disponível nesta máquina. O NeuroView plano foi preservado.");
+            setWebglFallbackMessage("O WebGL não está disponível nesta máquina. O NeuroVision plano foi preservado.");
             return;
         }
         setWebglFallbackMessage(null);
@@ -791,7 +791,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                 <div className="absolute inset-0 notes-retina-texture opacity-[0.2] dark:opacity-[0.28]" />
             </div>
 
-            <NeuroViewControls
+            <NeuroVisionControls
                 config={config}
                 onConfigChange={setConfig}
                 searchQuery={searchQuery}
@@ -804,7 +804,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                 onAnimate={handleAnimate}
             />
 
-            <NeuroViewSidebar
+            <NeuroVisionSidebar
                 patients={patients || []}
                 isOpen={isPatientSidebarOpen}
                 onOpenChange={setIsPatientSidebarOpen}
@@ -887,9 +887,9 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                     variant="outline"
                     onClick={handleEnterNeuroView3D}
                     className="absolute right-5 top-5 z-40 min-h-11 rounded-[18px] border border-white/[0.1] bg-white/[0.075] px-4 py-2.5 text-[9px] font-black uppercase tracking-[0.2em] text-white/72 shadow-[0_24px_70px_-40px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-3xl transition-all duration-500 hover:-translate-y-0.5 hover:bg-white/[0.12] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-black/50 motion-reduce:transition-none motion-reduce:hover:translate-y-0 [.light_&]:border-black/[0.08] [.light_&]:bg-white/72 [.light_&]:text-zinc-700 [.light_&]:shadow-[0_22px_64px_-38px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.65)] [.light_&]:hover:bg-white [.light_&]:hover:text-zinc-950 [.light_&]:focus-visible:ring-zinc-950/35 [.light_&]:focus-visible:ring-offset-white"
-                    aria-label="Abrir NeuroView 3d"
+                    aria-label="Abrir NeuroVision 3d"
                 >
-                    NeuroView 3d
+                    NeuroVision 3d
                 </Button>
             )}
 
@@ -902,7 +902,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                 </div>
             ) : null}
 
-            {/* NeuroView 3d is intentionally lazy-loaded only after entering the spatial scene. */}
+            {/* NeuroVision 3d is intentionally lazy-loaded only after entering the spatial scene. */}
             {isUniverseMode && (
                 <div className="absolute inset-0 z-[60]">
                     <Suspense
@@ -910,12 +910,12 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
                             <div className="absolute inset-0 flex items-center justify-center bg-background/96 backdrop-blur-xl">
                                 <div className="flex flex-col items-center gap-3" role="status">
                                     <Loader2 className="h-7 w-7 animate-spin text-foreground motion-reduce:animate-none" />
-                                    <p className="text-xs font-semibold tracking-wide text-muted-foreground">Preparando NeuroView 3d…</p>
+                                    <p className="text-xs font-semibold tracking-wide text-muted-foreground">Preparando NeuroVision 3d…</p>
                                 </div>
                             </div>
                         )}
                     >
-                        <NeuroView3D
+                        <NeuroVision3D
                             onBack={handleExitNeuroView3D}
                             graphData={spatialGraphData}
                             darkMode={isDarkMode}
@@ -940,3 +940,7 @@ export const NeuroView = ({ synapseRunId, synapsePatientId, synapseTrace, synaps
         </div>
     );
 };
+
+// Temporary source-level compatibility while protocol and database identifiers
+// intentionally remain on the previous version during this desktop-only phase.
+export const NeuroView = NeuroVision;

@@ -14,7 +14,7 @@ import {
 import { memo, useState } from 'react';
 import { Handle, NodeProps, NodeResizer, Position } from 'reactflow';
 import { MermaidDiagram } from './MermaidDiagram';
-import { NeuroViewPatientEmbed } from './NeuroViewPatientEmbed';
+import { NeuroVisionPatientEmbed } from './NeuroViewPatientEmbed';
 
 const iconMap = {
     start: Brain,
@@ -81,7 +81,7 @@ const typeLabelMap: Record<string, string> = {
     stop: 'Pausa / Stop',
     neuropulse: 'NeuroPulse',
     mermaid: 'Mermaid',
-    'neuroview-patient': 'NeuroView',
+    'neuroview-patient': 'NeuroVision',
     item: 'Bloco Livre',
 };
 
@@ -217,7 +217,7 @@ export const NeuralNode = memo(({ id, data, selected, type }: NodeProps) => {
         if (type === 'neuroview-patient') {
             const patientId = String(data.patientId || data.patient_id || data.linkedPatientId || '');
             return (
-                <NeuroViewPatientEmbed
+                <NeuroVisionPatientEmbed
                     patientId={patientId || null}
                     patientName={typeof data.patientName === 'string' ? data.patientName : undefined}
                 />

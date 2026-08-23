@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { htmlToPlainText, plainTextToNoteHtml, noteExcerpt } from "@/lib/note-content";
 import type { EvidenceNode } from "../clinical-evidence/evidence-types";
 import { getEvidenceSourceLabel } from "../clinical-evidence/evidence-model";
+import { EvidenceExplanationDialog, EvidenceScoreCards } from "../clinical-evidence/EvidenceExplanation";
 
 interface GraphDetailsPanelProps {
   selectedNote: PersonalNote | null;
@@ -100,23 +101,9 @@ export const GraphDetailsPanel = ({
                 {!selectedEvidence.reviewed ? (
                   <p className="rounded-2xl border border-violet-500/15 bg-violet-500/5 p-3 text-xs leading-relaxed">Aguardando revisão; esta evidência ainda não altera a gravidade.</p>
                 ) : null}
-                <div className="flex items-end justify-between gap-4">
-                  <span className="text-xs font-medium">Densidade de evidências</span>
-                  <strong className="text-2xl tracking-[-0.04em]">{Math.round(selectedEvidence.gravity.score * 100)}%</strong>
-                </div>
-                {([
-                  ["Recência", selectedEvidence.gravity.recency],
-                  ["Recorrência", selectedEvidence.gravity.recurrence],
-                  ["Diversidade de fontes", selectedEvidence.gravity.sourceDiversity],
-                  ["Ação pendente", selectedEvidence.gravity.actionability],
-                  ["Prioridade profissional", selectedEvidence.gravity.clinicianPriority],
-                ] as const).map(([label, value]) => (
-                  <div key={label} className="space-y-1.5">
-                    <div className="flex justify-between text-[10px]"><span className="text-muted-foreground">{label}</span><span>{Math.round(value * 100)}%</span></div>
-                    <div className="h-1 overflow-hidden rounded-full bg-secondary"><div className="h-full rounded-full bg-foreground/70" style={{ width: `${value * 100}%` }} /></div>
-                  </div>
-                ))}
-                <p className="border-t border-border/10 pt-4 text-[11px] leading-relaxed text-muted-foreground dark:border-white/5">A posição combina somente fatos rastreáveis. Risco registrado permanece uma dimensão separada.</p>
+                <EvidenceScoreCards evidence={selectedEvidence} />
+                <p className="text-[11px] leading-relaxed text-muted-foreground">Perto = atenção · maior = densidade · pulso = tensão. Risco registrado permanece separado.</p>
+                <EvidenceExplanationDialog evidence={selectedEvidence} />
               </div>
             </div>
           </motion.div>

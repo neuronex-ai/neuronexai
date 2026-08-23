@@ -119,3 +119,5 @@ export const NeuroViewSidebar = ({
         </div>
     );
 };
+
+export const NeuroVisionSidebar = NeuroViewSidebar;

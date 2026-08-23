@@ -82,7 +82,7 @@ export const NeuroViewControls = ({
               <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 [.light_&]:border-black/[0.06]">
                 <div>
                   <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-white/72 [.light_&]:text-zinc-700">
-                    <Settings2 className="h-3.5 w-3.5" /> Fisica do NeuroView
+                    <Settings2 className="h-3.5 w-3.5" /> Física do NeuroVision
                   </span>
                   <p className="mt-1 text-[8px] font-black uppercase tracking-[0.2em] text-white/30 [.light_&]:text-zinc-400">
                     Salvo automaticamente
@@ -93,7 +93,7 @@ export const NeuroViewControls = ({
                   variant="ghost"
                   onClick={() => setIsExpanded(false)}
                   className="h-7 w-7 rounded-xl text-white/45 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 [.light_&]:text-zinc-400 [.light_&]:hover:bg-black/5 [.light_&]:hover:text-zinc-900 [.light_&]:focus-visible:ring-zinc-950/35"
-                  aria-label="Recolher ajustes do NeuroView"
+                  aria-label="Recolher ajustes do NeuroVision"
                 >
                   <ChevronDown className="h-3.5 w-3.5" />
                 </Button>
@@ -204,10 +204,10 @@ export const NeuroViewControls = ({
             <Button size="icon" variant="ghost" onClick={onAnimate} className={controlButtonClass} title="Brotar rede neural" aria-label="Animar rede neural">
               <Play className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={onZoomOut} className={controlButtonClass} title="Visao panoramica" aria-label="Afastar NeuroView">
+            <Button size="icon" variant="ghost" onClick={onZoomOut} className={controlButtonClass} title="Visão panorâmica" aria-label="Afastar NeuroVision">
               <ZoomOut className="h-4 w-4" />
             </Button>
-            <Button size="icon" variant="ghost" onClick={onZoomIn} className={controlButtonClass} title="Foco de leitura" aria-label="Aproximar NeuroView">
+            <Button size="icon" variant="ghost" onClick={onZoomIn} className={controlButtonClass} title="Foco de leitura" aria-label="Aproximar NeuroVision">
               <ZoomIn className="h-4 w-4" />
             </Button>
             <Button size="icon" variant="ghost" onClick={onCenter} className={controlButtonClass} title="Centralizar rede" aria-label="Centralizar rede">
@@ -245,3 +245,5 @@ export const NeuroViewControls = ({
     </div>
   );
 };
+
+export const NeuroVisionControls = NeuroViewControls;

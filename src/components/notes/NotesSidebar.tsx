@@ -62,7 +62,7 @@ const mainItems = [
 ];
 
 const intelligenceItems = [
-  { id: 'neuroview', label: 'NeuroView', icon: Share2, mode: 'neuroview' as const },
+  { id: 'neuroview', label: 'NeuroVision', icon: Share2, mode: 'neuroview' as const },
   { id: 'neuroflow', label: 'NeuroFlow', icon: Share2, mode: 'neuroflow' as const },
   { id: 'neuropulse', label: 'NeuroPulse', icon: Fingerprint, mode: 'neuropulse' as const },
 ];

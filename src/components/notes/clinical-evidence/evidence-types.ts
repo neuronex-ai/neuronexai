@@ -8,16 +8,38 @@ export type EvidenceSource =
   | "appointment"
   | "reminder";
 
-export type NeuroViewLens = "panorama" | "session-prep" | "patterns" | "attention";
+export type NeuroVisionLens = "panorama" | "session-prep" | "patterns" | "attention";
+
+// Compatibility alias. Scene commands and persisted integrations still use the
+// original protocol name until the backend migration happens in a later phase.
+export type NeuroViewLens = NeuroVisionLens;
 
 export type GravityBreakdown = {
+  formulaVersion: "neurovision-attention-v2";
   recency: number;
   recurrence: number;
   sourceDiversity: number;
+  relationSupport: number;
+  density: number;
+  acceleration: number;
+  objectiveChange: number | null;
+  connectionStrength: number;
+  tension: number;
   actionability: number;
   clinicianPriority: number;
+  confidence: number;
   score: number;
   eligible: boolean;
+};
+
+export type PatientAttentionSummary = {
+  score: number;
+  confidence: number;
+  highestThemeScore: number;
+  topThreeAverage: number;
+  criticalPending: number;
+  dominantTheme: string | null;
+  evidenceCount: number;
 };
 
 export type AttentionReasonType =
@@ -94,8 +116,9 @@ export type EvidenceOverrideRow = {
   updated_at: string;
 };
 
-export type NeuroViewTimeWindow = {
+export type NeuroVisionTimeWindow = {
   start?: number | null;
   end?: number | null;
 };
 
+export type NeuroViewTimeWindow = NeuroVisionTimeWindow;

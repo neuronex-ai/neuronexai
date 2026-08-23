@@ -2,6 +2,7 @@ import type { GraphLink, GraphNode } from "../graph/graph-types";
 import type { EvidenceNode } from "../clinical-evidence/evidence-types";
 
 export type NeuroView3DFilter = "all" | "patients" | "recent" | "risk";
+export type NeuroVision3DFilter = NeuroView3DFilter;
 
 export type SpatialPoint = { x: number; y: number; z: number };
 
@@ -353,6 +354,7 @@ const themeForNode = (node: GraphNode) => {
 
 const semanticGravityForNode = (node: GraphNode, now = Date.now()) => {
   const evidence = getNodeEvidence(node);
+  // In NeuroVision v2 the radial distance represents attention, not risk.
   if (evidence) return evidence.gravity.score;
   const timestamp = timestampForNode(node);
   if (timestamp === null) return node.type === "flow" ? 0.48 : 0.28;

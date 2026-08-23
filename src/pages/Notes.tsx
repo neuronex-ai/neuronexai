@@ -27,8 +27,8 @@ import { clearSynapseNotesNavigationState } from "@/lib/synapse-navigation";
 const TaskBoard = lazy(() =>
     import("@/components/notes/TaskBoard").then((module) => ({ default: module.TaskBoard }))
 );
-const NeuroView = lazy(() =>
-    import("@/components/notes/NeuroView").then((module) => ({ default: module.NeuroView }))
+const NeuroVision = lazy(() =>
+    import("@/components/notes/NeuroView").then((module) => ({ default: module.NeuroVision }))
 );
 const NeuroFlow = lazy(() =>
     import("@/components/notes/NeuroFlow").then((module) => ({ default: module.NeuroFlow }))
@@ -424,7 +424,7 @@ export default function Notes() {
             case "neuroview":
                 return (
                     <motion.div {...motionProps} className="relative flex-1 h-full min-h-0 min-w-0 overflow-hidden" data-synapse-target="neuroview-graph" data-synapse-product="neuroview" data-synapse-run-id={synapseRunId || undefined}>
-                        <NeuroView synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapseTrace={synapseTrace} synapseDirective={synapseNeuroViewDirective} />
+                        <NeuroVision synapseRunId={synapseRunId} synapsePatientId={synapsePatientId} synapseTrace={synapseTrace} synapseDirective={synapseNeuroViewDirective} />
                     </motion.div>
                 );
             case "neuroflow":

@@ -127,9 +127,11 @@ const PANORAMA_TARGET = new THREE.Vector3(0, 0, 0);
 const baseNodeScale = (node: GraphNode, darkMode: boolean) => {
   const darkModeReduction = darkMode ? 0.828 : 1;
   if (node.type === "patient") return 1.9 * darkModeReduction;
-  if (node.type === "flow") return 1.24 * darkModeReduction;
-  if (node.type === "note") return 0.96 * darkModeReduction;
-  if (node.type === "evidence") return 0.76 * darkModeReduction;
+  const density = getNodeEvidence(node)?.gravity.density;
+  const densityScale = density === undefined ? 1 : THREE.MathUtils.lerp(0.76, 1.24, density);
+  if (node.type === "flow") return 1.24 * darkModeReduction * densityScale;
+  if (node.type === "note") return 0.96 * darkModeReduction * densityScale;
+  if (node.type === "evidence") return 0.76 * darkModeReduction * densityScale;
   return 0.59 * darkModeReduction;
 };
 
@@ -263,8 +265,8 @@ const createMicroSurfaceTextures = (maxAnisotropy: number) => {
   };
 
   return {
-    normal: configure(new THREE.DataTexture(normalData, size, size, THREE.RGBAFormat), "NeuroView micro-normal"),
-    roughness: configure(new THREE.DataTexture(roughnessData, size, size, THREE.RGBAFormat), "NeuroView micro-roughness"),
+    normal: configure(new THREE.DataTexture(normalData, size, size, THREE.RGBAFormat), "NeuroVision micro-normal"),
+    roughness: configure(new THREE.DataTexture(roughnessData, size, size, THREE.RGBAFormat), "NeuroVision micro-roughness"),
   };
 };
 
@@ -1146,7 +1148,11 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         dummy.updateMatrix();
         group.mesh.setMatrixAt(index, dummy.matrix);
 
-        dummy.scale.setScalar(Math.max(0.001, displayScale * (highlighted ? 1.85 : 1.48)));
+        const tension = evidence?.gravity.tension || 0;
+        const tensionPulse = tension > 0.03 && !reducedMotion
+          ? 1 + Math.sin(now * 0.0024 + (record.node.pulseSeed || 0)) * tension * 0.085
+          : 1;
+        dummy.scale.setScalar(Math.max(0.001, displayScale * (highlighted ? 1.85 : 1.48) * tensionPulse));
         dummy.updateMatrix();
         group.halo.setMatrixAt(index, dummy.matrix);
 
@@ -1161,7 +1167,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         setNodeColor(instanceColor, record.node, darkMode).multiplyScalar(brightness);
         if (dimForPath) instanceColor.lerp(background, 0.58);
         group.mesh.setColorAt(index, instanceColor);
-        instanceHaloColor.copy(instanceColor).multiplyScalar(0.48);
+        instanceHaloColor.copy(instanceColor).multiplyScalar(0.42 + tension * 0.24);
         if (highlighted) instanceHaloColor.set(darkMode ? "#f7f7f2" : "#4f6870");
         group.halo.setColorAt(index, instanceHaloColor);
       });
@@ -1858,3 +1864,10 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     },
   };
 };
+
+export type NeuroVisionSceneProfile = NeuroViewSceneProfile;
+export type NeuroVisionDynamicsSettings = NeuroViewDynamicsSettings;
+export type NeuroVisionCameraAction = NeuroViewCameraAction;
+export type NeuroVisionSceneController = NeuroViewSceneController;
+export const DEFAULT_NEUROVISION_DYNAMICS = DEFAULT_NEUROVIEW_DYNAMICS;
+export const createNeuroVisionScene = createNeuroViewScene;

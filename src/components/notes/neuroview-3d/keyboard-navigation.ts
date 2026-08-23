@@ -1,4 +1,4 @@
-import type { NeuroViewCameraAction } from "./three-scene";
+import type { NeuroVisionCameraAction } from "./three-scene";
 
 type KeyboardCameraInput = {
   key: string;
@@ -14,7 +14,7 @@ export const getNeuroViewCameraAction = ({
   altKey = false,
   ctrlKey = false,
   metaKey = false,
-}: KeyboardCameraInput): NeuroViewCameraAction | null => {
+}: KeyboardCameraInput): NeuroVisionCameraAction | null => {
   if (altKey || ctrlKey || metaKey) return null;
   if (key === "ArrowLeft") return "orbit-left";
   if (key === "ArrowRight") return "orbit-right";
@@ -29,3 +29,5 @@ export const getNeuroViewCameraAction = ({
   if (normalizedKey === "d") return "strafe-right";
   return null;
 };
+
+export const getNeuroVisionCameraAction = getNeuroViewCameraAction;

@@ -6,8 +6,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseStoredNeuroFlowWorkflow } from "@/lib/neuroflow-workflow";
 import { GraphNode, GraphLink, GRAPH_COLORS } from "./graph-types";
 import { NeuroConfig } from "../NeuroViewControls";
-import { useNeuroViewEvidence } from "../clinical-evidence/use-neuroview-evidence";
-import { buildAttentionReasons } from "../clinical-evidence/evidence-model";
+import { useNeuroVisionEvidence } from "../clinical-evidence/use-neuroview-evidence";
+import { buildAttentionReasons, buildPatientAttentionSummary } from "../clinical-evidence/evidence-model";
 
 interface UseGraphDataProps {
   config: NeuroConfig;
@@ -29,7 +29,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     isAvailable: isEvidenceAvailable,
     isLoading: loadingEvidence,
     updateOverride: updateEvidenceOverride,
-  } = useNeuroViewEvidence();
+  } = useNeuroVisionEvidence();
   const [flows, setFlows] = useState<any[]>([]);
   const [loadingFlows, setLoadingFlows] = useState(false);
   
@@ -55,7 +55,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
 
       if (!isMounted) return;
       if (error) {
-        console.error("[NeuroView] Falha ao carregar fluxos:", error);
+        console.error("[NeuroVision] Falha ao carregar fluxos:", error);
         setFlows([]);
       } else {
         setFlows(data || []);
@@ -120,7 +120,9 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
       if (n.type === 'flow' && !config.showNotes) return;
       if (n.type === 'evidence' && !config.showNotes) return;
 
-      const baseRadius = n.type === 'patient' ? 6 : (n.type === 'flow' ? 5.2 : (n.type === 'note' ? 4.2 : (n.type === 'evidence' ? 3.5 : 2.8)));
+      const evidenceDensity = Number(n.data?.evidence?.gravity?.density);
+      const densityScale = Number.isFinite(evidenceDensity) ? 0.82 + evidenceDensity * 0.36 : 1;
+      const baseRadius = (n.type === 'patient' ? 6 : (n.type === 'flow' ? 5.2 : (n.type === 'note' ? 4.2 : (n.type === 'evidence' ? 3.5 : 2.8)))) * densityScale;
       const baseGlow = n.type === 'patient' ? 24 : (n.type === 'flow' ? 22 : (n.type === 'note' ? 16 : (n.type === 'evidence' ? 14 : 10)));
       const pulseSeed = Array.from(String(n.id)).reduce((sum, char) => sum + char.charCodeAt(0), 0) % 997;
 
@@ -201,6 +203,9 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
     const attentionByPatientId = new Map(
       patients.map((patient) => [patient.id, buildAttentionReasons(patient, evidence)]),
     );
+    const attentionSummaryByPatientId = new Map(
+      patients.map((patient) => [patient.id, buildPatientAttentionSummary(patient.id, evidence)]),
+    );
 
     // Add Patients
     patients.forEach(p => {
@@ -212,7 +217,11 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
         type: 'patient',
         color: '#FFFFFF',
         imgUrl: p.avatar_url,
-        data: { ...p, attentionReasons: attentionByPatientId.get(p.id) || [] }
+        data: {
+          ...p,
+          attentionReasons: attentionByPatientId.get(p.id) || [],
+          attentionSummary: attentionSummaryByPatientId.get(p.id),
+        }
       });
     });
 
@@ -290,6 +299,10 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
           : null;
       if (existingNodeId && map[existingNodeId]) {
         map[existingNodeId].data = { ...map[existingNodeId].data, evidence: item };
+        const densityScale = 0.82 + item.gravity.density * 0.36;
+        const originalRadius = map[existingNodeId].type === "flow" ? 5.2 : 4.2;
+        map[existingNodeId].currentRadius = originalRadius * densityScale;
+        map[existingNodeId].targetRadius = originalRadius * densityScale;
         return;
       }
       if (!item.patientId || !addedIds.has(`pat-${item.patientId}`)) return;
@@ -311,7 +324,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
       links.push({
         source: `pat-${item.patientId}`,
         target: evidenceId,
-        value: 1.4 + item.gravity.score * 1.8,
+        value: 1.2 + item.gravity.density * 1.5 + item.gravity.tension * 0.5,
         revealProgress: 1,
         revealTarget: 1,
       });

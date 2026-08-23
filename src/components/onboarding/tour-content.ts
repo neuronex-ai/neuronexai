@@ -65,7 +65,7 @@ export const DESKTOP_TOUR_STEPS: TourStep[] = [
   {
     id: "desktop-notes",
     eyebrow: "Trabalho profundo",
-    title: "Notas e NeuroView ganham espaço no desktop.",
+    title: "Notas e NeuroVision ganham espaço no desktop.",
     description:
       "A tela maior favorece escrita clínica, revisão de conteúdo, análise sistêmica e uso dos recursos de IA sem comprimir o contexto principal.",
     expectedRoute: "/notas",

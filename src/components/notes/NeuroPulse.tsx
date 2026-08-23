@@ -11,7 +11,7 @@ import {
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import html2canvas from "html2canvas";
 import {
-    Brain, Download, FileText, Fingerprint, Maximize2, Mic, MicOff,
+    Brain, Download, FileText, Fingerprint, Maximize2, Mic, MicOff, Network,
     RefreshCcw, Zap
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -203,20 +203,22 @@ export const NeuroPulse = ({
 
             // 2. Construct the prompt
             const prompt = `
-Atue como um especialista em ${LENSES.find(l => l.value === selectedLens)?.label}. 
-Analise o seguinte relato clínico e gere um diagrama de causa e efeito usando a sintaxe Mermaid. 
-O diagrama deve identificar claramente:
-- Gatilhos/Eventos
-- Pensamentos/Cognições
-- Emoções
-- Comportamentos/Respostas
-- Consequências
+Use a abordagem ${LENSES.find(l => l.value === selectedLens)?.label} somente como lente de organização visual.
+Organize o relato clínico em um diagrama explicável de causa e efeito usando a sintaxe Mermaid.
+Separe claramente, nos próprios títulos dos nós:
+- DADO INFORMADO: algo que aparece literalmente no relato
+- PADRÃO POSSÍVEL: repetição ou relação sustentada pelo relato
+- HIPÓTESE A REVISAR: leitura da abordagem que exige confirmação profissional
+- PERGUNTA CLÍNICA: ponto que pode ser explorado pelo psicólogo
+- ACOMPANHAMENTO: mudança ou ação objetiva que pode ser observada depois
 
 REGRAS RÍGIDAS:
 1. Retorne APENAS o código Mermaid. Não use blocos de código markdown (sem \`\`\`mermaid).
 2. Use o formato graph TD ou flowchart TD.
 3. Estilize os nós para serem visualmente agradáveis (borda arredondada, cores suaves se possível na sintaxe mermaid).
 4. O diagrama deve ser complexo o suficiente para mostrar profundidade, mas legível.
+5. Não diagnostique, não complete lacunas e não apresente hipótese como fato.
+6. Preserve a linguagem do relato e deixe evidente o que precisa de revisão profissional.
 
 Relato:
 "${input}"
@@ -389,6 +391,11 @@ Relato:
                     </Button>
                 </div>
             </header>
+
+            <div className="relative z-20 mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-border/40 bg-card/45 px-4 py-2.5 text-[10px] text-muted-foreground backdrop-blur-xl">
+                <span className="inline-flex items-center gap-2 font-semibold text-foreground/75"><Network className="h-3.5 w-3.5" /> NeuroVision detecta → NeuroPulse explica → NeuroFlow acompanha</span>
+                <span>Hipóteses aparecem separadas dos fatos e sempre exigem revisão profissional.</span>
+            </div>
 
             {/* Main Content Area */}
             <div className="desktop-content-scroll relative z-10 mt-3 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto xl:flex-row xl:overflow-hidden">

@@ -77,7 +77,7 @@ export const useNeuroViewEvidence = () => {
     if (evidenceResult.error) {
       const missingProjection = evidenceResult.error.code === "42P01" || evidenceResult.error.code === "PGRST205";
       setIsAvailable(!missingProjection);
-      if (!missingProjection) console.error("[NeuroView] Falha ao carregar o índice clínico:", evidenceResult.error);
+      if (!missingProjection) console.error("[NeuroVision] Falha ao carregar o índice clínico:", evidenceResult.error);
       setRows([]);
     } else {
       setIsAvailable(true);
@@ -86,7 +86,7 @@ export const useNeuroViewEvidence = () => {
 
     if (overrideResult.error) {
       const missingProjection = overrideResult.error.code === "42P01" || overrideResult.error.code === "PGRST205";
-      if (!missingProjection) console.error("[NeuroView] Falha ao carregar preferências de evidência:", overrideResult.error);
+      if (!missingProjection) console.error("[NeuroVision] Falha ao carregar preferências de evidência:", overrideResult.error);
       setOverrides([]);
     } else {
       setOverrides((overrideResult.data || []).map((row) => normalizeOverrideRow(row as Record<string, unknown>)));
@@ -155,3 +155,4 @@ export const useNeuroViewEvidence = () => {
   };
 };
 
+export const useNeuroVisionEvidence = useNeuroViewEvidence;

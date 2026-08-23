@@ -7,8 +7,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/types";
+import { EvidenceExplanationDialog, EvidenceScoreCards } from "../clinical-evidence/EvidenceExplanation";
 import { getEvidenceSourceLabel } from "../clinical-evidence/evidence-model";
-import type { AttentionReason, EvidenceNode, NeuroViewLens } from "../clinical-evidence/evidence-types";
+import type { AttentionReason, EvidenceNode, NeuroVisionLens, PatientAttentionSummary } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import { getNodeEvidence } from "./model";
 
@@ -23,7 +24,7 @@ type OverrideUpdate = {
 
 type Props = {
   darkMode: boolean;
-  lens: NeuroViewLens;
+  lens: NeuroVisionLens;
   focusedPatient: GraphNode | null;
   inspectedNode: GraphNode | null;
   graphNodes: GraphNode[];
@@ -70,7 +71,10 @@ export const NeuroViewInsightsPanel = ({
 
   useEffect(() => setTheme(inspectedEvidence?.theme || ""), [inspectedEvidence?.id, inspectedEvidence?.theme]);
 
-  const patient = focusedPatient?.data as (Patient & { attentionReasons?: AttentionReason[] }) | undefined;
+  const patient = focusedPatient?.data as (Patient & {
+    attentionReasons?: AttentionReason[];
+    attentionSummary?: PatientAttentionSummary;
+  }) | undefined;
   const patientEvidence = useMemo(() => evidence
     .filter((item) => item.patientId === patient?.id && !item.hidden)
     .filter((item) => timeEnd === null || new Date(item.occurredAt).getTime() <= timeEnd)
@@ -99,9 +103,16 @@ export const NeuroViewInsightsPanel = ({
 
   const attentionPatients = useMemo(() => graphNodes
     .filter((node) => node.type === "patient")
-    .map((node) => ({ node, reasons: (node.data?.attentionReasons || []) as AttentionReason[] }))
-    .filter(({ reasons }) => reasons.length > 0)
-    .sort((left, right) => right.reasons.length - left.reasons.length), [graphNodes]);
+    .map((node) => ({
+      node,
+      reasons: (node.data?.attentionReasons || []) as AttentionReason[],
+      summary: node.data?.attentionSummary as PatientAttentionSummary | undefined,
+    }))
+    .filter(({ reasons, summary }) => reasons.length > 0 || Boolean(summary?.score))
+    .sort((left, right) => Number(right.reasons.some((reason) => reason.type === "recorded-risk"))
+      - Number(left.reasons.some((reason) => reason.type === "recorded-risk"))
+      || right.reasons.length - left.reasons.length
+      || (right.summary?.score || 0) - (left.summary?.score || 0)), [graphNodes]);
   const nodeIdForEvidence = (item: EvidenceNode) => graphNodes.find(
     (node) => getNodeEvidence(node)?.id === item.id,
   )?.id || item.id;
@@ -127,13 +138,6 @@ export const NeuroViewInsightsPanel = ({
 
   if (inspectedEvidence) {
     const gravity = inspectedEvidence.gravity;
-    const metrics = [
-      ["Recência", gravity.recency],
-      ["Recorrência", gravity.recurrence],
-      ["Fontes", gravity.sourceDiversity],
-      ["Ação", gravity.actionability],
-      ["Prioridade", gravity.clinicianPriority],
-    ] as const;
     return (
       <aside className={shellClass} aria-label="Por que esta evidência está aqui">
         <div className={cn("border-b px-5 pb-4 pt-5", darkMode ? "border-white/8" : "border-black/8")}>
@@ -153,23 +157,15 @@ export const NeuroViewInsightsPanel = ({
                 Esta evidência aguarda revisão. Ela pode ser explorada, mas ainda não altera a gravidade clínica.
               </div>
             ) : null}
-            <div>
-              <div className="flex items-end justify-between gap-3">
-                <span className="text-xs font-medium">Densidade de evidências</span>
-                <strong className="text-2xl font-semibold tracking-[-0.04em]">{percent(gravity.score)}</strong>
-              </div>
-              <div className="mt-3 space-y-2.5">
-                {metrics.map(([label, value]) => (
-                  <div key={label} className="grid grid-cols-[76px_1fr_34px] items-center gap-2 text-[10px]">
-                    <span className={secondary}>{label}</span>
-                    <span className={cn("h-1 overflow-hidden rounded-full", darkMode ? "bg-white/8" : "bg-black/8")}>
-                      <span className={cn("block h-full rounded-full", darkMode ? "bg-white/72" : "bg-zinc-800/72")} style={{ width: percent(value) }} />
-                    </span>
-                    <span className="text-right tabular-nums">{percent(value)}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <EvidenceScoreCards evidence={inspectedEvidence} />
+            <p className={cn("text-[11px] leading-relaxed", secondary)}>
+              Perto = precisa de atenção · maior = mais denso · pulso = mais tensão · confiança = força da base revisada.
+            </p>
+            <EvidenceExplanationDialog
+              evidence={inspectedEvidence}
+              body={typeof inspectedNode?.data?.content === "string" ? inspectedNode.data.content : null}
+              darkMode={darkMode}
+            />
 
             {evidenceAvailable && onUpdateOverride ? (
               <div className={cn("space-y-4 border-t pt-4", darkMode ? "border-white/8" : "border-black/8")}>
@@ -193,9 +189,9 @@ export const NeuroViewInsightsPanel = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label htmlFor="neuroview-theme" className="text-xs">Tema clínico revisado</label>
+                  <label htmlFor="neurovision-theme" className="text-xs">Tema clínico revisado</label>
                   <Input
-                    id="neuroview-theme"
+                    id="neurovision-theme"
                     value={theme}
                     disabled={saving}
                     onChange={(event) => setTheme(event.target.value)}
@@ -233,7 +229,7 @@ export const NeuroViewInsightsPanel = ({
                       sourceType: inspectedEvidence.sourceType,
                       sourceId: inspectedEvidence.sourceId,
                       isHidden: true,
-                    }, "Evidência ocultada do NeuroView.")}
+                    }, "Evidência ocultada do NeuroVision.")}
                     className="rounded-xl text-xs"
                   >
                     <EyeOff className="h-3.5 w-3.5" /> Ocultar
@@ -273,7 +269,7 @@ export const NeuroViewInsightsPanel = ({
                   className={cn("w-full rounded-2xl border p-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", darkMode ? "border-white/8 bg-white/[0.025] hover:bg-white/[0.07]" : "border-black/8 bg-black/[0.018] hover:bg-black/[0.05]")}
                 >
                   <span className="block truncate text-xs font-semibold">{item.title}</span>
-                  <span className={cn("mt-1 block text-[10px]", secondary)}>{getEvidenceSourceLabel(item.sourceType)} · {dateLabel(item.occurredAt)} · densidade {percent(item.gravity.score)}</span>
+                  <span className={cn("mt-1 block text-[10px]", secondary)}>{getEvidenceSourceLabel(item.sourceType)} · {dateLabel(item.occurredAt)} · atenção {percent(item.gravity.score)}</span>
                 </button>
               )) : <p className={cn("p-4 text-center text-xs", secondary)}>Nenhuma mudança indexada desde a última sessão.</p>}
             </div>
@@ -310,19 +306,24 @@ export const NeuroViewInsightsPanel = ({
 
   if (lens === "attention") {
     return (
-      <aside className={shellClass} aria-label="Radar vivo">
+      <aside className={shellClass} aria-label="NeuroTrack">
         <div className={cn("border-b px-5 pb-4 pt-5", darkMode ? "border-white/8" : "border-black/8")}>
-          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em]"><Radar className="h-3.5 w-3.5" /> Radar vivo</div>
+          <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em]"><Radar className="h-3.5 w-3.5" /> NeuroTrack</div>
           <h2 className="mt-2 text-base font-semibold">Atenção objetiva</h2>
           <p className={cn("mt-1 text-[11px] leading-relaxed", secondary)}>Sinais registrados e pendências operacionais; não representa diagnóstico.</p>
         </div>
         <ScrollArea className="max-h-[min(62vh,560px)]">
           <div className="space-y-2 p-3">
-            {attentionPatients.map(({ node, reasons }) => (
+            {attentionPatients.map(({ node, reasons, summary }) => (
               <button key={node.id} type="button" onClick={() => onInspectNode(node.id)} className={cn("w-full rounded-2xl border p-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", darkMode ? "border-white/8 bg-white/[0.025] hover:bg-white/[0.07]" : "border-black/8 bg-black/[0.018] hover:bg-black/[0.05]")}>
-                <span className="block truncate text-xs font-semibold">{node.label}</span>
+                <span className="flex items-center justify-between gap-3">
+                  <span className="truncate text-xs font-semibold">{node.label}</span>
+                  {summary ? <span className="text-[10px] tabular-nums opacity-60">atenção {percent(summary.score)}</span> : null}
+                </span>
+                {summary?.dominantTheme ? <span className={cn("mt-1 block truncate text-[10px]", secondary)}>Tema mais presente: {summary.dominantTheme} · confiança {percent(summary.confidence)}</span> : null}
                 <span className="mt-2 flex flex-wrap gap-1.5">
                   {reasons.map((reason) => <span key={reason.type} className="inline-flex items-center gap-1 text-[9px]"><span className={cn("h-1.5 w-1.5 rounded-full", reasonColor[reason.type])} />{reason.label}</span>)}
+                  {!reasons.length ? <span className={cn("text-[9px]", secondary)}>Sem sinal objetivo registrado</span> : null}
                 </span>
               </button>
             ))}
@@ -335,3 +336,5 @@ export const NeuroViewInsightsPanel = ({
 
   return null;
 };
+
+export const NeuroVisionInsightsPanel = NeuroViewInsightsPanel;

@@ -5932,7 +5932,7 @@
   cursor: col-resize;
 }
 
-/* ===== NEUROVIEW PREMIUM ANIMATIONS (Obsidian-style) ===== */
+/* ===== NEUROVISION PREMIUM ANIMATIONS (Obsidian-style) ===== */
 
 @keyframes fadeInBlur {
   0% {
@@ -6080,7 +6080,7 @@
   animation: pulseGlow 3s ease-in-out infinite;
 }
 
-/* Custom scrollbar for NeuroView panels */
+/* Custom scrollbar for NeuroVision panels */
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
 }

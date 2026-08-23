@@ -81,7 +81,9 @@ export const drawNode = (
   const bloom = clamp(node.bloomIntensity ?? 0, 0, 1);
   const dragPulse = clamp(node.dragPulse ?? 0, 0, 1);
   const pulseSeed = (node.pulseSeed ?? 0) * 0.013;
-  const breathing = Math.sin(time * 1.65 + pulseSeed) * 0.06;
+  const evidenceTension = clamp(Number(node.data?.evidence?.gravity?.tension) || 0, 0, 1);
+  const breathingAmplitude = node.type === "patient" ? 0.024 : 0.014 + evidenceTension * 0.052;
+  const breathing = Math.sin(time * 1.65 + pulseSeed) * breathingAmplitude;
 
   const radius = Math.max(
     0.1,
@@ -295,9 +297,9 @@ export const drawLink = (
   const hasEmphasis = Boolean(emphasizedNodeIds?.size);
   const isActive = isConnectedToHover || isEmphasized;
   const dimmed = Boolean((hoverNode || hasEmphasis) && !isActive);
-  const baseOpacity = isDarkMode ? 0.12 : 0.18;
+  const baseOpacity = isDarkMode ? 0.075 : 0.14;
   const targetOpacity = (dimmed ? 0.025 : (isActive ? 0.82 : baseOpacity)) * reveal;
-  const targetWidth = ((isActive ? 1.5 : 0.46) + (link.value || 1) * 0.065) / globalScale;
+  const targetWidth = ((isActive ? 1.5 : 0.38) + (link.value || 1) * (isActive ? 0.065 : 0.035)) / globalScale;
 
   link.currentOpacity = link.currentOpacity ?? targetOpacity;
   link.currentWidth = link.currentWidth ?? targetWidth;

@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import type { Patient } from "@/types";
-import { buildAttentionReasons, buildEvidenceNodes, GRAVITY_WEIGHTS } from "./evidence-model";
+import {
+  ATTENTION_WEIGHTS,
+  buildAttentionReasons,
+  buildEvidenceNodes,
+  buildPatientAttentionSummary,
+  DENSITY_WEIGHTS,
+} from "./evidence-model";
 import type { EvidenceIndexRow, EvidenceOverrideRow } from "./evidence-types";
 
 const NOW = Date.UTC(2026, 7, 22, 12);
+const DAY = 86_400_000;
 
 const row = (
   id: string,
@@ -39,8 +46,8 @@ const preference = (sourceId: string, priority: number): EvidenceOverrideRow => 
   updated_at: new Date(NOW).toISOString(),
 });
 
-describe("NeuroView evidence gravity", () => {
-  it("uses a 30-day half-life and the declared explainable weights", () => {
+describe("NeuroVision explainable attention", () => {
+  it("uses a 30-day half-life and keeps attention distinct from density", () => {
     const item = buildEvidenceNodes([
       row("half-life", { occurred_at: new Date(NOW - 30 * 86_400_000).toISOString() }),
     ], [], NOW)[0];
@@ -48,10 +55,16 @@ describe("NeuroView evidence gravity", () => {
     expect(item.gravity.recency).toBeCloseTo(0.5, 5);
     expect(item.gravity.recurrence).toBeCloseTo(0.2, 5);
     expect(item.gravity.sourceDiversity).toBeCloseTo(0.25, 5);
+    expect(item.gravity.density).toBeCloseTo(
+      0.2 * DENSITY_WEIGHTS.recurrence
+      + 0.25 * DENSITY_WEIGHTS.sourceDiversity
+      + 0.8 * DENSITY_WEIGHTS.relationSupport,
+      5,
+    );
     expect(item.gravity.score).toBeCloseTo(
-      0.5 * GRAVITY_WEIGHTS.recency
-      + 0.2 * GRAVITY_WEIGHTS.recurrence
-      + 0.25 * GRAVITY_WEIGHTS.sourceDiversity,
+      item.gravity.density * ATTENTION_WEIGHTS.density
+      + item.gravity.tension * ATTENTION_WEIGHTS.tension
+      + 0.5 * ATTENTION_WEIGHTS.recency,
       5,
     );
   });
@@ -69,13 +82,14 @@ describe("NeuroView evidence gravity", () => {
     expect(items[0].gravity.recurrence).toBe(1);
     expect(items[0].gravity.sourceDiversity).toBe(1);
     expect(items[0].gravity.clinicianPriority).toBe(1);
+    expect(items[0].gravity.density).toBeLessThanOrEqual(1);
   });
 
   it("keeps unreviewed AI-derived evidence outside gravity", () => {
     const item = buildEvidenceNodes([
       row("pending", { source_type: "session_note", reviewed: false, is_actionable: true }),
     ], [], NOW)[0];
-    expect(item.gravity).toMatchObject({ eligible: false, score: 0, recency: 0, actionability: 0 });
+    expect(item.gravity).toMatchObject({ eligible: false, score: 0, density: 0, tension: 0, recency: 0, actionability: 0 });
   });
 
   it("keeps recorded risk separate and reports objective attention reasons", () => {
@@ -102,5 +116,24 @@ describe("NeuroView evidence gravity", () => {
     ]);
     expect(evidence.every((item) => item.gravity.score <= 1)).toBe(true);
   });
-});
 
+  it("treats missing objective change as unavailable instead of inventing a zero", () => {
+    const item = buildEvidenceNodes([
+      row("single-mood", { source_type: "mood", metadata: { moodScore: 6 } }),
+    ], [], NOW)[0];
+    expect(item.gravity.objectiveChange).toBeNull();
+    expect(item.gravity.confidence).toBeGreaterThan(0);
+    expect(item.gravity.confidence).toBeLessThan(1);
+  });
+
+  it("summarizes patient attention without adding registered risk to the score", () => {
+    const evidence = buildEvidenceNodes([
+      row("one"),
+      row("two", { tags: ["Sono"], is_actionable: true, action_due_at: new Date(NOW - DAY).toISOString() }),
+    ], [], NOW);
+    const summary = buildPatientAttentionSummary("patient-a", evidence, NOW);
+    expect(summary.score).toBeGreaterThan(0);
+    expect(summary.dominantTheme).toBeTruthy();
+    expect(summary.evidenceCount).toBe(2);
+  });
+});

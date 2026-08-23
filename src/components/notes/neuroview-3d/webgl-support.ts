@@ -1,8 +1,8 @@
-import type { NeuroViewSceneProfile } from "./three-scene";
+import type { NeuroVisionSceneProfile } from "./three-scene";
 
 export type NeuroViewHardwareCapability = {
   available: boolean;
-  profile: NeuroViewSceneProfile;
+  profile: NeuroVisionSceneProfile;
   webgl2: boolean;
   maxTextureSize: number;
 };
@@ -51,3 +51,5 @@ export const detectNeuroViewHardware = (reducedMotion: boolean): NeuroViewHardwa
   };
 };
 
+export type NeuroVisionHardwareCapability = NeuroViewHardwareCapability;
+export const detectNeuroVisionHardware = detectNeuroViewHardware;

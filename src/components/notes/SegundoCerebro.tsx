@@ -83,7 +83,7 @@ const nodeCategories: Array<{ id: NodeType; label: string; description: string; 
     { id: 'stop', label: 'Pausa / Stop', description: 'Interrupção, defesa ou dissociação.', icon: PauseCircle, color: 'text-zinc-300', bg: 'bg-zinc-400/10' },
     { id: 'neuropulse', label: 'NeuroPulse', description: 'Síntese ou diagrama gerado.', icon: Activity, color: 'text-primary', bg: 'bg-primary/10' },
     { id: 'mermaid', label: 'Mermaid', description: 'Diagrama renderizável no fluxo.', icon: Network, color: 'text-blue-300', bg: 'bg-blue-400/10' },
-    { id: 'neuroview-patient', label: 'NeuroView do Paciente', description: 'Embed do grafo filtrado por paciente.', icon: Eye, color: 'text-white', bg: 'bg-white/10' },
+    { id: 'neuroview-patient', label: 'NeuroVision do Paciente', description: 'Mapa clínico filtrado por paciente.', icon: Eye, color: 'text-white', bg: 'bg-white/10' },
     { id: 'document', label: 'Arquivo', description: 'PDF, imagem ou documento conectado.', icon: BookOpen, color: 'text-zinc-400', bg: 'bg-zinc-500/10' },
     { id: 'transcription', label: 'Transcrição', description: 'Registro de fala editável.', icon: Mic, color: 'text-yellow-300', bg: 'bg-yellow-400/10' },
     { id: 'table', label: 'Tabela de Observações', description: 'Linhas e colunas editáveis.', icon: TableProperties, color: 'text-indigo-300', bg: 'bg-indigo-400/10' },

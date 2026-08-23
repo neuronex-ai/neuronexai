@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { PersonalNote, Patient } from "@/types";
-import type { EvidenceNode, EvidenceSource, NeuroViewLens } from "../clinical-evidence/evidence-types";
+import type { EvidenceNode, EvidenceSource, NeuroVisionLens } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import {
   getPatientSubgraphIds,
@@ -40,26 +40,26 @@ import {
   type NeuroView3DFilter,
 } from "./model";
 import {
-  createNeuroViewScene,
-  DEFAULT_NEUROVIEW_DYNAMICS,
-  type NeuroViewCameraAction,
-  type NeuroViewDynamicsSettings,
-  type NeuroViewSceneController,
-  type NeuroViewSceneProfile,
+  createNeuroVisionScene,
+  DEFAULT_NEUROVISION_DYNAMICS,
+  type NeuroVisionCameraAction,
+  type NeuroVisionDynamicsSettings,
+  type NeuroVisionSceneController,
+  type NeuroVisionSceneProfile,
 } from "./three-scene";
-import { getNeuroViewCameraAction } from "./keyboard-navigation";
-import { NeuroViewInsightsPanel } from "./NeuroViewInsightsPanel";
+import { getNeuroVisionCameraAction } from "./keyboard-navigation";
+import { NeuroVisionInsightsPanel } from "./NeuroViewInsightsPanel";
 import {
   neuroViewSceneCommands,
   type NeuroViewSceneCommand,
   type NeuroViewCommandResult,
 } from "./scene-command-controller";
 
-type NeuroView3DProps = {
+type NeuroVision3DProps = {
   onBack: () => void;
   graphData: GraphSnapshot;
   darkMode: boolean;
-  profile: NeuroViewSceneProfile;
+  profile: NeuroVisionSceneProfile;
   reducedMotion: boolean;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
@@ -93,7 +93,7 @@ const LENS_OPTIONS = [
   { value: "panorama", label: "Panorama", description: "Visão espacial completa" },
   { value: "session-prep", label: "Preparar sessão", description: "Mudanças e próximos passos" },
   { value: "patterns", label: "Padrões", description: "Trajetória clínica no tempo" },
-  { value: "attention", label: "Radar vivo", description: "Sinais objetivos de atenção" },
+  { value: "attention", label: "NeuroTrack", description: "Radar vivo de atenção objetiva" },
 ] as const;
 
 const NODE_TYPE_LABEL: Record<GraphNode["type"], string> = {
@@ -112,7 +112,7 @@ const NODE_TYPE_ORDER: Record<GraphNode["type"], number> = {
   evidence: 2,
 };
 
-const CAMERA_ACTION_ANNOUNCEMENT: Record<NeuroViewCameraAction, string> = {
+const CAMERA_ACTION_ANNOUNCEMENT: Record<NeuroVisionCameraAction, string> = {
   "orbit-left": "rotação para a esquerda",
   "orbit-right": "rotação para a direita",
   "orbit-up": "rotação para cima",
@@ -125,7 +125,7 @@ const CAMERA_ACTION_ANNOUNCEMENT: Record<NeuroViewCameraAction, string> = {
   "elevate-down": "descida da câmera",
 };
 
-export const NeuroView3D = ({
+export const NeuroVision3D = ({
   onBack,
   graphData,
   darkMode,
@@ -143,17 +143,17 @@ export const NeuroView3D = ({
   evidence = [],
   evidenceAvailable = false,
   onUpdateEvidenceOverride,
-}: NeuroView3DProps) => {
+}: NeuroVision3DProps) => {
   const sceneContainerRef = useRef<HTMLDivElement>(null);
-  const controllerRef = useRef<NeuroViewSceneController | null>(null);
+  const controllerRef = useRef<NeuroVisionSceneController | null>(null);
   const initialDarkModeRef = useRef(darkMode);
-  const dynamicsRef = useRef<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
+  const dynamicsRef = useRef<NeuroVisionDynamicsSettings>({ ...DEFAULT_NEUROVISION_DYNAMICS });
   const autoRotateRef = useRef(!reducedMotion);
   const emphasizedNodeIdsRef = useRef<ReadonlySet<string>>(emphasizedNodeIds || new Set());
   const focusNodeIdRef = useRef<string | null>(focusNodeId);
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
-  const [lens, setLens] = useState<NeuroViewLens>("panorama");
+  const [lens, setLens] = useState<NeuroVisionLens>("panorama");
   const [focusedPatientId, setFocusedPatientId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -164,9 +164,9 @@ export const NeuroView3D = ({
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [autoRotate, setAutoRotateState] = useState(!reducedMotion);
   const [dynamicsOpen, setDynamicsOpen] = useState(false);
-  const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
+  const [dynamics, setDynamicsState] = useState<NeuroVisionDynamicsSettings>({ ...DEFAULT_NEUROVISION_DYNAMICS });
   const [sceneError, setSceneError] = useState<string | null>(null);
-  const [announcement, setAnnouncement] = useState("NeuroView 3d pronto.");
+  const [announcement, setAnnouncement] = useState("NeuroVision 3d pronto.");
 
   const nodeById = useMemo(
     () => new Map(graphData.nodes.map((node) => [node.id, node])),
@@ -246,7 +246,7 @@ export const NeuroView3D = ({
     if (!container) return;
     setSceneError(null);
     try {
-      const controller = createNeuroViewScene({
+      const controller = createNeuroVisionScene({
         container,
         graph: graphData,
         darkMode: initialDarkModeRef.current,
@@ -267,7 +267,7 @@ export const NeuroView3D = ({
         if (controllerRef.current === controller) controllerRef.current = null;
       };
     } catch (error) {
-      setSceneError(error instanceof Error ? error.message : "Não foi possível iniciar o NeuroView 3d.");
+      setSceneError(error instanceof Error ? error.message : "Não foi possível iniciar o NeuroVision 3d.");
       return undefined;
     }
   }, [activateNode, graphData, profile, reducedMotion]);
@@ -337,13 +337,13 @@ export const NeuroView3D = ({
     setAnnouncement(`Filtro ${FILTER_OPTIONS.find((option) => option.value === nextFilter)?.label} aplicado.`);
   };
 
-  const handleLensChange = useCallback((nextLens: NeuroViewLens) => {
+  const handleLensChange = useCallback((nextLens: NeuroVisionLens) => {
     setLens(nextLens);
     setSelectedNodeId(null);
     if (nextLens === "attention") {
       setFocusedPatientId(null);
       onClearPatient?.();
-      setAnnouncement("Radar vivo aberto. Os halos mostram somente sinais objetivos de atenção.");
+      setAnnouncement("NeuroTrack aberto. Os halos mostram somente sinais objetivos de atenção.");
       return;
     }
     if ((nextLens === "session-prep" || nextLens === "patterns") && !focusedPatientId) {
@@ -361,7 +361,7 @@ export const NeuroView3D = ({
     setAnnouncement("Panorama completo restaurado.");
   };
 
-  const updateDynamics = (key: keyof NeuroViewDynamicsSettings, value: number) => {
+  const updateDynamics = (key: keyof NeuroVisionDynamicsSettings, value: number) => {
     const next = { ...dynamicsRef.current, [key]: value };
     dynamicsRef.current = next;
     setDynamicsState(next);
@@ -369,12 +369,12 @@ export const NeuroView3D = ({
   };
 
   const restoreDynamics = () => {
-    const defaults = { ...DEFAULT_NEUROVIEW_DYNAMICS };
+    const defaults = { ...DEFAULT_NEUROVISION_DYNAMICS };
     dynamicsRef.current = defaults;
     setDynamicsState(defaults);
     controllerRef.current?.setDynamics(defaults);
     controllerRef.current?.resetDynamics();
-    setAnnouncement("Dinâmica e posições do NeuroView 3d restauradas.");
+    setAnnouncement("Dinâmica e posições do NeuroVision 3d restauradas.");
   };
 
   const toggleAutoRotate = () => {
@@ -397,7 +397,7 @@ export const NeuroView3D = ({
   };
 
   const handleSceneKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const action = getNeuroViewCameraAction(event);
+    const action = getNeuroVisionCameraAction(event);
     if (!action) return;
     event.preventDefault();
     controllerRef.current?.moveCamera(action);
@@ -554,7 +554,7 @@ export const NeuroView3D = ({
           )}
         >
           <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">NeuroView plano</span>
+          <span className="hidden sm:inline">NeuroVision plano</span>
         </Button>
 
         <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 lg:top-5">
@@ -568,7 +568,7 @@ export const NeuroView3D = ({
               value={filter}
               onValueChange={handleFilterChange}
               options={FILTER_OPTIONS}
-              ariaLabel="Filtrar NeuroView 3d"
+              ariaLabel="Filtrar NeuroVision 3d"
               behavior="single-select"
               className="min-h-11 bg-transparent"
               triggerClassName="min-h-10 px-3 text-[11px] xl:px-4"
@@ -580,7 +580,7 @@ export const NeuroView3D = ({
                 type="button"
                 size="icon"
                 variant="outline"
-                aria-label="Como a priorização do NeuroView é calculada"
+                aria-label="Como a priorização do NeuroVision é calculada"
                 title="Como a priorização é calculada"
                 className={cn(
                   "h-8 w-8 shrink-0 rounded-full border shadow-lg backdrop-blur-2xl",
@@ -604,14 +604,14 @@ export const NeuroView3D = ({
             >
               <p className="text-sm font-semibold tracking-[-0.01em]">Como a priorização é calculada</p>
               <p className={cn("mt-1.5 text-[11px] leading-relaxed", darkMode ? "text-white/50" : "text-zinc-500")}>
-                Cada evidência recebe uma gravidade explicável, sem criar novas inferências clínicas.
+                A posição e a aparência organizam apenas dados rastreáveis, sem criar novas inferências clínicas.
               </p>
               <dl className="mt-3 grid grid-cols-[1fr_auto] gap-x-4 gap-y-2 text-[11px]">
                 {[
-                  ["Recência", "30%"],
-                  ["Recorrência temática", "25%"],
-                  ["Diversidade de fontes", "20%"],
-                  ["Ação pendente", "15%"],
+                  ["Densidade", "30%"],
+                  ["Tensão", "25%"],
+                  ["Recência", "20%"],
+                  ["Próxima ação", "15%"],
                   ["Prioridade do psicólogo", "10%"],
                 ].map(([label, value]) => (
                   <div key={label} className="contents">
@@ -621,7 +621,7 @@ export const NeuroView3D = ({
                 ))}
               </dl>
               <p className={cn("mt-3 border-t pt-3 text-[10px] leading-relaxed", darkMode ? "border-white/8 text-white/42" : "border-black/8 text-zinc-500")}>
-                Mais gravidade aproxima a evidência do paciente. Profundidade representa tempo e direção representa o tema revisado. Risco permanece uma dimensão independente.
+                Perto significa mais atenção; tamanho, mais densidade; pulso, mais tensão. Profundidade representa tempo e direção representa o tema revisado. Densidade combina recorrência (45%), variedade de fontes (35%) e vínculo revisado (20%). Risco permanece independente.
               </p>
             </PopoverContent>
           </Popover>
@@ -660,7 +660,7 @@ export const NeuroView3D = ({
                 Lente clínica
               </DropdownMenuLabel>
               <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
-              <DropdownMenuRadioGroup value={lens} onValueChange={(value) => handleLensChange(value as NeuroViewLens)}>
+              <DropdownMenuRadioGroup value={lens} onValueChange={(value) => handleLensChange(value as NeuroVisionLens)}>
                 {LENS_OPTIONS.map((option) => (
                   <DropdownMenuRadioItem
                     key={option.value}
@@ -687,7 +687,7 @@ export const NeuroView3D = ({
                 type="button"
                 size="icon"
                 variant="outline"
-                aria-label="Ajustar dinâmica do NeuroView 3d"
+                aria-label="Ajustar dinâmica do NeuroVision 3d"
                 className={cn(
                   "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
                   darkMode
@@ -808,7 +808,7 @@ export const NeuroView3D = ({
                 type="button"
                 size="icon"
                 variant="outline"
-                aria-label="Mais opções do NeuroView 3d"
+                aria-label="Mais opções do NeuroVision 3d"
                 title="Mais opções"
                 className={cn(
                   "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
@@ -938,7 +938,7 @@ export const NeuroView3D = ({
       </header>
 
       <div className="pointer-events-none absolute right-5 top-[88px] z-30">
-        <NeuroViewInsightsPanel
+        <NeuroVisionInsightsPanel
           darkMode={darkMode}
           lens={lens}
           focusedPatient={focusedPatient || null}
@@ -1026,9 +1026,9 @@ export const NeuroView3D = ({
       {sceneError ? (
         <div className="absolute inset-0 z-40 flex items-center justify-center bg-background/92 p-6 backdrop-blur-xl">
           <div className="max-w-md text-center">
-            <h2 className="text-lg font-semibold">NeuroView 3d indisponível</h2>
+            <h2 className="text-lg font-semibold">NeuroVision 3d indisponível</h2>
             <p className="mt-2 text-sm text-muted-foreground">A visualização plana foi preservada. {sceneError}</p>
-            <Button className="mt-5 rounded-xl" onClick={onBack}>Voltar ao NeuroView plano</Button>
+            <Button className="mt-5 rounded-xl" onClick={onBack}>Voltar ao NeuroVision plano</Button>
           </div>
         </div>
       ) : null}
@@ -1042,7 +1042,7 @@ export const NeuroView3D = ({
           )}
         >
           <SheetHeader className="border-b border-border/20 px-5 pb-4 pt-6">
-            <SheetTitle className={darkMode ? "text-white" : undefined}>Nós do NeuroView 3d</SheetTitle>
+            <SheetTitle className={darkMode ? "text-white" : undefined}>Nós do NeuroVision 3d</SheetTitle>
             <SheetDescription>
               Use as setas para navegar, Enter para entrar e Escape para retornar.
             </SheetDescription>
@@ -1107,4 +1107,5 @@ export const NeuroView3D = ({
   );
 };
 
-export default NeuroView3D;
+export const NeuroView3D = NeuroVision3D;
+export default NeuroVision3D;

@@ -74,7 +74,7 @@ export const NeuroViewPatientEmbed = ({
           isLoading: false,
           patientName: patientName || patientResult.data?.name || "",
           notes: [],
-          error: "Nao foi possivel carregar o NeuroView do paciente.",
+          error: "Nao foi possivel carregar o NeuroVision do paciente.",
         });
         return;
       }
@@ -124,7 +124,7 @@ export const NeuroViewPatientEmbed = ({
   if (!patientId) {
     return (
       <div className="nodrag nowheel mt-4 rounded-[24px] border border-zinc-200 bg-zinc-50 p-5 text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500 dark:border-white/5 dark:bg-white/[0.025] dark:text-zinc-600">
-        Vincule este fluxo a um paciente para renderizar o NeuroView filtrado.
+        Vincule este fluxo a um paciente para renderizar o NeuroVision filtrado.
       </div>
     );
   }
@@ -142,7 +142,7 @@ export const NeuroViewPatientEmbed = ({
       <div className="flex items-center justify-between border-b border-zinc-200 px-4 py-3 dark:border-white/5">
         <div className="min-w-0">
           <p className="truncate text-[11px] font-black uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-600">
-            NeuroView filtrado
+            NeuroVision filtrado
           </p>
           <p className="truncate text-sm font-black">{state.patientName || "Paciente"}</p>
         </div>
@@ -163,7 +163,7 @@ export const NeuroViewPatientEmbed = ({
             Nenhuma nota vinculada a este paciente ainda.
           </div>
         ) : (
-          <svg className="relative z-10 h-full w-full" viewBox="0 0 430 230" role="img" aria-label="Mini NeuroView do paciente">
+          <svg className="relative z-10 h-full w-full" viewBox="0 0 430 230" role="img" aria-label="Mini NeuroVision do paciente">
             <defs>
               <filter id="neuroview-embed-glow" x="-50%" y="-50%" width="200%" height="200%">
                 <feGaussianBlur stdDeviation="3.5" result="blur" />
@@ -255,3 +255,5 @@ export const NeuroViewPatientEmbed = ({
     </div>
   );
 };
+
+export const NeuroVisionPatientEmbed = NeuroViewPatientEmbed;

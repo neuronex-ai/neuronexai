@@ -11,7 +11,7 @@ import {
 } from '@/lib/neuroflow-workflow';
 import { cn } from '@/lib/utils';
 import {
-    AlertTriangle, ChevronLeft, Layers, Loader2, Lock, Maximize, Plus, RotateCcw, Unlock, ZoomIn, ZoomOut
+    AlertTriangle, ChevronLeft, Layers, Loader2, Lock, Maximize, Plus, Route, RotateCcw, Unlock, ZoomIn, ZoomOut
 } from 'lucide-react';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ReactFlow, {
@@ -676,6 +676,13 @@ const NeuroFlowContent = ({ flowId, synapseRunId, onBack }: NeuroFlowContentProp
           >
             <Plus size={24} strokeWidth={3} />
           </Button>
+        </Panel>
+
+        <Panel position="top-center" className="mt-12">
+          <div className="notes-toolbar-surface flex items-center gap-2 rounded-2xl border px-4 py-2.5 text-[10px] font-semibold text-muted-foreground backdrop-blur-3xl">
+            <Route className="h-3.5 w-3.5" aria-hidden="true" />
+            Acompanhamento de hipóteses revisadas · mudanças voltam ao NeuroVision
+          </div>
         </Panel>
 
         <SegundoCerebro isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} onAddNode={onAddNode} />
