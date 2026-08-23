@@ -192,6 +192,39 @@ export const findShortestClinicalPath = (
   return { nodeIds, edgeIds };
 };
 
+export const buildHoverEquivalentHighlight = (
+  graph: GraphSnapshot,
+  seedNodeIds: Iterable<string>,
+  targetPatientId?: string | null,
+): ClinicalPath => {
+  const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
+  const allowedNodeIds = targetPatientId ? getPatientSubgraphIds(graph, targetPatientId) : null;
+  const isAllowed = (nodeId: string) => nodeById.has(nodeId) && (!allowedNodeIds || allowedNodeIds.has(nodeId));
+  const nodeIds = new Set<string>();
+  const edgeIds = new Set<string>();
+
+  Array.from(new Set(seedNodeIds)).forEach((seedNodeId) => {
+    if (!isAllowed(seedNodeId)) return;
+    const path = findShortestClinicalPath(graph, seedNodeId, targetPatientId);
+    path.nodeIds.forEach((nodeId) => {
+      if (isAllowed(nodeId)) nodeIds.add(nodeId);
+    });
+    path.edgeIds.forEach((edgeId) => edgeIds.add(edgeId));
+
+    graph.links.forEach((link) => {
+      const sourceId = getGraphEndpointId(link.source);
+      const targetId = getGraphEndpointId(link.target);
+      if (!sourceId || !targetId || !isAllowed(sourceId) || !isAllowed(targetId)) return;
+      if (sourceId !== seedNodeId && targetId !== seedNodeId) return;
+      nodeIds.add(sourceId);
+      nodeIds.add(targetId);
+      edgeIds.add(getGraphEdgeId(sourceId, targetId));
+    });
+  });
+
+  return { nodeIds, edgeIds };
+};
+
 const timestampForNode = (node: GraphNode) => {
   if (!isClinicalArtifact(node)) return null;
   const evidence = getNodeEvidence(node);
