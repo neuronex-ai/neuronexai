@@ -2,8 +2,10 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { CSS2DObject, CSS2DRenderer } from "three/addons/renderers/CSS2DRenderer.js";
 import { EffectComposer } from "three/addons/postprocessing/EffectComposer.js";
+import { GTAOPass } from "three/addons/postprocessing/GTAOPass.js";
 import { OutputPass } from "three/addons/postprocessing/OutputPass.js";
 import { RenderPass } from "three/addons/postprocessing/RenderPass.js";
+import { SMAAPass } from "three/addons/postprocessing/SMAAPass.js";
 import { UnrealBloomPass } from "three/addons/postprocessing/UnrealBloomPass.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { RectAreaLightUniformsLib } from "three/addons/lights/RectAreaLightUniformsLib.js";
@@ -63,6 +65,8 @@ export type NeuroViewSceneController = {
   focusNode: (nodeId: string) => void;
   setLens: (lens: NeuroViewLens) => void;
   setTimeWindow: (window: NeuroViewTimeWindow) => void;
+  setAutoRotate: (enabled: boolean) => void;
+  playEmergence: () => void;
   dispose: () => void;
 };
 
@@ -77,6 +81,10 @@ type NodeRecord = {
   currentBrightness: number;
   startBrightness: number;
   targetBrightness: number;
+  currentReveal: number;
+  startReveal: number;
+  targetReveal: number;
+  transitionDelay: number;
   velocity: THREE.Vector3;
   pinned: boolean;
   label: CSS2DObject;
@@ -158,10 +166,85 @@ const makeGeometry = (type: GraphNode["type"], profile: NeuroViewSceneProfile) =
   if (type === "flow") geometry = new THREE.OctahedronGeometry(1, profile === "full" ? 3 : 1);
   else if (type === "note") geometry = new THREE.IcosahedronGeometry(1, profile === "full" ? 4 : 2);
   else if (type === "evidence") geometry = new THREE.DodecahedronGeometry(1, profile === "full" ? 3 : 1);
-  else if (type === "tag") geometry = new THREE.SphereGeometry(1, profile === "full" ? 32 : 12, profile === "full" ? 24 : 8);
-  else geometry = new THREE.SphereGeometry(1, profile === "full" ? 64 : 22, profile === "full" ? 48 : 14);
+  else if (type === "tag") geometry = new THREE.SphereGeometry(1, profile === "full" ? 48 : 12, profile === "full" ? 36 : 8);
+  else geometry = new THREE.SphereGeometry(1, profile === "full" ? 96 : 22, profile === "full" ? 64 : 14);
   geometry.computeVertexNormals();
   return geometry;
+};
+
+const ULTRA_PIXEL_BUDGET = 13_500_000;
+
+const resolveRenderPixelRatio = (
+  width: number,
+  height: number,
+  profile: NeuroViewSceneProfile,
+) => {
+  const deviceRatio = window.devicePixelRatio || 1;
+  if (profile === "light") return Math.min(deviceRatio, 1.1);
+  const budgetRatio = Math.sqrt(ULTRA_PIXEL_BUDGET / Math.max(1, width * height));
+  return THREE.MathUtils.clamp(Math.min(deviceRatio, budgetRatio), 1, 2.5);
+};
+
+const createMicroSurfaceTextures = (maxAnisotropy: number) => {
+  const size = 256;
+  const heights = new Float32Array(size * size);
+  const tau = Math.PI * 2;
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const u = x / size;
+      const v = y / size;
+      heights[y * size + x] = (
+        Math.sin(tau * (u * 17 + v * 11)) * 0.46
+        + Math.sin(tau * (u * 41 - v * 29)) * 0.31
+        + Math.cos(tau * (u * 73 + v * 61)) * 0.16
+        + Math.sin(tau * (u * 109 - v * 97)) * 0.07
+      );
+    }
+  }
+
+  const normalData = new Uint8Array(size * size * 4);
+  const roughnessData = new Uint8Array(size * size * 4);
+  const readHeight = (x: number, y: number) => heights[((y + size) % size) * size + ((x + size) % size)];
+  for (let y = 0; y < size; y += 1) {
+    for (let x = 0; x < size; x += 1) {
+      const left = readHeight(x - 1, y);
+      const right = readHeight(x + 1, y);
+      const down = readHeight(x, y - 1);
+      const up = readHeight(x, y + 1);
+      const normalX = (left - right) * 0.34;
+      const normalY = (down - up) * 0.34;
+      const inverseLength = 1 / Math.sqrt(normalX * normalX + normalY * normalY + 1);
+      const offset = (y * size + x) * 4;
+      normalData[offset] = Math.round((normalX * inverseLength * 0.5 + 0.5) * 255);
+      normalData[offset + 1] = Math.round((normalY * inverseLength * 0.5 + 0.5) * 255);
+      normalData[offset + 2] = Math.round((inverseLength * 0.5 + 0.5) * 255);
+      normalData[offset + 3] = 255;
+      const roughness = THREE.MathUtils.clamp(239 + heights[y * size + x] * 7, 224, 250);
+      roughnessData[offset] = roughness;
+      roughnessData[offset + 1] = roughness;
+      roughnessData[offset + 2] = roughness;
+      roughnessData[offset + 3] = 255;
+    }
+  }
+
+  const configure = (texture: THREE.DataTexture, name: string) => {
+    texture.name = name;
+    texture.colorSpace = THREE.NoColorSpace;
+    texture.wrapS = THREE.RepeatWrapping;
+    texture.wrapT = THREE.RepeatWrapping;
+    texture.repeat.set(4, 3);
+    texture.minFilter = THREE.LinearMipmapLinearFilter;
+    texture.magFilter = THREE.LinearFilter;
+    texture.generateMipmaps = true;
+    texture.anisotropy = Math.min(16, Math.max(1, maxAnisotropy));
+    texture.needsUpdate = true;
+    return texture;
+  };
+
+  return {
+    normal: configure(new THREE.DataTexture(normalData, size, size, THREE.RGBAFormat), "NeuroView micro-normal"),
+    roughness: configure(new THREE.DataTexture(roughnessData, size, size, THREE.RGBAFormat), "NeuroView micro-roughness"),
+  };
 };
 
 const makeLabel = (node: GraphNode, darkMode: boolean) => {
@@ -211,10 +294,12 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let focusedSubgraphIds = new Set<string>();
   let transitionStartedAt = performance.now();
   let transitionDuration = reducedMotion ? 120 : 900;
+  let transitionStaggerMax = 0;
   let frameId = 0;
   let animationUntil = transitionStartedAt + transitionDuration;
   let renderRequested = false;
   let controlsInteractionActive = false;
+  let autoRotate = true;
   let hoveredNodeId: string | null = null;
   let pointerStart: { x: number; y: number } | null = null;
   let draggedNodeId: string | null = null;
@@ -243,6 +328,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   });
   const dummy = new THREE.Object3D();
   const raycaster = new THREE.Raycaster();
+  raycaster.layers.set(2);
   const pointer = new THREE.Vector2(2, 2);
   const dragPlane = new THREE.Plane();
   const dragHit = new THREE.Vector3();
@@ -269,13 +355,18 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     renderer = new THREE.WebGLRenderer({
       antialias: profile === "full",
       alpha: true,
+      precision: "highp",
       powerPreference: profile === "full" ? "high-performance" : "low-power",
     });
   } catch (error) {
     onSceneError(error instanceof Error ? error.message : "WebGL indisponível.");
     throw error;
   }
-  const renderPixelRatio = Math.min(window.devicePixelRatio || 1, profile === "full" ? 2 : 1.1);
+  let renderPixelRatio = resolveRenderPixelRatio(
+    Math.max(1, container.clientWidth),
+    Math.max(1, container.clientHeight),
+    profile,
+  );
   renderer.setPixelRatio(renderPixelRatio);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -307,6 +398,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = !reducedMotion;
   controls.dampingFactor = 0.085;
+  controls.autoRotate = autoRotate && !reducedMotion;
+  controls.autoRotateSpeed = 0.48;
   controls.enablePan = false;
   controls.minDistance = 20;
   controls.maxDistance = 145;
@@ -337,6 +430,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     roomEnvironment.dispose();
     pmrem.dispose();
   }
+  const microSurface = profile === "full"
+    ? createMicroSurfaceTextures(renderer.capabilities.getMaxAnisotropy())
+    : null;
 
   const groupsByType = new Map<GraphNode["type"], GraphNode[]>();
   graph.nodes.forEach((node) => {
@@ -359,6 +455,10 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       currentBrightness: 0,
       startBrightness: 0,
       targetBrightness: activity.get(node.id) || 0.28,
+      currentReveal: 0,
+      startReveal: 0,
+      targetReveal: 1,
+      transitionDelay: 0,
       velocity: new THREE.Vector3(),
       pinned: Boolean(getNodeEvidence(node)?.pinned),
       label,
@@ -386,6 +486,11 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       sheenColor: new THREE.Color(darkMode ? 0x9fe8ff : 0xd8f4fb),
       sheenRoughness: 0.42,
       specularIntensity: darkMode ? 1 : 0.78,
+      normalMap: microSurface?.normal || null,
+      normalScale: new THREE.Vector2(type === "patient" ? 0.055 : 0.075, type === "patient" ? 0.055 : 0.075),
+      roughnessMap: microSurface?.roughness || null,
+      clearcoatNormalMap: microSurface?.normal || null,
+      clearcoatNormalScale: new THREE.Vector2(0.022, -0.022),
     });
     const haloMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
@@ -399,6 +504,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     const mesh = new THREE.InstancedMesh(geometry, material, nodes.length);
     const halo = new THREE.InstancedMesh(geometry, haloMaterial, nodes.length);
     const hit = new THREE.InstancedMesh(hitGeometry, hitMaterial, nodes.length);
+    hit.layers.set(2);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     halo.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     hit.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -517,9 +623,15 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
 
   let composer: EffectComposer | null = null;
   let bloom: UnrealBloomPass | null = null;
+  let gtao: GTAOPass | null = null;
+  let smaa: SMAAPass | null = null;
+  let renderPass: RenderPass | null = null;
+  let outputPass: OutputPass | null = null;
   if (profile === "full") {
+    const supportsHalfFloat = renderer.extensions.has("EXT_color_buffer_half_float")
+      || renderer.extensions.has("EXT_color_buffer_float");
     const composerTarget = new THREE.WebGLRenderTarget(1, 1, {
-      type: THREE.HalfFloatType,
+      type: supportsHalfFloat ? THREE.HalfFloatType : THREE.UnsignedByteType,
       minFilter: THREE.LinearFilter,
       magFilter: THREE.LinearFilter,
       depthBuffer: true,
@@ -528,10 +640,36 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     });
     composer = new EffectComposer(renderer, composerTarget);
     composer.setPixelRatio(renderPixelRatio);
-    composer.addPass(new RenderPass(scene, camera));
+    renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+    gtao = new GTAOPass(scene, camera, 1, 1);
+    gtao.output = GTAOPass.OUTPUT.Default;
+    gtao.blendIntensity = darkMode ? 0.34 : 0.22;
+    gtao.updateGtaoMaterial({
+      radius: 0.38,
+      distanceExponent: 1.7,
+      thickness: 1.6,
+      distanceFallOff: 0.82,
+      scale: 0.82,
+      samples: 12,
+      screenSpaceRadius: false,
+    });
+    gtao.updatePdMaterial({
+      lumaPhi: 11,
+      depthPhi: 2.2,
+      normalPhi: 4,
+      radius: 3,
+      radiusExponent: 1.35,
+      rings: 2,
+      samples: 12,
+    });
+    composer.addPass(gtao);
     bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), darkMode ? 0.28 : 0.09, 0.36, 0.9);
     composer.addPass(bloom);
-    composer.addPass(new OutputPass());
+    outputPass = new OutputPass();
+    composer.addPass(outputPass);
+    smaa = new SMAAPass();
+    composer.addPass(smaa);
   }
 
   const cameraTween = {
@@ -598,6 +736,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     activeEdgeMaterial.needsUpdate = true;
     activeEdgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
     if (bloom) bloom.strength = darkMode ? 0.28 : 0.09;
+    if (gtao) gtao.blendIntensity = darkMode ? 0.34 : 0.22;
     groups.forEach((group, type) => {
       group.haloMaterial.opacity = darkMode ? 0.16 : 0.08;
       group.material.roughness = type === "patient"
@@ -659,6 +798,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     activeLayoutPositions = positions;
     transitionStartedAt = performance.now();
     transitionDuration = Math.max(1, duration);
+    transitionStaggerMax = 0;
     layoutTransitionActive = true;
     physicsActive = false;
     animationUntil = Math.max(animationUntil, transitionStartedAt + transitionDuration + 48);
@@ -671,6 +811,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       }
       record.startScale = record.currentScale;
       record.startBrightness = record.currentBrightness;
+      record.startReveal = record.currentReveal;
+      record.transitionDelay = 0;
       record.velocity.set(0, 0, 0);
       const visible = nextVisibleIds.has(id);
       const legible = !focusedPatientId || nextFocusedSubgraph.has(id);
@@ -678,6 +820,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       record.targetBrightness = visible
         ? (activity.get(id) || 0.28) * (legible ? 1 : 0.07)
         : 0;
+      record.targetReveal = visible && legible ? 1 : 0;
     });
   };
 
@@ -810,19 +953,23 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   };
 
   const updateInstances = (now: number) => {
-    const progress = layoutTransitionActive
-      ? Math.min(1, (now - transitionStartedAt) / transitionDuration)
-      : 1;
-    const eased = reducedMotion ? 1 : easeInOutCubic(progress);
+    const transitionElapsed = now - transitionStartedAt;
     const background = backgroundColor(darkMode);
 
     if (layoutTransitionActive) {
       records.forEach((record) => {
+        const progress = THREE.MathUtils.clamp(
+          (transitionElapsed - record.transitionDelay) / transitionDuration,
+          0,
+          1,
+        );
+        const eased = reducedMotion ? 1 : easeInOutCubic(progress);
         record.current.lerpVectors(record.start, record.target, eased);
         record.currentScale = THREE.MathUtils.lerp(record.startScale, record.targetScale, eased);
         record.currentBrightness = THREE.MathUtils.lerp(record.startBrightness, record.targetBrightness, eased);
+        record.currentReveal = THREE.MathUtils.lerp(record.startReveal, record.targetReveal, eased);
       });
-      if (progress >= 1) {
+      if (transitionElapsed >= transitionDuration + transitionStaggerMax) {
         layoutTransitionActive = false;
         wakePhysics(1800);
       }
@@ -1179,9 +1326,19 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const resize = () => {
     const width = Math.max(1, container.clientWidth);
     const height = Math.max(1, container.clientHeight);
+    const nextPixelRatio = resolveRenderPixelRatio(width, height, profile);
+    if (Math.abs(nextPixelRatio - renderPixelRatio) > 0.01) {
+      renderPixelRatio = nextPixelRatio;
+      renderer.setPixelRatio(renderPixelRatio);
+      composer?.setPixelRatio(renderPixelRatio);
+    }
     renderer.setSize(width, height, false);
     labelsRenderer.setSize(width, height);
     composer?.setSize(width, height);
+    gtao?.setSize(
+      Math.max(1, Math.round(width * renderPixelRatio * 0.62)),
+      Math.max(1, Math.round(height * renderPixelRatio * 0.62)),
+    );
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
     requestRender(80);
@@ -1380,7 +1537,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       activeEdgeGeometry.dispose();
       activeEdgeMaterial.dispose();
       activeEdgeGlowMaterial.dispose();
+      renderPass?.dispose();
+      gtao?.dispose();
+      bloom?.dispose();
+      outputPass?.dispose();
+      smaa?.dispose();
       composer?.dispose();
+      microSurface?.normal.dispose();
+      microSurface?.roughness.dispose();
       environmentTarget?.dispose();
       scene.environment = null;
       scene.clear();
