@@ -29,6 +29,10 @@ import {
   type NeuroView3DFilter,
   type SpatialPoint,
 } from "./model";
+import {
+  resolveNeuroViewSceneWorkPolicy,
+  shouldUseFullAmbientOcclusion,
+} from "./scene-performance";
 
 export type NeuroViewSceneProfile = "full" | "light";
 
@@ -129,19 +133,19 @@ const baseNodeScale = (node: GraphNode, darkMode: boolean) => {
   return 0.59 * darkModeReduction;
 };
 
-const nodeColor = (node: GraphNode, darkMode: boolean) => {
+const setNodeColor = (target: THREE.Color, node: GraphNode, darkMode: boolean) => {
   if (darkMode) {
-    if (node.type === "patient") return new THREE.Color("#f5f5f7");
-    if (node.type === "flow") return new THREE.Color("#75d8f5");
-    if (node.type === "note") return new THREE.Color("#bbb8b5");
-    if (node.type === "evidence") return new THREE.Color("#c9bcff");
-    return new THREE.Color("#86818b");
+    if (node.type === "patient") return target.set("#f5f5f7");
+    if (node.type === "flow") return target.set("#d8dadd");
+    if (node.type === "note") return target.set("#bbb8b5");
+    if (node.type === "evidence") return target.set("#ccc8cf");
+    return target.set("#8b888e");
   }
-  if (node.type === "patient") return new THREE.Color("#202027");
-  if (node.type === "flow") return new THREE.Color("#087f9e");
-  if (node.type === "note") return new THREE.Color("#625e66");
-  if (node.type === "evidence") return new THREE.Color("#6653a6");
-  return new THREE.Color("#8a8179");
+  if (node.type === "patient") return target.set("#202027");
+  if (node.type === "flow") return target.set("#4f5960");
+  if (node.type === "note") return target.set("#625e66");
+  if (node.type === "evidence") return target.set("#625d69");
+  return target.set("#827b74");
 };
 
 const backgroundColor = (darkMode: boolean) => new THREE.Color(darkMode ? "#070709" : "#f3f1ec");
@@ -281,6 +285,7 @@ const makeLabel = (node: GraphNode, darkMode: boolean) => {
   element.style.backfaceVisibility = "hidden";
   const label = new CSS2DObject(element);
   label.center.set(0.5, -0.45);
+  label.visible = false;
   return label;
 };
 
@@ -320,6 +325,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let lastRenderAt = performance.now();
   let animationUntil = transitionStartedAt + transitionDuration;
   let renderRequested = false;
+  let sceneDataDirty = true;
   let controlsInteractionActive = false;
   let autoRotate = !reducedMotion;
   let hoveredNodeId: string | null = null;
@@ -334,8 +340,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   let settledPhysicsFrames = 0;
   let savedPanoramaCamera = PANORAMA_CAMERA.clone();
   let savedPanoramaTarget = PANORAMA_TARGET.clone();
+  let lastSemanticCameraDistance = -1;
+  const lastCameraQuaternion = new THREE.Quaternion();
 
   const layout = computeSpatialLayout(graph);
+  const { denseGraph, collisionPasses: collisionPassCount } = resolveNeuroViewSceneWorkPolicy(
+    graph.nodes.length,
+    graph.links.length,
+  );
   const activity = getActivityIntensity(graph);
   const nodeById = new Map(graph.nodes.map((node) => [node.id, node]));
   const records = new Map<string, NodeRecord>();
@@ -357,6 +369,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const dragOffset = new THREE.Vector3();
   const cameraDirection = new THREE.Vector3();
   const edgeDirection = new THREE.Vector3();
+  const edgeTangent = new THREE.Vector3();
   const edgeNormal = new THREE.Vector3();
   const edgeBinormal = new THREE.Vector3();
   const edgeControlA = new THREE.Vector3();
@@ -365,6 +378,10 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const edgePointB = new THREE.Vector3();
   const edgeBundleAnchor = new THREE.Vector3();
   const collisionNormal = new THREE.Vector3();
+  const instanceColor = new THREE.Color();
+  const instanceHaloColor = new THREE.Color();
+  const inactiveEdgeColor = new THREE.Color();
+  const activeEdgeColor = new THREE.Color();
 
   const scene = new THREE.Scene();
   scene.background = null;
@@ -432,14 +449,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   controls.update();
 
   RectAreaLightUniformsLib.init();
-  const hemisphere = new THREE.HemisphereLight(darkMode ? 0xe9f5ff : 0xffffff, darkMode ? 0x101018 : 0xc8c1b8, darkMode ? 1.32 : 1.7);
-  const keyLight = new THREE.RectAreaLight(darkMode ? 0xe8f6ff : 0xffffff, darkMode ? 14 : 11, 42, 30);
+  const hemisphere = new THREE.HemisphereLight(darkMode ? 0xf6f6f3 : 0xffffff, darkMode ? 0x111113 : 0xc8c1b8, darkMode ? 1.32 : 1.7);
+  const keyLight = new THREE.RectAreaLight(0xffffff, darkMode ? 14 : 11, 42, 30);
   keyLight.position.set(-28, 34, 44);
   keyLight.lookAt(0, 0, 0);
-  const fillLight = new THREE.RectAreaLight(darkMode ? 0x78d7f4 : 0xaadce8, darkMode ? 8.5 : 6.5, 28, 38);
+  const fillLight = new THREE.RectAreaLight(darkMode ? 0xe6e4df : 0xe8e1d7, darkMode ? 8.5 : 6.5, 28, 38);
   fillLight.position.set(34, -16, 30);
   fillLight.lookAt(0, 0, 0);
-  const rimLight = new THREE.PointLight(darkMode ? 0x9fe7ff : 0x77b7c9, darkMode ? 34 : 24, 170, 2);
+  const rimLight = new THREE.PointLight(darkMode ? 0xffffff : 0xd8d0c5, darkMode ? 34 : 24, 170, 2);
   rimLight.position.set(30, -12, 32);
   scene.add(hemisphere, keyLight, fillLight, rimLight);
 
@@ -508,7 +525,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       reflectivity: darkMode ? 0.82 : 0.62,
       envMapIntensity: profile === "full" ? (darkMode ? 1.36 : 1.08) : 0.44,
       sheen: darkMode ? 0.12 : 0.05,
-      sheenColor: new THREE.Color(darkMode ? 0x9fe8ff : 0xd8f4fb),
+      sheenColor: new THREE.Color(darkMode ? 0xf7f7f2 : 0xf2eee8),
       sheenRoughness: 0.42,
       specularIntensity: darkMode ? 1 : 0.78,
       normalMap: microSurface?.normal || null,
@@ -611,7 +628,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const inactiveEdgeMaterial = new LineMaterial({
     color: 0xffffff,
     vertexColors: true,
-    linewidth: 0.68,
+    linewidth: darkMode ? 0.68 : 0.72,
     transparent: true,
     opacity: 1,
     alphaToCoverage: true,
@@ -636,7 +653,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     vertexColors: true,
     transparent: true,
     opacity: darkMode ? 0.3 : 0.12,
-    blending: THREE.AdditiveBlending,
+    blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: false,
   });
   const activeEdgeLines = new THREE.LineSegments(activeEdgeGeometry, activeEdgeMaterial);
@@ -742,24 +759,26 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       scene.fog.density = darkMode ? 0.0058 : 0.0042;
     }
     renderer.toneMappingExposure = darkMode ? 1.18 : 0.94;
-    hemisphere.color.set(darkMode ? 0xe9f5ff : 0xffffff);
-    hemisphere.groundColor.set(darkMode ? 0x101018 : 0xc8c1b8);
+    hemisphere.color.set(darkMode ? 0xf6f6f3 : 0xffffff);
+    hemisphere.groundColor.set(darkMode ? 0x111113 : 0xc8c1b8);
     hemisphere.intensity = darkMode ? 1.32 : 1.7;
-    keyLight.color.set(darkMode ? 0xe8f6ff : 0xffffff);
+    keyLight.color.set(0xffffff);
     keyLight.intensity = darkMode ? 14 : 11;
-    fillLight.color.set(darkMode ? 0x78d7f4 : 0xaadce8);
+    fillLight.color.set(darkMode ? 0xe6e4df : 0xe8e1d7);
     fillLight.intensity = darkMode ? 8.5 : 6.5;
-    rimLight.color.set(darkMode ? 0x9fe7ff : 0x77b7c9);
+    rimLight.color.set(darkMode ? 0xffffff : 0xd8d0c5);
     rimLight.intensity = darkMode ? 34 : 24;
     scene.environmentIntensity = profile === "full" ? (darkMode ? 0.82 : 0.68) : 1;
-    inactiveEdgeMaterial.linewidth = darkMode ? 0.68 : 1;
-    inactiveEdgeMaterial.opacity = darkMode ? 1 : 0.72;
+    inactiveEdgeMaterial.linewidth = darkMode ? 0.68 : 0.72;
+    inactiveEdgeMaterial.opacity = darkMode ? 1 : 0.78;
     inactiveEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
     inactiveEdgeMaterial.needsUpdate = true;
     activeEdgeMaterial.opacity = darkMode ? 0.88 : 0.72;
     activeEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
     activeEdgeMaterial.needsUpdate = true;
     activeEdgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
+    activeEdgeGlowMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
+    activeEdgeGlowMaterial.needsUpdate = true;
     if (bloom) bloom.strength = darkMode ? 0.28 : 0.09;
     if (gtao) gtao.blendIntensity = darkMode ? 0.34 : 0.22;
     groups.forEach((group, type) => {
@@ -773,7 +792,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       group.material.reflectivity = darkMode ? 0.82 : 0.62;
       group.material.envMapIntensity = profile === "full" ? (darkMode ? 1.36 : 1.08) : 0.44;
       group.material.sheen = darkMode ? 0.12 : 0.05;
-      group.material.sheenColor.set(darkMode ? 0x9fe8ff : 0xd8f4fb);
+      group.material.sheenColor.set(darkMode ? 0xf7f7f2 : 0xf2eee8);
       group.material.specularIntensity = darkMode ? 1 : 0.78;
       group.material.needsUpdate = true;
     });
@@ -781,6 +800,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       material.opacity = darkMode ? 0.74 : 0.62;
     }));
     records.forEach((record) => updateLabelTheme(record, darkMode));
+    sceneDataDirty = true;
   };
 
   const getStateVisibleNodeIds = () => {
@@ -825,6 +845,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     transitionDuration = Math.max(1, duration);
     transitionStaggerMax = 0;
     layoutTransitionActive = true;
+    sceneDataDirty = true;
     physicsActive = false;
     animationUntil = Math.max(animationUntil, transitionStartedAt + transitionDuration + 48);
     const distanceScale = connectionDistanceScale(dynamics.connectionDistance);
@@ -905,6 +926,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         : "hidden";
       if (record.labelPresentation !== presentation) {
         record.labelPresentation = presentation;
+        record.label.visible = presentation !== "hidden";
         record.label.element.style.opacity = presentation === "hidden" ? "0" : presentation === "dimmed" ? "0.3" : "1";
         record.label.element.style.visibility = presentation === "hidden" ? "hidden" : "visible";
       }
@@ -1009,7 +1031,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     const cellSize = Math.max(2.25, maximumRadius * 2.08);
     let adjusted = false;
 
-    for (let pass = 0; pass < 3; pass += 1) {
+    for (let pass = 0; pass < collisionPassCount; pass += 1) {
       const cells = new Map<string, Array<[string, NodeRecord]>>();
       candidates.forEach(([id, record]) => {
         const cellX = Math.floor(record.current.x / cellSize);
@@ -1097,8 +1119,9 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         wakePhysics(1800);
       }
     }
+    const shouldResolveCollisions = layoutTransitionActive || physicsActive || draggedNodeId !== null;
     const physicsMoving = integratePhysics(now);
-    const collisionAdjusted = resolveNodeIntersections();
+    const collisionAdjusted = shouldResolveCollisions ? resolveNodeIntersections() : false;
     const cameraDistance = camera.position.distanceTo(controls.target);
 
     groups.forEach((group) => {
@@ -1135,10 +1158,12 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         group.hit.setMatrixAt(index, dummy.matrix);
 
         const brightness = Math.max(0, record.currentBrightness * semanticScale * (highlighted ? 1.34 : dimForPath ? 0.18 : 1));
-        const color = nodeColor(record.node, darkMode).multiplyScalar(brightness);
-        if (dimForPath) color.lerp(background, 0.58);
-        group.mesh.setColorAt(index, color);
-        group.halo.setColorAt(index, highlighted ? new THREE.Color(darkMode ? "#bcecff" : "#168bab") : color.clone().multiplyScalar(0.48));
+        setNodeColor(instanceColor, record.node, darkMode).multiplyScalar(brightness);
+        if (dimForPath) instanceColor.lerp(background, 0.58);
+        group.mesh.setColorAt(index, instanceColor);
+        instanceHaloColor.copy(instanceColor).multiplyScalar(0.48);
+        if (highlighted) instanceHaloColor.set(darkMode ? "#f7f7f2" : "#4f6870");
+        group.halo.setColorAt(index, instanceHaloColor);
       });
       group.mesh.instanceMatrix.needsUpdate = true;
       group.halo.instanceMatrix.needsUpdate = true;
@@ -1166,12 +1191,12 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
 
       edgeDirection.copy(target.current).sub(source.current);
       const edgeLength = Math.max(0.001, edgeDirection.length());
-      const tangent = edgeDirection.clone().multiplyScalar(1 / edgeLength);
+      edgeTangent.copy(edgeDirection).multiplyScalar(1 / edgeLength);
       edgeNormal.set(edge.bend, 0.75 + Math.abs(edge.twist) * 0.35, edge.twist).normalize();
-      edgeNormal.crossVectors(tangent, edgeNormal);
-      if (edgeNormal.lengthSq() < 0.01) edgeNormal.crossVectors(tangent, camera.up);
+      edgeNormal.crossVectors(edgeTangent, edgeNormal);
+      if (edgeNormal.lengthSq() < 0.01) edgeNormal.crossVectors(edgeTangent, camera.up);
       edgeNormal.normalize();
-      edgeBinormal.crossVectors(tangent, edgeNormal).normalize();
+      edgeBinormal.crossVectors(edgeTangent, edgeNormal).normalize();
       const bendAmount = THREE.MathUtils.clamp(edgeLength * (0.075 + Math.abs(edge.bend) * 0.035), 0.45, 4.6);
       edgeControlA.copy(source.current)
         .addScaledVector(edgeDirection, 0.32)
@@ -1204,13 +1229,13 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         && lens !== "attention"
         && edgeReveal > 0.001;
       const inactiveIntensity = highlightedNodeIds.size && !active
-        ? (darkMode ? 0.01 : 0.08)
+        ? (darkMode ? 0.01 : 0.055)
         : cameraDistance >= 92
-          ? (darkMode ? 0.012 : 0.14)
-          : darkMode ? 0.038 : 0.3;
-      const inactiveColor = new THREE.Color(darkMode ? "#ffffff" : "#88857f").multiplyScalar(inactiveIntensity);
+          ? (darkMode ? 0.012 : 0.085)
+          : darkMode ? 0.038 : 0.19;
+      inactiveEdgeColor.set(darkMode ? "#ffffff" : "#5f5b55").multiplyScalar(inactiveIntensity);
       const activeVisible = active && visible && focusVisible;
-      const activeColor = new THREE.Color(darkMode ? "#eafcff" : "#087f9e").multiplyScalar(darkMode ? 1.8 : 1.15);
+      activeEdgeColor.set(darkMode ? "#f7f7f2" : "#285f6c").multiplyScalar(darkMode ? 1.8 : 1.08);
 
       for (let segment = 0; segment < edgeSegmentCount; segment += 1) {
         const t0 = segment / edgeSegmentCount;
@@ -1234,12 +1259,12 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         inactiveEdgePositions[offset + 3] = THREE.MathUtils.lerp(edgePointA.x, edgePointB.x, inactiveReveal);
         inactiveEdgePositions[offset + 4] = THREE.MathUtils.lerp(edgePointA.y, edgePointB.y, inactiveReveal);
         inactiveEdgePositions[offset + 5] = THREE.MathUtils.lerp(edgePointA.z, edgePointB.z, inactiveReveal);
-        inactiveEdgeColors[offset] = inactiveColor.r;
-        inactiveEdgeColors[offset + 1] = inactiveColor.g;
-        inactiveEdgeColors[offset + 2] = inactiveColor.b;
-        inactiveEdgeColors[offset + 3] = inactiveColor.r;
-        inactiveEdgeColors[offset + 4] = inactiveColor.g;
-        inactiveEdgeColors[offset + 5] = inactiveColor.b;
+        inactiveEdgeColors[offset] = inactiveEdgeColor.r;
+        inactiveEdgeColors[offset + 1] = inactiveEdgeColor.g;
+        inactiveEdgeColors[offset + 2] = inactiveEdgeColor.b;
+        inactiveEdgeColors[offset + 3] = inactiveEdgeColor.r;
+        inactiveEdgeColors[offset + 4] = inactiveEdgeColor.g;
+        inactiveEdgeColors[offset + 5] = inactiveEdgeColor.b;
 
         const activeReveal = activeVisible ? segmentReveal : 0;
         activeEdgePositions[offset] = edgePointA.x;
@@ -1248,12 +1273,12 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         activeEdgePositions[offset + 3] = THREE.MathUtils.lerp(edgePointA.x, edgePointB.x, activeReveal);
         activeEdgePositions[offset + 4] = THREE.MathUtils.lerp(edgePointA.y, edgePointB.y, activeReveal);
         activeEdgePositions[offset + 5] = THREE.MathUtils.lerp(edgePointA.z, edgePointB.z, activeReveal);
-        activeEdgeColors[offset] = activeColor.r;
-        activeEdgeColors[offset + 1] = activeColor.g;
-        activeEdgeColors[offset + 2] = activeColor.b;
-        activeEdgeColors[offset + 3] = activeColor.r;
-        activeEdgeColors[offset + 4] = activeColor.g;
-        activeEdgeColors[offset + 5] = activeColor.b;
+        activeEdgeColors[offset] = activeEdgeColor.r;
+        activeEdgeColors[offset + 1] = activeEdgeColor.g;
+        activeEdgeColors[offset + 2] = activeEdgeColor.b;
+        activeEdgeColors[offset + 3] = activeEdgeColor.r;
+        activeEdgeColors[offset + 4] = activeEdgeColor.g;
+        activeEdgeColors[offset + 5] = activeEdgeColor.b;
       }
     });
     const inactiveStart = inactiveEdgeGeometry.getAttribute("instanceStart") as THREE.InterleavedBufferAttribute;
@@ -1266,14 +1291,44 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     return physicsMoving || collisionAdjusted;
   };
 
+  const updateAttentionHaloBillboards = () => {
+    attentionHalos.forEach((halo) => {
+      if (halo.group.visible) halo.group.quaternion.copy(camera.quaternion);
+    });
+  };
+
   const render = (now: number) => {
     renderRequested = false;
     if (disposed) return;
     const deltaSeconds = Math.min(0.05, Math.max(0.001, (now - lastRenderAt) / 1000));
     lastRenderAt = now;
     const animatingCamera = updateCameraTween(now);
-    const physicsMoving = updateInstances(now);
     const controlsChanged = controls.update(deltaSeconds);
+    const cameraDistance = camera.position.distanceTo(controls.target);
+    const cameraDistanceChanged = Math.abs(cameraDistance - lastSemanticCameraDistance) > 0.02;
+    const cameraOrientationChanged = 1 - Math.abs(lastCameraQuaternion.dot(camera.quaternion)) > 0.0000005;
+    const shouldUpdateSceneData = sceneDataDirty
+      || layoutTransitionActive
+      || physicsActive
+      || draggedNodeId !== null
+      || cameraDistanceChanged;
+    const physicsMoving = shouldUpdateSceneData ? updateInstances(now) : false;
+    if (!shouldUpdateSceneData && cameraOrientationChanged) updateAttentionHaloBillboards();
+    sceneDataDirty = false;
+    lastSemanticCameraDistance = cameraDistance;
+    lastCameraQuaternion.copy(camera.quaternion);
+    const cameraMotion = controlsInteractionActive
+      || autoRotate
+      || animatingCamera
+      || controlsChanged
+      || draggedNodeId !== null;
+    if (gtao) gtao.enabled = shouldUseFullAmbientOcclusion({
+      cameraMotion,
+      denseGraph,
+      physicsMoving,
+      layoutTransitionActive,
+    });
+    if (smaa) smaa.enabled = renderPixelRatio < 1.35;
     if (composer) composer.render();
     else renderer.render(scene, camera);
     labelsRenderer.render(scene, camera);
@@ -1298,6 +1353,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         && isSceneVisible(edge.sourceId)
         && isSceneVisible(edge.targetId))
       .map((edge) => edge.edgeId));
+    sceneDataDirty = true;
     requestRender(80);
   };
 
@@ -1621,6 +1677,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       record.target.copy(nextPosition);
       record.velocity.set(0, 0, 0);
       record.pinned = true;
+      sceneDataDirty = true;
       renderer.domElement.style.cursor = "grabbing";
       requestRender(100);
       return;

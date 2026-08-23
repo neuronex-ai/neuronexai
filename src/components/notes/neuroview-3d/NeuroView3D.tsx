@@ -1,16 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowLeft, CircleDot, Crosshair, Info, Keyboard, ListFilter, ListTree, Maximize, Minimize, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
+import { ArrowLeft, CircleDot, Crosshair, Info, Keyboard, ListFilter, ListTree, Maximize, Minimize, MoreHorizontal, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
@@ -157,7 +161,7 @@ export const NeuroView3D = ({
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [lensMenuOpen, setLensMenuOpen] = useState(false);
   const [priorityInfoOpen, setPriorityInfoOpen] = useState(false);
-  const [keyboardHelpOpen, setKeyboardHelpOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [autoRotate, setAutoRotateState] = useState(!reducedMotion);
   const [dynamicsOpen, setDynamicsOpen] = useState(false);
   const [dynamics, setDynamicsState] = useState<NeuroViewDynamicsSettings>({ ...DEFAULT_NEUROVIEW_DYNAMICS });
@@ -298,7 +302,7 @@ export const NeuroView3D = ({
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (navigatorOpen || dynamicsOpen || lensMenuOpen || priorityInfoOpen || keyboardHelpOpen) return;
+      if (navigatorOpen || dynamicsOpen || lensMenuOpen || moreMenuOpen || priorityInfoOpen) return;
       if (isFullscreen || document.fullscreenElement) return;
       if (detailsOpen) {
         event.preventDefault();
@@ -324,7 +328,7 @@ export const NeuroView3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, keyboardHelpOpen, lensMenuOpen, navigatorOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, lensMenuOpen, moreMenuOpen, navigatorOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -401,7 +405,7 @@ export const NeuroView3D = ({
   };
 
   const focusSceneForKeyboard = () => {
-    setKeyboardHelpOpen(false);
+    setMoreMenuOpen(false);
     requestAnimationFrame(() => {
       sceneContainerRef.current?.focus({ preventScroll: true });
       setAnnouncement("Navegação da câmera ativa. Use as setas e W A S D.");
@@ -677,40 +681,6 @@ export const NeuroView3D = ({
               </DropdownMenuRadioGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={toggleAutoRotate}
-            aria-label={autoRotate ? "Pausar rotação automática" : "Iniciar rotação automática"}
-            aria-pressed={autoRotate}
-            title={reducedMotion ? "Pausado por movimento reduzido" : autoRotate ? "Pausar rotação" : "Iniciar rotação"}
-            className={cn(
-              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
-              darkMode
-                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-              autoRotate && (darkMode ? "bg-white/[0.12] text-cyan-100" : "bg-cyan-950/[0.08] text-cyan-950"),
-            )}
-          >
-            {autoRotate ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={playEmergence}
-            aria-label="Animar surgimento orgânico da rede neural"
-            title="Brotar rede neural"
-            className={cn(
-              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
-              darkMode
-                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-            )}
-          >
-            <Sparkles className="h-4 w-4" />
-          </Button>
           <Popover open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -816,70 +786,6 @@ export const NeuroView3D = ({
               </div>
             </PopoverContent>
           </Popover>
-          <Popover open={keyboardHelpOpen} onOpenChange={setKeyboardHelpOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                aria-label="Ver controles de teclado do NeuroView 3d"
-                title="Controles de teclado"
-                className={cn(
-                  "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
-                  darkMode
-                    ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                    : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-                )}
-              >
-                <Keyboard className="h-4 w-4" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              align="end"
-              sideOffset={10}
-              className={cn(
-                "w-[330px] rounded-[24px] border p-4 shadow-2xl backdrop-blur-3xl",
-                darkMode
-                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
-                  : "border-black/10 bg-white/94 text-zinc-950",
-              )}
-            >
-              <p className="text-sm font-semibold tracking-[-0.01em]">Navegação por teclado</p>
-              <p className={cn("mt-1 text-[11px] leading-relaxed", darkMode ? "text-white/48" : "text-zinc-500")}>
-                A câmera responde enquanto a visualização 3D estiver em foco.
-              </p>
-              <dl className="mt-3 space-y-2.5 text-[11px]">
-                {[
-                  ["←  →  ↑  ↓", "Rotacionar a câmera"],
-                  ["W  S", "Aproximar ou afastar"],
-                  ["A  D", "Mover para os lados"],
-                  ["Shift + W  S", "Subir ou descer"],
-                ].map(([keys, description]) => (
-                  <div key={keys} className="flex items-center justify-between gap-4">
-                    <dt>
-                      <kbd className={cn(
-                        "inline-flex min-h-7 items-center rounded-lg border px-2 font-mono text-[10px] font-semibold shadow-sm",
-                        darkMode ? "border-white/12 bg-white/[0.055]" : "border-black/10 bg-black/[0.035]",
-                      )}>
-                        {keys}
-                      </kbd>
-                    </dt>
-                    <dd className={cn("text-right", darkMode ? "text-white/62" : "text-zinc-600")}>{description}</dd>
-                  </div>
-                ))}
-              </dl>
-              <Button
-                type="button"
-                onClick={focusSceneForKeyboard}
-                className={cn(
-                  "mt-4 min-h-10 w-full rounded-xl text-xs",
-                  darkMode ? "bg-white text-black hover:bg-white/90" : "bg-zinc-950 text-white hover:bg-zinc-800",
-                )}
-              >
-                Focar visualização
-              </Button>
-            </PopoverContent>
-          </Popover>
           <Button
             type="button"
             size="icon"
@@ -896,52 +802,138 @@ export const NeuroView3D = ({
           >
             {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
           </Button>
-          {focusedPatientId ? (
-            <Button
-              type="button"
-              variant="outline"
-              onClick={returnToPanorama}
+          <DropdownMenu open={moreMenuOpen} onOpenChange={setMoreMenuOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                size="icon"
+                variant="outline"
+                aria-label="Mais opções do NeuroView 3d"
+                title="Mais opções"
+                className={cn(
+                  "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+                  darkMode
+                    ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                    : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+                )}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              sideOffset={10}
               className={cn(
-                "min-h-11 rounded-2xl border px-4 shadow-xl backdrop-blur-2xl",
+                "w-[270px] rounded-[20px] border p-2 shadow-2xl backdrop-blur-3xl",
                 darkMode
-                  ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                  : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
+                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
+                  : "border-black/10 bg-white/94 text-zinc-950",
               )}
             >
-              <Orbit className="h-4 w-4" />
-              <span className="hidden lg:inline">Voltar ao panorama</span>
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => controllerRef.current?.resetCamera()}
-            aria-label="Reenquadrar visualização"
-            className={cn(
-              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
-              darkMode
-                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-            )}
-          >
-            <Crosshair className="h-4 w-4" />
-          </Button>
-          <Button
-            type="button"
-            size="icon"
-            variant="outline"
-            onClick={() => setNavigatorOpen(true)}
-            aria-label="Abrir lista acessível de nós"
-            className={cn(
-              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
-              darkMode
-                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-            )}
-          >
-            <ListTree className="h-4 w-4" />
-          </Button>
+              <DropdownMenuLabel className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">
+                Visualização
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+              <DropdownMenuItem
+                onSelect={() => toggleAutoRotate()}
+                className={cn(
+                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                  darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                )}
+              >
+                {autoRotate ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                <span className="flex-1">{autoRotate ? "Pausar rotação" : "Iniciar rotação"}</span>
+                <span className={cn("text-[10px]", darkMode ? "text-white/42" : "text-zinc-500")}>
+                  {reducedMotion ? "Indisponível" : autoRotate ? "Ativa" : "Pausada"}
+                </span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => playEmergence()}
+                className={cn(
+                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                  darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                )}
+              >
+                <Sparkles className="h-4 w-4" />
+                Animar surgimento da rede
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => controllerRef.current?.resetCamera()}
+                className={cn(
+                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                  darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                )}
+              >
+                <Crosshair className="h-4 w-4" />
+                Reenquadrar visualização
+              </DropdownMenuItem>
+              {focusedPatientId ? (
+                <DropdownMenuItem
+                  onSelect={() => returnToPanorama()}
+                  className={cn(
+                    "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                    darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                  )}
+                >
+                  <Orbit className="h-4 w-4" />
+                  Voltar ao panorama
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className={cn(
+                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                  darkMode ? "data-[state=open]:bg-white/10 focus:bg-white/10" : "data-[state=open]:bg-black/[0.055] focus:bg-black/[0.055]",
+                )}>
+                  <Keyboard className="h-4 w-4" />
+                  Navegação por teclado
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className={cn(
+                  "w-[300px] rounded-[18px] border p-3 shadow-2xl backdrop-blur-3xl",
+                  darkMode
+                    ? "border-white/10 bg-[#0c0c0f]/96 text-white"
+                    : "border-black/10 bg-white/96 text-zinc-950",
+                )}>
+                  <dl className="space-y-2.5 text-[11px]">
+                    {[
+                      ["←  →  ↑  ↓", "Rotacionar"],
+                      ["W  S", "Aproximar ou afastar"],
+                      ["A  D", "Mover para os lados"],
+                      ["Shift + W  S", "Subir ou descer"],
+                    ].map(([keys, description]) => (
+                      <div key={keys} className="flex items-center justify-between gap-4">
+                        <dt><kbd className={cn(
+                          "inline-flex min-h-7 items-center rounded-lg border px-2 font-mono text-[10px] font-semibold",
+                          darkMode ? "border-white/12 bg-white/[0.055]" : "border-black/10 bg-black/[0.035]",
+                        )}>{keys}</kbd></dt>
+                        <dd className={darkMode ? "text-white/62" : "text-zinc-600"}>{description}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <DropdownMenuSeparator className={cn("my-3", darkMode ? "bg-white/8" : "bg-black/8")} />
+                  <DropdownMenuItem
+                    onSelect={() => focusSceneForKeyboard()}
+                    className={cn(
+                      "min-h-10 justify-center rounded-xl text-xs font-semibold",
+                      darkMode ? "bg-white text-black focus:bg-white/90" : "bg-zinc-950 text-white focus:bg-zinc-800",
+                    )}
+                  >
+                    Focar visualização
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuItem
+                onSelect={() => setNavigatorOpen(true)}
+                className={cn(
+                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                  darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                )}
+              >
+                <ListTree className="h-4 w-4" />
+                Lista acessível de nós
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
@@ -1004,7 +996,13 @@ export const NeuroView3D = ({
             <span key={type} className="inline-flex items-center gap-1.5">
               <CircleDot className={cn(
                 "h-3 w-3",
-                type === "flow" ? "text-cyan-500" : type === "evidence" ? "text-violet-400" : type === "patient" ? "text-current" : "opacity-60",
+                type === "patient"
+                  ? "text-current"
+                  : type === "flow"
+                    ? "opacity-80"
+                    : type === "evidence"
+                      ? "opacity-70"
+                      : "opacity-55",
               )} />
               {NODE_TYPE_LABEL[type]}
             </span>
