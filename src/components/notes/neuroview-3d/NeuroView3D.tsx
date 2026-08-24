@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ChevronRight, Crosshair, Info, Keyboard, ListFilter, Maximize, Minimize, MoreHorizontal, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
+import { ChevronRight, Crosshair, Info, Keyboard, Maximize, Minimize, MoreHorizontal, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +23,6 @@ import { cn } from "@/lib/utils";
 import type { PersonalNote, Patient } from "@/types";
 import type { EvidenceNode, EvidenceSource, NeuroVisionLens } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
-import { NeuroVisionCompactSearch } from "../desktop/neurovision/NeuroVisionCompactSearch";
 import { NeuroVisionFilterBar, NEUROVISION_FILTER_OPTIONS } from "../desktop/neurovision/NeuroVisionFilterBar";
 import { NeuroVisionSidebar } from "../NeuroViewSidebar";
 import {
@@ -57,6 +56,7 @@ type NeuroVision3DProps = {
   reducedMotion: boolean;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
+  portalContainer?: HTMLElement | null;
   emphasizedNodeIds?: ReadonlySet<string>;
   focusNodeId?: string | null;
   detailsOpen?: boolean;
@@ -104,6 +104,7 @@ export const NeuroVision3D = ({
   reducedMotion,
   isFullscreen,
   onToggleFullscreen,
+  portalContainer,
   emphasizedNodeIds,
   focusNodeId = null,
   detailsOpen = false,
@@ -130,7 +131,6 @@ export const NeuroVision3D = ({
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [timeProgress, setTimeProgress] = useState(100);
   const [isPatientSidebarOpen, setIsPatientSidebarOpen] = useState(false);
-  const [lensMenuOpen, setLensMenuOpen] = useState(false);
   const [priorityInfoOpen, setPriorityInfoOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
   const [autoRotate, setAutoRotateState] = useState(!reducedMotion);
@@ -280,7 +280,7 @@ export const NeuroVision3D = ({
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (dynamicsOpen || lensMenuOpen || moreMenuOpen || priorityInfoOpen) return;
+      if (dynamicsOpen || moreMenuOpen || priorityInfoOpen) return;
       if (isFullscreen || document.fullscreenElement) return;
       if (isPatientSidebarOpen) {
         event.preventDefault();
@@ -311,7 +311,7 @@ export const NeuroVision3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, isPatientSidebarOpen, lensMenuOpen, moreMenuOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, isPatientSidebarOpen, moreMenuOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -512,7 +512,7 @@ export const NeuroVision3D = ({
         Use as setas para rotacionar, W e S para aproximar ou afastar, A e D para deslocar lateralmente e Shift com W ou S para subir ou descer a câmera.
       </p>
 
-      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-4 lg:p-5">
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-[120] flex items-start justify-between gap-3 p-4 lg:p-5">
         <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 lg:top-5">
           <NeuroVisionFilterBar
             value={filter}
@@ -539,6 +539,7 @@ export const NeuroVision3D = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent
+              portalContainer={portalContainer}
               align="center"
               sideOffset={10}
               className={cn(
@@ -573,7 +574,10 @@ export const NeuroVision3D = ({
           </Popover>
         </div>
 
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className={cn(
+          "pointer-events-auto flex items-center gap-2 transition-[margin] duration-300 motion-reduce:transition-none",
+          isPatientSidebarOpen && "ml-[248px]",
+        )}>
           <Button
             type="button"
             size="icon"
@@ -591,59 +595,6 @@ export const NeuroVision3D = ({
           >
             <ChevronRight className={cn("h-4 w-4 transition-transform duration-200 motion-reduce:transition-none", isPatientSidebarOpen && "rotate-180")} />
           </Button>
-          <DropdownMenu open={lensMenuOpen} onOpenChange={setLensMenuOpen}>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="icon"
-                variant="outline"
-                aria-label={`Escolher lente clínica. Atual: ${LENS_OPTIONS.find((option) => option.value === lens)?.label}`}
-                title="Lentes clínicas"
-                className={cn(
-                  "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
-                  darkMode
-                    ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-                    : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-                )}
-              >
-                <ListFilter className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align="start"
-              sideOffset={10}
-              className={cn(
-                "w-[260px] rounded-[20px] border p-2 shadow-2xl backdrop-blur-3xl",
-                darkMode
-                  ? "border-white/10 bg-[#0c0c0f]/94 text-white"
-                  : "border-black/10 bg-white/94 text-zinc-950",
-              )}
-            >
-              <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">
-                Lente clínica
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
-              <DropdownMenuRadioGroup value={lens} onValueChange={(value) => handleLensChange(value as NeuroVisionLens)}>
-                {LENS_OPTIONS.map((option) => (
-                  <DropdownMenuRadioItem
-                    key={option.value}
-                    value={option.value}
-                    className={cn(
-                      "my-0.5 min-h-12 rounded-xl pl-8 pr-3",
-                      darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
-                    )}
-                  >
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-xs font-semibold">{option.label}</span>
-                      <span className={cn("text-[10px] font-normal", darkMode ? "text-white/42" : "text-zinc-500")}>
-                        {option.description}
-                      </span>
-                    </span>
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <Popover open={dynamicsOpen} onOpenChange={setDynamicsOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -662,6 +613,7 @@ export const NeuroVision3D = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent
+              portalContainer={portalContainer}
               align="start"
               sideOffset={10}
               className={cn(
@@ -784,6 +736,7 @@ export const NeuroVision3D = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
+              portalContainer={portalContainer}
               align="start"
               sideOffset={10}
               className={cn(
@@ -796,6 +749,36 @@ export const NeuroVision3D = ({
               <DropdownMenuLabel className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">
                 Visualização
               </DropdownMenuLabel>
+              <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger className={cn(
+                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
+                  darkMode ? "data-[state=open]:bg-white/10 focus:bg-white/10" : "data-[state=open]:bg-black/[0.055] focus:bg-black/[0.055]",
+                )}>
+                  <Orbit className="h-4 w-4" />
+                  Lente clínica
+                </DropdownMenuSubTrigger>
+                <DropdownMenuSubContent className={cn(
+                  "w-[270px] rounded-[20px] border p-2 shadow-2xl backdrop-blur-3xl",
+                  darkMode ? "border-white/10 bg-[#0c0c0f]/96 text-white" : "border-black/10 bg-white/96 text-zinc-950",
+                )}>
+                  <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Lente clínica</DropdownMenuLabel>
+                  <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+                  <DropdownMenuRadioGroup value={lens} onValueChange={(value) => handleLensChange(value as NeuroVisionLens)}>
+                    {LENS_OPTIONS.map((option) => (
+                      <DropdownMenuRadioItem key={option.value} value={option.value} className={cn(
+                        "my-0.5 min-h-12 rounded-xl pl-8 pr-3",
+                        darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
+                      )}>
+                        <span className="flex flex-col gap-0.5">
+                          <span className="text-xs font-semibold">{option.label}</span>
+                          <span className={cn("text-[10px] font-normal", darkMode ? "text-white/42" : "text-zinc-500")}>{option.description}</span>
+                        </span>
+                      </DropdownMenuRadioItem>
+                    ))}
+                  </DropdownMenuRadioGroup>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
               <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
               <DropdownMenuItem
                 onSelect={() => toggleAutoRotate()}
@@ -896,6 +879,8 @@ export const NeuroVision3D = ({
           .map((node) => node.data as Patient)}
         graphData={graphData}
         darkMode={darkMode}
+        searchValue={searchQuery}
+        onSearchValueChange={setSearchQuery}
         isOpen={isPatientSidebarOpen}
         onOpenChange={setIsPatientSidebarOpen}
         onHoverNode={(nodeId) => {
@@ -947,10 +932,6 @@ export const NeuroVision3D = ({
           />
         </div>
       ) : null}
-
-      <div className="pointer-events-none absolute inset-x-0 bottom-5 z-30 flex justify-center px-5">
-        <NeuroVisionCompactSearch value={searchQuery} onValueChange={setSearchQuery} darkMode={darkMode} />
-      </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end p-5">
         <div

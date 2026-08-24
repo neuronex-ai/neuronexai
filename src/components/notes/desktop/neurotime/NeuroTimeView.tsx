@@ -1,5 +1,5 @@
-import { MotionConfig, motion, useReducedMotion } from "framer-motion";
-import { Clock3, DatabaseZap, Focus, ShieldCheck } from "lucide-react";
+import { MotionConfig } from "framer-motion";
+import { DatabaseZap, Focus, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -30,8 +30,7 @@ type NeuroTimeViewProps = {
   evidenceAvailable: boolean;
   isLoading: boolean;
   darkMode: boolean;
-  isFullscreen: boolean;
-  onToggleFullscreen: () => void;
+  portalContainer?: HTMLElement | null;
 };
 
 const DEFAULT_FILTERS: NeuroTimeFiltros = {
@@ -70,11 +69,10 @@ const NeuroTimePatientLayers = ({
 }) => {
   if (totalCount < 2) return null;
   return (
-    <section className="mt-2 border-t border-white/[0.065] pt-5 [.light_&]:border-black/[0.055]" aria-labelledby="neurotime-patient-layers-title">
-      <div className="mb-3 flex items-center justify-between gap-4">
+    <section className="mt-0 border-t border-white/[0.065] pt-4 [.light_&]:border-black/[0.055]" aria-labelledby="neurotime-patient-layers-title">
+      <div className="mb-2 flex items-center justify-between gap-4">
         <div>
           <h3 id="neurotime-patient-layers-title" className="text-[10px] font-bold uppercase tracking-[0.17em] text-white/46 [.light_&]:text-zinc-500">Campos mais ativos</h3>
-          <p className="mt-1 text-[10px] text-white/28 [.light_&]:text-zinc-400">Selecione um paciente para ampliar sua trajetória.</p>
         </div>
         <span className="text-[9px] font-semibold tabular-nums text-white/28 [.light_&]:text-zinc-400">{totalCount} campos</span>
       </div>
@@ -129,10 +127,8 @@ export const NeuroTimeView = ({
   evidenceAvailable,
   isLoading,
   darkMode,
-  isFullscreen,
-  onToggleFullscreen,
+  portalContainer,
 }: NeuroTimeViewProps) => {
-  const reducedMotion = useReducedMotion();
   const [filters, setFilters] = useState<NeuroTimeFiltros>(DEFAULT_FILTERS);
   const mergedEvidence = useMemo(() => mergeNeuroTimeEvidence({ evidence, notes, flows }), [evidence, flows, notes]);
   const events = useMemo(() => buildNeuroTimeHorizonteDeEventos(mergedEvidence, patients), [mergedEvidence, patients]);
@@ -146,9 +142,10 @@ export const NeuroTimeView = ({
     const rankedPatients = patients
       .filter((patient) => counts.has(patient.id))
       .sort((left, right) => (counts.get(right.id) || 0) - (counts.get(left.id) || 0) || left.name.localeCompare(right.name, "pt-BR"));
+    const visiblePatients = rankedPatients.slice(0, 7);
     return {
       totalCount: rankedPatients.length,
-      patientFields: rankedPatients.slice(0, 7).map((patient) => ({
+      patientFields: visiblePatients.map((patient) => ({
         patient,
         eventCount: counts.get(patient.id) || 0,
         field: buildNeuroTimeCampoTemporal({
@@ -167,63 +164,50 @@ export const NeuroTimeView = ({
   return (
     <MotionConfig reducedMotion="user">
       <div className="neurotime-scroll-region absolute inset-0 z-20 overflow-y-auto overscroll-contain px-6 pb-12 pt-6 lg:px-9 lg:pt-7" data-neurotime-view="true">
-        <motion.div
-          initial={reducedMotion ? false : { opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={reducedMotion ? { duration: 0 } : { duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
-          className="mx-auto w-full max-w-[1440px]"
-        >
-          <header className="flex flex-wrap items-end justify-between gap-5 pr-[330px]">
+        <div className="mx-auto w-full max-w-[1440px]">
+          <header className="pr-0 lg:pr-[430px]">
             <div>
-              <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.22em] text-white/32 [.light_&]:text-zinc-400">
-                <Clock3 className="h-3.5 w-3.5" aria-hidden="true" /> NeuroTime
-              </div>
-              <h1 className="mt-2 text-[clamp(1.55rem,2vw,2.25rem)] font-semibold tracking-[-0.035em] text-white/92 [.light_&]:text-zinc-950">
+              <h1 className="text-[clamp(1.55rem,2vw,2.25rem)] font-semibold tracking-[-0.035em] text-white/92 [.light_&]:text-zinc-950">
                 {NEUROTIME_NOMENCLATURA.horizonte}
               </h1>
-              <p className="mt-1 text-xs text-white/38 [.light_&]:text-zinc-500">A trajetória clínica, do primeiro registro até agora.</p>
-            </div>
-            {!isLoading && field.eventCount > 0 ? (
-              <div className="flex items-center gap-3 text-[10px] font-semibold text-white/34 [.light_&]:text-zinc-400">
-                <span>{field.eventCount} registros</span>
-                <span className="h-1 w-1 rounded-full bg-white/20 [.light_&]:bg-black/20" aria-hidden="true" />
-                <span>{field.sourceCount} {field.sourceCount === 1 ? "fonte" : "fontes"}</span>
-                <span className="h-1 w-1 rounded-full bg-white/20 [.light_&]:bg-black/20" aria-hidden="true" />
-                <span>{field.patientCount} {field.patientCount === 1 ? "paciente" : "pacientes"}</span>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5" aria-label="Resumo do campo temporal">
+                {[
+                  `${field.eventCount} ${field.eventCount === 1 ? "registro" : "registros"}`,
+                  `${field.sourceCount} ${field.sourceCount === 1 ? "fonte" : "fontes"}`,
+                  `${field.patientCount} ${field.patientCount === 1 ? "paciente" : "pacientes"}`,
+                ].map((label) => (
+                  <span key={label} className={cn(
+                    "inline-flex min-h-6 items-center rounded-full border px-2.5 text-[9px] font-semibold tabular-nums shadow-[inset_0_1px_0_rgba(255,255,255,0.065)]",
+                    darkMode ? "border-white/[0.075] bg-white/[0.035] text-white/48" : "border-black/[0.06] bg-white/72 text-zinc-500 shadow-[0_10px_24px_-22px_rgba(24,24,27,0.28),inset_0_1px_0_rgba(255,255,255,0.98)]",
+                  )}>{isLoading ? "—" : label}</span>
+                ))}
               </div>
-            ) : null}
+            </div>
           </header>
 
-          <div className="mt-6">
-            <NeuroTimeToolbar
-              patients={patients}
-              filters={filters}
-              availableSources={availableSources as Set<NeuroTimeFonte>}
-              onChange={handleFiltersChange}
-              isFullscreen={isFullscreen}
-              onToggleFullscreen={onToggleFullscreen}
-            />
-          </div>
-
           <main className={cn(
-            "neurotime-field-surface relative mt-4 overflow-hidden rounded-[34px] border p-5 lg:p-7",
+            "neurotime-field-surface relative mt-5 overflow-visible rounded-[32px] border p-5 lg:p-6",
             darkMode
               ? "border-white/[0.075] bg-[#070708]/78 shadow-[0_30px_96px_-58px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.052)]"
               : "border-black/[0.06] bg-white/92 shadow-[0_28px_86px_-58px_rgba(24,24,27,0.26),inset_0_1px_0_rgba(255,255,255,0.98)]",
           )}>
             <div className="pointer-events-none absolute inset-x-[12%] top-16 h-36 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(81,67,184,0.09),transparent_68%)] opacity-70 [.light_&]:opacity-45" aria-hidden="true" />
-            <div className="relative flex flex-wrap items-center justify-between gap-4">
+            <div className="relative flex flex-wrap items-start justify-between gap-5">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30 [.light_&]:text-zinc-400">{NEUROTIME_NOMENCLATURA.campo}</p>
-                <p className="mt-1 text-xs font-semibold text-white/58 [.light_&]:text-zinc-600">
-                  {filters.patientIds.length === 1
-                    ? patients.find((patient) => patient.id === filters.patientIds[0])?.name || "Paciente selecionado"
-                    : filters.patientIds.length > 1
-                      ? `${filters.patientIds.length} pacientes selecionados`
-                      : "Visão clínica geral"}
-                </p>
+                <p className="mt-1 text-xs font-semibold text-white/58 [.light_&]:text-zinc-600">Do primeiro registro, até agora.</p>
               </div>
-              <NeuroTimeLegend />
+              <div className="flex max-w-[760px] flex-col items-end gap-2">
+                <NeuroTimeToolbar
+                  patients={patients}
+                  filters={filters}
+                  availableSources={availableSources as Set<NeuroTimeFonte>}
+                  onChange={handleFiltersChange}
+                  darkMode={darkMode}
+                  portalContainer={portalContainer}
+                />
+                <NeuroTimeLegend darkMode={darkMode} portalContainer={portalContainer} />
+              </div>
             </div>
 
             {!evidenceAvailable && events.length > 0 ? (
@@ -233,7 +217,7 @@ export const NeuroTimeView = ({
               </div>
             ) : null}
 
-            <div className="relative mt-2">
+            <div className="relative mt-1">
               {isLoading ? <NeuroTimeLoading /> : null}
               {filteredEmpty ? (
                 <div className="flex min-h-[360px] flex-col items-center justify-center text-center" role="status">
@@ -267,7 +251,7 @@ export const NeuroTimeView = ({
               </footer>
             ) : null}
           </main>
-        </motion.div>
+        </div>
       </div>
     </MotionConfig>
   );

@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, useMemo, useCallback } fro
 import ForceGraph2D, { ForceGraphMethods } from "react-force-graph-2d";
 import { forceCollide, forceRadial, forceX, forceY } from "d3-force";
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
-import { Info, Loader2 } from "lucide-react";
+import { Info, Loader2, Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -21,7 +21,6 @@ import { detectNeuroVisionHardware, type NeuroVisionHardwareCapability } from ".
 import { buildHoverEquivalentHighlight, getVisibleNodeIds, type NeuroView3DFilter } from "./neuroview-3d/model";
 import type { EvidenceNode, NeuroVisionLens } from "./clinical-evidence/evidence-types";
 import { NeuroVisionFilterBar } from "./desktop/neurovision/NeuroVisionFilterBar";
-import { NeuroVisionCompactSearch } from "./desktop/neurovision/NeuroVisionCompactSearch";
 import {
     NeuroVisionPresentationSwitcher,
     type NeuroVisionArea,
@@ -847,7 +846,7 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
     return (
         <div
             ref={containerRef}
-            className="group/canvas relative isolate h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent [contain:layout_paint_size] [.light_&]:bg-transparent"
+            className="group/canvas relative isolate h-full min-h-0 w-full min-w-0 overflow-hidden bg-transparent [contain:layout_paint_size] fullscreen:h-[100dvh] fullscreen:w-[100dvw] fullscreen:max-w-none fullscreen:bg-background fullscreen:[contain:layout_paint] [.light_&]:bg-transparent"
             data-synapse-target="neuroview-graph"
             data-synapse-ready={isLoading ? undefined : "true"}
             data-synapse-run-id={synapseRunId || undefined}
@@ -879,6 +878,7 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                         darkMode={isDarkMode}
                         isSidebarOpen={isPatientSidebarOpen}
                         onSidebarOpenChange={setIsPatientSidebarOpen}
+                        portalContainer={isFullscreen ? containerRef.current : undefined}
                     />
 
                     <div className="pointer-events-auto absolute left-1/2 top-4 z-50 flex -translate-x-1/2 items-center gap-2 lg:top-5">
@@ -905,7 +905,7 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                                     <Info className="h-3.5 w-3.5" />
                                 </Button>
                             </PopoverTrigger>
-                            <PopoverContent align="center" sideOffset={10} className={cn(
+                            <PopoverContent portalContainer={isFullscreen ? containerRef.current : undefined} align="center" sideOffset={10} className={cn(
                                 "w-[330px] rounded-[20px] border p-4 shadow-2xl backdrop-blur-3xl",
                                 isDarkMode
                                     ? "border-white/10 bg-[#0c0c0f]/95 text-white"
@@ -918,14 +918,12 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                         </Popover>
                     </div>
 
-                    <div className="pointer-events-none absolute inset-x-0 bottom-5 z-50 flex justify-center px-5">
-                        <NeuroVisionCompactSearch value={searchQuery} onValueChange={setSearchQuery} darkMode={isDarkMode} />
-                    </div>
-
                     <NeuroVisionSidebar
                         patients={patients || []}
                         graphData={completeGraphData}
                         darkMode={isDarkMode}
+                        searchValue={searchQuery}
+                        onSearchValueChange={setSearchQuery}
                         isOpen={isPatientSidebarOpen}
                         onOpenChange={setIsPatientSidebarOpen}
                         onHoverNode={(id) => id && nodeMap[id] ? setHoverNode(nodeMap[id]) : setHoverNode(null)}
@@ -1028,7 +1026,25 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                 patients={patients}
             />
 
-            <div className="absolute right-5 top-5 z-[90]">
+            <div className="pointer-events-auto absolute right-5 top-5 z-[200] flex items-center gap-2">
+                {isNeuroTimeMode ? (
+                    <Button
+                        type="button"
+                        size="icon"
+                        variant="outline"
+                        onClick={handleFullscreen}
+                        aria-label={isFullscreen ? "Sair da tela cheia" : "Abrir NeuroTime em tela cheia"}
+                        title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+                        className={cn(
+                            "h-12 w-12 rounded-[18px] border shadow-[0_20px_56px_-34px_rgba(0,0,0,0.78),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-2xl",
+                            isDarkMode
+                                ? "border-white/[0.09] bg-[#08080a]/78 text-white/68 hover:bg-white/[0.09] hover:text-white"
+                                : "border-black/[0.075] bg-white/88 text-zinc-600 hover:bg-white hover:text-zinc-950",
+                        )}
+                    >
+                        {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                    </Button>
+                ) : null}
                 <NeuroVisionPresentationSwitcher
                     area={isNeuroTimeMode ? "neurotime" : "vision"}
                     dimension={isUniverseMode ? "3d" : "2d"}
@@ -1065,8 +1081,7 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                         evidenceAvailable={isEvidenceAvailable}
                         isLoading={isLoading}
                         darkMode={isDarkMode}
-                        isFullscreen={isFullscreen}
-                        onToggleFullscreen={handleFullscreen}
+                        portalContainer={isFullscreen ? containerRef.current : undefined}
                     />
                 </Suspense>
             ) : null}
@@ -1092,6 +1107,7 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                             reducedMotion={Boolean(shouldReduceMotion)}
                             isFullscreen={isFullscreen}
                             onToggleFullscreen={handleFullscreen}
+                            portalContainer={isFullscreen ? containerRef.current : undefined}
                             emphasizedNodeIds={spatialEmphasizedNodeIds}
                             focusNodeId={spatialFocusNodeId}
                             detailsOpen={Boolean(selectedNote || selectedPatient)}

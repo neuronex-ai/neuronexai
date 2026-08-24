@@ -1,12 +1,13 @@
 "use client";
 
-import { ChevronRight, Crosshair, ListFilter, Maximize, Minimize, MoreHorizontal, Settings2, Sparkles, ZoomIn, ZoomOut } from "lucide-react";
+import { ChevronRight, Crosshair, Maximize, Minimize, MoreHorizontal, Settings2, Sparkles, ZoomIn, ZoomOut } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
-  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent,
+  DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -39,6 +40,7 @@ interface NeuroViewControlsProps {
   darkMode: boolean;
   isSidebarOpen: boolean;
   onSidebarOpenChange: (open: boolean) => void;
+  portalContainer?: HTMLElement | null;
 }
 
 const LENS_OPTIONS: Array<{ value: NeuroVisionLens; label: string; description: string }> = [
@@ -64,15 +66,17 @@ const panelClass = (darkMode: boolean) => cn(
 
 export const NeuroViewControls = ({
   config, onConfigChange, isFullscreen, onToggleFullscreen, onZoomIn, onZoomOut, onCenter,
-  onAnimate, lens, onLensChange, darkMode, isSidebarOpen, onSidebarOpenChange,
+  onAnimate, lens, onLensChange, darkMode, isSidebarOpen, onSidebarOpenChange, portalContainer,
 }: NeuroViewControlsProps) => {
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [lensOpen, setLensOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const update = (key: keyof NeuroConfig, value: NeuroConfig[keyof NeuroConfig]) => onConfigChange({ ...config, [key]: value });
 
   return (
-    <div className="pointer-events-auto absolute left-4 top-4 z-50 flex items-center gap-2 lg:left-5 lg:top-5">
+    <div className={cn(
+      "pointer-events-auto absolute top-4 z-[120] flex items-center gap-2 transition-[left] duration-300 motion-reduce:transition-none lg:top-5",
+      isSidebarOpen ? "left-[268px]" : "left-4 lg:left-5",
+    )}>
       <Button
         type="button"
         size="icon"
@@ -86,35 +90,13 @@ export const NeuroViewControls = ({
         <ChevronRight className={cn("h-4 w-4 transition-transform duration-200 motion-reduce:transition-none", isSidebarOpen && "rotate-180")} />
       </Button>
 
-      <DropdownMenu open={lensOpen} onOpenChange={setLensOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button type="button" size="icon" variant="outline" className={controlButtonClass(darkMode)} aria-label={`Escolher lente clínica. Atual: ${LENS_OPTIONS.find((option) => option.value === lens)?.label}`} title="Lentes clínicas">
-            <ListFilter className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[270px] p-2")}>
-          <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Lente clínica</DropdownMenuLabel>
-          <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
-          <DropdownMenuRadioGroup value={lens} onValueChange={(value) => onLensChange(value as NeuroVisionLens)}>
-            {LENS_OPTIONS.map((option) => (
-              <DropdownMenuRadioItem key={option.value} value={option.value} className={cn("my-0.5 min-h-12 rounded-xl pl-8 pr-3", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}>
-                <span className="flex flex-col gap-0.5">
-                  <span className="text-xs font-semibold">{option.label}</span>
-                  <span className={cn("text-[10px] font-normal", darkMode ? "text-white/42" : "text-zinc-500")}>{option.description}</span>
-                </span>
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-
       <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
         <PopoverTrigger asChild>
           <Button type="button" size="icon" variant="outline" className={cn(controlButtonClass(darkMode), settingsOpen && (darkMode ? "bg-white/14 text-white" : "bg-zinc-950 text-white"))} aria-label="Ajustar dinâmica espacial do NeuroVision 2D" title="Dinâmica espacial">
             <Settings2 className="h-4 w-4" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" sideOffset={10} className={panelClass(darkMode)}>
+        <PopoverContent portalContainer={portalContainer} align="start" sideOffset={10} className={panelClass(darkMode)}>
           <div className={cn("border-b pb-3", darkMode ? "border-white/8" : "border-black/[0.065]")}>
             <p className="text-xs font-semibold">Dinâmica espacial</p>
             <p className={cn("mt-1 text-[10px] leading-relaxed", darkMode ? "text-white/42" : "text-zinc-500")}>Muda somente a disposição visual. Densidade, atenção e risco não são recalculados.</p>
@@ -151,8 +133,28 @@ export const NeuroViewControls = ({
         <DropdownMenuTrigger asChild>
           <Button type="button" size="icon" variant="outline" className={controlButtonClass(darkMode)} aria-label="Mais opções do NeuroVision 2D" title="Mais opções"><MoreHorizontal className="h-4 w-4" /></Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[260px] p-2")}>
+        <DropdownMenuContent portalContainer={portalContainer} align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[270px] p-2")}>
           <DropdownMenuLabel className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Visualização</DropdownMenuLabel>
+          <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger className={cn("min-h-11 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 data-[state=open]:bg-white/10" : "focus:bg-black/[0.055] data-[state=open]:bg-black/[0.055]")}>
+              Lente clínica
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent className={cn(panelClass(darkMode), "w-[270px] p-2")}>
+              <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Lente clínica</DropdownMenuLabel>
+              <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+              <DropdownMenuRadioGroup value={lens} onValueChange={(value) => onLensChange(value as NeuroVisionLens)}>
+                {LENS_OPTIONS.map((option) => (
+                  <DropdownMenuRadioItem key={option.value} value={option.value} className={cn("my-0.5 min-h-12 rounded-xl pl-8 pr-3", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}>
+                    <span className="flex flex-col gap-0.5">
+                      <span className="text-xs font-semibold">{option.label}</span>
+                      <span className={cn("text-[10px] font-normal", darkMode ? "text-white/42" : "text-zinc-500")}>{option.description}</span>
+                    </span>
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
           <DropdownMenuItem onSelect={onAnimate} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}><Sparkles className="h-4 w-4" /> Animar surgimento da rede</DropdownMenuItem>
           <DropdownMenuItem onSelect={onCenter} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}><Crosshair className="h-4 w-4" /> Centralizar visualização</DropdownMenuItem>

@@ -9,6 +9,7 @@ import { ChevronLeft, ChevronRight, CircleDot, Users } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import type { GraphLink, GraphNode } from "./graph/graph-types";
+import { NeuroVisionCompactSearch } from "./desktop/neurovision/NeuroVisionCompactSearch";
 
 type SidebarGraphData = {
     nodes: GraphNode[];
@@ -22,6 +23,8 @@ interface NeuroViewSidebarProps {
     onHoverNode: (id: string | null) => void;
     onSelectPatient: (patient: Patient) => void;
     onSelectNode?: (node: GraphNode) => void;
+    searchValue: string;
+    onSearchValueChange: (value: string) => void;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
 }
@@ -53,6 +56,8 @@ export const NeuroViewSidebar = ({
     onHoverNode,
     onSelectPatient,
     onSelectNode,
+    searchValue,
+    onSearchValueChange,
     isOpen,
     onOpenChange,
 }: NeuroViewSidebarProps) => {
@@ -63,32 +68,48 @@ export const NeuroViewSidebar = ({
         const nodes = graphData?.nodes || [];
         const links = graphData?.links || [];
         const nodeById = new Map(nodes.map((node) => [node.id, node]));
+        const includedByPatient = new Map(patients.map((patient) => [patient.id, new Set<string>()] as const));
+        const patientIdByNodeId = new Map(patients.map((patient) => [`pat-${patient.id}`, patient.id] as const));
+
+        nodes.forEach((node) => {
+            const patientId = String(node.data?.patient_id || "");
+            if (node.type !== "patient" && includedByPatient.has(patientId)) includedByPatient.get(patientId)?.add(node.id);
+        });
+
+        links.forEach((link) => {
+            const sourceId = endpointId(link.source);
+            const targetId = endpointId(link.target);
+            if (!sourceId || !targetId) return;
+            const sourcePatientId = patientIdByNodeId.get(sourceId);
+            const targetPatientId = patientIdByNodeId.get(targetId);
+            if (sourcePatientId) includedByPatient.get(sourcePatientId)?.add(targetId);
+            if (targetPatientId) includedByPatient.get(targetPatientId)?.add(sourceId);
+        });
+
+        const ownersByClinicalNode = new Map<string, Set<string>>();
+        includedByPatient.forEach((includedIds, patientId) => {
+            includedIds.forEach((id) => {
+                if (nodeById.get(id)?.type === "tag") return;
+                const owners = ownersByClinicalNode.get(id) || new Set<string>();
+                owners.add(patientId);
+                ownersByClinicalNode.set(id, owners);
+            });
+        });
+
+        links.forEach((link) => {
+            const sourceId = endpointId(link.source);
+            const targetId = endpointId(link.target);
+            if (!sourceId || !targetId) return;
+            if (nodeById.get(targetId)?.type === "tag") {
+                ownersByClinicalNode.get(sourceId)?.forEach((patientId) => includedByPatient.get(patientId)?.add(targetId));
+            }
+            if (nodeById.get(sourceId)?.type === "tag") {
+                ownersByClinicalNode.get(targetId)?.forEach((patientId) => includedByPatient.get(patientId)?.add(sourceId));
+            }
+        });
 
         return new Map(patients.map((patient) => {
-            const patientNodeId = `pat-${patient.id}`;
-            const includedIds = new Set<string>();
-
-            nodes.forEach((node) => {
-                if (node.id !== patientNodeId && String(node.data?.patient_id || "") === patient.id) includedIds.add(node.id);
-            });
-
-            links.forEach((link) => {
-                const sourceId = endpointId(link.source);
-                const targetId = endpointId(link.target);
-                if (sourceId === patientNodeId && targetId) includedIds.add(targetId);
-                if (targetId === patientNodeId && sourceId) includedIds.add(sourceId);
-            });
-
-            const clinicalIds = new Set(Array.from(includedIds).filter((id) => nodeById.get(id)?.type !== "tag"));
-            links.forEach((link) => {
-                const sourceId = endpointId(link.source);
-                const targetId = endpointId(link.target);
-                if (!sourceId || !targetId) return;
-                if (clinicalIds.has(sourceId) && nodeById.get(targetId)?.type === "tag") includedIds.add(targetId);
-                if (clinicalIds.has(targetId) && nodeById.get(sourceId)?.type === "tag") includedIds.add(sourceId);
-            });
-
-            const patientNodes = Array.from(includedIds)
+            const patientNodes = Array.from(includedByPatient.get(patient.id) || [])
                 .map((id) => nodeById.get(id))
                 .filter((node): node is GraphNode => Boolean(node) && node?.type !== "patient")
                 .sort((left, right) => NODE_TYPE_ORDER[left.type] - NODE_TYPE_ORDER[right.type]
@@ -114,46 +135,63 @@ export const NeuroViewSidebar = ({
     };
 
     return (
-        <div className="pointer-events-none absolute bottom-20 left-5 top-[78px] z-40 flex">
+        <div className="pointer-events-none absolute inset-y-0 left-0 z-[95] flex">
             <AnimatePresence mode="wait">
                 {isOpen ? (
                     <motion.aside
                         key="sidebar-open"
                         initial={reducedMotion ? false : { opacity: 0, x: -18, width: 0 }}
-                        animate={{ opacity: 1, x: 0, width: 244 }}
+                        animate={{ opacity: 1, x: 0, width: 248 }}
                         exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -18, width: 0 }}
                         transition={reducedMotion ? { duration: 0 } : { type: "spring", damping: 31, stiffness: 320 }}
                         className={cn(
-                            "pointer-events-auto flex h-full flex-col overflow-hidden rounded-[26px] border shadow-[0_30px_90px_-48px_rgba(0,0,0,0.9)] backdrop-blur-3xl",
+                            "pointer-events-auto relative flex h-full shrink-0 flex-col overflow-hidden border-r shadow-[24px_0_80px_-58px_rgba(0,0,0,0.84)] backdrop-blur-3xl",
                             darkMode
-                                ? "border-white/[0.09] bg-[#070708]/82 text-white"
-                                : "border-black/[0.075] bg-white/88 text-zinc-950 shadow-[0_28px_80px_-46px_rgba(24,24,27,0.36),inset_0_1px_0_rgba(255,255,255,0.96)]",
+                                ? "border-white/[0.055] bg-[#070708]/88 text-white"
+                                : "border-zinc-200/70 bg-white/78 text-zinc-950 shadow-[22px_0_72px_-58px_rgba(24,24,27,0.36),inset_-1px_0_0_rgba(255,255,255,0.88)]",
                         )}
                         aria-label="Pacientes e nós do NeuroVision"
                     >
-                        <div className={cn("flex flex-col gap-2.5 border-b p-3", darkMode ? "border-white/[0.07] bg-white/[0.025]" : "border-black/[0.055] bg-black/[0.018]")}>
+                        <div className={cn("notes-retina-texture pointer-events-none absolute inset-0", darkMode ? "opacity-[0.16]" : "opacity-[0.1]")} aria-hidden="true" />
+                        <div className={cn("relative z-10 flex min-h-20 flex-col justify-center gap-1 border-b px-5 py-4", darkMode ? "border-white/[0.05]" : "border-zinc-200/60")}>
                             <div className="flex items-center justify-between gap-3">
-                                <span className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.17em]", darkMode ? "text-white" : "text-zinc-900")}>
-                                    <Users className={cn("h-3.5 w-3.5", darkMode ? "text-white/55" : "text-zinc-500")} /> Pacientes e nós
-                                </span>
+                                <div>
+                                    <span className={cn("flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.24em]", darkMode ? "text-zinc-300" : "text-zinc-700")}>
+                                        <Users className={cn("h-3.5 w-3.5", darkMode ? "text-zinc-500" : "text-zinc-400")} /> Pacientes e nós
+                                    </span>
+                                    <p className={cn("mt-1 text-[8px] font-bold uppercase tracking-[0.16em]", darkMode ? "text-zinc-600" : "text-zinc-400")}>
+                                        {patients.length} {patients.length === 1 ? "paciente" : "pacientes"} · {graphData?.nodes.length || patients.length} nós
+                                    </p>
+                                </div>
                                 <Button
                                     type="button"
                                     size="icon"
                                     variant="ghost"
                                     onClick={() => onOpenChange(false)}
-                                    className={cn("h-7 w-7 rounded-xl", darkMode ? "text-white/50 hover:bg-white/[0.07] hover:text-white" : "text-zinc-500 hover:bg-black/[0.05] hover:text-zinc-950")}
+                                    className={cn(
+                                        "h-9 w-9 rounded-xl border transition-all active:scale-95 motion-reduce:transition-none motion-reduce:active:scale-100",
+                                        darkMode
+                                            ? "border-white/[0.06] bg-white/[0.035] text-zinc-400 hover:bg-white/[0.08] hover:text-white"
+                                            : "border-zinc-200/70 bg-white text-zinc-500 hover:bg-zinc-100 hover:text-zinc-950",
+                                    )}
                                     aria-label="Recolher pacientes e nós"
                                 >
                                     <ChevronLeft className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
-                            <p className={cn("text-[8.5px] font-black uppercase tracking-[0.2em]", darkMode ? "text-white/32" : "text-zinc-400")}>
-                                {patients.length} {patients.length === 1 ? "paciente" : "pacientes"} · {graphData?.nodes.length || patients.length} nós
-                            </p>
                         </div>
 
-                        <div className="relative flex-1 overflow-hidden">
-                            <div className="custom-scrollbar absolute inset-0 space-y-1 overflow-y-auto p-2 pb-5">
+                        <div className={cn("relative z-10 border-b px-3 py-3", darkMode ? "border-white/[0.05]" : "border-zinc-200/60")}>
+                            <NeuroVisionCompactSearch
+                                value={searchValue}
+                                onValueChange={onSearchValueChange}
+                                darkMode={darkMode}
+                                variant="sidebar"
+                            />
+                        </div>
+
+                        <div className="relative z-10 flex-1 overflow-hidden">
+                            <div className="custom-scrollbar absolute inset-0 space-y-1 overflow-y-auto px-3 py-4">
                                 {patients.length === 0 ? (
                                     <div className={cn("flex flex-col items-center justify-center gap-2 py-12", darkMode ? "text-white/30" : "text-zinc-400")}>
                                         <Users className="h-8 w-8 opacity-20" />
@@ -163,14 +201,14 @@ export const NeuroViewSidebar = ({
                                     const expanded = expandedPatientIds.has(patient.id);
                                     const patientNodes = nodesByPatient.get(patient.id) || [];
                                     return (
-                                        <div key={patient.id} className="overflow-hidden rounded-[17px]">
-                                            <div className={cn("group flex items-center rounded-[17px] border border-transparent transition-colors", darkMode ? "hover:border-white/[0.06] hover:bg-white/[0.04]" : "hover:border-black/[0.055] hover:bg-black/[0.025]")}>
+                                        <div key={patient.id} className="overflow-hidden rounded-xl">
+                                            <div className={cn("group flex items-center rounded-xl border border-transparent transition-all duration-200 motion-reduce:transition-none", darkMode ? "hover:border-white/[0.05] hover:bg-white/[0.045]" : "hover:border-zinc-200/70 hover:bg-zinc-950/[0.035]")}>
                                                 <button
                                                     type="button"
                                                     onMouseEnter={() => onHoverNode(`pat-${patient.id}`)}
                                                     onMouseLeave={() => onHoverNode(null)}
                                                     onClick={() => onSelectPatient(patient)}
-                                                    className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-l-[16px] p-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-current/35"
+                                                    className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-l-xl p-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-current/35"
                                                 >
                                                     <Avatar className={cn("h-7 w-7 shadow-sm ring-1", darkMode ? "ring-white/10" : "ring-black/[0.08]")}>
                                                         <AvatarImage src={patient.avatar_url || undefined} />
@@ -186,7 +224,7 @@ export const NeuroViewSidebar = ({
                                                 <button
                                                     type="button"
                                                     onClick={() => togglePatient(patient.id)}
-                                                    className={cn("mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/35", darkMode ? "text-white/38 hover:bg-white/[0.07] hover:text-white" : "text-zinc-400 hover:bg-black/[0.045] hover:text-zinc-900")}
+                                                    className={cn("mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/35", darkMode ? "text-white/38 hover:bg-white/[0.07] hover:text-white" : "text-zinc-400 hover:bg-zinc-950/[0.045] hover:text-zinc-900")}
                                                     aria-label={`${expanded ? "Recolher" : "Expandir"} nós de ${patient.name}`}
                                                     aria-expanded={expanded}
                                                 >

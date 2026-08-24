@@ -13,6 +13,7 @@ type NeuroVisionCompactSearchProps = {
   onValueChange: (value: string) => void;
   darkMode: boolean;
   placeholder?: string;
+  variant?: "floating" | "sidebar";
 };
 
 export const NeuroVisionCompactSearch = ({
@@ -20,6 +21,7 @@ export const NeuroVisionCompactSearch = ({
   onValueChange,
   darkMode,
   placeholder = "Buscar no NeuroVision",
+  variant = "floating",
 }: NeuroVisionCompactSearchProps) => {
   const reducedMotion = useReducedMotion();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -39,6 +41,53 @@ export const NeuroVisionCompactSearch = ({
     setExpanded(true);
     window.requestAnimationFrame(() => inputRef.current?.focus());
   };
+
+  if (variant === "sidebar") {
+    return (
+      <div
+        className={cn(
+          "flex h-10 w-full items-center rounded-[13px] border shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] transition-colors duration-200 focus-within:ring-2 motion-reduce:transition-none",
+          darkMode
+            ? "border-white/[0.065] bg-white/[0.035] text-white focus-within:border-white/12 focus-within:bg-white/[0.055] focus-within:ring-white/18"
+            : "border-zinc-200/75 bg-white/78 text-zinc-950 shadow-[inset_0_1px_0_rgba(255,255,255,0.96)] focus-within:border-zinc-300 focus-within:bg-white focus-within:ring-zinc-950/10",
+        )}
+        role="search"
+      >
+        <Search className={cn("ml-3 h-3.5 w-3.5 shrink-0", darkMode ? "text-white/38" : "text-zinc-400")} aria-hidden="true" />
+        <Input
+          value={value}
+          onChange={(event) => onValueChange(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            if (value) onValueChange("");
+            else event.currentTarget.blur();
+          }}
+          placeholder={placeholder}
+          aria-label="Buscar pacientes, notas e nós"
+          className={cn(
+            "h-9 min-w-0 flex-1 border-0 bg-transparent px-2 text-[11px] shadow-none focus-visible:ring-0",
+            darkMode ? "text-white placeholder:text-white/28" : "text-zinc-950 placeholder:text-zinc-400",
+          )}
+        />
+        {value ? (
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            onClick={() => onValueChange("")}
+            aria-label="Limpar busca"
+            className={cn(
+              "mr-1 h-8 w-8 shrink-0 rounded-[10px]",
+              darkMode ? "text-white/38 hover:bg-white/[0.08] hover:text-white" : "text-zinc-400 hover:bg-black/[0.045] hover:text-zinc-900",
+            )}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <motion.div
