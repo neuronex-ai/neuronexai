@@ -47,6 +47,7 @@ Deno.test("planner recupera somente valor explícito recente do profissional", (
 Deno.test("planner normaliza data e horário falados antes de criar os mini-cards", () => {
   assertIncludes("resolveSpokenAppointmentDateTime", "normalizador temporal compartilhado obrigatório");
   assertIncludes("recoverRecentAppointmentDateTime", "fala recente do profissional pode recuperar datetime omitido pelo modelo");
+  assertIncludes("resolveSpokenAppointmentDateTime(input.utterance)", "transcrição corrente deve ser preferida ao fallback assíncrono");
   assertIncludes('if (toolName === "create_appointment")', "normalização limitada à criação de agendamento");
   assertIncludes("rawArgs = await normalizeCreateAppointmentDateTime", "datetime deve ser normalizado antes do preflight");
 });

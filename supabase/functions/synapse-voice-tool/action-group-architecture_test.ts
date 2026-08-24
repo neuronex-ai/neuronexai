@@ -32,4 +32,5 @@ Deno.test("prepare_action_group mantém revisão versionada no caminho de voz", 
   equal(source.includes("prepared.pendingAction"), true, "ação pendente persistida");
   equal(source.includes("prepared.clientAction"), true, "revisão enviada ao Desktop");
   equal(source.includes('tool: confirmationPolicy === "opaque" ? "manage_action_group" : "execute_action_group"'), true, "classe de confirmação exposta ao gateway");
+  equal(source.includes("utterance: clean(body.utterance, 2000)"), true, "fala corrente chega ao planner");
 });

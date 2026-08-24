@@ -91,6 +91,16 @@ export type SynapseOpaqueCaptureBlock = {
   blocked: boolean;
 };
 
+let pendingOpaqueConfirmationRequest: SynapseOpaqueConfirmationRequest | null = null;
+
+export const getPendingOpaqueConfirmationRequest = () => pendingOpaqueConfirmationRequest;
+
+const clearPendingOpaqueConfirmationRequest = (requestId: string) => {
+  if (pendingOpaqueConfirmationRequest?.requestId === requestId) {
+    pendingOpaqueConfirmationRequest = null;
+  }
+};
+
 const asRecord = (value: unknown): Record<string, unknown> | null =>
   value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
@@ -268,6 +278,7 @@ export const requestOpaqueConfirmation = async (
     const finish = (result: { success: boolean; cancelled?: boolean; message: string }) => {
       if (settled) return;
       settled = true;
+      clearPendingOpaqueConfirmationRequest(requestId);
       window.clearTimeout(timer);
       window.removeEventListener(SYNAPSE_OPAQUE_CONFIRM_RESPONSE_EVENT, onResponse as EventListener);
       resolve(result);
@@ -287,6 +298,7 @@ export const requestOpaqueConfirmation = async (
 
     window.addEventListener(SYNAPSE_OPAQUE_CONFIRM_RESPONSE_EVENT, onResponse as EventListener);
     const detail: SynapseOpaqueConfirmationRequest = { requestId, challengeId };
+    pendingOpaqueConfirmationRequest = detail;
     window.dispatchEvent(new CustomEvent<SynapseOpaqueConfirmationRequest>(SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT, {
       detail,
     }));
@@ -295,6 +307,7 @@ export const requestOpaqueConfirmation = async (
 
 export const respondOpaqueConfirmation = (response: SynapseOpaqueConfirmationResponse) => {
   if (typeof window === "undefined") return;
+  clearPendingOpaqueConfirmationRequest(String(response.requestId || "").slice(0, 160));
   window.dispatchEvent(new CustomEvent<SynapseOpaqueConfirmationResponse>(SYNAPSE_OPAQUE_CONFIRM_RESPONSE_EVENT, {
     detail: {
       requestId: String(response.requestId || "").slice(0, 160),

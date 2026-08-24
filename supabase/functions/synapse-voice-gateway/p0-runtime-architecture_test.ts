@@ -38,3 +38,8 @@ Deno.test("retry continua limitado a falhas transitórias", () => {
   assertIncludes("payload.retryable", "tool deve controlar retry de erro estruturado");
   assertIncludes("isTransientError(error)", "exceções só podem repetir quando transitórias");
 });
+
+Deno.test("gateway encaminha a fala corrente para normalização temporal do planner", () => {
+  assertIncludes('private lastUserTranscript = ""', "transcrição corrente deve ficar disponível em memória");
+  assertIncludes("utterance: Date.now() - this.lastUserTranscriptAt <= 30_000", "somente fala recente pode acompanhar a tool");
+});

@@ -249,6 +249,7 @@ async function normalizeCreateAppointmentDateTime(input: {
   admin: any;
   userId: string;
   conversationId: string;
+  utterance?: string;
   args: Record<string, any>;
 }) {
   const args = { ...input.args };
@@ -261,6 +262,7 @@ async function normalizeCreateAppointmentDateTime(input: {
     240,
   );
   const resolved = resolveSpokenAppointmentDateTime(candidate)
+    || resolveSpokenAppointmentDateTime(input.utterance)
     || await recoverRecentAppointmentDateTime(input.admin, input.userId, input.conversationId);
 
   delete args.start_time;
@@ -460,6 +462,7 @@ async function buildActionGroupStepSet(input: {
   admin: any;
   userId: string;
   conversationId: string;
+  utterance?: string;
   rawSteps: unknown[];
 }) {
   const context = await loadConversationContext(input.admin, input.userId, input.conversationId);
@@ -520,6 +523,7 @@ async function buildActionGroupStepSet(input: {
         admin: input.admin,
         userId: input.userId,
         conversationId: input.conversationId,
+        utterance: input.utterance,
         args: rawArgs,
       });
     }
@@ -725,6 +729,7 @@ export async function prepareAndPersistActionGroup(input: {
   userId: string;
   conversationId: string;
   voiceSessionId?: string | null;
+  utterance?: string;
   title: string;
   intent: string;
   spokenSummary: string;
@@ -735,6 +740,7 @@ export async function prepareAndPersistActionGroup(input: {
     admin: input.admin,
     userId: input.userId,
     conversationId: input.conversationId,
+    utterance: input.utterance,
     rawSteps: input.rawSteps,
   });
   let plan: SynapseActionGroupPlan;

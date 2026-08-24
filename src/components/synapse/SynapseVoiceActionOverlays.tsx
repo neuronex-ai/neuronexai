@@ -6,6 +6,7 @@ import {
   SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT,
   SYNAPSE_VOICE_REVIEW_EVENT,
   emitActionGroupEditRequest,
+  getPendingOpaqueConfirmationRequest,
   normalizeVoiceReviewAction,
   respondOpaqueConfirmation,
   setOpaqueCaptureBlocked,
@@ -17,6 +18,7 @@ import {
   type SynapseReviewSegment,
   type SynapseVoiceReviewAction,
 } from "@/lib/synapse-voice-ui-protocol";
+import { getSynapseReviewFieldPresentation } from "@/lib/synapse-review-field-presentation";
 
 const WORD_NUMBERS: Record<string, number> = {
   zero: 0,
@@ -197,24 +199,33 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
     segment: SynapseReviewEditableSegment,
   ) => {
     const key = fieldKey(stepId, segment.fieldId);
-    const original = String(segment.value ?? "");
+    const presentation = getSynapseReviewFieldPresentation(segment.fieldId, segment.label, segment.value);
+    const original = presentation.editValue;
     const value = drafts[key] ?? original;
+    const submitEdit = () => {
+      if (value !== original) {
+        requestEdit(stepId, segment.fieldId, presentation.formatForRequest(value));
+      }
+    };
     return (
-      <label key={key} className="inline-flex max-w-full flex-col gap-1 align-middle">
-        <span className="sr-only">{segment.label}</span>
+      <label key={key} className="inline-flex max-w-full flex-col gap-1.5 align-middle">
+        <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+          {segment.label}
+        </span>
         <input
+          type={presentation.inputType}
           value={value}
-          inputMode={(segment.inputMode as React.HTMLAttributes<HTMLInputElement>["inputMode"]) || undefined}
-          maxLength={segment.maxLength}
+          inputMode={presentation.inputType === "text"
+            ? (segment.inputMode as React.HTMLAttributes<HTMLInputElement>["inputMode"]) || undefined
+            : undefined}
+          maxLength={presentation.inputType === "text" ? segment.maxLength : undefined}
           disabled={!versioned || rewriting === key}
           onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
-          onBlur={() => {
-            if (value !== original) requestEdit(stepId, segment.fieldId, value);
-          }}
+          onBlur={submitEdit}
           onKeyDown={(event) => {
             if (event.key === "Enter") {
               event.preventDefault();
-              if (value !== original) requestEdit(stepId, segment.fieldId, value);
+              submitEdit();
               event.currentTarget.blur();
             }
             if (event.key === "Escape") {
@@ -222,7 +233,8 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
               event.currentTarget.blur();
             }
           }}
-          className="min-h-11 min-w-[92px] max-w-[202px] rounded-xl border border-border/70 bg-background/92 px-3 py-1.5 text-center text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-60"
+          aria-label={segment.label}
+          className="min-h-11 min-w-[104px] max-w-[226px] rounded-[13px] border border-black/[0.08] bg-white/80 px-3 py-1.5 text-center text-xs font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] outline-none transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.09] dark:bg-white/[0.075] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
         />
       </label>
     );
@@ -231,13 +243,16 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
   const selectField = (stepId: string, segment: SynapseReviewSelectSegment) => {
     const key = fieldKey(stepId, segment.fieldId);
     return (
-      <label key={key} className="inline-flex max-w-full flex-col gap-1 align-middle">
-        <span className="sr-only">{segment.label}</span>
+      <label key={key} className="inline-flex max-w-full flex-col gap-1.5 align-middle">
+        <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+          {segment.label}
+        </span>
         <select
           value={segment.value}
           disabled={!versioned || rewriting === key}
           onChange={(event) => requestEdit(stepId, segment.fieldId, event.target.value)}
-          className="min-h-11 min-w-[112px] max-w-[202px] rounded-xl border border-border/70 bg-background/92 px-3 py-1.5 text-center text-xs font-medium text-foreground outline-none transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-60"
+          aria-label={segment.label}
+          className="min-h-11 min-w-[112px] max-w-[214px] rounded-[13px] border border-black/[0.08] bg-white/80 px-3 py-1.5 text-center text-xs font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] outline-none transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.09] dark:bg-white/[0.075] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
         >
           {segment.options.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
@@ -251,14 +266,19 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
     <motion.section
       initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.99 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.995 }}
-      transition={reduceMotion ? { duration: 0.14 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.8 }}
-      className="pointer-events-auto fixed inset-x-0 bottom-28 z-[92] mx-auto w-[min(95vw,1120px)] px-3"
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: "calc(-100vw - 48px)", scale: 0.985 }}
+      transition={reduceMotion
+        ? { duration: 0.14 }
+        : { type: "spring", stiffness: 330, damping: 34, mass: 0.86 }}
+      className="pointer-events-none fixed inset-0 z-[118] flex items-end justify-center px-4 pb-28"
+      role="dialog"
+      aria-modal="true"
       aria-label="Revisão da ação do Synapse"
       aria-live="polite"
     >
-      <div className="rounded-[28px] border border-border/55 bg-background/94 p-3 shadow-[0_20px_64px_-28px_rgba(0,0,0,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-zinc-950/94">
-        <div className="mb-3 flex flex-wrap items-start justify-between gap-3 px-2 pt-1">
+      <div className="pointer-events-auto relative w-[min(95vw,1120px)] overflow-hidden rounded-[30px] border border-black/[0.09] bg-white/[0.92] p-[18px] shadow-[0_30px_92px_-34px_rgba(0,0,0,0.52),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-[42px] backdrop-saturate-150 dark:border-white/[0.11] dark:bg-[#09090b]/[0.93] dark:shadow-[0_34px_100px_-36px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.09)]">
+        <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/20" />
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-x-5 gap-y-3 px-1 pt-0.5">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Revisar antes de executar</p>
@@ -290,15 +310,15 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
           </div>
         </div>
 
-        <div className="relative overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:thin] snap-x snap-proximity scroll-px-1" tabIndex={0} aria-label="Etapas da revisão">
-          <div className="flex min-w-max items-stretch gap-2.5">
+        <div className="relative overflow-x-auto overscroll-x-contain pb-1.5 [scrollbar-width:thin] snap-x snap-proximity scroll-px-1" tabIndex={0} aria-label="Etapas da revisão">
+          <div className="flex min-w-max items-stretch gap-3">
             {cards.map((card, index) => (
               <motion.article
                 key={card.id}
                 initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: reduceMotion ? 0.12 : 0.18, delay: reduceMotion ? 0 : Math.min(index * 0.035, 0.16) }}
-                className="relative w-[268px] shrink-0 snap-start overflow-hidden rounded-[22px] border border-border/55 bg-card/96 p-4 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.045]"
+                className="relative w-[276px] shrink-0 snap-start overflow-hidden rounded-[22px] border border-black/[0.075] bg-white/[0.76] p-[18px] shadow-[0_12px_28px_-22px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.86)] backdrop-blur-2xl dark:border-white/[0.085] dark:bg-white/[0.052] dark:shadow-[0_14px_32px_-22px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.07)]"
               >
                 <div className="mb-3 flex items-center justify-between">
                   <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold tabular-nums text-background" aria-label={`Etapa ${index + 1}`}>
@@ -314,7 +334,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
                   )}
                 </div>
                 <h3 className="text-left text-xs font-semibold tracking-wide text-foreground">{card.area}</h3>
-                <div className="mt-2 flex min-h-14 flex-wrap items-center justify-start gap-1.5 text-left text-sm leading-5 text-muted-foreground">
+                <div className="mt-2.5 flex min-h-14 flex-wrap items-end justify-start gap-x-2 gap-y-2.5 text-left text-sm leading-5 text-muted-foreground">
                   {card.segments.map((segment, segmentIndex) => {
                     if (segment.type === "editable") return editableField(card.id, segment);
                     if (segment.type === "select") return selectField(card.id, segment);
@@ -327,7 +347,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
           </div>
         </div>
 
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 px-2 text-[11px] leading-4 text-muted-foreground/80">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-1 text-[11px] leading-4 text-muted-foreground/80">
           <p>
             {versioned
               ? "Cada edição gera uma nova versão segura antes da confirmação."
@@ -345,7 +365,7 @@ const OpaqueConfirmationOverlay = ({
   onFinish,
 }: {
   request: SynapseOpaqueConfirmationRequest;
-  onFinish: () => void;
+  onFinish: (confirmed: boolean) => void;
 }) => {
   const code = useMemo(challengeNumber, [request.requestId]);
   const reduceMotion = useReducedMotion();
@@ -370,7 +390,7 @@ const OpaqueConfirmationOverlay = ({
       cancelled,
       message,
     });
-    onFinish();
+    onFinish(success);
   }, [onFinish, request.requestId]);
 
   const rejectAttempt = useCallback(() => {
@@ -450,11 +470,13 @@ const OpaqueConfirmationOverlay = ({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: reduceMotion ? 0.12 : 0.18 }}
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/38 px-5 backdrop-blur-xl"
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: "calc(100vw + 48px)" }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: "calc(100vw + 48px)" }}
+      transition={reduceMotion
+        ? { duration: 0.14 }
+        : { type: "spring", stiffness: 330, damping: 34, mass: 0.86 }}
+      className="fixed inset-0 z-[120] flex items-center justify-center px-5"
       role="dialog"
       aria-modal="true"
       aria-labelledby="synapse-opaque-confirm-title"
@@ -465,8 +487,9 @@ const OpaqueConfirmationOverlay = ({
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.99 }}
         transition={reduceMotion ? { duration: 0.12 } : { type: "spring", stiffness: 420, damping: 34, mass: 0.8 }}
-        className="w-[min(92vw,440px)] rounded-[32px] border border-white/20 bg-background/96 px-7 py-8 text-center shadow-[0_28px_88px_-30px_rgba(0,0,0,0.6)] dark:border-white/10 dark:bg-zinc-950/96"
+        className="relative w-[min(92vw,460px)] overflow-hidden rounded-[32px] border border-black/[0.09] bg-white/[0.94] px-8 py-9 text-center shadow-[0_34px_104px_-34px_rgba(0,0,0,0.58),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-[42px] backdrop-saturate-150 dark:border-white/[0.11] dark:bg-[#09090b]/[0.95] dark:shadow-[0_38px_112px_-34px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.09)]"
       >
+        <div className="pointer-events-none absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/20" />
         <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/60 bg-muted/50">
           <ShieldCheck className="h-5 w-5" aria-hidden="true" />
         </div>
@@ -538,7 +561,9 @@ const OpaqueConfirmationOverlay = ({
 
 export const SynapseVoiceActionOverlays = () => {
   const [review, setReview] = useState<SynapseActionReview | null>(null);
-  const [confirmation, setConfirmation] = useState<SynapseOpaqueConfirmationRequest | null>(null);
+  const [confirmation, setConfirmation] = useState<SynapseOpaqueConfirmationRequest | null>(
+    () => getPendingOpaqueConfirmationRequest(),
+  );
 
   useEffect(() => {
     const onReview = (event: Event) => {
@@ -554,6 +579,7 @@ export const SynapseVoiceActionOverlays = () => {
     const onConfirmation = (event: Event) => {
       const detail = (event as CustomEvent<SynapseOpaqueConfirmationRequest>).detail;
       if (!detail?.requestId || !detail?.challengeId) return;
+      setOpaqueCaptureBlocked(true);
       setConfirmation({
         requestId: String(detail.requestId).slice(0, 160),
         challengeId: String(detail.challengeId).slice(0, 160),
@@ -562,6 +588,10 @@ export const SynapseVoiceActionOverlays = () => {
 
     window.addEventListener(SYNAPSE_VOICE_REVIEW_EVENT, onReview as EventListener);
     window.addEventListener(SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT, onConfirmation as EventListener);
+    const pendingConfirmation = getPendingOpaqueConfirmationRequest();
+    if (pendingConfirmation) onConfirmation(new CustomEvent(SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT, {
+      detail: pendingConfirmation,
+    }));
     return () => {
       window.removeEventListener(SYNAPSE_VOICE_REVIEW_EVENT, onReview as EventListener);
       window.removeEventListener(SYNAPSE_OPAQUE_CONFIRM_REQUEST_EVENT, onConfirmation as EventListener);
@@ -569,16 +599,37 @@ export const SynapseVoiceActionOverlays = () => {
     };
   }, []);
 
+  const overlayVisible = Boolean(review || confirmation);
+
   return (
-    <AnimatePresence mode="sync">
-      {review && !confirmation ? <ReviewOverlay key={review.data.reviewId} review={review} /> : null}
-      {confirmation ? (
-        <OpaqueConfirmationOverlay
-          key={confirmation.requestId}
-          request={confirmation}
-          onFinish={() => setConfirmation(null)}
-        />
-      ) : null}
-    </AnimatePresence>
+    <>
+      <AnimatePresence>
+        {overlayVisible ? (
+          <motion.div
+            key="synapse-action-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="pointer-events-none fixed inset-0 z-[116] bg-white/20 backdrop-blur-[3px] dark:bg-black/30"
+            aria-hidden="true"
+          />
+        ) : null}
+      </AnimatePresence>
+      <AnimatePresence mode="wait" initial={false}>
+        {confirmation ? (
+          <OpaqueConfirmationOverlay
+            key={`confirmation:${confirmation.requestId}`}
+            request={confirmation}
+            onFinish={(confirmed) => {
+              setConfirmation(null);
+              if (confirmed) setReview(null);
+            }}
+          />
+        ) : review ? (
+          <ReviewOverlay key={`review:${review.data.reviewId}`} review={review} />
+        ) : null}
+      </AnimatePresence>
+    </>
   );
 };

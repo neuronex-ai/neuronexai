@@ -1144,6 +1144,8 @@ class EdgeSynapseVoiceSession {
   private runner: EdgeVoiceFunctionRunner;
   private persistQueue: Promise<void> = Promise.resolve();
   private persistenceDisabled = false;
+  private lastUserTranscript = "";
+  private lastUserTranscriptAt = 0;
   private closed = false;
   private lastProviderEvent: Record<string, unknown> | null = null;
 
@@ -1328,7 +1330,11 @@ class EdgeSynapseVoiceSession {
       case "ConversationText": {
         const text = conversationText(event);
         if (!text) break;
-        if (isUserRole(text.role)) this.runner.onUserTranscript(text.content);
+        if (isUserRole(text.role)) {
+          this.lastUserTranscript = text.content;
+          this.lastUserTranscriptAt = Date.now();
+          this.runner.onUserTranscript(text.content);
+        }
         if (isUserRole(text.role) || isAssistantRole(text.role)) {
           if (isUserRole(text.role)) this.latencyMs.first_transcript_ms ??= Date.now() - this.startedAt;
           void this.persistMessage(text.role, text.content, event);
@@ -1381,6 +1387,9 @@ class EdgeSynapseVoiceSession {
         voiceSessionId: this.voiceSessionId,
         name: input.name,
         arguments: input.arguments,
+        utterance: Date.now() - this.lastUserTranscriptAt <= 30_000
+          ? this.lastUserTranscript
+          : undefined,
       }),
     });
     const data = await response.json().catch(() => ({}));
