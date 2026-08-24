@@ -43,6 +43,7 @@ export const Layout = ({ children }: LayoutProps) => {
         <DesktopLumenBackdrop
           className={cn(
             location.pathname.startsWith("/agenda") && "desktop-lumen-field--agenda",
+            location.pathname.startsWith("/pacientes") && "desktop-lumen-field--patients",
             location.pathname.startsWith("/teleconsulta") && "desktop-lumen-field--teleconsultation",
           )}
         />

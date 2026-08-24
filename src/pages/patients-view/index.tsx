@@ -134,7 +134,7 @@ export default function Pacientes() {
         }
     }, [canAdd, location.pathname, location.state]);
 
-    const filteredPatients = patients?.filter(p =>
+    const filteredPatients = (patients || []).filter(p =>
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -159,7 +159,10 @@ export default function Pacientes() {
     };
 
     return (
-        <div className="patients-desktop-shell desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 font-sans selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white">
+        <div className={cn(
+            "desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 font-sans selection:bg-zinc-900/10 selection:text-zinc-900 dark:selection:bg-white/10 dark:selection:text-white",
+            !isMobile && "patients-desktop-shell",
+        )}>
             <NewPatientModal
                 open={agentPatientModalOpen}
                 onOpenChange={setAgentPatientModalOpen}
@@ -256,25 +259,37 @@ export default function Pacientes() {
 
             {/* ─── Header Bar ─── */}
             <div className={cn(
-                "relative z-40 w-full animate-fade-in mb-8",
-                isMobile && "pt-6 px-4"
+                isMobile
+                    ? "relative z-40 mb-8 w-full animate-fade-in px-4 pt-6"
+                    : "relative z-40 mb-6 w-full animate-fade-in md:mb-7",
             )}>
-                <div className="max-w-[1920px] mx-auto md:px-10 lg:px-16 xl:px-24">
+                <div className={cn("mx-auto", isMobile ? "max-w-[1920px]" : "max-w-[1760px] md:px-7 lg:px-10 xl:px-12 2xl:px-16")}>
                     <div className={cn(
-                        "desktop-retina-frame group flex w-full items-center justify-between rounded-[30px] border border-border/45 bg-card/78 px-8 py-4 transition-[border-color,background-color,box-shadow] duration-300 hover:border-border/70 md:px-10",
-                        isMobile && "p-5 flex-col gap-6"
+                        isMobile
+                            ? "desktop-retina-frame group flex w-full flex-col items-center justify-between gap-6 rounded-[30px] border border-border/45 bg-card/78 p-5"
+                            : "patients-directory-header group flex w-full flex-col items-stretch gap-5 rounded-[28px] px-6 py-5 sm:px-7 xl:flex-row xl:items-center xl:justify-between xl:px-8",
                     )}>
                         {/* Title Section */}
                         <div className="flex items-center justify-between w-full md:w-auto">
                             <div className="flex items-center gap-4">
-                                <div className="desktop-retina-inset flex h-10 w-10 items-center justify-center rounded-[15px] border border-border/45 bg-muted/30 text-foreground shadow-sm transition-transform duration-300 group-hover:scale-[1.04] md:h-11 md:w-11">
+                                <div className={cn(
+                                    "flex items-center justify-center rounded-[15px] text-foreground",
+                                    isMobile
+                                        ? "desktop-retina-inset h-10 w-10 border border-border/45 bg-muted/30 shadow-sm"
+                                        : "patients-directory-inset h-11 w-11",
+                                )}>
                                     <Users className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <h1 className="text-xl md:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter leading-none">
+                                    <h1 className="text-xl font-black leading-none tracking-[-0.04em] text-foreground md:text-2xl">
                                         Pacientes
                                     </h1>
-                                    <div className="px-2.5 py-0.5 md:px-3 md:py-1 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[10px] md:text-[11px] font-black tabular-nums shadow-lg border border-white/10">
+                                    <div className={cn(
+                                        "inline-flex items-center rounded-full px-3 text-[10px] font-black tabular-nums md:text-[11px]",
+                                        isMobile
+                                            ? "min-h-6 border border-white/10 bg-zinc-900 text-white shadow-lg dark:bg-white dark:text-zinc-900"
+                                            : "patients-directory-count min-h-7 text-foreground",
+                                    )}>
                                         {patients?.length || 0}
                                     </div>
                                 </div>
@@ -290,18 +305,19 @@ export default function Pacientes() {
                         </div>
 
                         {/* Actions Section */}
-                        <div className={cn("flex items-center gap-3 w-full md:w-auto", isMobile && "flex-col md:flex-row")}>
+                        <div className={cn("flex w-full min-w-0 flex-col gap-3 sm:flex-row sm:items-center xl:w-auto", isMobile && "flex-col md:flex-row")}>
                             {/* Unified Search & Actions Container (Mobile) */}
-                            <div className="flex items-center gap-3 w-full">
-                                <div className="relative flex-1 group/search" data-synapse-target="patients-search">
+                            <div className="flex min-w-0 flex-1 items-center gap-3 xl:flex-none">
+                                <div className="group/search relative min-w-0 flex-1 xl:w-[min(32vw,410px)]" data-synapse-target="patients-search">
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400 group-focus-within/search:text-zinc-900 dark:group-focus-within/search:text-zinc-300 transition-colors" />
                                     <Input
                                         placeholder="Buscar prontuário..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className={cn(
-                                            "desktop-retina-inset h-12 w-full rounded-2xl border-border/40 bg-muted/30 pl-11 text-xs font-bold tracking-tight shadow-none transition-[border-color,background-color] placeholder:text-muted-foreground/65 hover:bg-muted/45 focus:bg-background/70",
-                                            isMobile && "h-11 rounded-2xl"
+                                            isMobile
+                                                ? "desktop-retina-inset h-11 w-full rounded-2xl border-border/40 bg-muted/30 pl-11 pr-10 text-xs font-bold tracking-tight shadow-none placeholder:text-muted-foreground/65"
+                                                : "patients-directory-inset h-12 w-full rounded-[16px] border-0 pl-11 pr-11 text-xs font-bold tracking-tight shadow-none placeholder:text-muted-foreground/65 focus-visible:ring-2 focus-visible:ring-ring",
                                         )}
                                     />
                                     <AnimatePresence>
@@ -311,7 +327,14 @@ export default function Pacientes() {
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.8 }}
                                                 onClick={() => setSearchTerm("")}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-zinc-200 dark:bg-white/10 flex items-center justify-center text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors"
+                                                type="button"
+                                                aria-label="Limpar busca de pacientes"
+                                                className={cn(
+                                                    "absolute top-1/2 flex -translate-y-1/2 items-center justify-center text-muted-foreground transition-colors",
+                                                    isMobile
+                                                        ? "right-3 h-6 w-6 rounded-full bg-zinc-200 hover:text-foreground dark:bg-white/10"
+                                                        : "right-2.5 h-11 w-11 rounded-[14px] hover:bg-foreground hover:text-background",
+                                                )}
                                             >
                                                 <X className="w-3 h-3" strokeWidth={3} />
                                             </motion.button>
@@ -319,12 +342,25 @@ export default function Pacientes() {
                                     </AnimatePresence>
                                 </div>
 
+                                {!isMobile ? (
+                                    <MagneticSegmentedControl
+                                        id="patients-view"
+                                        indicatorId="patients-view-indicator"
+                                        value={viewMode}
+                                        onValueChange={setViewMode}
+                                        options={PATIENTS_VIEW_OPTIONS}
+                                        ariaLabel="Visualização dos pacientes"
+                                        className="patients-view-control min-h-12 shrink-0 rounded-[16px] p-0.5"
+                                        triggerClassName="min-h-11 rounded-[13px] px-3.5 text-[10px] font-black uppercase tracking-[0.11em]"
+                                    />
+                                ) : null}
+
                                 {/* Add Button */}
                                 {canAdd ? (
                                     <NewPatientModal>
                                         <Button
                                             className={cn(
-                                                "rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-black dark:hover:bg-zinc-100 shadow-xl transition-all duration-500 active:scale-90",
+                                                "rounded-[16px] bg-foreground text-background shadow-none transition-colors hover:bg-foreground/88",
                                                 isMobile ? "w-11 h-11 p-0 flex-shrink-0" : "h-11 px-6 text-[10px] font-black uppercase tracking-widest"
                                             )}
                                         >
@@ -336,7 +372,7 @@ export default function Pacientes() {
                                     <Button
                                         onClick={() => setShowUpsellModal(true)}
                                         className={cn(
-                                            "rounded-2xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 hover:bg-black dark:hover:bg-zinc-100 shadow-xl transition-all duration-500 active:scale-90",
+                                            "rounded-[16px] bg-foreground text-background shadow-none transition-colors hover:bg-foreground/88",
                                             isMobile ? "w-11 h-11 p-0 flex-shrink-0" : "h-11 px-6 text-[10px] font-black uppercase tracking-widest"
                                         )}
                                     >
@@ -350,30 +386,25 @@ export default function Pacientes() {
                 </div>
             </div>
 
-            {/* ─── Main Grid Content ─── */}
-            <div className="max-w-[1920px] mx-auto px-4 md:px-10 lg:px-16 xl:px-24 relative z-10 space-y-12">
-                <div
-                    data-synapse-target="patients-grid"
-                    className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 md:gap-8"
-                >
-                    {isLoading ? (
-                        [...Array(8)].map((_, i) => (
-                            <GlassCard key={i} className="h-[240px] animate-pulse rounded-[32px] motion-reduce:animate-none">
-                                <></>
-                            </GlassCard>
-                        ))
-                    ) : filteredPatients?.length === 0 ? (
-                        <div className="col-span-full py-40 flex flex-col items-center justify-center text-center">
-                            <GlassCard className="p-16 flex flex-col items-center max-w-lg mx-auto rounded-[48px] border-dashed">
-                                <div className="w-20 h-20 rounded-3xl bg-zinc-100 dark:bg-white/5 flex items-center justify-center mb-8 shadow-inner ring-1 ring-zinc-200 dark:ring-white/10">
-                                    <Users className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
-                                </div>
-                                <h3 className="text-xl font-black text-zinc-900 dark:text-zinc-100 mb-3 tracking-tight">Nenhum paciente encontrado</h3>
-                                <p className="text-zinc-500 dark:text-zinc-400 text-sm font-medium leading-relaxed max-w-[280px]">Tente ajustar sua busca ou adicione um novo prontuário.</p>
-                            </GlassCard>
-                        </div>
-                    ) : (
-                        filteredPatients?.map((patient, i) => (
+            {/* ─── Directory Content ─── */}
+            {isMobile ? (
+                <div className="relative z-10 mx-auto max-w-[1920px] space-y-12 px-4">
+                    <div data-synapse-target="patients-grid" className="grid grid-cols-1 gap-6">
+                        {isLoading ? (
+                            Array.from({ length: 8 }).map((_, index) => (
+                                <GlassCard key={index} className="h-[240px] animate-pulse rounded-[32px] motion-reduce:animate-none"><></></GlassCard>
+                            ))
+                        ) : filteredPatients?.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center py-40 text-center">
+                                <GlassCard className="mx-auto flex max-w-lg flex-col items-center rounded-[48px] border-dashed p-16">
+                                    <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-3xl bg-zinc-100 shadow-inner ring-1 ring-zinc-200 dark:bg-white/5 dark:ring-white/10">
+                                        <Users className="h-10 w-10 text-zinc-300 dark:text-zinc-600" />
+                                    </div>
+                                    <h3 className="mb-3 text-xl font-black tracking-tight text-zinc-900 dark:text-zinc-100">Nenhum paciente encontrado</h3>
+                                    <p className="max-w-[280px] text-sm font-medium leading-relaxed text-zinc-500 dark:text-zinc-400">Tente ajustar sua busca ou adicione um novo prontuário.</p>
+                                </GlassCard>
+                            </div>
+                        ) : filteredPatients?.map((patient, index) => (
                             <GlassCard
                                 key={patient.id}
                                 data-synapse-patient-id={patient.id}
@@ -390,118 +421,197 @@ export default function Pacientes() {
                                 role="link"
                                 tabIndex={0}
                                 aria-label={`Abrir prontuário de ${patient.name}`}
-                                delay={Math.min(i, 5) * 20}
+                                delay={Math.min(index, 5) * 20}
                             >
-                                <div className="p-6 md:p-8 flex flex-col justify-between h-full relative z-10">
-                                    {/* Delete Button (Visible on hover) */}
+                                <div className="relative z-10 flex h-full flex-col justify-between p-6">
                                     <button
-                                        onClick={(e) => handleDeleteClick(e, patient.id, patient.name)}
+                                        type="button"
+                                        onClick={(event) => handleDeleteClick(event, patient.id, patient.name)}
                                         className="desktop-retina-inset absolute right-6 top-6 z-20 flex h-10 w-10 items-center justify-center rounded-[14px] bg-muted/40 opacity-0 shadow-sm transition-[opacity,background-color,color,transform] duration-200 hover:bg-rose-500 hover:text-white focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
-                                        title="Excluir paciente"
                                         aria-label={`Excluir ${patient.name}`}
                                     >
-                                        <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                                        <Trash2 className="h-4 w-4" />
                                     </button>
-
-                                    {/* Top Section */}
-                                    <div className="flex items-start gap-4 md:gap-5">
-                                        <Avatar className="h-14 w-14 rounded-2xl border-[3px] border-white shadow-2xl transition-transform duration-300 group-hover:scale-[1.035] motion-reduce:transition-none motion-reduce:group-hover:scale-100 dark:border-[#0c0c0c] md:h-16 md:w-16">
-                                            <AvatarFallback className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 font-black text-base md:text-lg uppercase tracking-widest">
+                                    <div className="flex items-start gap-4">
+                                        <Avatar className="h-14 w-14 rounded-2xl border-[3px] border-white shadow-2xl dark:border-[#0c0c0c]">
+                                            <AvatarImage src={patient.avatar_url || undefined} alt="" />
+                                            <AvatarFallback className="bg-zinc-900 text-base font-black uppercase tracking-widest text-white dark:bg-white dark:text-zinc-900">
                                                 {patient.name.substring(0, 2).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
                                         <div className="min-w-0 flex-1 pt-1">
-                                            <h3 className="font-black text-base md:text-lg text-zinc-900 dark:text-zinc-100 truncate pr-8 mb-1.5 tracking-tighter group-hover:text-black dark:group-hover:text-white transition-colors">{patient.name}</h3>
+                                            <h3 className="mb-1.5 truncate pr-8 text-base font-black tracking-tighter text-zinc-900 dark:text-zinc-100">{patient.name}</h3>
                                             <div className="flex items-center gap-2">
-                                                <div className={cn(
-                                                    "w-1.5 h-1.5 rounded-full",
-                                                    patient.status === 'active'
-                                                        ? "animate-pulse bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] motion-reduce:animate-none"
-                                                        : "bg-zinc-400 dark:bg-zinc-700 shadow-sm"
-                                                )} />
-                                                <span className="text-[9px] text-zinc-500 dark:text-zinc-400 font-black uppercase tracking-widest">
+                                                <span className={cn('h-1.5 w-1.5 rounded-full', patient.status === 'active' ? 'bg-emerald-500' : 'bg-zinc-400 dark:bg-zinc-700')} />
+                                                <span className="text-[9px] font-black uppercase tracking-widest text-zinc-500 dark:text-zinc-400">{patient.status === 'active' ? 'Ativo' : 'Pendente'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="mt-6 space-y-2.5">
+                                        <div className="desktop-retina-inset flex items-center gap-3.5 rounded-xl border border-border/45 bg-muted/30 px-4 py-2.5 text-[11px] text-muted-foreground">
+                                            <Activity className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                                            <span className="truncate font-bold tracking-tight">{patient.diagnosis || 'Sem diagnóstico definido'}</span>
+                                        </div>
+                                        <div className="desktop-retina-inset flex items-center gap-3.5 rounded-xl border border-border/45 bg-muted/30 px-4 py-2.5 text-[11px] text-muted-foreground">
+                                            <Calendar className="h-3.5 w-3.5 shrink-0 text-zinc-400" />
+                                            <span className="truncate font-bold tracking-tight">{patient.next_session ? `Próxima: ${format(new Date(patient.next_session), 'dd/MM HH:mm')}` : 'Aguardando agendamento'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </GlassCard>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+            <div className="relative z-10 mx-auto max-w-[1760px] px-4 md:px-7 lg:px-10 xl:px-12 2xl:px-16">
+                {isLoading ? (
+                    activeView === 'cards' ? (
+                        <div
+                            id="patients-view-panel-cards"
+                            role={!isMobile ? 'tabpanel' : undefined}
+                            aria-labelledby={!isMobile ? 'patients-view-tab-cards' : undefined}
+                            className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 xl:gap-6"
+                        >
+                            {Array.from({ length: 8 }).map((_, index) => (
+                                <div key={index} className="patients-directory-card h-[236px] animate-pulse rounded-[28px] motion-reduce:animate-none" />
+                            ))}
+                        </div>
+                    ) : (
+                        <div id="patients-view-panel-list" role="tabpanel" aria-labelledby="patients-view-tab-list">
+                            <DesktopPatientsListSkeleton />
+                        </div>
+                    )
+                ) : filteredPatients?.length === 0 ? (
+                    <section className="patients-directory-empty mx-auto flex max-w-xl flex-col items-center rounded-[30px] px-8 py-14 text-center sm:px-12 sm:py-16" aria-live="polite">
+                        <div className="patients-directory-inset mb-6 flex h-16 w-16 items-center justify-center rounded-[20px]">
+                            <Users className="h-7 w-7 text-muted-foreground" aria-hidden="true" />
+                        </div>
+                        <h2 className="text-xl font-black tracking-[-0.035em] text-foreground">Nenhum paciente encontrado</h2>
+                        <p className="mt-3 max-w-sm text-sm font-medium leading-relaxed text-muted-foreground">Tente ajustar sua busca ou adicione um novo prontuário.</p>
+                    </section>
+                ) : activeView === 'list' ? (
+                    <div id="patients-view-panel-list" role="tabpanel" aria-labelledby="patients-view-tab-list" data-synapse-target="patients-list">
+                        <DesktopPatientsList
+                            patients={filteredPatients}
+                            onDelete={(patient) => requestPatientDeletion(patient.id, patient.name)}
+                        />
+                    </div>
+                ) : (
+                    <div
+                        id="patients-view-panel-cards"
+                        role={!isMobile ? 'tabpanel' : undefined}
+                        aria-labelledby={!isMobile ? 'patients-view-tab-cards' : undefined}
+                        data-synapse-target="patients-grid"
+                        className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 xl:gap-6"
+                    >
+                        {filteredPatients?.map((patient) => (
+                            <div
+                                key={patient.id}
+                                data-synapse-patient-id={patient.id}
+                                className="patients-directory-card desktop-retina-interactive group relative min-h-[236px] cursor-pointer overflow-hidden rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                onClick={() => navigate(`/pacientes/${patient.id}`)}
+                                onKeyDown={(event) => {
+                                    if (event.target !== event.currentTarget) return;
+                                    if (event.key === 'Enter' || event.key === ' ') {
+                                        event.preventDefault();
+                                        navigate(`/pacientes/${patient.id}`);
+                                    }
+                                }}
+                                role="link"
+                                tabIndex={0}
+                                aria-label={`Abrir prontuário de ${patient.name}`}
+                            >
+                                <div className="relative z-10 flex h-full min-h-[236px] flex-col justify-between p-6 sm:p-7">
+                                    <button
+                                        type="button"
+                                        onClick={(event) => handleDeleteClick(event, patient.id, patient.name)}
+                                        className="patients-directory-inset absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-[14px] text-muted-foreground opacity-0 transition-[opacity,background-color,color] duration-150 hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
+                                        aria-label={`Excluir ${patient.name}`}
+                                    >
+                                        <Trash2 className="h-4 w-4" />
+                                    </button>
+
+                                    <div className="flex items-start gap-[18px] pr-11">
+                                        <Avatar className="h-14 w-14 shrink-0 rounded-[18px] border border-border/55 bg-background shadow-sm">
+                                            <AvatarImage src={patient.avatar_url || undefined} alt="" />
+                                            <AvatarFallback className="rounded-[18px] bg-foreground text-sm font-black uppercase tracking-[0.12em] text-background">
+                                                {patient.name.substring(0, 2).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0 flex-1 pt-0.5">
+                                            <h3 className="truncate text-base font-black tracking-[-0.035em] text-foreground md:text-lg">{patient.name}</h3>
+                                            <div className="mt-2 flex items-center gap-2">
+                                                <span className={cn('patients-status-dot h-1.5 w-1.5 rounded-full', patient.status === 'active' ? 'is-active' : 'is-pending')} aria-hidden="true" />
+                                                <span className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
                                                     {patient.status === 'active' ? 'Ativo' : 'Pendente'}
                                                 </span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Bottom Info */}
-                                    <div className="space-y-2.5 mt-6 md:mt-8">
-                                        <div className="desktop-retina-inset flex items-center gap-3.5 rounded-xl border border-border/45 bg-muted/30 px-4 py-2.5 text-[11px] text-muted-foreground transition-colors group-hover:bg-muted/45 md:rounded-2xl md:py-3 md:text-xs">
-                                            <Activity className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-                                            <span className="truncate font-bold tracking-tight">{patient.diagnosis || "Sem diagnóstico definido"}</span>
+                                    <div className="mt-7 space-y-2.5">
+                                        <div className="patients-directory-inset flex min-h-11 items-center gap-3.5 rounded-[15px] px-4 text-[11px] text-muted-foreground md:text-xs">
+                                            <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                            <span className="truncate font-bold tracking-tight">{patient.diagnosis || 'Sem diagnóstico definido'}</span>
                                         </div>
-                                        <div className="desktop-retina-inset flex items-center gap-3.5 rounded-xl border border-border/45 bg-muted/30 px-4 py-2.5 text-[11px] text-muted-foreground transition-colors group-hover:bg-muted/45 md:rounded-2xl md:py-3 md:text-xs">
-                                            <Calendar className="h-3.5 w-3.5 text-zinc-400 shrink-0" />
-                                            <span className="font-bold tracking-tight">
+                                        <div className="patients-directory-inset flex min-h-11 items-center gap-3.5 rounded-[15px] px-4 text-[11px] text-muted-foreground md:text-xs">
+                                            <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                            <span className="truncate font-bold tracking-tight">
                                                 {patient.next_session
-                                                    ? `Próxima: ${format(new Date(patient.next_session), "dd/MM HH:mm")}`
-                                                    : "Aguardando agendamento"
-                                                }
+                                                    ? `Próxima: ${format(new Date(patient.next_session), 'dd/MM HH:mm')}`
+                                                    : 'Aguardando agendamento'}
                                             </span>
                                         </div>
                                     </div>
                                 </div>
-                            </GlassCard>
-                        ))
-                    )}
-                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
+            )}
 
             <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-                <DialogContent className="desktop-retina-modal desktop-retina-form z-[9999] overflow-hidden rounded-[38px] border border-zinc-200 bg-white/95 p-0 backdrop-blur-3xl dark:border-white/[0.08] dark:bg-[#0a0a0a]/95 sm:max-w-[480px]">
-                    <div className="p-12 text-center relative">
-                        <div className="absolute top-0 right-0 p-32 bg-rose-500/5 rounded-full blur-[80px] pointer-events-none" />
-
-                        <div className="w-20 h-20 rounded-3xl bg-rose-500/10 flex items-center justify-center mx-auto mb-8 shadow-2xl">
-                            <AlertTriangle className="w-10 h-10 text-rose-500" />
+                <DialogContent className="patients-directory-dialog desktop-retina-form z-[9999] overflow-hidden rounded-[30px] p-0 sm:max-w-[480px]">
+                    <div className="relative p-7 text-center sm:p-9">
+                        <div className="patients-directory-inset mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-[18px] text-destructive">
+                            <AlertTriangle className="h-6 w-6" aria-hidden="true" />
                         </div>
 
-                        <DialogTitle className="text-2xl font-black text-zinc-900 dark:text-zinc-100 mb-3 tracking-tighter">
-                            Excluir Paciente?
+                        <DialogTitle className="mb-3 text-2xl font-black tracking-[-0.04em] text-foreground">
+                            Excluir paciente?
                         </DialogTitle>
-                        <DialogDescription className="text-zinc-500 dark:text-zinc-400 text-base leading-relaxed max-w-[320px] mx-auto font-medium">
-                            Esta ação removerá <span className="text-zinc-900 dark:text-zinc-100 font-black">{deleteTarget?.name}</span> permanentemente.
+                        <DialogDescription className="mx-auto max-w-[340px] text-sm font-medium leading-relaxed text-muted-foreground">
+                            Esta ação removerá <span className="font-black text-foreground">{deleteTarget?.name}</span> permanentemente.
                         </DialogDescription>
 
-                        <div className="mt-10 mb-8">
-                            <button
-                                onClick={() => setExportOnDelete(!exportOnDelete)}
-                                className={cn(
-                                    "w-full flex items-center gap-5 p-5 rounded-2xl border transition-all duration-500 text-left group",
-                                    exportOnDelete
-                                        ? "bg-zinc-900 dark:bg-white border-zinc-900 dark:border-white shadow-xl"
-                                        : "bg-zinc-50 dark:bg-white/[0.02] border-zinc-200 dark:border-white/10 hover:border-zinc-300"
-                                )}
-                            >
-                                <div className={cn(
-                                    "w-7 h-7 rounded-lg border flex items-center justify-center transition-all shrink-0",
-                                    exportOnDelete ? "bg-white dark:bg-zinc-900 border-white dark:border-zinc-900 text-zinc-900 dark:text-white" : "border-zinc-300 dark:border-zinc-700 bg-white/50"
-                                )}>
-                                    {exportOnDelete && <Download className="w-4 h-4 stroke-[3]" />}
+                        <label htmlFor="export-before-patient-delete" className="patients-directory-inset my-7 flex min-h-[72px] cursor-pointer items-center gap-4 rounded-[18px] px-5 py-4 text-left">
+                            <Checkbox
+                                id="export-before-patient-delete"
+                                checked={exportOnDelete}
+                                onCheckedChange={(checked) => setExportOnDelete(checked === true)}
+                                className="h-5 w-5 rounded-md border-border data-[state=checked]:bg-foreground data-[state=checked]:text-background"
+                            />
+                            <div className="min-w-0">
+                                <p className="text-xs font-black uppercase tracking-[0.12em] text-foreground">Exportar dados antes</p>
+                                <p className="mt-1 text-[11px] font-medium text-muted-foreground">Baixar uma cópia do prontuário completo.</p>
                                 </div>
-                                <div>
-                                    <p className={cn("text-sm font-black uppercase tracking-widest", exportOnDelete ? "text-white dark:text-zinc-900" : "text-zinc-900 dark:text-zinc-100")}>Exportar dados</p>
-                                    <p className={cn("text-[10px] font-bold uppercase tracking-wider mt-1 opacity-70", exportOnDelete ? "text-white dark:text-zinc-900" : "text-zinc-500")}>Baixar prontuário completo</p>
-                                </div>
-                            </button>
-                        </div>
+                        </label>
 
-                        <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-3">
                             <Button
                                 onClick={confirmDelete}
                                 disabled={deletePatientMutation.isPending}
-                                className="w-full h-16 rounded-[24px] bg-rose-500 hover:bg-rose-600 text-white font-black uppercase tracking-[0.2em] text-[11px] transition-all shadow-xl shadow-rose-500/20 hover:scale-[1.02] active:scale-[0.98]"
+                                className="h-12 w-full rounded-[16px] bg-destructive text-[10px] font-black uppercase tracking-[0.16em] text-destructive-foreground shadow-none hover:bg-destructive/90"
                             >
-                                {deletePatientMutation.isPending ? "PROCESSANDO..." : "CONFIRMAR EXCLUSÃO"}
+                                {deletePatientMutation.isPending ? "Processando..." : "Confirmar exclusão"}
                             </Button>
                             <Button
                                 variant="ghost"
                                 onClick={() => setDeleteTarget(null)}
-                                className="w-full h-14 text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 uppercase tracking-[0.2em] text-[10px] font-black"
+                                className="h-11 w-full rounded-[14px] text-[10px] font-black uppercase tracking-[0.14em] text-muted-foreground hover:bg-muted hover:text-foreground"
                             >
-                                MANTER REGISTRO
+                                Manter registro
                             </Button>
                         </div>
                     </div>

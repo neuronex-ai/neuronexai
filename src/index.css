@@ -2007,7 +2007,8 @@
 
   /* Agenda uses a still, full-viewport light field. It adds spatial depth
      without animated blur, so the calendar remains crisp while scrolling. */
-  .desktop-lumen-field--agenda {
+  .desktop-lumen-field--agenda,
+  .desktop-lumen-field--patients {
     background:
       radial-gradient(92rem 52rem at 50% -12%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.66) 28%, rgba(244, 244, 244, 0.24) 58%, transparent 82%),
       radial-gradient(58rem 40rem at 8% 28%, rgba(0, 0, 0, 0.026) 0%, transparent 72%),
@@ -2015,19 +2016,22 @@
       linear-gradient(180deg, rgba(250, 250, 250, 0.98), rgba(244, 244, 245, 0.92));
   }
 
-  .desktop-lumen-field--agenda::before {
+  .desktop-lumen-field--agenda::before,
+  .desktop-lumen-field--patients::before {
     background:
       radial-gradient(ellipse 58% 38% at 50% 5%, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.34) 48%, transparent 80%),
       radial-gradient(ellipse 72% 44% at 50% 54%, rgba(0, 0, 0, 0.018) 0%, transparent 78%);
     opacity: 0.9;
   }
 
-  .desktop-lumen-field--agenda::after {
+  .desktop-lumen-field--agenda::after,
+  .desktop-lumen-field--patients::after {
     background: radial-gradient(ellipse 78% 28% at 50% 94%, rgba(0, 0, 0, 0.035) 0%, rgba(0, 0, 0, 0.01) 52%, transparent 84%);
     opacity: 0.64;
   }
 
-  .dark .desktop-lumen-field--agenda {
+  .dark .desktop-lumen-field--agenda,
+  .dark .desktop-lumen-field--patients {
     background:
       radial-gradient(94rem 56rem at 50% -14%, rgba(255, 255, 255, 0.092) 0%, rgba(255, 255, 255, 0.042) 30%, rgba(255, 255, 255, 0.012) 60%, transparent 82%),
       radial-gradient(58rem 42rem at 8% 24%, rgba(255, 255, 255, 0.017) 0%, transparent 74%),
@@ -2035,14 +2039,16 @@
       linear-gradient(180deg, rgb(10, 10, 11), rgb(5, 5, 6));
   }
 
-  .dark .desktop-lumen-field--agenda::before {
+  .dark .desktop-lumen-field--agenda::before,
+  .dark .desktop-lumen-field--patients::before {
     background:
       radial-gradient(ellipse 58% 38% at 50% 4%, rgba(255, 255, 255, 0.064) 0%, rgba(255, 255, 255, 0.018) 48%, transparent 82%),
       radial-gradient(ellipse 72% 44% at 50% 56%, rgba(255, 255, 255, 0.009) 0%, transparent 80%);
     opacity: 0.88;
   }
 
-  .dark .desktop-lumen-field--agenda::after {
+  .dark .desktop-lumen-field--agenda::after,
+  .dark .desktop-lumen-field--patients::after {
     background: radial-gradient(ellipse 78% 28% at 50% 94%, rgba(255, 255, 255, 0.026) 0%, rgba(255, 255, 255, 0.007) 52%, transparent 84%);
     opacity: 0.58;
   }
@@ -2359,6 +2365,146 @@
     background-color: rgba(9, 9, 9, 0.94) !important;
     background-image: linear-gradient(150deg, rgba(255, 255, 255, 0.015), rgba(0, 0, 0, 0.14));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.014), inset 0 -1px 0 rgba(0, 0, 0, 0.58);
+  }
+
+  /* Pacientes desktop follows the same still, monochrome Lumen hierarchy as
+     Agenda. Grouped layers use proximity and shared edges instead of glow. */
+  .patients-desktop-shell,
+  .patients-directory-dialog {
+    --patients-edge: 0 0% 10%;
+    --patients-surface: 0 0% 100%;
+    --patients-raised: 0 0% 99%;
+    --patients-inset: 0 0% 95%;
+    --patients-shadow: 0 0% 10%;
+  }
+
+  .dark .patients-desktop-shell,
+  .dark .patients-directory-dialog {
+    --patients-edge: 0 0% 42%;
+    --patients-surface: 0 0% 5%;
+    --patients-raised: 0 0% 8%;
+    --patients-inset: 0 0% 2%;
+    --patients-shadow: 0 0% 0%;
+  }
+
+  .patients-directory-header,
+  .patients-directory-card,
+  .patients-directory-list,
+  .patients-directory-empty,
+  .patients-directory-dialog {
+    border: 1px solid hsl(var(--patients-edge) / 0.082);
+    background:
+      radial-gradient(76% 54% at 18% -18%, hsl(var(--patients-surface) / 0.82), transparent 68%),
+      linear-gradient(155deg, hsl(var(--patients-surface) / 0.82), hsl(var(--patients-inset) / 0.58)),
+      hsl(var(--patients-raised) / 0.78);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--patients-surface) / 0.88),
+      inset 0 -1px 0 hsl(var(--patients-edge) / 0.026),
+      0 28px 76px -62px hsl(var(--patients-shadow) / 0.44);
+  }
+
+  .patients-directory-card {
+    transition: border-color 170ms ease, background-color 170ms ease, box-shadow 170ms ease;
+  }
+
+  .patients-directory-card:hover {
+    border-color: hsl(var(--patients-edge) / 0.14);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--patients-surface) / 0.92),
+      0 30px 76px -60px hsl(var(--patients-shadow) / 0.52);
+  }
+
+  .patients-directory-inset,
+  .patients-directory-count,
+  .patients-status-pill {
+    border: 1px solid hsl(var(--patients-edge) / 0.07);
+    background:
+      linear-gradient(152deg, hsl(var(--patients-surface) / 0.68), hsl(var(--patients-inset) / 0.72)),
+      hsl(var(--patients-inset) / 0.76);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--patients-surface) / 0.74),
+      inset 0 -1px 0 hsl(var(--patients-edge) / 0.03);
+  }
+
+  .patients-directory-table-head {
+    background: hsl(var(--patients-inset) / 0.44);
+  }
+
+  .patients-directory-row {
+    transition: background-color 150ms ease;
+  }
+
+  .patients-view-control.dashboard-segment-list {
+    border-color: hsl(var(--patients-edge) / 0.08);
+    background: hsl(var(--patients-inset) / 0.62);
+    box-shadow: inset 0 1px 0 hsl(var(--patients-surface) / 0.62);
+  }
+
+  .patients-view-control .dashboard-segment-indicator {
+    border-color: hsl(var(--patients-edge) / 0.1);
+    background: hsl(var(--patients-surface) / 0.9);
+    box-shadow:
+      0 8px 18px -16px hsl(var(--patients-shadow) / 0.4),
+      inset 0 1px 0 hsl(var(--patients-surface));
+  }
+
+  .patients-status-dot.is-active {
+    background: hsl(var(--foreground) / 0.78);
+  }
+
+  .patients-status-dot.is-pending {
+    background: hsl(var(--foreground) / 0.28);
+  }
+
+  .dark .patients-directory-header,
+  .dark .patients-directory-card,
+  .dark .patients-directory-list,
+  .dark .patients-directory-empty,
+  .dark .patients-directory-dialog {
+    border-color: rgba(255, 255, 255, 0.052);
+    background:
+      radial-gradient(76% 54% at 18% -18%, rgba(255, 255, 255, 0.03), transparent 68%),
+      linear-gradient(155deg, rgba(13, 13, 15, 0.96), rgba(7, 7, 9, 0.97)),
+      hsl(var(--patients-surface));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.029),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.66),
+      0 32px 84px -60px rgba(0, 0, 0, 0.94);
+  }
+
+  .dark .patients-directory-card:hover {
+    border-color: rgba(255, 255, 255, 0.082);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.036),
+      0 34px 86px -58px rgba(0, 0, 0, 0.98);
+  }
+
+  .dark .patients-directory-inset,
+  .dark .patients-directory-count,
+  .dark .patients-status-pill {
+    border-color: rgba(255, 255, 255, 0.045);
+    background: linear-gradient(152deg, rgba(11, 11, 13, 0.96), rgba(5, 5, 7, 0.97));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.021),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.54);
+  }
+
+  .dark .patients-directory-table-head {
+    background: rgba(255, 255, 255, 0.018);
+  }
+
+  .dark .patients-view-control.dashboard-segment-list {
+    border-color: rgba(255, 255, 255, 0.045);
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+  }
+
+  .dark .patients-view-control .dashboard-segment-indicator {
+    border-color: rgba(255, 255, 255, 0.07);
+    background: rgba(255, 255, 255, 0.075);
+    box-shadow:
+      0 9px 20px -16px rgba(0, 0, 0, 0.9),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
   }
 
   .dark .patients-desktop-shell .desktop-retina-panel,
