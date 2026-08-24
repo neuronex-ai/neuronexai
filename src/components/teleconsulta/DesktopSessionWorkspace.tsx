@@ -138,7 +138,7 @@ export const DesktopSessionWorkspace = ({
                   onClick={onToggleCapture}
                   className={cn(
                     'h-11 w-11 rounded-[13px] border-0',
-                    isCaptureEnabled && 'bg-emerald-500/12 text-emerald-600 dark:text-emerald-400',
+                    isCaptureEnabled && 'bg-foreground/[0.075] text-foreground dark:bg-white/[0.065]',
                   )}
                   aria-label={isCaptureEnabled ? 'Pausar captura' : 'Iniciar ou retomar captura'}
                 >
@@ -237,7 +237,7 @@ export const DesktopSessionWorkspace = ({
                     ? 'bg-rose-500/10 text-rose-500'
                     : riskScore >= 40
                       ? 'bg-amber-500/10 text-amber-600'
-                      : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                      : 'bg-foreground/[0.06] text-foreground/70',
                 )}
               >
                 {riskScore >= 40 ? <AlertTriangle className="h-3.5 w-3.5" /> : <Activity className="h-3.5 w-3.5" />}

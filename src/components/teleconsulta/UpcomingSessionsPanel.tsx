@@ -142,7 +142,7 @@ export const UpcomingSessionsPanel = ({
                         {nextSession.type === 'online' ? (
                           <Video className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         ) : (
-                          <MapPin className="h-4 w-4 text-rose-500" aria-hidden="true" />
+                          <MapPin className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         )}
                         {nextSession.type === 'online' ? 'Teleconsulta' : 'Presencial'}
                       </span>
@@ -220,7 +220,7 @@ export const UpcomingSessionsPanel = ({
                         )}
                       >
                         <SessionIdentity session={session} />
-                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-label="Concluída" />
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-foreground/60" aria-label="Concluída" />
                       </button>
                     );
                   }) : (

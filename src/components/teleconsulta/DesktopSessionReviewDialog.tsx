@@ -218,7 +218,7 @@ export const DesktopSessionReviewDialog = ({
                         <ul className="mt-3 space-y-2">
                           {nextSteps.map((step) => (
                             <li key={step} className="flex gap-2 text-xs font-semibold leading-relaxed text-foreground/80">
-                              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-foreground/55" />
                               {step}
                             </li>
                           ))}

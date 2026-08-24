@@ -10,6 +10,7 @@ describe('teleconsultation desktop visual contract', () => {
     const page = source('src/pages/Teleconsulta.tsx');
     const styles = source('src/index.css');
     const mobileLobby = source('src/mobile/components/MobileTeleconsultationLobby.tsx');
+    const legacyWorkspace = source('src/components/teleconsulta/WorkspaceTabs.tsx');
 
     expect(layout).toContain('desktop-lumen-field--teleconsultation');
     expect(page).toContain('teleconsultation-desktop');
@@ -18,6 +19,7 @@ describe('teleconsultation desktop visual contract', () => {
     expect(styles).toContain('.desktop-lumen-field.desktop-lumen-field--teleconsultation');
     expect(mobileLobby).toContain('variant="mobile"');
     expect(mobileLobby).not.toContain('teleconsultation-desktop');
+    expect(legacyWorkspace).not.toContain("/noise.png");
   });
 
   it('preserves breathing room around the pre-join layers and primary action', () => {

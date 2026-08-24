@@ -25,9 +25,6 @@ const AnimatedWrapper = ({ children }: { children: React.ReactNode }) => (
 export const WorkspaceTabs = ({ patientId, patientName }: WorkspaceTabsProps) => {
   return (
     <div className="flex-1 bg-white/40 dark:bg-[#050505]/40 backdrop-blur-[40px] border border-white/20 dark:border-white/5 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)] dark:shadow-[0_8px_32px_0_rgba(0,0,0,0.3)] rounded-[40px] flex flex-col overflow-hidden relative group">
-      {/* Texture */}
-      <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] mix-blend-overlay pointer-events-none" />
-
       <Tabs magnetic defaultValue="workspace" className="flex flex-col h-full relative z-10">
         <div className="px-8 pt-8 pb-4">
           <TabsList className="grid w-full grid-cols-3 bg-black/5 dark:bg-white/5 p-1.5 rounded-full border border-black/5 dark:border-white/5">

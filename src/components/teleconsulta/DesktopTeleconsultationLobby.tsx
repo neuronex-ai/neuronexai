@@ -173,31 +173,31 @@ export const DesktopTeleconsultationLobby = ({
                 onClick={handlePrimaryAction}
                 className="teleconsultation-action h-14 w-full rounded-[19px] bg-foreground text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-none disabled:opacity-45"
               >
-              {isOnline && isLoadingToken && !isDecisionBlocked ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Preparando sala
-                </>
-              ) : (
-                <>
-                  {isDecisionBlocked ? (
-                    <LockKeyhole className="mr-2 h-4 w-4" />
-                  ) : (
-                    <Play className="mr-2 h-4 w-4 fill-current" />
-                  )}
-                  {isDecisionBlocked ? 'Definir transcrição' : isOnline ? 'Entrar na sessão' : 'Iniciar sessão presencial'}
-                </>
-              )}
+                {isOnline && isLoadingToken && !isDecisionBlocked ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Preparando sala
+                  </>
+                ) : (
+                  <>
+                    {isDecisionBlocked ? (
+                      <LockKeyhole className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Play className="mr-2 h-4 w-4 fill-current" />
+                    )}
+                    {isDecisionBlocked ? 'Definir transcrição' : isOnline ? 'Entrar na sessão' : 'Iniciar sessão presencial'}
+                  </>
+                )}
               </Button>
 
               <p className="px-4 text-center text-[9px] font-bold leading-relaxed text-muted-foreground/70">
-              {isRoomClosed
-                ? 'Esta sala já foi encerrada.'
-                : isDecisionBlocked
-                  ? 'A decisão de transcrição é obrigatória antes de liberar a sala.'
-                  : !isReady
-                    ? 'Conclua o teste dos dispositivos para continuar.'
-                    : 'Dispositivos prontos. Você pode entrar quando quiser.'}
+                {isRoomClosed
+                  ? 'Esta sala já foi encerrada.'
+                  : isDecisionBlocked
+                    ? 'A decisão de transcrição é obrigatória antes de liberar a sala.'
+                    : !isReady
+                      ? 'Conclua o teste dos dispositivos para continuar.'
+                      : 'Dispositivos prontos. Você pode entrar quando quiser.'}
               </p>
             </div>
           </aside>
