@@ -69,7 +69,7 @@ export const NeuroViewSidebar = ({
         const links = graphData?.links || [];
         const nodeById = new Map(nodes.map((node) => [node.id, node]));
         const includedByPatient = new Map(patients.map((patient) => [patient.id, new Set<string>()] as const));
-        const patientIdByNodeId = new Map(patients.map((patient) => [`pat-${patient.id}`, patient.id] as const));
+        const patientIdByNodeId = new Map<string, string>(patients.map((patient) => [`pat-${patient.id}`, patient.id]));
 
         nodes.forEach((node) => {
             const patientId = String(node.data?.patient_id || "");
