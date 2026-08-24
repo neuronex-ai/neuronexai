@@ -84,7 +84,7 @@ export const AgendaFiltersPopover = ({
           type="button"
           variant="ghost"
           className={cn(
-            "agenda-floating-pill agenda-tactile pointer-events-auto h-10 shrink-0 rounded-full px-3.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground",
+            "agenda-floating-pill agenda-header-control agenda-tactile pointer-events-auto h-11 shrink-0 rounded-full px-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground",
             activeCount > 0 && "synapse-liquid-tab-active text-foreground",
           )}
           aria-label={activeCount ? `Filtros, ${activeCount} ativos` : "Filtros"}

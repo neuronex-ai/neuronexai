@@ -64,7 +64,7 @@ import {
 // Generate time labels from 00:00 to 23:00
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const HOUR_HEIGHT = 64; // px per hour row
-const FLOATING_HEADER_CLEARANCE = 66;
+const FLOATING_HEADER_CLEARANCE = 76;
 
 const compactWeekday = (day: Date) =>
     format(day, "EEE", { locale: ptBR })
@@ -545,8 +545,8 @@ export const CalendarView = ({
                 aria-busy={isPreparingReschedule}
                 className="agenda-calendar-canvas relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
             >
-                <header className="agenda-floating-header pointer-events-none absolute left-3 right-3 top-3 z-40 flex items-center justify-between gap-4 text-foreground">
-                    <div className="agenda-command-cluster pointer-events-auto flex min-w-0 shrink items-center gap-2.5">
+                <header className="agenda-floating-header pointer-events-none absolute left-5 right-5 top-5 z-40 flex items-center justify-between gap-4 text-foreground">
+                    <div className="agenda-command-cluster pointer-events-auto flex min-w-0 shrink items-center gap-2">
                         {filterControl}
 
                         <Popover>
@@ -554,7 +554,7 @@ export const CalendarView = ({
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    className="agenda-floating-pill agenda-tactile h-10 shrink-0 rounded-full px-3.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-foreground"
+                                    className="agenda-floating-pill agenda-header-control agenda-tactile h-11 shrink-0 rounded-full px-4 text-[10px] font-semibold uppercase tracking-[0.1em] text-foreground"
                                     aria-label={`Escolher data. Atual: ${format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
                                 >
                                     <motion.span
@@ -586,22 +586,22 @@ export const CalendarView = ({
                             type="button"
                             variant="ghost"
                             onClick={() => navigate('/ajustes?tab=integrations')}
-                            className="agenda-floating-pill agenda-tactile hidden h-10 shrink-0 rounded-full px-3.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground sm:inline-flex"
+                            className="agenda-floating-pill agenda-header-control agenda-tactile hidden h-11 shrink-0 rounded-full px-4 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground lg:inline-flex"
                             aria-label={isGoogleConnected ? "Google conectado. Abrir integrações" : "Conectar Google Agenda"}
                         >
                             {isLoadingGoogle ? "Conectando" : isGoogleConnected ? "Conectado" : "Conectar"}
                         </Button>
                     </div>
 
-                    <div className="agenda-command-cluster pointer-events-auto flex shrink-0 items-center gap-2.5">
-                        <div className="agenda-floating-pill flex h-10 shrink-0 items-center rounded-full p-0.5">
+                    <div className="agenda-command-cluster pointer-events-auto flex shrink-0 items-center gap-2">
+                        <div className="agenda-floating-pill agenda-header-control agenda-period-rail flex h-11 shrink-0 items-center rounded-full p-1">
                             <Button
                                 type="button"
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? subMonths(date, 1) : addDays(date, view === 'daily' ? -1 : -7))}
                                 aria-label="Mostrar período anterior"
-                                className="notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                                className="agenda-period-step notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
                             >
                                 <ChevronLeft className="h-3.5 w-3.5" />
                             </Button>
@@ -619,7 +619,7 @@ export const CalendarView = ({
                                         { value: "weekly", label: "Sem" },
                                         { value: "monthly", label: "Mês" },
                                     ]}
-                                    className="h-9 min-h-9 shrink-0 rounded-full bg-transparent p-0"
+                                    className="agenda-period-segments h-9 min-h-9 shrink-0 rounded-full bg-transparent p-0"
                                     triggerClassName="h-8 min-h-8 rounded-full px-3 py-0 text-[9px] font-semibold uppercase tracking-[0.1em]"
                                 />
                             ) : null}
@@ -630,7 +630,7 @@ export const CalendarView = ({
                                 size="icon"
                                 onClick={() => onDateChange(view === 'monthly' ? addMonths(date, 1) : addDays(date, view === 'daily' ? 1 : 7))}
                                 aria-label="Mostrar próximo período"
-                                className="notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
+                                className="agenda-period-step notification-liquid-control h-9 w-9 rounded-full text-muted-foreground hover:text-foreground"
                             >
                                 <ChevronRight className="h-3.5 w-3.5" />
                             </Button>
@@ -645,7 +645,7 @@ export const CalendarView = ({
                                 aria-label={`Lista de espera${waitlistCount ? `, ${waitlistCount} pessoas ativas` : ""}`}
                                 aria-pressed={waitlistOpen}
                                 className={cn(
-                                    "agenda-floating-pill relative h-10 w-10 rounded-full text-muted-foreground",
+                                    "agenda-floating-pill agenda-header-control agenda-icon-control agenda-tactile relative h-11 w-11 rounded-full text-muted-foreground",
                                     waitlistOpen && "synapse-liquid-tab-active text-foreground",
                                 )}
                             >
@@ -666,7 +666,7 @@ export const CalendarView = ({
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
                             aria-label="Criar novo agendamento"
-                            className="agenda-floating-pill agenda-primary-action flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                            className="agenda-floating-pill agenda-header-control agenda-icon-control agenda-primary-action flex h-11 w-11 shrink-0 items-center justify-center rounded-full"
                         >
                             <Plus className="h-4 w-4" />
                         </Button>

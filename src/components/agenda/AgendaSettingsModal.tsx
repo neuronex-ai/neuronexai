@@ -604,7 +604,7 @@ export const AgendaSettingsModal = () => {
         <Button
           variant="ghost"
           size="icon"
-          className="agenda-floating-pill agenda-tactile h-10 w-10 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+          className="agenda-floating-pill agenda-header-control agenda-icon-control agenda-tactile h-11 w-11 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
           aria-label="Configurar agenda e regras comerciais"
         >
           <Settings className="h-4 w-4" />

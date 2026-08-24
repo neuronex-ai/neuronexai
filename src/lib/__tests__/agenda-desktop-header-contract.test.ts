@@ -11,11 +11,15 @@ describe("agenda desktop compact header contract", () => {
     const styles = source("src/index.css");
 
     expect(calendar).toContain("agenda-floating-header");
-    expect(calendar).toContain("pointer-events-none absolute left-3 right-3 top-3");
+    expect(calendar).toContain("pointer-events-none absolute left-5 right-5 top-5");
     expect(calendar).toContain("agenda-floating-pill");
+    expect(calendar).toContain("agenda-period-rail");
+    expect(calendar).toContain("agenda-header-control");
     expect(calendar).not.toContain("<header className=\"agenda-liquid-surface");
     expect(styles).toContain(".agenda-floating-pill");
-    expect(styles).toContain("backdrop-filter: blur(28px)");
+    expect(styles).toContain("backdrop-filter: blur(32px)");
+    expect(styles).toContain("background-color: hsl(var(--agenda-surface) / 0.62) !important");
+    expect(styles).toContain(".agenda-month-cell:active");
   });
 
   it("keeps a monochrome depth hierarchy from the global canvas to the calendar grid", () => {

@@ -6262,21 +6262,21 @@
 }
 
 .agenda-floating-header {
-  min-height: 40px;
+  min-height: 44px;
 }
 
 .agenda-floating-pill,
 .agenda-day-pill {
-  border-color: hsl(var(--agenda-edge) / 0.115) !important;
-  background:
-    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.9), hsl(var(--agenda-surface-inset) / 0.72)),
-    hsl(var(--agenda-surface) / 0.84) !important;
+  border-color: hsl(var(--agenda-edge) / 0.105) !important;
+  background-color: hsl(var(--agenda-surface) / 0.62) !important;
+  background-image: none !important;
   box-shadow:
-    inset 0 1px 0 hsl(var(--agenda-surface) / 0.94),
-    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.035),
-    0 16px 36px -27px hsl(var(--agenda-shadow) / 0.5);
-  backdrop-filter: blur(28px) saturate(1.08);
-  -webkit-backdrop-filter: blur(28px) saturate(1.08);
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.82),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.045),
+    inset 0 0 0 0.5px hsl(var(--agenda-surface) / 0.28),
+    0 14px 34px -27px hsl(var(--agenda-shadow) / 0.46);
+  backdrop-filter: blur(32px) saturate(1.12) brightness(1.015);
+  -webkit-backdrop-filter: blur(32px) saturate(1.12) brightness(1.015);
 }
 
 .agenda-day-pill {
@@ -6290,15 +6290,16 @@
 
 .dark .agenda-floating-pill,
 .dark .agenda-day-pill {
-  border-color: rgba(255, 255, 255, 0.068) !important;
-  background: rgba(17, 17, 19, 0.84) !important;
+  border-color: rgba(255, 255, 255, 0.072) !important;
+  background-color: rgba(12, 12, 14, 0.64) !important;
   background-image: none !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.05),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.62),
-    0 16px 34px -27px rgba(0, 0, 0, 0.96);
-  backdrop-filter: blur(26px) saturate(0.96);
-  -webkit-backdrop-filter: blur(26px) saturate(0.96);
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.54),
+    inset 0 0 0 0.5px rgba(255, 255, 255, 0.018),
+    0 16px 36px -28px rgba(0, 0, 0, 0.96);
+  backdrop-filter: blur(32px) saturate(1.06) brightness(0.985);
+  -webkit-backdrop-filter: blur(32px) saturate(1.06) brightness(0.985);
 }
 
 .dark .agenda-day-pill {
@@ -6475,11 +6476,73 @@
 
 .agenda-command-cluster {
   isolation: isolate;
-  filter: drop-shadow(0 12px 20px hsl(var(--agenda-shadow) / 0.1));
+  filter: drop-shadow(0 12px 22px hsl(var(--agenda-shadow) / 0.09));
 }
 
 .dark .agenda-command-cluster {
-  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.38));
+  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.36));
+}
+
+.agenda-header-control {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.agenda-icon-control {
+  padding: 0;
+}
+
+.agenda-period-rail {
+  border-radius: 22px;
+}
+
+.agenda-period-rail .dashboard-segment-list {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.agenda-period-rail .dashboard-segment-trigger {
+  color: hsl(var(--muted-foreground) / 0.82);
+}
+
+.agenda-period-rail .dashboard-segment-trigger[data-state="active"] {
+  color: hsl(var(--foreground));
+}
+
+.agenda-period-rail .dashboard-segment-indicator {
+  border-color: hsl(var(--agenda-edge) / 0.09);
+  background: hsl(var(--agenda-surface) / 0.7);
+  box-shadow:
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.86),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.04),
+    0 9px 20px -16px hsl(var(--agenda-shadow) / 0.38);
+}
+
+.dark .agenda-period-rail .dashboard-segment-indicator {
+  border-color: rgba(255, 255, 255, 0.075);
+  background: rgba(255, 255, 255, 0.075);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.32),
+    0 10px 22px -17px rgba(0, 0, 0, 0.9);
+}
+
+.agenda-period-rail .agenda-period-step,
+.dark .agenda-period-rail .agenda-period-step {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+@media (hover: hover) {
+  .agenda-period-rail .agenda-period-step:hover:not(:disabled) {
+    background: hsl(var(--foreground) / 0.045) !important;
+  }
+
+  .dark .agenda-period-rail .agenda-period-step:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.045) !important;
+  }
 }
 
 .agenda-calendar-scroll {
@@ -6599,11 +6662,18 @@
 
 .agenda-tactile:active:not(:disabled),
 .agenda-choice-card:active:not(:disabled),
-.agenda-month-cell:active:not(:disabled),
-.agenda-appointment-card:active:not(:disabled),
 .agenda-primary-action:active:not(:disabled) {
   transform: translateY(0.5px) scale(0.985);
   transition-duration: 90ms;
+}
+
+/* Monthly items commonly open a detail card or popover. Keeping their geometry
+   stable prevents the anchored surface from appearing to sink with its trigger. */
+.agenda-month-cell:active,
+.agenda-month-cell :where(.agenda-tactile, .agenda-choice-card, .agenda-appointment-card):active,
+.agenda-month-more-appointment:active {
+  transform: none !important;
+  transition-duration: 180ms;
 }
 
 .agenda-choice-card[aria-pressed='true'],
