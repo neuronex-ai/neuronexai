@@ -1,22 +1,19 @@
+"use client";
+
+import { ChevronRight, Crosshair, ListFilter, Maximize, Minimize, MoreHorizontal, Settings2, Sparkles, ZoomIn, ZoomOut } from "lucide-react";
 import { useState } from "react";
-import {
-  Settings2,
-  Search,
-  ZoomIn,
-  ZoomOut,
-  Maximize,
-  Minimize,
-  Target,
-  ChevronDown,
-  Play,
-} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup,
+  DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import type { NeuroVisionLens } from "./clinical-evidence/evidence-types";
 
 export interface NeuroConfig {
   repulsion: number;
@@ -31,217 +28,142 @@ export interface NeuroConfig {
 interface NeuroViewControlsProps {
   config: NeuroConfig;
   onConfigChange: (config: NeuroConfig) => void;
-  searchQuery: string;
-  onSearchChange: (query: string) => void;
   isFullscreen: boolean;
   onToggleFullscreen: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onCenter: () => void;
   onAnimate: () => void;
+  lens: NeuroVisionLens;
+  onLensChange: (lens: NeuroVisionLens) => void;
+  darkMode: boolean;
+  isSidebarOpen: boolean;
+  onSidebarOpenChange: (open: boolean) => void;
 }
 
-const controlButtonClass =
-  "h-10 w-10 shrink-0 rounded-2xl border border-white/[0.085] bg-white/[0.055] text-white/62 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_18px_44px_-32px_rgba(0,0,0,0.75)] transition-all duration-300 hover:bg-white/[0.105] hover:text-white active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/45 focus-visible:ring-offset-2 focus-visible:ring-offset-[#070708] motion-reduce:transition-none motion-reduce:active:scale-100 [.light_&]:border-black/[0.06] [.light_&]:bg-white/62 [.light_&]:text-zinc-500 [.light_&]:hover:bg-white/86 [.light_&]:hover:text-zinc-950 [.light_&]:focus-visible:ring-zinc-950/35 [.light_&]:focus-visible:ring-offset-white [.light_&]:shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_18px_44px_-32px_rgba(0,0,0,0.55)]";
+const LENS_OPTIONS: Array<{ value: NeuroVisionLens; label: string; description: string }> = [
+  { value: "panorama", label: "Panorama", description: "Rede clínica completa" },
+  { value: "session-prep", label: "Preparar sessão", description: "Movimentos recentes" },
+  { value: "patterns", label: "Padrões", description: "Recorrências no tempo" },
+  { value: "attention", label: "NeuroTrack", description: "Atenção objetiva registrada" },
+];
+
+const controlButtonClass = (darkMode: boolean) => cn(
+  "h-11 w-11 shrink-0 rounded-2xl border shadow-xl backdrop-blur-2xl transition-[background-color,color,transform] duration-200 active:translate-y-px active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:active:transform-none",
+  darkMode
+    ? "border-white/10 bg-black/45 text-white/72 hover:bg-white/10 hover:text-white focus-visible:ring-white/45"
+    : "border-black/[0.075] bg-white/88 text-zinc-600 shadow-[0_18px_42px_-30px_rgba(24,24,27,0.38),inset_0_1px_0_rgba(255,255,255,0.96)] hover:bg-white hover:text-zinc-950 focus-visible:ring-zinc-950/30",
+);
+
+const panelClass = (darkMode: boolean) => cn(
+  "w-[360px] rounded-[22px] border p-4 shadow-2xl backdrop-blur-3xl",
+  darkMode
+    ? "border-white/10 bg-[#0c0c0f]/95 text-white"
+    : "border-black/[0.08] bg-white/96 text-zinc-950",
+);
 
 export const NeuroViewControls = ({
-  config,
-  onConfigChange,
-  searchQuery,
-  onSearchChange,
-  isFullscreen,
-  onToggleFullscreen,
-  onZoomIn,
-  onZoomOut,
-  onCenter,
-  onAnimate,
+  config, onConfigChange, isFullscreen, onToggleFullscreen, onZoomIn, onZoomOut, onCenter,
+  onAnimate, lens, onLensChange, darkMode, isSidebarOpen, onSidebarOpenChange,
 }: NeuroViewControlsProps) => {
-  const [isExpanded, setIsExpanded] = useState(false);
-
-  const update = (key: keyof NeuroConfig, value: NeuroConfig[keyof NeuroConfig]) => {
-    onConfigChange({ ...config, [key]: value });
-  };
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [lensOpen, setLensOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const update = (key: keyof NeuroConfig, value: NeuroConfig[keyof NeuroConfig]) => onConfigChange({ ...config, [key]: value });
 
   return (
-    <div className="absolute inset-x-0 bottom-5 z-50 flex justify-center px-5 pointer-events-none">
-      <div className="relative flex w-full max-w-[760px] flex-col items-center gap-3 pointer-events-auto">
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ opacity: 0, y: 18, scale: 0.96, filter: "blur(8px)" }}
-              animate={{ opacity: 1, y: 0, scale: 1, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: 18, scale: 0.96, filter: "blur(8px)" }}
-              transition={{ type: "spring", damping: 28, stiffness: 360 }}
-              className={cn(
-                "w-full max-w-[430px] p-4 space-y-4",
-                "rounded-[28px] bg-[#070708]/76 backdrop-blur-3xl [.light_&]:bg-white/78",
-                "border border-white/[0.085] [.light_&]:border-black/[0.07]",
-                "shadow-[0_34px_110px_-48px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.08)] [.light_&]:shadow-[0_34px_110px_-48px_rgba(0,0,0,0.64),inset_0_1px_0_rgba(255,255,255,0.18)]",
-              )}
-            >
-              <div className="flex items-center justify-between border-b border-white/[0.08] pb-3 [.light_&]:border-black/[0.06]">
-                <div>
-                  <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-white/72 [.light_&]:text-zinc-700">
-                    <Settings2 className="h-3.5 w-3.5" /> Física do NeuroVision
-                  </span>
-                  <p className="mt-1 max-w-[310px] text-[9px] leading-relaxed text-white/38 [.light_&]:text-zinc-500">
-                    Altera somente a disposição visual. Densidade, atenção e risco não são recalculados.
-                  </p>
-                </div>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => setIsExpanded(false)}
-                  className="h-7 w-7 rounded-xl text-white/45 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40 [.light_&]:text-zinc-400 [.light_&]:hover:bg-black/5 [.light_&]:hover:text-zinc-900 [.light_&]:focus-visible:ring-zinc-950/35"
-                  aria-label="Recolher ajustes do NeuroVision"
-                >
-                  <ChevronDown className="h-3.5 w-3.5" />
-                </Button>
-              </div>
+    <div className="pointer-events-auto absolute left-4 top-4 z-50 flex items-center gap-2 lg:left-5 lg:top-5">
+      <Button
+        type="button"
+        size="icon"
+        variant="outline"
+        className={controlButtonClass(darkMode)}
+        onClick={() => onSidebarOpenChange(!isSidebarOpen)}
+        aria-label={isSidebarOpen ? "Recolher pacientes e nós" : "Expandir pacientes e nós"}
+        aria-expanded={isSidebarOpen}
+        title={isSidebarOpen ? "Recolher pacientes e nós" : "Expandir pacientes e nós"}
+      >
+        <ChevronRight className={cn("h-4 w-4 transition-transform duration-200 motion-reduce:transition-none", isSidebarOpen && "rotate-180")} />
+      </Button>
 
-              <div className="rounded-2xl border border-white/[0.07] bg-white/[0.035] p-3 [.light_&]:border-black/[0.055] [.light_&]:bg-black/[0.025]">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="space-y-1">
-                    <Label className="text-xs font-semibold text-white/72 [.light_&]:text-zinc-700">Otimizacao dinamica</Label>
-                    <p className="text-[10px] leading-relaxed text-white/42 [.light_&]:text-zinc-500">
-                      Reduz detalhes enquanto a rede esta em movimento intenso.
-                    </p>
-                  </div>
-                  <Switch
-                    checked={config.performanceMode}
-                    onCheckedChange={(value) => update("performanceMode", value)}
-                    className="scale-75 data-[state=checked]:bg-white/80 [.light_&]:data-[state=checked]:bg-zinc-950"
-                  />
-                </div>
-              </div>
+      <DropdownMenu open={lensOpen} onOpenChange={setLensOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" size="icon" variant="outline" className={controlButtonClass(darkMode)} aria-label={`Escolher lente clínica. Atual: ${LENS_OPTIONS.find((option) => option.value === lens)?.label}`} title="Lentes clínicas">
+            <ListFilter className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[270px] p-2")}>
+          <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Lente clínica</DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-white/8 [.light_&]:bg-black/8" />
+          <DropdownMenuRadioGroup value={lens} onValueChange={(value) => onLensChange(value as NeuroVisionLens)}>
+            {LENS_OPTIONS.map((option) => (
+              <DropdownMenuRadioItem key={option.value} value={option.value} className="my-0.5 min-h-12 rounded-xl pl-8 pr-3 focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950">
+                <span className="flex flex-col gap-0.5">
+                  <span className="text-xs font-semibold">{option.label}</span>
+                  <span className="text-[10px] font-normal text-white/42 [.light_&]:text-zinc-500">{option.description}</span>
+                </span>
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-white/44 [.light_&]:text-zinc-500">
-                  <span>Repulsao neural</span>
-                  <span className="tabular-nums">{Math.abs(config.repulsion).toFixed(0)}</span>
-                </div>
-                <Slider
-                  value={[Math.abs(config.repulsion)]}
-                  min={120}
-                  max={1300}
-                  step={20}
-                  onValueChange={([value]) => update("repulsion", -value)}
-                  className="[&>span:first-child]:bg-white/10 [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [.light_&]:[&>span:first-child]:bg-zinc-200 [.light_&]:[&_[role=slider]]:bg-zinc-950"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-white/44 [.light_&]:text-zinc-500">
-                  <span>Comprimento dos elos</span>
-                  <span className="tabular-nums">{config.linkDistance.toFixed(0)}px</span>
-                </div>
-                <Slider
-                  value={[config.linkDistance]}
-                  min={45}
-                  max={210}
-                  step={5}
-                  onValueChange={([value]) => update("linkDistance", value)}
-                  className="[&>span:first-child]:bg-white/10 [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [.light_&]:[&>span:first-child]:bg-zinc-200 [.light_&]:[&_[role=slider]]:bg-zinc-950"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-white/44 [.light_&]:text-zinc-500">
-                  <span>Gravidade central</span>
-                  <span className="tabular-nums">{(config.centerForce * 100).toFixed(1)}%</span>
-                </div>
-                <Slider
-                  value={[config.centerForce * 100]}
-                  min={0}
-                  max={26}
-                  step={1}
-                  onValueChange={([value]) => update("centerForce", value / 100)}
-                  className="[&>span:first-child]:bg-white/10 [&_[role=slider]]:bg-white [&_[role=slider]]:border-0 [&_[role=slider]]:h-3 [&_[role=slider]]:w-3 [.light_&]:[&>span:first-child]:bg-zinc-200 [.light_&]:[&_[role=slider]]:bg-zinc-950"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 border-t border-white/[0.08] pt-3 [.light_&]:border-black/[0.06]">
-                {[
-                  ["Pacientes", "showPatients"],
-                  ["Notas", "showNotes"],
-                  ["Tags", "showTags"],
-                ].map(([label, key]) => (
-                  <label
-                    key={key}
-                    className="flex items-center justify-between gap-2 rounded-2xl border border-white/[0.07] bg-white/[0.035] px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] text-white/48 [.light_&]:border-black/[0.055] [.light_&]:bg-black/[0.025] [.light_&]:text-zinc-500"
-                  >
-                    {label}
-                    <Switch
-                      checked={Boolean(config[key as keyof NeuroConfig])}
-                      onCheckedChange={(value) => update(key as keyof NeuroConfig, value)}
-                      className="scale-[0.68] data-[state=checked]:bg-white/80 [.light_&]:data-[state=checked]:bg-zinc-950"
-                    />
-                  </label>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <div className="flex w-full items-center gap-2 rounded-[28px] border border-white/[0.09] bg-[#070708]/72 px-2.5 py-2.5 shadow-[0_30px_90px_-42px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-3xl [.light_&]:border-black/[0.08] [.light_&]:bg-white/72 [.light_&]:shadow-[0_30px_90px_-42px_rgba(0,0,0,0.62),inset_0_1px_0_rgba(255,255,255,0.42)]">
-          <div className="relative min-w-[180px] flex-1">
-            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-white/36 [.light_&]:text-zinc-400" />
-            <Input
-              value={searchQuery}
-              onChange={(event) => onSearchChange(event.target.value)}
-              placeholder="Buscar notas..."
-              className={cn(
-                "h-10 rounded-2xl border-transparent bg-white/[0.055] pl-10 pr-3 text-sm text-white shadow-none outline-none transition-all",
-                "placeholder:text-white/36 focus-visible:border-white/[0.12] focus-visible:ring-2 focus-visible:ring-white/25 motion-reduce:transition-none",
-                "[.light_&]:bg-black/[0.035] [.light_&]:text-zinc-900 [.light_&]:placeholder:text-zinc-400 [.light_&]:focus-visible:border-black/[0.08] [.light_&]:focus-visible:ring-zinc-950/15",
-              )}
-            />
+      <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <PopoverTrigger asChild>
+          <Button type="button" size="icon" variant="outline" className={cn(controlButtonClass(darkMode), settingsOpen && (darkMode ? "bg-white/14 text-white" : "bg-zinc-950 text-white"))} aria-label="Ajustar dinâmica espacial do NeuroVision 2D" title="Dinâmica espacial">
+            <Settings2 className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" sideOffset={10} className={panelClass(darkMode)}>
+          <div className="border-b border-white/8 pb-3 [.light_&]:border-black/[0.065]">
+            <p className="text-xs font-semibold">Dinâmica espacial</p>
+            <p className="mt-1 text-[10px] leading-relaxed text-white/42 [.light_&]:text-zinc-500">Muda somente a disposição visual. Densidade, atenção e risco não são recalculados.</p>
           </div>
-
-          <div className="hidden h-8 w-px bg-white/[0.09] [.light_&]:bg-black/[0.08] sm:block" />
-
-          <div className="flex shrink-0 items-center gap-1.5">
-            <Button size="icon" variant="ghost" onClick={onAnimate} className={controlButtonClass} title="Brotar rede neural" aria-label="Animar rede neural">
-              <Play className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={onZoomOut} className={controlButtonClass} title="Visão panorâmica" aria-label="Afastar NeuroVision">
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={onZoomIn} className={controlButtonClass} title="Foco de leitura" aria-label="Aproximar NeuroVision">
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={onCenter} className={controlButtonClass} title="Centralizar rede" aria-label="Centralizar rede">
-              <Target className="h-4 w-4" />
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => update("performanceMode", !config.performanceMode)}
-              className={cn(
-                controlButtonClass,
-                config.performanceMode && "bg-amber-500/18 text-amber-300 [.light_&]:bg-amber-500/16 [.light_&]:text-amber-600"
-              )}
-              title={config.performanceMode ? "Desativar modo performance" : "Ativar modo performance"}
-              aria-label={config.performanceMode ? "Desativar modo performance" : "Ativar modo performance"}
-            >
-              <Settings2 className={cn("h-4 w-4", config.performanceMode && "animate-pulse")} />
-            </Button>
-            <Button size="icon" variant="ghost" onClick={onToggleFullscreen} className={controlButtonClass} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"} aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"}>
-              {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className={cn(controlButtonClass, isExpanded && "bg-white text-black [.light_&]:bg-zinc-950 [.light_&]:text-white")}
-              title="Ajustar fisica"
-              aria-label={isExpanded ? "Fechar ajustes de fisica" : "Abrir ajustes de fisica"}
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
+          <div className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-semibold text-white/54 [.light_&]:text-zinc-600"><Label>Repulsão neural</Label><span className="tabular-nums">{Math.abs(config.repulsion).toFixed(0)}</span></div>
+              <Slider value={[Math.abs(config.repulsion)]} min={120} max={1300} step={20} onValueChange={([value]) => update("repulsion", -value)} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-semibold text-white/54 [.light_&]:text-zinc-600"><Label>Distância das conexões</Label><span className="tabular-nums">{config.linkDistance.toFixed(0)} px</span></div>
+              <Slider value={[config.linkDistance]} min={45} max={210} step={5} onValueChange={([value]) => update("linkDistance", value)} />
+            </div>
+            <div className="space-y-2">
+              <div className="flex justify-between text-[10px] font-semibold text-white/54 [.light_&]:text-zinc-600"><Label>Gravidade central</Label><span className="tabular-nums">{(config.centerForce * 100).toFixed(0)}%</span></div>
+              <Slider value={[config.centerForce * 100]} min={0} max={26} step={1} onValueChange={([value]) => update("centerForce", value / 100)} />
+            </div>
           </div>
-        </div>
-      </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/8 pt-4 [.light_&]:border-black/[0.065]">
+            {([["Pacientes", "showPatients"], ["Notas", "showNotes"], ["Tags", "showTags"]] as const).map(([label, key]) => (
+              <label key={key} className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-2.5 text-[9px] font-semibold text-white/54 [.light_&]:border-black/[0.06] [.light_&]:bg-black/[0.025] [.light_&]:text-zinc-600">
+                {label}<Switch checked={config[key]} onCheckedChange={(value) => update(key, value)} className="scale-[0.68]" />
+              </label>
+            ))}
+          </div>
+        </PopoverContent>
+      </Popover>
+
+      <Button type="button" size="icon" variant="outline" onClick={onToggleFullscreen} className={controlButtonClass(darkMode)} aria-label={isFullscreen ? "Sair da tela cheia" : "Entrar em tela cheia"} title={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}>
+        {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+      </Button>
+
+      <DropdownMenu open={moreOpen} onOpenChange={setMoreOpen}>
+        <DropdownMenuTrigger asChild>
+          <Button type="button" size="icon" variant="outline" className={controlButtonClass(darkMode)} aria-label="Mais opções do NeuroVision 2D" title="Mais opções"><MoreHorizontal className="h-4 w-4" /></Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[260px] p-2")}>
+          <DropdownMenuLabel className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Visualização</DropdownMenuLabel>
+          <DropdownMenuSeparator className="bg-white/8 [.light_&]:bg-black/8" />
+          <DropdownMenuItem onSelect={onAnimate} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><Sparkles className="h-4 w-4" /> Animar surgimento da rede</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onCenter} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><Crosshair className="h-4 w-4" /> Centralizar visualização</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onZoomOut} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><ZoomOut className="h-4 w-4" /> Afastar</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onZoomIn} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><ZoomIn className="h-4 w-4" /> Aproximar</DropdownMenuItem>
+          <DropdownMenuSeparator className="bg-white/8 [.light_&]:bg-black/8" />
+          <DropdownMenuItem onSelect={(event) => { event.preventDefault(); update("performanceMode", !config.performanceMode); }} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950">
+            <Settings2 className={cn("h-4 w-4", config.performanceMode && "text-emerald-300 [.light_&]:text-emerald-700")} /><span className="flex-1">Reduzir efeitos gráficos</span><span className="text-[10px] text-white/42 [.light_&]:text-zinc-500">{config.performanceMode ? "Ativo" : "Inativo"}</span>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };

@@ -29,7 +29,7 @@ export const NeuroViewSidebar = ({
     };
 
     return (
-        <div className="absolute top-5 left-5 bottom-28 z-40 flex pointer-events-none">
+        <div className="absolute bottom-20 left-5 top-[78px] z-40 flex pointer-events-none">
             <AnimatePresence mode="wait">
                 {isOpen ? (
                     <motion.div

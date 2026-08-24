@@ -17,7 +17,6 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
@@ -32,6 +31,8 @@ import { cn } from "@/lib/utils";
 import type { PersonalNote, Patient } from "@/types";
 import type { EvidenceNode, EvidenceSource, NeuroVisionLens } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
+import { NeuroVisionCompactSearch } from "../desktop/neurovision/NeuroVisionCompactSearch";
+import { NeuroVisionFilterBar, NEUROVISION_FILTER_OPTIONS } from "../desktop/neurovision/NeuroVisionFilterBar";
 import {
   getPatientSubgraphIds,
   getNodeEvidence,
@@ -81,13 +82,6 @@ type NeuroVision3DProps = {
     themeOverride?: string | null;
   }) => Promise<void>;
 };
-
-const FILTER_OPTIONS = [
-  { value: "all", label: "Todos" },
-  { value: "patients", label: "Pacientes" },
-  { value: "recent", label: "Recentes" },
-  { value: "risk", label: "Em risco" },
-] as const;
 
 const LENS_OPTIONS = [
   { value: "panorama", label: "Panorama", description: "Visão espacial completa" },
@@ -153,6 +147,7 @@ export const NeuroVision3D = ({
   const focusNodeIdRef = useRef<string | null>(focusNodeId);
   const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [lens, setLens] = useState<NeuroVisionLens>("panorama");
   const [focusedPatientId, setFocusedPatientId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
@@ -205,6 +200,13 @@ export const NeuroVision3D = ({
         || left.label.localeCompare(right.label, "pt-BR")),
     [graphData.nodes, visibleNodeIds],
   );
+  const searchMatchIds = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLocaleLowerCase("pt-BR");
+    if (!normalizedQuery) return new Set<string>();
+    return new Set(graphData.nodes
+      .filter((node) => `${node.label} ${node.type}`.toLocaleLowerCase("pt-BR").includes(normalizedQuery))
+      .map((node) => node.id));
+  }, [graphData.nodes, searchQuery]);
   const focusedPatient = focusedPatientId ? nodeById.get(focusedPatientId) : null;
   const inspectedNode = (hoveredNodeId ? nodeById.get(hoveredNodeId) : null)
     || (selectedNodeId ? nodeById.get(selectedNodeId) : null)
@@ -273,8 +275,15 @@ export const NeuroVision3D = ({
   }, [activateNode, graphData, profile, reducedMotion]);
 
   useEffect(() => {
-    controllerRef.current?.setHighlightSelection(emphasizedNodeIds || []);
-  }, [emphasizedNodeIds]);
+    const highlightedIds = searchQuery.trim()
+      ? searchMatchIds
+      : emphasizedNodeIds || new Set<string>();
+    controllerRef.current?.setHighlightSelection(highlightedIds);
+    if (searchQuery.trim() && searchMatchIds.size > 0) {
+      const firstId = searchMatchIds.values().next().value as string | undefined;
+      if (firstId) controllerRef.current?.frameNode(firstId);
+    }
+  }, [emphasizedNodeIds, searchMatchIds, searchQuery]);
 
   useEffect(() => {
     if (focusNodeId) controllerRef.current?.frameNode(focusNodeId);
@@ -334,7 +343,7 @@ export const NeuroVision3D = ({
     setFilter(nextFilter);
     setFocusedPatientId(null);
     onClearPatient?.();
-    setAnnouncement(`Filtro ${FILTER_OPTIONS.find((option) => option.value === nextFilter)?.label} aplicado.`);
+    setAnnouncement(`Filtro ${NEUROVISION_FILTER_OPTIONS.find((option) => option.value === nextFilter)?.label} aplicado.`);
   };
 
   const handleLensChange = useCallback((nextLens: NeuroVisionLens) => {
@@ -558,22 +567,12 @@ export const NeuroVision3D = ({
         </Button>
 
         <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 lg:top-5">
-          <div
-            className={cn(
-              "rounded-[20px] border p-1 shadow-2xl backdrop-blur-2xl",
-              darkMode ? "border-white/10 bg-black/52" : "border-black/10 bg-white/78",
-            )}
-          >
-            <MagneticSegmentedControl
-              value={filter}
-              onValueChange={handleFilterChange}
-              options={FILTER_OPTIONS}
-              ariaLabel="Filtrar NeuroVision 3d"
-              behavior="single-select"
-              className="min-h-11 bg-transparent"
-              triggerClassName="min-h-10 px-3 text-[11px] xl:px-4"
-            />
-          </div>
+          <NeuroVisionFilterBar
+            value={filter}
+            onValueChange={handleFilterChange}
+            ariaLabel="Filtrar NeuroVision 3D"
+            darkMode={darkMode}
+          />
           <Popover open={priorityInfoOpen} onOpenChange={setPriorityInfoOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -627,7 +626,7 @@ export const NeuroVision3D = ({
           </Popover>
         </div>
 
-        <div className="pointer-events-auto flex items-center gap-2">
+        <div className="pointer-events-auto mt-14 flex items-center gap-2">
           <DropdownMenu open={lensMenuOpen} onOpenChange={setLensMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -937,7 +936,7 @@ export const NeuroVision3D = ({
         </div>
       </header>
 
-      <div className="pointer-events-none absolute right-5 top-[88px] z-30">
+      <div className="pointer-events-none absolute right-5 top-[142px] z-30">
         <NeuroVisionInsightsPanel
           darkMode={darkMode}
           lens={lens}
@@ -975,6 +974,10 @@ export const NeuroVision3D = ({
           />
         </div>
       ) : null}
+
+      <div className="pointer-events-none absolute inset-x-0 bottom-5 z-30 flex justify-center px-5">
+        <NeuroVisionCompactSearch value={searchQuery} onValueChange={setSearchQuery} darkMode={darkMode} />
+      </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 p-5">
         <div

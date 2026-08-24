@@ -85,7 +85,7 @@ const NeuroTimePatientLayers = ({
             type="button"
             onClick={() => onSelectPatient(patient.id)}
             className={cn(
-              "group/layer grid min-h-11 grid-cols-[minmax(130px,190px)_1fr_auto] items-center gap-4 rounded-[15px] px-3 text-left",
+              "neurotime-contained-row group/layer grid min-h-11 grid-cols-[minmax(130px,190px)_1fr_auto] items-center gap-4 rounded-[15px] px-3 text-left",
               "border border-transparent transition-colors hover:border-white/[0.07] hover:bg-white/[0.035] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40",
               "motion-reduce:transition-none [.light_&]:hover:border-black/[0.055] [.light_&]:hover:bg-black/[0.025] [.light_&]:focus-visible:ring-zinc-950/30",
             )}
@@ -159,21 +159,21 @@ export const NeuroTimeView = ({
         }),
       })),
     };
-  }, [events, field.endAt, field.startAt, filters, patients]);
+  }, [events, field.endAt, field.singularities, field.startAt, filters, patients]);
 
   const handleFiltersChange = (next: NeuroTimeFiltros) => setFilters(next);
   const filteredEmpty = !isLoading && field.eventCount === 0 && !field.hasRecordedRisk;
 
   return (
     <MotionConfig reducedMotion="user">
-      <div className="absolute inset-0 z-20 overflow-y-auto overscroll-contain px-6 pb-12 pt-[86px] lg:px-9" data-neurotime-view="true">
+      <div className="neurotime-scroll-region absolute inset-0 z-20 overflow-y-auto overscroll-contain px-6 pb-12 pt-6 lg:px-9 lg:pt-7" data-neurotime-view="true">
         <motion.div
           initial={reducedMotion ? false : { opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={reducedMotion ? { duration: 0 } : { duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
           className="mx-auto w-full max-w-[1440px]"
         >
-          <header className="flex flex-wrap items-end justify-between gap-5">
+          <header className="flex flex-wrap items-end justify-between gap-5 pr-[330px]">
             <div>
               <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.22em] text-white/32 [.light_&]:text-zinc-400">
                 <Clock3 className="h-3.5 w-3.5" aria-hidden="true" /> NeuroTime
@@ -205,8 +205,13 @@ export const NeuroTimeView = ({
             />
           </div>
 
-          <main className="relative mt-4 overflow-hidden rounded-[34px] border border-white/[0.075] bg-[#070708]/46 p-5 shadow-[0_32px_110px_-58px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.055)] backdrop-blur-2xl lg:p-7 [.light_&]:border-black/[0.06] [.light_&]:bg-white/54 [.light_&]:shadow-[0_32px_100px_-58px_rgba(24,24,27,0.42),inset_0_1px_0_rgba(255,255,255,0.8)]">
-            <div className="pointer-events-none absolute inset-x-[12%] top-16 h-36 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(81,67,184,0.095),transparent_68%)] blur-3xl [.light_&]:opacity-55" aria-hidden="true" />
+          <main className={cn(
+            "neurotime-field-surface relative mt-4 overflow-hidden rounded-[34px] border p-5 lg:p-7",
+            darkMode
+              ? "border-white/[0.075] bg-[#070708]/78 shadow-[0_30px_96px_-58px_rgba(0,0,0,0.86),inset_0_1px_0_rgba(255,255,255,0.052)]"
+              : "border-black/[0.06] bg-white/92 shadow-[0_28px_86px_-58px_rgba(24,24,27,0.26),inset_0_1px_0_rgba(255,255,255,0.98)]",
+          )}>
+            <div className="pointer-events-none absolute inset-x-[12%] top-16 h-36 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(81,67,184,0.09),transparent_68%)] opacity-70 [.light_&]:opacity-45" aria-hidden="true" />
             <div className="relative flex flex-wrap items-center justify-between gap-4">
               <div>
                 <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30 [.light_&]:text-zinc-400">{NEUROTIME_NOMENCLATURA.campo}</p>
