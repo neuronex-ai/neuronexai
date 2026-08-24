@@ -10,6 +10,7 @@ import {
   type ActionGroupStepIdentitySource,
 } from "../_shared/synapse-action-kind.ts";
 import { loadAgendaActionContext } from "../_shared/agenda-action-context.ts";
+import { resolveSpokenAppointmentDateTime } from "../_shared/appointment-datetime.ts";
 import { validateVoiceToolCall } from "../_shared/synapse-voice-policy.ts";
 import {
   EntityResolutionError,
@@ -210,7 +211,7 @@ async function recoverRecentExplicitAmount(admin: any, userId: string, conversat
     .eq("session_id", conversationId)
     .eq("role", "user")
     .order("created_at", { ascending: false })
-    .limit(8);
+    .limit(1);
   if (error) {
     console.warn("[synapse-action-group] recent user messages unavailable", error.message);
     return null;
@@ -220,6 +221,53 @@ async function recoverRecentExplicitAmount(admin: any, userId: string, conversat
     if (amount !== null) return amount;
   }
   return null;
+}
+
+async function recoverRecentAppointmentDateTime(admin: any, userId: string, conversationId: string) {
+  const { data: rows, error } = await admin
+    .from("messages")
+    .select("content,created_at")
+    .eq("user_id", userId)
+    .eq("session_id", conversationId)
+    .eq("role", "user")
+    .order("created_at", { ascending: false })
+    .limit(8);
+  if (error) {
+    console.warn("[synapse-action-group] recent appointment datetime unavailable", error.message);
+    return null;
+  }
+  const row = rows?.[0];
+  if (!row) return null;
+  const spokenAt = new Date(row.created_at || Date.now());
+  return resolveSpokenAppointmentDateTime(
+    row.content,
+    Number.isNaN(spokenAt.getTime()) ? new Date() : spokenAt,
+  );
+}
+
+async function normalizeCreateAppointmentDateTime(input: {
+  admin: any;
+  userId: string;
+  conversationId: string;
+  args: Record<string, any>;
+}) {
+  const args = { ...input.args };
+  const splitDateTime = [
+    clean(args.appointment_date || args.date, 80),
+    clean(args.appointment_time || args.time, 80),
+  ].filter(Boolean).join(" às ");
+  const candidate = clean(
+    args.datetime || args.start_time || args.startTime || splitDateTime,
+    240,
+  );
+  const resolved = resolveSpokenAppointmentDateTime(candidate)
+    || await recoverRecentAppointmentDateTime(input.admin, input.userId, input.conversationId);
+
+  delete args.start_time;
+  delete args.startTime;
+  if (resolved) args.datetime = resolved;
+  else delete args.datetime;
+  return args;
 }
 
 function editableFieldsFor(toolName: string, args: Record<string, any>): SynapseEditableField[] {
@@ -466,7 +514,15 @@ async function buildActionGroupStepSet(input: {
       continue;
     }
 
-    const rawArgs = { ...normalized.args };
+    let rawArgs = { ...normalized.args };
+    if (toolName === "create_appointment") {
+      rawArgs = await normalizeCreateAppointmentDateTime({
+        admin: input.admin,
+        userId: input.userId,
+        conversationId: input.conversationId,
+        args: rawArgs,
+      });
+    }
     if (
       PATIENT_SCOPED_GROUP_TOOLS.has(toolName) &&
       !clean(rawArgs.patient_id || rawArgs.patientId, 120) &&

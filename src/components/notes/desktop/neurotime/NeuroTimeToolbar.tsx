@@ -29,8 +29,8 @@ type NeuroTimeToolbarProps = {
 };
 
 const controlClass = (darkMode: boolean) => cn(
-  "min-h-10 rounded-[13px] border px-3 text-[11px] font-semibold transition-[background-color,border-color,color,transform] duration-200",
-  "active:translate-y-px active:scale-[0.985] focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none motion-reduce:active:transform-none",
+  "min-h-10 rounded-[13px] border px-3 text-[11px] font-semibold transition-[background-color,border-color,color,box-shadow] duration-200",
+  "focus-visible:outline-none focus-visible:ring-2 motion-reduce:transition-none",
   darkMode
     ? "border-white/[0.075] bg-white/[0.035] text-white/66 shadow-[inset_0_1px_0_rgba(255,255,255,0.055)] hover:border-white/12 hover:bg-white/[0.07] hover:text-white focus-visible:ring-white/32"
     : "border-black/[0.065] bg-white/74 text-zinc-600 shadow-[0_12px_28px_-24px_rgba(24,24,27,0.3),inset_0_1px_0_rgba(255,255,255,0.98)] hover:border-black/[0.095] hover:bg-white hover:text-zinc-950 focus-visible:ring-zinc-950/24",

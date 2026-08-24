@@ -100,6 +100,8 @@ Deno.test("planner expõe intenções estáveis e argumentos humanos", () => {
   for (const field of ["patient_name", "notes", "amount", "entry_type", "subject", "body", "action", "destination", "name", "title"]) {
     equal(Boolean(argumentsSchema[field]), true, `argumento ${field}`);
   }
+  equal(Boolean(argumentsSchema.datetime), true, "datetime de agendamento presente");
+  equal(String(argumentsSchema.datetime?.description || "").includes("4 da tarde"), true, "datetime orienta período falado");
   equal(items.required?.includes("action_kind"), true, "action_kind obrigatório");
   equal(items.required?.includes("arguments"), true, "arguments obrigatório");
   equal(Boolean(properties.depends_on), true, "depends_on presente");

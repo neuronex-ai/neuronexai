@@ -16,6 +16,10 @@ import { LineSegmentsGeometry } from "three/addons/lines/LineSegmentsGeometry.js
 import type { NeuroViewLens, NeuroViewTimeWindow } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import {
+  getNeuroVisionDisplayLabel,
+  shouldUseNeuroVisionLabelSurface,
+} from "../graph/neurovision-labels";
+import {
   buildHoverEquivalentHighlight,
   computeFocusedLayout,
   computeSpatialLayout,
@@ -270,17 +274,70 @@ const createMicroSurfaceTextures = (maxAnisotropy: number) => {
   };
 };
 
+const createPlasmaTexture = (profile: NeuroViewSceneProfile) => {
+  const size = profile === "full" ? 512 : 192;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+
+  const center = size * 0.5;
+  const radius = size * 0.49;
+  const atmosphere = context.createRadialGradient(center, center, size * 0.12, center, center, radius);
+  atmosphere.addColorStop(0, "rgba(255,255,255,0)");
+  atmosphere.addColorStop(0.24, "rgba(255,255,255,0.62)");
+  atmosphere.addColorStop(0.5, "rgba(255,255,255,0.27)");
+  atmosphere.addColorStop(0.76, "rgba(255,255,255,0.07)");
+  atmosphere.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = atmosphere;
+  context.fillRect(0, 0, size, size);
+
+  context.globalCompositeOperation = "lighter";
+  const lobe = context.createRadialGradient(size * 0.42, size * 0.39, 0, size * 0.42, size * 0.39, size * 0.3);
+  lobe.addColorStop(0, "rgba(255,255,255,0.12)");
+  lobe.addColorStop(0.55, "rgba(255,255,255,0.035)");
+  lobe.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = lobe;
+  context.fillRect(0, 0, size, size);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.name = "NeuroVision plasma atmosphere";
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  texture.needsUpdate = true;
+  return texture;
+};
+
 const makeLabel = (node: GraphNode, darkMode: boolean) => {
   const element = document.createElement("span");
-  element.className = [
-    "pointer-events-none select-none whitespace-nowrap rounded-full border px-2.5 py-1",
-    "text-[10px] font-semibold tracking-[-0.01em] shadow-sm backdrop-blur-xl transition-opacity duration-200",
-  ].join(" ");
-  element.textContent = node.label || "Sem título";
+  const hasSurface = shouldUseNeuroVisionLabelSurface(node);
+  element.className = hasSurface
+    ? [
+        "pointer-events-none select-none whitespace-nowrap rounded-full border px-2.5 py-1",
+        "text-[10px] font-semibold tracking-[-0.01em] shadow-sm backdrop-blur-xl transition-opacity duration-200",
+      ].join(" ")
+    : [
+        "pointer-events-none select-none whitespace-nowrap border-0 bg-transparent p-0",
+        "text-[9px] font-semibold tracking-[-0.012em] transition-opacity duration-200",
+      ].join(" ");
+  element.textContent = getNeuroVisionDisplayLabel(node);
   element.dataset.nodeType = node.type;
-  element.style.borderColor = darkMode ? "rgba(255,255,255,0.12)" : "rgba(22,22,29,0.1)";
-  element.style.background = darkMode ? "rgba(17,17,20,0.78)" : "rgba(255,255,255,0.78)";
-  element.style.color = darkMode ? "rgba(250,250,252,0.9)" : "rgba(25,25,31,0.88)";
+  element.dataset.labelSurface = hasSurface ? "true" : "false";
+  element.style.borderColor = hasSurface
+    ? darkMode ? "rgba(255,255,255,0.12)" : "rgba(22,22,29,0.1)"
+    : "transparent";
+  element.style.background = hasSurface
+    ? darkMode ? "rgba(17,17,20,0.78)" : "rgba(255,255,255,0.78)"
+    : "transparent";
+  element.style.color = darkMode
+    ? hasSurface ? "rgba(250,250,252,0.9)" : "rgba(250,250,252,0.68)"
+    : hasSurface ? "rgba(25,25,31,0.88)" : "rgba(25,25,31,0.62)";
+  element.style.textShadow = hasSurface
+    ? "none"
+    : darkMode ? "0 1px 6px rgba(0,0,0,0.9)" : "0 1px 5px rgba(255,255,255,0.95)";
   element.style.opacity = "0";
   element.style.contain = "layout paint style";
   element.style.willChange = "transform, opacity, scale";
@@ -293,9 +350,19 @@ const makeLabel = (node: GraphNode, darkMode: boolean) => {
 
 const updateLabelTheme = (record: NodeRecord, darkMode: boolean) => {
   const element = record.label.element;
-  element.style.borderColor = darkMode ? "rgba(255,255,255,0.12)" : "rgba(22,22,29,0.1)";
-  element.style.background = darkMode ? "rgba(17,17,20,0.78)" : "rgba(255,255,255,0.8)";
-  element.style.color = darkMode ? "rgba(250,250,252,0.9)" : "rgba(25,25,31,0.88)";
+  const hasSurface = shouldUseNeuroVisionLabelSurface(record.node);
+  element.style.borderColor = hasSurface
+    ? darkMode ? "rgba(255,255,255,0.12)" : "rgba(22,22,29,0.1)"
+    : "transparent";
+  element.style.background = hasSurface
+    ? darkMode ? "rgba(17,17,20,0.78)" : "rgba(255,255,255,0.8)"
+    : "transparent";
+  element.style.color = darkMode
+    ? hasSurface ? "rgba(250,250,252,0.9)" : "rgba(250,250,252,0.68)"
+    : hasSurface ? "rgba(25,25,31,0.88)" : "rgba(25,25,31,0.62)";
+  element.style.textShadow = hasSurface
+    ? "none"
+    : darkMode ? "0 1px 6px rgba(0,0,0,0.9)" : "0 1px 5px rgba(255,255,255,0.95)";
 };
 
 export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneController => {
@@ -363,6 +430,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     colorWrite: false,
   });
   const dummy = new THREE.Object3D();
+  const plasmaDummy = new THREE.Object3D();
   const raycaster = new THREE.Raycaster();
   raycaster.layers.set(2);
   const pointer = new THREE.Vector2(2, 2);
@@ -378,6 +446,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const edgeControlB = new THREE.Vector3();
   const edgePointA = new THREE.Vector3();
   const edgePointB = new THREE.Vector3();
+  const edgeSourcePoint = new THREE.Vector3();
+  const edgeTargetPoint = new THREE.Vector3();
   const edgeBundleAnchor = new THREE.Vector3();
   const collisionNormal = new THREE.Vector3();
   const instanceColor = new THREE.Color();
@@ -475,6 +545,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const microSurface = profile === "full"
     ? createMicroSurfaceTextures(renderer.capabilities.getMaxAnisotropy())
     : null;
+  const plasmaTexture = createPlasmaTexture(profile);
+  const plasmaGeometry = new THREE.PlaneGeometry(2, 2, 1, 1);
 
   const groupsByType = new Map<GraphNode["type"], GraphNode[]>();
   graph.nodes.forEach((node) => {
@@ -539,14 +611,17 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     const haloMaterial = new THREE.MeshBasicMaterial({
       color: 0xffffff,
       vertexColors: true,
+      map: plasmaTexture,
       transparent: true,
-      opacity: darkMode ? 0.16 : 0.08,
+      opacity: darkMode ? 0.24 : 0.14,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
-      side: THREE.BackSide,
+      depthTest: true,
+      side: THREE.DoubleSide,
+      toneMapped: false,
     });
     const mesh = new THREE.InstancedMesh(geometry, material, nodes.length);
-    const halo = new THREE.InstancedMesh(geometry, haloMaterial, nodes.length);
+    const halo = new THREE.InstancedMesh(plasmaGeometry, haloMaterial, nodes.length);
     const hit = new THREE.InstancedMesh(hitGeometry, hitMaterial, nodes.length);
     hit.layers.set(2);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -784,7 +859,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     if (bloom) bloom.strength = darkMode ? 0.28 : 0.09;
     if (gtao) gtao.blendIntensity = darkMode ? 0.34 : 0.22;
     groups.forEach((group, type) => {
-      group.haloMaterial.opacity = darkMode ? 0.16 : 0.08;
+      group.haloMaterial.opacity = darkMode ? 0.24 : 0.14;
       group.material.roughness = type === "patient"
         ? (darkMode ? 0.14 : 0.27)
         : type === "flow"
@@ -926,15 +1001,20 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       const presentation = selectedIds.has(id)
         ? pathActive && !emphasized ? "dimmed" : "visible"
         : "hidden";
-      if (record.labelPresentation !== presentation) {
+      const labelStateChanged = record.labelPresentation !== presentation
+        || record.labelEmphasized !== emphasized;
+      if (labelStateChanged) {
         record.labelPresentation = presentation;
-        record.label.visible = presentation !== "hidden";
-        record.label.element.style.opacity = presentation === "hidden" ? "0" : presentation === "dimmed" ? "0.3" : "1";
-        record.label.element.style.visibility = presentation === "hidden" ? "hidden" : "visible";
-      }
-      if (record.labelEmphasized !== emphasized) {
         record.labelEmphasized = emphasized;
-        record.label.element.style.scale = emphasized ? "1.04" : "1";
+        const hasSurface = shouldUseNeuroVisionLabelSurface(record.node);
+        record.label.visible = presentation !== "hidden";
+        record.label.element.style.opacity = presentation === "hidden"
+          ? "0"
+          : presentation === "dimmed"
+            ? hasSurface ? "0.28" : "0.18"
+            : hasSurface ? "0.94" : emphasized ? "0.78" : "0.58";
+        record.label.element.style.visibility = presentation === "hidden" ? "hidden" : "visible";
+        record.label.element.style.scale = emphasized ? hasSurface ? "1.035" : "1.02" : "1";
       }
     });
   };
@@ -1099,6 +1179,30 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     return adjusted;
   };
 
+  const resolveSemanticScale = (
+    record: NodeRecord,
+    cameraDistance: number,
+    highlighted: boolean,
+  ) => {
+    const evidence = getNodeEvidence(record.node);
+    if (lens === "attention" && record.node.type !== "patient" && !highlighted) return 0.001;
+    if (!focusedPatientId && cameraDistance >= 92 && record.node.type !== "patient" && !highlighted) {
+      return evidence && evidence.gravity.score >= 0.72 ? 0.26 : 0.025;
+    }
+    if (!focusedPatientId && cameraDistance >= 62 && record.node.type !== "patient" && !highlighted) {
+      if (record.node.type === "tag" || record.node.type === "flow") return 0.74;
+      return evidence ? THREE.MathUtils.lerp(0.18, 0.82, evidence.gravity.score) : 0.34;
+    }
+    return 1;
+  };
+
+  const resolveDisplayScale = (record: NodeRecord, cameraDistance: number) => {
+    const highlighted = highlightedNodeIds.has(record.node.id);
+    return record.currentScale
+      * resolveSemanticScale(record, cameraDistance, highlighted)
+      * (highlighted ? 1.24 : 1);
+  };
+
   const updateInstances = (now: number) => {
     const transitionElapsed = now - transitionStartedAt;
     const background = backgroundColor(darkMode);
@@ -1133,15 +1237,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         const highlighted = highlightedNodeIds.has(id);
         const dimForPath = highlightedNodeIds.size > 0 && !highlighted;
         const evidence = getNodeEvidence(record.node);
-        let semanticScale = 1;
-        if (lens === "attention" && record.node.type !== "patient" && !highlighted) {
-          semanticScale = 0.001;
-        } else if (!focusedPatientId && cameraDistance >= 92 && record.node.type !== "patient" && !highlighted) {
-          semanticScale = evidence && evidence.gravity.score >= 0.72 ? 0.26 : 0.025;
-        } else if (!focusedPatientId && cameraDistance >= 62 && record.node.type !== "patient" && !highlighted) {
-          if (record.node.type === "tag" || record.node.type === "flow") semanticScale = 0.74;
-          else semanticScale = evidence ? THREE.MathUtils.lerp(0.18, 0.82, evidence.gravity.score) : 0.34;
-        }
+        const semanticScale = resolveSemanticScale(record, cameraDistance, highlighted);
         const displayScale = record.currentScale * semanticScale * (highlighted ? 1.24 : 1);
         dummy.position.copy(record.current);
         dummy.scale.setScalar(Math.max(0.001, displayScale));
@@ -1152,9 +1248,17 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         const tensionPulse = tension > 0.03 && !reducedMotion
           ? 1 + Math.sin(now * 0.0024 + (record.node.pulseSeed || 0)) * tension * 0.085
           : 1;
-        dummy.scale.setScalar(Math.max(0.001, displayScale * (highlighted ? 1.85 : 1.48) * tensionPulse));
-        dummy.updateMatrix();
-        group.halo.setMatrixAt(index, dummy.matrix);
+        const interactionPulse = highlighted && !reducedMotion
+          ? 1 + Math.sin(now * 0.00175 + (record.node.pulseSeed || 0) * 0.31) * 0.045
+          : 1;
+        plasmaDummy.position.copy(record.current);
+        plasmaDummy.quaternion.copy(camera.quaternion);
+        plasmaDummy.scale.setScalar(Math.max(
+          0.001,
+          displayScale * (highlighted ? 2.18 : 1.64) * tensionPulse * interactionPulse,
+        ));
+        plasmaDummy.updateMatrix();
+        group.halo.setMatrixAt(index, plasmaDummy.matrix);
 
         const hitScale = semanticScale > 0.08
           ? Math.max(displayScale * 1.58, record.node.type === "patient" ? 2.65 : 1.16)
@@ -1167,7 +1271,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         setNodeColor(instanceColor, record.node, darkMode).multiplyScalar(brightness);
         if (dimForPath) instanceColor.lerp(background, 0.58);
         group.mesh.setColorAt(index, instanceColor);
-        instanceHaloColor.copy(instanceColor).multiplyScalar(0.42 + tension * 0.24);
+        instanceHaloColor.copy(instanceColor).multiplyScalar(0.24 + tension * 0.14);
         if (highlighted) instanceHaloColor.set(darkMode ? "#f7f7f2" : "#393a3d");
         group.halo.setColorAt(index, instanceHaloColor);
       });
@@ -1196,6 +1300,19 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       if (!source || !target) return;
 
       edgeDirection.copy(target.current).sub(source.current);
+      const centerDistance = Math.max(0.001, edgeDirection.length());
+      edgeTangent.copy(edgeDirection).multiplyScalar(1 / centerDistance);
+      const sourceSurface = Math.min(
+        Math.max(0.045, resolveDisplayScale(source, cameraDistance) * 0.92),
+        centerDistance * 0.2,
+      );
+      const targetSurface = Math.min(
+        Math.max(0.045, resolveDisplayScale(target, cameraDistance) * 0.92),
+        centerDistance * 0.2,
+      );
+      edgeSourcePoint.copy(source.current).addScaledVector(edgeTangent, sourceSurface);
+      edgeTargetPoint.copy(target.current).addScaledVector(edgeTangent, -targetSurface);
+      edgeDirection.copy(edgeTargetPoint).sub(edgeSourcePoint);
       const edgeLength = Math.max(0.001, edgeDirection.length());
       edgeTangent.copy(edgeDirection).multiplyScalar(1 / edgeLength);
       edgeNormal.set(edge.bend, 0.75 + Math.abs(edge.twist) * 0.35, edge.twist).normalize();
@@ -1204,11 +1321,11 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
       edgeNormal.normalize();
       edgeBinormal.crossVectors(edgeTangent, edgeNormal).normalize();
       const bendAmount = THREE.MathUtils.clamp(edgeLength * (0.075 + Math.abs(edge.bend) * 0.035), 0.45, 4.6);
-      edgeControlA.copy(source.current)
+      edgeControlA.copy(edgeSourcePoint)
         .addScaledVector(edgeDirection, 0.32)
         .addScaledVector(edgeNormal, bendAmount * (edge.bend < 0 ? -1 : 1))
         .addScaledVector(edgeBinormal, bendAmount * edge.twist * 0.34);
-      edgeControlB.copy(source.current)
+      edgeControlB.copy(edgeSourcePoint)
         .addScaledVector(edgeDirection, 0.68)
         .addScaledVector(edgeNormal, bendAmount * (edge.bend < 0 ? -0.72 : 0.72))
         .addScaledVector(edgeBinormal, -bendAmount * edge.twist * 0.28);
@@ -1248,14 +1365,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         const t1 = (segment + 1) / edgeSegmentCount;
         const inverse0 = 1 - t0;
         const inverse1 = 1 - t1;
-        edgePointA.copy(source.current).multiplyScalar(inverse0 ** 3)
+        edgePointA.copy(edgeSourcePoint).multiplyScalar(inverse0 ** 3)
           .addScaledVector(edgeControlA, 3 * inverse0 ** 2 * t0)
           .addScaledVector(edgeControlB, 3 * inverse0 * t0 ** 2)
-          .addScaledVector(target.current, t0 ** 3);
-        edgePointB.copy(source.current).multiplyScalar(inverse1 ** 3)
+          .addScaledVector(edgeTargetPoint, t0 ** 3);
+        edgePointB.copy(edgeSourcePoint).multiplyScalar(inverse1 ** 3)
           .addScaledVector(edgeControlA, 3 * inverse1 ** 2 * t1)
           .addScaledVector(edgeControlB, 3 * inverse1 * t1 ** 2)
-          .addScaledVector(target.current, t1 ** 3);
+          .addScaledVector(edgeTargetPoint, t1 ** 3);
         const offset = (edgeIndex * edgeSegmentCount + segment) * 6;
         const segmentReveal = THREE.MathUtils.clamp(edgeReveal * edgeSegmentCount - segment, 0, 1);
         const inactiveReveal = inactiveVisible ? segmentReveal : 0;
@@ -1831,6 +1948,8 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         group.material.dispose();
         group.haloMaterial.dispose();
       });
+      plasmaGeometry.dispose();
+      plasmaTexture?.dispose();
       attentionHalos.forEach((halo) => {
         halo.group.removeFromParent();
         halo.geometries.forEach((geometry) => geometry.dispose());

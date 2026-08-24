@@ -1,4 +1,8 @@
 import { GraphNode, GraphLink } from "./graph-types";
+import {
+  getNeuroVisionDisplayLabel,
+  shouldUseNeuroVisionLabelSurface,
+} from "./neurovision-labels";
 
 // Linear interpolation for smooth animations.
 export const lerp = (current: number, target: number, factor: number): number => {
@@ -44,6 +48,51 @@ const quadraticPoint = (
     x: mt * mt * sx + 2 * mt * t * cx + t * t * tx,
     y: mt * mt * sy + 2 * mt * t * cy + t * t * ty,
   };
+};
+
+const drawQuadraticFilamentPulse = (
+  ctx: CanvasRenderingContext2D,
+  points: { sx: number; sy: number; cx: number; cy: number; tx: number; ty: number },
+  globalScale: number,
+  time: number,
+  seed: number,
+  isDarkMode: boolean,
+  reveal: number,
+  baseWidth: number,
+) => {
+  const sampleCount = 24;
+  const spread = 0.12;
+  const cycle = (time * 0.13 + seed) % 1;
+  const travel = -spread + cycle * (1 + spread * 2);
+  const widthBoost = 0.78 / Math.max(globalScale, 0.6);
+  const baseOpacity = 0.34 * reveal;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = isDarkMode ? "rgba(255,255,255,0.88)" : "rgba(30,30,34,0.76)";
+  ctx.shadowColor = isDarkMode ? "rgba(255,255,255,0.2)" : "rgba(24,24,27,0.1)";
+  ctx.shadowBlur = 3.5 / Math.max(globalScale, 0.75);
+
+  for (let index = 0; index < sampleCount; index += 1) {
+    const t0 = index / sampleCount;
+    const t1 = (index + 1) / sampleCount;
+    const midpoint = (t0 + t1) * 0.5;
+    const distance = Math.abs(midpoint - travel);
+    const envelope = Math.exp(-0.5 * (distance / spread) ** 2);
+    if (envelope < 0.035) continue;
+
+    const start = quadraticPoint(points.sx, points.sy, points.cx, points.cy, points.tx, points.ty, t0);
+    const end = quadraticPoint(points.sx, points.sy, points.cx, points.cy, points.tx, points.ty, t1);
+    ctx.globalAlpha = baseOpacity * envelope;
+    ctx.lineWidth = baseWidth + widthBoost * envelope;
+    ctx.beginPath();
+    ctx.moveTo(start.x, start.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+  }
+
+  ctx.restore();
 };
 
 const getNodeBase = (node: GraphNode) => {
@@ -113,24 +162,39 @@ export const drawNode = (
     : node.color;
 
   if (!performanceMode) {
-    const haloRadius = Math.max(radius + glowRadius * (0.5 + bloom * 0.45 + dragPulse * 0.36), radius * 2.9);
-    const halo = ctx.createRadialGradient(x, y, radius * 0.25, x, y, haloRadius);
-    halo.addColorStop(0, colorWithAlpha(nodeColor, isConnectedChain ? (isDarkMode ? 0.27 : 0.18) : (isDarkMode ? 0.095 : 0.055)));
-    halo.addColorStop(0.45, colorWithAlpha(nodeColor, isConnectedChain ? (isDarkMode ? 0.1 : 0.065) : (isDarkMode ? 0.035 : 0.022)));
+    const haloRadius = Math.max(radius + glowRadius * (0.42 + bloom * 0.32 + dragPulse * 0.26), radius * 2.75);
+    const halo = ctx.createRadialGradient(x, y, radius * 0.5, x, y, haloRadius);
+    halo.addColorStop(0, colorWithAlpha(nodeColor, isConnectedChain ? (isDarkMode ? 0.16 : 0.1) : (isDarkMode ? 0.052 : 0.032)));
+    halo.addColorStop(0.38, colorWithAlpha(nodeColor, isConnectedChain ? (isDarkMode ? 0.075 : 0.045) : (isDarkMode ? 0.022 : 0.014)));
+    halo.addColorStop(0.72, colorWithAlpha(nodeColor, isConnectedChain ? (isDarkMode ? 0.018 : 0.012) : 0.006));
     halo.addColorStop(1, colorWithAlpha(nodeColor, 0));
     ctx.fillStyle = halo;
     ctx.beginPath();
     ctx.arc(x, y, haloRadius, 0, Math.PI * 2);
     ctx.fill();
 
-    if (bloom > 0.02 || dragPulse > 0.02 || isHovered) {
-      const ringAlpha = clamp(0.22 * (bloom + dragPulse) + (isHovered ? 0.2 : 0), 0, 0.48);
-      ctx.globalAlpha = node.currentOpacity * ringAlpha;
-      ctx.strokeStyle = colorWithAlpha(nodeColor, 0.62);
-      ctx.lineWidth = (0.9 + bloom * 1.05 + dragPulse * 0.7) / globalScale;
-      ctx.beginPath();
-      ctx.arc(x, y, radius + (9 + Math.sin(time * 2.8 + pulseSeed) * 2.8) / globalScale, 0, Math.PI * 2);
-      ctx.stroke();
+    const plasmaEnergy = clamp(Math.max(isHovered ? 0.74 : 0, bloom * 0.58, dragPulse * 0.5), 0, 1);
+    if (plasmaEnergy > 0.025) {
+      const plasmaBreath = 1 + Math.sin(time * 1.7 + pulseSeed) * 0.045;
+      const plasmaRadius = (radius + glowRadius * 0.72) * plasmaBreath;
+      for (let lobe = 0; lobe < 2; lobe += 1) {
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(pulseSeed * 0.37 + lobe * Math.PI * 0.57 + Math.sin(time * 0.31 + lobe) * 0.08);
+        ctx.scale(lobe === 0 ? 1.08 : 0.82, lobe === 0 ? 0.78 : 1.12);
+        const plasma = ctx.createRadialGradient(0, 0, radius * 0.72, 0, 0, plasmaRadius);
+        plasma.addColorStop(0, colorWithAlpha(nodeColor, 0));
+        plasma.addColorStop(0.24, colorWithAlpha(nodeColor, plasmaEnergy * (isDarkMode ? 0.09 : 0.055)));
+        plasma.addColorStop(0.52, colorWithAlpha(nodeColor, plasmaEnergy * (isDarkMode ? 0.048 : 0.03)));
+        plasma.addColorStop(0.82, colorWithAlpha(nodeColor, plasmaEnergy * 0.012));
+        plasma.addColorStop(1, colorWithAlpha(nodeColor, 0));
+        ctx.globalAlpha = (node.currentOpacity || 1) * (lobe === 0 ? 1 : 0.72);
+        ctx.fillStyle = plasma;
+        ctx.beginPath();
+        ctx.arc(0, 0, plasmaRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
       ctx.globalAlpha = node.currentOpacity;
     }
   }
@@ -175,8 +239,10 @@ export const drawNode = (
     coreGradient.addColorStop(0.74, colorWithAlpha(nodeColor, node.type === "tag" ? 0.44 : 0.64));
     coreGradient.addColorStop(1, isDarkMode ? colorWithAlpha(nodeColor, node.type === "tag" ? 0.3 : 0.48) : "rgba(24,24,27,0.68)");
 
-    ctx.shadowBlur = isConnectedChain ? glowRadius * 0.56 : (isDarkMode ? glowRadius * 0.15 : glowRadius * 0.08);
-    ctx.shadowColor = colorWithAlpha(nodeColor, isConnectedChain ? 0.44 : 0.2);
+    ctx.shadowBlur = isConnectedChain
+      ? Math.min(glowRadius * 0.24, 6 / Math.max(globalScale, 0.75))
+      : Math.min(glowRadius * (isDarkMode ? 0.09 : 0.055), 2.6 / Math.max(globalScale, 0.75));
+    ctx.shadowColor = colorWithAlpha(nodeColor, isConnectedChain ? 0.28 : 0.12);
     ctx.fillStyle = coreGradient;
     ctx.beginPath();
     ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -209,40 +275,29 @@ export const drawNode = (
     ctx.arc(x, y, radius + 0.35 / globalScale, 0, Math.PI * 2);
     ctx.stroke();
 
-    if ((node.type === "note" || node.type === "flow") && (isConnectedChain || globalScale > 1.8)) {
-      ctx.fillStyle = isDarkMode ? "rgba(255,255,255,0.58)" : "rgba(255,255,255,0.72)";
-      ctx.beginPath();
-      if (node.type === "flow") {
-        ctx.roundRect(
-          x - radius * 0.42,
-          y - radius * 0.42,
-          radius * 0.84,
-          radius * 0.84,
-          radius * 0.18
-        );
-      } else {
-        ctx.arc(x - radius * 0.18, y - radius * 0.2, Math.max(0.7 / globalScale, radius * 0.22), 0, Math.PI * 2);
-      }
-      ctx.fill();
-    }
   }
 
   const showLabel = isConnectedChain || node.type === "patient" || globalScale > 2.3;
 
   if (showLabel) {
-    const fontSize = (isHovered ? 14 : 10.5) / globalScale;
+    const hasLabelSurface = shouldUseNeuroVisionLabelSurface(node);
+    const fontSize = (hasLabelSurface ? (isHovered ? 13 : 10.5) : (isHovered ? 10.5 : 9.25)) / globalScale;
     ctx.font = `${isHovered ? "700" : "600"} ${fontSize}px "Inter", sans-serif`;
 
-    const label = node.label;
+    const label = getNeuroVisionDisplayLabel(node);
     const textWidth = ctx.measureText(label).width;
     const paddingX = 8 / globalScale;
     const paddingY = 4 / globalScale;
     const textY = y + radius + 8 / globalScale;
-    const labelAlpha = (isConnectedChain ? 1 : (isDarkMode ? 0.42 : 0.6)) * reveal;
+    const labelAlpha = (
+      isConnectedChain
+        ? hasLabelSurface ? 0.96 : isHovered ? 0.82 : 0.66
+        : (isDarkMode ? 0.38 : 0.52)
+    ) * reveal;
 
     ctx.globalAlpha = (node.currentOpacity || 1) * labelAlpha;
 
-    if (isConnectedChain) {
+    if (isConnectedChain && hasLabelSurface) {
       const rw = textWidth + paddingX * 2;
       const rh = fontSize + paddingY * 2;
       const rx = x - rw / 2;
@@ -274,7 +329,12 @@ export const drawNode = (
     ctx.fillStyle = isConnectedChain
       ? (isDarkMode ? "#fff" : "#09090b")
       : (isDarkMode ? "rgba(255,255,255,0.62)" : "rgba(24,24,27,0.62)");
-    ctx.fillText(label, x, textY + paddingY);
+    if (!hasLabelSurface) {
+      ctx.shadowBlur = 3 / Math.max(globalScale, 0.75);
+      ctx.shadowColor = isDarkMode ? "rgba(0,0,0,0.72)" : "rgba(255,255,255,0.9)";
+    }
+    ctx.fillText(label, x, textY + (hasLabelSurface ? paddingY : 1 / globalScale));
+    ctx.shadowBlur = 0;
   }
 
   ctx.restore();
@@ -296,12 +356,12 @@ export const drawLink = (
 
   if (!source || !target || typeof source === "string" || typeof target === "string") return;
 
-  const sx = source.x;
-  const sy = source.y;
-  const tx = target.x;
-  const ty = target.y;
+  const rawSx = source.x;
+  const rawSy = source.y;
+  const rawTx = target.x;
+  const rawTy = target.y;
 
-  if (!Number.isFinite(sx) || !Number.isFinite(sy) || !Number.isFinite(tx) || !Number.isFinite(ty)) return;
+  if (!Number.isFinite(rawSx) || !Number.isFinite(rawSy) || !Number.isFinite(rawTx) || !Number.isFinite(rawTy)) return;
 
   const reveal = clamp(link.revealProgress ?? 1, 0, 1);
   const isConnectedToHover = Boolean(hoverNode && (source.id === hoverNode.id || target.id === hoverNode.id));
@@ -320,30 +380,43 @@ export const drawLink = (
 
   if ((link.currentOpacity || 0) < 0.01 || reveal < 0.01) return;
 
-  const dx = tx! - sx!;
-  const dy = ty! - sy!;
+  const rawDx = rawTx! - rawSx!;
+  const rawDy = rawTy! - rawSy!;
+  const rawDistance = Math.max(1, Math.hypot(rawDx, rawDy));
+  const ux = rawDx / rawDistance;
+  const uy = rawDy / rawDistance;
+  const sourceRadius = Math.max(0, source.currentRadius || getNodeBase(source).radius);
+  const targetRadius = Math.max(0, target.currentRadius || getNodeBase(target).radius);
+  const sourceClip = Math.min(sourceRadius + 0.65 / Math.max(globalScale, 0.7), rawDistance * 0.22);
+  const targetClip = Math.min(targetRadius + 0.65 / Math.max(globalScale, 0.7), rawDistance * 0.22);
+  const sx = rawSx! + ux * sourceClip;
+  const sy = rawSy! + uy * sourceClip;
+  const tx = rawTx! - ux * targetClip;
+  const ty = rawTy! - uy * targetClip;
+  const dx = tx - sx;
+  const dy = ty - sy;
   const distance = Math.max(1, Math.hypot(dx, dy));
   const nx = -dy / distance;
   const ny = dx / distance;
   const seed = (link.pulseSeed ?? 0) / 997;
   const organicDrift = performanceMode ? 0 : (
     Math.sin(time * 0.42 + seed * Math.PI * 2) * Math.min(9, distance * 0.035)
-    + Math.cos(time * 0.23 + sx! * 0.004 - ty! * 0.003) * Math.min(5, distance * 0.02)
+    + Math.cos(time * 0.23 + sx * 0.004 - ty * 0.003) * Math.min(5, distance * 0.02)
   );
   const curve = (seed - 0.5) * Math.min(26, distance * 0.09) + organicDrift;
-  const cx = (sx! + tx!) / 2 + nx * curve;
-  const cy = (sy! + ty!) / 2 + ny * curve;
+  const cx = (sx + tx) / 2 + nx * curve;
+  const cy = (sy + ty) / 2 + ny * curve;
 
   ctx.save();
   ctx.globalAlpha = link.currentOpacity;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.beginPath();
-  ctx.moveTo(sx!, sy!);
-  ctx.quadraticCurveTo(cx, cy, tx!, ty!);
+  ctx.moveTo(sx, sy);
+  ctx.quadraticCurveTo(cx, cy, tx, ty);
 
   if (isActive) {
-    const grad = ctx.createLinearGradient(sx!, sy!, tx!, ty!);
+    const grad = ctx.createLinearGradient(sx, sy, tx, ty);
     grad.addColorStop(0, isDarkMode ? colorWithAlpha(source.color || "#ffffff", 0.92) : "rgba(39,39,42,0.68)");
     grad.addColorStop(0.52, isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.9)");
     grad.addColorStop(1, isDarkMode ? colorWithAlpha(target.color || "#ffffff", 0.92) : "rgba(63,63,70,0.68)");
@@ -358,23 +431,17 @@ export const drawLink = (
   ctx.lineWidth = link.currentWidth;
   ctx.stroke();
 
-  if (!performanceMode && !dimmed && reveal > 0.45) {
-    const pulseT = (time * 0.17 + seed) % 1;
-    const pulse = quadraticPoint(sx!, sy!, cx, cy, tx!, ty!, pulseT);
-    const pulseAlpha = (isActive ? 0.58 : 0.065) * (link.currentOpacity || 1);
-    const pulseRadius = (isActive ? 3.1 : 1.8) / Math.max(globalScale, 0.6);
-
-    ctx.globalAlpha = pulseAlpha;
-    ctx.shadowBlur = isActive ? 14 / Math.max(globalScale, 0.7) : 6 / Math.max(globalScale, 0.7);
-    ctx.shadowColor = isDarkMode ? "rgba(255,255,255,0.48)" : "rgba(24,24,27,0.2)";
-    const pulseGradient = ctx.createRadialGradient(pulse.x, pulse.y, 0, pulse.x, pulse.y, pulseRadius * 2.4);
-    pulseGradient.addColorStop(0, isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.36)");
-    pulseGradient.addColorStop(0.42, isDarkMode ? "rgba(255,255,255,0.22)" : "rgba(24,24,27,0.12)");
-    pulseGradient.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = pulseGradient;
-    ctx.beginPath();
-    ctx.arc(pulse.x, pulse.y, pulseRadius * 2.4, 0, Math.PI * 2);
-    ctx.fill();
+  if (!performanceMode && isActive && !dimmed && reveal > 0.45) {
+    drawQuadraticFilamentPulse(
+      ctx,
+      { sx, sy, cx, cy, tx, ty },
+      globalScale,
+      time,
+      seed,
+      isDarkMode,
+      reveal,
+      link.currentWidth || targetWidth,
+    );
   }
 
   ctx.restore();

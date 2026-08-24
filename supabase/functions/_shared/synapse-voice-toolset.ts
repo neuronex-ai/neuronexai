@@ -191,6 +191,12 @@ function constrainActionGroupPlanner(
       if (!(key in unionProperties)) unionProperties[key] = schema;
     }
   }
+  if (unionProperties.datetime && typeof unionProperties.datetime === "object") {
+    unionProperties.datetime = {
+      ...unionProperties.datetime as Record<string, unknown>,
+      description: "Data/hora completa do agendamento em Brasília, no formato YYYY-MM-DDTHH:mm:ss-03:00. Converta expressões como amanhã, daqui a N dias e 4 da tarde usando a data/hora atual do prompt; nunca omita mês/ano no valor enviado.",
+    };
+  }
   copy.parameters.properties.steps.items.properties.arguments = {
     type: "object",
     properties: unionProperties,

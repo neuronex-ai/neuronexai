@@ -960,10 +960,6 @@ export const NeuroVision = ({ synapseRunId, synapsePatientId, synapseTrace, syna
                     nodeRelSize={4}
                     linkColor={() => "transparent"}
                     linkCanvasObject={handleLinkCanvasObject}
-                    linkDirectionalParticles={!shouldReduceMotion && effectiveHoverNode ? 2 : 0}
-                    linkDirectionalParticleWidth={1}
-                    linkDirectionalParticleSpeed={0.003}
-                    linkDirectionalParticleColor={() => "rgba(255, 255, 255, 0.48)"}
                     backgroundColor="transparent"
                     onNodeClick={(node) => handleNodeClick(node as GraphNode)}
                     onNodeHover={(node) => setHoverNode((node as GraphNode) || null)}

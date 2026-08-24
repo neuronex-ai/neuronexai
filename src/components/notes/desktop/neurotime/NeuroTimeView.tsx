@@ -1,6 +1,6 @@
-import { MotionConfig } from "framer-motion";
+import { motion, MotionConfig, useReducedMotion } from "framer-motion";
 import { DatabaseZap, Focus, ShieldCheck } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useId, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -21,6 +21,7 @@ import {
 import { NeuroTimeLegend } from "./NeuroTimeLegend";
 import { NeuroTimeTimeline } from "./NeuroTimeTimeline";
 import { NeuroTimeToolbar } from "./NeuroTimeToolbar";
+import { buildNeuroTimeRibbonGeometry } from "./neurotime-ribbon-geometry";
 
 type NeuroTimeViewProps = {
   patients: Patient[];
@@ -40,6 +41,8 @@ const DEFAULT_FILTERS: NeuroTimeFiltros = {
 };
 
 const percent = (value: number) => `${Math.round(value * 100)}%`;
+
+const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
 
 const NeuroTimeLoading = () => (
   <div className="rounded-[32px] border border-white/[0.075] bg-white/[0.025] p-6 [.light_&]:border-black/[0.06] [.light_&]:bg-white/54" role="status" aria-label="Carregando NeuroTime">
@@ -90,24 +93,7 @@ const NeuroTimePatientLayers = ({
             aria-label={`Abrir campo temporal de ${patient.name}, ${eventCount} registros`}
           >
             <span className="truncate text-[11px] font-semibold text-white/58 group-hover/layer:text-white/82 [.light_&]:text-zinc-600 [.light_&]:group-hover/layer:text-zinc-900">{patient.name}</span>
-            <span className="flex h-5 items-center" aria-hidden="true">
-              {field.singularities.map((singularity) => {
-                const color = singularity.eventCount
-                  ? neuroTimeTemperatureColor(singularity.thermalScore, darkMode)
-                  : darkMode ? "rgba(255,255,255,0.055)" : "rgba(24,24,27,0.07)";
-                return (
-                  <span
-                    key={singularity.id}
-                    className={cn("-mr-px min-w-0 flex-1 rounded-full", singularity.recordedRisk && "ring-1 ring-red-300/65 [.light_&]:ring-red-600/65")}
-                    style={{
-                      height: singularity.eventCount ? 2 + singularity.density * 9 : 1,
-                      background: color,
-                      opacity: singularity.eventCount ? 0.46 + singularity.recency * 0.5 : 1,
-                    }}
-                  />
-                );
-              })}
-            </span>
+            <NeuroTimePatientRibbon field={field} darkMode={darkMode} />
             <span className="text-[9px] font-semibold tabular-nums text-white/28 [.light_&]:text-zinc-400">{eventCount}</span>
           </button>
         ))}
@@ -116,6 +102,66 @@ const NeuroTimePatientLayers = ({
         <p className="mt-2 pl-3 text-[9px] text-white/28 [.light_&]:text-zinc-400">Mais {totalCount - patientFields.length} pacientes fazem parte do campo geral.</p>
       ) : null}
     </section>
+  );
+};
+
+const NeuroTimePatientRibbon = ({
+  field,
+  darkMode,
+}: {
+  field: ReturnType<typeof buildNeuroTimeCampoTemporal>;
+  darkMode: boolean;
+}) => {
+  const reducedMotion = useReducedMotion();
+  const gradientId = `neurotime-layer-ribbon-${useId().replace(/:/g, "")}`;
+  const geometry = useMemo(() => buildNeuroTimeRibbonGeometry(field.singularities), [field.singularities]);
+  const first = field.singularities[0];
+  const last = field.singularities[field.singularities.length - 1];
+
+  return (
+    <span className="relative flex h-9 items-center" aria-hidden="true">
+      <span className={cn("absolute inset-x-0 top-1/2 h-px -translate-y-1/2", darkMode ? "bg-white/[0.045]" : "bg-zinc-950/[0.055]")} />
+      <svg viewBox="0 0 1000 68" preserveAspectRatio="none" className="absolute inset-x-0 top-1/2 h-9 w-full -translate-y-1/2 overflow-visible">
+        <defs>
+          <linearGradient id={gradientId} x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0%" stopColor={neuroTimeTemperatureColor(first?.thermalScore || 0, darkMode)} stopOpacity={first?.eventCount ? 0.56 : 0.12} />
+            {field.singularities.map((singularity) => (
+              <stop
+                key={singularity.id}
+                offset={`${clamp01(singularity.centroNormalizado) * 100}%`}
+                stopColor={neuroTimeTemperatureColor(singularity.thermalScore, darkMode)}
+                stopOpacity={singularity.eventCount ? 0.38 + singularity.recency * 0.46 : 0.1}
+              />
+            ))}
+            <stop offset="100%" stopColor={neuroTimeTemperatureColor(last?.thermalScore || 0, darkMode)} stopOpacity={last?.eventCount ? 0.68 : 0.12} />
+          </linearGradient>
+        </defs>
+        <motion.g
+          initial={reducedMotion ? false : { scaleX: 0, opacity: 0.42 }}
+          animate={{ scaleX: 1, opacity: 1 }}
+          transition={reducedMotion ? { duration: 0 } : { duration: 0.74, ease: [0.22, 1, 0.36, 1] }}
+          style={{ transformOrigin: "0px 34px" }}
+        >
+          <path
+            d={geometry.areaPath}
+            fill={`url(#${gradientId})`}
+            style={{ filter: darkMode ? "drop-shadow(0 0 6px rgba(88,93,188,0.16))" : "drop-shadow(0 2px 5px rgba(54,66,116,0.10))" }}
+          />
+          <path d={geometry.centerPath} fill="none" stroke={darkMode ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.56)"} strokeWidth="0.7" />
+        </motion.g>
+        {field.singularities.some((singularity) => singularity.recordedRisk) ? (
+          field.singularities.map((singularity) => singularity.recordedRisk ? (
+            <circle
+              key={singularity.id}
+              cx={clamp01(singularity.centroNormalizado) * 1000}
+              cy="34"
+              r="3.2"
+              fill={darkMode ? "rgba(248,113,113,0.82)" : "rgba(185,28,28,0.78)"}
+            />
+          ) : null)
+        ) : null}
+      </svg>
+    </span>
   );
 };
 
@@ -192,12 +238,9 @@ export const NeuroTimeView = ({
               : "border-black/[0.06] bg-white/92 shadow-[0_28px_86px_-58px_rgba(24,24,27,0.26),inset_0_1px_0_rgba(255,255,255,0.98)]",
           )}>
             <div className="pointer-events-none absolute inset-x-[12%] top-16 h-36 rounded-full bg-[radial-gradient(ellipse_at_center,rgba(81,67,184,0.09),transparent_68%)] opacity-70 [.light_&]:opacity-45" aria-hidden="true" />
-            <div className="relative flex flex-wrap items-start justify-between gap-5">
-              <div>
-                <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-white/30 [.light_&]:text-zinc-400">{NEUROTIME_NOMENCLATURA.campo}</p>
-                <p className="mt-1 text-xs font-semibold text-white/58 [.light_&]:text-zinc-600">Do primeiro registro, até agora.</p>
-              </div>
-              <div className="flex max-w-[760px] flex-col items-end gap-2">
+            <div className="relative flex flex-wrap items-center justify-between gap-5">
+              <NeuroTimeLegend darkMode={darkMode} portalContainer={portalContainer} />
+              <div className="flex max-w-[760px] items-center justify-end">
                 <NeuroTimeToolbar
                   patients={patients}
                   filters={filters}
@@ -206,16 +249,8 @@ export const NeuroTimeView = ({
                   darkMode={darkMode}
                   portalContainer={portalContainer}
                 />
-                <NeuroTimeLegend darkMode={darkMode} portalContainer={portalContainer} />
               </div>
             </div>
-
-            {!evidenceAvailable && events.length > 0 ? (
-              <div className="relative mt-4 flex items-center gap-2 rounded-[14px] border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[9px] text-white/32 [.light_&]:border-black/[0.05] [.light_&]:bg-black/[0.02] [.light_&]:text-zinc-400" role="status">
-                <DatabaseZap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                O horizonte usa as notas e os fluxos disponíveis; outras fontes surgirão quando houver registros neste campo.
-              </div>
-            ) : null}
 
             <div className="relative mt-1">
               {isLoading ? <NeuroTimeLoading /> : null}
@@ -245,9 +280,17 @@ export const NeuroTimeView = ({
             </div>
 
             {!isLoading && !filteredEmpty ? (
-              <footer className="relative mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-4 text-[9px] text-white/28 [.light_&]:border-black/[0.05] [.light_&]:text-zinc-400">
-                <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Risco exibido somente quando registrado.</span>
-                <span>Densidade {percent(Math.max(...field.singularities.map((item) => item.density), 0))} no ponto mais intenso.</span>
+              <footer className="relative mt-5 space-y-3 border-t border-white/[0.06] pt-4 text-[9px] text-white/28 [.light_&]:border-black/[0.05] [.light_&]:text-zinc-400">
+                {!evidenceAvailable && events.length > 0 ? (
+                  <div className="flex items-center gap-2 rounded-[14px] border border-white/[0.06] bg-white/[0.025] px-3 py-2 text-[9px] text-white/32 [.light_&]:border-black/[0.05] [.light_&]:bg-black/[0.02] [.light_&]:text-zinc-400" role="status">
+                    <DatabaseZap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    O horizonte usa as notas e os fluxos disponíveis; outras fontes surgirão quando houver registros neste campo.
+                  </div>
+                ) : null}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" /> Risco exibido somente quando registrado.</span>
+                  <span>Densidade {percent(Math.max(...field.singularities.map((item) => item.density), 0))} no ponto mais intenso.</span>
+                </div>
               </footer>
             ) : null}
           </main>

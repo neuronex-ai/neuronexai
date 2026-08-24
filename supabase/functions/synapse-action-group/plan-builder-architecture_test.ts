@@ -44,6 +44,13 @@ Deno.test("planner recupera somente valor explícito recente do profissional", (
   assertExcludes('firstNameOwners', "planner não deve manter um segundo resolver simplificado de paciente");
 });
 
+Deno.test("planner normaliza data e horário falados antes de criar os mini-cards", () => {
+  assertIncludes("resolveSpokenAppointmentDateTime", "normalizador temporal compartilhado obrigatório");
+  assertIncludes("recoverRecentAppointmentDateTime", "fala recente do profissional pode recuperar datetime omitido pelo modelo");
+  assertIncludes('if (toolName === "create_appointment")', "normalização limitada à criação de agendamento");
+  assertIncludes("rawArgs = await normalizeCreateAppointmentDateTime", "datetime deve ser normalizado antes do preflight");
+});
+
 Deno.test("resolução canônica de paciente atualiza contexto durável imediatamente", () => {
   assertIncludes("enrichToolArguments", "planner usa resolver canônico compartilhado");
   assertIncludes("context.state.activePatientId = enriched.patient.id", "patient id inequívoco vira contexto ativo");
