@@ -41,7 +41,10 @@ export const Layout = ({ children }: LayoutProps) => {
       {/* Camada global de canvas: todas as telas desktop devem revelar a mesma base. */}
       {!isMobile ? (
         <DesktopLumenBackdrop
-          className={location.pathname.startsWith("/agenda") ? "desktop-lumen-field--agenda" : undefined}
+          className={cn(
+            location.pathname.startsWith("/agenda") && "desktop-lumen-field--agenda",
+            location.pathname.startsWith("/teleconsulta") && "desktop-lumen-field--teleconsultation",
+          )}
         />
       ) : null}
       {!isMobile ? <DesktopGoogleCalendarSync /> : null}

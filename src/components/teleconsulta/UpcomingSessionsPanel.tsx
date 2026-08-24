@@ -37,7 +37,7 @@ const isUpcoming = (session: Appointment, now: number) =>
 
 const SessionIdentity = ({ session }: { session: Appointment }) => (
   <div className="flex min-w-0 items-center gap-3">
-    <div className="teleconsultation-inset flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] text-xs font-black text-foreground">
+    <div className="teleconsultation-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] text-xs font-black text-foreground">
       {getInitials(session.patient_name || 'Paciente')}
     </div>
     <div className="min-w-0">
@@ -92,13 +92,13 @@ export const UpcomingSessionsPanel = ({
   }
 
   return (
-    <div className="teleconsultation-shell relative z-10 h-full min-h-0 w-full px-4 pb-4 md:px-6 md:pb-6 xl:px-8">
-      <div className="mx-auto grid h-full min-h-0 w-full max-w-[1760px] gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(310px,370px)]">
-        <main className="teleconsultation-scroll min-h-0 overflow-y-auto pr-1 xl:pr-2" aria-label="Teleconsultas">
-          <div className="space-y-4 pb-3">
-            <header className="teleconsultation-surface flex min-h-[76px] items-center justify-between gap-4 rounded-[26px] px-5 py-4 sm:px-6">
-              <div className="flex min-w-0 items-center gap-4">
-                <div className="teleconsultation-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] text-emerald-600 dark:text-emerald-400">
+    <div className="teleconsultation-shell relative z-10 h-full min-h-0 w-full px-5 pb-5 pt-2 md:px-7 md:pb-7 md:pt-3 xl:px-8">
+      <div className="mx-auto grid h-full min-h-0 w-full max-w-[1760px] gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)] xl:gap-6">
+        <main className="teleconsultation-scroll min-h-0 overflow-y-auto pr-1.5 xl:pr-2" aria-label="Teleconsultas">
+          <div className="space-y-5 pb-4">
+            <header className="teleconsultation-surface flex min-h-[88px] items-center justify-between gap-5 rounded-[28px] px-6 py-5 sm:px-7">
+              <div className="flex min-w-0 items-center gap-[18px]">
+                <div className="teleconsultation-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] text-foreground/75">
                   <Video className="h-5 w-5" aria-hidden="true" />
                 </div>
                 <div className="min-w-0">
@@ -116,11 +116,11 @@ export const UpcomingSessionsPanel = ({
             </header>
 
             {nextSession ? (
-              <section className="teleconsultation-surface overflow-hidden rounded-[30px] p-5 sm:p-7" aria-labelledby="next-session-title">
-                <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <section className="teleconsultation-surface overflow-hidden rounded-[32px] p-6 sm:p-8" aria-labelledby="next-session-title">
+                <div className="flex flex-col gap-7 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-3">
-                      <span className="inline-flex items-center rounded-full border border-emerald-500/20 bg-emerald-500/[0.08] px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-emerald-700 dark:text-emerald-300">
+                      <span className="teleconsultation-inset inline-flex items-center rounded-full px-3.5 py-2 text-[9px] font-black uppercase tracking-[0.15em] text-foreground/75">
                         Próxima sessão
                       </span>
                       <span className="text-xs font-medium text-muted-foreground">
@@ -130,17 +130,17 @@ export const UpcomingSessionsPanel = ({
                         })}
                       </span>
                     </div>
-                    <h2 id="next-session-title" className="mt-5 truncate text-4xl font-black tracking-[-0.055em] text-foreground sm:text-5xl">
+                    <h2 id="next-session-title" className="mt-6 truncate text-4xl font-black tracking-[-0.055em] text-foreground sm:text-5xl">
                       {nextSession.patient_name || 'Paciente'}
                     </h2>
-                    <div className="mt-5 flex flex-wrap gap-2.5">
+                    <div className="mt-6 flex flex-wrap gap-3">
                       <span className="teleconsultation-inset inline-flex min-h-11 items-center gap-2 rounded-[15px] px-4 text-sm font-bold text-foreground">
                         <Clock3 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         {format(new Date(nextSession.start_time), 'HH:mm')}
                       </span>
                       <span className="teleconsultation-inset inline-flex min-h-11 items-center gap-2 rounded-[15px] px-4 text-[10px] font-black uppercase tracking-[0.12em] text-foreground">
                         {nextSession.type === 'online' ? (
-                          <Video className="h-4 w-4 text-emerald-500" aria-hidden="true" />
+                          <Video className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
                         ) : (
                           <MapPin className="h-4 w-4 text-rose-500" aria-hidden="true" />
                         )}
@@ -152,7 +152,7 @@ export const UpcomingSessionsPanel = ({
                   <Button
                     type="button"
                     onClick={() => startSession(nextSession.id)}
-                    className="teleconsultation-action h-14 shrink-0 rounded-[18px] bg-foreground px-8 text-[10px] font-black uppercase tracking-[0.17em] text-background shadow-none"
+                    className="teleconsultation-action h-14 min-w-[190px] shrink-0 rounded-[18px] bg-foreground px-8 text-[10px] font-black uppercase tracking-[0.17em] text-background shadow-none"
                   >
                     <Play className="mr-2.5 h-4 w-4 fill-current" aria-hidden="true" />
                     Preparar sessão
@@ -160,15 +160,15 @@ export const UpcomingSessionsPanel = ({
                 </div>
               </section>
             ) : (
-              <section className="teleconsultation-surface flex min-h-52 flex-col items-center justify-center rounded-[30px] px-6 text-center">
+              <section className="teleconsultation-surface flex min-h-56 flex-col items-center justify-center rounded-[32px] px-8 text-center">
                 <CalendarDays className="h-8 w-8 text-muted-foreground/45" aria-hidden="true" />
                 <h2 className="mt-4 text-lg font-black tracking-[-0.03em]">Agenda livre</h2>
                 <p className="mt-1 text-sm text-muted-foreground">Nenhuma sessão clínica agendada neste período.</p>
               </section>
             )}
 
-            <div className="teleconsultation-deferred-section grid gap-4 lg:grid-cols-2">
-              <section className="teleconsultation-surface min-h-[310px] rounded-[28px] p-5 sm:p-6" aria-labelledby="future-sessions-title">
+            <div className="teleconsultation-deferred-section grid gap-5 lg:grid-cols-2">
+              <section className="teleconsultation-surface min-h-[320px] rounded-[30px] p-6 sm:p-7" aria-labelledby="future-sessions-title">
                 <div className="flex items-center justify-between gap-3">
                   <h2 id="future-sessions-title" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.17em] text-foreground">
                     <CalendarDays className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -176,13 +176,13 @@ export const UpcomingSessionsPanel = ({
                   </h2>
                   <span className="text-[10px] font-bold text-muted-foreground">{futureSessions.length}</span>
                 </div>
-                <div className="mt-4 space-y-2.5">
+                <div className="mt-5 space-y-3">
                   {futureSessions.length ? futureSessions.slice(0, 6).map((session) => (
                     <button
                       key={session.id}
                       type="button"
                       onClick={() => startSession(session.id)}
-                      className="teleconsultation-inset teleconsultation-action flex w-full items-center justify-between gap-3 rounded-[20px] p-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="teleconsultation-inset teleconsultation-action flex min-h-[76px] w-full items-center justify-between gap-4 rounded-[20px] p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       <SessionIdentity session={session} />
                       <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -195,7 +195,7 @@ export const UpcomingSessionsPanel = ({
                 </div>
               </section>
 
-              <section className="teleconsultation-surface min-h-[310px] rounded-[28px] p-5 sm:p-6" aria-labelledby="session-history-title">
+              <section className="teleconsultation-surface min-h-[320px] rounded-[30px] p-6 sm:p-7" aria-labelledby="session-history-title">
                 <div className="flex items-center justify-between gap-3">
                   <h2 id="session-history-title" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.17em] text-foreground">
                     <History className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
@@ -203,7 +203,7 @@ export const UpcomingSessionsPanel = ({
                   </h2>
                   <span className="text-[10px] font-bold text-muted-foreground">{pastSessions.length}</span>
                 </div>
-                <div className="mt-4 space-y-2.5">
+                <div className="mt-5 space-y-3">
                   {pastSessions.length ? pastSessions.map((session) => {
                     const isSelected = selectedSession?.id === session.id;
                     return (
@@ -213,7 +213,7 @@ export const UpcomingSessionsPanel = ({
                         onClick={() => setSelectedSession(isSelected ? null : session)}
                         aria-pressed={isSelected}
                         className={cn(
-                          'teleconsultation-action flex w-full items-center justify-between gap-3 rounded-[20px] border p-3.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                          'teleconsultation-action flex min-h-[76px] w-full items-center justify-between gap-4 rounded-[20px] border p-4 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
                           isSelected
                             ? 'border-foreground/15 bg-foreground/[0.07]'
                             : 'teleconsultation-inset',

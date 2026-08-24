@@ -86,7 +86,7 @@ const DesktopTeleconsulta = () => {
 
   if (activeAppointment) {
     return (
-      <div className='desktop-lumen-page teleconsultation-shell relative h-dvh overflow-hidden bg-transparent'>
+      <div className='desktop-lumen-page teleconsultation-shell teleconsultation-desktop relative h-dvh overflow-hidden bg-transparent'>
         <ActiveSessionPanel
           key={activeAppointment.id}
           activeAppointment={activeAppointment}
@@ -100,7 +100,7 @@ const DesktopTeleconsulta = () => {
   }
 
   return (
-    <div className='desktop-lumen-page desktop-content-offset teleconsultation-shell relative h-dvh overflow-hidden bg-transparent'>
+    <div className='desktop-lumen-page desktop-content-offset teleconsultation-shell teleconsultation-desktop relative h-dvh overflow-hidden bg-transparent'>
       <UpcomingSessionsPanel upcomingSessions={upcomingSessions} activeAppointment={activeAppointment} isLoading={isLoading} startSession={startSession} />
     </div>
   );

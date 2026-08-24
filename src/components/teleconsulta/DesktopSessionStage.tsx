@@ -120,9 +120,9 @@ export const DesktopSessionStage = ({
           <div className="relative z-10 flex flex-col items-center">
             <div
               className={cn(
-                'flex h-32 w-32 items-center justify-center rounded-[38px] border transition-colors duration-300 motion-reduce:transition-none',
+                'flex h-32 w-32 items-center justify-center rounded-[38px] border transition-colors duration-200 motion-reduce:transition-none',
                 isCaptureEnabled
-                  ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-500'
+                  ? 'border-white/[0.095] bg-white/[0.07] text-white/75'
                   : 'border-white/[0.055] bg-white/[0.035] text-white/45',
               )}
             >
@@ -188,7 +188,7 @@ export const DesktopSessionStage = ({
       {renderStage()}
       <RiskAlert riskScore={patientRiskScore} />
 
-      <div className="pointer-events-none absolute left-5 top-5 z-30 flex items-center gap-2">
+      <div className="pointer-events-none absolute left-4 top-4 z-30 flex items-center gap-2 sm:left-6 sm:top-6">
         <div className="rounded-full border border-white/[0.07] bg-black/72 px-3.5 py-2 text-[9px] font-black uppercase tracking-[0.14em] text-white">
           {elapsedLabel}
         </div>
@@ -196,11 +196,11 @@ export const DesktopSessionStage = ({
           className={cn(
             'flex items-center gap-2 rounded-full border px-3.5 py-2 text-[9px] font-black uppercase tracking-[0.14em]',
             isCaptureEnabled
-              ? 'border-emerald-400/25 bg-emerald-500/16 text-emerald-200'
+              ? 'border-white/[0.1] bg-black/72 text-white/75'
               : 'border-white/[0.07] bg-black/72 text-white/65',
           )}
         >
-          <span className={cn('h-2 w-2 rounded-full', isCaptureEnabled ? 'animate-pulse bg-emerald-400 motion-reduce:animate-none' : 'bg-white/35')} />
+          <span className={cn('h-2 w-2 rounded-full', isCaptureEnabled ? 'bg-white/75' : 'bg-white/35')} />
           {captureLabel}
         </div>
       </div>
@@ -210,7 +210,7 @@ export const DesktopSessionStage = ({
         onClick={onRetrySync}
         aria-label={`Estado de sincronização: ${syncLabel}. Tentar novamente`}
         className={cn(
-          'teleconsultation-action absolute right-5 top-5 z-30 flex h-11 items-center gap-2 rounded-full border px-4 text-[9px] font-black uppercase tracking-[0.12em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55',
+          'teleconsultation-action absolute right-4 top-4 z-30 flex h-11 items-center gap-2 rounded-full border px-4 text-[9px] font-black uppercase tracking-[0.12em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/55 sm:right-6 sm:top-6',
           syncState === 'error'
             ? 'border-rose-400/25 bg-rose-500/16 text-rose-200'
             : !hasNetwork
@@ -223,7 +223,7 @@ export const DesktopSessionStage = ({
       </button>
 
       {hasJoined ? (
-        <div className="pointer-events-none absolute bottom-5 left-0 right-0 z-40">
+        <div className="pointer-events-none absolute bottom-4 left-0 right-0 z-40 sm:bottom-6">
           <SessionControls
             isFocusMode={isFocusMode}
             onToggleFocus={onToggleFocus}

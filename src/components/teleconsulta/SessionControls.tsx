@@ -69,7 +69,7 @@ const ControlButton = ({
         aria-label={label}
         aria-pressed={danger || active === undefined ? undefined : active}
         className={cn(
-          'teleconsultation-action relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1 focus-visible:ring-offset-transparent',
+          'teleconsultation-action relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-transparent outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-transparent',
           danger
             ? 'bg-rose-500/14 text-rose-500 hover:bg-rose-500/22'
             : active
@@ -120,14 +120,14 @@ export const SessionControls = ({
   };
 
   return (
-    <div className="pointer-events-none mx-auto flex w-full items-center justify-center px-3">
-      <div className="teleconsultation-control-dock pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-1.5 rounded-[26px] p-2">
+    <div className="pointer-events-none mx-auto flex w-full items-center justify-center px-5 sm:px-6">
+      <div className="teleconsultation-control-dock pointer-events-auto flex max-w-full flex-wrap items-center justify-center gap-2 rounded-[28px] p-2.5">
         {isOnline ? (
           <>
             <ControlButton icon={Copy} onClick={() => void handleCopyLink()} label="Copiar link da sala" />
             <ControlButton icon={MessageSquare} active={isChatOpen} onClick={onToggleChat} label={isChatOpen ? 'Fechar chat' : 'Abrir chat'} />
             <ControlButton icon={Send} onClick={onOpenInvite} label="Enviar convite" />
-            <span className="mx-0.5 h-7 w-px bg-border/60 dark:bg-white/[0.055]" aria-hidden="true" />
+            <span className="mx-1.5 h-7 w-px bg-border/60 dark:bg-white/[0.055]" aria-hidden="true" />
             <ControlButton
               icon={isAudioEnabled ? Mic : MicOff}
               active={!isAudioEnabled}
@@ -171,7 +171,7 @@ export const SessionControls = ({
           disabled={isProcessing}
           onClick={onEndSession}
           label="Encerrar e revisar sessão"
-          className="ml-0.5 h-12 w-12"
+          className="ml-1.5 h-12 w-12"
         />
       </div>
     </div>

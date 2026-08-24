@@ -17,8 +17,9 @@ describe("agenda desktop compact header contract", () => {
     expect(calendar).toContain("agenda-header-control");
     expect(calendar).not.toContain("<header className=\"agenda-liquid-surface");
     expect(styles).toContain(".agenda-floating-pill");
-    expect(styles).toContain("backdrop-filter: blur(32px)");
-    expect(styles).toContain("background-color: hsl(var(--agenda-surface) / 0.62) !important");
+    expect(styles).toContain("backdrop-filter: blur(40px)");
+    expect(styles).toContain("background-color: hsl(var(--agenda-surface) / 0.54) !important");
+    expect(styles).toContain("isolation: auto");
     expect(styles).toContain(".agenda-month-cell:active");
   });
 

@@ -53,19 +53,19 @@ export const PatientRecapSidebar = ({
   const firstName = patientName?.trim().split(/\s+/)[0] || 'paciente';
 
   return (
-    <section className={cn('teleconsultation-surface flex h-full min-h-0 flex-col overflow-hidden rounded-[30px]', className)}>
-      <header className="shrink-0 border-b border-border/40 px-5 py-5 dark:border-white/[0.045] sm:px-6">
+    <section className={cn('teleconsultation-surface flex h-full min-h-0 flex-col overflow-hidden rounded-[32px]', className)}>
+      <header className="shrink-0 border-b border-border/40 px-6 py-6 dark:border-white/[0.045] sm:px-7 sm:py-7">
         <div className="flex items-center gap-2.5 text-muted-foreground">
           <div className="flex h-8 w-8 items-center justify-center rounded-[12px] border border-border/45 bg-foreground/[0.035] dark:border-white/[0.05]">
             <BrainCircuit className="h-4 w-4" aria-hidden="true" />
           </div>
           <span className="text-[9px] font-black uppercase tracking-[0.22em]">Synapse · contexto</span>
         </div>
-        <h2 className="mt-5 text-2xl font-black leading-tight tracking-[-0.045em] text-foreground">
+        <h2 className="mt-6 text-2xl font-black leading-tight tracking-[-0.045em] text-foreground">
           Última sessão com <span className="text-muted-foreground">{firstName}</span>
         </h2>
         {lastNote ? (
-          <div className="mt-4 flex flex-wrap gap-2">
+          <div className="mt-5 flex flex-wrap gap-2.5">
             <span className="teleconsultation-inset inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.11em] text-muted-foreground">
               <CalendarClock className="h-3.5 w-3.5" aria-hidden="true" />
               {format(new Date(lastNote.created_at), "dd 'de' MMMM", { locale: ptBR })}
@@ -77,7 +77,7 @@ export const PatientRecapSidebar = ({
         ) : null}
       </header>
 
-      <div className="teleconsultation-scroll min-h-0 flex-1 overflow-y-auto px-5 py-5 sm:px-6" aria-live="polite">
+      <div className="teleconsultation-scroll min-h-0 flex-1 overflow-y-auto p-6 sm:p-7" aria-live="polite">
         {isLoading ? (
           <div className="space-y-4" role="status" aria-label="Carregando contexto clínico">
             <Skeleton className="h-36 rounded-[22px]" />
@@ -93,12 +93,12 @@ export const PatientRecapSidebar = ({
             </p>
           </div>
         ) : (
-          <div className="space-y-5">
+          <div className="space-y-6">
             <section aria-labelledby="recap-summary-title">
               <p id="recap-summary-title" className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
                 Síntese profissional
               </p>
-              <div className="teleconsultation-inset mt-3 rounded-[22px] p-4">
+              <div className="teleconsultation-inset mt-4 rounded-[22px] p-5">
                 <p className="text-sm font-medium leading-7 text-foreground/82">
                   {summary?.summary || 'Ainda não há uma síntese clínica disponível.'}
                 </p>
@@ -109,9 +109,9 @@ export const PatientRecapSidebar = ({
               <p id="recap-topics-title" className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">
                 Pontos de atenção
               </p>
-              <div className="mt-3 space-y-2.5">
+              <div className="mt-4 space-y-3">
                 {topics.length ? topics.map((topic, index) => (
-                  <div key={`${topic}-${index}`} className="teleconsultation-inset flex items-start gap-3 rounded-[18px] px-4 py-3.5">
+                  <div key={`${topic}-${index}`} className="teleconsultation-inset flex items-start gap-3.5 rounded-[19px] px-[18px] py-4">
                     <span className="mt-0.5 text-[9px] font-black text-muted-foreground">0{index + 1}</span>
                     <p className="text-xs font-semibold leading-relaxed text-foreground/80">{topic}</p>
                   </div>

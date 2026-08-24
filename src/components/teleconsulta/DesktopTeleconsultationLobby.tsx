@@ -74,11 +74,11 @@ export const DesktopTeleconsultationLobby = ({
   };
 
   return (
-    <div className="teleconsultation-scroll relative z-10 h-full min-h-0 w-full touch-pan-y overflow-y-auto overscroll-contain bg-transparent px-4 pb-6 md:px-6 xl:px-8">
-      <div className="mx-auto min-h-full w-full max-w-[1560px] space-y-4 pb-3">
-        <header className="teleconsultation-surface flex flex-col gap-4 rounded-[28px] px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="teleconsultation-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] text-emerald-600 dark:text-emerald-400">
+    <div className="teleconsultation-scroll relative z-10 h-full min-h-0 w-full touch-pan-y overflow-y-auto overscroll-contain bg-transparent px-5 pb-7 pt-2 md:px-7 md:pb-8 md:pt-3 xl:px-8">
+      <div className="mx-auto min-h-full w-full max-w-[1560px] space-y-5 pb-4">
+        <header className="teleconsultation-surface flex flex-col gap-5 rounded-[30px] px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-7 sm:py-6">
+          <div className="flex min-w-0 items-center gap-[18px]">
+            <div className="teleconsultation-inset flex h-12 w-12 shrink-0 items-center justify-center rounded-[17px] text-foreground/75">
               <Video className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="min-w-0">
@@ -98,8 +98,8 @@ export const DesktopTeleconsultationLobby = ({
           ) : null}
         </header>
 
-        <div className="grid min-h-0 gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(330px,0.55fr)] xl:items-start">
-          <section className="teleconsultation-surface rounded-[30px] p-4 sm:p-5" aria-label="Teste de dispositivos">
+        <div className="grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(340px,0.55fr)] xl:items-start xl:gap-6">
+          <section className="teleconsultation-surface rounded-[32px] p-5 sm:p-6" aria-label="Teste de dispositivos">
             <MediaReadinessPanel
               variant="desktop"
               initialAudioEnabled
@@ -108,9 +108,9 @@ export const DesktopTeleconsultationLobby = ({
             />
           </section>
 
-          <aside className="space-y-3 xl:sticky xl:top-0">
-            <section className="teleconsultation-surface rounded-[28px] p-5 sm:p-6">
-              <div className="flex items-start gap-3">
+          <aside className="space-y-4 xl:sticky xl:top-0">
+            <section className="teleconsultation-surface rounded-[30px] p-6 sm:p-7">
+              <div className="flex items-start gap-4">
                 <div className="teleconsultation-inset flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] text-muted-foreground">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" />
                 </div>
@@ -128,7 +128,7 @@ export const DesktopTeleconsultationLobby = ({
               {isOnline ? (
                 <div className="teleconsultation-inset mt-5 flex items-center gap-3 rounded-[18px] px-4 py-3.5">
                   {hasTranscriptionDecision ? (
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" aria-hidden="true" />
+                    <CheckCircle2 className="h-4 w-4 shrink-0 text-foreground/70" aria-hidden="true" />
                   ) : (
                     <LockKeyhole className="h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
                   )}
@@ -145,9 +145,10 @@ export const DesktopTeleconsultationLobby = ({
             </section>
 
             {isOnline ? (
-              <section className="teleconsultation-surface rounded-[24px] p-4">
-                <p className="mb-3 text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">Enviar link ao paciente</p>
+              <section className="teleconsultation-surface rounded-[28px] p-5 sm:p-6">
+                <p className="mb-4 text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">Enviar link ao paciente</p>
                 <PreJoinActions
+                  variant="desktop"
                   appointmentId={appointmentId}
                   patient={patient}
                   meetLink={meetLink}
@@ -165,12 +166,13 @@ export const DesktopTeleconsultationLobby = ({
               </section>
             ) : null}
 
-            <Button
-              type="button"
-              disabled={isJoinDisabled}
-              onClick={handlePrimaryAction}
-              className="teleconsultation-action h-14 w-full rounded-[19px] bg-foreground text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-none disabled:opacity-45"
-            >
+            <div className="space-y-3 px-1.5">
+              <Button
+                type="button"
+                disabled={isJoinDisabled}
+                onClick={handlePrimaryAction}
+                className="teleconsultation-action h-14 w-full rounded-[19px] bg-foreground text-[10px] font-black uppercase tracking-[0.18em] text-background shadow-none disabled:opacity-45"
+              >
               {isOnline && isLoadingToken && !isDecisionBlocked ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -186,9 +188,9 @@ export const DesktopTeleconsultationLobby = ({
                   {isDecisionBlocked ? 'Definir transcrição' : isOnline ? 'Entrar na sessão' : 'Iniciar sessão presencial'}
                 </>
               )}
-            </Button>
+              </Button>
 
-            <p className="px-3 text-center text-[9px] font-bold leading-relaxed text-muted-foreground/70">
+              <p className="px-4 text-center text-[9px] font-bold leading-relaxed text-muted-foreground/70">
               {isRoomClosed
                 ? 'Esta sala já foi encerrada.'
                 : isDecisionBlocked
@@ -196,7 +198,8 @@ export const DesktopTeleconsultationLobby = ({
                   : !isReady
                     ? 'Conclua o teste dos dispositivos para continuar.'
                     : 'Dispositivos prontos. Você pode entrar quando quiser.'}
-            </p>
+              </p>
+            </div>
           </aside>
         </div>
       </div>

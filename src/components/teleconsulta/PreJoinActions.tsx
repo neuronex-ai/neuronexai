@@ -14,6 +14,7 @@ interface PreJoinActionsProps {
   disabled?: boolean;
   disabledReason?: string;
   onDisabledClick?: () => void;
+  variant?: "mobile" | "desktop";
 }
 
 export const PreJoinActions = ({
@@ -24,6 +25,7 @@ export const PreJoinActions = ({
   disabled = false,
   disabledReason,
   onDisabledClick,
+  variant = "mobile",
 }: PreJoinActionsProps) => {
   const [sending, setSending] = useState<"email" | null>(null);
 
@@ -88,13 +90,15 @@ export const PreJoinActions = ({
     toast.success("Link copiado para a área de transferência.");
   };
 
+  const isDesktop = variant === "desktop";
   const buttonClass = (tone: "emerald" | "sky" | "amber") =>
     cn(
-      "teleconsultation-inset teleconsultation-action h-11 w-11 shrink-0 rounded-full shadow-none",
+      "teleconsultation-inset teleconsultation-action shrink-0 shadow-none",
+      isDesktop ? "h-12 w-12 rounded-[16px]" : "h-11 w-11 rounded-full",
       disabled && "opacity-45",
-      tone === "emerald" && "group hover:[&>svg]:text-emerald-500",
-      tone === "sky" && "group hover:[&>svg]:text-sky-500",
-      tone === "amber" && "group hover:[&>svg]:text-amber-500",
+      !isDesktop && tone === "emerald" && "group hover:[&>svg]:text-emerald-500",
+      !isDesktop && tone === "sky" && "group hover:[&>svg]:text-sky-500",
+      !isDesktop && tone === "amber" && "group hover:[&>svg]:text-amber-500",
     );
 
   return (
@@ -106,7 +110,7 @@ export const PreJoinActions = ({
         onClick={handleWhatsApp}
         aria-label="Enviar via WhatsApp"
       >
-        <MessageSquare className="h-4 w-4 text-zinc-500 transition-colors duration-300 dark:text-zinc-400" />
+        <MessageSquare className="h-4 w-4 text-zinc-500 transition-colors duration-200 dark:text-zinc-400" />
       </Button>
 
       <Button
@@ -120,7 +124,7 @@ export const PreJoinActions = ({
         {sending === "email" ? (
           <Loader2 className="h-4 w-4 animate-spin text-zinc-500 dark:text-zinc-400" />
         ) : (
-          <Mail className="h-4 w-4 text-zinc-500 transition-colors duration-300 dark:text-zinc-400" />
+          <Mail className="h-4 w-4 text-zinc-500 transition-colors duration-200 dark:text-zinc-400" />
         )}
       </Button>
 
@@ -133,10 +137,10 @@ export const PreJoinActions = ({
         onClick={handleCopyLink}
         aria-label="Copiar link"
       >
-        <Link className="h-4 w-4 text-zinc-500 transition-colors duration-300 dark:text-zinc-400" />
+        <Link className="h-4 w-4 text-zinc-500 transition-colors duration-200 dark:text-zinc-400" />
       </Button>
 
-      <span className="min-w-0 flex-[1_1_8rem] text-[9px] font-bold uppercase leading-tight tracking-[0.16em] text-zinc-400 dark:text-zinc-600 sm:ml-2">
+      <span className={cn("min-w-0 flex-[1_1_8rem] text-[9px] font-bold uppercase leading-tight tracking-[0.16em] text-zinc-400 dark:text-zinc-600", isDesktop && "sm:ml-3")}>
         {disabled ? "Decisão pendente" : "Convidar paciente"}
       </span>
     </div>

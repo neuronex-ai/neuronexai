@@ -56,7 +56,7 @@ export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessi
           onPointerDownOutside={(event) => event.preventDefault()}
           data-synapse-target='transcription-decision'
           aria-label='Decisão de transcrição'
-          className='teleconsultation-surface !w-[min(680px,calc(100vw-2rem))] !max-w-[min(680px,calc(100vw-2rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0'
+        className='teleconsultation-desktop teleconsultation-surface !w-[min(680px,calc(100vw-2.5rem))] !max-w-[min(680px,calc(100vw-2.5rem))] !gap-0 !overflow-hidden !rounded-[30px] !p-0'
         >
           <DialogTitle className='sr-only'>Decisão de transcrição</DialogTitle>
           <DialogDescription className='sr-only'>
@@ -75,7 +75,7 @@ export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessi
   if (session.showLobby) {
     return (
       <>
-        <div className='desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent'>
+        <div className='desktop-lumen-page teleconsultation-shell teleconsultation-desktop fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent'>
           <div className='relative z-10 h-full min-h-0 overflow-hidden'>
             <DesktopTeleconsultationLobby
               patientName={patientName}
@@ -101,13 +101,13 @@ export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessi
 
   return (
     <>
-      <div className='desktop-lumen-page teleconsultation-shell fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent'>
+      <div className='desktop-lumen-page teleconsultation-shell teleconsultation-desktop fixed inset-x-0 top-[var(--desktop-navbar-clearance)] z-[100] h-[calc(100dvh-var(--desktop-navbar-clearance))] min-h-0 overflow-hidden bg-transparent'>
         <div
           className={cn(
-            'relative z-10 grid h-full min-h-0 grid-rows-[minmax(0,1fr)] items-stretch gap-3 px-3 pb-3 sm:px-4 sm:pb-4 xl:px-5 xl:pb-5',
+            'relative z-10 grid h-full min-h-0 grid-rows-[minmax(0,1fr)] items-stretch gap-4 px-4 pb-4 pt-2 sm:px-5 sm:pb-5 sm:pt-3 xl:gap-5 xl:px-6 xl:pb-6',
             session.isFocusMode
               ? 'grid-cols-1'
-              : 'grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(260px,34vh)] lg:grid-cols-[minmax(0,1fr)_300px] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_328px] 2xl:grid-cols-[minmax(0,1fr)_360px]',
+              : 'grid-cols-1 grid-rows-[minmax(0,1fr)_minmax(280px,36vh)] lg:grid-cols-[minmax(0,1fr)_320px] lg:grid-rows-[minmax(0,1fr)] xl:grid-cols-[minmax(0,1fr)_348px] 2xl:grid-cols-[minmax(0,1fr)_376px]',
           )}
         >
           <DesktopSessionStage

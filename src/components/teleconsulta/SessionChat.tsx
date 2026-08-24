@@ -123,10 +123,10 @@ export const SessionChat = ({
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -18, opacity: 0 }}
             transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
-            className="teleconsultation-surface absolute bottom-24 left-4 top-20 z-50 flex w-[min(360px,calc(100%-2rem))] min-h-0 flex-col overflow-hidden rounded-[24px] sm:left-5"
+            className="teleconsultation-surface absolute bottom-28 left-5 top-24 z-50 flex w-[min(370px,calc(100%-2.5rem))] min-h-0 flex-col overflow-hidden rounded-[26px] sm:left-6"
             aria-label="Chat da sessão"
           >
-            <header className="flex shrink-0 items-center justify-between border-b border-border/40 p-4 dark:border-white/[0.045]">
+            <header className="flex shrink-0 items-center justify-between border-b border-border/40 p-5 dark:border-white/[0.045]">
               <div className="flex items-center gap-3">
                 <div className="teleconsultation-inset flex h-9 w-9 items-center justify-center rounded-[13px]">
                   <MessageSquare className="h-4 w-4" aria-hidden="true" />
@@ -138,7 +138,7 @@ export const SessionChat = ({
               </Button>
             </header>
 
-            <div ref={scrollRef} className="teleconsultation-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-4" aria-live="polite">
+            <div ref={scrollRef} className="teleconsultation-scroll min-h-0 flex-1 space-y-5 overflow-y-auto p-5" aria-live="polite">
               {isLoading ? (
                 <div className="flex h-full items-center justify-center text-muted-foreground" role="status">
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -180,8 +180,8 @@ export const SessionChat = ({
               })}
             </div>
 
-            <footer className="shrink-0 border-t border-border/40 p-3 dark:border-white/[0.045]">
-              <form onSubmit={(event) => void handleSendMessage(event)} className="teleconsultation-inset flex items-center gap-2 rounded-full p-1.5 pl-2 focus-within:ring-2 focus-within:ring-ring">
+            <footer className="shrink-0 border-t border-border/40 p-4 dark:border-white/[0.045]">
+              <form onSubmit={(event) => void handleSendMessage(event)} className="teleconsultation-inset flex items-center gap-2 rounded-full p-1.5 pl-3 focus-within:ring-2 focus-within:ring-ring">
                 <Input
                   value={newMessage}
                   onChange={(event) => setNewMessage(event.target.value)}

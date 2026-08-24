@@ -2047,6 +2047,49 @@
     opacity: 0.58;
   }
 
+  /* Teleconsulta follows Agenda and NeuroVision with a still, monochromatic
+     Lumen field. The light is distributed across the viewport so no card has
+     to manufacture its own glow. */
+  .desktop-lumen-field.desktop-lumen-field--teleconsultation {
+    background:
+      radial-gradient(92rem 52rem at 50% -14%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.7) 30%, rgba(245, 245, 245, 0.22) 60%, transparent 82%),
+      radial-gradient(56rem 40rem at 8% 26%, rgba(0, 0, 0, 0.022) 0%, transparent 74%),
+      radial-gradient(54rem 38rem at 94% 22%, rgba(0, 0, 0, 0.017) 0%, transparent 76%),
+      linear-gradient(180deg, rgba(250, 250, 250, 0.985), rgba(244, 244, 245, 0.94));
+  }
+
+  .desktop-lumen-field.desktop-lumen-field--teleconsultation::before {
+    background:
+      radial-gradient(ellipse 62% 38% at 50% 4%, rgba(255, 255, 255, 0.92) 0%, rgba(255, 255, 255, 0.3) 50%, transparent 82%),
+      radial-gradient(ellipse 76% 46% at 50% 58%, rgba(0, 0, 0, 0.014) 0%, transparent 80%);
+    opacity: 0.84;
+  }
+
+  .desktop-lumen-field.desktop-lumen-field--teleconsultation::after {
+    background: radial-gradient(ellipse 80% 28% at 50% 96%, rgba(0, 0, 0, 0.03) 0%, rgba(0, 0, 0, 0.008) 54%, transparent 86%);
+    opacity: 0.58;
+  }
+
+  .dark .desktop-lumen-field.desktop-lumen-field--teleconsultation {
+    background:
+      radial-gradient(94rem 56rem at 50% -16%, rgba(255, 255, 255, 0.086) 0%, rgba(255, 255, 255, 0.038) 32%, rgba(255, 255, 255, 0.009) 62%, transparent 82%),
+      radial-gradient(58rem 42rem at 8% 24%, rgba(255, 255, 255, 0.014) 0%, transparent 76%),
+      radial-gradient(56rem 40rem at 94% 20%, rgba(255, 255, 255, 0.011) 0%, transparent 78%),
+      linear-gradient(180deg, rgb(10, 10, 11), rgb(5, 5, 6));
+  }
+
+  .dark .desktop-lumen-field.desktop-lumen-field--teleconsultation::before {
+    background:
+      radial-gradient(ellipse 62% 38% at 50% 4%, rgba(255, 255, 255, 0.058) 0%, rgba(255, 255, 255, 0.015) 50%, transparent 82%),
+      radial-gradient(ellipse 76% 46% at 50% 58%, rgba(255, 255, 255, 0.007) 0%, transparent 80%);
+    opacity: 0.82;
+  }
+
+  .dark .desktop-lumen-field.desktop-lumen-field--teleconsultation::after {
+    background: radial-gradient(ellipse 80% 28% at 50% 96%, rgba(255, 255, 255, 0.022) 0%, rgba(255, 255, 255, 0.006) 54%, transparent 86%);
+    opacity: 0.54;
+  }
+
   .desktop-retina-frame,
   .desktop-retina-panel,
   .desktop-retina-inset,
@@ -2485,6 +2528,23 @@
     contain: layout style;
   }
 
+  .teleconsultation-desktop {
+    --teleconsultation-edge: 0 0% 10%;
+    --teleconsultation-surface: 0 0% 100%;
+    --teleconsultation-raised: 0 0% 99%;
+    --teleconsultation-inset: 0 0% 95%;
+    --teleconsultation-shadow: 0 0% 10%;
+  }
+
+  .dark .teleconsultation-desktop,
+  .dark.teleconsultation-desktop {
+    --teleconsultation-edge: 0 0% 42%;
+    --teleconsultation-surface: 0 0% 5%;
+    --teleconsultation-raised: 0 0% 8%;
+    --teleconsultation-inset: 0 0% 2%;
+    --teleconsultation-shadow: 0 0% 0%;
+  }
+
   .teleconsultation-surface {
     border: 1px solid rgba(24, 24, 24, 0.075);
     background-color: rgba(250, 250, 250, 0.86);
@@ -2525,6 +2585,69 @@
       inset 0 -1px 0 rgba(0, 0, 0, 0.44);
   }
 
+  .teleconsultation-desktop .teleconsultation-surface,
+  .teleconsultation-desktop.teleconsultation-surface {
+    border-color: hsl(var(--teleconsultation-edge) / 0.085);
+    background:
+      radial-gradient(78% 58% at 18% -16%, hsl(var(--teleconsultation-surface) / 0.88), transparent 68%),
+      linear-gradient(155deg, hsl(var(--teleconsultation-surface) / 0.82), hsl(var(--teleconsultation-inset) / 0.6)),
+      hsl(var(--teleconsultation-raised) / 0.76);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--teleconsultation-surface) / 0.9),
+      inset 0 -1px 0 hsl(var(--teleconsultation-edge) / 0.025),
+      0 30px 82px -62px hsl(var(--teleconsultation-shadow) / 0.48);
+  }
+
+  .teleconsultation-desktop .teleconsultation-inset,
+  .teleconsultation-desktop.teleconsultation-inset {
+    border-color: hsl(var(--teleconsultation-edge) / 0.075);
+    background:
+      linear-gradient(152deg, hsl(var(--teleconsultation-surface) / 0.68), hsl(var(--teleconsultation-inset) / 0.72)),
+      hsl(var(--teleconsultation-inset) / 0.76);
+    box-shadow:
+      inset 0 1px 0 hsl(var(--teleconsultation-surface) / 0.76),
+      inset 0 -1px 0 hsl(var(--teleconsultation-edge) / 0.032);
+  }
+
+  .dark .teleconsultation-desktop .teleconsultation-surface,
+  .dark .teleconsultation-desktop.teleconsultation-surface,
+  .dark.teleconsultation-desktop.teleconsultation-surface {
+    border-color: rgba(255, 255, 255, 0.052);
+    background:
+      radial-gradient(76% 56% at 18% -18%, rgba(255, 255, 255, 0.032), transparent 68%),
+      linear-gradient(155deg, rgba(13, 13, 15, 0.96), rgba(7, 7, 9, 0.97)),
+      hsl(var(--teleconsultation-surface));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.03),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.68),
+      0 34px 90px -58px rgba(0, 0, 0, 0.96);
+  }
+
+  .dark .teleconsultation-desktop .teleconsultation-inset,
+  .dark .teleconsultation-desktop.teleconsultation-inset,
+  .dark.teleconsultation-desktop.teleconsultation-inset {
+    border-color: rgba(255, 255, 255, 0.046);
+    background: linear-gradient(152deg, rgba(11, 11, 13, 0.96), rgba(5, 5, 7, 0.97));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.022),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.56);
+  }
+
+  .teleconsultation-desktop .teleconsultation-subsection,
+  .teleconsultation-desktop.teleconsultation-subsection {
+    border: 1px solid hsl(var(--teleconsultation-edge) / 0.07);
+    background: hsl(var(--teleconsultation-inset) / 0.52);
+    box-shadow: inset 0 1px 0 hsl(var(--teleconsultation-surface) / 0.58);
+  }
+
+  .dark .teleconsultation-desktop .teleconsultation-subsection,
+  .dark .teleconsultation-desktop.teleconsultation-subsection,
+  .dark.teleconsultation-desktop.teleconsultation-subsection {
+    border-color: rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.018);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+  }
+
   .teleconsultation-stage {
     border: 1px solid rgba(255, 255, 255, 0.055);
     background:
@@ -2550,6 +2673,23 @@
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.035),
       inset 0 -1px 0 rgba(0, 0, 0, 0.62),
+      0 24px 62px -36px rgba(0, 0, 0, 0.96);
+  }
+
+  .teleconsultation-desktop .teleconsultation-control-dock {
+    border-color: hsl(var(--teleconsultation-edge) / 0.095);
+    background: linear-gradient(155deg, hsl(var(--teleconsultation-surface) / 0.96), hsl(var(--teleconsultation-inset) / 0.92));
+    box-shadow:
+      inset 0 1px 0 hsl(var(--teleconsultation-surface) / 0.96),
+      0 22px 56px -38px hsl(var(--teleconsultation-shadow) / 0.48);
+  }
+
+  .dark .teleconsultation-desktop .teleconsultation-control-dock {
+    border-color: rgba(255, 255, 255, 0.065);
+    background: linear-gradient(155deg, rgba(20, 20, 22, 0.98), rgba(8, 8, 10, 0.98));
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.034),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.64),
       0 24px 62px -36px rgba(0, 0, 0, 0.96);
   }
 
@@ -2585,6 +2725,39 @@
   .teleconsultation-action:active {
     transform: scale(0.975);
     transition-duration: 100ms;
+  }
+
+  .teleconsultation-desktop .teleconsultation-action,
+  .teleconsultation-desktop.teleconsultation-action {
+    transition-duration: 180ms;
+  }
+
+  .teleconsultation-desktop .teleconsultation-action:hover,
+  .teleconsultation-desktop.teleconsultation-action:hover {
+    transform: none;
+  }
+
+  .teleconsultation-desktop .teleconsultation-action:active,
+  .teleconsultation-desktop.teleconsultation-action:active {
+    transform: scale(0.985);
+    transition-duration: 90ms;
+  }
+
+  .teleconsultation-desktop .teleconsultation-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.26) transparent;
+  }
+
+  .teleconsultation-desktop .teleconsultation-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .teleconsultation-desktop .teleconsultation-scroll::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    border-radius: 999px;
+    background: hsl(var(--muted-foreground) / 0.24);
+    background-clip: padding-box;
   }
 
   @supports (background: radial-gradient(in oklab, white, transparent)) {
@@ -6268,15 +6441,15 @@
 .agenda-floating-pill,
 .agenda-day-pill {
   border-color: hsl(var(--agenda-edge) / 0.105) !important;
-  background-color: hsl(var(--agenda-surface) / 0.62) !important;
+  background-color: hsl(var(--agenda-surface) / 0.54) !important;
   background-image: none !important;
   box-shadow:
     inset 0 1px 0 hsl(var(--agenda-surface) / 0.82),
     inset 0 -1px 0 hsl(var(--agenda-edge) / 0.045),
     inset 0 0 0 0.5px hsl(var(--agenda-surface) / 0.28),
     0 14px 34px -27px hsl(var(--agenda-shadow) / 0.46);
-  backdrop-filter: blur(32px) saturate(1.12) brightness(1.015);
-  -webkit-backdrop-filter: blur(32px) saturate(1.12) brightness(1.015);
+  backdrop-filter: blur(40px) saturate(1.16) brightness(1.015) contrast(0.94);
+  -webkit-backdrop-filter: blur(40px) saturate(1.16) brightness(1.015) contrast(0.94);
 }
 
 .agenda-day-pill {
@@ -6291,15 +6464,15 @@
 .dark .agenda-floating-pill,
 .dark .agenda-day-pill {
   border-color: rgba(255, 255, 255, 0.072) !important;
-  background-color: rgba(12, 12, 14, 0.64) !important;
+  background-color: rgba(12, 12, 14, 0.54) !important;
   background-image: none !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.07),
     inset 0 -1px 0 rgba(0, 0, 0, 0.54),
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.018),
     0 16px 36px -28px rgba(0, 0, 0, 0.96);
-  backdrop-filter: blur(32px) saturate(1.06) brightness(0.985);
-  -webkit-backdrop-filter: blur(32px) saturate(1.06) brightness(0.985);
+  backdrop-filter: blur(40px) saturate(1.12) brightness(0.985) contrast(0.94);
+  -webkit-backdrop-filter: blur(40px) saturate(1.12) brightness(0.985) contrast(0.94);
 }
 
 .dark .agenda-day-pill {
@@ -6475,12 +6648,10 @@
 }
 
 .agenda-command-cluster {
-  isolation: isolate;
-  filter: drop-shadow(0 12px 22px hsl(var(--agenda-shadow) / 0.09));
-}
-
-.dark .agenda-command-cluster {
-  filter: drop-shadow(0 14px 24px rgba(0, 0, 0, 0.36));
+  /* A filter or isolated stacking context here becomes a backdrop root and
+     prevents the glass children from sampling the calendar underneath. */
+  isolation: auto;
+  filter: none;
 }
 
 .agenda-header-control {
