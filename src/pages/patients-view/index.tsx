@@ -3,15 +3,18 @@
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
+import { DesktopPatientsList, DesktopPatientsListSkeleton } from "@/components/patients/DesktopPatientsList";
 import { UpsellModal } from "@/components/subscription";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Dialog,
     DialogContent, DialogDescription, DialogTitle
 } from "@/components/ui/dialog";
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/input";
+import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useDashboardAlerts } from "@/hooks/use-dashboard-alerts";
@@ -28,14 +31,28 @@ import {
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, AlertTriangle, Bell, Calendar, Crown, DollarSign, Download, LayoutDashboard, LogOut, Menu, NotebookPen, Plus, Search, Settings, Sparkles, Trash2, Users, Video, Zap, X } from "lucide-react";
+import { Activity, AlertTriangle, Bell, Calendar, Crown, DollarSign, Grid2X2, LayoutDashboard, List, LogOut, Menu, NotebookPen, Plus, Search, Settings, Sparkles, Trash2, Users, Video, Zap, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+type PatientsViewMode = 'cards' | 'list';
+
+const PATIENTS_VIEW_STORAGE_KEY = 'neuronex:patients:desktop-view';
+const PATIENTS_VIEW_OPTIONS = [
+    { value: 'cards', label: <><Grid2X2 className="h-4 w-4" aria-hidden="true" /> Cards</>, ariaLabel: 'Visualizar pacientes em cards' },
+    { value: 'list', label: <><List className="h-4 w-4" aria-hidden="true" /> Lista</>, ariaLabel: 'Visualizar pacientes em lista' },
+] as const;
+
+const initialPatientsView = (): PatientsViewMode => {
+    if (typeof window === 'undefined') return 'cards';
+    return window.localStorage.getItem(PATIENTS_VIEW_STORAGE_KEY) === 'list' ? 'list' : 'cards';
+};
+
 export default function Pacientes() {
     const [searchTerm, setSearchTerm] = useState("");
     const [showUpsellModal, setShowUpsellModal] = useState(false);
+    const [viewMode, setViewMode] = useState<PatientsViewMode>(initialPatientsView);
     const { data: patients, isLoading } = usePatients();
     const navigate = useNavigate();
     const location = useLocation();
@@ -82,6 +99,12 @@ export default function Pacientes() {
     const canAdd = canAddPatient(patientCount);
     const isAtLimit = !canAdd && plan === 'Essential';
     const maxPatients = features.maxPatients;
+    const activeView = isMobile ? 'cards' : viewMode;
+
+    useEffect(() => {
+        if (isMobile) return;
+        window.localStorage.setItem(PATIENTS_VIEW_STORAGE_KEY, viewMode);
+    }, [isMobile, viewMode]);
 
     useEffect(() => {
         const handleSynapseAction = (event: Event) => {
@@ -116,9 +139,13 @@ export default function Pacientes() {
         p.email?.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
+    const requestPatientDeletion = (patientId: string, patientName: string) => {
+        setDeleteTarget({ id: patientId, name: patientName });
+    };
+
     const handleDeleteClick = (e: React.MouseEvent, patientId: string, patientName: string) => {
         e.stopPropagation();
-        setDeleteTarget({ id: patientId, name: patientName });
+        requestPatientDeletion(patientId, patientName);
     };
 
     const confirmDelete = () => {

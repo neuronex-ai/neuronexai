@@ -2525,7 +2525,6 @@
   .teleconsultation-shell {
     position: relative;
     isolation: isolate;
-    contain: layout style;
   }
 
   .teleconsultation-desktop {
@@ -2705,7 +2704,7 @@
   }
 
   .teleconsultation-deferred-section {
-    contain: layout style;
+    min-width: 0;
   }
 
   .teleconsultation-overlay {

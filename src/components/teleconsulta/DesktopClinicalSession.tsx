@@ -64,7 +64,7 @@ export const DesktopClinicalSession = ({ activeAppointment, patientName, onSessi
           </DialogDescription>
           <TranscriptionConsentPanel
             patientName={patientName}
-            isPending={session.captureState === 'restoring' || session.captureState === 'finalizing'}
+            isPending={session.isSavingTranscriptionDecision || session.captureState === 'restoring' || session.captureState === 'finalizing'}
             onGrant={session.handleGrantConsent}
             onDecline={session.handleDeclineConsent}
           />

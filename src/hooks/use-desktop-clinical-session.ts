@@ -15,6 +15,11 @@ import {
   shouldOpenTeleconsultationTranscriptionReview,
   shouldStartTeleconsultationCapture,
 } from '@/lib/teleconsultation-transcription';
+import {
+  getTeleconsultationTranscriptionDecision,
+  persistTeleconsultationTranscriptionDecision,
+  type TeleconsultationTranscriptionDecision,
+} from '@/lib/teleconsultation-consent';
 import type { AISummary, Appointment, SessionNote } from '@/types';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -23,19 +28,7 @@ import { toast } from 'sonner';
 export type DesktopSessionCompletionMode = 'idle' | 'generating' | 'saving';
 
 const JITSI_APP_ID = 'vpaas-magic-cookie-dc267e44c7014498a3a128625367fc67';
-const TRANSCRIPTION_NOTICE_VERSION = '2026-06-teleconsultation-transcription-v1';
-
-type TranscriptionDecision = {
-  enabled: boolean;
-  decidedAt?: string;
-  decidedBy?: string;
-  noticeVersion?: string;
-} | null;
-
-const getTranscriptionDecision = (metadata: Appointment['metadata']): TranscriptionDecision => {
-  const decision = metadata?.teleconsultationTranscription;
-  return decision && typeof decision.enabled === 'boolean' ? decision : null;
-};
+type TranscriptionDecision = TeleconsultationTranscriptionDecision | null;
 
 export const formatSessionElapsed = (seconds: number) => {
   const minutes = Math.floor(seconds / 60);
@@ -66,11 +59,16 @@ export const useDesktopClinicalSession = (
   const [reviewSummaryNote, setReviewSummaryNote] = useState<SessionNote | null>(null);
   const [completionMode, setCompletionMode] = useState<DesktopSessionCompletionMode>('idle');
   const [completionError, setCompletionError] = useState<string | null>(null);
+  const [isSavingTranscriptionDecision, setIsSavingTranscriptionDecision] = useState(false);
 
   const jitsiRef = useRef<JitsiRef>(null);
   const joinedAtRef = useRef<number | null>(null);
   const reviewRequestedRef = useRef(false);
   const finishSessionInFlightRef = useRef<Promise<void> | null>(null);
+  const transcriptionDecisionInFlightRef = useRef<{
+    enabled: boolean;
+    promise: Promise<TeleconsultationTranscriptionDecision>;
+  } | null>(null);
 
   const { toggleFocusMode, isFocusMode } = useAI();
   const { user } = useAuth();
@@ -88,7 +86,7 @@ export const useDesktopClinicalSession = (
   );
   const effectiveMeetLink = invite.data?.meetLink || '';
   const [transcriptionDecision, setTranscriptionDecision] = useState<TranscriptionDecision>(() =>
-    getTranscriptionDecision(activeAppointment.metadata),
+    getTeleconsultationTranscriptionDecision(activeAppointment.metadata),
   );
   const [roomStatus, setRoomStatus] = useState<'waiting' | 'open' | 'closed'>(
     activeAppointment.metadata?.teleconsultationRoom?.status || 'waiting',
@@ -177,23 +175,36 @@ export const useDesktopClinicalSession = (
     return 'Recuperação ativa';
   }, [hasNetwork, pendingCount, syncState]);
 
-  const persistTranscriptionDecision = useCallback(async (enabled: boolean) => {
-    const decision = {
+  const persistTranscriptionDecision = useCallback((enabled: boolean, notes?: string) => {
+    if (!user?.id) return Promise.reject(new Error('Usuário não autenticado.'));
+
+    const inFlight = transcriptionDecisionInFlightRef.current;
+    if (inFlight) {
+      if (inFlight.enabled === enabled) return inFlight.promise;
+      return Promise.reject(new Error('A decisão de transcrição já está sendo registrada.'));
+    }
+
+    setIsSavingTranscriptionDecision(true);
+    const promise = persistTeleconsultationTranscriptionDecision({
+      appointmentId,
+      professionalId: user.id,
       enabled,
-      decidedAt: new Date().toISOString(),
-      decidedBy: user?.id,
-      noticeVersion: TRANSCRIPTION_NOTICE_VERSION,
-    };
-    await updateAppointment({
-      id: appointmentId,
-      updates: {
-        metadata: {
-          teleconsultationTranscription: decision,
-        },
-      },
+      notes,
+    }).then(({ decision }) => {
+      setTranscriptionDecision(decision);
+      void queryClient.invalidateQueries({ queryKey: ['appointmentsByDateRange'] });
+      void queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      return decision;
+    }).finally(() => {
+      if (transcriptionDecisionInFlightRef.current?.promise === promise) {
+        transcriptionDecisionInFlightRef.current = null;
+      }
+      setIsSavingTranscriptionDecision(false);
     });
-    setTranscriptionDecision(decision);
-  }, [appointmentId, updateAppointment, user?.id]);
+
+    transcriptionDecisionInFlightRef.current = { enabled, promise };
+    return promise;
+  }, [appointmentId, queryClient, user?.id]);
 
   const persistRoomStatus = useCallback(async (
     status: 'waiting' | 'open' | 'closed',
@@ -242,7 +253,7 @@ export const useDesktopClinicalSession = (
   }, []);
 
   useEffect(() => {
-    const nextDecision = getTranscriptionDecision(activeAppointment.metadata);
+    const nextDecision = getTeleconsultationTranscriptionDecision(activeAppointment.metadata);
     // Always reset the decision when moving between appointments. Keeping the
     // previous session's state here could silently bypass the pre-join choice.
     setTranscriptionDecision(nextDecision);
@@ -336,14 +347,13 @@ export const useDesktopClinicalSession = (
     notes?: string,
   ) => {
     try {
-      await persistTranscriptionDecision(true);
+      await persistTranscriptionDecision(true, notes);
+      setShowConsent(false);
       await grantConsent(method, notes);
       if (!isOnlineSession && !speechSupported) {
-        setShowConsent(false);
         toast.warning('Transcrição presencial indisponível. A sessão seguirá com anotações protegidas.');
         return;
       }
-      setShowConsent(false);
       if (hasJoined) {
         await startCapture();
         toast.success('Consentimento registrado e transcrição iniciada.');
@@ -357,9 +367,9 @@ export const useDesktopClinicalSession = (
 
   const handleDeclineConsent = useCallback(async (notes?: string) => {
     try {
-      await persistTranscriptionDecision(false);
-      await declineConsent(notes);
+      await persistTranscriptionDecision(false, notes);
       setShowConsent(false);
+      await declineConsent(notes);
       toast.info('A sessão continuará sem transcrição.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Não foi possível registrar a decisão.');
@@ -598,6 +608,7 @@ export const useDesktopClinicalSession = (
     showLobby,
     hasJoined,
     showConsent,
+    isSavingTranscriptionDecision,
     transcriptionDecision,
     transcriptionEnabled,
     hasTranscriptionDecision,

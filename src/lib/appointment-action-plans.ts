@@ -103,6 +103,13 @@ export type AppointmentActionOriginChannel =
   | "synapse_voice"
   | "synapse_whatsapp";
 
+export type AppointmentPlanAction =
+  | "create"
+  | "reschedule"
+  | "cancel"
+  | "set_teleconsultation_transcription"
+  | "close_teleconsultation";
+
 const toPlan = (value: unknown): AppointmentActionPlan => {
   if (!value || typeof value !== "object") throw new Error("O servidor não retornou um plano válido.");
   const plan = value as Record<string, unknown>;
@@ -134,7 +141,7 @@ const rpc = async (name: string, params: Record<string, unknown>) => {
 };
 
 export const prepareAppointmentActionPlan = (
-  action: "create" | "reschedule" | "cancel",
+  action: AppointmentPlanAction,
   input: Record<string, unknown>,
   idempotencyKey: string,
   originChannel: AppointmentActionOriginChannel = "professional_app",
@@ -193,7 +200,7 @@ export const cancelAppointmentActionPlan = (
 });
 
 export const prepareAndExecuteAppointmentAction = async (
-  action: "create" | "reschedule" | "cancel",
+  action: AppointmentPlanAction,
   input: Record<string, unknown>,
   idempotencyKey: string,
   originChannel: AppointmentActionOriginChannel = "professional_app",

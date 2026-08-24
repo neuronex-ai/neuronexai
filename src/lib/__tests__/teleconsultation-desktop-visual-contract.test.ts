@@ -50,4 +50,15 @@ describe('teleconsultation desktop visual contract', () => {
     expect(review).toContain('sm:px-8 sm:py-6');
     expect(review).toContain('gap-4 border-t');
   });
+
+  it('keeps scroll layers paint-stable without layout containment', () => {
+    const styles = source('src/index.css');
+    const shellRule = styles.match(/\.teleconsultation-shell\s*\{([^}]*)\}/)?.[1] || '';
+    const deferredRule = styles.match(/\.teleconsultation-deferred-section\s*\{([^}]*)\}/)?.[1] || '';
+
+    expect(shellRule).not.toContain('contain:');
+    expect(deferredRule).not.toContain('contain:');
+    expect(styles).toContain('.teleconsultation-scroll');
+    expect(styles).toContain('overscroll-behavior: contain');
+  });
 });
