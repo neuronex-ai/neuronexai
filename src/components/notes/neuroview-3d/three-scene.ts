@@ -121,7 +121,7 @@ type MeshGroup = {
   haloMaterial: THREE.MeshBasicMaterial;
 };
 
-const PANORAMA_CAMERA = new THREE.Vector3(0, 7, 116);
+const PANORAMA_CAMERA = new THREE.Vector3(0, 6.4, 104);
 const PANORAMA_TARGET = new THREE.Vector3(0, 0, 0);
 
 const baseNodeScale = (node: GraphNode, darkMode: boolean) => {
@@ -630,7 +630,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const inactiveEdgeMaterial = new LineMaterial({
     color: 0xffffff,
     vertexColors: true,
-    linewidth: darkMode ? 0.68 : 0.72,
+    linewidth: darkMode ? 0.68 : 0.54,
     transparent: true,
     opacity: 1,
     alphaToCoverage: true,
@@ -647,14 +647,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
   const activeEdgeMaterial = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: darkMode ? 0.88 : 0.72,
+    opacity: darkMode ? 0.88 : 0.62,
     blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: false,
   });
   const activeEdgeGlowMaterial = new THREE.LineBasicMaterial({
     vertexColors: true,
     transparent: true,
-    opacity: darkMode ? 0.3 : 0.12,
+    opacity: darkMode ? 0.3 : 0.06,
     blending: darkMode ? THREE.AdditiveBlending : THREE.NormalBlending,
     depthWrite: false,
   });
@@ -771,14 +771,14 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
     rimLight.color.set(darkMode ? 0xffffff : 0xd8d0c5);
     rimLight.intensity = darkMode ? 34 : 24;
     scene.environmentIntensity = profile === "full" ? (darkMode ? 0.82 : 0.68) : 1;
-    inactiveEdgeMaterial.linewidth = darkMode ? 0.68 : 0.72;
-    inactiveEdgeMaterial.opacity = darkMode ? 1 : 0.78;
+    inactiveEdgeMaterial.linewidth = darkMode ? 0.68 : 0.54;
+    inactiveEdgeMaterial.opacity = darkMode ? 1 : 0.62;
     inactiveEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
     inactiveEdgeMaterial.needsUpdate = true;
-    activeEdgeMaterial.opacity = darkMode ? 0.88 : 0.72;
+    activeEdgeMaterial.opacity = darkMode ? 0.88 : 0.62;
     activeEdgeMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
     activeEdgeMaterial.needsUpdate = true;
-    activeEdgeGlowMaterial.opacity = darkMode ? 0.3 : 0.12;
+    activeEdgeGlowMaterial.opacity = darkMode ? 0.3 : 0.06;
     activeEdgeGlowMaterial.blending = darkMode ? THREE.AdditiveBlending : THREE.NormalBlending;
     activeEdgeGlowMaterial.needsUpdate = true;
     if (bloom) bloom.strength = darkMode ? 0.28 : 0.09;
@@ -1168,7 +1168,7 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         if (dimForPath) instanceColor.lerp(background, 0.58);
         group.mesh.setColorAt(index, instanceColor);
         instanceHaloColor.copy(instanceColor).multiplyScalar(0.42 + tension * 0.24);
-        if (highlighted) instanceHaloColor.set(darkMode ? "#f7f7f2" : "#4f6870");
+        if (highlighted) instanceHaloColor.set(darkMode ? "#f7f7f2" : "#393a3d");
         group.halo.setColorAt(index, instanceHaloColor);
       });
       group.mesh.instanceMatrix.needsUpdate = true;
@@ -1235,13 +1235,13 @@ export const createNeuroViewScene = (options: SceneOptions): NeuroViewSceneContr
         && lens !== "attention"
         && edgeReveal > 0.001;
       const inactiveIntensity = highlightedNodeIds.size && !active
-        ? (darkMode ? 0.01 : 0.055)
+        ? (darkMode ? 0.01 : 0.022)
         : cameraDistance >= 92
-          ? (darkMode ? 0.012 : 0.085)
-          : darkMode ? 0.038 : 0.19;
-      inactiveEdgeColor.set(darkMode ? "#ffffff" : "#5f5b55").multiplyScalar(inactiveIntensity);
+          ? (darkMode ? 0.012 : 0.045)
+          : darkMode ? 0.038 : 0.09;
+      inactiveEdgeColor.set(darkMode ? "#ffffff" : "#5d5d60").multiplyScalar(inactiveIntensity);
       const activeVisible = active && visible && focusVisible;
-      activeEdgeColor.set(darkMode ? "#f7f7f2" : "#285f6c").multiplyScalar(darkMode ? 1.8 : 1.08);
+      activeEdgeColor.set(darkMode ? "#f7f7f2" : "#303136").multiplyScalar(darkMode ? 1.8 : 0.96);
 
       for (let segment = 0; segment < edgeSegmentCount; segment += 1) {
         const t0 = segment / edgeSegmentCount;

@@ -1,120 +1,242 @@
+"use client";
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Users } from "lucide-react";
+import { cn } from "@/lib/utils";
+import type { Patient } from "@/types";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { ChevronLeft, ChevronRight, CircleDot, Users } from "lucide-react";
+import { useMemo, useState } from "react";
 
-interface Patient {
-    id: string;
-    name: string;
-    avatar_url?: string | null;
-}
+import type { GraphLink, GraphNode } from "./graph/graph-types";
+
+type SidebarGraphData = {
+    nodes: GraphNode[];
+    links: GraphLink[];
+};
 
 interface NeuroViewSidebarProps {
     patients: Patient[];
+    graphData?: SidebarGraphData;
+    darkMode: boolean;
     onHoverNode: (id: string | null) => void;
     onSelectPatient: (patient: Patient) => void;
+    onSelectNode?: (node: GraphNode) => void;
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
 }
 
+const NODE_TYPE_LABEL: Record<GraphNode["type"], string> = {
+    patient: "Paciente",
+    flow: "Fluxo",
+    note: "Nota",
+    evidence: "Evidência",
+    tag: "Tag",
+};
+
+const NODE_TYPE_ORDER: Record<GraphNode["type"], number> = {
+    patient: 0,
+    flow: 1,
+    note: 2,
+    evidence: 3,
+    tag: 4,
+};
+
+const endpointId = (endpoint: GraphLink["source"] | GraphLink["target"]) => (
+    typeof endpoint === "string" ? endpoint : endpoint?.id
+);
+
 export const NeuroViewSidebar = ({
     patients,
+    graphData,
+    darkMode,
     onHoverNode,
     onSelectPatient,
+    onSelectNode,
     isOpen,
-    onOpenChange
+    onOpenChange,
 }: NeuroViewSidebarProps) => {
-    const getInitials = (name: string) => {
-        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    const reducedMotion = useReducedMotion();
+    const [expandedPatientIds, setExpandedPatientIds] = useState<Set<string>>(new Set());
+
+    const nodesByPatient = useMemo(() => {
+        const nodes = graphData?.nodes || [];
+        const links = graphData?.links || [];
+        const nodeById = new Map(nodes.map((node) => [node.id, node]));
+
+        return new Map(patients.map((patient) => {
+            const patientNodeId = `pat-${patient.id}`;
+            const includedIds = new Set<string>();
+
+            nodes.forEach((node) => {
+                if (node.id !== patientNodeId && String(node.data?.patient_id || "") === patient.id) includedIds.add(node.id);
+            });
+
+            links.forEach((link) => {
+                const sourceId = endpointId(link.source);
+                const targetId = endpointId(link.target);
+                if (sourceId === patientNodeId && targetId) includedIds.add(targetId);
+                if (targetId === patientNodeId && sourceId) includedIds.add(sourceId);
+            });
+
+            const clinicalIds = new Set(Array.from(includedIds).filter((id) => nodeById.get(id)?.type !== "tag"));
+            links.forEach((link) => {
+                const sourceId = endpointId(link.source);
+                const targetId = endpointId(link.target);
+                if (!sourceId || !targetId) return;
+                if (clinicalIds.has(sourceId) && nodeById.get(targetId)?.type === "tag") includedIds.add(targetId);
+                if (clinicalIds.has(targetId) && nodeById.get(sourceId)?.type === "tag") includedIds.add(sourceId);
+            });
+
+            const patientNodes = Array.from(includedIds)
+                .map((id) => nodeById.get(id))
+                .filter((node): node is GraphNode => Boolean(node) && node?.type !== "patient")
+                .sort((left, right) => NODE_TYPE_ORDER[left.type] - NODE_TYPE_ORDER[right.type]
+                    || left.label.localeCompare(right.label, "pt-BR"));
+            return [patient.id, patientNodes] as const;
+        }));
+    }, [graphData?.links, graphData?.nodes, patients]);
+
+    const getInitials = (name: string) => name
+        .split(" ")
+        .map((part) => part[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+
+    const togglePatient = (patientId: string) => {
+        setExpandedPatientIds((current) => {
+            const next = new Set(current);
+            if (next.has(patientId)) next.delete(patientId);
+            else next.add(patientId);
+            return next;
+        });
     };
 
     return (
-        <div className="absolute bottom-20 left-5 top-[78px] z-40 flex pointer-events-none">
+        <div className="pointer-events-none absolute bottom-20 left-5 top-[78px] z-40 flex">
             <AnimatePresence mode="wait">
                 {isOpen ? (
-                    <motion.div
+                    <motion.aside
                         key="sidebar-open"
-                        initial={{ opacity: 0, x: -20, width: 0 }}
-                        animate={{ opacity: 1, x: 0, width: 196 }}
-                        exit={{ opacity: 0, x: -20, width: 0 }}
-                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="pointer-events-auto flex h-full flex-col overflow-hidden rounded-[26px] border border-white/[0.09] bg-[#070708]/76 shadow-[0_30px_90px_-48px_rgba(0,0,0,0.9),inset_0_1px_0_rgba(255,255,255,0.07)] backdrop-blur-3xl [.light_&]:border-black/[0.08] [.light_&]:bg-white/[0.72] [.light_&]:shadow-[0_28px_80px_-46px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.55)]"
+                        initial={reducedMotion ? false : { opacity: 0, x: -18, width: 0 }}
+                        animate={{ opacity: 1, x: 0, width: 244 }}
+                        exit={reducedMotion ? { opacity: 0 } : { opacity: 0, x: -18, width: 0 }}
+                        transition={reducedMotion ? { duration: 0 } : { type: "spring", damping: 31, stiffness: 320 }}
+                        className={cn(
+                            "pointer-events-auto flex h-full flex-col overflow-hidden rounded-[26px] border shadow-[0_30px_90px_-48px_rgba(0,0,0,0.9)] backdrop-blur-3xl",
+                            darkMode
+                                ? "border-white/[0.09] bg-[#070708]/82 text-white"
+                                : "border-black/[0.075] bg-white/88 text-zinc-950 shadow-[0_28px_80px_-46px_rgba(24,24,27,0.36),inset_0_1px_0_rgba(255,255,255,0.96)]",
+                        )}
+                        aria-label="Pacientes e nós do NeuroVision"
                     >
-                        <div className="flex flex-col gap-2.5 border-b border-white/[0.07] bg-white/[0.025] p-3 [.light_&]:border-black/[0.06] [.light_&]:bg-black/[0.015]">
-                            <div className="flex items-center justify-between">
-                                <span className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-white [.light_&]:text-foreground">
-                                    <Users className="h-3.5 w-3.5 text-white/55 [.light_&]:text-zinc-500" /> Pacientes
+                        <div className={cn("flex flex-col gap-2.5 border-b p-3", darkMode ? "border-white/[0.07] bg-white/[0.025]" : "border-black/[0.055] bg-black/[0.018]")}>
+                            <div className="flex items-center justify-between gap-3">
+                                <span className={cn("flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.17em]", darkMode ? "text-white" : "text-zinc-900")}>
+                                    <Users className={cn("h-3.5 w-3.5", darkMode ? "text-white/55" : "text-zinc-500")} /> Pacientes e nós
                                 </span>
                                 <Button
+                                    type="button"
                                     size="icon"
                                     variant="ghost"
                                     onClick={() => onOpenChange(false)}
-                                    className="h-6 w-6 rounded-xl text-white/50 hover:bg-white/[0.06] hover:text-white [.light_&]:text-muted-foreground [.light_&]:hover:bg-black/[0.05] [.light_&]:hover:text-foreground"
+                                    className={cn("h-7 w-7 rounded-xl", darkMode ? "text-white/50 hover:bg-white/[0.07] hover:text-white" : "text-zinc-500 hover:bg-black/[0.05] hover:text-zinc-950")}
+                                    aria-label="Recolher pacientes e nós"
                                 >
                                     <ChevronLeft className="h-3.5 w-3.5" />
                                 </Button>
                             </div>
-                            <p className="text-[8.5px] font-black uppercase tracking-[0.22em] text-white/32 [.light_&]:text-muted-foreground/50">
-                                {patients.length} nós ativos
+                            <p className={cn("text-[8.5px] font-black uppercase tracking-[0.2em]", darkMode ? "text-white/32" : "text-zinc-400")}>
+                                {patients.length} {patients.length === 1 ? "paciente" : "pacientes"} · {graphData?.nodes.length || patients.length} nós
                             </p>
                         </div>
 
                         <div className="relative flex-1 overflow-hidden">
                             <div className="custom-scrollbar absolute inset-0 space-y-1 overflow-y-auto p-2 pb-5">
                                 {patients.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center gap-2 py-12 text-white/30 [.light_&]:text-muted-foreground/30">
+                                    <div className={cn("flex flex-col items-center justify-center gap-2 py-12", darkMode ? "text-white/30" : "text-zinc-400")}>
                                         <Users className="h-8 w-8 opacity-20" />
                                         <p className="px-4 text-center text-[10px] font-medium">Nenhum paciente</p>
                                     </div>
-                                ) : (
-                                    patients.map((patient) => (
-                                        <motion.button
-                                            key={patient.id}
-                                            layoutId={patient.id}
-                                            onMouseEnter={() => onHoverNode(`pat-${patient.id}`)}
-                                            onMouseLeave={() => onHoverNode(null)}
-                                            onClick={() => onSelectPatient(patient)}
-                                            whileHover={{ backgroundColor: "rgba(120,120,120,0.1)", scale: 1.015 }}
-                                            whileTap={{ scale: 0.98 }}
-                                            className="group flex w-full cursor-pointer items-center gap-2.5 rounded-2xl border border-transparent p-1.5 text-left transition-colors duration-200 hover:border-white/[0.06] [.light_&]:hover:border-black/[0.06]"
-                                        >
-                                            <Avatar className="h-7 w-7 shadow-sm ring-1 ring-white/10 transition-all group-hover:ring-white/24 [.light_&]:ring-black/[0.08] [.light_&]:group-hover:ring-zinc-400/60">
-                                                <AvatarImage src={patient.avatar_url || undefined} />
-                                                <AvatarFallback className="bg-[#1A1A1D] text-[8.5px] font-black text-white/60 [.light_&]:bg-zinc-100 [.light_&]:text-zinc-500">
-                                                    {getInitials(patient.name)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate text-[11px] font-semibold text-white/66 transition-colors group-hover:text-white [.light_&]:text-muted-foreground [.light_&]:group-hover:text-foreground">
-                                                    {patient.name}
-                                                </p>
+                                ) : patients.map((patient) => {
+                                    const expanded = expandedPatientIds.has(patient.id);
+                                    const patientNodes = nodesByPatient.get(patient.id) || [];
+                                    return (
+                                        <div key={patient.id} className="overflow-hidden rounded-[17px]">
+                                            <div className={cn("group flex items-center rounded-[17px] border border-transparent transition-colors", darkMode ? "hover:border-white/[0.06] hover:bg-white/[0.04]" : "hover:border-black/[0.055] hover:bg-black/[0.025]")}>
+                                                <button
+                                                    type="button"
+                                                    onMouseEnter={() => onHoverNode(`pat-${patient.id}`)}
+                                                    onMouseLeave={() => onHoverNode(null)}
+                                                    onClick={() => onSelectPatient(patient)}
+                                                    className="flex min-h-11 min-w-0 flex-1 items-center gap-2.5 rounded-l-[16px] p-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-current/35"
+                                                >
+                                                    <Avatar className={cn("h-7 w-7 shadow-sm ring-1", darkMode ? "ring-white/10" : "ring-black/[0.08]")}>
+                                                        <AvatarImage src={patient.avatar_url || undefined} />
+                                                        <AvatarFallback className={cn("text-[8.5px] font-black", darkMode ? "bg-[#1A1A1D] text-white/60" : "bg-zinc-100 text-zinc-500")}>
+                                                            {getInitials(patient.name)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <span className="min-w-0 flex-1">
+                                                        <span className={cn("block truncate text-[11px] font-semibold", darkMode ? "text-white/68 group-hover:text-white" : "text-zinc-600 group-hover:text-zinc-950")}>{patient.name}</span>
+                                                        <span className={cn("block text-[8px] font-medium", darkMode ? "text-white/30" : "text-zinc-400")}>{patientNodes.length} nós vinculados</span>
+                                                    </span>
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => togglePatient(patient.id)}
+                                                    className={cn("mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-current/35", darkMode ? "text-white/38 hover:bg-white/[0.07] hover:text-white" : "text-zinc-400 hover:bg-black/[0.045] hover:text-zinc-900")}
+                                                    aria-label={`${expanded ? "Recolher" : "Expandir"} nós de ${patient.name}`}
+                                                    aria-expanded={expanded}
+                                                >
+                                                    <ChevronRight className={cn("h-3.5 w-3.5 transition-transform duration-200 motion-reduce:transition-none", expanded && "rotate-90")} />
+                                                </button>
                                             </div>
-                                            <ChevronRight className="h-3 w-3 text-white/30 opacity-0 transition-opacity group-hover:opacity-100 group-hover:text-white/50 [.light_&]:text-muted-foreground/30 [.light_&]:group-hover:text-foreground/50" />
-                                        </motion.button>
-                                    ))
-                                )}
+
+                                            <AnimatePresence initial={false}>
+                                                {expanded ? (
+                                                    <motion.ul
+                                                        initial={reducedMotion ? false : { height: 0, opacity: 0 }}
+                                                        animate={{ height: "auto", opacity: 1 }}
+                                                        exit={reducedMotion ? { opacity: 0 } : { height: 0, opacity: 0 }}
+                                                        transition={reducedMotion ? { duration: 0 } : { duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                                        className={cn("ml-5 overflow-hidden border-l pl-2", darkMode ? "border-white/[0.07]" : "border-black/[0.065]")}
+                                                    >
+                                                        {patientNodes.length ? patientNodes.map((node) => (
+                                                            <li key={node.id}>
+                                                                <button
+                                                                    type="button"
+                                                                    onMouseEnter={() => onHoverNode(node.id)}
+                                                                    onMouseLeave={() => onHoverNode(null)}
+                                                                    onFocus={() => onHoverNode(node.id)}
+                                                                    onBlur={() => onHoverNode(null)}
+                                                                    onClick={() => onSelectNode?.(node)}
+                                                                    className={cn(
+                                                                        "flex min-h-10 w-full items-center gap-2 rounded-xl px-2 py-1.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset",
+                                                                        darkMode ? "text-white/54 hover:bg-white/[0.055] hover:text-white focus-visible:ring-white/35" : "text-zinc-500 hover:bg-black/[0.035] hover:text-zinc-950 focus-visible:ring-zinc-950/25",
+                                                                    )}
+                                                                >
+                                                                    <CircleDot className="h-3 w-3 shrink-0 opacity-55" />
+                                                                    <span className="min-w-0 flex-1">
+                                                                        <span className="block truncate text-[10px] font-semibold">{node.label || "Sem título"}</span>
+                                                                        <span className="block text-[7.5px] font-bold uppercase tracking-[0.12em] opacity-45">{NODE_TYPE_LABEL[node.type]}</span>
+                                                                    </span>
+                                                                </button>
+                                                            </li>
+                                                        )) : (
+                                                            <li className={cn("px-2 py-3 text-[9px]", darkMode ? "text-white/30" : "text-zinc-400")}>Nenhum nó vinculado.</li>
+                                                        )}
+                                                    </motion.ul>
+                                                ) : null}
+                                            </AnimatePresence>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="sidebar-closed"
-                        initial={{ opacity: 0, scale: 0.8, x: -20 }}
-                        animate={{ opacity: 1, scale: 1, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, x: -20 }}
-                        transition={{ type: "spring", damping: 20, stiffness: 400 }}
-                        className="pointer-events-auto"
-                    >
-                        <Button
-                            size="icon"
-                            variant="outline"
-                            onClick={() => onOpenChange(true)}
-                            className="h-10 w-10 rounded-2xl border border-white/[0.09] bg-[#070708]/72 text-white/70 shadow-[0_20px_54px_-34px_rgba(0,0,0,0.75)] backdrop-blur-2xl hover:bg-white/[0.08] hover:text-white [.light_&]:border-black/[0.08] [.light_&]:bg-white/70 [.light_&]:text-muted-foreground [.light_&]:hover:bg-white [.light_&]:hover:text-foreground"
-                        >
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </motion.div>
-                )}
+                    </motion.aside>
+                ) : null}
             </AnimatePresence>
         </div>
     );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ArrowLeft, CircleDot, Crosshair, Info, Keyboard, ListFilter, ListTree, Maximize, Minimize, MoreHorizontal, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
+import { ChevronRight, Crosshair, Info, Keyboard, ListFilter, Maximize, Minimize, MoreHorizontal, Orbit, Pause, Play, RotateCcw, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,21 +18,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import type { PersonalNote, Patient } from "@/types";
 import type { EvidenceNode, EvidenceSource, NeuroVisionLens } from "../clinical-evidence/evidence-types";
 import type { GraphNode } from "../graph/graph-types";
 import { NeuroVisionCompactSearch } from "../desktop/neurovision/NeuroVisionCompactSearch";
 import { NeuroVisionFilterBar, NEUROVISION_FILTER_OPTIONS } from "../desktop/neurovision/NeuroVisionFilterBar";
+import { NeuroVisionSidebar } from "../NeuroViewSidebar";
 import {
   getPatientSubgraphIds,
   getNodeEvidence,
@@ -90,22 +83,6 @@ const LENS_OPTIONS = [
   { value: "attention", label: "NeuroTrack", description: "Radar vivo de atenção objetiva" },
 ] as const;
 
-const NODE_TYPE_LABEL: Record<GraphNode["type"], string> = {
-  patient: "Paciente",
-  flow: "Fluxo",
-  note: "Nota",
-  tag: "Tag",
-  evidence: "Evidência",
-};
-
-const NODE_TYPE_ORDER: Record<GraphNode["type"], number> = {
-  patient: 0,
-  flow: 1,
-  note: 2,
-  tag: 3,
-  evidence: 2,
-};
-
 const CAMERA_ACTION_ANNOUNCEMENT: Record<NeuroVisionCameraAction, string> = {
   "orbit-left": "rotação para a esquerda",
   "orbit-right": "rotação para a direita",
@@ -145,7 +122,6 @@ export const NeuroVision3D = ({
   const autoRotateRef = useRef(!reducedMotion);
   const emphasizedNodeIdsRef = useRef<ReadonlySet<string>>(emphasizedNodeIds || new Set());
   const focusNodeIdRef = useRef<string | null>(focusNodeId);
-  const nodeButtonRefs = useRef(new Map<string, HTMLButtonElement>());
   const [filter, setFilter] = useState<NeuroView3DFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [lens, setLens] = useState<NeuroVisionLens>("panorama");
@@ -153,7 +129,7 @@ export const NeuroVision3D = ({
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [timeProgress, setTimeProgress] = useState(100);
-  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [isPatientSidebarOpen, setIsPatientSidebarOpen] = useState(false);
   const [lensMenuOpen, setLensMenuOpen] = useState(false);
   const [priorityInfoOpen, setPriorityInfoOpen] = useState(false);
   const [moreMenuOpen, setMoreMenuOpen] = useState(false);
@@ -193,13 +169,6 @@ export const NeuroVision3D = ({
       return !item || new Date(item.occurredAt).getTime() <= timeEnd;
     }));
   }, [filter, focusedPatientId, graphData, nodeById, timeEnd]);
-  const visibleNodes = useMemo(
-    () => graphData.nodes
-      .filter((node) => visibleNodeIds.has(node.id))
-      .sort((left, right) => NODE_TYPE_ORDER[left.type] - NODE_TYPE_ORDER[right.type]
-        || left.label.localeCompare(right.label, "pt-BR")),
-    [graphData.nodes, visibleNodeIds],
-  );
   const searchMatchIds = useMemo(() => {
     const normalizedQuery = searchQuery.trim().toLocaleLowerCase("pt-BR");
     if (!normalizedQuery) return new Set<string>();
@@ -311,8 +280,13 @@ export const NeuroVision3D = ({
   useEffect(() => {
     const handleEscape = (event: globalThis.KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      if (navigatorOpen || dynamicsOpen || lensMenuOpen || moreMenuOpen || priorityInfoOpen) return;
+      if (dynamicsOpen || lensMenuOpen || moreMenuOpen || priorityInfoOpen) return;
       if (isFullscreen || document.fullscreenElement) return;
+      if (isPatientSidebarOpen) {
+        event.preventDefault();
+        setIsPatientSidebarOpen(false);
+        return;
+      }
       if (detailsOpen) {
         event.preventDefault();
         onCloseDetails?.();
@@ -337,7 +311,7 @@ export const NeuroVision3D = ({
     };
     window.addEventListener("keydown", handleEscape);
     return () => window.removeEventListener("keydown", handleEscape);
-  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, lensMenuOpen, moreMenuOpen, navigatorOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
+  }, [detailsOpen, dynamicsOpen, focusedPatientId, isFullscreen, isPatientSidebarOpen, lensMenuOpen, moreMenuOpen, onBack, onClearPatient, onCloseDetails, priorityInfoOpen, selectedNodeId]);
 
   const handleFilterChange = (nextFilter: NeuroView3DFilter) => {
     setFilter(nextFilter);
@@ -356,7 +330,7 @@ export const NeuroVision3D = ({
       return;
     }
     if ((nextLens === "session-prep" || nextLens === "patterns") && !focusedPatientId) {
-      setNavigatorOpen(true);
+      setIsPatientSidebarOpen(true);
       setAnnouncement("Escolha um paciente para abrir esta lente clínica.");
       return;
     }
@@ -419,18 +393,6 @@ export const NeuroVision3D = ({
       sceneContainerRef.current?.focus({ preventScroll: true });
       setAnnouncement("Navegação da câmera ativa. Use as setas e W A S D.");
     });
-  };
-
-  const handleNodeListKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
-    let targetIndex: number | null = null;
-    if (event.key === "ArrowDown") targetIndex = Math.min(visibleNodes.length - 1, index + 1);
-    if (event.key === "ArrowUp") targetIndex = Math.max(0, index - 1);
-    if (event.key === "Home") targetIndex = 0;
-    if (event.key === "End") targetIndex = visibleNodes.length - 1;
-    if (targetIndex === null) return;
-    event.preventDefault();
-    const target = visibleNodes[targetIndex];
-    if (target) nodeButtonRefs.current.get(target.id)?.focus();
   };
 
   const inspectNode = useCallback((nodeId: string) => {
@@ -551,21 +513,6 @@ export const NeuroVision3D = ({
       </p>
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-3 p-4 lg:p-5">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onBack}
-          className={cn(
-            "pointer-events-auto min-h-11 rounded-2xl border px-4 shadow-xl backdrop-blur-2xl",
-            darkMode
-              ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
-              : "border-black/10 bg-white/72 text-zinc-900 hover:bg-white",
-          )}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          <span className="hidden sm:inline">NeuroVision plano</span>
-        </Button>
-
         <div className="pointer-events-auto absolute left-1/2 top-4 flex -translate-x-1/2 items-center gap-2 lg:top-5">
           <NeuroVisionFilterBar
             value={filter}
@@ -626,7 +573,24 @@ export const NeuroVision3D = ({
           </Popover>
         </div>
 
-        <div className="pointer-events-auto mt-14 flex items-center gap-2">
+        <div className="pointer-events-auto flex items-center gap-2">
+          <Button
+            type="button"
+            size="icon"
+            variant="outline"
+            onClick={() => setIsPatientSidebarOpen((open) => !open)}
+            aria-label={isPatientSidebarOpen ? "Recolher pacientes e nós" : "Expandir pacientes e nós"}
+            aria-expanded={isPatientSidebarOpen}
+            title={isPatientSidebarOpen ? "Recolher pacientes e nós" : "Expandir pacientes e nós"}
+            className={cn(
+              "h-11 w-11 rounded-2xl border shadow-xl backdrop-blur-2xl",
+              darkMode
+                ? "border-white/10 bg-black/45 text-white hover:bg-white/10"
+                : "border-black/10 bg-white/88 text-zinc-700 hover:bg-white",
+            )}
+          >
+            <ChevronRight className={cn("h-4 w-4 transition-transform duration-200 motion-reduce:transition-none", isPatientSidebarOpen && "rotate-180")} />
+          </Button>
           <DropdownMenu open={lensMenuOpen} onOpenChange={setLensMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button
@@ -646,7 +610,7 @@ export const NeuroVision3D = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              align="end"
+              align="start"
               sideOffset={10}
               className={cn(
                 "w-[260px] rounded-[20px] border p-2 shadow-2xl backdrop-blur-3xl",
@@ -698,7 +662,7 @@ export const NeuroVision3D = ({
               </Button>
             </PopoverTrigger>
             <PopoverContent
-              align="end"
+              align="start"
               sideOffset={10}
               className={cn(
                 "w-[310px] rounded-[24px] border p-0 shadow-2xl backdrop-blur-3xl",
@@ -820,7 +784,7 @@ export const NeuroVision3D = ({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              align="end"
+              align="start"
               sideOffset={10}
               className={cn(
                 "w-[270px] rounded-[20px] border p-2 shadow-2xl backdrop-blur-3xl",
@@ -921,22 +885,31 @@ export const NeuroVision3D = ({
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
-              <DropdownMenuItem
-                onSelect={() => setNavigatorOpen(true)}
-                className={cn(
-                  "min-h-11 gap-3 rounded-xl px-3 text-xs",
-                  darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950",
-                )}
-              >
-                <ListTree className="h-4 w-4" />
-                Lista acessível de nós
-              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </header>
 
-      <div className="pointer-events-none absolute right-5 top-[142px] z-30">
+      <NeuroVisionSidebar
+        patients={graphData.nodes
+          .filter((node) => node.type === "patient")
+          .map((node) => node.data as Patient)}
+        graphData={graphData}
+        darkMode={darkMode}
+        isOpen={isPatientSidebarOpen}
+        onOpenChange={setIsPatientSidebarOpen}
+        onHoverNode={(nodeId) => {
+          setHoveredNodeId(nodeId);
+          controllerRef.current?.setHighlight(nodeId);
+        }}
+        onSelectPatient={(patient) => {
+          const node = nodeById.get(`pat-${patient.id}`);
+          if (node) activateNode(node);
+        }}
+        onSelectNode={activateNode}
+      />
+
+      <div className="pointer-events-none absolute right-5 top-[88px] z-30">
         <NeuroVisionInsightsPanel
           darkMode={darkMode}
           lens={lens}
@@ -979,7 +952,7 @@ export const NeuroVision3D = ({
         <NeuroVisionCompactSearch value={searchQuery} onValueChange={setSearchQuery} darkMode={darkMode} />
       </div>
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end justify-between gap-4 p-5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex items-end p-5">
         <div
           className={cn(
             "rounded-2xl border px-3.5 py-2 text-[10px] font-semibold tracking-wide shadow-lg backdrop-blur-xl",
@@ -988,32 +961,9 @@ export const NeuroVision3D = ({
         >
           {profile === "full" ? "Renderização completa" : "Renderização leve"}
         </div>
-        <div
-          className={cn(
-            "hidden items-center gap-3 rounded-2xl border px-3.5 py-2 text-[10px] font-medium shadow-lg backdrop-blur-xl md:flex",
-            darkMode ? "border-white/10 bg-black/38 text-white/58" : "border-black/8 bg-white/62 text-zinc-600",
-          )}
-          aria-hidden="true"
-        >
-          {(["patient", "flow", "note", "evidence", "tag"] as const).map((type) => (
-            <span key={type} className="inline-flex items-center gap-1.5">
-              <CircleDot className={cn(
-                "h-3 w-3",
-                type === "patient"
-                  ? "text-current"
-                  : type === "flow"
-                    ? "opacity-80"
-                    : type === "evidence"
-                      ? "opacity-70"
-                      : "opacity-55",
-              )} />
-              {NODE_TYPE_LABEL[type]}
-            </span>
-          ))}
-        </div>
       </div>
 
-      {visibleNodes.length === 0 && !sceneError ? (
+      {visibleNodeIds.size === 0 && !sceneError ? (
         <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center p-6">
           <div className={cn(
             "pointer-events-auto max-w-sm rounded-3xl border p-6 text-center shadow-2xl backdrop-blur-2xl",
@@ -1035,72 +985,6 @@ export const NeuroVision3D = ({
           </div>
         </div>
       ) : null}
-
-      <Sheet open={navigatorOpen} onOpenChange={setNavigatorOpen}>
-        <SheetContent
-          side="right"
-          className={cn(
-            "z-[120] flex w-[min(92vw,420px)] max-w-[420px] flex-col border-l p-0",
-            darkMode ? "border-white/10 bg-[#0b0b0e]/96 text-white" : "border-black/10 bg-[#f8f7f3]/96",
-          )}
-        >
-          <SheetHeader className="border-b border-border/20 px-5 pb-4 pt-6">
-            <SheetTitle className={darkMode ? "text-white" : undefined}>Nós do NeuroVision 3d</SheetTitle>
-            <SheetDescription>
-              Use as setas para navegar, Enter para entrar e Escape para retornar.
-            </SheetDescription>
-          </SheetHeader>
-          <ScrollArea className="min-h-0 flex-1">
-            <ul className="space-y-1 p-3" aria-label="Nós visíveis">
-              {visibleNodes.map((node, index) => {
-                const active = hoveredNodeId === node.id || focusedPatientId === node.id;
-                return (
-                  <li key={node.id}>
-                    <button
-                      ref={(element) => {
-                        if (element) nodeButtonRefs.current.set(node.id, element);
-                        else nodeButtonRefs.current.delete(node.id);
-                      }}
-                      type="button"
-                      onClick={() => activateNode(node)}
-                      onFocus={() => {
-                        setHoveredNodeId(node.id);
-                        controllerRef.current?.setHighlight(node.id);
-                        setAnnouncement(`${NODE_TYPE_LABEL[node.type]} ${node.label} em foco.`);
-                      }}
-                      onBlur={() => {
-                        setHoveredNodeId(null);
-                        controllerRef.current?.setHighlight(null);
-                      }}
-                      onMouseEnter={() => controllerRef.current?.setHighlight(node.id)}
-                      onMouseLeave={() => controllerRef.current?.setHighlight(null)}
-                      onKeyDown={(event) => handleNodeListKeyDown(event, index)}
-                      className={cn(
-                        "flex min-h-12 w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left transition-colors",
-                        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-                        active
-                          ? darkMode ? "border-white/16 bg-white/10" : "border-black/12 bg-black/[0.055]"
-                          : darkMode ? "border-transparent hover:bg-white/[0.055]" : "border-transparent hover:bg-black/[0.035]",
-                      )}
-                    >
-                      <span className={cn(
-                        "h-2.5 w-2.5 shrink-0 rounded-full",
-                        node.type === "flow" ? "bg-cyan-400" : node.type === "evidence" ? "bg-violet-400" : node.type === "patient" ? darkMode ? "bg-white" : "bg-zinc-800" : "bg-current opacity-45",
-                      )} />
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-sm font-semibold">{node.label || "Sem título"}</span>
-                        <span className="block text-[10px] font-medium uppercase tracking-[0.14em] opacity-48">
-                          {NODE_TYPE_LABEL[node.type]}
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
 
       <p className="sr-only" aria-live="polite" aria-atomic="true">{announcement}</p>
       {focusedPatient ? (

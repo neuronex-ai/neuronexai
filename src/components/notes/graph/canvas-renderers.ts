@@ -297,9 +297,9 @@ export const drawLink = (
   const hasEmphasis = Boolean(emphasizedNodeIds?.size);
   const isActive = isConnectedToHover || isEmphasized;
   const dimmed = Boolean((hoverNode || hasEmphasis) && !isActive);
-  const baseOpacity = isDarkMode ? 0.075 : 0.14;
-  const targetOpacity = (dimmed ? 0.025 : (isActive ? 0.82 : baseOpacity)) * reveal;
-  const targetWidth = ((isActive ? 1.5 : 0.38) + (link.value || 1) * (isActive ? 0.065 : 0.035)) / globalScale;
+  const baseOpacity = isDarkMode ? 0.075 : 0.072;
+  const targetOpacity = (dimmed ? (isDarkMode ? 0.025 : 0.014) : (isActive ? (isDarkMode ? 0.82 : 0.76) : baseOpacity)) * reveal;
+  const targetWidth = ((isActive ? 1.5 : (isDarkMode ? 0.38 : 0.27)) + (link.value || 1) * (isActive ? 0.065 : (isDarkMode ? 0.035 : 0.022))) / globalScale;
 
   link.currentOpacity = link.currentOpacity ?? targetOpacity;
   link.currentWidth = link.currentWidth ?? targetWidth;
@@ -331,14 +331,14 @@ export const drawLink = (
 
   if (isActive) {
     const grad = ctx.createLinearGradient(sx!, sy!, tx!, ty!);
-    grad.addColorStop(0, colorWithAlpha(source.color || "#ffffff", 0.92));
-    grad.addColorStop(0.52, isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.36)");
-    grad.addColorStop(1, colorWithAlpha(target.color || "#ffffff", 0.92));
+    grad.addColorStop(0, isDarkMode ? colorWithAlpha(source.color || "#ffffff", 0.92) : "rgba(39,39,42,0.68)");
+    grad.addColorStop(0.52, isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.9)");
+    grad.addColorStop(1, isDarkMode ? colorWithAlpha(target.color || "#ffffff", 0.92) : "rgba(63,63,70,0.68)");
     ctx.strokeStyle = grad;
     ctx.shadowBlur = performanceMode ? 0 : 7 / Math.max(globalScale, 0.5);
-    ctx.shadowColor = colorWithAlpha(target.color || "#ffffff", 0.42);
+    ctx.shadowColor = isDarkMode ? colorWithAlpha(target.color || "#ffffff", 0.42) : "rgba(24,24,27,0.2)";
   } else {
-    ctx.strokeStyle = isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(24,24,27,0.58)";
+    ctx.strokeStyle = isDarkMode ? "rgba(255,255,255,0.72)" : "rgba(39,39,42,0.42)";
     ctx.shadowBlur = 0;
   }
 

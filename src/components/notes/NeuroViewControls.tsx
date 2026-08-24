@@ -94,13 +94,13 @@ export const NeuroViewControls = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[270px] p-2")}>
           <DropdownMenuLabel className="px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Lente clínica</DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/8 [.light_&]:bg-black/8" />
+          <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
           <DropdownMenuRadioGroup value={lens} onValueChange={(value) => onLensChange(value as NeuroVisionLens)}>
             {LENS_OPTIONS.map((option) => (
-              <DropdownMenuRadioItem key={option.value} value={option.value} className="my-0.5 min-h-12 rounded-xl pl-8 pr-3 focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950">
+              <DropdownMenuRadioItem key={option.value} value={option.value} className={cn("my-0.5 min-h-12 rounded-xl pl-8 pr-3", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}>
                 <span className="flex flex-col gap-0.5">
                   <span className="text-xs font-semibold">{option.label}</span>
-                  <span className="text-[10px] font-normal text-white/42 [.light_&]:text-zinc-500">{option.description}</span>
+                  <span className={cn("text-[10px] font-normal", darkMode ? "text-white/42" : "text-zinc-500")}>{option.description}</span>
                 </span>
               </DropdownMenuRadioItem>
             ))}
@@ -115,27 +115,27 @@ export const NeuroViewControls = ({
           </Button>
         </PopoverTrigger>
         <PopoverContent align="start" sideOffset={10} className={panelClass(darkMode)}>
-          <div className="border-b border-white/8 pb-3 [.light_&]:border-black/[0.065]">
+          <div className={cn("border-b pb-3", darkMode ? "border-white/8" : "border-black/[0.065]")}>
             <p className="text-xs font-semibold">Dinâmica espacial</p>
-            <p className="mt-1 text-[10px] leading-relaxed text-white/42 [.light_&]:text-zinc-500">Muda somente a disposição visual. Densidade, atenção e risco não são recalculados.</p>
+            <p className={cn("mt-1 text-[10px] leading-relaxed", darkMode ? "text-white/42" : "text-zinc-500")}>Muda somente a disposição visual. Densidade, atenção e risco não são recalculados.</p>
           </div>
           <div className="mt-4 space-y-4">
             <div className="space-y-2">
-              <div className="flex justify-between text-[10px] font-semibold text-white/54 [.light_&]:text-zinc-600"><Label>Repulsão neural</Label><span className="tabular-nums">{Math.abs(config.repulsion).toFixed(0)}</span></div>
+              <div className={cn("flex justify-between text-[10px] font-semibold", darkMode ? "text-white/54" : "text-zinc-600")}><Label>Repulsão neural</Label><span className="tabular-nums">{Math.abs(config.repulsion).toFixed(0)}</span></div>
               <Slider value={[Math.abs(config.repulsion)]} min={120} max={1300} step={20} onValueChange={([value]) => update("repulsion", -value)} />
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between text-[10px] font-semibold text-white/54 [.light_&]:text-zinc-600"><Label>Distância das conexões</Label><span className="tabular-nums">{config.linkDistance.toFixed(0)} px</span></div>
+              <div className={cn("flex justify-between text-[10px] font-semibold", darkMode ? "text-white/54" : "text-zinc-600")}><Label>Distância das conexões</Label><span className="tabular-nums">{config.linkDistance.toFixed(0)} px</span></div>
               <Slider value={[config.linkDistance]} min={45} max={210} step={5} onValueChange={([value]) => update("linkDistance", value)} />
             </div>
             <div className="space-y-2">
-              <div className="flex justify-between text-[10px] font-semibold text-white/54 [.light_&]:text-zinc-600"><Label>Gravidade central</Label><span className="tabular-nums">{(config.centerForce * 100).toFixed(0)}%</span></div>
+              <div className={cn("flex justify-between text-[10px] font-semibold", darkMode ? "text-white/54" : "text-zinc-600")}><Label>Gravidade central</Label><span className="tabular-nums">{(config.centerForce * 100).toFixed(0)}%</span></div>
               <Slider value={[config.centerForce * 100]} min={0} max={26} step={1} onValueChange={([value]) => update("centerForce", value / 100)} />
             </div>
           </div>
-          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-white/8 pt-4 [.light_&]:border-black/[0.065]">
+          <div className={cn("mt-4 grid grid-cols-3 gap-2 border-t pt-4", darkMode ? "border-white/8" : "border-black/[0.065]")}>
             {([["Pacientes", "showPatients"], ["Notas", "showNotes"], ["Tags", "showTags"]] as const).map(([label, key]) => (
-              <label key={key} className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-white/8 bg-white/[0.035] px-2.5 text-[9px] font-semibold text-white/54 [.light_&]:border-black/[0.06] [.light_&]:bg-black/[0.025] [.light_&]:text-zinc-600">
+              <label key={key} className={cn("flex min-h-11 items-center justify-between gap-2 rounded-xl border px-2.5 text-[9px] font-semibold", darkMode ? "border-white/8 bg-white/[0.035] text-white/54" : "border-black/[0.06] bg-black/[0.025] text-zinc-600")}>
                 {label}<Switch checked={config[key]} onCheckedChange={(value) => update(key, value)} className="scale-[0.68]" />
               </label>
             ))}
@@ -153,14 +153,14 @@ export const NeuroViewControls = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" sideOffset={10} className={cn(panelClass(darkMode), "w-[260px] p-2")}>
           <DropdownMenuLabel className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] opacity-50">Visualização</DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-white/8 [.light_&]:bg-black/8" />
-          <DropdownMenuItem onSelect={onAnimate} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><Sparkles className="h-4 w-4" /> Animar surgimento da rede</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onCenter} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><Crosshair className="h-4 w-4" /> Centralizar visualização</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onZoomOut} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><ZoomOut className="h-4 w-4" /> Afastar</DropdownMenuItem>
-          <DropdownMenuItem onSelect={onZoomIn} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950"><ZoomIn className="h-4 w-4" /> Aproximar</DropdownMenuItem>
-          <DropdownMenuSeparator className="bg-white/8 [.light_&]:bg-black/8" />
-          <DropdownMenuItem onSelect={(event) => { event.preventDefault(); update("performanceMode", !config.performanceMode); }} className="min-h-11 gap-3 rounded-xl px-3 text-xs focus:bg-white/10 focus:text-white [.light_&]:focus:bg-black/[0.055] [.light_&]:focus:text-zinc-950">
-            <Settings2 className={cn("h-4 w-4", config.performanceMode && "text-emerald-300 [.light_&]:text-emerald-700")} /><span className="flex-1">Reduzir efeitos gráficos</span><span className="text-[10px] text-white/42 [.light_&]:text-zinc-500">{config.performanceMode ? "Ativo" : "Inativo"}</span>
+          <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+          <DropdownMenuItem onSelect={onAnimate} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}><Sparkles className="h-4 w-4" /> Animar surgimento da rede</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onCenter} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}><Crosshair className="h-4 w-4" /> Centralizar visualização</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onZoomOut} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}><ZoomOut className="h-4 w-4" /> Afastar</DropdownMenuItem>
+          <DropdownMenuItem onSelect={onZoomIn} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}><ZoomIn className="h-4 w-4" /> Aproximar</DropdownMenuItem>
+          <DropdownMenuSeparator className={darkMode ? "bg-white/8" : "bg-black/8"} />
+          <DropdownMenuItem onSelect={(event) => { event.preventDefault(); update("performanceMode", !config.performanceMode); }} className={cn("min-h-11 gap-3 rounded-xl px-3 text-xs", darkMode ? "focus:bg-white/10 focus:text-white" : "focus:bg-black/[0.055] focus:text-zinc-950")}>
+            <Settings2 className={cn("h-4 w-4", config.performanceMode && (darkMode ? "text-emerald-300" : "text-emerald-700"))} /><span className="flex-1">Reduzir efeitos gráficos</span><span className={cn("text-[10px]", darkMode ? "text-white/42" : "text-zinc-500")}>{config.performanceMode ? "Ativo" : "Inativo"}</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
