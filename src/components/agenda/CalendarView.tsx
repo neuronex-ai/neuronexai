@@ -64,7 +64,7 @@ import {
 // Generate time labels from 00:00 to 23:00
 const HOUR_LABELS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, '0')}:00`);
 const HOUR_HEIGHT = 64; // px per hour row
-const FLOATING_HEADER_CLEARANCE = 60;
+const FLOATING_HEADER_CLEARANCE = 66;
 
 const compactWeekday = (day: Date) =>
     format(day, "EEE", { locale: ptBR })
@@ -423,7 +423,7 @@ export const CalendarView = ({
 
         return (
             <div className="flex h-full min-h-0 flex-1 flex-col">
-                <div className="custom-scrollbar relative h-full flex-1 overflow-y-auto overscroll-contain">
+                <div className="agenda-calendar-scroll custom-scrollbar relative h-full flex-1 overflow-y-auto overscroll-contain">
                     <div aria-hidden="true" style={{ height: FLOATING_HEADER_CLEARANCE }} />
                     <div
                         className="agenda-floating-day-header pointer-events-none sticky z-30 flex shrink-0"
@@ -435,11 +435,11 @@ export const CalendarView = ({
                             return (
                                 <div
                                     key={day.toISOString()}
-                                    className="flex min-w-0 flex-1 justify-center px-1 py-1.5"
+                                    className="flex min-w-0 flex-1 justify-center px-1.5 py-2"
                                 >
                                     <span
                                         className={cn(
-                                            "agenda-day-pill inline-flex h-8 min-w-[72px] items-center justify-center rounded-full border px-3 text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground",
+                                            "agenda-day-pill inline-flex h-8 min-w-[72px] items-center justify-center rounded-full border px-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground",
                                             isToday && "synapse-liquid-tab-active text-foreground",
                                         )}
                                         aria-label={format(day, "EEEE, dd 'de' MMMM", { locale: ptBR })}
@@ -462,7 +462,7 @@ export const CalendarView = ({
                                     className="absolute w-full flex items-start justify-end pr-3"
                                     style={{ top: i * HOUR_HEIGHT, height: HOUR_HEIGHT }}
                                 >
-                                    <span className="-mt-[6px] text-[10px] font-bold tabular-nums text-muted-foreground/60">
+                                    <span className="-mt-[6px] text-[10px] font-medium tabular-nums text-muted-foreground/65">
                                         {label}
                                     </span>
                                 </div>
@@ -494,10 +494,10 @@ export const CalendarView = ({
     // ─── Render: Monthly (existing card-based layout) ─────────────────────
 
     const renderMonthlyView = () => (
-        <div className="custom-scrollbar h-full min-h-0 flex-1 overflow-y-auto overscroll-contain">
+        <div className="agenda-calendar-scroll custom-scrollbar h-full min-h-0 flex-1 overflow-y-auto overscroll-contain">
             <div aria-hidden="true" style={{ height: FLOATING_HEADER_CLEARANCE }} />
             <div className={cn(
-                "grid min-h-full select-none auto-rows-[minmax(132px,1fr)] gap-2 p-1",
+                "grid min-h-full select-none auto-rows-[minmax(132px,1fr)] gap-2.5 p-1.5",
                 "grid-cols-4 sm:grid-cols-7"
             )}>
                 {monthDays.map(day => (
@@ -543,10 +543,10 @@ export const CalendarView = ({
                 id="agenda-main-calendar"
                 data-synapse-target="agenda-calendar"
                 aria-busy={isPreparingReschedule}
-                className="relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
+                className="agenda-calendar-canvas relative z-10 flex h-full flex-col overflow-hidden bg-transparent px-3 pb-3 pt-3"
             >
-                <header className="agenda-floating-header pointer-events-none absolute left-3 right-3 top-3 z-40 flex items-center justify-between gap-3 text-foreground">
-                    <div className="pointer-events-auto flex min-w-0 shrink items-center gap-2">
+                <header className="agenda-floating-header pointer-events-none absolute left-3 right-3 top-3 z-40 flex items-center justify-between gap-4 text-foreground">
+                    <div className="agenda-command-cluster pointer-events-auto flex min-w-0 shrink items-center gap-2.5">
                         {filterControl}
 
                         <Popover>
@@ -554,7 +554,7 @@ export const CalendarView = ({
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    className="agenda-floating-pill agenda-tactile h-10 shrink-0 rounded-full px-3 text-[10px] font-black uppercase tracking-[0.12em] text-foreground"
+                                    className="agenda-floating-pill agenda-tactile h-10 shrink-0 rounded-full px-3.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-foreground"
                                     aria-label={`Escolher data. Atual: ${format(date, "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}`}
                                 >
                                     <motion.span
@@ -586,14 +586,14 @@ export const CalendarView = ({
                             type="button"
                             variant="ghost"
                             onClick={() => navigate('/ajustes?tab=integrations')}
-                            className="agenda-floating-pill agenda-tactile hidden h-10 shrink-0 rounded-full px-3 text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground sm:inline-flex"
+                            className="agenda-floating-pill agenda-tactile hidden h-10 shrink-0 rounded-full px-3.5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground sm:inline-flex"
                             aria-label={isGoogleConnected ? "Google conectado. Abrir integrações" : "Conectar Google Agenda"}
                         >
                             {isLoadingGoogle ? "Conectando" : isGoogleConnected ? "Conectado" : "Conectar"}
                         </Button>
                     </div>
 
-                    <div className="pointer-events-auto flex shrink-0 items-center gap-2">
+                    <div className="agenda-command-cluster pointer-events-auto flex shrink-0 items-center gap-2.5">
                         <div className="agenda-floating-pill flex h-10 shrink-0 items-center rounded-full p-0.5">
                             <Button
                                 type="button"
@@ -620,7 +620,7 @@ export const CalendarView = ({
                                         { value: "monthly", label: "Mês" },
                                     ]}
                                     className="h-9 min-h-9 shrink-0 rounded-full bg-transparent p-0"
-                                    triggerClassName="h-8 min-h-8 rounded-full px-3 py-0 text-[9px] font-black uppercase tracking-[0.1em]"
+                                    triggerClassName="h-8 min-h-8 rounded-full px-3 py-0 text-[9px] font-semibold uppercase tracking-[0.1em]"
                                 />
                             ) : null}
 
@@ -666,7 +666,7 @@ export const CalendarView = ({
                             size="icon"
                             onClick={() => { setNewAppointmentDate(new Date()); setSelectedTimeSlot(undefined); }}
                             aria-label="Criar novo agendamento"
-                            className="agenda-floating-pill synapse-liquid-tab-active flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-foreground"
+                            className="agenda-floating-pill agenda-primary-action flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
                         >
                             <Plus className="h-4 w-4" />
                         </Button>
@@ -676,7 +676,7 @@ export const CalendarView = ({
                 {/* Main content area */}
                 <div
                     data-synapse-target="agenda-appointments"
-                    className="agenda-grid-surface flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border"
+                    className="agenda-grid-surface flex min-h-0 flex-1 flex-col overflow-hidden rounded-[26px] border"
                 >
                     {view === 'monthly' ? renderMonthlyView() : renderTimeGridView()}
                 </div>

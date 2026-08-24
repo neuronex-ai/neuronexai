@@ -84,7 +84,7 @@ export const AgendaFiltersPopover = ({
           type="button"
           variant="ghost"
           className={cn(
-            "agenda-floating-pill agenda-tactile pointer-events-auto h-10 shrink-0 rounded-full px-3 text-[10px] font-black uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground",
+            "agenda-floating-pill agenda-tactile pointer-events-auto h-10 shrink-0 rounded-full px-3.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground",
             activeCount > 0 && "synapse-liquid-tab-active text-foreground",
           )}
           aria-label={activeCount ? `Filtros, ${activeCount} ativos` : "Filtros"}
@@ -101,9 +101,9 @@ export const AgendaFiltersPopover = ({
       <PopoverContent
         align="start"
         sideOffset={10}
-        className="agenda-menu-surface notification-liquid-menu w-[min(440px,calc(100vw-1.5rem))] rounded-[24px] border p-3"
+        className="agenda-menu-surface notification-liquid-menu w-[min(440px,calc(100vw-1.5rem))] rounded-[26px] border p-4"
       >
-        <div className="flex items-center justify-between gap-3 px-1 pb-3">
+        <div className="flex items-center justify-between gap-4 px-1 pb-4">
           <div>
             <p className="text-xs font-black text-foreground">Filtrar agenda</p>
             <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
@@ -123,7 +123,7 @@ export const AgendaFiltersPopover = ({
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-x-3 gap-y-3.5 sm:grid-cols-3">
           <FilterField label="Paciente" className="sm:col-span-3">
             <Select
               value={filters.patientId}

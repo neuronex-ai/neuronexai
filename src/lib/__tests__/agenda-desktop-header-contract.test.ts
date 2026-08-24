@@ -15,7 +15,21 @@ describe("agenda desktop compact header contract", () => {
     expect(calendar).toContain("agenda-floating-pill");
     expect(calendar).not.toContain("<header className=\"agenda-liquid-surface");
     expect(styles).toContain(".agenda-floating-pill");
-    expect(styles).toContain("backdrop-filter: blur(24px)");
+    expect(styles).toContain("backdrop-filter: blur(28px)");
+  });
+
+  it("keeps a monochrome depth hierarchy from the global canvas to the calendar grid", () => {
+    const layout = source("src/components/layout/Layout.tsx");
+    const page = source("src/pages/desktop/DesktopAgenda.tsx");
+    const calendar = source("src/components/agenda/CalendarView.tsx");
+    const styles = source("src/index.css");
+
+    expect(layout).toContain('"desktop-lumen-field--agenda"');
+    expect(page).toContain("agenda-calendar-stage");
+    expect(calendar).toContain("agenda-command-cluster");
+    expect(styles).toContain("--agenda-shell: 0 0% 97%");
+    expect(styles).toContain("--agenda-grid: 0 0% 2%");
+    expect(styles).toContain(".dark .agenda-grid-surface");
   });
 
   it("keeps date selection and period-aware navigation compact", () => {

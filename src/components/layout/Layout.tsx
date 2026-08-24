@@ -39,7 +39,11 @@ export const Layout = ({ children }: LayoutProps) => {
       data-neuronex-surface={!isMobile ? "professional-desktop" : undefined}
     >
       {/* Camada global de canvas: todas as telas desktop devem revelar a mesma base. */}
-      {!isMobile ? <DesktopLumenBackdrop /> : null}
+      {!isMobile ? (
+        <DesktopLumenBackdrop
+          className={location.pathname.startsWith("/agenda") ? "desktop-lumen-field--agenda" : undefined}
+        />
+      ) : null}
       {!isMobile ? <DesktopGoogleCalendarSync /> : null}
 
       {!isMobile && <Navbar />}

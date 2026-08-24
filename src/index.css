@@ -2005,6 +2005,48 @@
     opacity: 0.6;
   }
 
+  /* Agenda uses a still, full-viewport light field. It adds spatial depth
+     without animated blur, so the calendar remains crisp while scrolling. */
+  .desktop-lumen-field--agenda {
+    background:
+      radial-gradient(92rem 52rem at 50% -12%, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.66) 28%, rgba(244, 244, 244, 0.24) 58%, transparent 82%),
+      radial-gradient(58rem 40rem at 8% 28%, rgba(0, 0, 0, 0.026) 0%, transparent 72%),
+      radial-gradient(54rem 38rem at 94% 22%, rgba(0, 0, 0, 0.02) 0%, transparent 74%),
+      linear-gradient(180deg, rgba(250, 250, 250, 0.98), rgba(244, 244, 245, 0.92));
+  }
+
+  .desktop-lumen-field--agenda::before {
+    background:
+      radial-gradient(ellipse 58% 38% at 50% 5%, rgba(255, 255, 255, 0.94) 0%, rgba(255, 255, 255, 0.34) 48%, transparent 80%),
+      radial-gradient(ellipse 72% 44% at 50% 54%, rgba(0, 0, 0, 0.018) 0%, transparent 78%);
+    opacity: 0.9;
+  }
+
+  .desktop-lumen-field--agenda::after {
+    background: radial-gradient(ellipse 78% 28% at 50% 94%, rgba(0, 0, 0, 0.035) 0%, rgba(0, 0, 0, 0.01) 52%, transparent 84%);
+    opacity: 0.64;
+  }
+
+  .dark .desktop-lumen-field--agenda {
+    background:
+      radial-gradient(94rem 56rem at 50% -14%, rgba(255, 255, 255, 0.092) 0%, rgba(255, 255, 255, 0.042) 30%, rgba(255, 255, 255, 0.012) 60%, transparent 82%),
+      radial-gradient(58rem 42rem at 8% 24%, rgba(255, 255, 255, 0.017) 0%, transparent 74%),
+      radial-gradient(56rem 40rem at 94% 20%, rgba(255, 255, 255, 0.014) 0%, transparent 76%),
+      linear-gradient(180deg, rgb(10, 10, 11), rgb(5, 5, 6));
+  }
+
+  .dark .desktop-lumen-field--agenda::before {
+    background:
+      radial-gradient(ellipse 58% 38% at 50% 4%, rgba(255, 255, 255, 0.064) 0%, rgba(255, 255, 255, 0.018) 48%, transparent 82%),
+      radial-gradient(ellipse 72% 44% at 50% 56%, rgba(255, 255, 255, 0.009) 0%, transparent 80%);
+    opacity: 0.88;
+  }
+
+  .dark .desktop-lumen-field--agenda::after {
+    background: radial-gradient(ellipse 78% 28% at 50% 94%, rgba(255, 255, 255, 0.026) 0%, rgba(255, 255, 255, 0.007) 52%, transparent 84%);
+    opacity: 0.58;
+  }
+
   .desktop-retina-frame,
   .desktop-retina-panel,
   .desktop-retina-inset,
@@ -6225,34 +6267,34 @@
 
 .agenda-floating-pill,
 .agenda-day-pill {
-  border-color: hsl(var(--agenda-edge) / 0.1) !important;
+  border-color: hsl(var(--agenda-edge) / 0.115) !important;
   background:
-    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.72), hsl(var(--agenda-surface-inset) / 0.46)),
-    hsl(var(--agenda-surface) / 0.54) !important;
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.9), hsl(var(--agenda-surface-inset) / 0.72)),
+    hsl(var(--agenda-surface) / 0.84) !important;
   box-shadow:
-    inset 0 1px 0 hsl(var(--agenda-surface) / 0.78),
-    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.025),
-    0 14px 32px -25px hsl(var(--agenda-shadow) / 0.48);
-  backdrop-filter: blur(24px) saturate(1.16);
-  -webkit-backdrop-filter: blur(24px) saturate(1.16);
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.94),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.035),
+    0 16px 36px -27px hsl(var(--agenda-shadow) / 0.5);
+  backdrop-filter: blur(28px) saturate(1.08);
+  -webkit-backdrop-filter: blur(28px) saturate(1.08);
 }
 
 .agenda-day-pill {
   background:
-    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.66), hsl(var(--agenda-surface-inset) / 0.4)),
-    hsl(var(--agenda-surface) / 0.46) !important;
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.82), hsl(var(--agenda-surface-inset) / 0.64)),
+    hsl(var(--agenda-surface) / 0.76) !important;
   box-shadow:
-    inset 0 1px 0 hsl(var(--agenda-surface) / 0.72),
-    0 10px 26px -23px hsl(var(--agenda-shadow) / 0.44);
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.9),
+    0 11px 28px -24px hsl(var(--agenda-shadow) / 0.42);
 }
 
 .dark .agenda-floating-pill,
 .dark .agenda-day-pill {
-  border-color: rgba(255, 255, 255, 0.048) !important;
-  background: rgba(10, 10, 12, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.068) !important;
+  background: rgba(17, 17, 19, 0.84) !important;
   background-image: none !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.034),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
     inset 0 -1px 0 rgba(0, 0, 0, 0.62),
     0 16px 34px -27px rgba(0, 0, 0, 0.96);
   backdrop-filter: blur(26px) saturate(0.96);
@@ -6260,7 +6302,7 @@
 }
 
 .dark .agenda-day-pill {
-  background: rgba(11, 11, 14, 0.64) !important;
+  background: rgba(14, 14, 16, 0.78) !important;
 }
 
 .agenda-viewport-modal {
@@ -6281,21 +6323,27 @@
 .agenda-desktop-shell,
 .agenda-modal-surface,
 .appointment-detail-shell {
-  --agenda-edge: 240 6% 10%;
+  --agenda-edge: 0 0% 10%;
+  --agenda-shell: 0 0% 97%;
+  --agenda-panel: 0 0% 99%;
+  --agenda-grid: 0 0% 96%;
   --agenda-surface: 0 0% 100%;
   --agenda-surface-raised: 0 0% 100%;
-  --agenda-surface-inset: 240 5% 96%;
-  --agenda-shadow: 240 6% 10%;
+  --agenda-surface-inset: 0 0% 95%;
+  --agenda-shadow: 0 0% 10%;
   --agenda-system-red: 3 100% 59%;
 }
 
 .dark .agenda-desktop-shell,
 .dark .agenda-modal-surface,
 .dark .appointment-detail-shell {
-  --agenda-edge: 240 3% 34%;
-  --agenda-surface: 240 7% 3%;
-  --agenda-surface-raised: 240 5% 7%;
-  --agenda-surface-inset: 240 7% 2%;
+  --agenda-edge: 0 0% 42%;
+  --agenda-shell: 0 0% 3%;
+  --agenda-panel: 0 0% 5%;
+  --agenda-grid: 0 0% 2%;
+  --agenda-surface: 0 0% 4%;
+  --agenda-surface-raised: 0 0% 8%;
+  --agenda-surface-inset: 0 0% 2%;
   --agenda-shadow: 0 0% 0%;
   --agenda-system-red: 3 100% 63%;
 }
@@ -6355,35 +6403,119 @@
   mix-blend-mode: normal;
 }
 
+.agenda-desktop-shell.agenda-liquid-surface {
+  border-color: rgba(0, 0, 0, 0.085) !important;
+  background:
+    radial-gradient(72% 54% at 50% -16%, rgba(255, 255, 255, 0.9), transparent 72%),
+    linear-gradient(155deg, rgba(250, 250, 250, 0.86), rgba(241, 241, 242, 0.74)),
+    hsl(var(--agenda-shell)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.94),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.035),
+    0 34px 92px -62px rgba(0, 0, 0, 0.42) !important;
+}
+
+.dark .agenda-desktop-shell.agenda-liquid-surface {
+  border-color: rgba(255, 255, 255, 0.065) !important;
+  background:
+    radial-gradient(74% 56% at 50% -18%, rgba(255, 255, 255, 0.045), transparent 72%),
+    linear-gradient(155deg, rgba(11, 11, 13, 0.94), rgba(6, 6, 8, 0.96)),
+    hsl(var(--agenda-shell)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.038),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.76),
+    0 38px 104px -60px rgba(0, 0, 0, 0.98) !important;
+}
+
+.agenda-calendar-stage.agenda-liquid-surface {
+  border-color: rgba(0, 0, 0, 0.078) !important;
+  background:
+    radial-gradient(74% 48% at 50% -12%, rgba(255, 255, 255, 0.96), transparent 74%),
+    linear-gradient(160deg, rgba(255, 255, 255, 0.9), rgba(247, 247, 248, 0.82)),
+    hsl(var(--agenda-panel)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.025),
+    0 24px 64px -52px rgba(0, 0, 0, 0.36) !important;
+}
+
+.dark .agenda-calendar-stage.agenda-liquid-surface {
+  border-color: rgba(255, 255, 255, 0.055) !important;
+  background:
+    radial-gradient(72% 48% at 50% -14%, rgba(255, 255, 255, 0.034), transparent 72%),
+    linear-gradient(160deg, rgba(13, 13, 15, 0.96), rgba(8, 8, 10, 0.97)),
+    hsl(var(--agenda-panel)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.68),
+    0 28px 72px -48px rgba(0, 0, 0, 0.94) !important;
+}
+
+.agenda-grid-surface {
+  border-color: rgba(0, 0, 0, 0.07) !important;
+  background:
+    linear-gradient(180deg, rgba(250, 250, 251, 0.9), rgba(245, 245, 246, 0.84)),
+    hsl(var(--agenda-grid)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.32),
+    0 18px 48px -44px rgba(0, 0, 0, 0.34) !important;
+}
+
+.dark .agenda-grid-surface {
+  border-color: rgba(255, 255, 255, 0.046) !important;
+  background:
+    linear-gradient(180deg, rgba(7, 7, 9, 0.97), rgba(4, 4, 6, 0.98)),
+    hsl(var(--agenda-grid)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.022),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.42),
+    0 22px 56px -42px rgba(0, 0, 0, 0.96) !important;
+}
+
+.agenda-command-cluster {
+  isolation: isolate;
+  filter: drop-shadow(0 12px 20px hsl(var(--agenda-shadow) / 0.1));
+}
+
+.dark .agenda-command-cluster {
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.38));
+}
+
+.agenda-calendar-scroll {
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
 .agenda-liquid-card,
 .agenda-choice-card,
 .agenda-appointment-card,
 .agenda-month-cell {
-  border-color: hsl(var(--agenda-edge) / 0.085) !important;
+  border-color: hsl(var(--agenda-edge) / 0.1) !important;
   background:
-    linear-gradient(148deg, hsl(var(--agenda-surface) / 0.78), hsl(var(--agenda-surface-inset) / 0.5)),
-    hsl(var(--agenda-surface) / 0.68) !important;
+    linear-gradient(148deg, hsl(var(--agenda-surface) / 0.9), hsl(var(--agenda-surface-inset) / 0.64)),
+    hsl(var(--agenda-surface) / 0.84) !important;
   box-shadow:
-    inset 0 1px 0 hsl(var(--agenda-surface) / 0.82),
-    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.025),
-    0 15px 36px -31px hsl(var(--agenda-shadow) / 0.42);
+    inset 0 1px 0 hsl(var(--agenda-surface) / 0.94),
+    inset 0 -1px 0 hsl(var(--agenda-edge) / 0.035),
+    0 16px 38px -31px hsl(var(--agenda-shadow) / 0.44);
 }
 
 .dark .agenda-liquid-card,
 .dark .agenda-choice-card,
 .dark .agenda-appointment-card,
 .dark .agenda-month-cell {
-  border-color: rgba(255, 255, 255, 0.028) !important;
-  background: rgba(17, 17, 20, 0.78) !important;
+  border-color: rgba(255, 255, 255, 0.055) !important;
+  background: rgba(18, 18, 20, 0.88) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 1px 0 rgba(255, 255, 255, 0.032),
     inset 0 -1px 0 rgba(0, 0, 0, 0.58),
     0 17px 40px -31px rgba(0, 0, 0, 0.94);
 }
 
 .agenda-field,
 .agenda-modal-surface :where(input, textarea, button[role='combobox']) {
-  border-color: hsl(var(--agenda-edge) / 0.1) !important;
+  border-color: hsl(var(--agenda-edge) / 0.12) !important;
   background:
     linear-gradient(150deg, hsl(var(--agenda-surface) / 0.72), hsl(var(--agenda-surface-inset) / 0.5)),
     hsl(var(--agenda-surface) / 0.7) !important;
@@ -6398,8 +6530,8 @@
 
 .dark .agenda-field,
 .dark .agenda-modal-surface :where(input, textarea, button[role='combobox']) {
-  border-color: rgba(255, 255, 255, 0.035) !important;
-  background: rgba(5, 5, 7, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.055) !important;
+  background: rgba(7, 7, 9, 0.92) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.016),
     inset 0 -1px 0 rgba(0, 0, 0, 0.64);
@@ -6561,8 +6693,8 @@
 .dark .appointment-detail-shell .appointment-liquid-control,
 .dark .agenda-modal-surface .appointment-liquid-control,
 .dark .agenda-modal-surface .app-modal-close {
-  border-color: rgba(255, 255, 255, 0.035) !important;
-  background: rgba(255, 255, 255, 0.025) !important;
+  border-color: rgba(255, 255, 255, 0.052) !important;
+  background: rgba(255, 255, 255, 0.032) !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.018),
     inset 0 -1px 0 rgba(0, 0, 0, 0.52) !important;
@@ -6593,8 +6725,8 @@
 
 .dark .agenda-desktop-shell :where(.synapse-liquid-toolbar, .notification-liquid-toolbar),
 .dark .agenda-modal-surface :where(.synapse-liquid-toolbar, .notification-liquid-toolbar) {
-  border-color: rgba(255, 255, 255, 0.03) !important;
-  background: rgba(6, 6, 8, 0.82) !important;
+  border-color: rgba(255, 255, 255, 0.052) !important;
+  background: rgba(9, 9, 11, 0.88) !important;
   background-image: none !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.018),
@@ -6603,8 +6735,8 @@
 
 .dark .agenda-desktop-shell :where(.synapse-liquid-tab-active, .notification-liquid-tab-active),
 .dark .agenda-modal-surface :where(.synapse-liquid-tab-active, .notification-liquid-tab-active) {
-  border-color: rgba(255, 255, 255, 0.065) !important;
-  background: rgba(255, 255, 255, 0.055) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  background: rgba(255, 255, 255, 0.075) !important;
   background-image: none !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -6662,8 +6794,8 @@
 }
 
 .dark .agenda-waitlist-surface :where(.agenda-liquid-surface, .agenda-liquid-card, .notification-card) {
-  border-color: rgba(255, 255, 255, 0.028) !important;
-  background: rgba(15, 15, 18, 0.78) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  background: rgba(17, 17, 19, 0.88) !important;
   background-image: none !important;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.018),
@@ -6678,7 +6810,15 @@
 }
 
 .agenda-menu-surface {
-  border-color: hsl(var(--foreground) / 0.09) !important;
+  border-color: hsl(var(--foreground) / 0.1) !important;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.94), rgba(246, 246, 247, 0.88)),
+    hsl(var(--popover)) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.96),
+    0 28px 72px -34px rgba(0, 0, 0, 0.32) !important;
+  backdrop-filter: blur(30px) saturate(1.08) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(1.08) !important;
 }
 
 .dark .agenda-menu-surface {
@@ -6725,26 +6865,26 @@
 }
 
 .agenda-grid-header {
-  border-color: hsl(var(--agenda-edge) / 0.075) !important;
+  border-color: hsl(var(--agenda-edge) / 0.09) !important;
   background:
-    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.72), hsl(var(--agenda-surface) / 0.5)) !important;
-  backdrop-filter: blur(18px) saturate(1.08);
+    linear-gradient(180deg, hsl(var(--agenda-surface) / 0.86), hsl(var(--agenda-surface-inset) / 0.68)) !important;
+  backdrop-filter: blur(20px) saturate(1.04);
 }
 
 .dark .agenda-grid-header {
-  border-color: rgba(255, 255, 255, 0.028) !important;
-  background: rgba(10, 10, 12, 0.94) !important;
+  border-color: rgba(255, 255, 255, 0.045) !important;
+  background: rgba(11, 11, 13, 0.96) !important;
 }
 
 .agenda-grid-day,
 .agenda-time-gutter {
-  border-color: hsl(var(--agenda-edge) / 0.055) !important;
+  border-color: hsl(var(--agenda-edge) / 0.065) !important;
 }
 
 .dark .agenda-grid-day,
 .dark .agenda-time-gutter,
 .dark .agenda-grid-slot {
-  border-color: rgba(255, 255, 255, 0.022) !important;
+  border-color: rgba(255, 255, 255, 0.034) !important;
 }
 
 .agenda-grid-today {
@@ -6753,7 +6893,7 @@
 }
 
 .dark .agenda-grid-today {
-  background: rgba(255, 255, 255, 0.018) !important;
+  background: rgba(255, 255, 255, 0.026) !important;
 }
 
 .agenda-grid-slot {
@@ -6800,6 +6940,8 @@
 }
 
 @media (prefers-reduced-transparency: reduce) {
+  .agenda-desktop-shell.agenda-liquid-surface,
+  .agenda-calendar-stage.agenda-liquid-surface,
   .agenda-floating-pill,
   .agenda-day-pill,
   .agenda-liquid-surface,
@@ -6813,6 +6955,10 @@
     background: hsl(var(--card)) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+  }
+
+  .agenda-command-cluster {
+    filter: none;
   }
 }
 
@@ -6828,6 +6974,8 @@
 }
 
 @media (forced-colors: active) {
+  .agenda-desktop-shell.agenda-liquid-surface,
+  .agenda-calendar-stage.agenda-liquid-surface,
   .agenda-floating-pill,
   .agenda-day-pill,
   .agenda-liquid-surface,
@@ -6846,6 +6994,8 @@
 }
 
 @media (prefers-contrast: more) {
+  .agenda-desktop-shell.agenda-liquid-surface,
+  .agenda-calendar-stage.agenda-liquid-surface,
   .agenda-liquid-surface,
   .agenda-modal-surface,
   .agenda-grid-surface,
@@ -6856,6 +7006,10 @@
   .agenda-appointment-card {
     border-color: hsl(var(--foreground) / 0.34) !important;
     box-shadow: none;
+  }
+
+  .agenda-command-cluster {
+    filter: none;
   }
 
   .agenda-field:focus,

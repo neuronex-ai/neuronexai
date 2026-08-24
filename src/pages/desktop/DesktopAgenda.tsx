@@ -119,9 +119,9 @@ export default function DesktopAgenda() {
     }, [appointments, filters]);
 
     return (
-        <div className="desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-4 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
-            <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-8 xl:px-10">
-                <div className="agenda-desktop-shell agenda-liquid-surface desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[38px] border p-2 md:p-3">
+        <div className="agenda-desktop-page desktop-lumen-page desktop-content-offset relative flex h-dvh w-full flex-col overflow-hidden bg-transparent pb-5 font-sans text-foreground selection:bg-primary/10 selection:text-primary">
+            <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[2200px] flex-1 px-4 md:px-6 lg:px-9 xl:px-12 2xl:px-14">
+                <div className="agenda-desktop-shell agenda-liquid-surface desktop-retina-frame relative flex min-h-0 flex-1 overflow-hidden rounded-[40px] border p-2.5 md:p-3.5">
                 <AnimatePresence>
                     {waitlistOpen ? (
                         <>
@@ -142,7 +142,7 @@ export default function DesktopAgenda() {
                                 animate={{ opacity: 1, x: 0, scale: 1 }}
                                 exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, x: 20, scale: 0.985 }}
                                 transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 36, mass: 0.8 }}
-                                className="absolute inset-y-3 right-3 z-40 flex min-h-0 w-[min(420px,calc(100%_-_24px))] flex-col overflow-visible"
+                                className="absolute inset-y-3.5 right-3.5 z-40 flex min-h-0 w-[min(420px,calc(100%_-_28px))] flex-col overflow-visible"
                             >
                                 <ProfessionalWaitlistPanel onClose={() => setWaitlistOpen(false)} />
                             </motion.aside>
@@ -161,7 +161,7 @@ export default function DesktopAgenda() {
                 </AnimatePresence>
 
                 <main className="relative z-10 flex h-full min-w-0 flex-1 flex-col" data-synapse-target="daily-schedule">
-                    <div className="agenda-liquid-surface relative min-h-0 flex-1 overflow-hidden rounded-[32px] border">
+                    <div className="agenda-calendar-stage agenda-liquid-surface relative min-h-0 flex-1 overflow-hidden rounded-[32px] border">
                         <CalendarView
                             date={selectedDate}
                             onDateChange={setSelectedDate}
