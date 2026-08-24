@@ -236,7 +236,7 @@ export const LandingRealProductShowcase = () => {
                 className={cn(
                   "group flex min-h-12 items-center gap-3 rounded-[20px] px-4 py-3 text-left transition-all duration-300 motion-reduce:transition-none",
                   activeKey === module.key
-                    ? "bg-foreground text-background shadow-[0_18px_60px_-38px_rgba(0,0,0,0.65)]"
+                    ? "bg-foreground text-background shadow-[0_18px_60px_-38px_rgba(0,0,0,0.65)] dark:bg-white dark:text-zinc-950"
                     : "text-muted-foreground hover:bg-foreground/[0.045] hover:text-foreground",
                 )}
               >
@@ -489,7 +489,7 @@ export const LandingRealFinanceFiscalSection = () => (
           </div>
           <Button
             asChild
-            className="h-12 shrink-0 rounded-2xl bg-background px-6 text-[9px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white"
+            className="h-12 shrink-0 rounded-2xl bg-background px-6 text-[9px] font-black uppercase tracking-[0.18em] text-foreground hover:bg-background/90 dark:bg-zinc-950 dark:text-white dark:hover:bg-zinc-950/90"
           >
             <Link to="/create-account">
               Começar grátis <ArrowRight className="ml-2 h-4 w-4" />
