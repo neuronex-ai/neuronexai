@@ -9,12 +9,17 @@ describe('patients desktop visual contract', () => {
     const layout = source('src/components/layout/Layout.tsx');
     const page = source('src/pages/patients-view/index.tsx');
     const styles = source('src/index.css');
+    const patientDocuments = [
+      source('src/components/patients/DocumentGeneratorModal.tsx'),
+      source('src/components/patients/DocumentPreviewModal.tsx'),
+    ].join('\n');
 
     expect(layout).toContain('desktop-lumen-field--patients');
     expect(page).toContain('!isMobile && "patients-desktop-shell"');
     expect(styles).toContain('--patients-surface: 0 0% 100%');
     expect(styles).toContain('--patients-inset: 0 0% 2%');
-    expect(styles).not.toContain('/noise.png');
+    expect(page).not.toContain('/noise.png');
+    expect(patientDocuments).not.toContain('/noise.png');
   });
 
   it('offers persisted cards and list modes while keeping the mobile directory on cards', () => {

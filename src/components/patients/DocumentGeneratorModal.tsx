@@ -219,9 +219,6 @@ export const DocumentGeneratorModal = ({ patient, children }: DocumentGeneratorM
                 </div>
 
                 <div className="flex-1 bg-secondary/5 relative overflow-hidden flex flex-col items-center p-8 md:p-12">
-                    <div className="absolute inset-0 bg-[url('/noise.png')] opacity-[0.03] pointer-events-none" />
-                    <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-primary/5 rounded-full blur-[120px] pointer-events-none" />
-
                     <div className="absolute top-6 right-6 z-20 flex gap-4 items-center">
                         <div className="px-3 py-1.5 rounded-lg bg-card/60 border border-border/10 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest text-muted-foreground shadow-xl pointer-events-none">
                             Visualização A4
