@@ -84,8 +84,8 @@ export const NeuroViewControls = ({
                   <span className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-white/72 [.light_&]:text-zinc-700">
                     <Settings2 className="h-3.5 w-3.5" /> Física do NeuroVision
                   </span>
-                  <p className="mt-1 text-[8px] font-black uppercase tracking-[0.2em] text-white/30 [.light_&]:text-zinc-400">
-                    Salvo automaticamente
+                  <p className="mt-1 max-w-[310px] text-[9px] leading-relaxed text-white/38 [.light_&]:text-zinc-500">
+                    Altera somente a disposição visual. Densidade, atenção e risco não são recalculados.
                   </p>
                 </div>
                 <Button

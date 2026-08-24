@@ -12,6 +12,7 @@ import { buildAttentionReasons, buildPatientAttentionSummary } from "../clinical
 interface UseGraphDataProps {
   config: NeuroConfig;
   searchQuery: string;
+  trackNodePositions?: boolean;
 }
 
 const normalizeSearchText = (value?: string | null) =>
@@ -20,7 +21,7 @@ const normalizeSearchText = (value?: string | null) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
+export const useGraphData = ({ config, searchQuery, trackNodePositions = true }: UseGraphDataProps) => {
   const { user } = useAuth();
   const { notes, isLoading: loadingNotes } = usePersonalNotes();
   const { data: patients, isLoading: loadingPatients } = usePatients();
@@ -357,6 +358,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
 
   // Continuously save positions to ref to persist across re-renders
   useEffect(() => {
+     if (!trackNodePositions) return undefined;
      // We don't need a timer, just update on unmount or before re-render? 
      // Actually, graph library updates the node objects directly.
      // We need to capture that state periodically or before updates.
@@ -373,7 +375,7 @@ export const useGraphData = ({ config, searchQuery }: UseGraphDataProps) => {
          });
      }, 500);
      return () => clearInterval(interval);
-  }, [graphData]);
+  }, [graphData, trackNodePositions]);
 
   return { 
     graphData, 

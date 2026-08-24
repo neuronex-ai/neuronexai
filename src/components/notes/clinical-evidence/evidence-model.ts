@@ -360,9 +360,11 @@ export const getEvidenceSourceLabel = (source: EvidenceSource) => ({
   personal_note: "Nota",
   flow: "Fluxo",
   session_note: "Sessão",
+  ai_summary: "Resumo revisado",
   mood: "Humor",
   goal: "Meta",
   anamnesis: "Anamnese",
   appointment: "Agenda",
   reminder: "Lembrete",
+  finance: "Financeiro",
 }[source]);

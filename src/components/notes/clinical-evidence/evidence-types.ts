@@ -2,11 +2,13 @@ export type EvidenceSource =
   | "personal_note"
   | "flow"
   | "session_note"
+  | "ai_summary"
   | "mood"
   | "goal"
   | "anamnesis"
   | "appointment"
-  | "reminder";
+  | "reminder"
+  | "finance";
 
 export type NeuroVisionLens = "panorama" | "session-prep" | "patterns" | "attention";
 

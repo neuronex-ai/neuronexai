@@ -711,7 +711,7 @@ export const NeuroVision3D = ({
               <div className={cn("border-b px-4 pb-3 pt-4", darkMode ? "border-white/8" : "border-black/8")}>
                 <p className="text-sm font-semibold tracking-[-0.01em]">Dinâmica espacial</p>
                 <p className={cn("mt-1 text-[11px] leading-relaxed", darkMode ? "text-white/48" : "text-zinc-500")}>
-                  Arraste qualquer esfera para esticar seus filamentos e fixá-la no espaço.
+                  Arraste esferas e ajuste o campo apenas para visualizar melhor. Nenhum valor clínico é recalculado.
                 </p>
               </div>
               <div className="space-y-5 p-4">
