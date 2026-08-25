@@ -218,111 +218,88 @@
   letter-spacing: 0;
 }
 
-/* Right appointment artifact remains in the same NeuroFinance family. */
-.dashboard-morning-panel > .grid > div:last-child {
+/* Right appointment card: compact schedule summary that expands in place. */
+.dashboard-morning-panel .next-schedule-stage {
   border-color: rgb(228 228 231) !important;
   background: rgb(250 250 250 / 0.72) !important;
 }
 
-.dark .dashboard-morning-panel > .grid > div:last-child {
+.dark .dashboard-morning-panel .next-schedule-stage {
   border-color: rgb(255 255 255 / 0.05) !important;
   background: rgb(0 0 0 / 0.2) !important;
 }
 
-.dashboard-morning-panel > .grid > div:last-child > .pointer-events-none.absolute.inset-0 {
-  opacity: 0.22 !important;
-}
-
-.dashboard-morning-panel .dashboard-schedule-card {
-  border: 1px solid rgb(228 228 231) !important;
-  background: #ffffff !important;
-  color: #18181b !important;
+.dashboard-morning-panel .next-schedule-card {
+  border-color: rgb(212 212 216 / 0.9);
+  background: rgb(255 255 255 / 0.96);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.8),
-    0 26px 58px -36px rgb(0 0 0 / 0.24) !important;
+    inset 0 1px 0 rgb(255 255 255),
+    0 24px 54px -36px rgb(24 24 27 / 0.3);
+  backdrop-filter: blur(22px) saturate(110%);
+  -webkit-backdrop-filter: blur(22px) saturate(110%);
 }
 
-.dark .dashboard-morning-panel .dashboard-schedule-card {
-  border-color: rgb(255 255 255 / 0.05) !important;
-  background: linear-gradient(145deg, #1a1a1c 0%, #141416 48%, #0d0d0f 100%) !important;
-  color: #ffffff !important;
+.dark .dashboard-morning-panel .next-schedule-card {
+  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(15 15 17 / 0.97);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.025),
-    inset 0 -1px 0 rgb(0 0 0 / 0.26),
-    0 30px 64px -34px rgb(0 0 0 / 0.9) !important;
+    inset 0 1px 0 rgb(255 255 255 / 0.04),
+    inset 0 -1px 0 rgb(0 0 0 / 0.32),
+    0 30px 64px -38px rgb(0 0 0 / 0.94);
 }
 
-.dashboard-morning-panel .dashboard-schedule-card .dashboard-soft-fill {
-  border: 1px solid rgb(228 228 231) !important;
-  background: #ffffff !important;
-  color: #71717a !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.025) !important;
+.dashboard-morning-panel .next-schedule-card[data-state="expanded"] {
+  border-color: rgb(161 161 170 / 0.7);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255),
+    0 28px 64px -38px rgb(24 24 27 / 0.34);
 }
 
-.dark .dashboard-morning-panel .dashboard-schedule-card .dashboard-soft-fill {
-  border-color: rgb(255 255 255 / 0.06) !important;
-  background: rgb(255 255 255 / 0.05) !important;
-  color: #a1a1aa !important;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.02) !important;
+.dark .dashboard-morning-panel .next-schedule-card[data-state="expanded"] {
+  border-color: rgb(255 255 255 / 0.14);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.055),
+    0 34px 72px -40px rgb(0 0 0 / 0.98);
 }
 
-.dashboard-morning-panel .dashboard-schedule-card h3,
-.dashboard-morning-panel .dashboard-schedule-card p[class*="font-black"] {
-  color: #18181b !important;
+.dashboard-morning-panel .next-schedule-presence,
+.dashboard-morning-panel .next-schedule-icon,
+.dashboard-morning-panel .next-schedule-details,
+.dashboard-morning-panel .next-schedule-detail-cell {
+  border-color: rgb(228 228 231 / 0.82);
+  background: rgb(250 250 250 / 0.88);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.92);
 }
 
-.dark .dashboard-morning-panel .dashboard-schedule-card h3,
-.dark .dashboard-morning-panel .dashboard-schedule-card p[class*="font-black"] {
-  color: #ffffff !important;
+.dark .dashboard-morning-panel .next-schedule-presence,
+.dark .dashboard-morning-panel .next-schedule-icon,
+.dark .dashboard-morning-panel .next-schedule-details,
+.dark .dashboard-morning-panel .next-schedule-detail-cell {
+  border-color: rgb(255 255 255 / 0.07);
+  background: rgb(255 255 255 / 0.045);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025);
 }
 
-.dashboard-morning-panel .dashboard-schedule-card h3 + p {
-  max-width: 92%;
-  color: #71717a !important;
-  font-size: 0.68rem !important;
-  line-height: 1.25 !important;
+.dashboard-morning-panel .next-schedule-pill {
+  max-width: 10.5rem;
 }
 
-.dark .dashboard-morning-panel .dashboard-schedule-card h3 + p {
-  color: #71717a !important;
+.dashboard-morning-panel .next-schedule-card button {
+  -webkit-tap-highlight-color: transparent;
 }
 
-.dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] {
-  margin-top: 0;
-  border-radius: 0;
-  padding: 0;
-  background: transparent;
-  box-shadow: none;
+.dashboard-morning-panel .next-schedule-card button:active:not(:disabled) {
+  transform: scale(0.985);
 }
 
-.dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button {
-  border: 1px solid rgb(228 228 231) !important;
-  background: #ffffff !important;
-  color: #52525b !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.025) !important;
-}
+@media (hover: hover) {
+  .dashboard-morning-panel .next-schedule-card button:hover:not(:disabled) {
+    filter: brightness(0.985);
+  }
 
-.dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button:hover {
-  background: #f4f4f5 !important;
-  color: #18181b !important;
-}
-
-.dark .dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button {
-  border-color: rgb(255 255 255 / 0.06) !important;
-  background: rgb(255 255 255 / 0.045) !important;
-  color: #a1a1aa !important;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.018) !important;
-}
-
-.dark .dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button:hover {
-  background: rgb(255 255 255 / 0.09) !important;
-  color: #ffffff !important;
-}
-
-.dashboard-morning-panel .dashboard-schedule-orbit,
-.dashboard-morning-panel .dashboard-schedule-scan,
-.dashboard-morning-panel .dashboard-schedule-time-rail {
-  opacity: 0.18 !important;
+  .dark .dashboard-morning-panel .next-schedule-card button:hover:not(:disabled) {
+    filter: brightness(1.08);
+  }
 }
 
 @media (max-width: 1023px) {
@@ -350,8 +327,21 @@
 
 @media (prefers-reduced-transparency: reduce) {
   .dashboard-morning-panel div:has(> .dashboard-inverted-metric)::after,
-  .dashboard-morning-panel .dashboard-schedule-card {
+  .dashboard-morning-panel .next-schedule-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .dashboard-morning-panel .next-schedule-card,
+  .dashboard-morning-panel .next-schedule-presence,
+  .dashboard-morning-panel .next-schedule-icon,
+  .dashboard-morning-panel .next-schedule-details,
+  .dashboard-morning-panel .next-schedule-detail-cell {
+    border: 1px solid CanvasText !important;
+    color: CanvasText !important;
+    background: Canvas !important;
+    box-shadow: none !important;
   }
 }

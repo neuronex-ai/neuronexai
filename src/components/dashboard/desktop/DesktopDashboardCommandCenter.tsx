@@ -1,9 +1,8 @@
 "use client";
 
-import { addDays, differenceInMinutes, endOfDay, format, startOfDay } from "date-fns";
+import { addDays, endOfDay, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion, useReducedMotion } from "framer-motion";
-import type { ElementType, KeyboardEvent, ReactNode } from "react";
+import type { ElementType, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -11,12 +10,10 @@ import {
   ArrowRight,
   Bell,
   Calendar as CalendarIcon,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
   Clock,
-  FileText,
   Plus,
   ReceiptText,
   Stethoscope,
@@ -27,7 +24,6 @@ import {
   WalletCards,
 } from "lucide-react";
 
-import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
 import { NewAppointmentModal } from "@/components/agenda/NewAppointmentModal";
 import { ManualChargeModal } from "@/components/financeiro/ManualChargeModal";
 import { NewPatientModal } from "@/components/patients/NewPatientModal";
@@ -50,11 +46,12 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { usePendingPatientsCount } from "@/hooks/use-pending-patients-count";
 import { useProfile } from "@/hooks/use-profile";
 import { useSessionNotes } from "@/hooks/use-session-notes";
-import { getAppointmentKind, getAppointmentMetadata, type AppointmentKind } from "@/lib/appointment-metadata";
+import { getAppointmentKind } from "@/lib/appointment-metadata";
 import { getAppointmentStatusMeta } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
 import { cn } from "@/lib/utils";
 import type { AISummary, Appointment, SessionNote } from "@/types";
+import { NextScheduleCard } from "./NextScheduleCard";
 import {
   buildAttentionQueue,
   getActiveAppointments,
@@ -127,18 +124,6 @@ const formatAppointmentTime = (appointment?: Appointment | null) =>
 const formatAppointmentDay = (appointment?: Appointment | null) =>
   appointment?.start_time ? format(new Date(appointment.start_time), "dd/MM") : "-";
 
-const getMinutesUntil = (appointment?: Appointment | null) => {
-  if (!appointment?.start_time) return null;
-
-  const minutes = differenceInMinutes(new Date(appointment.start_time), new Date());
-  if (minutes < 0) return "em andamento";
-  if (minutes < 60) return `${minutes} min`;
-
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours}h ${rest}min` : `${hours}h`;
-};
-
 const getFirstName = (profile?: { first_name?: string | null; full_name?: string | null; name?: string | null } | null) =>
   profile?.first_name || profile?.full_name?.split(" ")[0] || profile?.name?.split(" ")[0] || "Doutor";
 
@@ -149,51 +134,12 @@ const getAppointmentLabel = (appointment: Appointment) => {
   return isOnlineAppointment(appointment) ? "Online" : "Consultório";
 };
 
-const scheduleKindLabels: Record<AppointmentKind, string> = {
-  session: "Atendimento",
-  event: "Evento",
-  block: "Bloqueio",
-};
-
-const getScheduleTitle = (appointment?: Appointment | null) => {
-  if (!appointment) return "Agenda livre";
-  return getAppointmentDisplayTitle(appointment) || appointment.patient_name || scheduleKindLabels[getAppointmentKind(appointment)];
-};
-
 const getScheduleFocusLabel = (appointment?: Appointment | null) => {
   if (!appointment) return "Próximo foco";
   const kind = getAppointmentKind(appointment);
   if (kind === "event") return "Próximo evento";
   if (kind === "block") return "Próximo bloqueio";
   return "Próximo atendimento";
-};
-
-const getScheduleModeLabel = (appointment?: Appointment | null) => {
-  if (!appointment) return "Novo agendamento";
-  const kind = getAppointmentKind(appointment);
-  const metadata = getAppointmentMetadata(appointment);
-  if (kind === "event") return metadata.eventCategoryLabel || "Evento";
-  if (kind === "block") return "Bloqueio";
-  return isOnlineAppointment(appointment) ? "Online" : "Consultório";
-};
-
-const getSchedulePrompt = (appointment: Appointment, expanded: boolean) => {
-  const kind = getAppointmentKind(appointment);
-  const metadata = getAppointmentMetadata(appointment);
-
-  if (expanded) {
-    return kind === "session" ? "Resumo clínico aberto abaixo." : "Detalhes do compromisso abertos abaixo.";
-  }
-
-  if (kind === "event") {
-    return metadata.eventLocation ? `Local: ${metadata.eventLocation}` : "Clique para revisar detalhes do evento.";
-  }
-
-  if (kind === "block") {
-    return "Período reservado na agenda.";
-  }
-
-  return isOnlineAppointment(appointment) ? "Teleconsulta pronta para entrada direta." : "Clique para preparar a sessão.";
 };
 
 const getSessionSummaryText = (note?: SessionNote | null) => {
@@ -293,298 +239,6 @@ const ClinicalPrepMetric = ({
   </div>
 );
 
-const ScheduleDetailsLayer = ({
-  id,
-  open,
-  appointment,
-  latestSessionNote,
-  latestSummaryText,
-  latestTopics,
-  latestNextSteps,
-  isLoading,
-}: {
-  id: string;
-  open: boolean;
-  appointment?: Appointment;
-  latestSessionNote?: SessionNote;
-  latestSummaryText: string | null;
-  latestTopics: string[];
-  latestNextSteps: string[];
-  isLoading: boolean;
-}) => {
-  const kind = appointment ? getAppointmentKind(appointment) : null;
-  const metadata = appointment ? getAppointmentMetadata(appointment) : null;
-  const isSession = kind === "session";
-  const DetailIcon = isSession ? FileText : Clock;
-  const detailTitle = isSession ? "Última sessão" : kind === "block" ? "Bloqueio reservado" : "Detalhes do evento";
-  const eventNotes = metadata?.eventNotes || "";
-  const eventLocation = metadata?.eventLocation || appointment?.location || "";
-
-  return (
-    <div
-    id={id}
-    className={cn(
-      "dashboard-schedule-detail-layer absolute inset-x-4 bottom-4 top-[148px] z-10 rounded-[24px] p-3 text-white transition-[transform,opacity] duration-slow ease-apple motion-reduce:transition-none",
-      open ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0",
-    )}
-  >
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 [&>p:last-child]:hidden">
-          <DetailIcon className="h-3.5 w-3.5 text-white/50" />
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/48">{detailTitle}</p>
-          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/42">Última sessão</p>
-        </div>
-        {latestSessionNote?.created_at ? (
-          <span className="text-[9px] font-black uppercase tracking-[0.14em] text-white/42">
-            {format(new Date(latestSessionNote.created_at), "dd/MM", { locale: ptBR })}
-          </span>
-        ) : null}
-      </div>
-
-      <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
-        {isSession ? (
-          <>
-        {isLoading ? (
-          <div className="space-y-2">
-            <div className="h-4 w-11/12 animate-pulse rounded-full bg-muted/45" />
-            <div className="h-4 w-9/12 animate-pulse rounded-full bg-muted/35" />
-            <div className="h-4 w-10/12 animate-pulse rounded-full bg-muted/25" />
-          </div>
-        ) : latestSummaryText ? (
-          <p className="text-xs font-semibold leading-relaxed text-white/78">{latestSummaryText}</p>
-        ) : (
-          <p className="text-xs font-medium leading-relaxed text-white/50">Sem resumo confirmado para este paciente ainda.</p>
-        )}
-
-        {!isLoading && latestSummaryText ? (
-          <div className="mt-3 flex flex-wrap gap-1.5">
-            {[...latestTopics, ...latestNextSteps].slice(0, 4).map((item) => (
-              <span key={item} className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
-                {item}
-              </span>
-            ))}
-          </div>
-        ) : null}
-          </>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex flex-wrap gap-1.5">
-              {appointment ? (
-                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
-                  {format(new Date(appointment.start_time), "HH:mm")} - {format(new Date(appointment.end_time), "HH:mm")}
-                </span>
-              ) : null}
-              {metadata?.eventCategoryLabel ? (
-                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
-                  {metadata.eventCategoryLabel}
-                </span>
-              ) : null}
-              {eventLocation ? (
-                <span className="dashboard-schedule-detail-pill rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.1em] text-white/58">
-                  {eventLocation}
-                </span>
-              ) : null}
-            </div>
-            <p className="text-xs font-semibold leading-relaxed text-white/78">
-              {eventNotes || "Sem observações adicionais para este compromisso."}
-            </p>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-  );
-};
-
-const AppointmentScheduleArtifact = ({
-  today,
-  nextAppointment,
-  isLoading,
-  summaryOpen,
-  setSummaryOpen,
-  latestSessionNote,
-  latestSummaryText,
-  latestTopics,
-  latestNextSteps,
-  loadingSessionNotes,
-}: {
-  today: Date;
-  nextAppointment?: Appointment;
-  isLoading: boolean;
-  summaryOpen: boolean;
-  setSummaryOpen: (open: boolean) => void;
-  latestSessionNote?: SessionNote;
-  latestSummaryText: string | null;
-  latestTopics: string[];
-  latestNextSteps: string[];
-  loadingSessionNotes: boolean;
-}) => {
-  const navigate = useNavigate();
-  const prefersReducedMotion = useReducedMotion();
-  const summaryPanelId = "dashboard-next-schedule-details";
-  const minutesUntil = getMinutesUntil(nextAppointment);
-  const scheduleKind = nextAppointment ? getAppointmentKind(nextAppointment) : null;
-  const isSession = scheduleKind === "session";
-  const online = nextAppointment && isSession ? isOnlineAppointment(nextAppointment) : false;
-  const scheduleTitle = getScheduleTitle(nextAppointment);
-  const scheduleModeLabel = getScheduleModeLabel(nextAppointment);
-  const scheduleMetadata = nextAppointment ? getAppointmentMetadata(nextAppointment) : null;
-  const scheduleLocation = scheduleMetadata?.eventLocation || nextAppointment?.location || "";
-  const scheduleNotes = scheduleMetadata?.eventNotes?.replace(/\s+/g, " ").trim() || "";
-  const scheduleContext =
-    scheduleKind === "event" || scheduleKind === "block"
-      ? [scheduleMetadata?.eventCategoryLabel, scheduleLocation].filter(Boolean).join(" · ") ||
-        scheduleNotes ||
-        "Revisar detalhes do compromisso."
-      : nextAppointment
-        ? getSchedulePrompt(nextAppointment, summaryOpen)
-        : "";
-
-  const handleToggle = () => {
-    if (!isLoading && nextAppointment) {
-      setSummaryOpen(!summaryOpen);
-    }
-  };
-
-  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      handleToggle();
-    }
-  };
-
-  return (
-    <div className="relative h-full min-h-[264px] overflow-hidden border-t border-background/10 bg-background/[0.07] p-4 [perspective:1600px] dark:border-zinc-950/10 dark:bg-zinc-950/[0.035] lg:border-l lg:border-t-0">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_62%_10%,hsl(var(--background)/0.08),transparent_30%),linear-gradient(180deg,hsl(var(--background)/0.035),transparent_48%)] opacity-75 dark:bg-[radial-gradient(circle_at_62%_10%,rgba(0,0,0,0.06),transparent_30%),linear-gradient(180deg,rgba(0,0,0,0.035),transparent_48%)]" />
-
-      <ScheduleDetailsLayer
-        id={summaryPanelId}
-        open={summaryOpen}
-        appointment={nextAppointment}
-        latestSessionNote={latestSessionNote}
-        latestSummaryText={latestSummaryText}
-        latestTopics={latestTopics}
-        latestNextSteps={latestNextSteps}
-        isLoading={loadingSessionNotes}
-      />
-
-      <motion.div
-        role={nextAppointment ? "button" : undefined}
-        tabIndex={nextAppointment ? 0 : undefined}
-        aria-expanded={nextAppointment ? summaryOpen : undefined}
-        aria-controls={nextAppointment ? summaryPanelId : undefined}
-        onClick={handleToggle}
-        onKeyDown={handleKeyDown}
-        whileHover={
-          !prefersReducedMotion && nextAppointment && !summaryOpen
-            ? { y: -3, rotateX: 0.9, rotateY: -0.45, transition: { duration: 0.28, ease: [0.22, 1, 0.36, 1] } }
-            : undefined
-        }
-        whileTap={!prefersReducedMotion && nextAppointment ? { scale: 0.992 } : undefined}
-        className={cn(
-          "dashboard-schedule-card group/appointment absolute inset-x-4 z-20 overflow-hidden rounded-[28px] p-4 text-foreground outline-none transition-[top,height,box-shadow,border-color,background-color] duration-slow ease-apple [transform-style:preserve-3d] focus-visible:ring-2 focus-visible:ring-ring motion-reduce:transform-none motion-reduce:transition-none",
-          nextAppointment && "cursor-pointer",
-          summaryOpen ? "top-4 h-[124px]" : "top-5 h-[222px]",
-        )}
-      >
-        <div className="pointer-events-none absolute inset-0 rounded-[32px] bg-[linear-gradient(180deg,hsl(var(--background)/0.24),transparent_42%),linear-gradient(135deg,hsl(var(--foreground)/0.018),transparent_48%)] dark:bg-[linear-gradient(180deg,rgba(255,255,255,0.018),transparent_42%),linear-gradient(135deg,rgba(255,255,255,0.012),transparent_48%)]" />
-        <div className="dashboard-schedule-art pointer-events-none absolute inset-0 z-0 overflow-hidden rounded-[28px]">
-          <span
-            className="dashboard-schedule-orbit dashboard-schedule-orbit-primary"
-          />
-          <span
-            className="dashboard-schedule-orbit dashboard-schedule-orbit-secondary"
-          />
-          <span className="dashboard-schedule-scan" />
-          <span className="dashboard-schedule-time-rail" />
-        </div>
-
-        <div className={cn("relative z-10 grid h-full min-h-0", summaryOpen ? "grid-rows-[auto_minmax(0,1fr)] gap-2" : "grid-rows-[auto_minmax(0,1fr)_auto] gap-3")}>
-          <div className="flex min-h-10 items-start justify-between gap-4">
-            <div className="flex min-w-0 flex-wrap items-center gap-2 pr-2 [&>span:last-child]:hidden">
-              {minutesUntil ? (
-                <span className="dashboard-soft-fill rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                  {minutesUntil}
-                </span>
-              ) : null}
-              <span className="dashboard-soft-fill rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                {scheduleModeLabel}
-              </span>
-              <span className="dashboard-soft-fill rounded-full px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">
-                {nextAppointment ? (online ? "Online" : "Consultório") : "Novo agendamento"}
-              </span>
-            </div>
-            <span className="dashboard-soft-fill flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] text-muted-foreground">
-              <CalendarIcon className="h-4 w-4" />
-            </span>
-          </div>
-
-          {isLoading ? (
-            <div className="min-h-0 space-y-4 overflow-hidden py-2">
-              <div className="h-12 w-48 animate-pulse rounded-[18px] bg-muted/40" />
-              <div className="h-5 w-36 animate-pulse rounded-full bg-muted/30" />
-            </div>
-          ) : nextAppointment ? (
-            <>
-              <div className={cn("min-h-0 overflow-hidden transition-all duration-500 motion-reduce:transition-none", summaryOpen ? "py-0" : "py-1")}>
-                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">{formatAppointmentDay(nextAppointment)}</p>
-                <div className={cn("flex items-end justify-between gap-4", summaryOpen ? "mt-1" : "mt-1.5")}>
-                  <p className={cn("min-w-0 font-black leading-[0.86] tracking-[-0.075em] tabular-nums transition-all duration-500 motion-reduce:transition-none", summaryOpen ? "text-[2.25rem]" : "text-[3rem] 2xl:text-[3.35rem]")}>
-                    {formatAppointmentTime(nextAppointment)}
-                  </p>
-                  <ChevronDown className={cn("mb-1 h-5 w-5 shrink-0 text-muted-foreground transition-transform duration-300 motion-reduce:transition-none", summaryOpen && "rotate-180")} />
-                </div>
-                <h3 className={cn("truncate font-black leading-[1.02] tracking-[-0.055em] transition-all duration-500 motion-reduce:transition-none", summaryOpen ? "mt-1.5 text-base" : "mt-2 text-lg")}>{scheduleTitle}</h3>
-                <p className={cn("line-clamp-1 font-medium leading-snug text-muted-foreground transition-all duration-300 motion-reduce:transition-none", summaryOpen ? "mt-0 opacity-0 [font-size:0]" : "mt-1.5 text-xs opacity-100")}>
-                  {summaryOpen ? "Resumo clínico aberto abaixo." : scheduleContext}
-                </p>
-              </div>
-
-              <div className={cn("grid shrink-0 gap-2 overflow-hidden transition-all duration-300 motion-reduce:transition-none", online ? "sm:grid-cols-3" : "sm:grid-cols-2", summaryOpen ? "pointer-events-none max-h-0 opacity-0" : "max-h-12 opacity-100")} onClick={(event) => event.stopPropagation()}>
-                {online ? (
-                  <Button
-                    className="h-9 rounded-[14px] bg-foreground px-3 text-[8px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-950"
-                    onClick={() => navigate("/teleconsulta", { state: { activeAppointmentId: nextAppointment.id } })}
-                  >
-                    Entrar
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                ) : null}
-                <AppointmentDetailModal appointment={nextAppointment}>
-                  <Button variant="outline" className="h-9 rounded-[14px] px-3 text-[8px] font-black uppercase tracking-[0.16em]">
-                    {isSession ? "Ficha" : "Detalhes"}
-                  </Button>
-                </AppointmentDetailModal>
-                <Button
-                  variant="outline"
-                  className="h-9 rounded-[14px] px-3 text-[8px] font-black uppercase tracking-[0.16em]"
-                  onClick={() => navigate("/agenda", { state: { openAppointmentId: nextAppointment.id } })}
-                >
-                  Abrir
-                </Button>
-              </div>
-            </>
-          ) : (
-            <div className="mt-5">
-              <p className="text-3xl font-black leading-none tracking-[-0.065em]">Dia livre</p>
-              <p className="mt-2 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground">Crie um horário ou abra a agenda para organizar a próxima sessão.</p>
-              <div className="mt-4" onClick={(event) => event.stopPropagation()}>
-                <NewAppointmentModal selectedDate={today}>
-                  <Button className="h-9 rounded-[14px] bg-foreground px-4 text-[9px] font-black uppercase tracking-[0.16em] text-background hover:bg-foreground/90 dark:bg-white dark:text-zinc-950">
-                    Agendar
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </NewAppointmentModal>
-              </div>
-            </div>
-          )}
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
 const MorningCommandPanel = ({
   today,
   firstName,
@@ -592,6 +246,7 @@ const MorningCommandPanel = ({
   weekAppointmentsCount,
   attentionItems,
   nextAppointment,
+  followingAppointment,
   isLoading,
 }: {
   today: Date;
@@ -600,6 +255,7 @@ const MorningCommandPanel = ({
   weekAppointmentsCount: number;
   attentionItems: AttentionQueueItem[];
   nextAppointment?: Appointment;
+  followingAppointment?: Appointment;
   isLoading: boolean;
 }) => {
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -647,18 +303,20 @@ const MorningCommandPanel = ({
           </div>
         </div>
 
-        <AppointmentScheduleArtifact
-          today={today}
-          nextAppointment={nextAppointment}
-          isLoading={isLoading}
-          summaryOpen={summaryOpen}
-          setSummaryOpen={setSummaryOpen}
-          latestSessionNote={latestSessionNote}
-          latestSummaryText={latestSummaryText}
-          latestTopics={latestTopics}
-          latestNextSteps={latestNextSteps}
-          loadingSessionNotes={loadingSessionNotes}
-        />
+        <div className="next-schedule-stage relative min-h-[264px] border-t border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.035] lg:border-l lg:border-t-0">
+          <NextScheduleCard
+            today={today}
+            appointment={nextAppointment}
+            followingAppointment={followingAppointment}
+            isLoading={isLoading}
+            expanded={summaryOpen}
+            onExpandedChange={setSummaryOpen}
+            latestSummaryText={latestSummaryText}
+            latestTopics={latestTopics}
+            latestNextSteps={latestNextSteps}
+            loadingSessionNotes={loadingSessionNotes}
+          />
+        </div>
       </div>
     </DesktopWorkspacePanel>
   );
@@ -1311,6 +969,11 @@ export const DesktopDashboardCommandCenter = () => {
   const activeAppointments = useMemo(() => getActiveAppointments((allUpcomingAppointments || []) as Appointment[]), [allUpcomingAppointments]);
   const todayAppointments = useMemo(() => getTodayAppointments(activeAppointments, today), [activeAppointments, today]);
   const nextAppointment = useMemo(() => getNextScheduleItem(activeAppointments, new Date()), [activeAppointments]);
+  const followingAppointment = useMemo(() => {
+    if (!nextAppointment) return undefined;
+    const currentIndex = activeAppointments.findIndex((appointment) => appointment.id === nextAppointment.id);
+    return currentIndex >= 0 ? activeAppointments[currentIndex + 1] : undefined;
+  }, [activeAppointments, nextAppointment]);
   const attentionItems = useMemo(
     () =>
       buildAttentionQueue({
@@ -1338,6 +1001,7 @@ export const DesktopDashboardCommandCenter = () => {
               weekAppointmentsCount={activeAppointments.length}
               attentionItems={attentionItems}
               nextAppointment={nextAppointment}
+              followingAppointment={followingAppointment}
               isLoading={loadingAppointments}
             />
           </div>

@@ -5550,113 +5550,6 @@
     -webkit-backdrop-filter: blur(22px) saturate(108%);
   }
 
-  .dashboard-schedule-card {
-    border: 1px solid hsl(var(--foreground) / 0.12);
-    background:
-      linear-gradient(180deg, hsl(var(--background) / 0.96), hsl(var(--background) / 0.82)),
-      linear-gradient(135deg, hsl(var(--foreground) / 0.028), transparent 50%);
-    box-shadow:
-      0 28px 70px -48px hsl(var(--foreground) / 0.5),
-      inset 0 1px 0 hsl(var(--background));
-  }
-
-  .dark .dashboard-schedule-card {
-    border-color: rgba(255, 255, 255, 0.09);
-    background:
-      linear-gradient(180deg, rgba(15, 15, 15, 0.98), rgba(7, 7, 7, 0.96)),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.026), transparent 50%);
-    box-shadow:
-      0 28px 74px -48px rgba(0, 0, 0, 0.96),
-      inset 0 1px 0 rgba(255, 255, 255, 0.042);
-  }
-
-  .dashboard-schedule-detail-layer {
-    border: 1px solid rgba(255, 255, 255, 0.13);
-    background:
-      linear-gradient(180deg, rgba(15, 15, 15, 0.94), rgba(7, 7, 7, 0.92)),
-      linear-gradient(135deg, rgba(255, 255, 255, 0.036), transparent 56%);
-    box-shadow:
-      0 26px 56px -42px rgba(0, 0, 0, 0.84),
-      inset 0 1px 0 rgba(255, 255, 255, 0.05);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-
-  .dashboard-schedule-detail-pill {
-    border: 1px solid rgba(255, 255, 255, 0.07);
-    background: rgba(255, 255, 255, 0.042);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-  }
-
-  .dashboard-schedule-art {
-    opacity: 0.82;
-    mix-blend-mode: multiply;
-  }
-
-  .dark .dashboard-schedule-art {
-    mix-blend-mode: normal;
-    opacity: 0.72;
-  }
-
-  .dashboard-schedule-orbit {
-    position: absolute;
-    display: block;
-    border-radius: 999px;
-    border: 1px solid rgba(9, 9, 11, 0.075);
-    background:
-      radial-gradient(circle at 50% 50%, transparent 58%, rgba(9, 9, 11, 0.048) 59%, transparent 63%),
-      conic-gradient(from 120deg, transparent 0deg, rgba(9, 9, 11, 0.1) 28deg, transparent 72deg, transparent 360deg);
-    mask-image: radial-gradient(circle, transparent 54%, #000 56%, #000 63%, transparent 65%);
-    -webkit-mask-image: radial-gradient(circle, transparent 54%, #000 56%, #000 63%, transparent 65%);
-  }
-
-  .dark .dashboard-schedule-orbit {
-    border-color: rgba(255, 255, 255, 0.045);
-    background:
-      radial-gradient(circle at 50% 50%, transparent 58%, rgba(255, 255, 255, 0.04) 59%, transparent 63%),
-      conic-gradient(from 120deg, transparent 0deg, rgba(255, 255, 255, 0.09) 28deg, transparent 72deg, transparent 360deg);
-  }
-
-  .dashboard-schedule-orbit-primary {
-    right: -42px;
-    top: -68px;
-    width: 214px;
-    height: 214px;
-  }
-
-  .dashboard-schedule-orbit-secondary {
-    right: 54px;
-    bottom: -122px;
-    width: 252px;
-    height: 252px;
-    opacity: 0.6;
-  }
-
-  .dashboard-schedule-scan {
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 42%;
-    transform: skewX(-16deg);
-    background: linear-gradient(90deg, transparent, rgba(9, 9, 11, 0.06), transparent);
-  }
-
-  .dark .dashboard-schedule-scan {
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.045), transparent);
-  }
-
-  .dashboard-schedule-time-rail {
-    position: absolute;
-    left: 20px;
-    right: 22px;
-    bottom: 18px;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(9, 9, 11, 0.12), rgba(9, 9, 11, 0.02));
-  }
-
-  .dark .dashboard-schedule-time-rail {
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02));
-  }
-
   .dashboard-shell-surface,
   .dashboard-panel-surface,
   .dashboard-high-contrast-panel {
@@ -6029,8 +5922,6 @@
     .notes-lumen-field::before,
     .notes-lumen-field::after,
     .notes-neuroview-backdrop,
-    .dashboard-schedule-orbit,
-    .dashboard-schedule-scan,
     .synapse-liquid-orb-caustic,
     .synapse-presence-orb,
     .synapse-desktop-thinking::after,
@@ -6081,8 +5972,6 @@
   html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-lumen-field::before,
   html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-lumen-field::after,
   html.reduce-motion [data-neuronex-surface="professional-desktop"] .notes-neuroview-backdrop,
-  html.reduce-motion [data-neuronex-surface="professional-desktop"] .dashboard-schedule-orbit,
-  html.reduce-motion [data-neuronex-surface="professional-desktop"] .dashboard-schedule-scan,
   html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-liquid-orb-caustic,
   html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-presence-orb,
   html.reduce-motion [data-neuronex-surface="professional-desktop"] .synapse-desktop-thinking::after,
