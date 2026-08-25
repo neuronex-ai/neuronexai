@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
-import { AppleHelloEnglishEffect } from "@/components/ui/apple-hello-effect";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useProfile } from "@/hooks/use-profile";
@@ -55,6 +54,12 @@ export const DesktopSessionWelcome = () => {
       : "Bem-vindo de volta.",
     [firstName, user],
   );
+  const phraseFontSize = useMemo(() => {
+    if (visibleMessage.length > 34) return 58;
+    if (visibleMessage.length > 28) return 68;
+    if (visibleMessage.length > 23) return 78;
+    return 88;
+  }, [visibleMessage]);
 
   const dismiss = useCallback(() => {
     if (dismissTimer.current) window.clearTimeout(dismissTimer.current);
@@ -145,6 +150,7 @@ export const DesktopSessionWelcome = () => {
           role="dialog"
           aria-modal="true"
           aria-labelledby="desktop-welcome-message"
+          aria-live="polite"
           tabIndex={-1}
           data-neuronex-desktop-login-welcome
           initial={shouldReduceMotion ? false : { opacity: 0 }}
@@ -158,31 +164,61 @@ export const DesktopSessionWelcome = () => {
             initial={shouldReduceMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.48, ease: [0.22, 1, 0.36, 1] }}
-            className="relative flex w-full max-w-3xl flex-col items-center text-center"
+            className="relative flex w-full max-w-5xl flex-col items-center text-center"
           >
-            <AppleHelloEnglishEffect
-              aria-hidden="true"
-              reducedMotion={shouldReduceMotion ?? false}
-              speed={0.62}
-              className="w-[min(100%,33rem)] text-foreground drop-shadow-[0_12px_34px_hsl(var(--foreground)/0.08)]"
-            />
-
-            <motion.p
-              id="desktop-welcome-message"
-              aria-live="polite"
-              initial={shouldReduceMotion ? false : { opacity: 0, y: 8, filter: "blur(4px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={shouldReduceMotion
-                ? { duration: 0 }
-                : { delay: 1.78, duration: 0.52, ease: [0.22, 1, 0.36, 1] }}
-              className="mt-2 max-w-full px-3 text-[clamp(1.85rem,4.5vw,3.75rem)] leading-[0.98] tracking-[-0.045em] text-foreground"
-              style={{
-                fontFamily: '"Segoe Script", "Snell Roundhand", "Apple Chancery", cursive',
-                fontWeight: 500,
-              }}
-            >
+            <span id="desktop-welcome-message" className="sr-only">
               {visibleMessage}
-            </motion.p>
+            </span>
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 1200 300"
+              className="h-auto w-full max-w-5xl overflow-visible text-foreground drop-shadow-[0_12px_34px_hsl(var(--foreground)/0.08)]"
+            >
+              <text
+                x="600"
+                y="178"
+                textAnchor="middle"
+                fill="currentColor"
+                stroke="currentColor"
+                strokeWidth="0.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  fontFamily: '"Segoe Script", "Snell Roundhand", "Apple Chancery", cursive',
+                  fontWeight: 500,
+                  fontSize: phraseFontSize,
+                  letterSpacing: "-0.035em",
+                  paintOrder: "stroke fill",
+                }}
+              >
+                {Array.from(visibleMessage).map((character, index) => (
+                  <motion.tspan
+                    // The sequential strokes make dynamic text retain the supplied
+                    // component's handwriting cadence without hard-coding a wordmark.
+                    key={`${character}-${index}`}
+                    initial={shouldReduceMotion
+                      ? false
+                      : { opacity: 0, fillOpacity: 0, strokeDashoffset: 220 }}
+                    animate={{
+                      opacity: 1,
+                      fillOpacity: shouldReduceMotion ? 1 : [0, 0.06, 1],
+                      strokeDashoffset: 0,
+                    }}
+                    transition={shouldReduceMotion
+                      ? { duration: 0 }
+                      : {
+                        duration: 0.46,
+                        delay: Math.min(index * 0.052, 1.82),
+                        ease: [0.65, 0, 0.35, 1],
+                        fillOpacity: { duration: 0.46, times: [0, 0.72, 1] },
+                      }}
+                    style={{ strokeDasharray: 220 }}
+                  >
+                    {character === " " ? "\u00a0" : character}
+                  </motion.tspan>
+                ))}
+              </text>
+            </svg>
 
             <Button
               type="button"
