@@ -6,26 +6,26 @@ const DESKTOP_WELCOME_SEEN_PREFIX = "seen:";
 type SessionStorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
 
 export const DESKTOP_WELCOME_TEMPLATES = [
-  "Bem-vindo de volta, {name}.",
-  "Já posso te ouvir, {name}.",
-  "Sua clínica acordou, {name}.",
-  "Tudo pronto, {name}.",
-  "Vamos começar, {name}.",
-  "O dia chama, {name}.",
-  "Te escuto, {name}.",
-  "Estou com você, {name}.",
-  "Seu espaço respira, {name}.",
-  "Sua agenda espera, {name}.",
-  "O cuidado começa, {name}.",
-  "Seu consultório desperta, {name}.",
-  "Pronto para hoje, {name}.",
-  "Vamos cuidar, {name}.",
-  "Aqui com você, {name}.",
-  "Sua clínica responde, {name}.",
-  "Ouvindo você, {name}.",
-  "Hora de começar, {name}.",
-  "Seu dia está pronto, {name}.",
-  "Vamos ao essencial, {name}.",
+  "A agenda abriu para você.",
+  "Ah, {name}. Bem-vindo de volta.",
+  "Algo novo no prontuário.",
+  "Amanhã, um dia mais leve.",
+  "Ao que importa.",
+  "Aqui com você.",
+  "Bora pro que importa.",
+  "Já deu uma olhada na agenda?",
+  "Já pegou seu café?",
+  "Lembrete: anotação pendente.",
+  "NeuroVision atualizou o caso.",
+  "O cuidado começa agora.",
+  "O que vamos explorar?",
+  "Ouvindo, {name}.",
+  "Paciente das 14h confirmou.",
+  "Pode começar quando quiser.",
+  "Quer que eu abra o prontuário?",
+  "Seu dia está pronto.",
+  "Sua clínica já te ouve.",
+  "Tudo certo por aí?",
 ] as const;
 
 const hashText = (value: string) => {
@@ -102,6 +102,14 @@ export const getDailyDesktopWelcomeMessage = ({
   date?: Date;
 }) => {
   const normalizedName = firstName.trim() || "profissional";
-  const index = hashText(`${userId}:${localDayKey(date)}`) % DESKTOP_WELCOME_TEMPLATES.length;
+  const index = getDailyDesktopWelcomeIndex({ userId, date });
   return DESKTOP_WELCOME_TEMPLATES[index].replace("{name}", normalizedName);
 };
+
+export const getDailyDesktopWelcomeIndex = ({
+  userId,
+  date = new Date(),
+}: {
+  userId: string;
+  date?: Date;
+}) => hashText(`${userId}:${localDayKey(date)}`) % DESKTOP_WELCOME_TEMPLATES.length;

@@ -18,19 +18,13 @@ const createSessionStorage = () => {
 };
 
 describe("desktop session welcome", () => {
-  it("provides twenty distinct templates and every one includes the name token", () => {
+  it("provides twenty distinct templates matching the exported welcome artwork", () => {
     expect(DESKTOP_WELCOME_TEMPLATES).toHaveLength(20);
     expect(new Set(DESKTOP_WELCOME_TEMPLATES).size).toBe(20);
-    expect(DESKTOP_WELCOME_TEMPLATES.every((template) => template.includes("{name}"))).toBe(true);
-    expect(
-      DESKTOP_WELCOME_TEMPLATES.every((template) => {
-        const words = template.replace("{name}", "Nathalia").match(/[\p{L}\p{N}]+/gu) || [];
-        return words.length >= 3 && words.length <= 5;
-      }),
-    ).toBe(true);
+    expect(DESKTOP_WELCOME_TEMPLATES.filter((template) => template.includes("{name}"))).toHaveLength(2);
   });
 
-  it("keeps the daily greeting stable and personalized", () => {
+  it("keeps the daily artwork selection stable", () => {
     const input = {
       userId: "professional-1",
       firstName: "Nathalia",
@@ -38,7 +32,7 @@ describe("desktop session welcome", () => {
     };
 
     expect(getDailyDesktopWelcomeMessage(input)).toBe(getDailyDesktopWelcomeMessage(input));
-    expect(getDailyDesktopWelcomeMessage(input)).toContain("Nathalia");
+    expect(getDailyDesktopWelcomeMessage(input)).toBeTruthy();
   });
 
   it("scopes the seen marker to the authenticated account", () => {

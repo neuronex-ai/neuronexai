@@ -1,9 +1,14 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { queueDesktopWelcomeForLogin } from "@/lib/desktop-session-welcome";
+import {
+  getDailyDesktopWelcomeIndex,
+  getDailyDesktopWelcomeMessage,
+  queueDesktopWelcomeForLogin,
+} from "@/lib/desktop-session-welcome";
 
 import { DesktopSessionWelcome } from "./DesktopSessionWelcome";
+import { DESKTOP_WELCOME_ARTWORK } from "./desktop-session-welcome-artwork";
 
 vi.mock("@/components/auth/SessionContextProvider", () => ({
   useAuth: () => ({
@@ -43,7 +48,14 @@ describe("DesktopSessionWelcome", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveAttribute("data-neuronex-desktop-login-welcome");
     expect(dialog.parentElement).toBe(document.body);
-    expect(dialog).toHaveTextContent("Nathalia");
+    const expectedIndex = getDailyDesktopWelcomeIndex({ userId: "professional-1" });
+    const expectedMessage = getDailyDesktopWelcomeMessage({
+      userId: "professional-1",
+      firstName: "Nathalia",
+    });
+
+    expect(dialog).toHaveTextContent(expectedMessage);
+    expect(dialog.querySelector("img")).toHaveAttribute("src", DESKTOP_WELCOME_ARTWORK[expectedIndex]);
   });
 
   it("does not render for a restored session without a new login", async () => {

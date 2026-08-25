@@ -11,8 +11,11 @@ import { useProfile } from "@/hooks/use-profile";
 import { isPatientAccount } from "@/lib/auth-account-role";
 import {
   claimDesktopWelcomeForEntry,
+  getDailyDesktopWelcomeIndex,
   getDailyDesktopWelcomeMessage,
 } from "@/lib/desktop-session-welcome";
+
+import { DESKTOP_WELCOME_ARTWORK } from "./desktop-session-welcome-artwork";
 
 const profileFirstName = (profile?: {
   first_name?: string | null;
@@ -54,12 +57,13 @@ export const DesktopSessionWelcome = () => {
       : "Bem-vindo de volta.",
     [firstName, user],
   );
-  const phraseFontSize = useMemo(() => {
-    if (visibleMessage.length > 34) return 58;
-    if (visibleMessage.length > 28) return 68;
-    if (visibleMessage.length > 23) return 78;
-    return 88;
-  }, [visibleMessage]);
+  const resolvedArtwork = useMemo(
+    () => user
+      ? DESKTOP_WELCOME_ARTWORK[getDailyDesktopWelcomeIndex({ userId: user.id })]
+      : DESKTOP_WELCOME_ARTWORK[0],
+    [user],
+  );
+  const [visibleArtwork, setVisibleArtwork] = useState(resolvedArtwork);
 
   const dismiss = useCallback(() => {
     if (dismissTimer.current) window.clearTimeout(dismissTimer.current);
@@ -83,16 +87,19 @@ export const DesktopSessionWelcome = () => {
 
     presentedEntryRef.current = entryId;
     setVisibleMessage(resolvedMessage);
+    setVisibleArtwork(resolvedArtwork);
     setVisible(true);
-  }, [isMobile, resolvedMessage, user]);
+  }, [isMobile, resolvedArtwork, resolvedMessage, user]);
 
   useEffect(() => {
     if (isMobile) dismiss();
   }, [dismiss, isMobile]);
 
   useEffect(() => {
-    if (visible) setVisibleMessage(resolvedMessage);
-  }, [resolvedMessage, visible]);
+    if (!visible) return;
+    setVisibleMessage(resolvedMessage);
+    setVisibleArtwork(resolvedArtwork);
+  }, [resolvedArtwork, resolvedMessage, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -169,56 +176,24 @@ export const DesktopSessionWelcome = () => {
             <span id="desktop-welcome-message" className="sr-only">
               {visibleMessage}
             </span>
-            <svg
+            <motion.div
               aria-hidden="true"
-              viewBox="0 0 1200 300"
-              className="h-auto w-full max-w-5xl overflow-visible text-foreground drop-shadow-[0_12px_34px_hsl(var(--foreground)/0.08)]"
+              initial={shouldReduceMotion
+                ? false
+                : { opacity: 0, clipPath: "inset(0 100% 0 0)", scale: 0.992 }}
+              animate={{ opacity: 1, clipPath: "inset(0 0% 0 0)", scale: 1 }}
+              transition={shouldReduceMotion
+                ? { duration: 0 }
+                : { duration: 1.9, ease: [0.65, 0, 0.35, 1] }}
+              className="w-full max-w-[47.75rem] overflow-hidden"
             >
-              <text
-                x="600"
-                y="178"
-                textAnchor="middle"
-                fill="currentColor"
-                stroke="currentColor"
-                strokeWidth="0.8"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                style={{
-                  fontFamily: '"Segoe Script", "Snell Roundhand", "Apple Chancery", cursive',
-                  fontWeight: 500,
-                  fontSize: phraseFontSize,
-                  letterSpacing: "-0.035em",
-                  paintOrder: "stroke fill",
-                }}
-              >
-                {Array.from(visibleMessage).map((character, index) => (
-                  <motion.tspan
-                    // The sequential strokes make dynamic text retain the supplied
-                    // component's handwriting cadence without hard-coding a wordmark.
-                    key={`${character}-${index}`}
-                    initial={shouldReduceMotion
-                      ? false
-                      : { opacity: 0, fillOpacity: 0, strokeDashoffset: 220 }}
-                    animate={{
-                      opacity: 1,
-                      fillOpacity: shouldReduceMotion ? 1 : [0, 0.06, 1],
-                      strokeDashoffset: 0,
-                    }}
-                    transition={shouldReduceMotion
-                      ? { duration: 0 }
-                      : {
-                        duration: 0.46,
-                        delay: Math.min(index * 0.052, 1.82),
-                        ease: [0.65, 0, 0.35, 1],
-                        fillOpacity: { duration: 0.46, times: [0, 0.72, 1] },
-                      }}
-                    style={{ strokeDasharray: 220 }}
-                  >
-                    {character === " " ? "\u00a0" : character}
-                  </motion.tspan>
-                ))}
-              </text>
-            </svg>
+              <img
+                src={visibleArtwork}
+                alt=""
+                draggable={false}
+                className="block h-auto w-full select-none object-contain brightness-0 drop-shadow-[0_12px_34px_rgba(0,0,0,0.16)] dark:brightness-100 dark:drop-shadow-[0_12px_34px_rgba(255,255,255,0.08)]"
+              />
+            </motion.div>
 
             <Button
               type="button"
