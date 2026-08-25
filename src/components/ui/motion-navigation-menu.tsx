@@ -53,6 +53,23 @@ const contentVariants = {
   exit: (direction: number) => ({ x: `${-100 * direction}%`, opacity: 0 }),
 };
 
+const requestFrame = (callback: FrameRequestCallback) => {
+  if (typeof window.requestAnimationFrame === "function") {
+    return window.requestAnimationFrame(callback);
+  }
+
+  return window.setTimeout(() => callback(Date.now()), 0);
+};
+
+const cancelFrame = (frame: number) => {
+  if (typeof window.cancelAnimationFrame === "function") {
+    window.cancelAnimationFrame(frame);
+    return;
+  }
+
+  window.clearTimeout(frame);
+};
+
 type MotionNavigationMenuProps = Omit<
   React.ComponentPropsWithRef<"nav">,
   "onValueChange"
@@ -121,10 +138,10 @@ function MotionNavigationMenu({
 
   const updateViewportPosition = React.useCallback(() => {
     if (frameRef.current !== null) {
-      cancelAnimationFrame(frameRef.current);
+      cancelFrame(frameRef.current);
     }
 
-    frameRef.current = requestAnimationFrame(() => {
+    frameRef.current = requestFrame(() => {
       const root = rootRef.current;
 
       if (!root) {
@@ -196,7 +213,7 @@ function MotionNavigationMenu({
       if (typeof ref === "function") {
         ref(node);
       } else if (ref) {
-        ref.current = node;
+        (ref as React.MutableRefObject<HTMLElement | null>).current = node;
       }
     },
     [ref],
@@ -294,7 +311,7 @@ function MotionNavigationMenu({
     if (!root || typeof ResizeObserver === "undefined") {
       return () => {
         if (frameRef.current !== null) {
-          cancelAnimationFrame(frameRef.current);
+          cancelFrame(frameRef.current);
         }
       };
     }
@@ -306,7 +323,7 @@ function MotionNavigationMenu({
       observer.disconnect();
 
       if (frameRef.current !== null) {
-        cancelAnimationFrame(frameRef.current);
+        cancelFrame(frameRef.current);
       }
     };
   }, [updateViewportPosition]);
