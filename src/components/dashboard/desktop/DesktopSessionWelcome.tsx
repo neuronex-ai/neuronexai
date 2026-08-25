@@ -35,7 +35,7 @@ const userFirstName = (user?: { user_metadata?: Record<string, unknown> } | null
 
 export const DesktopSessionWelcome = () => {
   const { user } = useAuth();
-  const { data: profile } = useProfile();
+  const { data: profile, isLoading: profileLoading } = useProfile();
   const isMobile = useIsMobile();
   const shouldReduceMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
@@ -61,7 +61,7 @@ export const DesktopSessionWelcome = () => {
   }, []);
 
   useEffect(() => {
-    if (!user || isMobile || isPatientAccount(user)) return;
+    if (!user || profileLoading || isMobile || isPatientAccount(user)) return;
 
     let entryId: string | null = null;
     try {
@@ -77,7 +77,7 @@ export const DesktopSessionWelcome = () => {
     presentedEntryRef.current = entryId;
     setVisibleMessage(resolvedMessage);
     setVisible(true);
-  }, [isMobile, resolvedMessage, user]);
+  }, [isMobile, profileLoading, resolvedMessage, user]);
 
   useEffect(() => {
     if (isMobile) dismiss();

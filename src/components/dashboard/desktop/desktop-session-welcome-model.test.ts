@@ -1,10 +1,21 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  claimDesktopWelcomeForEntry,
   DESKTOP_WELCOME_TEMPLATES,
   getDailyDesktopWelcomeMessage,
   getDesktopWelcomeStorageKey,
+  queueDesktopWelcomeForLogin,
 } from "@/lib/desktop-session-welcome";
+
+const createSessionStorage = () => {
+  const values = new Map<string, string>();
+  return {
+    getItem: (key: string) => values.get(key) ?? null,
+    removeItem: (key: string) => values.delete(key),
+    setItem: (key: string, value: string) => values.set(key, value),
+  };
+};
 
 describe("desktop session welcome", () => {
   it("provides twenty distinct templates and every one includes the name token", () => {
@@ -28,5 +39,24 @@ describe("desktop session welcome", () => {
     expect(getDesktopWelcomeStorageKey("professional-1")).not.toBe(
       getDesktopWelcomeStorageKey("professional-2"),
     );
+  });
+
+  it("presents exactly once for each explicit login entry", () => {
+    const storage = createSessionStorage();
+    const firstLoginEntry = queueDesktopWelcomeForLogin("professional-1", storage);
+
+    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBe(firstLoginEntry);
+    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBeNull();
+
+    const nextLoginEntry = queueDesktopWelcomeForLogin("professional-1", storage);
+    expect(nextLoginEntry).not.toBe(firstLoginEntry);
+    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBe(nextLoginEntry);
+  });
+
+  it("uses a single welcome for an existing desktop entry, then stops on navigation", () => {
+    const storage = createSessionStorage();
+
+    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBe("initial-entry");
+    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBeNull();
   });
 });

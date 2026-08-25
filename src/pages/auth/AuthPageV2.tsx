@@ -223,7 +223,12 @@ const AuthPageV2 = () => {
 
   const queueDesktopWelcome = useCallback((userId?: string) => {
     if (!shouldQueueDesktopWelcomeRef.current || !userId) return;
-    queueDesktopWelcomeForLogin(userId);
+    try {
+      queueDesktopWelcomeForLogin(userId);
+    } catch {
+      // A privacy-restricted browser can block session storage. Login must
+      // still complete even when the optional welcome marker cannot persist.
+    }
     shouldQueueDesktopWelcomeRef.current = false;
   }, []);
 
