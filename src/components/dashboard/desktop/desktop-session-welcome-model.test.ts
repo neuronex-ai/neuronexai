@@ -21,7 +21,7 @@ describe("desktop session welcome", () => {
   it("provides twenty distinct templates matching the exported welcome artwork", () => {
     expect(DESKTOP_WELCOME_TEMPLATES).toHaveLength(20);
     expect(new Set(DESKTOP_WELCOME_TEMPLATES).size).toBe(20);
-    expect(DESKTOP_WELCOME_TEMPLATES.filter((template) => template.includes("{name}"))).toHaveLength(2);
+    expect(DESKTOP_WELCOME_TEMPLATES.some((template) => template.includes("{name}"))).toBe(false);
   });
 
   it("keeps the daily artwork selection stable", () => {

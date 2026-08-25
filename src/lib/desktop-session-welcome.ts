@@ -7,7 +7,7 @@ type SessionStorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
 
 export const DESKTOP_WELCOME_TEMPLATES = [
   "A agenda abriu para você.",
-  "Ah, {name}. Bem-vindo de volta.",
+  "Ah, nome. Bem-vindo de volta.",
   "Algo novo no prontuário.",
   "Amanhã, um dia mais leve.",
   "Ao que importa.",
@@ -19,7 +19,7 @@ export const DESKTOP_WELCOME_TEMPLATES = [
   "NeuroVision atualizou o caso.",
   "O cuidado começa agora.",
   "O que vamos explorar?",
-  "Ouvindo, {name}.",
+  "Ouvindo, nome.",
   "Paciente das 14h confirmou.",
   "Pode começar quando quiser.",
   "Quer que eu abra o prontuário?",
