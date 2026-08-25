@@ -130,8 +130,14 @@ export const NextScheduleCard = ({
   const presentation = buildNextScheduleCardPresentation(appointment, followingAppointment);
   const isSession = presentation.kind === "session";
   const isBlock = presentation.kind === "block";
-  const shareLabel = presentation.isOnline && isSession ? "Compartilhar sala" : "Compartilhar local";
-  const recurrenceContext = presentation.recurrenceLabel ? `Sessão ${presentation.recurrenceLabel} da recorrência` : null;
+  const shareLabel = presentation.isOnline
+    ? isSession ? "Compartilhar sala" : "Compartilhar acesso"
+    : "Compartilhar local";
+  const recurrenceContext = presentation.recurrenceLabel
+    ? presentation.kind === "session"
+      ? `Sessão ${presentation.recurrenceLabel} da recorrência`
+      : `Ocorrência ${presentation.recurrenceLabel} da recorrência`
+    : null;
   const scheduleSummary = [presentation.modalityLabel, recurrenceContext, presentation.locationLabel]
     .filter(Boolean)
     .join(" · ");
@@ -181,18 +187,32 @@ export const NextScheduleCard = ({
       initial={false}
       animate={{ height: expanded ? 408 : 228 }}
       transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 430, damping: 42 }}
-      className="next-schedule-card relative overflow-hidden rounded-[28px] border text-foreground focus-within:ring-2 focus-within:ring-ring"
+      className="next-schedule-card relative overflow-hidden rounded-[28px] border text-foreground"
       data-state={expanded ? "expanded" : "collapsed"}
       data-kind={presentation.kind}
     >
-      <motion.div
-        aria-hidden="true"
-        className="next-schedule-presence pointer-events-none absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-[16px] border"
-        animate={shouldReduceMotion ? undefined : { scale: expanded ? 1.04 : 1, opacity: expanded ? 1 : 0.72 }}
-        transition={{ duration: 0.22 }}
-      >
-        {presentation.isOnline ? <Video className="h-5 w-5" /> : isBlock ? <Clock3 className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
-      </motion.div>
+      {presentation.canShare ? (
+        <motion.button
+          type="button"
+          onClick={handleShare}
+          aria-label={shareLabel}
+          title={shareLabel}
+          className="next-schedule-presence absolute right-4 top-4 z-30 flex h-11 w-11 items-center justify-center rounded-[16px] border text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          animate={shouldReduceMotion ? undefined : { scale: expanded ? 1.04 : 1, opacity: expanded ? 1 : 0.78 }}
+          transition={{ duration: 0.22 }}
+        >
+          <Share2 className="h-4 w-4" aria-hidden="true" />
+        </motion.button>
+      ) : (
+        <motion.div
+          aria-hidden="true"
+          className="next-schedule-presence pointer-events-none absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-[16px] border text-muted-foreground"
+          animate={shouldReduceMotion ? undefined : { scale: expanded ? 1.04 : 1, opacity: expanded ? 1 : 0.72 }}
+          transition={{ duration: 0.22 }}
+        >
+          {isBlock ? <Clock3 className="h-5 w-5" /> : <CalendarIcon className="h-5 w-5" />}
+        </motion.div>
+      )}
 
       <button
         type="button"
@@ -233,23 +253,9 @@ export const NextScheduleCard = ({
             exit={{ opacity: 0 }}
             className="absolute inset-x-4 bottom-4 z-20 flex items-center gap-2 overflow-hidden"
           >
-            {presentation.recurrenceLabel ? <DetailPill icon={Repeat2} label={presentation.recurrenceLabel} /> : null}
             <DetailPill icon={CheckCircle2} label={presentation.confirmationLabel} tone={presentation.confirmationTone} />
             {presentation.financialValueLabel ? <DetailPill icon={ReceiptText} label={presentation.financialValueLabel} /> : null}
             {presentation.financialStatusLabel ? <DetailPill icon={ReceiptText} label={presentation.financialStatusLabel} tone={presentation.financialStatusTone} /> : null}
-            {presentation.canShare ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleShare}
-                className="next-schedule-icon ml-auto h-11 w-11 shrink-0 rounded-full border"
-                aria-label={shareLabel}
-                title={shareLabel}
-              >
-                <Share2 className="h-4 w-4" aria-hidden="true" />
-              </Button>
-            ) : null}
           </motion.div>
         ) : (
           <motion.section
@@ -263,11 +269,11 @@ export const NextScheduleCard = ({
           >
             <div className="grid grid-cols-2 gap-2">
               <div className="next-schedule-detail-cell min-w-0 rounded-[16px] border p-2.5">
-                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Confirmação</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Confirmação</p>
                 <p className="mt-1 truncate text-xs font-bold text-foreground">{presentation.confirmationLabel}</p>
               </div>
               <div className="next-schedule-detail-cell min-w-0 rounded-[16px] border p-2.5">
-                <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{isSession ? "Financeiro" : "Local"}</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground">{isSession ? "Financeiro" : "Local"}</p>
                 <p className="mt-1 truncate text-xs font-bold text-foreground">
                   {isSession
                     ? [presentation.financialValueLabel, presentation.financialStatusLabel].filter(Boolean).join(" · ")
@@ -276,7 +282,7 @@ export const NextScheduleCard = ({
               </div>
             </div>
 
-            <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-[16px] px-1 py-1">
+            <div className="mt-2 min-h-0 flex-1 overflow-y-auto rounded-[16px] px-1 py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {isBlock ? (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold leading-relaxed text-foreground">Intervalo reservado: {presentation.intervalLabel}.</p>
@@ -300,7 +306,7 @@ export const NextScheduleCard = ({
                   {latestSummaryText ? (
                     <div className="flex flex-wrap gap-1.5">
                       {[...latestTopics, ...latestNextSteps].slice(0, 3).map((item) => (
-                        <span key={item} className="rounded-full border border-foreground/8 bg-foreground/[0.035] px-2 py-1 text-[9px] font-semibold text-muted-foreground">
+                        <span key={item} className="rounded-full border border-foreground/8 bg-foreground/[0.035] px-2 py-1 text-[10px] font-semibold text-muted-foreground">
                           {item}
                         </span>
                       ))}
@@ -328,7 +334,7 @@ export const NextScheduleCard = ({
                     onClick={presentation.isOnline
                       ? () => navigate("/teleconsulta", { state: { activeAppointmentId: appointment.id } })
                       : openPatientPreparation}
-                    className="h-11 min-w-0 flex-1 rounded-full bg-foreground px-3 text-[10px] font-bold text-background hover:bg-foreground/90"
+                    className="h-11 min-w-0 flex-1 rounded-full bg-foreground px-3 text-xs font-bold text-background hover:bg-foreground/90"
                   >
                     {presentation.isOnline ? <Video className="mr-1.5 h-4 w-4" /> : <FileText className="mr-1.5 h-4 w-4" />}
                     {presentation.isOnline ? "Abrir sala" : "Preparar sessão"}
@@ -337,7 +343,7 @@ export const NextScheduleCard = ({
                     type="button"
                     variant="outline"
                     onClick={openSynapsePrep}
-                    className="h-11 min-w-0 flex-1 rounded-full px-3 text-[10px] font-bold"
+                    className="h-11 min-w-0 flex-1 rounded-full px-3 text-xs font-bold"
                   >
                     <Mic2 className="mr-1.5 h-4 w-4" aria-hidden="true" />
                     Synapse prepara
@@ -345,26 +351,12 @@ export const NextScheduleCard = ({
                 </>
               ) : (
                 <AppointmentDetailModal appointment={appointment}>
-                  <Button type="button" className="h-11 min-w-0 flex-1 rounded-full bg-foreground px-3 text-[10px] font-bold text-background hover:bg-foreground/90">
+                  <Button type="button" className="h-11 min-w-0 flex-1 rounded-full bg-foreground px-3 text-xs font-bold text-background hover:bg-foreground/90">
                     <Sparkles className="mr-1.5 h-4 w-4" aria-hidden="true" />
                     {isBlock ? "Abrir bloqueio" : "Ver evento"}
                   </Button>
                 </AppointmentDetailModal>
               )}
-
-              {presentation.canShare ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  onClick={handleShare}
-                  className="h-11 w-11 shrink-0 rounded-full"
-                  aria-label={shareLabel}
-                  title={shareLabel}
-                >
-                  <Share2 className="h-4 w-4" aria-hidden="true" />
-                </Button>
-              ) : null}
             </div>
           </motion.section>
         )}
