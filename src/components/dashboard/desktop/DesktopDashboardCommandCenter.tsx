@@ -1,7 +1,6 @@
 "use client";
 
 import { addDays, endOfDay, format, startOfDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import type { ElementType, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,7 +12,6 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
-  Clock,
   Plus,
   ReceiptText,
   Stethoscope,
@@ -45,13 +43,12 @@ import { useNeuroFinanceBalance } from "@/hooks/use-neurofinance-balance";
 import { useNotifications } from "@/hooks/use-notifications";
 import { usePendingPatientsCount } from "@/hooks/use-pending-patients-count";
 import { useProfile } from "@/hooks/use-profile";
-import { useSessionNotes } from "@/hooks/use-session-notes";
 import { getAppointmentKind } from "@/lib/appointment-metadata";
 import { getAppointmentStatusMeta } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
 import { cn } from "@/lib/utils";
-import type { AISummary, Appointment, SessionNote } from "@/types";
-import { NextScheduleCard } from "./NextScheduleCard";
+import type { Appointment } from "@/types";
+import { DesktopDashboardMorningBriefing } from "./DesktopDashboardMorningBriefing";
 import {
   buildAttentionQueue,
   getActiveAppointments,
@@ -134,24 +131,6 @@ const getAppointmentLabel = (appointment: Appointment) => {
   return isOnlineAppointment(appointment) ? "Online" : "Consultório";
 };
 
-const getScheduleFocusLabel = (appointment?: Appointment | null) => {
-  if (!appointment) return "Próximo foco";
-  const kind = getAppointmentKind(appointment);
-  if (kind === "event") return "Próximo evento";
-  if (kind === "block") return "Próximo bloqueio";
-  return "Próximo atendimento";
-};
-
-const getSessionSummaryText = (note?: SessionNote | null) => {
-  const summary = note?.ai_summary;
-  if (summary?.summary) return summary.summary;
-  if (note?.notes) return note.notes;
-  return null;
-};
-
-const getSummaryTopics = (summary?: AISummary | null) => summary?.topics?.filter(Boolean).slice(0, 3) || [];
-const getSummaryNextSteps = (summary?: AISummary | null) => summary?.next_steps?.filter(Boolean).slice(0, 2) || [];
-
 const SectionHeader = ({
   eyebrow,
   title,
@@ -172,13 +151,6 @@ const SectionHeader = ({
     </div>
     {action}
   </div>
-);
-
-const GreetingChip = ({ label, value }: { label: string; value: string | number }) => (
-  <span className="dashboard-inverted-chip inline-flex min-h-10 items-center gap-2.5 rounded-full px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-background/62">
-    <span>{label}</span>
-    <strong className="text-sm font-black text-background tabular-nums">{value}</strong>
-  </span>
 );
 
 const AppointmentStatusPill = ({ appointment }: { appointment: Appointment }) => {
@@ -222,105 +194,6 @@ const ActionSidebar = ({
     </nav>
   </DesktopWorkspacePanel>
 );
-
-const ClinicalPrepMetric = ({
-  label,
-  value,
-  detail,
-}: {
-  label: string;
-  value: string | number;
-  detail: string;
-}) => (
-  <div className="dashboard-inverted-metric rounded-[22px] px-4 py-3.5">
-    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-background/48">{label}</p>
-    <p className="mt-1.5 truncate text-lg font-black tracking-[-0.04em] text-background">{value}</p>
-    <p className="mt-1 truncate text-xs font-semibold text-background/58">{detail}</p>
-  </div>
-);
-
-const MorningCommandPanel = ({
-  today,
-  firstName,
-  todayAppointments,
-  weekAppointmentsCount,
-  attentionItems,
-  nextAppointment,
-  followingAppointment,
-  isLoading,
-}: {
-  today: Date;
-  firstName: string;
-  todayAppointments: Appointment[];
-  weekAppointmentsCount: number;
-  attentionItems: AttentionQueueItem[];
-  nextAppointment?: Appointment;
-  followingAppointment?: Appointment;
-  isLoading: boolean;
-}) => {
-  const [summaryOpen, setSummaryOpen] = useState(false);
-  const patientId = nextAppointment?.patient_id || "";
-  const { data: sessionNotes = [], isLoading: loadingSessionNotes } = useSessionNotes(patientId);
-  const latestSessionNote = sessionNotes[0];
-  const latestSummaryText = getSessionSummaryText(latestSessionNote);
-  const latestTopics = getSummaryTopics(latestSessionNote?.ai_summary);
-  const latestNextSteps = getSummaryNextSteps(latestSessionNote?.ai_summary);
-  const remainingToday = todayAppointments.filter((appointment) => new Date(appointment.end_time) > new Date()).length;
-  const sessionsToday = todayAppointments.filter((appointment) => getAppointmentKind(appointment) === "session").length;
-  const onlineToday = todayAppointments.filter((appointment) => isOnlineAppointment(appointment)).length;
-  const clinicalSignals = attentionItems.filter((item) => item.category === "sessions").length;
-  const appointmentSignals = attentionItems.filter((item) => item.category === "appointments").length;
-  const nextPatient = nextAppointment ? getAppointmentDisplayTitle(nextAppointment) || nextAppointment.patient_name || "Paciente" : "Sem sessão futura";
-  const nextTime = nextAppointment ? formatAppointmentTime(nextAppointment) : "Livre";
-
-  useEffect(() => {
-    setSummaryOpen(false);
-  }, [nextAppointment?.id]);
-
-  return (
-    <DesktopWorkspacePanel highContrast className="dashboard-high-contrast-panel dashboard-morning-panel min-h-[264px] p-0">
-      <div className="grid min-h-[264px] lg:grid-cols-[minmax(0,1.22fr)_minmax(390px,0.78fr)]">
-        <div className="flex min-h-[264px] flex-col justify-between gap-5 p-6 lg:px-8 lg:py-6">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-background/52">
-              {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-            </p>
-            <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
-              Bom dia, {firstName}.
-            </h1>
-          </div>
-
-          <div className="grid gap-2.5 lg:grid-cols-3">
-            <ClinicalPrepMetric label={getScheduleFocusLabel(nextAppointment)} value={nextPatient} detail={nextTime} />
-            <ClinicalPrepMetric label="Revisar antes" value={clinicalSignals + appointmentSignals} detail="sinais clínicos e agenda" />
-            <ClinicalPrepMetric label="Operação do dia" value={sessionsToday} detail={`${onlineToday} online`} />
-          </div>
-
-          <div className="flex flex-wrap gap-2.5">
-            <GreetingChip label="Hoje" value={remainingToday} />
-            <GreetingChip label="Semana" value={weekAppointmentsCount} />
-            <GreetingChip label="Pendências" value={attentionItems.length} />
-          </div>
-        </div>
-
-        <div className="next-schedule-stage relative min-h-[264px] border-t border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.035] lg:border-l lg:border-t-0">
-          <NextScheduleCard
-            today={today}
-            appointment={nextAppointment}
-            followingAppointment={followingAppointment}
-            isLoading={isLoading}
-            expanded={summaryOpen}
-            onExpandedChange={setSummaryOpen}
-            latestSummaryText={latestSummaryText}
-            latestTopics={latestTopics}
-            latestNextSteps={latestNextSteps}
-            loadingSessionNotes={loadingSessionNotes}
-          />
-        </div>
-      </div>
-    </DesktopWorkspacePanel>
-  );
-};
 
 const EmptyState = ({
   icon: Icon,
@@ -994,7 +867,7 @@ export const DesktopDashboardCommandCenter = () => {
         <DesktopWorkspaceShell className="dashboard-shell-surface">
           <div className="grid items-start gap-4 xl:grid-cols-[104px_minmax(0,1fr)]">
             <ActionSidebar today={today} openManualCharge={() => setManualChargeOpen(true)} />
-            <MorningCommandPanel
+            <DesktopDashboardMorningBriefing
               today={today}
               firstName={firstName}
               todayAppointments={todayAppointments}
@@ -1003,6 +876,7 @@ export const DesktopDashboardCommandCenter = () => {
               nextAppointment={nextAppointment}
               followingAppointment={followingAppointment}
               isLoading={loadingAppointments}
+              financialConnected={financialConnected}
             />
           </div>
 
@@ -1018,7 +892,11 @@ export const DesktopDashboardCommandCenter = () => {
             />
           </div>
 
-          <div className="dashboard-deferred-section dashboard-deferred-section-pending mt-4">
+          <div
+            id="dashboard-pendencias"
+            tabIndex={-1}
+            className="dashboard-deferred-section dashboard-deferred-section-pending mt-4 scroll-mt-24 outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
             <PendingWorkPanel items={attentionItems} isLoading={notificationsLoading} />
           </div>
 

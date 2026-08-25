@@ -36,186 +36,90 @@
   color: #71717a !important;
 }
 
-/* Remove the Hoje / Semana / Pendências pill strip from the morning card. */
-.dashboard-morning-panel div:has(> .dashboard-inverted-chip) {
-  display: none !important;
+/* Daily briefing: one narrative card and a genuinely separated two-card rail. */
+.dashboard-morning-panel .dashboard-briefing-metrics {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(220px, 28%, 280px);
+  align-items: stretch;
+  gap: clamp(12px, 1.2vw, 18px);
+  min-width: 0;
 }
 
-/* Neutralize legacy liquid-glass glare that created the bright diagonal wedges. */
-.dashboard-morning-panel .dashboard-inverted-metric::before,
-.dashboard-morning-panel .dashboard-inverted-chip::before {
-  content: none !important;
-  display: none !important;
-  background: none !important;
-}
-
-/* Compose the clinical summary exactly like NeuroFinance:
-   large balance-style card + compact right rail with two stacked blocks. */
-@media (min-width: 1024px) {
-  .dashboard-morning-panel div:has(> .dashboard-inverted-metric) {
-    --dashboard-clinical-rail-gap: 10px;
-    --dashboard-clinical-rail-width: clamp(132px, 22%, 200px);
-    position: relative;
-    isolation: isolate;
-    display: grid !important;
-    grid-template-columns: minmax(0, 1fr) var(--dashboard-clinical-rail-width) !important;
-    grid-template-rows: repeat(2, minmax(0, 1fr)) !important;
-    gap: var(--dashboard-clinical-rail-gap) !important;
-    min-height: 156px;
-  }
-
-  .dashboard-morning-panel div:has(> .dashboard-inverted-metric)::after {
-    content: "";
-    position: absolute;
-    z-index: -1;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: calc(var(--dashboard-clinical-rail-width) + var(--dashboard-clinical-rail-gap));
-    border: 1px solid rgb(228 228 231 / 0.5);
-    border-radius: 32px;
-    background: rgb(244 244 245 / 0.52);
-    backdrop-filter: blur(18px) saturate(112%);
-    -webkit-backdrop-filter: blur(18px) saturate(112%);
-  }
-
-  .dark .dashboard-morning-panel div:has(> .dashboard-inverted-metric)::after {
-    border-color: rgb(255 255 255 / 0.05);
-    background: rgb(255 255 255 / 0.05);
-    box-shadow:
-      inset 0 1px 0 rgb(255 255 255 / 0.015),
-      0 16px 38px -32px rgb(0 0 0 / 0.82);
-  }
-
-  .dashboard-morning-panel .dashboard-inverted-metric:first-child {
-    grid-column: 1;
-    grid-row: 1 / span 2;
-  }
-
-  .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
-    grid-column: 2;
-    grid-row: 2;
-  }
-}
-
-.dashboard-morning-panel .dashboard-inverted-metric {
-  position: relative;
-  z-index: 1;
-  min-height: 0;
-  overflow: hidden;
-  border-radius: 20px;
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* Próximo evento / atendimento = same material as NeuroFinance "Saldo disponível". */
-.dashboard-morning-panel .dashboard-inverted-metric:first-child {
-  border: 1px solid rgb(228 228 231) !important;
-  border-radius: 32px;
-  background: #fafafa !important;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.025) !important;
-}
-
-.dark .dashboard-morning-panel .dashboard-inverted-metric:first-child {
-  border-color: rgb(255 255 255 / 0.05) !important;
-  background: linear-gradient(145deg, #1a1a1c 0%, #141416 48%, #0d0d0f 100%) !important;
+.dashboard-morning-panel .dashboard-briefing-summary-card {
+  min-width: 0;
+  min-height: 202px;
+  border-color: rgb(228 228 231 / 0.92);
+  background: rgb(250 250 250 / 0.98);
+  color: #18181b;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.025),
-    inset 0 -1px 0 rgb(0 0 0 / 0.26),
-    0 18px 42px -34px rgb(0 0 0 / 0.94) !important;
+    inset 0 1px 0 rgb(255 255 255),
+    0 18px 46px -40px rgb(24 24 27 / 0.3);
 }
 
-/* Revisar antes = elevated "Quanto entrou" tile. */
-.dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) {
-  margin: 8px 8px 0;
-  border: 1px solid rgb(228 228 231) !important;
-  background: #ffffff !important;
-  box-shadow: 0 8px 22px -18px rgb(0 0 0 / 0.24) !important;
-}
-
-.dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) {
-  border-color: rgb(255 255 255 / 0.1) !important;
-  background: #09090b !important;
+.dark .dashboard-morning-panel .dashboard-briefing-summary-card {
+  border-color: rgb(255 255 255 / 0.075);
+  background: linear-gradient(145deg, #1a1a1c 0%, #141416 50%, #0d0d0f 100%);
+  color: #ffffff;
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.025),
-    0 12px 26px -20px rgb(0 0 0 / 0.88) !important;
+    inset 0 1px 0 rgb(255 255 255 / 0.028),
+    inset 0 -1px 0 rgb(0 0 0 / 0.28),
+    0 24px 52px -42px rgb(0 0 0 / 0.96);
 }
 
-/* Operação do dia = flat "Quanto saiu / Vai cair" row inside the same rail. */
-.dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
-  margin: 0 8px 8px;
-  border: 0 !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
+.dashboard-morning-panel .dashboard-briefing-rail {
+  display: grid;
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  min-width: 0;
+  min-height: 202px;
+  border-color: rgb(228 228 231 / 0.82);
+  background: rgb(244 244 245 / 0.62);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75);
 }
 
-.dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
-  background: transparent !important;
+.dark .dashboard-morning-panel .dashboard-briefing-rail {
+  border-color: rgb(255 255 255 / 0.06);
+  background: rgb(255 255 255 / 0.035);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.018),
+    0 20px 42px -38px rgb(0 0 0 / 0.88);
 }
 
-.dashboard-morning-panel .dashboard-inverted-metric::after {
-  content: none !important;
+.dashboard-morning-panel .dashboard-briefing-mini-card,
+.dashboard-morning-panel .dashboard-briefing-mini-icon {
+  border-color: rgb(228 228 231 / 0.9);
+  background: rgb(255 255 255 / 0.92);
+  box-shadow: inset 0 1px 0 rgb(255 255 255);
 }
 
-.dashboard-morning-panel .dashboard-inverted-metric > p:first-child {
-  color: #a1a1aa !important;
-  font-size: 0.48rem !important;
-  letter-spacing: 0.17em !important;
+.dark .dashboard-morning-panel .dashboard-briefing-mini-card,
+.dark .dashboard-morning-panel .dashboard-briefing-mini-icon {
+  border-color: rgb(255 255 255 / 0.075);
+  background: rgb(9 9 11 / 0.84);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025);
 }
 
-.dark .dashboard-morning-panel .dashboard-inverted-metric > p:first-child {
-  color: #71717a !important;
+.dashboard-morning-panel .dashboard-briefing-inline-action {
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.dashboard-morning-panel .dashboard-inverted-metric > p:nth-child(2) {
-  margin-top: 7px !important;
-  color: #18181b !important;
-  font-size: 0.95rem !important;
-  line-height: 1 !important;
-  letter-spacing: -0.035em !important;
+@media (max-width: 1180px) {
+  .dashboard-morning-panel .dashboard-briefing-metrics {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, 250px);
+  }
 }
 
-.dark .dashboard-morning-panel .dashboard-inverted-metric > p:nth-child(2) {
-  color: #ffffff !important;
-}
+@media (max-width: 860px) {
+  .dashboard-morning-panel .dashboard-briefing-metrics {
+    grid-template-columns: minmax(0, 1fr);
+  }
 
-.dashboard-morning-panel .dashboard-inverted-metric:first-child > p:nth-child(2) {
-  margin-top: 16px !important;
-  max-width: 90%;
-  font-size: clamp(1.4rem, 2vw, 2rem) !important;
-  line-height: 0.96 !important;
-  letter-spacing: -0.05em !important;
-}
-
-.dashboard-morning-panel .dashboard-inverted-metric > p:last-child {
-  margin-top: 7px !important;
-  color: #71717a !important;
-  font-size: 0.64rem !important;
-  line-height: 1.1;
-}
-
-.dark .dashboard-morning-panel .dashboard-inverted-metric > p:last-child {
-  color: #71717a !important;
-}
-
-.dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) > p:last-child {
-  display: none;
-}
-
-.dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) > p:nth-child(2)::after {
-  content: " itens";
-  margin-left: 4px;
-  color: #a1a1aa;
-  font-size: 0.55rem;
-  font-weight: 750;
-  letter-spacing: 0;
+  .dashboard-morning-panel .dashboard-briefing-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+    min-height: auto;
+  }
 }
 
 /* Right appointment card: compact schedule summary that expands in place. */
@@ -302,31 +206,7 @@
   }
 }
 
-@media (max-width: 1023px) {
-  .dashboard-morning-panel div:has(> .dashboard-inverted-metric) {
-    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-  }
-
-  .dashboard-morning-panel .dashboard-inverted-metric:first-child,
-  .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2),
-  .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
-    margin: 0;
-    border: 1px solid rgb(228 228 231) !important;
-    border-radius: 22px;
-    background: #fafafa !important;
-  }
-
-  .dark .dashboard-morning-panel .dashboard-inverted-metric:first-child,
-  .dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2),
-  .dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
-    border-color: rgb(255 255 255 / 0.05) !important;
-    background: linear-gradient(145deg, #1a1a1c 0%, #141416 48%, #0d0d0f 100%) !important;
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.02), 0 16px 38px -32px rgb(0 0 0 / 0.86) !important;
-  }
-}
-
 @media (prefers-reduced-transparency: reduce) {
-  .dashboard-morning-panel div:has(> .dashboard-inverted-metric)::after,
   .dashboard-morning-panel .next-schedule-card {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -338,7 +218,11 @@
   .dashboard-morning-panel .next-schedule-presence,
   .dashboard-morning-panel .next-schedule-icon,
   .dashboard-morning-panel .next-schedule-details,
-  .dashboard-morning-panel .next-schedule-detail-cell {
+  .dashboard-morning-panel .next-schedule-detail-cell,
+  .dashboard-morning-panel .dashboard-briefing-summary-card,
+  .dashboard-morning-panel .dashboard-briefing-rail,
+  .dashboard-morning-panel .dashboard-briefing-mini-card,
+  .dashboard-morning-panel .dashboard-briefing-mini-icon {
     border: 1px solid CanvasText !important;
     color: CanvasText !important;
     background: Canvas !important;

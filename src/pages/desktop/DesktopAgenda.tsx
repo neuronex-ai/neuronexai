@@ -10,6 +10,7 @@ import { useAgendaRealtime } from "@/hooks/use-agenda-realtime";
 import {
     EMPTY_AGENDA_FILTERS,
     matchesAgendaFilters,
+    type AgendaFilterStatus,
     type AgendaFilters,
 } from "@/lib/agenda-filters";
 import { AppointmentDetailModal } from "@/components/agenda/AppointmentDetailModal";
@@ -45,6 +46,16 @@ export default function DesktopAgenda() {
             setView(location.state.synapseView);
         }
         if (location.state?.synapseDate) setSelectedDate(new Date(location.state.synapseDate));
+
+        const briefingStatus = location.state?.briefingAgendaStatus as AgendaFilterStatus | undefined;
+        const briefingDate = String(location.state?.briefingAgendaDate || "");
+        if (["all", "Pendente", "Confirmada"].includes(briefingStatus || "")) {
+            setFilters({
+                ...EMPTY_AGENDA_FILTERS,
+                date: /^\d{4}-\d{2}-\d{2}$/.test(briefingDate) ? briefingDate : "",
+                status: briefingStatus || "all",
+            });
+        }
     }, [location.state, searchParams]);
 
     const openedAppointment = useMemo(
