@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { usePersonalNotes } from "@/hooks/use-personal-notes";
 import {
   buildIntentFromSearchParams,
@@ -120,7 +120,7 @@ export default function PwaIntent() {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
       <div className="flex flex-col items-center gap-4 text-center">
-        <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+        <NeuroNexLoadingLoop surface="inline" size={96} label="Preparando sua nota" />
         <div>
           <h1 className="text-xl font-semibold">Preparando sua nota</h1>
           <p className="mt-1 text-sm text-muted-foreground">

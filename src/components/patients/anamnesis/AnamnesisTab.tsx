@@ -3,7 +3,7 @@ import { RouteSelection } from "./RouteSelection";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2 } from "lucide-react";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 
 const ImportAnamnesis = lazy(() =>
     import("./ImportAnamnesis").then((module) => ({ default: module.ImportAnamnesis }))
@@ -19,9 +19,7 @@ const DocumentUploadPanel = lazy(() =>
 );
 
 const AnamnesisLoadingState = () => (
-    <div className="w-full min-h-[400px] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-zinc-300 dark:text-zinc-600 animate-spin" />
-    </div>
+    <NeuroNexLoadingLoop surface="section" className="min-h-[400px]" label="Carregando anamnese" />
 );
 
 const hasValidAnamnesisContent = (content: unknown) => {

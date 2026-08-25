@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { useSubscription } from "@/context/SubscriptionContext";
 
 type SubscriptionRouteGuardProps = {
@@ -20,11 +20,7 @@ export const SubscriptionRouteGuard = ({ children }: SubscriptionRouteGuardProps
   const { isLoading, isDevAccount, canUseCurrentAccess } = useSubscription();
 
   if (isLoading) {
-    return (
-      <div className="flex min-h-screen w-full items-center justify-center bg-background">
-        <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <NeuroNexLoadingLoop surface="page" label="Verificando acesso" />;
   }
 
   if (isDevAccount || canUseCurrentAccess) {

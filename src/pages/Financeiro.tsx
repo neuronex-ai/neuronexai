@@ -1,6 +1,6 @@
 import { Suspense, lazy } from "react";
 import { Route, Routes } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 const DesktopFinanceiro = lazy(() => import("@/pages/desktop/DesktopFinanceiro"));
@@ -8,7 +8,7 @@ const MobileFinancialManagementFlow = lazy(() => import("@/mobile/pages/finance/
 const MobileNeuroFinanceHome = lazy(() => import("@/mobile/pages/finance/MobileNeuroFinanceHome").then((module) => ({ default: module.MobileNeuroFinanceHome })));
 const MobileNeuroFinanceFlow = lazy(() => import("@/mobile/pages/finance/MobileNeuroFinanceFlow").then((module) => ({ default: module.MobileNeuroFinanceFlow })));
 
-const PageLoader = () => <div className="flex h-screen w-full items-center justify-center bg-background"><Loader2 className="h-8 w-8 animate-spin text-foreground/20" /></div>;
+const PageLoader = () => <NeuroNexLoadingLoop surface="page" label="Abrindo financeiro" />;
 
 const ManagementCore = () => {
   const mobile = useIsMobile();

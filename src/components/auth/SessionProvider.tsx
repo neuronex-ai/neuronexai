@@ -1,7 +1,7 @@
 import { useState, useEffect, ReactNode } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2 } from 'lucide-react';
+import { NeuroNexLoadingLoop } from '@/components/ui/neuronex-loading-loop';
 import { AuthContext } from './SessionContextProvider';
 
 interface SessionContextProviderProps {
@@ -45,11 +45,7 @@ export const SessionContextProvider = ({ children }: SessionContextProviderProps
   const value = { session, user, isLoading, refetchUser: fetchSession, signOut };
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
+    return <NeuroNexLoadingLoop surface="page" label="Carregando sessão" />;
   }
 
   return (

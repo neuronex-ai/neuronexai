@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { FeatureKey } from "@/types/subscription";
-import { Loader2 } from "lucide-react";
 
 interface FeatureGateProps {
     /** The feature key to check access for */
@@ -27,11 +27,7 @@ export const FeatureGate = ({
     const { canAccess, isLoading } = useSubscription();
 
     if (isLoading && showLoading) {
-        return (
-            <div className="min-h-[400px] flex items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-            </div>
-        );
+        return <NeuroNexLoadingLoop surface="section" className="min-h-[400px]" label="Verificando acesso" />;
     }
 
     if (canAccess(feature)) {

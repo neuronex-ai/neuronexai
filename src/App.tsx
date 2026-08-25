@@ -17,8 +17,8 @@ import { CookieConsent } from "@/components/landing/CookieConsent";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { NeuroFinancePostOnboardingGate } from "@/components/financeiro/NeuroFinancePostOnboardingGate";
 import { SynapseVoiceActionOverlays } from "@/components/synapse/SynapseVoiceActionOverlays";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { lazy, Suspense, ReactNode } from "react";
-import { Loader2 } from "lucide-react";
 import { RouteRecoveryBoundary } from "@/components/errors/RouteRecoveryBoundary";
 import { MotionConfig } from "framer-motion";
 import { PublicSeoManager } from "@/components/public/PublicSeoManager";
@@ -90,14 +90,7 @@ const SynapseGlobalShell = lazy(() => import("@/components/synapse/SynapseGlobal
 const queryClient = new QueryClient();
 
 // ─── Loading State ────────────────────────────────────────────────────
-const PageLoader = () => (
-  <div className="flex min-h-[100dvh] w-full items-center justify-center bg-transparent px-6" role="status" aria-live="polite">
-    <div className="flex items-center gap-3 rounded-full border border-border/55 bg-card/75 px-4 py-3 shadow-lg backdrop-blur-xl dark:border-white/[0.07] dark:bg-zinc-950/72">
-      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground motion-reduce:animate-none" aria-hidden="true" />
-      <span className="text-xs font-medium text-muted-foreground">Abrindo área</span>
-    </div>
-  </div>
-);
+const PageLoader = () => <NeuroNexLoadingLoop surface="page" label="Abrindo área" />;
 
 const PaidRoute = ({ children }: { children: ReactNode }) => (
   <ProtectedRoute>
@@ -152,7 +145,7 @@ const SharedRoutes = () => {
         <Route path="/account-created" element={<AccountCreated />} />
         <Route path="/google-connection-success" element={<GoogleConnectionSuccess />} />
 
-        {/* ─── Semi-Public Routes ─────────────────────────── */}
+        {/* ─── Semi-Public Routes ────────────────────────────────── */}
         <Route path="/confirmar-agendamento/:token" element={<ConfirmAppointment />} />
         <Route path="/join/:inviteToken" element={<JoinSession />} />
         <Route path="/payment/callback" element={<PaymentCallback />} />

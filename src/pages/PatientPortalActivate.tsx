@@ -2,6 +2,7 @@ import { PatientPortalAuthPanel } from "@/components/patient-portal/PatientPorta
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { useActivatePatientPortal, usePatientPortalCurrent, usePatientPortalInvitePreview } from "@/hooks/use-patient-portal";
 import {
   clearPatientPortalInviteToken,
@@ -68,11 +69,7 @@ const PatientPortalActivate = () => {
 
   const renderCardBody = () => {
     if (isLoading) {
-      return (
-        <div className="flex min-h-40 items-center justify-center">
-          <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
-        </div>
-      );
+      return <NeuroNexLoadingLoop surface="section" className="min-h-40" label="Carregando acesso" />;
     }
 
     if (!user) {
@@ -99,11 +96,7 @@ const PatientPortalActivate = () => {
     }
 
     if (current.isLoading) {
-      return (
-        <div className="flex min-h-40 items-center justify-center">
-          <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
-        </div>
-      );
+      return <NeuroNexLoadingLoop surface="section" className="min-h-40" label="Carregando portal" />;
     }
 
     if (!token && current.data?.status !== "needs_activation") {

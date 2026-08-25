@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useAppointments } from '@/hooks/use-appointments';
 import { UpcomingSessionsPanel } from '@/components/teleconsulta/UpcomingSessionsPanel';
 import { ActiveSessionPanel } from '@/components/teleconsulta/ActiveSessionPanel';
+import { NeuroNexLoadingLoop } from '@/components/ui/neuronex-loading-loop';
 import { addMonths, endOfWeek, startOfWeek } from 'date-fns';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLocation } from 'react-router-dom';
@@ -111,7 +112,7 @@ const TeleconsultaCore = () => {
 
   if (isMobile) {
     return (
-      <Suspense fallback={<div className='min-h-dvh bg-transparent' aria-busy='true' aria-label='Carregando teleconsulta' />}>
+      <Suspense fallback={<NeuroNexLoadingLoop surface='page' label='Carregando teleconsulta' />}>
         <MobileTeleconsulta />
       </Suspense>
     );

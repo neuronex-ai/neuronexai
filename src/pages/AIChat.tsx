@@ -1,16 +1,12 @@
 import { Suspense, lazy } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Loader2 } from "lucide-react";
+import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { FeatureGate, LockedFeatureScreen } from "@/components/subscription";
 
 const DesktopAIChat = lazy(() => import("@/pages/desktop/DesktopAIChat"));
 const MobileAIChat = lazy(() => import("@/mobile/pages/MobileAIChat").then(m => ({ default: m.MobileAIChat })));
 
-const PageLoader = () => (
-    <div className="h-screen w-full flex items-center justify-center bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-foreground/20" />
-    </div>
-);
+const PageLoader = () => <NeuroNexLoadingLoop surface="page" label="Abrindo Synapse AI" />;
 
 function AIChatContent() {
     const isMobile = useIsMobile();
