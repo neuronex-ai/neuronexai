@@ -1,7 +1,7 @@
 /* Desktop Dashboard — NeuroFinance-aligned command-center refinements.
-   This sheet intentionally mirrors the visual grammar of NeuroFinance:
-   ceramic/onyx outer shell, a dominant primary card, compact side rail,
-   restrained zinc borders and inset highlights, plus a separated right pane. */
+   The morning block intentionally mirrors NeuroFinance > Conta e Saldo:
+   ceramic/onyx shell, one dominant balance-style card, a compact summary rail,
+   restrained zinc borders, inset highlights and no artificial diagonal glare. */
 
 .dashboard-morning-panel {
   overflow: hidden;
@@ -19,7 +19,6 @@
   box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.5) !important;
 }
 
-/* Left command area follows the same open spacing as the NeuroFinance balance pane. */
 .dashboard-morning-panel > .grid > div:first-child {
   background: transparent !important;
 }
@@ -32,15 +31,26 @@
   color: #ffffff !important;
 }
 
-.dashboard-morning-panel > .grid > div:first-child > div:first-child > p {
-  color: #71717a !important;
-}
-
+.dashboard-morning-panel > .grid > div:first-child > div:first-child > p,
 .dark .dashboard-morning-panel > .grid > div:first-child > div:first-child > p {
   color: #71717a !important;
 }
 
-/* Compose the 3 clinical metrics like NeuroFinance's main balance + side summary rail. */
+/* Remove the Hoje / Semana / Pendências pill strip from the morning card. */
+.dashboard-morning-panel div:has(> .dashboard-inverted-chip) {
+  display: none !important;
+}
+
+/* Neutralize legacy liquid-glass glare that created the bright diagonal wedges. */
+.dashboard-morning-panel .dashboard-inverted-metric::before,
+.dashboard-morning-panel .dashboard-inverted-chip::before {
+  content: none !important;
+  display: none !important;
+  background: none !important;
+}
+
+/* Compose the clinical summary exactly like NeuroFinance:
+   large balance-style card + compact right rail with two stacked blocks. */
 @media (min-width: 1024px) {
   .dashboard-morning-panel div:has(> .dashboard-inverted-metric) {
     position: relative;
@@ -60,9 +70,9 @@
     right: 0;
     bottom: 0;
     width: calc(25.4% + 8px);
-    border: 1px solid rgb(228 228 231 / 0.52);
+    border: 1px solid rgb(228 228 231 / 0.5);
     border-radius: 32px;
-    background: rgb(244 244 245 / 0.58);
+    background: rgb(244 244 245 / 0.52);
     backdrop-filter: blur(18px) saturate(112%);
     -webkit-backdrop-filter: blur(18px) saturate(112%);
   }
@@ -70,6 +80,9 @@
   .dark .dashboard-morning-panel div:has(> .dashboard-inverted-metric)::after {
     border-color: rgb(255 255 255 / 0.05);
     background: rgb(255 255 255 / 0.05);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.015),
+      0 16px 38px -32px rgb(0 0 0 / 0.82);
   }
 
   .dashboard-morning-panel .dashboard-inverted-metric:first-child {
@@ -93,15 +106,12 @@
   z-index: 1;
   min-height: 0;
   overflow: hidden;
-  border: 0 !important;
   border-radius: 20px;
-  background: transparent !important;
-  box-shadow: none !important;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
-/* Main metric gets the same texture as the NeuroFinance "Saldo disponível" card. */
+/* Próximo evento / atendimento = same material as NeuroFinance "Saldo disponível". */
 .dashboard-morning-panel .dashboard-inverted-metric:first-child {
   border: 1px solid rgb(228 228 231) !important;
   border-radius: 32px;
@@ -111,13 +121,14 @@
 
 .dark .dashboard-morning-panel .dashboard-inverted-metric:first-child {
   border-color: rgb(255 255 255 / 0.05) !important;
-  background: linear-gradient(145deg, #1a1a1c 0%, #111113 55%, #0d0d0f 100%) !important;
+  background: linear-gradient(145deg, #1a1a1c 0%, #141416 48%, #0d0d0f 100%) !important;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.025),
+    inset 0 -1px 0 rgb(0 0 0 / 0.26),
     0 18px 42px -34px rgb(0 0 0 / 0.94) !important;
 }
 
-/* First item in the side rail is elevated, matching NeuroFinance's compact value stack. */
+/* Revisar antes = elevated "Quanto entrou" tile. */
 .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) {
   margin: 8px 8px 0;
   border: 1px solid rgb(228 228 231) !important;
@@ -126,21 +137,29 @@
 }
 
 .dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) {
-  border-color: rgb(255 255 255 / 0.08) !important;
+  border-color: rgb(255 255 255 / 0.1) !important;
   background: #09090b !important;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.025),
     0 12px 26px -20px rgb(0 0 0 / 0.88) !important;
 }
 
+/* Operação do dia = flat "Quanto saiu / Vai cair" row inside the same rail. */
 .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
   margin: 0 8px 8px;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
   padding-top: 10px !important;
   padding-bottom: 10px !important;
 }
 
+.dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
+  background: transparent !important;
+}
+
 .dashboard-morning-panel .dashboard-inverted-metric::after {
-  content: none;
+  content: none !important;
 }
 
 .dashboard-morning-panel .dashboard-inverted-metric > p:first-child {
@@ -184,7 +203,6 @@
   color: #71717a !important;
 }
 
-/* “Revisar antes” only needs the count; repeated explanatory copy adds noise. */
 .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) > p:last-child {
   display: none;
 }
@@ -198,46 +216,7 @@
   letter-spacing: 0;
 }
 
-/* Bottom summary chips become the compact utility strip used below NeuroFinance. */
-.dashboard-morning-panel div:has(> .dashboard-inverted-chip) {
-  width: fit-content;
-  max-width: 100%;
-  gap: 4px !important;
-  border: 1px solid rgb(228 228 231 / 0.78);
-  border-radius: 24px;
-  background: rgb(255 255 255 / 0.78);
-  padding: 5px;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 0.025);
-}
-
-.dark .dashboard-morning-panel div:has(> .dashboard-inverted-chip) {
-  border-color: rgb(255 255 255 / 0.05);
-  background: rgb(255 255 255 / 0.018);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.018);
-}
-
-.dashboard-morning-panel .dashboard-inverted-chip {
-  min-height: 36px !important;
-  border: 0 !important;
-  background: transparent !important;
-  color: #71717a !important;
-  padding: 8px 13px !important;
-  box-shadow: none !important;
-}
-
-.dashboard-morning-panel .dashboard-inverted-chip strong {
-  color: #18181b !important;
-}
-
-.dark .dashboard-morning-panel .dashboard-inverted-chip {
-  color: #71717a !important;
-}
-
-.dark .dashboard-morning-panel .dashboard-inverted-chip strong {
-  color: #ffffff !important;
-}
-
-/* Right appointment area mirrors NeuroFinance's separated bank-card pane. */
+/* Right appointment artifact remains in the same NeuroFinance family. */
 .dashboard-morning-panel > .grid > div:last-child {
   border-color: rgb(228 228 231) !important;
   background: rgb(250 250 250 / 0.72) !important;
@@ -263,10 +242,11 @@
 
 .dark .dashboard-morning-panel .dashboard-schedule-card {
   border-color: rgb(255 255 255 / 0.05) !important;
-  background: linear-gradient(145deg, #1a1a1c 0%, #111113 55%, #0d0d0f 100%) !important;
+  background: linear-gradient(145deg, #1a1a1c 0%, #141416 48%, #0d0d0f 100%) !important;
   color: #ffffff !important;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.025),
+    inset 0 -1px 0 rgb(0 0 0 / 0.26),
     0 30px 64px -34px rgb(0 0 0 / 0.9) !important;
 }
 
@@ -305,7 +285,6 @@
   color: #71717a !important;
 }
 
-/* Appointment actions use the same small neutral controls as NeuroFinance. */
 .dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] {
   margin-top: 0;
   border-radius: 0;
@@ -338,7 +317,6 @@
   color: #ffffff !important;
 }
 
-/* Decorative schedule graphics are kept as texture, not as the visual subject. */
 .dashboard-morning-panel .dashboard-schedule-orbit,
 .dashboard-morning-panel .dashboard-schedule-scan,
 .dashboard-morning-panel .dashboard-schedule-time-rail {
@@ -363,7 +341,8 @@
   .dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(2),
   .dark .dashboard-morning-panel .dashboard-inverted-metric:nth-child(3) {
     border-color: rgb(255 255 255 / 0.05) !important;
-    background: rgb(255 255 255 / 0.04) !important;
+    background: linear-gradient(145deg, #1a1a1c 0%, #141416 48%, #0d0d0f 100%) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.02), 0 16px 38px -32px rgb(0 0 0 / 0.86) !important;
   }
 }
 
