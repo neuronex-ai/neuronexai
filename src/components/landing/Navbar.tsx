@@ -2,7 +2,6 @@ import {
   ArrowUpRight,
   BookOpen,
   CalendarDays,
-  ChevronDown,
   Download,
   FileText,
   Landmark,
@@ -14,21 +13,24 @@ import {
   Video,
   WalletCards,
 } from "lucide-react";
-import { motion, useReducedMotion } from "framer-motion";
 import {
-  type FocusEvent,
-  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
   useEffect,
-  useLayoutEffect,
-  useRef,
   useState,
 } from "react";
-import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/ui/Logo";
+import {
+  MotionNavigationMenu,
+  MotionNavigationMenuContent,
+  MotionNavigationMenuItem,
+  MotionNavigationMenuLink,
+  MotionNavigationMenuList,
+  MotionNavigationMenuTrigger,
+} from "@/components/ui/motion-navigation-menu";
 import { cn } from "@/lib/utils";
 
 const productLinks = [
@@ -125,166 +127,28 @@ const publicLinks = [
 const navControlClass =
   "public-navbar-control public-tactile flex min-h-11 items-center rounded-[18px] px-4 text-xs font-semibold tracking-[-0.01em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
 
+const menuHighlightClass =
+  "rounded-[18px] bg-foreground/[0.055] dark:bg-white/[0.07]";
+
 export const Navbar = () => {
   const [productsOpen, setProductsOpen] = useState(false);
-  const [productMenuPosition, setProductMenuPosition] = useState<{
-    left: number;
-    top: number;
-  } | null>(null);
-  const productMenuRef = useRef<HTMLDivElement>(null);
-  const productButtonRef = useRef<HTMLButtonElement>(null);
-  const productPopoverRef = useRef<HTMLDivElement>(null);
-  const productCloseTimerRef = useRef<number | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  const shouldReduceMotion = useReducedMotion();
-
-  useEffect(() => {
-    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape" && productsOpen) {
-        productButtonRef.current?.focus();
-        setProductsOpen(false);
-      }
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [productsOpen]);
-
-  useEffect(
-    () => () => {
-      if (productCloseTimerRef.current !== null) {
-        window.clearTimeout(productCloseTimerRef.current);
-      }
-    },
-    [],
-  );
-
-  useLayoutEffect(() => {
-    if (!productsOpen) return;
-
-    const updateProductMenuPosition = () => {
-      const trigger = productButtonRef.current;
-      if (!trigger) return;
-
-      const rect = trigger.getBoundingClientRect();
-      const menuWidth = Math.min(
-        window.innerWidth - 32,
-        window.innerWidth >= 1280 ? 860 : 720,
-      );
-      const halfMenuWidth = menuWidth / 2;
-      const unclampedLeft = rect.left + rect.width / 2;
-
-      setProductMenuPosition({
-        left: Math.max(
-          16 + halfMenuWidth,
-          Math.min(window.innerWidth - 16 - halfMenuWidth, unclampedLeft),
-        ),
-        top: rect.bottom,
-      });
-    };
-
-    updateProductMenuPosition();
-    window.addEventListener("resize", updateProductMenuPosition);
-
-    return () =>
-      window.removeEventListener("resize", updateProductMenuPosition);
-  }, [productsOpen]);
 
   useEffect(() => {
     setProductsOpen(false);
   }, [location.pathname]);
 
-  const keepProductsOpen = () => {
-    if (productCloseTimerRef.current !== null) {
-      window.clearTimeout(productCloseTimerRef.current);
-      productCloseTimerRef.current = null;
-    }
-    setProductsOpen(true);
-  };
-
-  const toggleProducts = () => {
-    if (productCloseTimerRef.current !== null) {
-      window.clearTimeout(productCloseTimerRef.current);
-      productCloseTimerRef.current = null;
-    }
-    setProductsOpen((isOpen) => !isOpen);
-  };
-
-  const closeProductsSoon = () => {
-    if (productCloseTimerRef.current !== null) {
-      window.clearTimeout(productCloseTimerRef.current);
-    }
-    productCloseTimerRef.current = window.setTimeout(() => {
-      setProductsOpen(false);
-      productCloseTimerRef.current = null;
-    }, 100);
-  };
-
-  const handleProductsBlur = (event: FocusEvent<HTMLElement>) => {
-    const nextTarget = event.relatedTarget;
-    if (
-      nextTarget instanceof Node &&
-      (productMenuRef.current?.contains(nextTarget) ||
-        productPopoverRef.current?.contains(nextTarget))
-    ) {
-      return;
-    }
-
-    setProductsOpen(false);
-  };
-
-  const handleProductButtonKeyDown = (
-    event: ReactKeyboardEvent<HTMLButtonElement>,
-  ) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      keepProductsOpen();
-      window.requestAnimationFrame(() => {
-        productPopoverRef.current
-          ?.querySelector<HTMLElement>("a[href]")
-          ?.focus();
-      });
-      return;
-    }
-
-    if (event.key === "Tab" && !event.shiftKey && productsOpen) {
-      const firstProductLink =
-        productPopoverRef.current?.querySelector<HTMLElement>("a[href]");
-      if (firstProductLink) {
-        event.preventDefault();
-        firstProductLink.focus();
+  useEffect(() => {
+    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProductsOpen(false);
       }
-    }
-  };
+    };
 
-  const handleProductPopoverKeyDown = (
-    event: ReactKeyboardEvent<HTMLDivElement>,
-  ) => {
-    if (event.key !== "Tab") return;
-
-    const focusableItems = Array.from(
-      productPopoverRef.current?.querySelectorAll<HTMLElement>("a[href]") ?? [],
-    );
-    if (focusableItems.length === 0) return;
-
-    if (event.shiftKey && event.target === focusableItems[0]) {
-      event.preventDefault();
-      productButtonRef.current?.focus();
-      return;
-    }
-
-    if (
-      !event.shiftKey &&
-      event.target === focusableItems[focusableItems.length - 1]
-    ) {
-      const nextNavbarControl = productMenuRef.current
-        ?.nextElementSibling as HTMLElement | null;
-      if (nextNavbarControl) {
-        event.preventDefault();
-        nextNavbarControl.focus();
-      }
-    }
-  };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, []);
 
   const handleSectionClick = (target: string) => {
     if (location.pathname !== "/") {
@@ -295,6 +159,25 @@ export const Navbar = () => {
     document.getElementById(target)?.scrollIntoView({
       behavior: "auto",
     });
+  };
+
+  const handleMenuNavigate = (
+    event: ReactMouseEvent<HTMLAnchorElement>,
+    to: string,
+  ) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    setProductsOpen(false);
+    navigate(to);
   };
 
   return (
@@ -324,184 +207,183 @@ export const Navbar = () => {
             Diferenciais
           </button>
 
-          <div
-            ref={productMenuRef}
-            className="relative"
-            onMouseEnter={keepProductsOpen}
-            onMouseLeave={closeProductsSoon}
-            onBlur={handleProductsBlur}
+          <MotionNavigationMenu
+            value={productsOpen ? "products" : ""}
+            onValueChange={(value) => setProductsOpen(value === "products")}
+            viewport
+            springBounce={0}
+            springStiffness={350}
+            springDamping={32}
+            viewportClassName="public-product-menu-surface border-black/[0.1] bg-[rgba(255,255,255,0.9)] shadow-[0_36px_90px_-30px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/70 backdrop-blur-[48px] backdrop-saturate-[145%] dark:border-white/[0.1] dark:bg-[rgba(8,8,10,0.9)] dark:shadow-[0_40px_96px_-26px_rgba(0,0,0,0.88)] dark:ring-white/[0.08] rounded-[28px]"
+            className="shrink-0"
           >
-            <button
-              ref={productButtonRef}
-              type="button"
-              aria-expanded={productsOpen}
-              aria-controls="public-product-menu"
-              className={cn(
-                navControlClass,
-                "gap-1.5",
-                productsOpen && "public-navbar-control-active",
-              )}
-              onClick={toggleProducts}
-              onKeyDown={handleProductButtonKeyDown}
+            <MotionNavigationMenuList
+              className="gap-0"
+              highlightClassName="rounded-[18px] bg-foreground/[0.045] dark:bg-white/[0.055]"
             >
-              Produtos
-              <ChevronDown
-                aria-hidden="true"
-                className={cn(
-                  "h-3.5 w-3.5 transition-transform duration-200",
-                  productsOpen && "rotate-180",
-                )}
-              />
-            </button>
+              <MotionNavigationMenuItem
+                value="products"
+                onMouseEnter={() => setProductsOpen(true)}
+                onMouseLeave={(event) => {
+                  const nextTarget = event.relatedTarget;
+                  const navigationRoot = event.currentTarget.closest(
+                    '[data-slot="navigation-menu"]',
+                  );
 
-            {typeof document !== "undefined" &&
-            productsOpen &&
-            productMenuPosition
-              ? createPortal(
-                  <motion.div
-                        ref={productPopoverRef}
-                        initial={
-                          shouldReduceMotion
-                            ? false
-                            : { opacity: 0, x: "-50%", y: -6, scale: 0.985 }
-                        }
-                        animate={{ opacity: 1, x: "-50%", y: 0, scale: 1 }}
-                        transition={
-                          shouldReduceMotion
-                            ? { duration: 0 }
-                            : {
-                                type: "spring",
-                                stiffness: 470,
-                                damping: 38,
-                                mass: 0.72,
-                              }
-                        }
-                        style={{
-                          left: productMenuPosition.left,
-                          top: productMenuPosition.top,
-                        }}
-                        className="pointer-events-auto fixed z-[200] w-[min(720px,calc(100vw-32px))] pt-2 text-foreground xl:w-[860px]"
-                        onMouseEnter={keepProductsOpen}
-                        onMouseLeave={closeProductsSoon}
-                        onFocus={keepProductsOpen}
-                        onBlur={handleProductsBlur}
-                        onKeyDown={handleProductPopoverKeyDown}
+                  if (
+                    !(nextTarget instanceof Node) ||
+                    !navigationRoot?.contains(nextTarget)
+                  ) {
+                    setProductsOpen(false);
+                  }
+                }}
+              >
+                <MotionNavigationMenuTrigger
+                  aria-controls="public-product-menu"
+                  className={cn(
+                    navControlClass,
+                    "h-auto gap-0 bg-transparent py-0 hover:bg-transparent focus:bg-transparent",
+                    productsOpen && "public-navbar-control-active",
+                  )}
+                >
+                  Produtos
+                </MotionNavigationMenuTrigger>
+
+                <MotionNavigationMenuContent
+                  className="!p-0 w-[min(820px,calc(100vw-32px))]"
+                  highlightClassName={menuHighlightClass}
+                  innerClassName="p-3"
+                >
+                  <div
+                    id="public-product-menu"
+                    role="group"
+                    aria-label="Produtos NeuroNex"
+                    className="relative isolate"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="pointer-events-none absolute inset-0 -z-10 rounded-[24px] bg-gradient-to-br from-white/52 via-white/8 to-transparent dark:from-white/[0.055] dark:via-transparent"
+                    />
+
+                    <div className="grid gap-2 lg:grid-cols-[0.82fr_1.55fr]">
+                      <MotionNavigationMenuLink
+                        href="/produto"
+                        onClick={(event) => handleMenuNavigate(event, "/produto")}
+                        className="public-tactile min-h-[282px] justify-between rounded-[22px] border border-border/45 bg-background/58 p-5 text-foreground dark:border-white/[0.075] dark:bg-white/[0.025]"
                       >
-                        <div
-                          id="public-product-menu"
-                          role="group"
-                          aria-label="Produtos NeuroNex"
-                          className="public-product-menu-surface relative isolate max-h-[calc(100vh-7rem)] overflow-x-hidden overflow-y-auto rounded-[32px] border border-black/[0.1] bg-[rgba(255,255,255,0.86)] p-3 shadow-[0_36px_90px_-30px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/70 backdrop-blur-[48px] backdrop-saturate-[145%] dark:border-white/[0.1] dark:bg-[rgba(8,8,10,0.86)] dark:shadow-[0_40px_96px_-26px_rgba(0,0,0,0.88)] dark:ring-white/[0.08]"
-                        >
-                          <span
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/55 via-white/10 to-transparent dark:from-white/[0.07] dark:via-transparent"
-                          />
-                          <span
-                            aria-hidden="true"
-                            className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/25"
-                          />
-                          <div className="relative z-10">
-                            <div className="flex items-start justify-between gap-6 px-3 pb-3 pt-2">
-                              <div>
-                                <p className="text-sm font-semibold tracking-[-0.015em]">
-                                  Ecossistema NeuroNex
-                                </p>
-                                <p className="mt-1 text-xs font-medium leading-relaxed text-muted-foreground">
-                                  Uma operação contínua, organizada por finalidade.
-                                </p>
-                              </div>
-                              <Link
-                                to="/produto"
-                                className="public-tactile inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border/60 bg-background/60 px-4 text-xs font-semibold text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/10 dark:bg-white/[0.04]"
-                              >
-                                Visão geral
-                                <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
-                              </Link>
+                        <span className="flex size-11 items-center justify-center rounded-[15px] border border-border/55 bg-background/80 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.045]">
+                          <Sparkles className="size-4.5 text-foreground" />
+                        </span>
+                        <span className="space-y-2">
+                          <span className="block text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">
+                            Ecossistema NeuroNex
+                          </span>
+                          <span className="block text-lg font-semibold tracking-[-0.03em] text-foreground">
+                            Toda a clínica em um fluxo contínuo.
+                          </span>
+                          <span className="block text-xs font-medium leading-relaxed text-muted-foreground">
+                            Conheça a visão geral e como agenda, prontuário, IA e gestão trabalham juntos.
+                          </span>
+                          <span className="inline-flex items-center gap-1.5 pt-1 text-xs font-semibold text-foreground">
+                            Visão geral
+                            <ArrowUpRight className="size-3.5" />
+                          </span>
+                        </span>
+                      </MotionNavigationMenuLink>
+
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {productGroups.map((group) => (
+                          <section
+                            key={group.label}
+                            className="rounded-[22px] border border-border/40 bg-background/30 p-1.5 dark:border-white/[0.065] dark:bg-white/[0.012]"
+                          >
+                            <div className="px-3 pb-2 pt-2.5">
+                              <p className="text-[10px] font-black uppercase tracking-[0.16em] text-foreground/70">
+                                {group.label}
+                              </p>
+                              <p className="mt-1 text-[10px] font-medium leading-relaxed text-muted-foreground">
+                                {group.description}
+                              </p>
                             </div>
 
-                            <div className="grid gap-2 md:grid-cols-2">
-                              {productGroups.map((group) => {
-                                const headingId = `product-group-${group.label
-                                  .replaceAll(" ", "-")
-                                  .toLowerCase()}`;
+                            <div className="grid gap-0.5">
+                              {group.links.map((item) => {
+                                const isActive = location.pathname === item.to;
 
                                 return (
-                                  <section
-                                    key={group.label}
-                                    aria-labelledby={headingId}
-                                    className="rounded-[24px] border border-border/45 bg-background/32 p-2 dark:border-white/[0.07] dark:bg-white/[0.018]"
+                                  <MotionNavigationMenuLink
+                                    key={item.to}
+                                    href={item.to}
+                                    data-active={isActive ? "true" : undefined}
+                                    aria-current={isActive ? "page" : undefined}
+                                    onClick={(event) =>
+                                      handleMenuNavigate(event, item.to)
+                                    }
+                                    className="public-tactile grid min-h-[52px] grid-cols-[auto_1fr_auto] items-center gap-3 rounded-[18px] px-3 py-2 text-left"
                                   >
-                                    <div className="px-3 pb-2 pt-2">
-                                      <h3 id={headingId} className="text-xs font-semibold text-foreground">
-                                        {group.label}
-                                      </h3>
-                                      <p className="mt-1 text-[11px] font-medium leading-relaxed text-muted-foreground">
-                                        {group.description}
-                                      </p>
-                                    </div>
-                                    <div className="grid gap-1" role="list">
-                                      {group.links.map((item) => {
-                                        const isActive = location.pathname === item.to;
-
-                                        return (
-                                          <Link
-                                            key={item.to}
-                                            to={item.to}
-                                            aria-current={isActive ? "page" : undefined}
-                                            role="listitem"
-                                            className="public-product-menu-item public-tactile group flex min-h-[62px] items-center gap-3 rounded-[18px] px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                          >
-                                            <span
-                                              className={cn(
-                                                "flex h-9 w-9 shrink-0 items-center justify-center rounded-[13px] border border-border/55 bg-background/70 text-muted-foreground transition-colors group-hover:text-foreground dark:border-white/[0.08] dark:bg-white/[0.035]",
-                                                isActive && "bg-foreground text-background dark:bg-white dark:text-zinc-950",
-                                              )}
-                                            >
-                                              <item.icon aria-hidden="true" className="h-4 w-4" />
-                                            </span>
-                                            <span className="min-w-0">
-                                              <span className="block text-[13px] font-semibold tracking-[-0.015em]">
-                                                {item.label}
-                                              </span>
-                                              <span className="mt-0.5 block truncate text-[10px] font-medium text-muted-foreground">
-                                                {item.description}
-                                              </span>
-                                            </span>
-                                          </Link>
-                                        );
-                                      })}
-                                    </div>
-                                  </section>
+                                    <span
+                                      className={cn(
+                                        "flex size-8 items-center justify-center rounded-[12px] border border-border/50 bg-background/72 text-muted-foreground transition-colors dark:border-white/[0.08] dark:bg-white/[0.035]",
+                                        isActive &&
+                                          "bg-foreground text-background dark:bg-white dark:text-zinc-950",
+                                      )}
+                                    >
+                                      <item.icon className="size-3.5" />
+                                    </span>
+                                    <span className="min-w-0 space-y-0.5">
+                                      <span className="block text-xs font-semibold tracking-[-0.01em] text-foreground">
+                                        {item.label}
+                                      </span>
+                                      <span className="block truncate text-[9px] font-medium text-muted-foreground">
+                                        {item.description}
+                                      </span>
+                                    </span>
+                                    <ArrowUpRight className="size-3 text-muted-foreground/70" />
+                                  </MotionNavigationMenuLink>
                                 );
                               })}
                             </div>
+                          </section>
+                        ))}
+                      </div>
+                    </div>
 
-                            <div className="mt-2 grid gap-1.5 sm:grid-cols-3" role="list" aria-label="Mais opções">
-                              {publicLinks.map((item) => (
-                                <Link
-                                  key={item.to}
-                                  to={item.to}
-                                  role="listitem"
-                                  className="public-product-menu-footer public-tactile group flex min-h-[66px] items-center gap-3 rounded-[18px] px-3.5 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                >
-                                  <item.icon aria-hidden="true" className="h-4 w-4 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
-                                  <span className="min-w-0">
-                                    <span className="block text-xs font-semibold">{item.label}</span>
-                                    <span className="mt-0.5 block truncate text-[10px] font-medium text-muted-foreground">
-                                      {item.description}
-                                    </span>
-                                  </span>
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                  </motion.div>,
-                  document.body,
-                )
-              : null}
-          </div>
+                    <div
+                      className="mt-2 grid gap-1.5 sm:grid-cols-3"
+                      aria-label="Mais opções"
+                    >
+                      {publicLinks.map((item) => {
+                        const isActive = location.pathname === item.to;
+
+                        return (
+                          <MotionNavigationMenuLink
+                            key={item.to}
+                            href={item.to}
+                            data-active={isActive ? "true" : undefined}
+                            aria-current={isActive ? "page" : undefined}
+                            onClick={(event) => handleMenuNavigate(event, item.to)}
+                            className="public-product-menu-footer public-tactile grid min-h-[64px] grid-cols-[auto_1fr] items-center gap-3 rounded-[18px] px-3.5 py-3"
+                          >
+                            <span className="flex size-8 items-center justify-center rounded-[12px] border border-border/45 bg-background/55 dark:border-white/[0.07] dark:bg-white/[0.025]">
+                              <item.icon className="size-3.5" />
+                            </span>
+                            <span className="min-w-0">
+                              <span className="block text-xs font-semibold text-foreground">
+                                {item.label}
+                              </span>
+                              <span className="mt-0.5 block truncate text-[9px] font-medium text-muted-foreground">
+                                {item.description}
+                              </span>
+                            </span>
+                          </MotionNavigationMenuLink>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </MotionNavigationMenuContent>
+              </MotionNavigationMenuItem>
+            </MotionNavigationMenuList>
+          </MotionNavigationMenu>
 
           <button
             type="button"
