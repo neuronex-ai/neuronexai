@@ -43,10 +43,12 @@ export const buildDailyBriefingContext = ({
   counts,
   attentionItems,
   financialConnected,
+  neurofinancePendingAmount = 0,
 }: {
   counts: DailyBriefingCounts;
   attentionItems: AttentionQueueItem[];
   financialConnected: boolean;
+  neurofinancePendingAmount?: number;
 }): DailyBriefingContext => {
   const neurofinanceItems = attentionItems.filter(
     (item) => item.category === "neurofinance",
@@ -58,6 +60,20 @@ export const buildDailyBriefingContext = ({
       actionLabel: "o NeuroFinance ainda não está ativo",
       after: ".",
       actionPath: "/financeiro/neurofinance",
+    };
+  }
+
+  if (neurofinancePendingAmount > 0) {
+    const pendingLabel = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    }).format(neurofinancePendingAmount);
+
+    return {
+      before: "Há ",
+      actionLabel: `${pendingLabel} em recebimentos pendentes no NeuroFinance`,
+      after: " para acompanhar.",
+      actionPath: "/financeiro/neurofinance?view=cobrancas-historia",
     };
   }
 
@@ -104,4 +120,3 @@ export const buildDailyBriefingContext = ({
     actionPath: "/agenda",
   };
 };
-

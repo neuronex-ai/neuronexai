@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { Button } from "@/components/ui/button";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useProfile } from "@/hooks/use-profile";
 import { isPatientAccount } from "@/lib/auth-account-role";
 import {
@@ -19,16 +20,30 @@ const profileFirstName = (profile?: {
 } | null) =>
   profile?.first_name?.trim()
   || profile?.full_name?.trim().split(/\s+/)[0]
-  || profile?.name?.trim().split(/\s+/)[0]
-  || "profissional";
+  || profile?.name?.trim().split(/\s+/)[0];
+
+const userFirstName = (user?: { user_metadata?: Record<string, unknown> } | null) => {
+  const metadata = user?.user_metadata || {};
+  const candidate = [
+    metadata.first_name,
+    metadata.given_name,
+    metadata.name,
+    metadata.full_name,
+  ].find((value) => typeof value === "string" && value.trim());
+  return typeof candidate === "string" ? candidate.trim().split(/\s+/)[0] : "";
+};
 
 export const DesktopSessionWelcome = () => {
   const { user } = useAuth();
   const { data: profile, isLoading: profileLoading } = useProfile();
+  const isMobile = useIsMobile();
   const shouldReduceMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
   const dismissTimer = useRef<number | null>(null);
-  const firstName = profileFirstName(profile);
+  const firstName = profileFirstName(profile)
+    || userFirstName(user)
+    || user?.email?.split("@")[0]
+    || "Profissional";
   const message = useMemo(
     () => user
       ? getDailyDesktopWelcomeMessage({ userId: user.id, firstName })
@@ -48,13 +63,17 @@ export const DesktopSessionWelcome = () => {
   }, [dismiss, shouldReduceMotion]);
 
   useEffect(() => {
-    if (!user || profileLoading || isPatientAccount(user)) return;
+    if (!user || profileLoading || isMobile || isPatientAccount(user)) return;
     const storageKey = getDesktopWelcomeStorageKey(user.id);
     if (window.sessionStorage.getItem(storageKey)) return;
 
     window.sessionStorage.setItem(storageKey, "seen");
     setVisible(true);
-  }, [profileLoading, user]);
+  }, [isMobile, profileLoading, user]);
+
+  useEffect(() => {
+    if (isMobile) dismiss();
+  }, [dismiss, isMobile]);
 
   useEffect(() => {
     if (!visible || !shouldReduceMotion) return;

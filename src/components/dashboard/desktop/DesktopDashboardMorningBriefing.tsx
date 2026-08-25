@@ -31,6 +31,7 @@ type DesktopDashboardMorningBriefingProps = {
   followingAppointment?: Appointment;
   isLoading: boolean;
   financialConnected: boolean;
+  neurofinancePendingAmount?: number;
 };
 
 const getSessionSummaryText = (note?: SessionNote | null) => {
@@ -119,6 +120,7 @@ export const DesktopDashboardMorningBriefing = ({
   followingAppointment,
   isLoading,
   financialConnected,
+  neurofinancePendingAmount = 0,
 }: DesktopDashboardMorningBriefingProps) => {
   const navigate = useNavigate();
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -134,6 +136,7 @@ export const DesktopDashboardMorningBriefing = ({
     counts,
     attentionItems,
     financialConnected,
+    neurofinancePendingAmount,
   });
   const clinicalSignals = attentionItems.filter(
     (item) => item.category === "sessions" || item.category === "appointments",

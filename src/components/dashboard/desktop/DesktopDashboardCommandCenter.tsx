@@ -877,6 +877,7 @@ export const DesktopDashboardCommandCenter = () => {
               followingAppointment={followingAppointment}
               isLoading={loadingAppointments}
               financialConnected={financialConnected}
+              neurofinancePendingAmount={neuroBalance?.pending || 0}
             />
           </div>
 

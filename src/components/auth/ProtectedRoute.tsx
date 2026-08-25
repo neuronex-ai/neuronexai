@@ -1,4 +1,5 @@
 import { DesktopRouteLoadingOverlay } from '@/components/runtime/DesktopRouteLoadingOverlay';
+import { DesktopSessionWelcome } from '@/components/dashboard/desktop/DesktopSessionWelcome';
 import { SessionAssuranceOverlay } from '@/components/runtime/SessionAssuranceOverlay';
 import { SettingsSimplifierRuntime } from '@/components/runtime/SettingsSimplifierRuntime';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
@@ -13,7 +14,7 @@ interface ProtectedRouteProps { children: ReactNode; isFullScreen?: boolean; }
 
 const ProfessionalRouteContent = ({ children, isFullScreen = false }: ProtectedRouteProps) => {
   useUserPreferences();
-  const content = <><DesktopRouteLoadingOverlay /><SettingsSimplifierRuntime /><SessionAssuranceOverlay />{!isFullScreen && <WelcomeTourModal />}{children}</>;
+  const content = <><DesktopRouteLoadingOverlay /><DesktopSessionWelcome /><SettingsSimplifierRuntime /><SessionAssuranceOverlay />{!isFullScreen && <WelcomeTourModal />}{children}</>;
   return isFullScreen ? content : <Layout>{content}</Layout>;
 };
 

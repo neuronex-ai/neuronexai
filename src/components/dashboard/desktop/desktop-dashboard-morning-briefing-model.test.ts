@@ -71,4 +71,16 @@ describe("desktop dashboard morning briefing", () => {
     expect(context.actionLabel).toBe("2 pendências no NeuroFinance");
     expect(context.actionPath).toContain("cobrancas-historia");
   });
+
+  it("personalizes the next action when connected NeuroFinance has pending receivables", () => {
+    const context = buildDailyBriefingContext({
+      counts: { total: 3, pending: 1, confirmed: 2, online: 1 },
+      attentionItems: [],
+      financialConnected: true,
+      neurofinancePendingAmount: 480,
+    });
+
+    expect(context.actionLabel).toContain("480,00");
+    expect(context.actionLabel).toContain("NeuroFinance");
+  });
 });
