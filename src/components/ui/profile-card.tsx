@@ -12,7 +12,7 @@ import type { KeyboardEvent, MouseEvent } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 interface ProfileCardProps {
@@ -69,7 +69,7 @@ export default function ProfileCard({
     >
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 top-[72%] z-0 rounded-[28px] bg-zinc-950 shadow-[0_34px_72px_-24px_rgba(0,0,0,0.34)] dark:bg-white dark:shadow-[0_34px_78px_-24px_rgba(255,255,255,0.34)]"
+        className="pointer-events-none absolute inset-x-0 bottom-0 top-[72%] z-0 rounded-[28px] bg-[linear-gradient(145deg,#18181b_0%,#09090b_100%)] shadow-[0_34px_72px_-24px_rgba(0,0,0,0.34)] dark:bg-[linear-gradient(145deg,#fafafa_0%,#ffffff_100%)] dark:shadow-[0_34px_78px_-24px_rgba(255,255,255,0.34)]"
       />
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 flex h-11 items-center justify-center px-5 text-center text-[11px] font-semibold tracking-[-0.01em] text-white dark:text-zinc-950">
@@ -77,7 +77,14 @@ export default function ProfileCard({
         <span className="truncate">{nextSessionText}</span>
       </div>
 
-      <Card
+      {/*
+        This card intentionally does not use the shared <Card /> primitive.
+        The primitive carries the global `glass-panel` class, whose legacy
+        design-token background is dark by default and can override this
+        route's light appearance. Keeping the patient surface self-contained
+        lets the explicit light/dark palette below follow the resolved theme.
+      */}
+      <div
         data-slot="patient-profile-card"
         role={onOpen ? "link" : undefined}
         tabIndex={onOpen ? 0 : undefined}
@@ -85,7 +92,7 @@ export default function ProfileCard({
         onClick={onOpen}
         onKeyDown={handleCardKeyDown}
         className={cn(
-          "relative z-10 w-full cursor-pointer overflow-hidden rounded-[28px] border border-black/[0.06] bg-[radial-gradient(120%_120%_at_30%_10%,#ffffff_0%,#f7f7f8_58%,#efeff1_100%)] text-zinc-950 shadow-[0_22px_48px_-30px_rgba(0,0,0,0.34)] outline-none transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-0.5 hover:shadow-[0_28px_58px_-28px_rgba(0,0,0,0.42)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-white/[0.07] dark:bg-[radial-gradient(120%_120%_at_30%_10%,#1a1a1a_0%,#0f0f10_60%,#0b0b0c_100%)] dark:text-white dark:shadow-[0_26px_58px_-30px_rgba(0,0,0,0.86)]",
+          "relative z-10 w-full cursor-pointer overflow-hidden rounded-[28px] border border-black/[0.07] bg-[radial-gradient(120%_120%_at_30%_10%,#ffffff_0%,#f8f8f9_55%,#efeff1_100%)] text-zinc-950 shadow-[0_22px_48px_-30px_rgba(0,0,0,0.34)] outline-none transition-[transform,box-shadow,border-color] duration-300 hover:-translate-y-0.5 hover:border-black/[0.10] hover:shadow-[0_28px_58px_-28px_rgba(0,0,0,0.42)] focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:border-white/[0.07] dark:bg-[radial-gradient(120%_120%_at_30%_10%,#1a1a1a_0%,#0f0f10_60%,#0b0b0c_100%)] dark:text-white dark:shadow-[0_26px_58px_-30px_rgba(0,0,0,0.86)] dark:hover:border-white/[0.10]",
           className,
         )}
       >
@@ -139,7 +146,7 @@ export default function ProfileCard({
               type="button"
               variant="secondary"
               onClick={stopAndRun(onOpen)}
-              className="h-11 justify-start gap-2.5 rounded-2xl border border-black/[0.04] bg-black/[0.07] px-4 text-xs font-semibold text-zinc-950 shadow-none hover:bg-black/[0.11] dark:border-white/[0.03] dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+              className="h-11 justify-start gap-2.5 rounded-2xl border border-black/[0.05] bg-black/[0.06] px-4 text-xs font-semibold text-zinc-950 shadow-none hover:bg-black/[0.10] dark:border-white/[0.03] dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
             >
               <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
               Prontuário
@@ -149,14 +156,14 @@ export default function ProfileCard({
               type="button"
               variant="secondary"
               onClick={stopAndRun(onDelete)}
-              className="h-11 justify-start gap-2.5 rounded-2xl border border-black/[0.04] bg-black/[0.07] px-4 text-xs font-semibold text-zinc-950 shadow-none hover:bg-destructive hover:text-destructive-foreground dark:border-white/[0.03] dark:bg-white/10 dark:text-white dark:hover:bg-destructive dark:hover:text-destructive-foreground"
+              className="h-11 justify-start gap-2.5 rounded-2xl border border-black/[0.05] bg-black/[0.06] px-4 text-xs font-semibold text-zinc-950 shadow-none hover:bg-destructive hover:text-destructive-foreground dark:border-white/[0.03] dark:bg-white/10 dark:text-white dark:hover:bg-destructive dark:hover:text-destructive-foreground"
             >
               <Trash2 className="h-4 w-4" aria-hidden="true" />
               Excluir
             </Button>
           </div>
         </CardContent>
-      </Card>
+      </div>
     </motion.div>
   );
 }
