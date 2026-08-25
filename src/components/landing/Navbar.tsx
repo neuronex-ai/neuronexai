@@ -214,7 +214,7 @@ export const Navbar = () => {
             springBounce={0}
             springStiffness={350}
             springDamping={32}
-            viewportClassName="public-product-menu-surface border-black/[0.1] bg-[rgba(255,255,255,0.9)] shadow-[0_36px_90px_-30px_rgba(0,0,0,0.42)] ring-1 ring-inset ring-white/70 backdrop-blur-[48px] backdrop-saturate-[145%] dark:border-white/[0.1] dark:bg-[rgba(8,8,10,0.9)] dark:shadow-[0_40px_96px_-26px_rgba(0,0,0,0.88)] dark:ring-white/[0.08] rounded-[28px]"
+            viewportClassName="public-product-menu-surface !border-black/[0.08] !bg-[rgba(246,247,249,0.80)] shadow-[0_40px_110px_-32px_rgba(0,0,0,0.5)] ring-1 ring-inset ring-white/75 !backdrop-blur-[56px] !backdrop-saturate-[185%] dark:!border-white/[0.12] dark:!bg-[rgba(12,12,14,0.78)] dark:shadow-[0_42px_120px_-30px_rgba(0,0,0,0.92)] dark:ring-white/[0.09] rounded-[28px]"
             className="shrink-0"
           >
             <MotionNavigationMenuList
