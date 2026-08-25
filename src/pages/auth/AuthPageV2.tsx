@@ -298,7 +298,8 @@ const AuthPageV2 = () => {
       });
       if (error) throw error;
       shouldQueueDesktopWelcomeRef.current = true;
-      queueDesktopWelcome(restored.session.user?.id);
+      const { data: { session } } = await supabase.auth.getSession();
+      queueDesktopWelcome(session?.user.id);
       toast.success('Sessão desbloqueada com biometria.');
       await evaluateSession();
     } catch (cause) {
@@ -310,7 +311,7 @@ const AuthPageV2 = () => {
     } finally {
       setBiometricLoading(false);
     }
-  }, [evaluateSession]);
+  }, [evaluateSession, queueDesktopWelcome]);
 
   const enableBiometrics = async () => {
     if (!pendingBiometricSession?.user) return;

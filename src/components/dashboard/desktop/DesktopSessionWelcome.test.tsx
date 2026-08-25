@@ -43,7 +43,7 @@ describe("DesktopSessionWelcome", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveAttribute("data-neuronex-desktop-login-welcome");
     expect(dialog.parentElement).toBe(document.body);
-    expect(screen.getByText(/Nathalia/)).toBeInTheDocument();
+    expect(dialog).toHaveTextContent("Nathalia");
   });
 
   it("does not render for a restored session without a new login", async () => {
