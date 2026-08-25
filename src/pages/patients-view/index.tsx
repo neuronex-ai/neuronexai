@@ -15,6 +15,7 @@ import {
 import { GlassCard } from "@/components/ui/GlassCard";
 import { Input } from "@/components/ui/input";
 import { MagneticSegmentedControl } from "@/components/ui/magnetic-segmented-control";
+import ProfileCard from "@/components/ui/profile-card";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useDashboardAlerts } from "@/hooks/use-dashboard-alerts";
@@ -473,7 +474,7 @@ export default function Pacientes() {
                             className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 xl:gap-6"
                         >
                             {Array.from({ length: 8 }).map((_, index) => (
-                                <div key={index} className="patients-directory-card h-[236px] animate-pulse rounded-[28px] motion-reduce:animate-none" />
+                                <div key={index} className="patients-directory-card h-[318px] animate-pulse rounded-[28px] motion-reduce:animate-none" />
                             ))}
                         </div>
                     ) : (
@@ -505,65 +506,20 @@ export default function Pacientes() {
                         className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 xl:gap-6"
                     >
                         {filteredPatients?.map((patient) => (
-                            <div
-                                key={patient.id}
-                                data-synapse-patient-id={patient.id}
-                                className="patients-directory-card desktop-retina-interactive group relative min-h-[236px] cursor-pointer overflow-hidden rounded-[28px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                                onClick={() => navigate(`/pacientes/${patient.id}`)}
-                                onKeyDown={(event) => {
-                                    if (event.target !== event.currentTarget) return;
-                                    if (event.key === 'Enter' || event.key === ' ') {
-                                        event.preventDefault();
-                                        navigate(`/pacientes/${patient.id}`);
-                                    }
-                                }}
-                                role="link"
-                                tabIndex={0}
-                                aria-label={`Abrir prontuário de ${patient.name}`}
-                            >
-                                <div className="relative z-10 flex h-full min-h-[236px] flex-col justify-between p-6 sm:p-7">
-                                    <button
-                                        type="button"
-                                        onClick={(event) => handleDeleteClick(event, patient.id, patient.name)}
-                                        className="patients-directory-inset absolute right-5 top-5 z-20 flex h-11 w-11 items-center justify-center rounded-[14px] text-muted-foreground opacity-0 transition-[opacity,background-color,color] duration-150 hover:bg-destructive hover:text-destructive-foreground focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover:opacity-100"
-                                        aria-label={`Excluir ${patient.name}`}
-                                    >
-                                        <Trash2 className="h-4 w-4" />
-                                    </button>
-
-                                    <div className="flex items-start gap-[18px] pr-11">
-                                        <Avatar className="h-14 w-14 shrink-0 rounded-[18px] border border-border/55 bg-background shadow-sm">
-                                            <AvatarImage src={patient.avatar_url || undefined} alt="" />
-                                            <AvatarFallback className="rounded-[18px] bg-foreground text-sm font-black uppercase tracking-[0.12em] text-background">
-                                                {patient.name.substring(0, 2).toUpperCase()}
-                                            </AvatarFallback>
-                                        </Avatar>
-                                        <div className="min-w-0 flex-1 pt-0.5">
-                                            <h3 className="truncate text-base font-black tracking-[-0.035em] text-foreground md:text-lg">{patient.name}</h3>
-                                            <div className="mt-2 flex items-center gap-2">
-                                                <span className={cn('patients-status-dot h-1.5 w-1.5 rounded-full', patient.status === 'active' ? 'is-active' : 'is-pending')} aria-hidden="true" />
-                                                <span className="text-[9px] font-black uppercase tracking-[0.14em] text-muted-foreground">
-                                                    {patient.status === 'active' ? 'Ativo' : 'Pendente'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="mt-7 space-y-2.5">
-                                        <div className="patients-directory-inset flex min-h-11 items-center gap-3.5 rounded-[15px] px-4 text-[11px] text-muted-foreground md:text-xs">
-                                            <Activity className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                                            <span className="truncate font-bold tracking-tight">{patient.diagnosis || 'Sem diagnóstico definido'}</span>
-                                        </div>
-                                        <div className="patients-directory-inset flex min-h-11 items-center gap-3.5 rounded-[15px] px-4 text-[11px] text-muted-foreground md:text-xs">
-                                            <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                                            <span className="truncate font-bold tracking-tight">
-                                                {patient.next_session
-                                                    ? `Próxima: ${format(new Date(patient.next_session), 'dd/MM HH:mm')}`
-                                                    : 'Aguardando agendamento'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
+                            <div key={patient.id} data-synapse-patient-id={patient.id}>
+                                <ProfileCard
+                                    name={patient.name}
+                                    subtitle={patient.profession || 'Paciente'}
+                                    avatarSrc={patient.avatar_url}
+                                    statusText={patient.status === 'active' ? 'Paciente ativo' : 'Cadastro pendente'}
+                                    active={patient.status === 'active'}
+                                    clinicalContext={patient.diagnosis}
+                                    contactText={patient.email || patient.mobile_phone || patient.phone}
+                                    lastSessionText={patient.last_session ? `Última ${format(new Date(patient.last_session), 'dd/MM')}` : 'Sem sessão anterior'}
+                                    nextSessionText={patient.next_session ? `Próxima sessão · ${format(new Date(patient.next_session), "dd/MM 'às' HH:mm")}` : 'Sem próxima sessão agendada'}
+                                    onOpen={() => navigate(`/pacientes/${patient.id}`)}
+                                    onDelete={() => requestPatientDeletion(patient.id, patient.name)}
+                                />
                             </div>
                         ))}
                     </div>
