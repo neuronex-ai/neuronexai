@@ -22,6 +22,12 @@ describe("desktop session welcome", () => {
     expect(DESKTOP_WELCOME_TEMPLATES).toHaveLength(20);
     expect(new Set(DESKTOP_WELCOME_TEMPLATES).size).toBe(20);
     expect(DESKTOP_WELCOME_TEMPLATES.every((template) => template.includes("{name}"))).toBe(true);
+    expect(
+      DESKTOP_WELCOME_TEMPLATES.every((template) => {
+        const words = template.replace("{name}", "Nathalia").match(/[\p{L}\p{N}]+/gu) || [];
+        return words.length >= 3 && words.length <= 5;
+      }),
+    ).toBe(true);
   });
 
   it("keeps the daily greeting stable and personalized", () => {
