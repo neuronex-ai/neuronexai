@@ -1,0 +1,149 @@
+/* Desktop Dashboard — compact monochrome command-center refinements.
+   Loaded after the core theme so these rules can refine the existing dashboard
+   without changing its data or interaction model. */
+
+.dashboard-morning-panel .dashboard-inverted-metric {
+  position: relative;
+  min-height: 112px;
+  overflow: hidden;
+  border: 1px solid hsl(var(--background) / 0.12) !important;
+  background:
+    radial-gradient(120% 130% at 14% 0%, hsl(var(--background) / 0.11) 0%, transparent 58%),
+    hsl(var(--background) / 0.055) !important;
+  box-shadow:
+    inset 0 1px 0 hsl(var(--foreground) / 0.18),
+    0 18px 44px -34px hsl(var(--background) / 0.58) !important;
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.dashboard-morning-panel .dashboard-inverted-metric::after {
+  content: "";
+  position: absolute;
+  inset-inline: 14px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 999px 999px 0 0;
+  background: hsl(var(--background) / 0.78);
+  opacity: 0.72;
+}
+
+.dashboard-morning-panel .dashboard-inverted-metric > p:first-child {
+  color: hsl(var(--background) / 0.52) !important;
+}
+
+.dashboard-morning-panel .dashboard-inverted-metric > p:nth-child(2) {
+  margin-top: 8px !important;
+  font-size: 1.05rem !important;
+  line-height: 1.05;
+}
+
+.dashboard-morning-panel .dashboard-inverted-metric > p:last-child {
+  margin-top: 7px !important;
+  font-size: 0.68rem !important;
+  line-height: 1.1;
+  color: hsl(var(--background) / 0.56) !important;
+}
+
+/* “Revisar antes” only needs the count; the long explanatory copy is redundant. */
+.dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) > p:last-child {
+  display: none;
+}
+
+.dashboard-morning-panel .dashboard-inverted-metric:nth-child(2) > p:nth-child(2)::after {
+  content: " itens";
+  margin-left: 4px;
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.01em;
+  opacity: 0.5;
+}
+
+/* Right-side next appointment/event card: same monochrome family as patient cards,
+   but optimized for schedule scanning and fast actions. */
+.dashboard-morning-panel .dashboard-schedule-card {
+  border: 1px solid rgb(0 0 0 / 0.07) !important;
+  background:
+    radial-gradient(120% 120% at 30% 8%, #ffffff 0%, #f7f7f8 58%, #eeeeef 100%) !important;
+  color: #09090b !important;
+  box-shadow:
+    0 28px 72px -34px rgb(0 0 0 / 0.36),
+    inset 0 1px 0 rgb(255 255 255 / 0.82) !important;
+}
+
+.dark .dashboard-morning-panel .dashboard-schedule-card {
+  border-color: rgb(255 255 255 / 0.08) !important;
+  background:
+    radial-gradient(120% 120% at 30% 8%, #1a1a1b 0%, #0f0f10 60%, #0a0a0b 100%) !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 34px 82px -34px rgb(0 0 0 / 0.9),
+    inset 0 1px 0 rgb(255 255 255 / 0.055) !important;
+}
+
+.dashboard-morning-panel .dashboard-schedule-card .dashboard-soft-fill {
+  border: 1px solid rgb(0 0 0 / 0.06) !important;
+  background: rgb(0 0 0 / 0.045) !important;
+  color: rgb(63 63 70 / 0.82) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.58);
+}
+
+.dark .dashboard-morning-panel .dashboard-schedule-card .dashboard-soft-fill {
+  border-color: rgb(255 255 255 / 0.07) !important;
+  background: rgb(255 255 255 / 0.055) !important;
+  color: rgb(212 212 216 / 0.78) !important;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025);
+}
+
+.dashboard-morning-panel .dashboard-schedule-card h3 + p {
+  max-width: 92%;
+  font-size: 0.68rem !important;
+  line-height: 1.25 !important;
+  opacity: 0.72;
+}
+
+/* Turn the existing action row into the contrasting lower strip from the new card language. */
+.dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] {
+  margin-top: 1px;
+  border-radius: 16px;
+  padding: 4px;
+  background: #09090b;
+  box-shadow: 0 16px 34px -26px rgb(0 0 0 / 0.6);
+}
+
+.dark .dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] {
+  background: #fafafa;
+  box-shadow: 0 18px 38px -26px rgb(255 255 255 / 0.32);
+}
+
+.dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button {
+  border-color: transparent !important;
+  background: transparent !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button:hover {
+  background: rgb(255 255 255 / 0.11) !important;
+}
+
+.dark .dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button {
+  color: #09090b !important;
+}
+
+.dark .dashboard-morning-panel .dashboard-schedule-card > .relative.z-10 > div[class*="grid"][class*="shrink-0"] button:hover {
+  background: rgb(0 0 0 / 0.07) !important;
+}
+
+/* Reduce decorative noise so date, time, patient/event and actions win the hierarchy. */
+.dashboard-morning-panel .dashboard-schedule-orbit,
+.dashboard-morning-panel .dashboard-schedule-scan,
+.dashboard-morning-panel .dashboard-schedule-time-rail {
+  opacity: 0.42 !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-morning-panel .dashboard-inverted-metric,
+  .dashboard-morning-panel .dashboard-schedule-card {
+    backdrop-filter: none;
+  }
+}

@@ -1,6 +1,7 @@
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import "./styles/design-tokens.css";
+import "./styles/dashboard-command-center-refinement.css";
 import { StartupFailure } from "./components/runtime/StartupFailure";
 import { registerPwaBackgroundCapabilities, registerPwaLaunchHandlers } from "./lib/pwa-integrations";
 
