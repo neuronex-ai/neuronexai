@@ -1,4 +1,5 @@
-import { SiriWave } from "@/components/ui/siri-wave"
+import { Loader2 } from "lucide-react"
+
 import { cn } from "@/lib/utils"
 
 type LoadingSurface = "page" | "section" | "inline"
@@ -16,7 +17,8 @@ export function NeuroNexLoadingLoop({
   size,
   surface = "section",
 }: NeuroNexLoadingLoopProps) {
-  const resolvedSize = size ?? (surface === "page" ? 128 : surface === "section" ? 96 : 72)
+  const defaultSize = surface === "page" ? 32 : surface === "section" ? 28 : 20
+  const resolvedSize = Math.min(size ?? defaultSize, 40)
 
   return (
     <div
@@ -32,12 +34,10 @@ export function NeuroNexLoadingLoop({
       aria-busy="true"
       data-neuronex-loading-loop
     >
-      <SiriWave
+      <Loader2
         aria-hidden="true"
-        variant="fluid-dots"
-        size={resolvedSize}
-        renderScale={0.85}
-        className="shrink-0 shadow-[0_18px_50px_rgba(0,0,0,0.48)]"
+        className="shrink-0 animate-spin text-muted-foreground motion-reduce:animate-none"
+        style={{ width: resolvedSize, height: resolvedSize }}
       />
       <span className="sr-only">{label}</span>
     </div>
