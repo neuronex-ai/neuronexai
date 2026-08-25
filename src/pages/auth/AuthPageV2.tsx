@@ -268,6 +268,9 @@ const AuthPageV2 = () => {
 
       if (result.error) throw result.error;
       shouldQueueDesktopWelcomeRef.current = true;
+      if (!isPatientAccount(result.data.user)) {
+        queueDesktopWelcome(result.data.user?.id);
+      }
 
       if (remember) {
         localStorage.setItem('neuronex_remember_me', 'true');
@@ -295,6 +298,7 @@ const AuthPageV2 = () => {
       });
       if (error) throw error;
       shouldQueueDesktopWelcomeRef.current = true;
+      queueDesktopWelcome(restored.session.user?.id);
       toast.success('Sessão desbloqueada com biometria.');
       await evaluateSession();
     } catch (cause) {

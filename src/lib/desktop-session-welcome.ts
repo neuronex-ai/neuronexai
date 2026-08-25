@@ -70,10 +70,9 @@ export const queueDesktopWelcomeForLogin = (
 };
 
 /**
- * Claims the greeting for the current desktop app entry. A missing or legacy
- * marker is intentionally treated as a fresh entry, so users receive the
- * welcome once after this feature ships. A current "seen" marker prevents it
- * from appearing again during internal navigation.
+ * Claims the greeting that was explicitly queued by a successful login. Once
+ * claimed, navigation inside the desktop app cannot present the same greeting
+ * again.
  */
 export const claimDesktopWelcomeForEntry = (
   userId: string,
@@ -84,12 +83,10 @@ export const claimDesktopWelcomeForEntry = (
   const storageKey = getDesktopWelcomeStorageKey(userId);
   const storedValue = storage.getItem(storageKey);
 
-  if (storedValue?.startsWith(DESKTOP_WELCOME_SEEN_PREFIX)) return null;
+  if (!storedValue?.startsWith(DESKTOP_WELCOME_PENDING_PREFIX)) return null;
 
-  const pendingEntryId = storedValue?.startsWith(DESKTOP_WELCOME_PENDING_PREFIX)
-    ? storedValue.slice(DESKTOP_WELCOME_PENDING_PREFIX.length)
-    : "initial-entry";
-  const entryId = pendingEntryId || "initial-entry";
+  const entryId = storedValue.slice(DESKTOP_WELCOME_PENDING_PREFIX.length);
+  if (!entryId) return null;
 
   storage.setItem(storageKey, `${DESKTOP_WELCOME_SEEN_PREFIX}${entryId}`);
   return entryId;

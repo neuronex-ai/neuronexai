@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { Button } from "@/components/ui/button";
@@ -35,7 +36,7 @@ const userFirstName = (user?: { user_metadata?: Record<string, unknown> } | null
 
 export const DesktopSessionWelcome = () => {
   const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile } = useProfile();
   const isMobile = useIsMobile();
   const shouldReduceMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
@@ -61,7 +62,7 @@ export const DesktopSessionWelcome = () => {
   }, []);
 
   useEffect(() => {
-    if (!user || profileLoading || isMobile || isPatientAccount(user)) return;
+    if (!user || isMobile || isPatientAccount(user)) return;
 
     let entryId: string | null = null;
     try {
@@ -77,11 +78,15 @@ export const DesktopSessionWelcome = () => {
     presentedEntryRef.current = entryId;
     setVisibleMessage(resolvedMessage);
     setVisible(true);
-  }, [isMobile, profileLoading, resolvedMessage, user]);
+  }, [isMobile, resolvedMessage, user]);
 
   useEffect(() => {
     if (isMobile) dismiss();
   }, [dismiss, isMobile]);
+
+  useEffect(() => {
+    if (visible) setVisibleMessage(resolvedMessage);
+  }, [resolvedMessage, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -129,7 +134,9 @@ export const DesktopSessionWelcome = () => {
     if (dismissTimer.current) window.clearTimeout(dismissTimer.current);
   }, []);
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <AnimatePresence>
       {visible ? (
         <motion.section
@@ -138,6 +145,7 @@ export const DesktopSessionWelcome = () => {
           aria-modal="true"
           aria-labelledby="desktop-welcome-message"
           tabIndex={-1}
+          data-neuronex-desktop-login-welcome
           initial={shouldReduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.008 }}
@@ -200,6 +208,7 @@ export const DesktopSessionWelcome = () => {
           </div>
         </motion.section>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 };

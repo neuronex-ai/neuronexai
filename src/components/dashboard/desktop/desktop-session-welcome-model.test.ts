@@ -53,10 +53,10 @@ describe("desktop session welcome", () => {
     expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBe(nextLoginEntry);
   });
 
-  it("uses a single welcome for an existing desktop entry, then stops on navigation", () => {
+  it("does not show a welcome for a restored session without a new login", () => {
     const storage = createSessionStorage();
 
-    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBe("initial-entry");
+    expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBeNull();
     expect(claimDesktopWelcomeForEntry("professional-1", storage)).toBeNull();
   });
 });
