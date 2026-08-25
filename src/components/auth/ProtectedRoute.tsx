@@ -14,7 +14,7 @@ interface ProtectedRouteProps { children: ReactNode; isFullScreen?: boolean; }
 
 const ProfessionalRouteContent = ({ children, isFullScreen = false }: ProtectedRouteProps) => {
   useUserPreferences();
-  const content = <><DesktopRouteLoadingOverlay /><DesktopSessionWelcome /><SettingsSimplifierRuntime /><SessionAssuranceOverlay />{!isFullScreen && <WelcomeTourModal />}{children}</>;
+  const content = <><DesktopRouteLoadingOverlay />{!isFullScreen && <DesktopSessionWelcome />}<SettingsSimplifierRuntime /><SessionAssuranceOverlay />{!isFullScreen && <WelcomeTourModal />}{children}</>;
   return isFullScreen ? content : <Layout>{content}</Layout>;
 };
 

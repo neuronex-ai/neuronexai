@@ -9,8 +9,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useProfile } from "@/hooks/use-profile";
 import { isPatientAccount } from "@/lib/auth-account-role";
 import {
+  claimDesktopWelcomeForEntry,
   getDailyDesktopWelcomeMessage,
-  getDesktopWelcomeStorageKey,
 } from "@/lib/desktop-session-welcome";
 
 const profileFirstName = (profile?: {
@@ -35,16 +35,19 @@ const userFirstName = (user?: { user_metadata?: Record<string, unknown> } | null
 
 export const DesktopSessionWelcome = () => {
   const { user } = useAuth();
-  const { data: profile, isLoading: profileLoading } = useProfile();
+  const { data: profile } = useProfile();
   const isMobile = useIsMobile();
   const shouldReduceMotion = useReducedMotion();
   const [visible, setVisible] = useState(false);
+  const [visibleMessage, setVisibleMessage] = useState("");
   const dismissTimer = useRef<number | null>(null);
+  const dialogRef = useRef<HTMLElement | null>(null);
+  const presentedEntryRef = useRef<string | null>(null);
   const firstName = profileFirstName(profile)
     || userFirstName(user)
     || user?.email?.split("@")[0]
     || "Profissional";
-  const message = useMemo(
+  const resolvedMessage = useMemo(
     () => user
       ? getDailyDesktopWelcomeMessage({ userId: user.id, firstName })
       : "Bem-vindo de volta.",
@@ -57,28 +60,57 @@ export const DesktopSessionWelcome = () => {
     setVisible(false);
   }, []);
 
-  const scheduleDismiss = useCallback(() => {
-    if (dismissTimer.current) window.clearTimeout(dismissTimer.current);
-    dismissTimer.current = window.setTimeout(dismiss, shouldReduceMotion ? 700 : 950);
-  }, [dismiss, shouldReduceMotion]);
-
   useEffect(() => {
-    if (!user || profileLoading || isMobile || isPatientAccount(user)) return;
-    const storageKey = getDesktopWelcomeStorageKey(user.id);
-    if (window.sessionStorage.getItem(storageKey)) return;
+    if (!user || isMobile || isPatientAccount(user)) return;
 
-    window.sessionStorage.setItem(storageKey, "seen");
+    let entryId: string | null = null;
+    try {
+      entryId = claimDesktopWelcomeForEntry(user.id);
+    } catch {
+      // Session storage can be unavailable in locked-down browser contexts.
+      // Still present the welcome once while this component is mounted.
+      entryId = `runtime:${user.id}`;
+    }
+
+    if (!entryId || presentedEntryRef.current === entryId) return;
+
+    presentedEntryRef.current = entryId;
+    setVisibleMessage(resolvedMessage);
     setVisible(true);
-  }, [isMobile, profileLoading, user]);
+  }, [isMobile, resolvedMessage, user]);
 
   useEffect(() => {
     if (isMobile) dismiss();
   }, [dismiss, isMobile]);
 
   useEffect(() => {
-    if (!visible || !shouldReduceMotion) return;
-    scheduleDismiss();
-  }, [scheduleDismiss, shouldReduceMotion, visible]);
+    if (!visible) return;
+
+    dismissTimer.current = window.setTimeout(
+      dismiss,
+      shouldReduceMotion ? 1_100 : 3_850,
+    );
+
+    return () => {
+      if (dismissTimer.current) window.clearTimeout(dismissTimer.current);
+      dismissTimer.current = null;
+    };
+  }, [dismiss, shouldReduceMotion, visible]);
+
+  useEffect(() => {
+    if (!visible) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const focusTimer = window.setTimeout(() => {
+      dialogRef.current?.focus({ preventScroll: true });
+    }, 0);
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -101,14 +133,16 @@ export const DesktopSessionWelcome = () => {
     <AnimatePresence>
       {visible ? (
         <motion.section
+          ref={dialogRef}
           role="dialog"
           aria-modal="true"
           aria-labelledby="desktop-welcome-message"
+          tabIndex={-1}
           initial={shouldReduceMotion ? false : { opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, scale: 1.008 }}
           transition={{ duration: shouldReduceMotion ? 0.12 : 0.38, ease: [0.22, 1, 0.36, 1] }}
-          className="fixed inset-0 z-[220] flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6 text-foreground"
+          className="fixed inset-0 z-[2147483500] flex min-h-dvh items-center justify-center overflow-hidden bg-background px-6 text-foreground outline-none"
         >
           <div className="flex w-full max-w-6xl flex-col items-center text-center">
             <p className="mb-8 text-[10px] font-bold uppercase tracking-[0.24em] text-muted-foreground">
@@ -121,7 +155,7 @@ export const DesktopSessionWelcome = () => {
               role="img"
               aria-labelledby="desktop-welcome-message"
             >
-              <title id="desktop-welcome-message">{message}</title>
+              <title id="desktop-welcome-message">{visibleMessage}</title>
               <motion.text
                 x="600"
                 y="158"
@@ -130,8 +164,8 @@ export const DesktopSessionWelcome = () => {
                 stroke="currentColor"
                 strokeWidth="0.8"
                 style={{
-                  fontFamily: '"Snell Roundhand", "Segoe Print", "Bradley Hand", cursive',
-                  fontSize: message.length > 48 ? 62 : message.length > 38 ? 70 : 78,
+                  fontFamily: '"Snell Roundhand", "Apple Chancery", "Segoe Print", "Bradley Hand", cursive',
+                  fontSize: visibleMessage.length > 48 ? 62 : visibleMessage.length > 38 ? 70 : 78,
                   fontWeight: 500,
                   letterSpacing: "-0.035em",
                   paintOrder: "stroke fill",
@@ -150,9 +184,8 @@ export const DesktopSessionWelcome = () => {
                       ease: [0.65, 0, 0.35, 1],
                       fillOpacity: { times: [0, 0.72, 1], duration: 1.65 },
                     }}
-                onAnimationComplete={shouldReduceMotion ? undefined : scheduleDismiss}
               >
-                {message}
+                {visibleMessage}
               </motion.text>
             </svg>
 

@@ -9,6 +9,7 @@ import { useTheme } from '@/hooks/use-theme';
 import { supabase } from '@/integrations/supabase/client';
 import type { PatientPortalContext } from '@/hooks/use-patient-portal';
 import { isPatientAccount } from '@/lib/auth-account-role';
+import { queueDesktopWelcomeForLogin } from '@/lib/desktop-session-welcome';
 import {
   disableBiometricSignIn,
   enableBiometricSignIn,
@@ -28,7 +29,7 @@ import { readSupabaseFunctionError } from '@/lib/read-supabase-function-error';
 import { cn } from '@/lib/utils';
 import type { Session } from '@supabase/supabase-js';
 import { ArrowRight, Eye, EyeOff, Fingerprint, Loader2, ShieldCheck, Stethoscope, UserRound } from 'lucide-react';
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
@@ -162,6 +163,7 @@ const AuthPageV2 = () => {
   const [pendingBiometricSession, setPendingBiometricSession] = useState<Session | null>(null);
   const [mfaOpen, setMfaOpen] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const shouldQueueDesktopWelcomeRef = useRef(false);
 
   const redirectPatientSession = useCallback(async () => {
     const { data, error } = await supabase.functions.invoke<PatientPortalContext>('patient-portal-current', {
@@ -219,16 +221,24 @@ const AuthPageV2 = () => {
     return true;
   }, [role]);
 
+  const queueDesktopWelcome = useCallback((userId?: string) => {
+    if (!shouldQueueDesktopWelcomeRef.current || !userId) return;
+    queueDesktopWelcomeForLogin(userId);
+    shouldQueueDesktopWelcomeRef.current = false;
+  }, []);
+
   const finishAuthenticatedSession = useCallback(async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (await shouldOfferBiometric(session)) return;
-    await redirect();
-  }, [redirect, shouldOfferBiometric]);
+    queueDesktopWelcome(session?.user.id);
+    await redirect(session);
+  }, [queueDesktopWelcome, redirect, shouldOfferBiometric]);
 
   const evaluateSession = useCallback(async () => {
     const session = await supabase.auth.getSession();
     if (!session.data.session) return;
     if (isPatientAccount(session.data.session.user)) {
+      shouldQueueDesktopWelcomeRef.current = false;
       await redirect(session.data.session);
       return;
     }
@@ -252,6 +262,7 @@ const AuthPageV2 = () => {
       const result = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
       if (result.error) throw result.error;
+      shouldQueueDesktopWelcomeRef.current = true;
 
       if (remember) {
         localStorage.setItem('neuronex_remember_me', 'true');
@@ -278,6 +289,7 @@ const AuthPageV2 = () => {
         refresh_token: restored.session.refresh_token,
       });
       if (error) throw error;
+      shouldQueueDesktopWelcomeRef.current = true;
       toast.success('Sessão desbloqueada com biometria.');
       await evaluateSession();
     } catch (cause) {
@@ -293,6 +305,7 @@ const AuthPageV2 = () => {
 
   const enableBiometrics = async () => {
     if (!pendingBiometricSession?.user) return;
+    const userId = pendingBiometricSession.user.id;
     setBiometricLoading(true);
     try {
       await enableBiometricSignIn({
@@ -304,6 +317,7 @@ const AuthPageV2 = () => {
       setBiometricPromptOpen(false);
       setPendingBiometricSession(null);
       toast.success('Entrar com biometria ativado neste aparelho.');
+      queueDesktopWelcome(userId);
       await redirect();
     } catch (cause) {
       toast.error(
@@ -317,16 +331,19 @@ const AuthPageV2 = () => {
   };
 
   const skipBiometrics = async () => {
-    if (pendingBiometricSession?.user?.id) {
-      await disableBiometricSignIn(pendingBiometricSession.user.id).catch(() => undefined);
+    const userId = pendingBiometricSession?.user?.id;
+    if (userId) {
+      await disableBiometricSignIn(userId).catch(() => undefined);
       await refreshBiometricState().catch(() => undefined);
     }
     setBiometricPromptOpen(false);
     setPendingBiometricSession(null);
+    queueDesktopWelcome(userId);
     await redirect();
   };
 
   const cancelMfa = async () => {
+    shouldQueueDesktopWelcomeRef.current = false;
     setMfaOpen(false);
     await supabase.auth.signOut();
   };
