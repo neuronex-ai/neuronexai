@@ -9,7 +9,6 @@ import { useNavigate } from "react-router-dom";
 import {
   DesktopWorkspacePanel,
 } from "@/components/ui/desktop-workspace";
-import { ShortHandwritingGreeting } from "@/components/ui/handwriting-greeting/ShortHandwritingGreeting";
 import { useSessionNotes } from "@/hooks/use-session-notes";
 import type { AISummary, Appointment, SessionNote } from "@/types";
 
@@ -126,11 +125,9 @@ export const DesktopDashboardMorningBriefing = ({
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-background/52">
               {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </p>
-            <ShortHandwritingGreeting
-              firstName={firstName}
-              today={today}
-              className="max-w-full text-background"
-            />
+            <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
+              Bom dia, {firstName}.
+            </h1>
           </div>
 
           <section className="dashboard-synapse-day mt-auto rounded-[32px] border p-5 sm:p-6" aria-labelledby="dashboard-synapse-day-title">
