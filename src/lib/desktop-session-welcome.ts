@@ -7,7 +7,7 @@ type SessionStorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
 
 export const DESKTOP_WELCOME_TEMPLATES = [
   "A agenda abriu para você.",
-  "Ah, nome. Bem-vindo de volta.",
+  "Ah, {nome}. Bem-vindo de volta.",
   "Algo novo no prontuário.",
   "Amanhã, um dia mais leve.",
   "Ao que importa.",
@@ -19,7 +19,7 @@ export const DESKTOP_WELCOME_TEMPLATES = [
   "NeuroVision atualizou o caso.",
   "O cuidado começa agora.",
   "O que vamos explorar?",
-  "Ouvindo, nome.",
+  "Ouvindo, {nome}.",
   "Paciente das 14h confirmou.",
   "Pode começar quando quiser.",
   "Quer que eu abra o prontuário?",
@@ -92,6 +92,17 @@ export const claimDesktopWelcomeForEntry = (
   return entryId;
 };
 
+export const resolveDesktopWelcomeTemplate = (
+  template: string,
+  firstName: string,
+) => {
+  const normalizedName = firstName.trim().split(/\s+/u)[0] || "profissional";
+
+  return template
+    .replace(/\{(?:nome|name)\}/giu, normalizedName)
+    .replace(/\bnome\b/giu, normalizedName);
+};
+
 export const getDailyDesktopWelcomeMessage = ({
   userId,
   firstName,
@@ -101,9 +112,8 @@ export const getDailyDesktopWelcomeMessage = ({
   firstName: string;
   date?: Date;
 }) => {
-  const normalizedName = firstName.trim() || "profissional";
   const index = getDailyDesktopWelcomeIndex({ userId, date });
-  return DESKTOP_WELCOME_TEMPLATES[index].replace("{name}", normalizedName);
+  return resolveDesktopWelcomeTemplate(DESKTOP_WELCOME_TEMPLATES[index], firstName);
 };
 
 export const getDailyDesktopWelcomeIndex = ({
