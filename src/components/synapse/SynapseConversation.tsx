@@ -17,6 +17,7 @@ import { sanitizeSynapseMarkdown } from '@/lib/synapse-humanize';
 import { parseSynapseWidgetsFromContent } from '@/lib/synapse-widget-parser';
 import type { Message } from '@/types';
 
+import { SynapseProcessingState } from './SynapseProcessingState';
 import { SynapseWidgetRenderer } from './SynapseWidgetRenderer';
 
 type MarkdownPreProps = React.ComponentPropsWithoutRef<'pre'> & { node?: unknown };
@@ -55,13 +56,6 @@ type SynapseComposerProps = {
     onSend: () => void;
     onToggleListening: () => void;
 };
-
-const messageTransition = {
-    type: 'spring',
-    stiffness: 420,
-    damping: 34,
-    mass: 0.72,
-} as const;
 
 const formatMessageTime = (value: string) => {
     const date = new Date(value);
@@ -298,47 +292,24 @@ export const SynapseConversation = ({
                     ))}
 
                     <AnimatePresence initial={false}>
-                            {processingActive ? (
-                                <motion.div
-                                    key="thinking"
-                                    initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: 3 }}
-                                    transition={shouldReduceMotion ? { duration: 0 } : messageTransition}
-                                    className="flex items-end gap-2.5"
-                                >
-                                    <SynapseMessageMark />
-                                    <div
-                                        className="synapse-desktop-thinking flex min-h-[58px] max-w-[324px] items-center gap-3 px-3 py-2.5"
-                                        data-activity={activityMode}
-                                        data-reduced-motion={shouldReduceMotion ? 'true' : undefined}
-                                    >
-                                        <span className="synapse-thinking-signal flex h-9 w-9 shrink-0 items-center justify-center gap-[3px] rounded-full" aria-hidden="true">
-                                            {[0, 1, 2].map((index) => (
-                                                <span
-                                                    key={index}
-                                                    className="synapse-thinking-signal-bar block w-[2px] rounded-full"
-                                                    style={{ animationDelay: `${index * -120}ms` }}
-                                                />
-                                            ))}
-                                        </span>
-                                        <div className="min-w-0 flex-1">
-                                            <span className="block truncate text-[11px] font-semibold leading-4 text-foreground/86">
-                                                {activityLabel}
-                                            </span>
-                                            <div className="mt-1 flex min-w-0 items-center gap-1.5">
-                                                <span className="synapse-thinking-phase shrink-0 text-[9px] font-semibold uppercase tracking-[0.11em] text-muted-foreground">
-                                                    {activityMode === 'executing' ? 'Executando' : activityMode === 'responding' ? 'Digitando' : 'Analisando'}
-                                                </span>
-                                                <span className="synapse-thinking-separator h-0.5 w-0.5 shrink-0 rounded-full" aria-hidden="true" />
-                                                <span className="min-w-0 truncate text-[10px] font-medium text-muted-foreground">
-                                                    {activityDetail || 'Organizando a melhor resposta'}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ) : null}
+                        {processingActive ? (
+                            <motion.div
+                                key="thinking"
+                                initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: 3 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
+                                className="flex items-end gap-2.5"
+                            >
+                                <SynapseMessageMark />
+                                <SynapseProcessingState
+                                    label={activityLabel}
+                                    detail={activityDetail}
+                                    mode={activityMode}
+                                    reducedMotion={shouldReduceMotion}
+                                />
+                            </motion.div>
+                        ) : null}
                     </AnimatePresence>
                 </div>
             )}

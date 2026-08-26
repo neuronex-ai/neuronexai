@@ -7,10 +7,19 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import {
   SynapseAgentPlan,
-  type SynapseAgentIntegration,
   type SynapseAgentPlanModel,
   type SynapseAgentPlanStep,
 } from "@/components/synapse/SynapseAgentPlan";
+import {
+  SynapseOperationalReasoning,
+  type SynapseReasoningState,
+  type SynapseReasoningStep,
+} from "@/components/synapse/SynapseOperationalReasoning";
+import {
+  humanizeSynapseTool,
+  integrationForSynapseTool,
+  normalizeSynapseToolName,
+} from "@/lib/synapse-agent-presentation";
 import {
   SYNAPSE_TEXT_AGENT_PROGRESS_EVENT,
   type SynapseTextAgentProgressDetail,
@@ -22,6 +31,14 @@ type RuntimePlan = SynapseAgentPlanModel & {
   awaitingConfirmation: boolean;
 };
 
+type RuntimeReasoning = {
+  visible: boolean;
+  state: SynapseReasoningState;
+  steps: SynapseReasoningStep[];
+  startedAt?: number;
+  finishedAt?: number;
+};
+
 const EMPTY_PLAN: RuntimePlan = {
   title: "Plano do Synapse",
   steps: [],
@@ -29,110 +46,10 @@ const EMPTY_PLAN: RuntimePlan = {
   awaitingConfirmation: false,
 };
 
-const normalizeToolName = (value?: string) => String(value || "").trim().toLowerCase();
-
-const integrationForTool = (toolName: string): SynapseAgentIntegration | undefined => {
-  const tool = normalizeToolName(toolName);
-
-  if (
-    tool === "send_patient_email" ||
-    tool === "send_email" ||
-    tool === "draft_email" ||
-    tool.includes("gmail")
-  ) {
-    return "gmail";
-  }
-
-  // These canonical Agenda mutations feed the Google Calendar synchronization
-  // outbox when the professional has the calendar integration configured.
-  if (
-    tool === "create_appointment" ||
-    tool === "reschedule_appointment" ||
-    tool === "cancel_appointment" ||
-    tool.includes("google_calendar") ||
-    tool.includes("calendar_event")
-  ) {
-    return "google_calendar";
-  }
-
-  return undefined;
-};
-
-const TOOL_LABELS: Record<string, string> = {
-  search_workspace: "Pesquisar informações no NeuroNex",
-  get_workspace_overview: "Consultar visão geral do consultório",
-  get_dashboard_daily_briefing: "Consultar resumo do dia",
-  get_dashboard_schedule: "Consultar agenda do painel",
-  get_dashboard_next_appointment: "Consultar próximo atendimento",
-  get_dashboard_attention_queue: "Verificar pendências importantes",
-  get_dashboard_financial_overview: "Consultar resumo financeiro",
-  list_patients: "Consultar pacientes",
-  search_patients: "Buscar paciente",
-  search_patient_directory: "Buscar paciente",
-  get_patient_details: "Consultar cadastro do paciente",
-  get_patient_card_summary: "Consultar resumo do paciente",
-  get_clinical_history: "Consultar prontuário",
-  get_patient_system_snapshot: "Consolidar contexto do paciente",
-  get_patient_payment_status: "Consultar situação financeira do paciente",
-  get_patient_timeline: "Montar linha do tempo do paciente",
-  get_calendar: "Consultar agenda clínica",
-  get_agenda_daily_overview: "Consultar agenda do dia",
-  get_agenda_week_overview: "Consultar agenda da semana",
-  get_appointment_details: "Consultar detalhes do atendimento",
-  find_available_slots: "Verificar horários disponíveis",
-  create_appointment: "Preparar novo agendamento",
-  reschedule_appointment: "Preparar remarcação",
-  cancel_appointment: "Preparar cancelamento",
-  send_appointment_reminder: "Preparar comunicação do atendimento",
-  send_patient_email: "Preparar e-mail pelo Gmail",
-  create_patient: "Preparar cadastro de paciente",
-  update_patient: "Preparar atualização do paciente",
-  update_patient_basic_info: "Preparar atualização cadastral",
-  inactivate_patient: "Preparar inativação do paciente",
-  create_session_note: "Preparar registro de prontuário",
-  create_personal_note: "Preparar nova nota",
-  update_personal_note: "Preparar atualização da nota",
-  append_to_personal_note: "Preparar complemento da nota",
-  create_task: "Preparar nova tarefa",
-  update_task: "Preparar atualização da tarefa",
-  complete_task: "Preparar conclusão da tarefa",
-  create_financial_entry: "Preparar lançamento financeiro",
-  get_neurofinance_status: "Consultar status do NeuroFinance",
-  get_neurofinance_overview: "Consultar NeuroFinance",
-  list_neurofinance_charges: "Consultar cobranças",
-  get_neurofinance_charge: "Consultar cobrança",
-  create_neurofinance_charge: "Preparar cobrança pelo NeuroFinance",
-  list_fiscal_invoices: "Consultar notas fiscais",
-  get_fiscal_invoice: "Consultar nota fiscal",
-  create_fiscal_invoice: "Preparar emissão de NFS-e",
-  analyze_neuroview_patient_patterns: "Analisar padrões no NeuroView",
-  create_neuroflow_from_patient_history: "Criar NeuroFlow",
-  create_neuropulse_cause_effect_diagram: "Criar diagrama no NeuroPulse",
-  request_interface_action: "Preparar ação na interface",
-};
-
-const humanizeTool = (toolName?: string) => {
-  const normalized = normalizeToolName(toolName);
-  if (!normalized) return "Executar ação do Synapse";
-  if (TOOL_LABELS[normalized]) return TOOL_LABELS[normalized];
-
-  return normalized
-    .replace(/^get_/, "Consultar ")
-    .replace(/^list_/, "Listar ")
-    .replace(/^search_/, "Buscar ")
-    .replace(/^create_/, "Criar ")
-    .replace(/^update_/, "Atualizar ")
-    .replace(/^send_/, "Enviar ")
-    .replace(/^open_/, "Abrir ")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (letter) => letter.toUpperCase())
-    .replace(/^Consultar /, "Consultar ")
-    .replace(/^Listar /, "Listar ")
-    .replace(/^Buscar /, "Buscar ")
-    .replace(/^Criar /, "Criar ")
-    .replace(/^Atualizar /, "Atualizar ")
-    .replace(/^Enviar /, "Enviar ")
-    .replace(/^Abrir /, "Abrir ");
+const EMPTY_REASONING: RuntimeReasoning = {
+  visible: false,
+  state: "complete",
+  steps: [],
 };
 
 const safeDetail = (event: SynapseTextAgentProgressEvent) => {
@@ -141,41 +58,61 @@ const safeDetail = (event: SynapseTextAgentProgressEvent) => {
   return detail.slice(0, 180);
 };
 
+const eventTime = (detail: SynapseTextAgentProgressDetail) => {
+  const value = Date.parse(detail.emittedAt);
+  return Number.isFinite(value) ? value : Date.now();
+};
+
 const PREP_STEP_ID = "synapse-plan-preparation";
 const FINAL_STEP_ID = "synapse-plan-finalization";
 const CONFIRM_STEP_ID = "synapse-plan-confirmation";
+const REASON_PREP_ID = "synapse-reasoning-intent";
+const REASON_CONFIRM_ID = "synapse-reasoning-confirmation";
+const REASON_FINAL_ID = "synapse-reasoning-finalization";
 
-const completedPrepStep = (): SynapseAgentPlanStep => ({
+const completedPrepStep = (durationMs?: number): SynapseAgentPlanStep => ({
   id: PREP_STEP_ID,
   title: "Entender a solicitação",
   detail: "O Synapse conferiu o contexto necessário antes de usar as ferramentas.",
   status: "completed",
+  durationMs,
 });
 
 const toolStepId = (toolName: string, occurrence: number) =>
   `synapse-plan-tool-${toolName}-${occurrence}`;
 
-const markLastMatchingTool = (
+const reasoningToolStepId = (toolName: string, occurrence: number) =>
+  `synapse-reasoning-tool-${toolName}-${occurrence}`;
+
+const finishActiveReasoningSteps = (
+  steps: SynapseReasoningStep[],
+  status: Extract<SynapseReasoningStep["status"], "complete" | "error"> = "complete",
+) => steps.map((step) =>
+  step.status === "active" ? { ...step, status } : step,
+);
+
+const markLastMatchingPlanTool = (
   steps: SynapseAgentPlanStep[],
   toolName: string,
   status: SynapseAgentPlanStep["status"],
   detail?: string,
+  finishedAt?: number,
 ) => {
-  const normalized = normalizeToolName(toolName);
+  const normalized = normalizeSynapseToolName(toolName);
   let matchedIndex = -1;
   for (let index = steps.length - 1; index >= 0; index -= 1) {
-    if (normalizeToolName(steps[index].toolName) === normalized && steps[index].status === "in-progress") {
+    if (normalizeSynapseToolName(steps[index].toolName) === normalized && steps[index].status === "in-progress") {
       matchedIndex = index;
       break;
     }
   }
 
   if (matchedIndex < 0) return steps;
-  return steps.map((step, index) =>
-    index === matchedIndex
-      ? { ...step, status, detail: detail || step.detail }
-      : step,
-  );
+  return steps.map((step, index) => {
+    if (index !== matchedIndex) return step;
+    const durationMs = step.startedAt && finishedAt ? Math.max(0, finishedAt - step.startedAt) : step.durationMs;
+    return { ...step, status, detail: detail || step.detail, durationMs };
+  });
 };
 
 export const SynapseTextAgentPlanBridge = ({
@@ -187,7 +124,11 @@ export const SynapseTextAgentPlanBridge = ({
 }) => {
   const [target, setTarget] = useState<HTMLElement | null>(null);
   const [plan, setPlan] = useState<RuntimePlan>(EMPTY_PLAN);
+  const [reasoning, setReasoning] = useState<RuntimeReasoning>(EMPTY_REASONING);
   const toolOccurrences = useRef<Record<string, number>>({});
+  const reasoningToolOccurrences = useRef<Record<string, number>>({});
+  const toolStartedAt = useRef<Record<string, number[]>>({});
+  const prepStartedAt = useRef<number | undefined>(undefined);
   const hideTimer = useRef<number | null>(null);
 
   const clearHideTimer = useCallback(() => {
@@ -197,10 +138,19 @@ export const SynapseTextAgentPlanBridge = ({
     }
   }, []);
 
-  useEffect(() => {
+  const resetRuntime = useCallback(() => {
+    clearHideTimer();
     setPlan(EMPTY_PLAN);
+    setReasoning(EMPTY_REASONING);
     toolOccurrences.current = {};
-  }, [sessionId]);
+    reasoningToolOccurrences.current = {};
+    toolStartedAt.current = {};
+    prepStartedAt.current = undefined;
+  }, [clearHideTimer]);
+
+  useEffect(() => {
+    resetRuntime();
+  }, [resetRuntime, sessionId]);
 
   useEffect(() => {
     if (!enabled || typeof document === "undefined") {
@@ -230,77 +180,137 @@ export const SynapseTextAgentPlanBridge = ({
 
       const event = detail.event || {};
       const stage = String(event.stage || "").toLowerCase();
-      const toolName = normalizeToolName(event.toolName);
+      const toolName = normalizeSynapseToolName(event.toolName);
       const detailText = safeDetail(event);
+      const now = eventTime(detail);
 
       if (stage === "received") {
         clearHideTimer();
+        setPlan(EMPTY_PLAN);
+        setReasoning(EMPTY_REASONING);
+        toolOccurrences.current = {};
+        reasoningToolOccurrences.current = {};
+        toolStartedAt.current = {};
+        prepStartedAt.current = now;
         return;
       }
 
       if (stage === "planning") {
-        setPlan((current) => {
-          if (current.awaitingConfirmation) return current;
-          toolOccurrences.current = {};
-          return {
-            title: "Plano do Synapse",
-            visible: false,
-            awaitingConfirmation: false,
-            steps: [{
-              id: PREP_STEP_ID,
-              title: "Entender a solicitação",
-              detail: detailText || "Organizando o contexto necessário para executar o pedido.",
-              status: "in-progress",
-            }],
-          };
+        prepStartedAt.current = prepStartedAt.current || now;
+        setPlan({
+          title: "Plano do Synapse",
+          visible: false,
+          awaitingConfirmation: false,
+          steps: [{
+            id: PREP_STEP_ID,
+            title: "Entender a solicitação",
+            detail: detailText || "Organizando o contexto necessário para executar o pedido.",
+            status: "in-progress",
+            startedAt: prepStartedAt.current,
+          }],
+        });
+        setReasoning({
+          visible: true,
+          state: "running",
+          startedAt: prepStartedAt.current,
+          steps: [{
+            id: REASON_PREP_ID,
+            title: "Entender a intenção",
+            detail: detailText || "Interpretando o pedido e verificando o contexto disponível.",
+            status: "active",
+          }],
         });
         return;
       }
 
       if (stage === "tool_started" && toolName) {
-        setPlan((current) => {
-          const occurrence = (toolOccurrences.current[toolName] || 0) + 1;
-          toolOccurrences.current[toolName] = occurrence;
-          const existing = current.steps.filter((step) => step.id !== PREP_STEP_ID);
-          const steps: SynapseAgentPlanStep[] = [
-            completedPrepStep(),
-            ...existing.filter((step) => step.id !== FINAL_STEP_ID && step.id !== CONFIRM_STEP_ID),
-            {
-              id: toolStepId(toolName, occurrence),
-              toolName,
-              title: humanizeTool(toolName),
-              detail: detailText,
-              status: "in-progress",
-              integration: integrationForTool(toolName),
-            },
-          ];
+        const planOccurrence = (toolOccurrences.current[toolName] || 0) + 1;
+        toolOccurrences.current[toolName] = planOccurrence;
+        toolStartedAt.current[toolName] = [...(toolStartedAt.current[toolName] || []), now];
 
+        const reasoningOccurrence = (reasoningToolOccurrences.current[toolName] || 0) + 1;
+        reasoningToolOccurrences.current[toolName] = reasoningOccurrence;
+
+        setPlan((current) => {
+          const prepDuration = prepStartedAt.current ? Math.max(0, now - prepStartedAt.current) : undefined;
+          const existing = current.steps.filter((step) => step.id !== PREP_STEP_ID);
           return {
             title: "Plano do Synapse",
-            steps,
             visible: true,
             awaitingConfirmation: false,
+            steps: [
+              completedPrepStep(prepDuration),
+              ...existing.filter((step) => step.id !== FINAL_STEP_ID && step.id !== CONFIRM_STEP_ID),
+              {
+                id: toolStepId(toolName, planOccurrence),
+                toolName,
+                title: humanizeSynapseTool(toolName),
+                detail: detailText,
+                status: "in-progress",
+                integration: integrationForSynapseTool(toolName),
+                startedAt: now,
+              },
+            ],
+          };
+        });
+
+        setReasoning((current) => {
+          const baseSteps = current.steps.length
+            ? finishActiveReasoningSteps(current.steps)
+            : [{ id: REASON_PREP_ID, title: "Entender a intenção", status: "complete" as const }];
+          return {
+            visible: true,
+            state: "running",
+            startedAt: current.startedAt || prepStartedAt.current || now,
+            steps: [
+              ...baseSteps.filter((step) => step.id !== REASON_FINAL_ID && step.id !== REASON_CONFIRM_ID),
+              {
+                id: reasoningToolStepId(toolName, reasoningOccurrence),
+                toolName,
+                title: humanizeSynapseTool(toolName),
+                detail: detailText,
+                status: "active",
+              },
+            ],
           };
         });
         return;
       }
 
       if (stage === "tool_finished" && toolName) {
+        const startedList = toolStartedAt.current[toolName] || [];
+        const startedAt = startedList.shift();
+        toolStartedAt.current[toolName] = startedList;
+        const durationMs = startedAt ? Math.max(0, now - startedAt) : undefined;
+
         setPlan((current) => ({
           ...current,
-          steps: markLastMatchingTool(current.steps, toolName, "completed", detailText),
+          steps: markLastMatchingPlanTool(current.steps, toolName, "completed", detailText, now).map((step) =>
+            normalizeSynapseToolName(step.toolName) === toolName && step.status === "completed" && !step.durationMs && durationMs
+              ? { ...step, durationMs }
+              : step,
+          ),
         }));
+
+        setReasoning((current) => {
+          let matched = false;
+          const steps = [...current.steps].reverse().map((step) => {
+            if (!matched && step.status === "active" && normalizeSynapseToolName(step.toolName) === toolName) {
+              matched = true;
+              return { ...step, status: "complete" as const, detail: detailText || step.detail, durationMs };
+            }
+            return step;
+          }).reverse();
+          return { ...current, steps };
+        });
         return;
       }
 
       if (stage === "confirmation_required") {
         setPlan((current) => {
           const baseSteps = current.steps.length
-            ? current.steps.map((step) =>
-                step.status === "in-progress" ? { ...step, status: "completed" as const } : step,
-              )
+            ? current.steps.map((step) => step.status === "in-progress" ? { ...step, status: "completed" as const } : step)
             : [completedPrepStep()];
-
           return {
             title: "Plano do Synapse",
             visible: true,
@@ -316,6 +326,20 @@ export const SynapseTextAgentPlanBridge = ({
             ],
           };
         });
+        setReasoning((current) => ({
+          visible: true,
+          state: "waiting",
+          startedAt: current.startedAt || prepStartedAt.current || now,
+          steps: [
+            ...finishActiveReasoningSteps(current.steps).filter((step) => step.id !== REASON_CONFIRM_ID),
+            {
+              id: REASON_CONFIRM_ID,
+              title: "Preparar revisão para confirmação",
+              detail: detailText || "O Synapse pausou antes de executar qualquer alteração.",
+              status: "waiting",
+            },
+          ],
+        }));
         return;
       }
 
@@ -325,22 +349,24 @@ export const SynapseTextAgentPlanBridge = ({
           visible: true,
           awaitingConfirmation: false,
           steps: current.steps.length
-            ? current.steps.map((step) =>
-                step.id === CONFIRM_STEP_ID
-                  ? {
-                      ...step,
-                      title: "Executar ação confirmada",
-                      detail: detailText || step.detail,
-                      status: "in-progress" as const,
-                    }
-                  : step,
-              )
-            : [{
-                id: CONFIRM_STEP_ID,
-                title: "Executar ação confirmada",
-                detail: detailText,
-                status: "in-progress",
-              }],
+            ? current.steps.map((step) => step.id === CONFIRM_STEP_ID
+              ? { ...step, title: "Executar ação confirmada", detail: detailText || step.detail, status: "in-progress" as const, startedAt: now }
+              : step)
+            : [{ id: CONFIRM_STEP_ID, title: "Executar ação confirmada", detail: detailText, status: "in-progress", startedAt: now }],
+        }));
+        setReasoning((current) => ({
+          visible: true,
+          state: "running",
+          startedAt: current.startedAt || now,
+          steps: [
+            ...current.steps.filter((step) => step.id !== REASON_CONFIRM_ID),
+            {
+              id: REASON_CONFIRM_ID,
+              title: "Aplicar confirmação do profissional",
+              detail: detailText || "Retomando a execução com a confirmação recebida.",
+              status: "active",
+            },
+          ],
         }));
         return;
       }
@@ -350,11 +376,24 @@ export const SynapseTextAgentPlanBridge = ({
           ...current,
           visible: current.visible || current.steps.length > 0,
           awaitingConfirmation: false,
-          steps: current.steps.map((step) =>
-            step.id === CONFIRM_STEP_ID
-              ? { ...step, title: "Ação cancelada", status: "cancelled" as const }
-              : step,
-          ),
+          steps: current.steps.map((step) => step.id === CONFIRM_STEP_ID
+            ? { ...step, title: "Ação cancelada", status: "cancelled" as const }
+            : step),
+        }));
+        setReasoning((current) => ({
+          visible: true,
+          state: "complete",
+          startedAt: current.startedAt || now,
+          finishedAt: now,
+          steps: [
+            ...finishActiveReasoningSteps(current.steps),
+            {
+              id: `synapse-reasoning-cancelled-${now}`,
+              title: "Encerrar sem alterações",
+              detail: detailText || "A execução foi cancelada antes de aplicar mudanças.",
+              status: "complete",
+            },
+          ],
         }));
         hideTimer.current = window.setTimeout(() => setPlan(EMPTY_PLAN), 1200);
         return;
@@ -363,9 +402,7 @@ export const SynapseTextAgentPlanBridge = ({
       if (stage === "finalizing") {
         setPlan((current) => {
           if (!current.visible) return current;
-          const steps = current.steps.map((step) =>
-            step.status === "in-progress" ? { ...step, status: "completed" as const } : step,
-          );
+          const steps = current.steps.map((step) => step.status === "in-progress" ? { ...step, status: "completed" as const } : step);
           return {
             ...current,
             awaitingConfirmation: false,
@@ -376,18 +413,38 @@ export const SynapseTextAgentPlanBridge = ({
                 title: "Preparar resposta",
                 detail: detailText,
                 status: "in-progress",
+                startedAt: now,
               },
             ],
           };
         });
+        setReasoning((current) => ({
+          visible: true,
+          state: "running",
+          startedAt: current.startedAt || now,
+          steps: [
+            ...finishActiveReasoningSteps(current.steps).filter((step) => step.id !== REASON_FINAL_ID),
+            {
+              id: REASON_FINAL_ID,
+              title: "Consolidar resultado",
+              detail: detailText || "Organizando o que foi encontrado e executado antes de responder.",
+              status: "active",
+            },
+          ],
+        }));
         return;
       }
 
       if (stage === "responding") {
-        setPlan((current) => {
-          if (current.awaitingConfirmation) return current;
-          return EMPTY_PLAN;
-        });
+        setPlan((current) => current.awaitingConfirmation ? current : EMPTY_PLAN);
+        setReasoning((current) => current.visible
+          ? {
+              ...current,
+              state: "complete",
+              finishedAt: now,
+              steps: finishActiveReasoningSteps(current.steps),
+            }
+          : current);
         return;
       }
 
@@ -399,22 +456,24 @@ export const SynapseTextAgentPlanBridge = ({
             ...current,
             awaitingConfirmation: false,
             steps: hasInProgress
-              ? current.steps.map((step) =>
-                  step.status === "in-progress"
-                    ? { ...step, status: "failed" as const, detail: detailText || step.detail }
-                    : step,
-                )
+              ? current.steps.map((step) => step.status === "in-progress"
+                ? { ...step, status: "failed" as const, detail: detailText || step.detail }
+                : step)
               : [
                   ...current.steps,
-                  {
-                    id: `synapse-plan-error-${Date.now()}`,
-                    title: "Não foi possível concluir",
-                    detail: detailText,
-                    status: "failed",
-                  },
+                  { id: `synapse-plan-error-${now}`, title: "Não foi possível concluir", detail: detailText, status: "failed" },
                 ],
           };
         });
+        setReasoning((current) => ({
+          visible: true,
+          state: "error",
+          startedAt: current.startedAt || now,
+          finishedAt: now,
+          steps: current.steps.length
+            ? finishActiveReasoningSteps(current.steps, "error")
+            : [{ id: `synapse-reasoning-error-${now}`, title: "Não foi possível concluir o processamento", detail: detailText, status: "error" }],
+        }));
         hideTimer.current = window.setTimeout(() => setPlan(EMPTY_PLAN), 2200);
       }
     };
@@ -426,26 +485,28 @@ export const SynapseTextAgentPlanBridge = ({
     };
   }, [clearHideTimer, sessionId]);
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    if (enabled && plan.visible) {
-      document.documentElement.dataset.synapseTextAgentPlan = "active";
-      return () => {
-        delete document.documentElement.dataset.synapseTextAgentPlan;
-      };
-    }
-    delete document.documentElement.dataset.synapseTextAgentPlan;
-    return undefined;
-  }, [enabled, plan.visible]);
+  const runtimeVisible = enabled && (plan.visible || reasoning.visible);
 
   useEffect(() => {
-    if (!target || !plan.visible) return;
+    if (typeof document === "undefined") return;
+    if (runtimeVisible) {
+      document.documentElement.dataset.synapseTextAgentRuntime = "active";
+      return () => {
+        delete document.documentElement.dataset.synapseTextAgentRuntime;
+      };
+    }
+    delete document.documentElement.dataset.synapseTextAgentRuntime;
+    return undefined;
+  }, [runtimeVisible]);
+
+  useEffect(() => {
+    if (!target || !runtimeVisible) return;
     const viewport = document.getElementById("synapse-tabpanel");
     const frame = window.requestAnimationFrame(() => {
       viewport?.scrollTo({ top: viewport.scrollHeight, behavior: "auto" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [plan, target]);
+  }, [plan, reasoning, runtimeVisible, target]);
 
   const visiblePlan = useMemo<SynapseAgentPlanModel>(
     () => ({ title: plan.title, steps: plan.steps }),
@@ -457,16 +518,16 @@ export const SynapseTextAgentPlanBridge = ({
   return (
     <>
       <style>{`
-        html[data-synapse-text-agent-plan="active"] .synapse-desktop-thinking {
+        html[data-synapse-text-agent-runtime="active"] .synapse-desktop-thinking {
           display: none !important;
         }
       `}</style>
 
       {createPortal(
         <AnimatePresence initial={false}>
-          {plan.visible && plan.steps.length > 0 ? (
+          {runtimeVisible ? (
             <div
-              key="synapse-text-agent-plan"
+              key="synapse-text-agent-runtime"
               className="flex min-w-0 items-start gap-2.5"
               role="status"
               aria-live="polite"
@@ -477,8 +538,16 @@ export const SynapseTextAgentPlanBridge = ({
               >
                 <Sparkles className="relative z-10 h-3.5 w-3.5" />
               </span>
-              <div className="min-w-0 max-w-[84%] flex-1">
-                <SynapseAgentPlan plan={visiblePlan} />
+              <div className="min-w-0 max-w-[84%] flex-1 space-y-2">
+                {reasoning.visible && reasoning.steps.length ? (
+                  <SynapseOperationalReasoning
+                    steps={reasoning.steps}
+                    state={reasoning.state}
+                    startedAt={reasoning.startedAt}
+                    finishedAt={reasoning.finishedAt}
+                  />
+                ) : null}
+                {plan.visible && plan.steps.length > 0 ? <SynapseAgentPlan plan={visiblePlan} /> : null}
               </div>
             </div>
           ) : null}

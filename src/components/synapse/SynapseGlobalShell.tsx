@@ -5,6 +5,7 @@ import { useSynapse } from '@/context/SynapseContext';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
 import { SynapsePill } from './SynapsePill';
 import { SynapseTextAgentPlanBridge } from './SynapseTextAgentPlanBridge';
+import { SynapseActivityToolGroupBridge } from './SynapseActivityToolGroupBridge';
 import { AppointmentPlanReviewDialog } from '@/components/appointments/AppointmentPlanReviewDialog';
 import { useReducedMotionPreference } from '@/hooks/use-reduced-motion-preference';
 
@@ -163,6 +164,7 @@ export const SynapseGlobalShell = () => {
             sessionId={activeSessionId}
             enabled={textAgentPlanEnabled}
         />
+        <SynapseActivityToolGroupBridge />
         <AppointmentPlanReviewDialog />
         </>
     );
