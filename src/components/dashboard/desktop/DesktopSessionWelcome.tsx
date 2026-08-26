@@ -6,16 +6,14 @@ import { createPortal } from "react-dom";
 
 import { useAuth } from "@/components/auth/SessionContextProvider";
 import { Button } from "@/components/ui/button";
+import { ShortHandwritingGreeting } from "@/components/ui/handwriting-greeting/ShortHandwritingGreeting";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useProfile } from "@/hooks/use-profile";
 import { isPatientAccount } from "@/lib/auth-account-role";
 import {
   claimDesktopWelcomeForEntry,
-  getDailyDesktopWelcomeIndex,
   getDailyDesktopWelcomeMessage,
 } from "@/lib/desktop-session-welcome";
-
-import { DESKTOP_WELCOME_ARTWORK } from "./desktop-session-welcome-artwork";
 
 const profileFirstName = (profile?: {
   first_name?: string | null;
@@ -57,13 +55,6 @@ export const DesktopSessionWelcome = () => {
       : "Bem-vindo de volta.",
     [firstName, user],
   );
-  const resolvedArtwork = useMemo(
-    () => user
-      ? DESKTOP_WELCOME_ARTWORK[getDailyDesktopWelcomeIndex({ userId: user.id })]
-      : DESKTOP_WELCOME_ARTWORK[0],
-    [user],
-  );
-  const [visibleArtwork, setVisibleArtwork] = useState(resolvedArtwork);
 
   const dismiss = useCallback(() => {
     if (dismissTimer.current) window.clearTimeout(dismissTimer.current);
@@ -87,9 +78,8 @@ export const DesktopSessionWelcome = () => {
 
     presentedEntryRef.current = entryId;
     setVisibleMessage(resolvedMessage);
-    setVisibleArtwork(resolvedArtwork);
     setVisible(true);
-  }, [isMobile, resolvedArtwork, resolvedMessage, user]);
+  }, [isMobile, resolvedMessage, user]);
 
   useEffect(() => {
     if (isMobile) dismiss();
@@ -98,8 +88,7 @@ export const DesktopSessionWelcome = () => {
   useEffect(() => {
     if (!visible) return;
     setVisibleMessage(resolvedMessage);
-    setVisibleArtwork(resolvedArtwork);
-  }, [resolvedArtwork, resolvedMessage, visible]);
+  }, [resolvedMessage, visible]);
 
   useEffect(() => {
     if (!visible) return;
@@ -178,20 +167,16 @@ export const DesktopSessionWelcome = () => {
             </span>
             <motion.div
               aria-hidden="true"
-              initial={shouldReduceMotion
-                ? false
-                : { opacity: 0, clipPath: "inset(0 100% 0 0)", scale: 0.992 }}
-              animate={{ opacity: 1, clipPath: "inset(0 0% 0 0)", scale: 1 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, scale: 0.992 }}
+              animate={{ opacity: 1, scale: 1 }}
               transition={shouldReduceMotion
                 ? { duration: 0 }
-                : { duration: 1.9, ease: [0.65, 0, 0.35, 1] }}
-              className="w-full max-w-[47.75rem] overflow-hidden"
+                : { duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+              className="w-full max-w-[47.75rem] overflow-visible"
             >
-              <img
-                src={visibleArtwork}
-                alt=""
-                draggable={false}
-                className="block h-auto w-full select-none object-contain brightness-0 drop-shadow-[0_12px_34px_rgba(0,0,0,0.16)] dark:brightness-100 dark:drop-shadow-[0_12px_34px_rgba(255,255,255,0.08)]"
+              <ShortHandwritingGreeting
+                text={visibleMessage}
+                className="m-0 max-w-full text-foreground"
               />
             </motion.div>
 
