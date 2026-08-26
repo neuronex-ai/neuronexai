@@ -4,12 +4,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowUp, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import {
   DesktopWorkspacePanel,
 } from "@/components/ui/desktop-workspace";
-import { HandwritingGreetingPilot } from "@/components/ui/handwriting-greeting/HandwritingGreetingPilot";
+import { ShortHandwritingGreeting } from "@/components/ui/handwriting-greeting/ShortHandwritingGreeting";
 import { useSessionNotes } from "@/hooks/use-session-notes";
 import type { AISummary, Appointment, SessionNote } from "@/types";
 
@@ -56,8 +56,6 @@ export const DesktopDashboardMorningBriefing = ({
   isLoading,
 }: DesktopDashboardMorningBriefingProps) => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const handwritingPilotEnabled = searchParams.get("handwritingPilot") === "1";
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [synapsePrompt, setSynapsePrompt] = useState("");
   const patientId = nextAppointment?.patient_id || "";
@@ -128,16 +126,11 @@ export const DesktopDashboardMorningBriefing = ({
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-background/52">
               {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </p>
-            {handwritingPilotEnabled ? (
-              <>
-                <h1 className="sr-only">Ah, Jhonatan. Bem-vindo de volta.</h1>
-                <HandwritingGreetingPilot className="mt-1 max-w-[1180px] text-background" />
-              </>
-            ) : (
-              <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
-                Bom dia, {firstName}.
-              </h1>
-            )}
+            <ShortHandwritingGreeting
+              firstName={firstName}
+              today={today}
+              className="max-w-full text-background"
+            />
           </div>
 
           <section className="dashboard-synapse-day mt-auto rounded-[32px] border p-5 sm:p-6" aria-labelledby="dashboard-synapse-day-title">
