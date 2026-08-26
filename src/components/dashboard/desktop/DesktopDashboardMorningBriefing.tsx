@@ -14,7 +14,6 @@ import type { AISummary, Appointment, SessionNote } from "@/types";
 
 import type { AttentionQueueItem } from "./dashboard-command-center-model";
 import {
-  buildDailyBriefingContext,
   getDailyBriefingCounts,
 } from "./desktop-dashboard-morning-briefing-model";
 import { NextScheduleCard } from "./NextScheduleCard";
@@ -30,8 +29,6 @@ type DesktopDashboardMorningBriefingProps = {
   nextAppointment?: Appointment;
   followingAppointment?: Appointment;
   isLoading: boolean;
-  financialConnected: boolean;
-  neurofinancePendingAmount?: number;
 };
 
 const getSessionSummaryText = (note?: SessionNote | null) => {
@@ -119,8 +116,6 @@ export const DesktopDashboardMorningBriefing = ({
   nextAppointment,
   followingAppointment,
   isLoading,
-  financialConnected,
-  neurofinancePendingAmount = 0,
 }: DesktopDashboardMorningBriefingProps) => {
   const navigate = useNavigate();
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -132,12 +127,6 @@ export const DesktopDashboardMorningBriefing = ({
   const latestTopics = getSummaryTopics(latestSessionNote?.ai_summary);
   const latestNextSteps = getSummaryNextSteps(latestSessionNote?.ai_summary);
   const counts = getDailyBriefingCounts(todayAppointments);
-  const briefingContext = buildDailyBriefingContext({
-    counts,
-    attentionItems,
-    financialConnected,
-    neurofinancePendingAmount,
-  });
   const clinicalSignals = attentionItems.filter(
     (item) => item.category === "sessions" || item.category === "appointments",
   ).length;
@@ -161,14 +150,6 @@ export const DesktopDashboardMorningBriefing = ({
     const target = document.getElementById("dashboard-pendencias");
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
     target?.focus({ preventScroll: true });
-  };
-
-  const openBriefingContext = () => {
-    if (briefingContext.actionPath === "#dashboard-pendencias") {
-      openPendingWorkspace();
-      return;
-    }
-    navigate(briefingContext.actionPath);
   };
 
   return (
@@ -205,13 +186,6 @@ export const DesktopDashboardMorningBriefing = ({
                 <BriefingInlineAction onClick={() => openAgenda("Confirmada")} ariaLabel="Abrir agendamentos confirmados de hoje">
                   {countLabel(counts.confirmed, "confirmado", "confirmados")}
                 </BriefingInlineAction>.
-              </p>
-              <p className="mt-3 max-w-[58ch] text-sm font-medium leading-relaxed text-muted-foreground">
-                {briefingContext.before}
-                <BriefingInlineAction onClick={openBriefingContext} ariaLabel={briefingContext.actionLabel}>
-                  {briefingContext.actionLabel}
-                </BriefingInlineAction>
-                {briefingContext.after}
               </p>
               <p className="mt-4 text-[10px] font-semibold text-muted-foreground/75">
                 {weekAppointmentsCount} compromissos nos próximos sete dias
