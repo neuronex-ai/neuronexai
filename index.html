@@ -3,6 +3,17 @@
 
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // Public entry pages include a static SEO/no-JS shell inside #root. Hide it
+    // before the first paint whenever JavaScript is available; React replaces it
+    // with the real application during bootstrap.
+    document.documentElement.classList.add("neuronex-js");
+  </script>
+  <style>
+    html.neuronex-js #static-public-shell {
+      display: none !important;
+    }
+  </style>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <!-- Primary Meta Tags -->
   <title>NeuroNex | Sistema operacional para consultórios de psicologia</title>
