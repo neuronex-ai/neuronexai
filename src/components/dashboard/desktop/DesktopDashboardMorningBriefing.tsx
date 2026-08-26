@@ -4,11 +4,12 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowUpRight, CalendarDays, ListChecks } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import {
   DesktopWorkspacePanel,
 } from "@/components/ui/desktop-workspace";
+import { HandwritingGreetingPilot } from "@/components/ui/handwriting-greeting/HandwritingGreetingPilot";
 import { useSessionNotes } from "@/hooks/use-session-notes";
 import type { AISummary, Appointment, SessionNote } from "@/types";
 
@@ -123,6 +124,8 @@ export const DesktopDashboardMorningBriefing = ({
   neurofinancePendingAmount = 0,
 }: DesktopDashboardMorningBriefingProps) => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const handwritingPilotEnabled = searchParams.get("handwritingPilot") === "1";
   const [summaryOpen, setSummaryOpen] = useState(false);
   const patientId = nextAppointment?.patient_id || "";
   const { data: sessionNotes = [], isLoading: loadingSessionNotes } =
@@ -182,9 +185,16 @@ export const DesktopDashboardMorningBriefing = ({
             <p className="text-[10px] font-black uppercase tracking-[0.24em] text-background/52">
               {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
             </p>
-            <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
-              Bom dia, {firstName}.
-            </h1>
+            {handwritingPilotEnabled ? (
+              <>
+                <h1 className="sr-only">Ah, Jhonatan. Bem-vindo de volta.</h1>
+                <HandwritingGreetingPilot className="mt-1 max-w-[1180px] text-background" />
+              </>
+            ) : (
+              <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
+                Bom dia, {firstName}.
+              </h1>
+            )}
           </div>
 
           <div className="dashboard-briefing-metrics mt-auto">
