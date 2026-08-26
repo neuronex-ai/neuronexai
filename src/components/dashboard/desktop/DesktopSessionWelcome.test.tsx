@@ -2,13 +2,11 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
-  getDailyDesktopWelcomeIndex,
   getDailyDesktopWelcomeMessage,
   queueDesktopWelcomeForLogin,
 } from "@/lib/desktop-session-welcome";
 
 import { DesktopSessionWelcome } from "./DesktopSessionWelcome";
-import { DESKTOP_WELCOME_ARTWORK } from "./desktop-session-welcome-artwork";
 
 vi.mock("@/components/auth/SessionContextProvider", () => ({
   useAuth: () => ({
@@ -40,7 +38,7 @@ describe("DesktopSessionWelcome", () => {
     window.sessionStorage.clear();
   });
 
-  it("renders as a portal after a successful desktop login", async () => {
+  it("renders a personalized handwriting greeting as a portal after login", async () => {
     queueDesktopWelcomeForLogin("professional-1");
 
     render(<DesktopSessionWelcome />);
@@ -48,14 +46,16 @@ describe("DesktopSessionWelcome", () => {
     const dialog = await screen.findByRole("dialog");
     expect(dialog).toHaveAttribute("data-neuronex-desktop-login-welcome");
     expect(dialog.parentElement).toBe(document.body);
-    const expectedIndex = getDailyDesktopWelcomeIndex({ userId: "professional-1" });
     const expectedMessage = getDailyDesktopWelcomeMessage({
       userId: "professional-1",
       firstName: "Nathalia",
     });
 
     expect(dialog).toHaveTextContent(expectedMessage);
-    expect(dialog.querySelector("img")).toHaveAttribute("src", DESKTOP_WELCOME_ARTWORK[expectedIndex]);
+    expect(dialog.querySelector("img")).not.toBeInTheDocument();
+    expect(dialog.querySelector("[data-neuronex-handwriting-message]")).toHaveTextContent(
+      expectedMessage,
+    );
   });
 
   it("does not render for a restored session without a new login", async () => {
