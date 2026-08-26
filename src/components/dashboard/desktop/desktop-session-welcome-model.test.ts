@@ -6,6 +6,7 @@ import {
   getDailyDesktopWelcomeMessage,
   getDesktopWelcomeStorageKey,
   queueDesktopWelcomeForLogin,
+  resolveDesktopWelcomeTemplate,
 } from "@/lib/desktop-session-welcome";
 
 const createSessionStorage = () => {
@@ -18,13 +19,24 @@ const createSessionStorage = () => {
 };
 
 describe("desktop session welcome", () => {
-  it("provides twenty distinct templates matching the exported welcome artwork", () => {
+  it("provides twenty distinct templates", () => {
     expect(DESKTOP_WELCOME_TEMPLATES).toHaveLength(20);
     expect(new Set(DESKTOP_WELCOME_TEMPLATES).size).toBe(20);
-    expect(DESKTOP_WELCOME_TEMPLATES.some((template) => template.includes("{name}"))).toBe(false);
   });
 
-  it("keeps the daily artwork selection stable", () => {
+  it("resolves the professional name before the greeting is rendered", () => {
+    expect(
+      resolveDesktopWelcomeTemplate("Ah, {nome}. Bem-vindo de volta.", "Nathalia Souza"),
+    ).toBe("Ah, Nathalia. Bem-vindo de volta.");
+    expect(resolveDesktopWelcomeTemplate("Ouvindo, nome.", "Nathalia")).toBe(
+      "Ouvindo, Nathalia.",
+    );
+    expect(resolveDesktopWelcomeTemplate("Olá, {name}.", "Nathalia")).toBe(
+      "Olá, Nathalia.",
+    );
+  });
+
+  it("keeps the daily greeting selection stable", () => {
     const input = {
       userId: "professional-1",
       firstName: "Nathalia",
