@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowUpRight, CalendarDays, ListChecks } from "lucide-react";
+import { ArrowUp, Sparkles } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -44,69 +44,6 @@ const getSummaryTopics = (summary?: AISummary | null) =>
 const getSummaryNextSteps = (summary?: AISummary | null) =>
   summary?.next_steps?.filter(Boolean).slice(0, 2) || [];
 
-const countLabel = (count: number, singular: string, plural: string) =>
-  `${count} ${count === 1 ? singular : plural}`;
-
-const BriefingInlineAction = ({
-  children,
-  onClick,
-  ariaLabel,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-  ariaLabel: string;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    aria-label={ariaLabel}
-    className="dashboard-briefing-inline-action rounded-md font-bold text-foreground underline decoration-foreground/30 decoration-1 underline-offset-4 outline-none transition-colors hover:decoration-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-  >
-    {children}
-  </button>
-);
-
-const BriefingMetricButton = ({
-  icon: Icon,
-  label,
-  value,
-  detail,
-  onClick,
-}: {
-  icon: typeof CalendarDays;
-  label: string;
-  value: number;
-  detail: string;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="dashboard-briefing-mini-card group flex min-h-[92px] w-full items-center gap-3 rounded-[22px] border p-3.5 text-left outline-none transition-[border-color,background-color,transform] duration-200 hover:border-foreground/15 focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100"
-  >
-    <span className="dashboard-briefing-mini-icon flex h-11 w-11 shrink-0 items-center justify-center rounded-[16px] border text-muted-foreground">
-      <Icon className="h-[18px] w-[18px]" aria-hidden="true" />
-    </span>
-    <span className="min-w-0 flex-1">
-      <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
-        {label}
-      </span>
-      <span className="mt-1 flex items-baseline gap-1.5">
-        <strong className="text-xl font-bold tracking-[-0.04em] text-foreground tabular-nums">
-          {value}
-        </strong>
-        <span className="truncate text-[11px] font-semibold text-muted-foreground">
-          {detail}
-        </span>
-      </span>
-    </span>
-    <ArrowUpRight
-      className="h-4 w-4 shrink-0 text-muted-foreground/55 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transition-none"
-      aria-hidden="true"
-    />
-  </button>
-);
-
 export const DesktopDashboardMorningBriefing = ({
   today,
   firstName,
@@ -119,6 +56,7 @@ export const DesktopDashboardMorningBriefing = ({
 }: DesktopDashboardMorningBriefingProps) => {
   const navigate = useNavigate();
   const [summaryOpen, setSummaryOpen] = useState(false);
+  const [synapsePrompt, setSynapsePrompt] = useState("");
   const patientId = nextAppointment?.patient_id || "";
   const { data: sessionNotes = [], isLoading: loadingSessionNotes } =
     useSessionNotes(patientId);
@@ -152,6 +90,30 @@ export const DesktopDashboardMorningBriefing = ({
     target?.focus({ preventScroll: true });
   };
 
+  const openSynapse = (prompt: string) => {
+    navigate(`/synapse-ai?q=${encodeURIComponent(prompt)}`);
+  };
+
+  const submitSynapsePrompt = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const prompt = synapsePrompt.trim();
+    if (!prompt) return;
+    openSynapse(prompt);
+  };
+
+  const synapsePlaceholder = counts.total > 0
+    ? "O que merece atenção antes da próxima sessão?"
+    : "Como posso aproveitar a agenda livre de hoje?";
+  const synapseSuggestions = [
+    clinicalSignals > 0
+      ? "Revisar sinais antes da próxima sessão"
+      : counts.total > 0
+        ? "Preparar a próxima sessão"
+        : "Planejar a semana",
+    "Preparar cobranças da semana",
+    "Há pendências de ontem?",
+  ];
+
   return (
     <DesktopWorkspacePanel
       highContrast
@@ -168,47 +130,78 @@ export const DesktopDashboardMorningBriefing = ({
             </h1>
           </div>
 
-          <div className="dashboard-briefing-metrics mt-auto">
-            <section className="dashboard-briefing-summary-card rounded-[32px] border p-5 sm:p-6" aria-labelledby="dashboard-daily-briefing-title">
-              <p id="dashboard-daily-briefing-title" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Seu dia, em poucas palavras
-              </p>
-              <p className="mt-4 max-w-[48ch] text-[clamp(1.05rem,1.55vw,1.4rem)] font-medium leading-[1.45] tracking-[-0.025em] text-foreground">
-                Para hoje, você tem{" "}
-                <BriefingInlineAction onClick={() => openAgenda("all")} ariaLabel="Abrir todos os agendamentos de hoje">
-                  {countLabel(counts.total, "agendamento", "agendamentos")}
-                </BriefingInlineAction>{" "}
-                marcados: {" "}
-                <BriefingInlineAction onClick={() => openAgenda("Pendente")} ariaLabel="Abrir agendamentos pendentes de hoje">
-                  {countLabel(counts.pending, "pendente", "pendentes")}
-                </BriefingInlineAction>{" "}
-                e{" "}
-                <BriefingInlineAction onClick={() => openAgenda("Confirmada")} ariaLabel="Abrir agendamentos confirmados de hoje">
-                  {countLabel(counts.confirmed, "confirmado", "confirmados")}
-                </BriefingInlineAction>.
-              </p>
-              <p className="mt-4 text-[10px] font-semibold text-muted-foreground/75">
-                {weekAppointmentsCount} compromissos nos próximos sete dias
-              </p>
-            </section>
-
-            <div className="dashboard-briefing-rail rounded-[30px] border p-2.5">
-              <BriefingMetricButton
-                icon={ListChecks}
-                label="Revisar antes"
-                value={clinicalSignals}
-                detail={clinicalSignals === 1 ? "sinal" : "sinais"}
-                onClick={openPendingWorkspace}
-              />
-              <BriefingMetricButton
-                icon={CalendarDays}
-                label="Operação do dia"
-                value={counts.total}
-                detail={`${counts.online} online`}
-                onClick={() => openAgenda("all")}
-              />
+          <section className="dashboard-synapse-day mt-auto rounded-[32px] border p-5 sm:p-6" aria-labelledby="dashboard-synapse-day-title">
+            <div className="flex items-center gap-2">
+              <span className="dashboard-synapse-day-icon flex h-8 w-8 items-center justify-center rounded-xl border text-muted-foreground">
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+              </span>
+              <h2 id="dashboard-synapse-day-title" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                Synapse do dia
+              </h2>
             </div>
-          </div>
+
+            <p className="dashboard-synapse-day-brief mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-[clamp(0.95rem,1.15vw,1.05rem)] font-medium leading-relaxed tracking-[-0.02em] text-foreground">
+              {counts.total > 0 ? (
+                <>
+                  <span>Hoje:</span>
+                  <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir os ${counts.total} agendamentos de hoje`}>
+                    {counts.total} {counts.total === 1 ? "sessão" : "sessões"}
+                  </button>
+                  {counts.pending > 0 ? <span aria-hidden="true">·</span> : null}
+                  {counts.pending > 0 ? (
+                    <button type="button" onClick={() => openAgenda("Pendente")} className="dashboard-synapse-chip" aria-label={`Abrir os ${counts.pending} agendamentos pendentes de hoje`}>
+                      {counts.pending} {counts.pending === 1 ? "pendente" : "pendentes"}
+                    </button>
+                  ) : null}
+                  {counts.online > 0 ? <span aria-hidden="true">·</span> : null}
+                  {counts.online > 0 ? (
+                    <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir a agenda de hoje, que inclui ${counts.online} agendamentos online`}>
+                      {counts.online} online
+                    </button>
+                  ) : null}
+                </>
+              ) : (
+                <>
+                  <span>Agenda livre hoje.</span>
+                  <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir os ${weekAppointmentsCount} compromissos dos próximos sete dias`}>
+                    {weekAppointmentsCount} {weekAppointmentsCount === 1 ? "compromisso" : "compromissos"} nos próximos sete dias
+                  </button>
+                </>
+              )}
+              {clinicalSignals > 0 ? <span aria-hidden="true">·</span> : null}
+              {clinicalSignals > 0 ? (
+                <button type="button" onClick={openPendingWorkspace} className="dashboard-synapse-chip" aria-label={`Revisar ${clinicalSignals} ${clinicalSignals === 1 ? "sinal" : "sinais"} antes da próxima sessão`}>
+                  {clinicalSignals} {clinicalSignals === 1 ? "sinal para revisar" : "sinais para revisar"}
+                </button>
+              ) : null}
+            </p>
+
+            <form className="mt-4" onSubmit={submitSynapsePrompt}>
+              <label className="sr-only" htmlFor="dashboard-synapse-prompt">Pergunte ao Synapse sobre seu dia</label>
+              <div className="dashboard-synapse-composer flex min-h-11 items-center gap-2 rounded-2xl border px-3">
+                <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                <input
+                  id="dashboard-synapse-prompt"
+                  type="text"
+                  value={synapsePrompt}
+                  onChange={(event) => setSynapsePrompt(event.target.value)}
+                  placeholder={synapsePlaceholder}
+                  className="min-w-0 flex-1 bg-transparent py-2 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/65"
+                />
+                <button type="submit" className="dashboard-synapse-send flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-45" aria-label="Enviar pergunta ao Synapse" disabled={!synapsePrompt.trim()}>
+                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                </button>
+              </div>
+            </form>
+
+            <div className="mt-2 flex flex-wrap gap-2" aria-label="Sugestões para o Synapse">
+              {synapseSuggestions.map((suggestion) => (
+                <button key={suggestion} type="button" onClick={() => openSynapse(suggestion)} className="dashboard-synapse-suggestion rounded-full border px-3 text-xs font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
 
         <div className="next-schedule-stage relative min-h-[264px] border-t border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.035] lg:border-l lg:border-t-0">

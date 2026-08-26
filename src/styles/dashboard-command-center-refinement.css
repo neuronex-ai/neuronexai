@@ -36,18 +36,9 @@
   color: #71717a !important;
 }
 
-/* Daily briefing: one narrative card and a genuinely separated two-card rail. */
-.dashboard-morning-panel .dashboard-briefing-metrics {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(220px, 28%, 280px);
-  align-items: start;
-  gap: clamp(12px, 1.2vw, 18px);
+/* Daily briefing: one contextual Synapse entry point, not a secondary dashboard. */
+.dashboard-morning-panel .dashboard-synapse-day {
   min-width: 0;
-}
-
-.dashboard-morning-panel .dashboard-briefing-summary-card {
-  min-width: 0;
-  min-height: 120px;
   border-color: rgb(228 228 231 / 0.92);
   background: rgb(250 250 250 / 0.98);
   color: #18181b;
@@ -56,7 +47,7 @@
     0 18px 46px -40px rgb(24 24 27 / 0.3);
 }
 
-.dark .dashboard-morning-panel .dashboard-briefing-summary-card {
+.dark .dashboard-morning-panel .dashboard-synapse-day {
   border-color: rgb(255 255 255 / 0.075);
   background: linear-gradient(145deg, #1a1a1c 0%, #141416 50%, #0d0d0f 100%);
   color: #ffffff;
@@ -66,66 +57,82 @@
     0 24px 52px -42px rgb(0 0 0 / 0.96);
 }
 
-.dashboard-morning-panel .dashboard-briefing-rail {
-  display: grid;
-  grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-  min-width: 0;
-  min-height: 120px;
-  padding-block: 3px;
-  border-color: rgb(228 228 231 / 0.82);
-  background: rgb(244 244 245 / 0.62);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.75);
-}
-
-.dark .dashboard-morning-panel .dashboard-briefing-rail {
-  border-color: rgb(255 255 255 / 0.06);
-  background: rgb(255 255 255 / 0.035);
-  box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / 0.018),
-    0 20px 42px -38px rgb(0 0 0 / 0.88);
-}
-
-.dashboard-morning-panel .dashboard-briefing-mini-card,
-.dashboard-morning-panel .dashboard-briefing-mini-icon {
+.dashboard-morning-panel .dashboard-synapse-day-icon,
+.dashboard-morning-panel .dashboard-synapse-composer,
+.dashboard-morning-panel .dashboard-synapse-suggestion {
   border-color: rgb(228 228 231 / 0.9);
   background: rgb(255 255 255 / 0.92);
   box-shadow: inset 0 1px 0 rgb(255 255 255);
 }
 
-.dashboard-morning-panel .dashboard-briefing-mini-card {
-  min-height: 52px;
-  padding-block: 0;
+.dashboard-morning-panel .dashboard-synapse-composer:focus-within {
+  border-color: rgb(161 161 170 / 0.85);
+  box-shadow: 0 0 0 3px rgb(161 161 170 / 0.16);
 }
 
-.dark .dashboard-morning-panel .dashboard-briefing-mini-card,
-.dark .dashboard-morning-panel .dashboard-briefing-mini-icon {
+.dashboard-morning-panel .dashboard-synapse-chip {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  border-radius: 9999px;
+  border: 1px solid rgb(24 24 27 / 0.1);
+  background: rgb(255 255 255 / 0.74);
+  padding: 0 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  color: #18181b;
+  outline: none;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.dashboard-morning-panel .dashboard-synapse-suggestion {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+}
+
+.dashboard-morning-panel .dashboard-synapse-chip:hover {
+  border-color: rgb(24 24 27 / 0.22);
+  background: #ffffff;
+}
+
+.dashboard-morning-panel .dashboard-synapse-chip:focus-visible,
+.dashboard-morning-panel .dashboard-synapse-suggestion:focus-visible {
+  box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--background));
+}
+
+.dashboard-morning-panel .dashboard-synapse-send {
+  background: #18181b;
+}
+
+.dark .dashboard-morning-panel .dashboard-synapse-day-icon,
+.dark .dashboard-morning-panel .dashboard-synapse-composer,
+.dark .dashboard-morning-panel .dashboard-synapse-suggestion {
   border-color: rgb(255 255 255 / 0.075);
   background: rgb(9 9 11 / 0.84);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.025);
 }
 
-.dashboard-morning-panel .dashboard-briefing-inline-action {
-  color: inherit;
-  -webkit-tap-highlight-color: transparent;
+.dark .dashboard-morning-panel .dashboard-synapse-composer:focus-within {
+  border-color: rgb(255 255 255 / 0.22);
+  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.08);
 }
 
-@media (max-width: 1180px) {
-  .dashboard-morning-panel .dashboard-briefing-metrics {
-    grid-template-columns: minmax(0, 1fr) minmax(210px, 250px);
-  }
+.dark .dashboard-morning-panel .dashboard-synapse-chip {
+  border-color: rgb(255 255 255 / 0.1);
+  background: rgb(255 255 255 / 0.055);
+  color: #ffffff;
 }
 
-@media (max-width: 860px) {
-  .dashboard-morning-panel .dashboard-briefing-metrics {
-    grid-template-columns: minmax(0, 1fr);
-  }
+.dark .dashboard-morning-panel .dashboard-synapse-chip:hover {
+  border-color: rgb(255 255 255 / 0.2);
+  background: rgb(255 255 255 / 0.09);
+}
 
-  .dashboard-morning-panel .dashboard-briefing-rail {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: none;
-    min-height: auto;
-  }
+.dark .dashboard-morning-panel .dashboard-synapse-send {
+  background: #ffffff;
+  color: #18181b;
 }
 
 /* Right appointment card: compact schedule summary that expands in place. */
@@ -225,10 +232,11 @@
   .dashboard-morning-panel .next-schedule-icon,
   .dashboard-morning-panel .next-schedule-details,
   .dashboard-morning-panel .next-schedule-detail-cell,
-  .dashboard-morning-panel .dashboard-briefing-summary-card,
-  .dashboard-morning-panel .dashboard-briefing-rail,
-  .dashboard-morning-panel .dashboard-briefing-mini-card,
-  .dashboard-morning-panel .dashboard-briefing-mini-icon {
+  .dashboard-morning-panel .dashboard-synapse-day,
+  .dashboard-morning-panel .dashboard-synapse-day-icon,
+  .dashboard-morning-panel .dashboard-synapse-composer,
+  .dashboard-morning-panel .dashboard-synapse-suggestion,
+  .dashboard-morning-panel .dashboard-synapse-chip {
     border: 1px solid CanvasText !important;
     color: CanvasText !important;
     background: Canvas !important;
