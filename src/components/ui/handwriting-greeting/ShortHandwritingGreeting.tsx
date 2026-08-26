@@ -46,20 +46,22 @@ const resolveGreeting = (today: Date, firstName: string) => {
 };
 
 type ShortHandwritingGreetingProps = {
-  firstName: string;
-  today: Date;
+  firstName?: string;
+  today?: Date;
+  text?: string;
   className?: string;
 };
 
 export const ShortHandwritingGreeting = ({
-  firstName,
-  today,
+  firstName = "você",
+  today = new Date(),
+  text,
   className,
 }: ShortHandwritingGreetingProps) => {
   const [fontReady, setFontReady] = useState(false);
   const phrase = useMemo(
-    () => resolveGreeting(today, firstName),
-    [firstName, today],
+    () => text?.trim() || resolveGreeting(today, firstName),
+    [firstName, text, today],
   );
 
   useEffect(() => {
@@ -88,7 +90,7 @@ export const ShortHandwritingGreeting = ({
 
         await document.fonts.load(`1em "${HELLO_SCRIPT_FAMILY}"`);
       } catch {
-        // The greeting still renders with the cursive fallback instead of blocking the dashboard.
+        // Keep a cursive fallback available if the embedded face cannot load.
       }
 
       if (!cancelled) setFontReady(true);
@@ -116,7 +118,10 @@ export const ShortHandwritingGreeting = ({
   } satisfies CSSProperties;
 
   return (
-    <h1 className={cn("mt-1 w-full overflow-visible", className)}>
+    <h1
+      className={cn("mt-1 w-full overflow-visible", className)}
+      data-neuronex-handwriting-message
+    >
       <style>{`
         @keyframes neuronex-short-handwriting-write {
           0% {
@@ -136,7 +141,7 @@ export const ShortHandwritingGreeting = ({
       <span className="sr-only">{phrase}</span>
       <span
         aria-hidden="true"
-        className="relative inline-block max-w-full align-top text-background"
+        className="relative inline-block max-w-full align-top text-current"
         style={handwritingStyle}
       >
         <span className="invisible block whitespace-nowrap px-[0.035em]">
