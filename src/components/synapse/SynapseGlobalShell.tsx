@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useSynapse } from '@/context/SynapseContext';
 import { SynapseCompactPanel } from './SynapseCompactPanel';
 import { SynapsePill } from './SynapsePill';
+import { SynapseTextAgentPlanBridge } from './SynapseTextAgentPlanBridge';
 import { AppointmentPlanReviewDialog } from '@/components/appointments/AppointmentPlanReviewDialog';
 import { useReducedMotionPreference } from '@/hooks/use-reduced-motion-preference';
 
@@ -12,6 +13,7 @@ import { useReducedMotionPreference } from '@/hooks/use-reduced-motion-preferenc
 
 export const SynapseGlobalShell = () => {
     const {
+        activeSessionId,
         activeTab,
         actionExperience,
         cancelActionExperience,
@@ -108,6 +110,10 @@ export const SynapseGlobalShell = () => {
     const isRestoringPillAfterVoice =
         !isVoiceExperienceActive && wasVoiceExperienceActive.current;
     const visibleShellState = isRestoringPillAfterVoice ? 'pill' : shellState;
+    const textAgentPlanEnabled =
+        !isVoiceExperienceActive &&
+        visibleShellState === 'compact' &&
+        activeTab === 'chat';
 
     const shell = (
         <>
@@ -153,6 +159,10 @@ export const SynapseGlobalShell = () => {
                 </motion.div>
             ) : null}
         </AnimatePresence>
+        <SynapseTextAgentPlanBridge
+            sessionId={activeSessionId}
+            enabled={textAgentPlanEnabled}
+        />
         <AppointmentPlanReviewDialog />
         </>
     );
