@@ -10,8 +10,9 @@ import {
 } from "@/components/landing/LandingNarrativeSections";
 import { Navbar } from "@/components/landing/Navbar";
 import {
-    LandingRealProductShowcase,
-} from "@/components/landing/LandingProductScreenshots";
+    LandingDesktopProductShowcase,
+    LandingNeuroTimeSection,
+} from "@/components/landing/LandingDesktopProductShowcase";
 import {
     LandingFinalCTASection,
     LandingOperatingSystemSection,
@@ -40,7 +41,8 @@ const DesktopIndex = () => {
                 <LandingWorkflowDiagramSection />
                 <LandingHumanControlSection />
                 <PublicSynapseCommandSection variant="compact" />
-                <LandingRealProductShowcase />
+                <LandingDesktopProductShowcase />
+                <LandingNeuroTimeSection />
                 <LandingContinuityAuthoritySection />
                 <LandingHorizontalProductStory />
                 <LandingTrustAndFAQSection />
