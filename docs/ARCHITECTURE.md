@@ -91,7 +91,8 @@ The public desktop landing is composed from `src/pages/desktop/DesktopIndex.tsx`
 
 - Public product naming must use **NeuroVision**, not NeuroView.
 - Legacy `neuroview` media/catalog keys may continue to back NeuroVision screenshots until the asset catalog itself is migrated.
-- NeuroTime is a public product capability and should be described using the behavior already present in the psychologist desktop: temporal organization of evidence, source/period/patient filtering, and professional-controlled risk records.
+- **NeuroTime is exposed publicly only on `/neurobox`**, alongside NeuroVision, NeuroFlow, and NeuroPulse. It must not appear as a dedicated section on the public home or in the public plan catalog unless product scope changes explicitly.
+- On `/neurobox`, NeuroTime must be described using behavior already present in the psychologist desktop: temporal organization of evidence, source/period/patient filtering, and professional-controlled risk records.
 - Public copy must not promote NeuroTime, NeuroVision, Synapse, or other AI-assisted surfaces as autonomous diagnosis or clinical decision-makers.
 
 ## Supabase And R2 Contracts
