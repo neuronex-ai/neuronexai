@@ -11,7 +11,6 @@ import {
 import { Navbar } from "@/components/landing/Navbar";
 import {
     LandingDesktopProductShowcase,
-    LandingNeuroTimeSection,
 } from "@/components/landing/LandingDesktopProductShowcase";
 import {
     LandingFinalCTASection,
@@ -42,7 +41,6 @@ const DesktopIndex = () => {
                 <LandingHumanControlSection />
                 <PublicSynapseCommandSection variant="compact" />
                 <LandingDesktopProductShowcase />
-                <LandingNeuroTimeSection />
                 <LandingContinuityAuthoritySection />
                 <LandingHorizontalProductStory />
                 <LandingTrustAndFAQSection />
