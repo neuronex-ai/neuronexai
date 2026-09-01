@@ -41,6 +41,7 @@ export interface SynapseActionGroupStep {
     id: string;
     version?: number;
     hash?: string;
+    executionMode?: "appointment" | "agenda_v2";
   };
 }
 

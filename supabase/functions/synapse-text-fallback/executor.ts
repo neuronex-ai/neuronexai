@@ -361,7 +361,7 @@ function agendaV2CreateInput(args: Record<string, any>) {
   return input;
 }
 
-async function prepareAppointmentMutation(
+export async function prepareAppointmentMutation(
   name: string,
   args: Record<string, any>,
   context: AgentToolContext,

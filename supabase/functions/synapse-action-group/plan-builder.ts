@@ -18,7 +18,14 @@ import {
   loadConversationContext,
   saveConversationContext,
 } from "../synapse-text-fallback/entity-context.ts";
-import type { PendingAction } from "../synapse-text-fallback/executor.ts";
+import {
+  prepareAppointmentMutation,
+  type PendingAction,
+} from "../synapse-text-fallback/executor.ts";
+import {
+  appointmentArgumentsForCanonicalPlan,
+  inferRequiredStepDependencies,
+} from "./dependency-flow.ts";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -87,6 +94,77 @@ export class ActionGroupPreparationError extends Error {
       "preflight_blocked",
     ].includes(code);
   }
+}
+
+async function attachCanonicalAppointmentPlans(input: {
+  admin: any;
+  userId: string;
+  conversationId: string;
+  voiceSessionId?: string | null;
+  steps: SynapseActionGroupStep[];
+}) {
+  const preparedSteps: SynapseActionGroupStep[] = [];
+  for (const step of input.steps) {
+    if (step.toolName !== "create_appointment") {
+      preparedSteps.push(step);
+      continue;
+    }
+
+    const result = await prepareAppointmentMutation(
+      "create_appointment",
+      appointmentArgumentsForCanonicalPlan(step, input.steps),
+      {
+        admin: input.admin,
+        userId: input.userId,
+        sessionId: input.conversationId,
+        channel: "voice",
+        voiceSessionId: input.voiceSessionId || null,
+        toolCallId: `action-group-prepare:${step.stepId}:${crypto.randomUUID()}`,
+        correlationId: `action-group:${crypto.randomUUID()}`,
+      },
+    );
+    if (!result.ok) {
+      throw new ActionGroupPreparationError(
+        "preflight_blocked",
+        clean(result.error, 1200) || "O planejamento oficial da Agenda recusou o agendamento.",
+        { needsClarification: true },
+      );
+    }
+
+    const pending = result.pendingAction;
+    const status = clean(result.data?.status, 60);
+    const planId = clean(pending?.arguments?.plan_id, 120);
+    const planVersion = Number(pending?.arguments?.plan_version);
+    const planHash = clean(pending?.arguments?.plan_hash, 64).toLowerCase();
+    if (
+      status !== "awaiting_confirmation"
+      || !pending
+      || !UUID_PATTERN.test(planId)
+      || !Number.isInteger(planVersion)
+      || planVersion < 1
+      || !/^[a-f0-9]{64}$/.test(planHash)
+    ) {
+      throw new ActionGroupPreparationError(
+        "preflight_blocked",
+        status === "review_required"
+          ? "O planejamento oficial da Agenda encontrou algo que precisa ser revisto antes da confirmação."
+          : "O planejamento oficial da Agenda não devolveu uma versão confirmável do agendamento.",
+        { needsClarification: true },
+      );
+    }
+
+    preparedSteps.push({
+      ...step,
+      canonicalPlanRef: {
+        kind: "appointment",
+        id: planId,
+        version: planVersion,
+        hash: planHash,
+        executionMode: pending.arguments.agenda_v2 === true ? "agenda_v2" : "appointment",
+      },
+    });
+  }
+  return preparedSteps;
 }
 
 const safeStepId = (value: unknown, fallback: string) => {
@@ -462,6 +540,7 @@ async function buildActionGroupStepSet(input: {
   admin: any;
   userId: string;
   conversationId: string;
+  voiceSessionId?: string | null;
   utterance?: string;
   rawSteps: unknown[];
 }) {
@@ -623,13 +702,22 @@ async function buildActionGroupStepSet(input: {
     );
   }
 
-  return { steps, warnings, preflights };
+  const dependencyAwareSteps = inferRequiredStepDependencies(steps);
+  const canonicalSteps = await attachCanonicalAppointmentPlans({
+    admin: input.admin,
+    userId: input.userId,
+    conversationId: input.conversationId,
+    voiceSessionId: input.voiceSessionId || null,
+    steps: dependencyAwareSteps,
+  });
+  return { steps: canonicalSteps, warnings, preflights };
 }
 
 export async function buildActionGroupSteps(input: {
   admin: any;
   userId: string;
   conversationId: string;
+  voiceSessionId?: string | null;
   rawSteps: unknown[];
 }) {
   return (await buildActionGroupStepSet(input)).steps;
@@ -740,6 +828,7 @@ export async function prepareAndPersistActionGroup(input: {
     admin: input.admin,
     userId: input.userId,
     conversationId: input.conversationId,
+    voiceSessionId: input.voiceSessionId || null,
     utterance: input.utterance,
     rawSteps: input.rawSteps,
   });
@@ -830,6 +919,15 @@ export async function editPersistedActionGroup(input: {
     step.arguments = { ...step.arguments, [field.fieldId]: edit.value };
   }
 
+  const dependencyAwareSteps = inferRequiredStepDependencies(steps);
+  const canonicalSteps = await attachCanonicalAppointmentPlans({
+    admin: input.admin,
+    userId: input.userId,
+    conversationId: current.conversation_id,
+    voiceSessionId: current.voice_session_id,
+    steps: dependencyAwareSteps,
+  });
+
   const next = await prepareSynapseActionGroupPlan({
     planId: current.plan_id,
     planVersion: current.plan_version + 1,
@@ -839,7 +937,7 @@ export async function editPersistedActionGroup(input: {
     title: current.title,
     intent: current.intent || "action_group",
     spokenSummary: current.spoken_summary || current.title,
-    steps,
+    steps: canonicalSteps,
     expiresAt: new Date(Date.now() + 20 * 60_000).toISOString(),
     capabilityVersion: current.capability_version || 1,
   });

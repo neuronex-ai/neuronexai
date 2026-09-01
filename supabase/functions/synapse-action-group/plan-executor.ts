@@ -15,6 +15,11 @@ import {
   executeConfirmedMutationV3,
 } from "../synapse-text-fallback/executor-v3.ts";
 import type { PendingAction } from "../synapse-text-fallback/executor.ts";
+import {
+  executionArgumentsForStep,
+  hasIncompleteDependency,
+  primaryRecordIdFromResult,
+} from "./dependency-flow.ts";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 
@@ -96,9 +101,7 @@ export async function executePersistedActionGroup(input: {
   for (const step of steps) {
     if (results.get(step.stepId)?.status === "completed") continue;
 
-    const dependencyFailed = (step.dependencies || []).some((dependency) =>
-      results.get(dependency)?.status !== "completed"
-    );
+    const dependencyFailed = hasIncompleteDependency(step, results);
     if (dependencyFailed) {
       results.set(step.stepId, {
         stepId: step.stepId,
@@ -122,6 +125,7 @@ export async function executePersistedActionGroup(input: {
         toolCallId: `${row.plan_id}:${row.plan_version}:${step.stepId}`,
         correlationId: `${row.plan_id}:${row.plan_version}`,
       };
+      const executionArguments = executionArgumentsForStep(step, steps, results);
 
       let result: any;
       if (policy.executor === "mutation") {
@@ -129,7 +133,7 @@ export async function executePersistedActionGroup(input: {
           kind: "synapse_pending_action",
           actionId: `${row.plan_id}:${step.stepId}`,
           toolName: step.toolName,
-          arguments: step.arguments,
+          arguments: executionArguments,
           summary: step.spokenSummary,
           status: "executing",
           createdAt: row.created_at,
@@ -137,14 +141,14 @@ export async function executePersistedActionGroup(input: {
         };
         result = await executeConfirmedMutationV3(pending, toolContext as any);
       } else {
-        result = await executeAgentToolV3(step.toolName, step.arguments as Record<string, any>, toolContext as any, state);
+        result = await executeAgentToolV3(step.toolName, executionArguments as Record<string, any>, toolContext as any, state);
       }
 
       if (!result?.ok) {
         throw new Error(clean(result?.error || result?.message, 800) || "Etapa falhou sem resultado confiável.");
       }
 
-      state = updateContextFromResult(state, step.toolName, step.arguments, result);
+      state = updateContextFromResult(state, step.toolName, executionArguments, result);
       await saveConversationContext(input.admin, input.userId, row.conversation_id, state);
       if (result.clientAction && typeof result.clientAction === "object") visualActions.push(result.clientAction);
 
@@ -167,13 +171,7 @@ export async function executePersistedActionGroup(input: {
         status: "completed",
         message: clean(result.message || result.data?.spoken_summary || step.spokenSummary, 800) || step.spokenSummary,
         primaryCommitted: result?.data?.primary_committed !== false,
-        recordId: clean(
-          result?.data?.id ||
-          result?.data?.appointment?.id ||
-          result?.data?.charge?.id ||
-          result?.data?.invoice?.id,
-          120,
-        ) || null,
+        recordId: primaryRecordIdFromResult(step.toolName, result),
         warning,
       });
     } catch (error) {
