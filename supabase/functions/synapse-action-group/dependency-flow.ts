@@ -51,10 +51,15 @@ const COMMUNICATION_TOOLS = new Set([
   "send_appointment_reminder",
 ]);
 
+const APPOINTMENT_LINKED_FINANCE_TOOLS = new Set([
+  "create_neurofinance_charge",
+  "create_financial_entry",
+]);
+
 /**
  * The model may describe dependencies, but the server owns the final graph.
- * A charge or appointment communication for the same patient cannot outlive
- * the appointment creation that gives the downstream action its identity.
+ * A finance step or appointment communication for the same patient cannot
+ * outlive an appointment creation that appears earlier in the same package.
  */
 export function inferRequiredStepDependencies(
   sourceSteps: SynapseActionGroupStep[],
@@ -78,7 +83,7 @@ export function inferRequiredStepDependencies(
         samePatient(candidate, step)
       ) || null;
 
-    if (step.toolName === "create_neurofinance_charge" && appointment) {
+    if (APPOINTMENT_LINKED_FINANCE_TOOLS.has(step.toolName) && appointment) {
       step.dependencies = appendDependency(
         step.dependencies,
         appointment.stepId,
