@@ -52,6 +52,22 @@ const dashboardPeriod = {
   end_date: { type: "string", description: "Data final em YYYY-MM-DD. Se ausente, use hoje ou os próximos 7 dias conforme o pedido." },
 };
 
+const waitlistWindows = {
+  type: "array",
+  description: "Janelas em que o paciente aceita uma vaga. Use weekday (0=domingo a 6=sábado) ou specific_date, sempre com start_time e end_time no formato HH:mm.",
+  items: {
+    type: "object",
+    properties: {
+      weekday: { type: "integer", minimum: 0, maximum: 6 },
+      specific_date: { type: "string", description: "Data específica em YYYY-MM-DD." },
+      start_time: { type: "string", description: "Início em HH:mm." },
+      end_time: { type: "string", description: "Fim em HH:mm." },
+    },
+    required: ["start_time", "end_time"],
+    additionalProperties: false,
+  },
+};
+
 const EXTRA_TOOLS = [
   fn(
     "search_workspace",
@@ -82,8 +98,40 @@ const EXTRA_TOOLS = [
     objectSchema({}),
   ),
   fn(
+    "get_agenda_waitlist",
+    "Consulta exclusivamente a lista de espera real da Agenda Desktop em professional_waitlist_entries. Nunca use fila de atenção do Dashboard como substituta. Por padrão retorna somente entradas atuais: active, paused e offered; scheduled, expired e removed são histórico e só aparecem quando solicitados.",
+    objectSchema({
+      ...patientReference,
+      status: {
+        type: "string",
+        enum: ["current", "all", "active", "paused", "offered", "scheduled", "expired", "removed"],
+        description: "current = active + paused + offered.",
+      },
+      limit: { type: "integer", minimum: 1, maximum: 50 },
+    }),
+  ),
+  fn(
+    "manage_agenda_waitlist",
+    "Prepara uma alteração real na lista de espera da Agenda e exige revisão/confirmação. Use para adicionar, atualizar preferências, pausar, reativar, remover ou oferecer uma vaga. Nunca trate scheduled/removed como pacientes atualmente aguardando.",
+    objectSchema({
+      action: { type: "string", enum: ["add", "update", "pause", "resume", "remove", "offer"] },
+      ...patientReference,
+      priority: { type: "integer", minimum: 1, maximum: 5 },
+      valid_from: { type: "string", description: "Data inicial em YYYY-MM-DD." },
+      valid_until: { type: ["string", "null"], description: "Data final opcional em YYYY-MM-DD." },
+      minimum_duration_minutes: { type: "integer", minimum: 15, maximum: 1440 },
+      preferred_duration_minutes: { type: "integer", minimum: 15, maximum: 1440 },
+      modality: { type: ["string", "null"], enum: ["presencial", "online", null] },
+      location: { type: ["string", "null"] },
+      offer_automatically: { type: "boolean" },
+      windows: waitlistWindows,
+      starts_at: { type: "string", description: "Para offer: início ISO da vaga. Se omitido, o servidor pode sugerir uma vaga compatível." },
+      ends_at: { type: "string", description: "Para offer: fim ISO da vaga. Se omitido, o servidor pode sugerir uma vaga compatível." },
+    }, ["action", "patient_name"]),
+  ),
+  fn(
     "get_dashboard_attention_queue",
-    "Consulta a fila de atenção do Dashboard Desktop: consultas sem registro de presença, pacientes pendentes, pendências de revisão e alertas relevantes do NeuroFinance.",
+    "Consulta a fila de atenção do Dashboard Desktop: consultas sem registro de presença, pacientes pendentes, pendências de revisão e alertas relevantes do NeuroFinance. Não representa a lista de espera da Agenda.",
     objectSchema({ limit: { type: "integer", minimum: 1, maximum: 30 } }),
   ),
   fn(
@@ -247,6 +295,7 @@ export const AGENT_TOOLS_V3 = [...BASE_TOOLS, ...EXTRA_TOOLS] as const;
 
 export const MUTATING_TOOLS_V3 = new Set([
   ...BASE_MUTATING_TOOLS,
+  "manage_agenda_waitlist",
   "create_neurofinance_charge",
   "create_fiscal_invoice",
   "send_appointment_reminder",
@@ -259,6 +308,7 @@ export const SYSTEM_DATA_TOOLS_V3 = new Set([
   "get_dashboard_daily_briefing",
   "get_dashboard_schedule",
   "get_dashboard_next_appointment",
+  "get_agenda_waitlist",
   "get_dashboard_attention_queue",
   "get_dashboard_financial_overview",
   "get_neurofinance_status",
