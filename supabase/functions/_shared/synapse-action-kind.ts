@@ -17,6 +17,7 @@ export const SYNAPSE_ACTION_KIND_TO_TOOL = {
   appointment_create: "create_appointment",
   appointment_reschedule: "reschedule_appointment",
   appointment_cancel: "cancel_appointment",
+  agenda_waitlist_manage: "manage_agenda_waitlist",
   teleconsultation_transcription_decision: "set_teleconsultation_transcription_decision",
   teleconsultation_close: "close_teleconsultation_room",
   personal_note_create: "create_personal_note",
