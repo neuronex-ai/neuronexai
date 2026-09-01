@@ -92,6 +92,28 @@ export type NormalizedActionGroupStepIdentity = {
   hasIdentityField: boolean;
 };
 
+function explicitlyRequestsCharge(raw: Record<string, unknown>) {
+  const args = raw.arguments && typeof raw.arguments === "object" && !Array.isArray(raw.arguments)
+    ? raw.arguments as Record<string, unknown>
+    : {};
+  const financial = args.financial && typeof args.financial === "object" && !Array.isArray(args.financial)
+    ? args.financial as Record<string, unknown>
+    : {};
+  const mode = clean(args.financial_mode || financial.mode || args.mode, 40).toLowerCase();
+  const paymentMethod = clean(args.payment_method || args.paymentMethod, 40).toLowerCase();
+  const text = [raw.title, raw.summary, raw.spoken_summary, args.description, args.intent]
+    .map((value) => clean(value, 500))
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return args.create_charge === true
+    || mode === "neurofinance"
+    || paymentMethod === "boleto"
+    || /\b(neurofinance|cobranca|cobrar|emitir boleto|link de pagamento)\b/.test(text);
+}
+
 /**
  * Compatibility bridge for model/runtime payloads created before action_kind.
  * Every alias still converges to a server-side allowlist; free tool names never
@@ -122,6 +144,20 @@ export function normalizeActionGroupStepIdentity(rawValue: unknown): NormalizedA
 
   const [source, value] = selected;
   const rawIdentity = clean(value, 120);
+
+  if (
+    ["manual_financial_entry", "create_financial_entry"].includes(rawIdentity) &&
+    explicitlyRequestsCharge(raw)
+  ) {
+    return {
+      kind: "neurofinance_charge",
+      canonicalToolName: "create_neurofinance_charge",
+      source,
+      rawIdentity,
+      hasIdentityField: true,
+    };
+  }
+
   const fromKind = canonicalToolForActionKind(rawIdentity);
   if (fromKind) {
     return {
