@@ -22,6 +22,7 @@ import {
 import {
   emitVoiceReviewAction,
   normalizeVoiceReviewAction,
+  requestOpaqueConfirmation,
 } from "@/lib/synapse-voice-ui-protocol";
 
 type SynapseLiveVoiceStatus = "disconnected" | "connecting" | "connected" | "disconnecting" | "error";
@@ -36,6 +37,11 @@ interface UseSynapseLiveVoiceOptions {
   onClientAction?: (action: unknown) => void;
   onActionLifecycle?: (event: SynapseActionLifecycleEvent | null) => void;
 }
+
+const asRecord = (value: unknown): Record<string, unknown> | null =>
+  value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
 
 export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
   const navigate = useNavigate();
@@ -81,6 +87,34 @@ export function useSynapseLiveVoice(options?: UseSynapseLiveVoiceOptions) {
         optionsRef.current?.onClientAction?.(rawAction);
       } catch (error) {
         console.warn("[Synapse Voice] client action observer failed", error);
+      }
+
+      // Protected confirmations are initiated by the voice gateway before the
+      // pending mutation is executed. Hand the challenge to the existing
+      // browser-only overlay and resolve the gateway ACK only after the local
+      // spoken/typed number check finishes.
+      const rawRecord = asRecord(rawAction);
+      const rawData = asRecord(rawRecord?.data);
+      if (rawRecord?.type === "synapse_confirmation_challenge") {
+        const challengeId = String(rawData?.challengeId || "").trim().slice(0, 160);
+        if (!challengeId) {
+          return {
+            success: false,
+            action: "opaque_confirmation",
+            message: "O desafio de confirmação protegido chegou sem identificação válida.",
+            durationMs: 0,
+          };
+        }
+
+        const startedAt = performance.now();
+        const confirmation = await requestOpaqueConfirmation(challengeId);
+        return {
+          success: confirmation.success === true,
+          action: "opaque_confirmation",
+          message: confirmation.message,
+          cancelled: Boolean(confirmation.cancelled),
+          durationMs: Math.round(performance.now() - startedAt),
+        };
       }
 
       // Action-group reviews are a voice UI protocol, not a navigation action.
