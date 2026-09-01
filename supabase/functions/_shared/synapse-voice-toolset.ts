@@ -6,7 +6,7 @@ import {
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v12-theme-stable";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v13-agenda-safe";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 const DELEGATED_MUTATION_EXCEPTIONS = new Set([
@@ -71,6 +71,8 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
       "Expresse cada efeito por action_kind; o servidor escolhe a ferramenta canonica. Nunca envie nomes internos de ferramenta.",
       "Consultas/validacoes sao preflight e nao viram cards. Nunca execute mutacoes separadamente antes da revisao.",
       "Cada etapa deve trazer arguments com os dados humanos ja ditos, especialmente patient_name, valores e textos.",
+      "GESTAO FINANCEIRA x NEUROFINANCE: manual_financial_entry apenas registra um lancamento gerencial; nunca emite cobranca. Se o profissional pedir cobrar, cobranca, boleto, link de pagamento, cobranca Pix/cartao ou citar NeuroFinance, use neurofinance_charge. NeuroFinance exige patient_name, amount, due_date e payment_method; se qualquer dado estiver faltando, pergunte antes de preparar o plano e nunca converta a solicitacao em lancamento manual.",
+      "BLOQUEIO DE AGENDA: um compromisso/bloqueio sem paciente continua sendo appointment_create com type ou appointment_type='block', mas deve omitir patient_name e patient_id. Nunca herde o paciente em contexto para um bloqueio pessoal da agenda.",
       "Area, titulo e resumo sao opcionais: o servidor deriva defaults seguros quando faltarem.",
       "SMOKE VISUAL: se o profissional disser 'mostrar mini-cards', 'teste dos mini-cards', 'quero ver os mini-cards' ou pedir apenas para validar os cards de revisao, chame prepare_action_group IMEDIATAMENTE, sem pesquisar paciente e sem chamar nenhuma outra ferramenta antes. Use exatamente title='Teste rapido dos mini-cards', intent='smoke_action_group_review', spoken_summary='Preparei duas acoes simples de teste para voce revisar.' e exatamente dois steps: (1) action_kind='note_module_create', arguments={name:'Teste Synapse - mini-cards'}, area='Notas', title='Criar modulo de teste', summary='Criar um modulo de teste para validar o primeiro mini-card.'; (2) action_kind='task_create', arguments={title:'Validar mini-cards do Synapse'}, area='Tarefas', title='Criar tarefa de teste', summary='Criar uma tarefa simples para validar o segundo mini-card.'. Nao confirme nem execute automaticamente; pare na revisao visual.",
       "Todo plano abre revisao versionada; critico/NeuroFinance recebe confirmacao opaca. NeuroFlow e NeuroPulse usam suas rotas explicitas.",
