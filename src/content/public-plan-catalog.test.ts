@@ -27,11 +27,11 @@ describe("public plan catalog", () => {
     expect(row?.[1]).toBe("5 sessões e 150 min/mês");
   });
 
-  it("lists all four NeuroBox products only in Professional", () => {
+  it("lists the public NeuroBox plan products only in Professional", () => {
     const row = PUBLIC_PLAN_COMPARISON.find(([label]) => label === "NeuroBox");
 
     expect(row?.[1]).toBe("—");
-    expect(row?.[2]).toBe("NeuroView, NeuroFlow, NeuroPulse e NeuroScan");
+    expect(row?.[2]).toBe("NeuroVision, NeuroFlow, NeuroPulse e NeuroScan");
   });
 
   it("describes NeuroZap and Synapse no WhatsApp without overpromising access", () => {

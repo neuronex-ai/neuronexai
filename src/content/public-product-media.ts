@@ -42,6 +42,23 @@ const baseCatalog = generatedCatalog as Record<
   PublicMediaCollection
 >;
 
+const publicNeuroVisionCollection: PublicMediaCollection = {
+  light: baseCatalog.neuroview.light.map((image) => ({
+    ...image,
+    alt: image.alt.replaceAll("NeuroView", "NeuroVision"),
+    caption: image.caption.replaceAll("NeuroView", "NeuroVision"),
+  })),
+  dark: baseCatalog.neuroview.dark.map((image) => ({
+    ...image,
+    alt: image.alt.replaceAll("NeuroView", "NeuroVision"),
+    caption: image.caption.replaceAll("NeuroView", "NeuroVision"),
+  })),
+};
+
+function getBaseCollection(key: PublicMediaBaseKey): PublicMediaCollection {
+  return key === "neuroview" ? publicNeuroVisionCollection : baseCatalog[key];
+}
+
 function uniqueImages(images: readonly PublicMediaImage[]) {
   const seen = new Set<string>();
   return images.filter((image) => {
@@ -53,8 +70,8 @@ function uniqueImages(images: readonly PublicMediaImage[]) {
 
 function combineCollections(keys: readonly PublicMediaBaseKey[]): PublicMediaCollection {
   return {
-    light: uniqueImages(keys.flatMap((key) => baseCatalog[key].light)),
-    dark: uniqueImages(keys.flatMap((key) => baseCatalog[key].dark)),
+    light: uniqueImages(keys.flatMap((key) => getBaseCollection(key).light)),
+    dark: uniqueImages(keys.flatMap((key) => getBaseCollection(key).dark)),
   };
 }
 
@@ -63,9 +80,10 @@ function findImage(
   theme: PublicMediaTheme,
   nameFragment: string,
 ) {
+  const collection = getBaseCollection(key);
   return (
-    baseCatalog[key][theme].find((image) => image.name.includes(nameFragment)) ??
-    baseCatalog[key][theme][0]
+    collection[theme].find((image) => image.name.includes(nameFragment)) ??
+    collection[theme][0]
   );
 }
 
@@ -124,7 +142,7 @@ export function getPublicMediaCollection(key: PublicMediaKey): PublicMediaCollec
   if (key === "produto") return productCollection;
   if (key === "portal-paciente") return portalCollection;
   if (key === "synapse") return synapseCollection;
-  return baseCatalog[key];
+  return getBaseCollection(key);
 }
 
 export function getPublicMediaImage(
