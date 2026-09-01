@@ -8,6 +8,7 @@ import { MUTATING_TOOLS_V3 } from "./tools-v3.ts";
 import {
   EntityResolutionError,
   enrichToolArguments,
+  resolvePatientReference,
   updateContextFromResult,
   type SynapseConversationState,
 } from "./entity-context.ts";
@@ -62,6 +63,7 @@ const getDateValue = (item: any) =>
 const paidStatuses = new Set(["paid", "received", "completed", "confirmed"]);
 const openStatuses = new Set(["planned", "pending", "overdue", "scheduled", "processing"]);
 const cancelledAppointmentStatuses = new Set(["cancelled", "canceled", "cancelled_by_patient", "cancelled_by_professional"]);
+const currentWaitlistStatuses = ["active", "paused", "offered"] as const;
 
 function summarizePaymentTotals(charges: any[], entries: any[]) {
   const chargePendingStatuses = new Set(["pending", "overdue", "processing"]);
@@ -109,6 +111,17 @@ async function invokeAuthenticatedFunction(
     body: JSON.stringify(body),
   });
   return safeJson(response);
+}
+
+async function invokeUserRpc(
+  context: AgentToolContextV3,
+  name: string,
+  args: Record<string, unknown>,
+) {
+  if (!context.userClient) throw new Error("Cliente autenticado indisponível para operar a Agenda.");
+  const { data, error } = await context.userClient.rpc(name, args);
+  if (error) throw error;
+  return data;
 }
 
 function accountUiState(account: any) {
@@ -423,9 +436,216 @@ async function getDashboardAttentionQueue(admin: any, userId: string, limit = 20
   return { items, total: items.length };
 }
 
+function mapWaitlistEntry(row: any) {
+  const patient = Array.isArray(row.patients) ? row.patients[0] || null : row.patients || null;
+  const windows = Array.isArray(row.professional_waitlist_windows) ? row.professional_waitlist_windows : [];
+  const offers = Array.isArray(row.professional_waitlist_offers) ? row.professional_waitlist_offers : [];
+  return {
+    id: row.id,
+    patient_id: row.patient_id,
+    patient_name: patient?.name || null,
+    status: row.status,
+    currently_waiting: ["active", "paused", "offered"].includes(String(row.status || "")),
+    eligible_for_offer: row.status === "active",
+    priority: row.priority,
+    valid_from: row.valid_from,
+    valid_until: row.valid_until,
+    minimum_duration_minutes: row.minimum_duration_minutes,
+    preferred_duration_minutes: row.preferred_duration_minutes,
+    modality: row.modality,
+    location: row.location,
+    offer_automatically: row.offer_automatically,
+    offer_count: row.offer_count,
+    last_offered_at: row.last_offered_at,
+    created_at: row.created_at,
+    windows,
+    offers,
+  };
+}
+
+async function queryAgendaWaitlist(admin: any, userId: string, args: Record<string, any>) {
+  const status = clean(args.status || "current", 30).toLowerCase();
+  let query = admin
+    .from("professional_waitlist_entries")
+    .select("id,patient_id,status,priority,valid_from,valid_until,minimum_duration_minutes,preferred_duration_minutes,modality,location,offer_automatically,offer_count,last_offered_at,created_at,patients(id,name),professional_waitlist_windows(id,weekday,specific_date,start_time,end_time),professional_waitlist_offers(id,status,offered_start_time,offered_end_time,expires_at)")
+    .eq("professional_id", userId)
+    .order("priority", { ascending: true })
+    .order("created_at", { ascending: true });
+  if (args.patient_id) query = query.eq("patient_id", args.patient_id);
+  if (status === "current") query = query.in("status", [...currentWaitlistStatuses]);
+  else if (status !== "all") query = query.eq("status", status);
+  query = query.limit(clamp(args.limit, 30, 1, 50));
+  const { data, error } = await query;
+  if (error) throw error;
+  const entries = (data || []).map(mapWaitlistEntry);
+  const counts = entries.reduce((acc: Record<string, number>, entry: any) => {
+    acc[entry.status] = (acc[entry.status] || 0) + 1;
+    return acc;
+  }, {});
+  return {
+    status_filter: status,
+    semantics: {
+      active: "aguardando e elegível para oferta",
+      paused: "na lista, mas temporariamente pausado",
+      offered: "vaga oferecida aguardando resposta",
+      scheduled: "já agendado; histórico, não está aguardando",
+      expired: "entrada expirada; histórico",
+      removed: "removido; histórico",
+    },
+    entries,
+    counts,
+    total: entries.length,
+  };
+}
+
+async function getCurrentWaitlistEntry(admin: any, userId: string, patientId: string) {
+  const { data, error } = await admin
+    .from("professional_waitlist_entries")
+    .select("id,patient_id,status,priority,valid_from,valid_until,minimum_duration_minutes,preferred_duration_minutes,modality,location,offer_automatically,offer_count,last_offered_at,created_at,professional_waitlist_windows(id,weekday,specific_date,start_time,end_time)")
+    .eq("professional_id", userId)
+    .eq("patient_id", patientId)
+    .in("status", [...currentWaitlistStatuses])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return data || null;
+}
+
+function normalizeWaitlistWindows(value: unknown) {
+  if (!Array.isArray(value)) return null;
+  return value.map((raw: any) => {
+    const weekday = raw?.weekday === undefined || raw?.weekday === null || raw?.weekday === ""
+      ? null
+      : Number(raw.weekday);
+    const specificDate = clean(raw?.specific_date, 10) || null;
+    const startTime = clean(raw?.start_time, 8).slice(0, 5);
+    const endTime = clean(raw?.end_time, 8).slice(0, 5);
+    if ((!Number.isInteger(weekday) && !specificDate) || (weekday !== null && (weekday < 0 || weekday > 6))) {
+      throw new Error("Cada janela da lista de espera precisa informar um dia da semana ou uma data específica.");
+    }
+    if (!/^\d{2}:\d{2}$/.test(startTime) || !/^\d{2}:\d{2}$/.test(endTime) || endTime <= startTime) {
+      throw new Error("Cada janela da lista de espera precisa ter horário inicial e final válidos.");
+    }
+    return { weekday, specific_date: specificDate, start_time: startTime, end_time: endTime };
+  });
+}
+
+async function executeAgendaWaitlistMutation(
+  context: AgentToolContextV3,
+  args: Record<string, any>,
+  actionId: string,
+) {
+  const action = clean(args.action, 20).toLowerCase();
+  const patientId = clean(args.patient_id, 100);
+  if (!patientId) throw new Error("Paciente não resolvido para a lista de espera.");
+  const existing = await getCurrentWaitlistEntry(context.admin, context.userId, patientId);
+
+  if (["pause", "resume", "remove"].includes(action)) {
+    if (!existing) throw new Error(`${args.patient_name || "O paciente"} não possui entrada atual na lista de espera.`);
+    const targetStatus = action === "pause" ? "paused" : action === "resume" ? "active" : "removed";
+    const result = await invokeUserRpc(context, "set_professional_waitlist_entry_status", {
+      p_entry_id: existing.id,
+      p_status: targetStatus,
+    });
+    return { action, patient_name: args.patient_name, entry_id: existing.id, status: result?.status || targetStatus };
+  }
+
+  if (action === "offer") {
+    if (!existing) throw new Error(`${args.patient_name || "O paciente"} não possui entrada atual na lista de espera.`);
+    if (existing.status === "paused") throw new Error("A entrada está pausada. Reative-a antes de oferecer uma vaga.");
+    let startsAt = clean(args.starts_at, 80);
+    let endsAt = clean(args.ends_at, 80);
+    if (!startsAt || !endsAt) {
+      const suggestion = await invokeUserRpc(context, "suggest_professional_waitlist_slot", {
+        p_entry_id: existing.id,
+        p_search_days: 56,
+      });
+      startsAt = clean(suggestion?.startsAt, 80);
+      endsAt = clean(suggestion?.endsAt, 80);
+      if (!startsAt || !endsAt) throw new Error("Não encontrei uma vaga compatível para oferecer agora.");
+    }
+    const result = await invokeUserRpc(context, "prepare_waitlist_offer", {
+      p_entry_id: existing.id,
+      p_starts_at: startsAt,
+      p_ends_at: endsAt,
+      p_idempotency_key: `synapse:${actionId}`,
+    });
+    if (!result?.success) throw new Error("Não foi possível preparar a oferta da vaga agora.");
+    return {
+      action,
+      patient_name: args.patient_name,
+      entry_id: existing.id,
+      offer_id: result.offerId || null,
+      starts_at: startsAt,
+      ends_at: endsAt,
+      expires_at: result.expiresAt || null,
+      already_offered: Boolean(result.alreadyOffered),
+    };
+  }
+
+  if (!["add", "update"].includes(action)) throw new Error("Ação de lista de espera inválida.");
+  if (action === "update" && !existing) {
+    throw new Error(`${args.patient_name || "O paciente"} não possui entrada atual para atualizar.`);
+  }
+  const suppliedWindows = normalizeWaitlistWindows(args.windows);
+  const existingWindows = Array.isArray(existing?.professional_waitlist_windows)
+    ? existing.professional_waitlist_windows.map((window: any) => ({
+      weekday: window.weekday,
+      specific_date: window.specific_date,
+      start_time: clean(window.start_time, 8).slice(0, 5),
+      end_time: clean(window.end_time, 8).slice(0, 5),
+    }))
+    : [];
+  const windows = suppliedWindows ?? existingWindows;
+  if (!windows.length) {
+    throw new Error("Informe ao menos uma janela de disponibilidade para incluir o paciente na lista de espera.");
+  }
+
+  const input = {
+    ...(existing?.id ? { id: existing.id } : {}),
+    patient_id: patientId,
+    priority: clamp(args.priority, Number(existing?.priority || 3), 1, 5),
+    valid_from: clean(args.valid_from || existing?.valid_from || dateOnly(new Date()), 10),
+    valid_until: args.valid_until !== undefined ? (clean(args.valid_until, 10) || null) : existing?.valid_until || null,
+    minimum_duration_minutes: clamp(args.minimum_duration_minutes, Number(existing?.minimum_duration_minutes || 50), 15, 1440),
+    preferred_duration_minutes: clamp(args.preferred_duration_minutes, Number(existing?.preferred_duration_minutes || 50), 15, 1440),
+    modality: args.modality !== undefined ? (clean(args.modality, 20) || null) : existing?.modality || null,
+    location: args.location !== undefined ? (clean(args.location, 500) || null) : existing?.location || null,
+    offer_automatically: args.offer_automatically !== undefined ? Boolean(args.offer_automatically) : existing?.offer_automatically ?? true,
+    windows,
+    rules_snapshot: { source: "synapse", action },
+  };
+  if (input.preferred_duration_minutes < input.minimum_duration_minutes) {
+    throw new Error("A duração preferida não pode ser menor que a duração mínima.");
+  }
+  const result = await invokeUserRpc(context, "upsert_professional_waitlist_entry", { p_input: input });
+  if (action === "add" && existing?.status === "paused") {
+    await invokeUserRpc(context, "set_professional_waitlist_entry_status", {
+      p_entry_id: result?.entryId || existing.id,
+      p_status: "active",
+    });
+  }
+  return {
+    action,
+    patient_name: args.patient_name,
+    entry_id: result?.entryId || existing?.id || null,
+    status: action === "add" && existing?.status === "paused" ? "active" : result?.status || existing?.status || "active",
+  };
+}
+
 function stageNewMutation(name: string, args: Record<string, any>): AgentToolResult {
   const now = new Date();
+  const waitlistActionLabels: Record<string, string> = {
+    add: "Adicionar à lista de espera",
+    update: "Atualizar preferências da lista de espera",
+    pause: "Pausar na lista de espera",
+    resume: "Reativar na lista de espera",
+    remove: "Remover da lista de espera",
+    offer: "Oferecer uma vaga da lista de espera",
+  };
   const summaries: Record<string, string> = {
+    manage_agenda_waitlist: `${waitlistActionLabels[clean(args.action, 20)] || "Alterar a lista de espera"}: ${clean(args.patient_name, 120)}.`,
     create_neurofinance_charge: `Criar uma cobrança NeuroFinance de ${formatMoney(Number(args.amount || 0))} para ${clean(args.patient_name, 120)}, com vencimento em ${clean(args.due_date, 20)}.`,
     create_fiscal_invoice: `Solicitar uma NFS-e de ${formatMoney(Number(args.amount || 0))} para ${clean(args.patient_name, 120)}, referente a “${clean(args.description, 180)}”.`,
     send_appointment_reminder: `Enviar e-mail de ${args.action === "cancel" ? "cancelamento" : args.action === "reschedule" ? "reagendamento" : "lembrete"} da consulta de ${clean(args.patient_name, 120)}.`,
@@ -501,6 +721,17 @@ async function executeNewReadTool(
     case "get_dashboard_next_appointment": {
       const appointment = await getNextAppointment(admin, userId);
       return { ok: true, grounded: true, recordCount: appointment ? 1 : 0, data: { appointment }, structuredData: { type: "dashboard_next_appointment", data: { appointment } } };
+    }
+
+    case "get_agenda_waitlist": {
+      const waitlist = await queryAgendaWaitlist(admin, userId, args);
+      return {
+        ok: true,
+        grounded: true,
+        recordCount: waitlist.total,
+        data: waitlist,
+        structuredData: { type: "agenda_waitlist", data: waitlist },
+      };
     }
 
     case "get_dashboard_financial_overview": {
@@ -859,12 +1090,26 @@ export async function executeAgentToolV3(
 ): Promise<AgentToolExecutionV3> {
   try {
     const enriched = await enrichToolArguments(context.admin, context.userId, name, originalArgs, state, context.userClient);
-    const contextArgs = enriched.args;
+    let contextArgs = enriched.args;
+    if (
+      (name === "get_agenda_waitlist" || name === "manage_agenda_waitlist")
+      && (contextArgs.patient_name || contextArgs.patient_id || name === "manage_agenda_waitlist")
+    ) {
+      const patientResult = await resolvePatientReference(
+        context.admin,
+        context.userId,
+        contextArgs,
+        state,
+        { required: name === "manage_agenda_waitlist", searchClient: context.userClient },
+      );
+      contextArgs = patientResult.args;
+    }
     const args = { ...contextArgs };
     delete args._confirmed_patient_alias;
     let result: AgentToolResult;
 
     if (MUTATING_TOOLS_V3.has(name) && [
+      "manage_agenda_waitlist",
       "create_neurofinance_charge",
       "create_fiscal_invoice",
       "send_appointment_reminder",
@@ -1034,6 +1279,26 @@ export async function executeConfirmedMutationV3(
 
   try {
     switch (pending.toolName) {
+      case "manage_agenda_waitlist": {
+        const result = await executeAgendaWaitlistMutation(context, args, pending.actionId);
+        const actionLabels: Record<string, string> = {
+          add: "adicionado à lista de espera",
+          update: "atualizado na lista de espera",
+          pause: "pausado na lista de espera",
+          resume: "reativado na lista de espera",
+          remove: "removido da lista de espera",
+          offer: "recebeu uma oferta de vaga",
+        };
+        return {
+          ok: true,
+          grounded: true,
+          recordCount: 1,
+          data: { waitlist: result, patient_id: args.patient_id, patient_name: args.patient_name },
+          message: `${args.patient_name} foi ${actionLabels[result.action] || "atualizado na lista de espera"}.`,
+          structuredData: { type: "agenda_waitlist_mutation", data: result },
+        };
+      }
+
       case "create_neurofinance_charge": {
         const payload = await invokeAuthenticatedFunction(context, "asaas-create-payment", {
           patient_id: args.patient_id,
