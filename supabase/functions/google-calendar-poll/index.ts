@@ -7,35 +7,62 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
+const json = (payload: Record<string, unknown>, status = 200) =>
+  new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
 async function refreshAccessToken(
   supabaseService: any,
   userId: string,
   refreshToken: string,
 ) {
+  const clientId = Deno.env.get("GOOGLE_CLIENT_ID")?.trim();
+  const clientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET")?.trim();
+
+  if (!clientId || !clientSecret || !refreshToken) {
+    return { ok: false as const, reconnectRequired: false, reason: "refresh_unavailable" };
+  }
+
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({
-      client_id: Deno.env.get("GOOGLE_CLIENT_ID")!.trim(),
-      client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET")!.trim(),
+      client_id: clientId,
+      client_secret: clientSecret,
       refresh_token: refreshToken,
       grant_type: "refresh_token",
     }).toString(),
   });
+  const tokens = await tokenResponse.json().catch(() => ({}));
 
-  if (!tokenResponse.ok) return null;
-  const tokens = await tokenResponse.json();
-  const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
+  if (!tokenResponse.ok) {
+    const reason = String(tokens?.error || `http_${tokenResponse.status}`).trim();
+    return {
+      ok: false as const,
+      reconnectRequired: ["invalid_grant", "invalid_client", "unauthorized_client"].includes(reason),
+      reason,
+    };
+  }
 
-  await supabaseService
+  const accessToken = String(tokens?.access_token || "").trim();
+  if (!accessToken) {
+    return { ok: false as const, reconnectRequired: false, reason: "missing_access_token" };
+  }
+
+  const expiresAt = new Date(Date.now() + Math.max(60, Number(tokens?.expires_in) || 3600) * 1000);
+  const { error } = await supabaseService
     .from("user_google_tokens")
     .update({
-      access_token: tokens.access_token,
+      access_token: accessToken,
       expires_at: expiresAt.toISOString(),
+      updated_at: new Date().toISOString(),
     })
     .eq("user_id", userId);
+  if (error) throw error;
 
-  return tokens.access_token;
+  return { ok: true as const, accessToken };
 }
 
 const normalizeGoogleDescription = (description?: string) =>
@@ -92,52 +119,108 @@ serve(async (req: Request) => {
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")?.trim();
 
   if (!supabaseUrl || !supabaseServiceKey) {
-    return new Response(
-      JSON.stringify({
-        error: "Server configuration error: Missing environment variables",
-      }),
-      {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return json({ error: "Server configuration error: Missing environment variables" }, 500);
   }
 
   const supabaseService = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) throw new Error("Missing auth header");
+    if (!authHeader) return json({ error: "auth_required" }, 401);
+
     const { data: { user }, error: userError } = await supabaseService.auth
       .getUser(authHeader.replace("Bearer ", ""));
-    if (userError || !user) throw new Error("Invalid token");
+    if (userError || !user) return json({ error: "auth_failed" }, 401);
 
-    const { data: tokenData } = await supabaseService
+    const { data: tokenData, error: tokenError } = await supabaseService
       .from("user_google_tokens")
-      .select("*")
+      .select("access_token,refresh_token,expires_at,scope")
       .eq("user_id", user.id)
-      .single();
-    if (!tokenData) throw new Error("Google not connected");
+      .maybeSingle();
+    if (tokenError) throw tokenError;
 
-    let accessToken = tokenData.access_token;
-    if (new Date(tokenData.expires_at) < new Date(Date.now() + 60000)) {
-      accessToken = await refreshAccessToken(
+    if (!tokenData) {
+      return json({ success: false, skipped: true, reason: "google_not_connected", imported: 0, processed: 0 });
+    }
+
+    let accessToken = String(tokenData.access_token || "").trim();
+    let refreshAttempted = false;
+
+    if (!accessToken || !tokenData.expires_at || new Date(tokenData.expires_at).getTime() <= Date.now() + 60_000) {
+      refreshAttempted = true;
+      const refreshed = await refreshAccessToken(
         supabaseService,
         user.id,
-        tokenData.refresh_token,
+        String(tokenData.refresh_token || ""),
       );
+      if (!refreshed.ok) {
+        return json({
+          success: false,
+          skipped: true,
+          reason: refreshed.reconnectRequired ? "google_reconnect_required" : "google_token_refresh_failed",
+          imported: 0,
+          processed: 0,
+        });
+      }
+      accessToken = refreshed.accessToken;
     }
 
     const timeMin = new Date().toISOString();
-    const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString();
+    const timeMax = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     const calendarUrl =
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&showDeleted=true`;
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${encodeURIComponent(timeMin)}&timeMax=${encodeURIComponent(timeMax)}&singleEvents=true&orderBy=startTime&showDeleted=true`;
 
-    const calRes = await fetch(calendarUrl, {
-      headers: { "Authorization": `Bearer ${accessToken}` },
-    });
-    if (!calRes.ok) throw new Error("Failed to fetch Google Calendar");
+    const fetchCalendar = (token: string) => fetch(calendarUrl, {
+      headers: { "Authorization": `Bearer ${token}` },
+    }).catch(() => null);
+
+    let calRes = await fetchCalendar(accessToken);
+
+    if (calRes?.status === 401 && tokenData.refresh_token && !refreshAttempted) {
+      refreshAttempted = true;
+      const refreshed = await refreshAccessToken(
+        supabaseService,
+        user.id,
+        String(tokenData.refresh_token),
+      );
+      if (refreshed.ok) {
+        accessToken = refreshed.accessToken;
+        calRes = await fetchCalendar(accessToken);
+      } else if (refreshed.reconnectRequired) {
+        return json({ success: false, skipped: true, reason: "google_reconnect_required", imported: 0, processed: 0 });
+      }
+    }
+
+    if (!calRes) {
+      return json({
+        success: false,
+        skipped: true,
+        reason: "google_calendar_temporarily_unavailable",
+        retryAfterSeconds: 300,
+        imported: 0,
+        processed: 0,
+      });
+    }
+
+    if (!calRes.ok) {
+      const googleStatus = calRes.status;
+      const reason = googleStatus === 401
+        ? "google_reconnect_required"
+        : googleStatus === 403
+        ? "google_calendar_permission_unavailable"
+        : "google_calendar_temporarily_unavailable";
+
+      console.warn("google-calendar-poll:calendar-unavailable", { status: googleStatus, reason });
+      return json({
+        success: false,
+        skipped: true,
+        reason,
+        googleStatus,
+        retryAfterSeconds: googleStatus === 429 || googleStatus >= 500 ? 300 : 900,
+        imported: 0,
+        processed: 0,
+      });
+    }
 
     const calData = await calRes.json();
     const googleEvents = calData.items || [];
@@ -146,13 +229,14 @@ serve(async (req: Request) => {
     for (const event of googleEvents) {
       if (!event.id) continue;
 
-      const { data: existing } = await supabaseService
+      const { data: existing, error: existingError } = await supabaseService
         .from("appointments")
         .select(
           "id, user_id, patient_id, start_time, end_time, status, lifecycle_status, type, notes, location, metadata, audit_metadata, updated_at",
         )
         .eq("google_event_id", event.id)
         .maybeSingle();
+      if (existingError) throw existingError;
 
       const isCancelledGoogle = event.status === "cancelled";
 
@@ -218,28 +302,27 @@ serve(async (req: Request) => {
           };
         }
 
-        if (Object.keys(updatePayload).length > 1 || updatePayload.metadata) {
-          updatePayload.audit_metadata = {
-            ...(existing.audit_metadata || {}),
-            ...(updatePayload.audit_metadata || {}),
-            source: "google_calendar_poll",
-            googleEventId: event.id,
-            googleUpdatedAt: event.updated || null,
-            googleMutationMarker: event.updated || `${event.id}:${event.status || "confirmed"}`,
-          };
-          const { error: updateError } = await supabaseService
-            .from("appointments")
-            .update(updatePayload)
-            .eq("id", existing.id)
-            .eq("user_id", user.id);
-          if (updateError) throw updateError;
-          processedCount++;
-        }
+        updatePayload.audit_metadata = {
+          ...(existing.audit_metadata || {}),
+          ...(updatePayload.audit_metadata || {}),
+          source: "google_calendar_poll",
+          googleEventId: event.id,
+          googleUpdatedAt: event.updated || null,
+          googleMutationMarker: event.updated || `${event.id}:${event.status || "confirmed"}`,
+        };
+
+        const { error: updateError } = await supabaseService
+          .from("appointments")
+          .update(updatePayload)
+          .eq("id", existing.id)
+          .eq("user_id", user.id);
+        if (updateError) throw updateError;
+        processedCount++;
       } else if (
         !isCancelledGoogle && event.start?.dateTime && event.end?.dateTime
       ) {
         const metadata = eventMetadata(event);
-        await supabaseService.from("appointments").insert({
+        const { error: insertError } = await supabaseService.from("appointments").insert({
           user_id: user.id,
           start_time: event.start.dateTime,
           end_time: event.end.dateTime,
@@ -251,24 +334,14 @@ serve(async (req: Request) => {
           google_event_id: event.id,
           patient_id: null,
         });
+        if (insertError) throw insertError;
         processedCount++;
       }
     }
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        processed: processedCount,
-        imported: processedCount,
-      }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      },
-    );
+    return json({ success: true, processed: processedCount, imported: processedCount });
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("google-calendar-poll:error", e?.message || e);
+    return json({ error: "google_calendar_poll_failed" }, 500);
   }
 });
