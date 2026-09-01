@@ -501,7 +501,7 @@ async function queryAgendaWaitlist(admin: any, userId: string, args: Record<stri
 async function getCurrentWaitlistEntry(admin: any, userId: string, patientId: string) {
   const { data, error } = await admin
     .from("professional_waitlist_entries")
-    .select("id,patient_id,status,priority,valid_from,valid_until,minimum_duration_minutes,preferred_duration_minutes,modality,location,offer_automatically,offer_count,last_offered_at,created_at,professional_waitlist_windows(id,weekday,specific_date,start_time,end_time)")
+    .select("id,patient_id,status,priority,valid_from,valid_until,minimum_duration_minutes,preferred_duration_minutes,modality,location,offer_automatically,offer_count,last_offered_at,created_at,rules_snapshot,professional_waitlist_windows(id,weekday,specific_date,start_time,end_time)")
     .eq("professional_id", userId)
     .eq("patient_id", patientId)
     .in("status", [...currentWaitlistStatuses])
@@ -614,7 +614,7 @@ async function executeAgendaWaitlistMutation(
     location: args.location !== undefined ? (clean(args.location, 500) || null) : existing?.location || null,
     offer_automatically: args.offer_automatically !== undefined ? Boolean(args.offer_automatically) : existing?.offer_automatically ?? true,
     windows,
-    rules_snapshot: { source: "synapse", action },
+    rules_snapshot: existing?.rules_snapshot && typeof existing.rules_snapshot === "object" ? existing.rules_snapshot : {},
   };
   if (input.preferred_duration_minutes < input.minimum_duration_minutes) {
     throw new Error("A duração preferida não pode ser menor que a duração mínima.");
