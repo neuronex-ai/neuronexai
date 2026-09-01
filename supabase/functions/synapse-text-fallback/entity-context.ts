@@ -154,7 +154,7 @@ export async function resolveAppointmentReference(admin: any, userId: string, ar
 }
 
 const PATIENT_REQUIRED_TOOLS = new Set([
-  "get_patient_details", "get_clinical_history", "get_patient_card_summary", "update_patient", "update_patient_basic_info", "inactivate_patient", "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment", "create_neurofinance_charge", "create_fiscal_invoice", "send_appointment_reminder", "send_patient_email", "get_patient_system_snapshot", "get_patient_payment_status", "get_patient_timeline", "analyze_neuroview_patient_patterns", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram",
+  "get_patient_details", "get_clinical_history", "get_patient_card_summary", "update_patient", "update_patient_basic_info", "inactivate_patient", "create_session_note", "create_appointment", "reschedule_appointment", "cancel_appointment", "manage_agenda_waitlist", "create_neurofinance_charge", "create_fiscal_invoice", "send_appointment_reminder", "send_patient_email", "get_patient_system_snapshot", "get_patient_payment_status", "get_patient_timeline", "analyze_neuroview_patient_patterns", "create_neuroflow_from_patient_history", "create_neuropulse_cause_effect_diagram",
 ]);
 const PATIENT_OPTIONAL_TOOLS = new Set([
   "get_calendar", "get_appointment_details", "get_teleconsultation_session_status", "get_teleconsultation_readiness", "list_financial_entries", "list_documents", "request_interface_action", "create_financial_entry", "list_neurofinance_charges", "get_neurofinance_charge", "list_fiscal_invoices", "get_fiscal_invoice", "create_personal_note", "search_patient_files", "list_files_by_patient", "link_file_to_patient",
@@ -172,7 +172,20 @@ export async function enrichToolArguments(admin: any, userId: string, toolName: 
   let args = { ...originalArgs };
   let patient: any = null;
   let appointment: any = null;
-  if (PATIENT_REQUIRED_TOOLS.has(toolName) || PATIENT_OPTIONAL_TOOLS.has(toolName)) {
+  const appointmentType = clean(args.appointment_type || args.type, 40).toLowerCase();
+  const isCalendarBlock = toolName === "create_appointment" && appointmentType === "block";
+  if (isCalendarBlock) {
+    const {
+      patient_id: _patientId,
+      patientId: _patientIdCamel,
+      patient_name: _patientName,
+      patientName: _patientNameCamel,
+      _confirmed_patient_alias: _confirmedAlias,
+      ...blockArgs
+    } = args;
+    args = blockArgs;
+  }
+  if (!isCalendarBlock && (PATIENT_REQUIRED_TOOLS.has(toolName) || PATIENT_OPTIONAL_TOOLS.has(toolName))) {
     const patientResult = await resolvePatientReference(admin, userId, args, state, { required: PATIENT_REQUIRED_TOOLS.has(toolName), searchClient });
     args = patientResult.args;
     patient = patientResult.patient;
