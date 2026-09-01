@@ -36,6 +36,7 @@ export type AppointmentPlanAction =
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const PLAN_HASH = /^[0-9a-f]{64}$/;
+const SUCCESS_STATUSES = new Set(["completed", "completed_with_warnings", "partial", "partially_completed"]);
 
 export function normalizeAppointmentPlanChannel(channel?: string | null): AppointmentPlanChannel {
   switch (String(channel || "").toLowerCase()) {
@@ -69,9 +70,25 @@ function assertReference(reference: Pick<AppointmentPlanReference, "planId" | "p
   }
 }
 
+function rpcError(error: unknown, fallback = "Falha ao executar o plano da Agenda.") {
+  const source = error && typeof error === "object" ? error as Record<string, unknown> : {};
+  const values = [
+    source.message,
+    source.details,
+    source.hint,
+    typeof error === "string" ? error : null,
+  ]
+    .map((value) => String(value || "").trim())
+    .filter(Boolean);
+  const message = Array.from(new Set(values)).join(" — ") || fallback;
+  const normalized = new Error(message);
+  if (source.code) (normalized as Error & { code?: string }).code = String(source.code);
+  return normalized;
+}
+
 async function rpc(admin: any, name: string, params: Record<string, unknown>) {
   const { data, error } = await admin.rpc(name, params);
-  if (error) throw error;
+  if (error) throw rpcError(error);
   if (!data || typeof data !== "object") throw new Error("O orquestrador não retornou um plano válido.");
   return data as AppointmentPlanReference;
 }
@@ -85,6 +102,39 @@ function provenance(context: AppointmentPlanContext, toolName: string) {
     tool_call: toolName,
     correlation_id: context.correlationId || context.toolCallId || null,
   };
+}
+
+async function recoverSuccessfulExecution(
+  context: AppointmentPlanContext,
+  reference: Pick<AppointmentPlanReference, "planId" | "planVersion">,
+) {
+  try {
+    const status = await rpc(context.admin, "get_appointment_action_plan_status_internal", {
+      p_actor_user_id: context.userId,
+      p_plan_id: reference.planId,
+      p_plan_version: reference.planVersion,
+    });
+    return SUCCESS_STATUSES.has(String(status.status || "").toLowerCase()) ? status : null;
+  } catch {
+    return null;
+  }
+}
+
+async function executeWithRecovery(
+  context: AppointmentPlanContext,
+  reference: Pick<AppointmentPlanReference, "planId" | "planVersion" | "planHash">,
+  rpcName: string,
+  params: Record<string, unknown>,
+) {
+  try {
+    return await rpc(context.admin, rpcName, params);
+  } catch (error) {
+    // A resposta HTTP pode falhar depois de o banco já ter concluído a mutação.
+    // Antes de declarar falha, confira o estado canônico do mesmo plano/versionamento.
+    const recovered = await recoverSuccessfulExecution(context, reference);
+    if (recovered) return recovered;
+    throw error instanceof Error ? error : rpcError(error);
+  }
 }
 
 export async function prepareAppointmentActionPlan(
@@ -123,14 +173,19 @@ export async function executeAppointmentActionPlan(
   reference: Pick<AppointmentPlanReference, "planId" | "planVersion" | "planHash">,
 ) {
   assertReference(reference);
-  return rpc(context.admin, "execute_appointment_action_plan_internal", {
-    p_actor_user_id: context.userId,
-    p_plan_id: reference.planId,
-    p_plan_version: reference.planVersion,
-    p_plan_hash: reference.planHash.toLowerCase(),
-    p_confirmation_channel: normalizeAppointmentPlanChannel(context.channel),
-    p_conversation_id: nullableUuid(context.sessionId),
-  });
+  return executeWithRecovery(
+    context,
+    reference,
+    "execute_appointment_action_plan_internal",
+    {
+      p_actor_user_id: context.userId,
+      p_plan_id: reference.planId,
+      p_plan_version: reference.planVersion,
+      p_plan_hash: reference.planHash.toLowerCase(),
+      p_confirmation_channel: normalizeAppointmentPlanChannel(context.channel),
+      p_conversation_id: nullableUuid(context.sessionId),
+    },
+  );
 }
 
 export async function executeAgendaActionPlan(
@@ -138,13 +193,18 @@ export async function executeAgendaActionPlan(
   reference: Pick<AppointmentPlanReference, "planId" | "planVersion" | "planHash">,
 ) {
   assertReference(reference);
-  return rpc(context.admin, "execute_agenda_action_plan_internal", {
-    p_actor_user_id: context.userId,
-    p_plan_id: reference.planId,
-    p_plan_version: reference.planVersion,
-    p_plan_hash: reference.planHash.toLowerCase(),
-    p_confirmation_channel: normalizeAppointmentPlanChannel(context.channel),
-  });
+  return executeWithRecovery(
+    context,
+    reference,
+    "execute_agenda_action_plan_internal",
+    {
+      p_actor_user_id: context.userId,
+      p_plan_id: reference.planId,
+      p_plan_version: reference.planVersion,
+      p_plan_hash: reference.planHash.toLowerCase(),
+      p_confirmation_channel: normalizeAppointmentPlanChannel(context.channel),
+    },
+  );
 }
 
 export async function getAppointmentActionPlanStatus(
