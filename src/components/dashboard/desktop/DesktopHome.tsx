@@ -46,6 +46,24 @@ const firstNameFromProfile = (profile?: {
   profile?.name?.split(" ")[0] ||
   "Doutor";
 
+const greetingForHour = (hour: number) => {
+  if (hour < 12) return "Bom dia";
+  if (hour < 18) return "Boa tarde";
+  return "Boa noite";
+};
+
+const shortSuggestionLabel = (label: string) => {
+  const clean = label.trim();
+  if (clean.length <= 25) return clean;
+  return `${clean.slice(0, 24).trimEnd()}…`;
+};
+
+type SynapseSuggestion = {
+  id: string;
+  label: string;
+  prompt: string;
+};
+
 const Surface = ({
   children,
   className,
@@ -87,6 +105,9 @@ export const DesktopHome = () => {
   } = useSynapse();
 
   const firstName = firstNameFromProfile(profile);
+  const greeting = greetingForHour(today.getHours());
+  const pendingPatients = Number(pendingPatientsRaw || 0);
+
   const activeAppointments = useMemo(
     () => getActiveAppointments((upcomingRaw || []) as Appointment[]),
     [upcomingRaw],
@@ -109,7 +130,7 @@ export const DesktopHome = () => {
       buildAttentionQueue({
         notifications,
         appointments: activeAppointments,
-        pendingPatients: Number(pendingPatientsRaw || 0),
+        pendingPatients,
         financialConnected,
         financialLoading,
         limit: 3,
@@ -119,9 +140,102 @@ export const DesktopHome = () => {
       financialConnected,
       financialLoading,
       notifications,
-      pendingPatientsRaw,
+      pendingPatients,
     ],
   );
+
+  const synapseSuggestions = useMemo(() => {
+    const candidates: SynapseSuggestion[] = [];
+
+    if (nextAppointment) {
+      const patientName =
+        getAppointmentDisplayTitle(nextAppointment) ||
+        nextAppointment.patient_name ||
+        "próximo paciente";
+      const patientFirstName = patientName.trim().split(/\s+/)[0] || "sessão";
+      const appointmentTime = format(new Date(nextAppointment.start_time), "HH:mm");
+
+      candidates.push({
+        id: "next-session",
+        label: shortSuggestionLabel(`Preparar ${patientFirstName}`),
+        prompt: `Prepare minha próxima sessão com ${patientName}, marcada para ${appointmentTime}. Resuma somente o contexto clínico autorizado e o que merece minha atenção antes do atendimento.`,
+      });
+    }
+
+    if (pendingPatients > 0) {
+      candidates.push({
+        id: "pending-patients",
+        label: shortSuggestionLabel(`Revisar ${pendingPatients} cadastros`),
+        prompt: `Tenho ${pendingPatients} ${pendingPatients === 1 ? "cadastro de paciente pendente" : "cadastros de pacientes pendentes"}. Organize o que precisa da minha atenção e me ajude a decidir o próximo passo.`,
+      });
+    }
+
+    if (attentionItems.length > 0) {
+      const topAttention = attentionItems[0];
+      candidates.push({
+        id: "attention",
+        label: "Revisar pendências",
+        prompt: `Revise comigo as pendências que merecem atenção agora. Comece por: ${topAttention.title}. ${topAttention.description}`,
+      });
+    }
+
+    if (!financialLoading && !financialConnected) {
+      candidates.push({
+        id: "financial",
+        label: "Organizar financeiro",
+        prompt: "Revise minha situação financeira operacional na NeuroNex e me diga o que merece atenção agora, separando gestão financeira do que depende do NeuroFinance.",
+      });
+    }
+
+    if (todayAppointments.length > 0) {
+      candidates.push({
+        id: "today",
+        label: "Resumo do dia",
+        prompt: `Faça um resumo operacional do meu dia. Tenho ${todayAppointments.length} ${todayAppointments.length === 1 ? "sessão" : "sessões"} hoje. Mostre agenda, preparos importantes e pendências relacionadas sem alterar nada sem minha confirmação.`,
+      });
+    }
+
+    if (activeAppointments.length > 0) {
+      candidates.push({
+        id: "week",
+        label: "Organizar semana",
+        prompt: `Organize minha semana clínica a partir dos ${activeAppointments.length} compromissos carregados na agenda dos próximos dias. Destaque conflitos, espaços livres e o que precisa de preparação.`,
+      });
+    }
+
+    const fallbacks: SynapseSuggestion[] = [
+      {
+        id: "fallback-day",
+        label: "Organizar meu dia",
+        prompt: "Organize meu dia na NeuroNex usando apenas meu contexto autorizado. Mostre primeiro o que realmente exige uma decisão ou ação minha.",
+      },
+      {
+        id: "fallback-agenda",
+        label: "Checar agenda",
+        prompt: "Revise minha agenda e me mostre somente o que merece atenção agora, incluindo próximos horários, conflitos ou lacunas relevantes.",
+      },
+      {
+        id: "fallback-pending",
+        label: "Ver pendências",
+        prompt: "Mostre minhas pendências atuais na NeuroNex em ordem de prioridade e sugira o próximo passo para cada uma, sem executar mudanças sem confirmação.",
+      },
+    ];
+
+    const unique = new Map<string, SynapseSuggestion>();
+    [...candidates, ...fallbacks].forEach((suggestion) => {
+      if (!unique.has(suggestion.label)) unique.set(suggestion.label, suggestion);
+    });
+
+    return Array.from(unique.values()).slice(0, 3);
+  }, [
+    activeAppointments.length,
+    attentionItems,
+    financialConnected,
+    financialLoading,
+    nextAppointment,
+    pendingPatients,
+    todayAppointments.length,
+  ]);
 
   const openSynapse = (text = "") => {
     const clean = text.trim();
@@ -146,51 +260,54 @@ export const DesktopHome = () => {
   return (
     <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 text-foreground">
       <main className="page-spacing relative z-10 mx-auto flex w-full max-w-[1840px] flex-col gap-6 px-6 md:px-8 lg:px-12 xl:px-16">
-        <header className="flex flex-col gap-4 pt-2 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
-              {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-            </p>
-            <h1 className="mt-3 text-[clamp(2.4rem,5vw,5.6rem)] font-black leading-[0.9] tracking-[-0.075em]">
-              Bom dia, {firstName}.
-            </h1>
-            <p className="mt-4 max-w-xl text-sm font-medium leading-relaxed text-muted-foreground md:text-base">
-              Aqui está apenas o que merece sua atenção agora.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <NewAppointmentModal selectedDate={today}>
-              <Button variant="outline" className="h-11 rounded-2xl px-4 font-bold">
-                <Calendar className="mr-2 h-4 w-4" /> Agendar
-              </Button>
-            </NewAppointmentModal>
-            <NewPatientModal>
-              <Button variant="outline" className="h-11 rounded-2xl px-4 font-bold">
-                <UserPlus className="mr-2 h-4 w-4" /> Paciente
-              </Button>
-            </NewPatientModal>
-          </div>
-        </header>
+        <div className="flex flex-wrap justify-end gap-2 pt-2">
+          <NewAppointmentModal selectedDate={today}>
+            <Button variant="outline" className="h-11 rounded-2xl px-4 font-bold">
+              <Calendar className="mr-2 h-4 w-4" /> Agendar
+            </Button>
+          </NewAppointmentModal>
+          <NewPatientModal>
+            <Button variant="outline" className="h-11 rounded-2xl px-4 font-bold">
+              <UserPlus className="mr-2 h-4 w-4" /> Paciente
+            </Button>
+          </NewPatientModal>
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.36fr)_minmax(360px,0.64fr)]">
           <Surface className="overflow-hidden p-6 md:p-8 lg:p-10">
-            <div className="flex min-h-[480px] flex-col">
+            <div className="flex min-h-[500px] flex-col">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Sparkles className="h-4 w-4" />
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">Synapse</span>
               </div>
 
-              <div className="my-auto py-12">
-                <h2 className="max-w-3xl text-[clamp(2rem,4vw,4.6rem)] font-black leading-[0.96] tracking-[-0.065em]">
-                  O que você quer resolver agora?
-                </h2>
+              <div className="my-auto py-9 md:py-10">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+                  {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+                </p>
+                <h1 className="mt-3 max-w-4xl text-[clamp(2.55rem,4.8vw,5.5rem)] font-black leading-[0.92] tracking-[-0.075em]">
+                  {greeting}, {firstName}
+                </h1>
                 <p className="mt-5 max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground md:text-base">
-                  Consulte agenda, contexto clínico e operação ou prepare uma ação. Você continua no controle do que muda.
+                  O que você quer resolver agora?
                 </p>
               </div>
 
               <form onSubmit={submitPrompt}>
+                <div className="mb-3 flex flex-wrap gap-2">
+                  {synapseSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion.id}
+                      type="button"
+                      onClick={() => openSynapse(suggestion.prompt)}
+                      className="group relative overflow-hidden rounded-full border border-foreground/[0.09] bg-background/45 px-4 py-2.5 text-xs font-bold text-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.85),0_8px_28px_-18px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:border-foreground/[0.14] hover:bg-background/65 dark:border-white/[0.1] dark:bg-white/[0.055] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_30px_-20px_rgba(0,0,0,0.95)] dark:hover:border-white/[0.16] dark:hover:bg-white/[0.085]"
+                      aria-label={`Perguntar ao Synapse: ${suggestion.label}`}
+                    >
+                      <span className="relative z-10">{suggestion.label}</span>
+                    </button>
+                  ))}
+                </div>
+
                 <div className="flex min-h-[72px] items-center gap-3 rounded-[26px] border border-foreground/[0.09] bg-muted/25 p-2 pl-5 dark:border-white/[0.08] dark:bg-white/[0.035]">
                   <Sparkles className="h-5 w-5 shrink-0 text-muted-foreground" />
                   <input
