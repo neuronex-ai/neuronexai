@@ -11,8 +11,8 @@ Deno.test("live voice stays below the Deepgram function ceiling", () => {
   const functions = buildSynapseVoiceFunctions();
   assert(functions.length === 15, `esperadas 15 funções, recebidas ${functions.length}`);
   assert(
-    SYNAPSE_VOICE_TOOLSET_VERSION === "neuronex.voice-core.v12-theme-stable",
-    "toolset estável de voz inesperado",
+    String(SYNAPSE_VOICE_TOOLSET_VERSION) === "neuronex.voice-core.v14-review-canonical",
+    "toolset canônico de voz inesperado",
   );
 });
 
