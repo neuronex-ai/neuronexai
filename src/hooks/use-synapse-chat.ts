@@ -41,13 +41,13 @@ const conversationTitleFromPrompt = (prompt: string) => {
 };
 
 const INTERFACE_TARGET_LABELS: Record<string, string> = {
-    dashboard: 'Dashboard',
+    dashboard: 'Home',
     agenda: 'Agenda',
     patients: 'Pacientes',
     finance: 'Financeiro',
     notes: 'Notas',
     teleconsultation: 'Teleconsulta',
-    synapse: 'Synapse AI',
+    synapse: 'Synapse',
 };
 
 const describeInterfaceAction = (action: SynapseInterfaceAction) => {
@@ -102,6 +102,8 @@ export const useSynapseChat = () => {
         setExecState,
         addTimelineEntry,
         setActionExperience,
+        intentContextHint,
+        setIntentContextHint,
     } = useSynapse();
     const { currentContext, contextSummary, activePatientId } = useAI();
 
@@ -121,6 +123,18 @@ export const useSynapseChat = () => {
         (message: string) => {
             const cleanMessage = message.trim();
             if (!user || !cleanMessage) return;
+
+            const contextualHint = intentContextHint.trim();
+            const contextualSummary = [
+                contextSummary,
+                contextualHint ? `Contexto operacional sugerido pela interface: ${contextualHint}` : '',
+            ]
+                .filter(Boolean)
+                .join('\n\n');
+
+            // The short human intent remains the visible message. Rich Home context is
+            // passed separately so implementation-oriented prompt text never leaks into UI.
+            if (contextualHint) setIntentContextHint('');
 
             setExecState('thinking');
             setProgressEvent({
@@ -149,7 +163,7 @@ export const useSynapseChat = () => {
                     sessionId,
                     context: {
                         route: currentContext,
-                        summary: contextSummary,
+                        summary: contextualSummary,
                         patientId: activePatientId || lastPatientIdRef.current,
                         channel: 'text',
                         source: 'synapse-shell',
@@ -250,6 +264,8 @@ export const useSynapseChat = () => {
             currentContext,
             contextSummary,
             activePatientId,
+            intentContextHint,
+            setIntentContextHint,
             setExecState,
             addTimelineEntry,
             sendMessage,
@@ -273,9 +289,10 @@ export const useSynapseChat = () => {
         if (createSession.isPending || sendMessage.isPending) return false;
         setActiveSessionId(null);
         setProgressEvent(null);
+        setIntentContextHint('');
         setExecState('idle');
         return true;
-    }, [createSession.isPending, sendMessage.isPending, setActiveSessionId, setExecState]);
+    }, [createSession.isPending, sendMessage.isPending, setActiveSessionId, setExecState, setIntentContextHint]);
 
     return {
         send,
