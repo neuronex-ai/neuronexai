@@ -6,7 +6,6 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useLocation } from "react-router-dom";
 import { DesktopLumenBackdrop } from "@/components/ui/DesktopLumenBackdrop";
-import { DesktopRouteTransition } from "./DesktopRouteTransition";
 import { useGoogleCalendarSync } from "@/hooks/use-google-calendar-sync";
 
 interface LayoutProps {
@@ -31,6 +30,9 @@ export const Layout = ({ children }: LayoutProps) => {
       location.pathname.startsWith("/teleconsulta") ||
       location.pathname.startsWith("/ajustes") ||
       location.pathname.startsWith("/notas"));
+  const shouldSyncGoogleCalendar =
+    !isMobile &&
+    (location.pathname === "/dashboard" || location.pathname.startsWith("/agenda"));
 
   return (
     <div className={cn(
@@ -48,7 +50,7 @@ export const Layout = ({ children }: LayoutProps) => {
           )}
         />
       ) : null}
-      {!isMobile ? <DesktopGoogleCalendarSync /> : null}
+      {shouldSyncGoogleCalendar ? <DesktopGoogleCalendarSync /> : null}
 
       {!isMobile && <Navbar />}
       <main className={cn(
@@ -57,11 +59,7 @@ export const Layout = ({ children }: LayoutProps) => {
         !isMobile && hasFullBleedDesktopShell && "pb-0",
         isMobile && "pt-0",
       )}>
-        {!isMobile ? (
-          <DesktopRouteTransition pathname={location.pathname}>
-            {children}
-          </DesktopRouteTransition>
-        ) : children}
+        {children}
       </main>
     </div>
   );
