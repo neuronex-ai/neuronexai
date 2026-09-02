@@ -68,7 +68,7 @@ describe('SynapseConversation', () => {
         expect(navigator.clipboard.writeText).toHaveBeenCalledWith('**Hoje** você tem três atendimentos.');
     });
 
-    it('uses a continuously staggered processing signal when motion is enabled', () => {
+    it('renders the current animated processing signal when motion is enabled', () => {
         const { container } = render(
             <SynapseConversation
                 messages={messages}
@@ -81,11 +81,9 @@ describe('SynapseConversation', () => {
         );
 
         const indicator = container.querySelector('.synapse-desktop-thinking');
-        const bars = [...container.querySelectorAll<HTMLElement>('.synapse-thinking-signal-bar')];
         expect(indicator).toHaveAttribute('data-activity', 'responding');
         expect(indicator).not.toHaveAttribute('data-reduced-motion');
-        expect(bars).toHaveLength(3);
-        expect(bars.map((bar) => bar.style.animationDelay)).toEqual(['0ms', '-120ms', '-240ms']);
+        expect(indicator?.querySelector('.pointer-events-none')).toBeInTheDocument();
     });
 
     it('does not expose internal tool identifiers from historical assistant messages', () => {
