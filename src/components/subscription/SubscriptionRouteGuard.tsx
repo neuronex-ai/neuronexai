@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { useSubscription } from "@/context/SubscriptionContext";
 
 type SubscriptionRouteGuardProps = {
@@ -19,9 +18,10 @@ export const SubscriptionRouteGuard = ({ children }: SubscriptionRouteGuardProps
   const location = useLocation();
   const { isLoading, isDevAccount, canUseCurrentAccess } = useSubscription();
 
-  if (isLoading) {
-    return <NeuroNexLoadingLoop surface="page" label="Verificando acesso" />;
-  }
+  // Keep the authenticated desktop shell visible while entitlement resolves.
+  // Protected content remains unmounted until access is known, so this removes
+  // a second full-page loading loop without weakening the route guard.
+  if (isLoading) return null;
 
   if (isDevAccount || canUseCurrentAccess) {
     return <>{children}</>;
