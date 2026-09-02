@@ -48,13 +48,14 @@ const bundle = () =>
   inferRequiredStepDependencies([
     step("appointment", 1, "create_appointment", {
       patient_id: "patient-123",
-      datetime: "2026-09-04T07:00:00-03:00",
+      datetime: "2099-09-04T07:00:00-03:00",
       financial_mode: "neurofinance",
       send_confirmation: true,
     }),
     step("charge", 2, "create_neurofinance_charge", {
       patient_id: "patient-123",
       amount: 250,
+      due_date: "2099-09-03",
       payment_method: "boleto",
     }),
     step("confirmation", 3, "send_patient_email", {
@@ -106,13 +107,13 @@ Deno.test("comunicação financeira depende das cobranças anteriores mesmo sem 
     step("charge-1", 1, "create_neurofinance_charge", {
       patient_id: "patient-123",
       amount: 200,
-      due_date: "2026-09-04",
+      due_date: "2099-09-04",
       payment_method: "pix",
     }),
     step("charge-2", 2, "create_neurofinance_charge", {
       patient_id: "patient-123",
       amount: 200,
-      due_date: "2026-09-05",
+      due_date: "2099-09-05",
       payment_method: "pix",
     }),
     step("email", 3, "send_patient_email", {
