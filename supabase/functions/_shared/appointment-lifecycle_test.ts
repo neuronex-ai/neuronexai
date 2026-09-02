@@ -10,7 +10,7 @@ const internalValues = {
   patientId: "79bcba41-4cb8-4e59-a911-f9f76f87ef45",
   professionalId: "33b5799d-171b-4750-84a7-782f0edfc146",
   requestId: "e6ac9afd-1c5c-4bb0-af11-ff9a39e95766",
-  tokenId: "e3107ab5-8cb8-4d9b-ba50-e0250bbd329f",
+  tokenId: "00000000-0000-0000-0000-000000000002",
   tokenHash: "raw-token-hash-must-stay-server-side",
   rawToken: "raw-bearer-token-must-stay-server-side",
   ipAddress: "179.216.23.38",
