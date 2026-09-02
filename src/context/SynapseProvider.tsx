@@ -103,6 +103,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     // Chat persistence across routes
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [inputDraft, setInputDraft] = useState('');
+    const [intentContextHint, setIntentContextHint] = useState('');
 
     const isMobile = useIsMobile();
 
@@ -119,7 +120,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const availableTools = baseTools;
 
     const toggleCompact = useCallback(() => {
-        setShellState((prev) => (prev === 'compact' ? 'pill' : 'compact'));
+        setShellState((prev) => (prev === 'compact' ? 'composer' : 'compact'));
     }, []);
 
     const addTimelineEntry = useCallback(
@@ -242,6 +243,8 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 setActiveSessionId,
                 inputDraft,
                 setInputDraft,
+                intentContextHint,
+                setIntentContextHint,
                 isVisible,
                 voiceStatus: synapseVoice.status,
                 isVoiceSpeaking: synapseVoice.isSpeaking,
