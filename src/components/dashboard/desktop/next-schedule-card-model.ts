@@ -1,6 +1,3 @@
-import { format, isSameDay, isTomorrow } from "date-fns";
-import { ptBR } from "date-fns/locale";
-
 import { getAppointmentKind, getAppointmentMetadata, type AppointmentKind } from "@/lib/appointment-metadata";
 import { getAppointmentStatusMeta } from "@/lib/appointment-status";
 import { getAppointmentDisplayTitle } from "@/lib/appointment-utils";
@@ -31,11 +28,66 @@ export type NextScheduleCardPresentation = {
   canShare: boolean;
 };
 
+const BRAZIL_TIME_ZONE = "America/Sao_Paulo";
+
 const currencyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
   maximumFractionDigits: 2,
 });
+
+const timeFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: BRAZIL_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+const shortDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: BRAZIL_TIME_ZONE,
+  day: "2-digit",
+  month: "2-digit",
+});
+
+const weekdayFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: BRAZIL_TIME_ZONE,
+  weekday: "short",
+});
+
+const scheduleDateFormatter = new Intl.DateTimeFormat("pt-BR", {
+  timeZone: BRAZIL_TIME_ZONE,
+  weekday: "short",
+  day: "2-digit",
+  month: "short",
+});
+
+const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: BRAZIL_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const formatTime = (date: Date) => timeFormatter.format(date);
+const dateKey = (date: Date) => dateKeyFormatter.format(date);
+
+const tomorrowKey = (now: Date) => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BRAZIL_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(now);
+  const mapped = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  const next = new Date(Date.UTC(Number(mapped.year), Number(mapped.month) - 1, Number(mapped.day) + 1, 12));
+  return dateKey(next);
+};
+
+const formatScheduleDate = (date: Date) => {
+  const parts = scheduleDateFormatter.formatToParts(date);
+  const mapped = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${mapped.weekday}, ${mapped.day} de ${mapped.month}`;
+};
 
 const normalizeStatus = (value?: string | null) => (value || "").trim().toLowerCase();
 
@@ -136,16 +188,18 @@ const getFollowingLabel = (followingAppointment?: Appointment) => {
   if (!followingAppointment) return null;
 
   const start = new Date(followingAppointment.start_time);
-  const dayLabel = isSameDay(start, new Date())
+  const now = new Date();
+  const startKey = dateKey(start);
+  const dayLabel = startKey === dateKey(now)
     ? "hoje"
-    : isTomorrow(start)
-      ? `amanhã, ${format(start, "dd/MM")}`
-      : format(start, "EEE, dd/MM", { locale: ptBR });
+    : startKey === tomorrowKey(now)
+      ? `amanhã, ${shortDateFormatter.format(start)}`
+      : `${weekdayFormatter.format(start)}, ${shortDateFormatter.format(start)}`;
   const followingTitle = getAppointmentDisplayTitle(followingAppointment)
     || followingAppointment.patient_name
     || (getAppointmentKind(followingAppointment) === "session" ? "Atendimento" : "Compromisso");
 
-  return `Depois: ${followingTitle} · ${dayLabel} às ${format(start, "HH:mm")}`;
+  return `Depois: ${followingTitle} · ${dayLabel} às ${formatTime(start)}`;
 };
 
 export const buildNextScheduleCardPresentation = (
@@ -176,9 +230,9 @@ export const buildNextScheduleCardPresentation = (
     kind,
     title,
     eyebrow: kind === "block" ? "Próximo bloqueio" : kind === "event" ? "Próximo evento" : "Próximo atendimento",
-    dateLabel: format(start, "EEE, dd 'de' MMM", { locale: ptBR }),
-    timeLabel: format(start, "HH:mm"),
-    intervalLabel: `${format(start, "HH:mm")}–${format(end, "HH:mm")}`,
+    dateLabel: formatScheduleDate(start),
+    timeLabel: formatTime(start),
+    intervalLabel: `${formatTime(start)}–${formatTime(end)}`,
     modalityLabel: kind === "block" ? "Bloqueio de agenda" : isOnline ? "Online" : "Presencial",
     recurrenceLabel,
     confirmationLabel: confirmation.label,
