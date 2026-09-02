@@ -74,7 +74,7 @@ export const SynapseOperationalReasoning = ({
     if (!startedAt) return '';
     const end = finishedAt || Date.now();
     return formatSynapseElapsed(Math.max(0, end - startedAt));
-  }, [finishedAt, startedAt, state]);
+  }, [finishedAt, startedAt]);
 
   if (!steps.length) return null;
 
