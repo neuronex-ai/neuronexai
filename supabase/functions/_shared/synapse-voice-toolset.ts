@@ -6,7 +6,7 @@ import {
 import { AGENT_TOOLS_V3 } from "../synapse-text-fallback/tools-v3.ts";
 
 export const MAX_SYNAPSE_VOICE_FUNCTIONS = 16;
-export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v13-agenda-safe";
+export const SYNAPSE_VOICE_TOOLSET_VERSION = "neuronex.voice-core.v14-review-canonical";
 export const SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool";
 
 const DELEGATED_MUTATION_EXCEPTIONS = new Set([
@@ -52,13 +52,20 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
   },
   {
     name: "edit_action_group",
-    description: "Edita um campo visivel da revisao pendente. Identifique o card por numero e o campo pelo nome humano exibido. Nunca invente plan_id, versao ou hash.",
+    description: [
+      "Edita um campo visivel da revisao pendente. Identifique o card por numero e o campo pelo nome humano exibido. Nunca invente plan_id, versao ou hash.",
+      "Envie somente o valor canonico do campo: numeros sem unidade ou texto extra (ex.: 60, nunca '60 minutos'); datas como YYYY-MM-DD; data/hora como ISO com offset de Brasilia; e selects usando o value interno da opcao exibida (ex.: undefined para 'A definir').",
+      "Quando o nome falado do paciente for apenas um apelido ou primeiro nome, preserve o paciente resolvido pelo sistema e nunca substitua o nome canonico cadastrado por uma grafia aproximada.",
+    ].join(" "),
     parameters: {
       type: "object",
       properties: {
         step_number: { type: "integer", minimum: 1, maximum: 12 },
         field: { type: "string" },
-        value: { type: "string" },
+        value: {
+          type: "string",
+          description: "Valor puro/canonico do campo, sem unidade, prefixo ou explicacao.",
+        },
       },
       required: ["step_number", "field", "value"],
       additionalProperties: false,
@@ -70,7 +77,10 @@ export const SYNAPSE_VOICE_ONLY_TOOLS = [
       "Rota obrigatoria para qualquer criacao, alteracao, envio ou pacote operacional por voz, inclusive uma unica etapa.",
       "Expresse cada efeito por action_kind; o servidor escolhe a ferramenta canonica. Nunca envie nomes internos de ferramenta.",
       "Consultas/validacoes sao preflight e nao viram cards. Nunca execute mutacoes separadamente antes da revisao.",
-      "Cada etapa deve trazer arguments com os dados humanos ja ditos, especialmente patient_name, valores e textos.",
+      "Cada etapa deve trazer arguments com os dados humanos ja ditos, especialmente patient_name, valores e textos. Depois que o paciente for resolvido, preserve sempre o nome/ID canonicos retornados pelo sistema; o apelido falado serve para localizar, nao para substituir o cadastro.",
+      "VALORES DE REVISAO: argumentos executaveis devem ser valores puros. duration_minutes/occurrence_count sao numeros, sem 'minutos', 'vezes' ou outras palavras. Datas de vencimento sao sempre datas concretas YYYY-MM-DD, nunca frases como '2 dias antes'.",
+      "RECORRENCIA DE AGENDA: se o profissional pedir varias sessoes dentro do mes e disser semanal, uma por semana, aproximadamente uma por semana ou equivalente, use frequency='weekly' e occurrence_count com a quantidade pedida. Nunca converta isso em frequency='monthly', pois monthly significa uma ocorrencia por mes.",
+      "VENCIMENTO NEUROFINANCE: due_date nunca pode estar no passado. Se o profissional disser 'N dias antes da consulta', calcule a data concreta de cada cobranca antes de preparar a revisao e confirme que ela e hoje ou futura. Se o calculo cair no passado, pergunte por um novo vencimento em vez de inventar/ajustar silenciosamente. Para varias cobrancas com vencimentos diferentes, crie uma etapa neurofinance_charge por cobranca, cada uma com sua due_date concreta.",
       "GESTAO FINANCEIRA x NEUROFINANCE: manual_financial_entry apenas registra um lancamento gerencial; nunca emite cobranca. Se o profissional pedir cobrar, cobranca, boleto, link de pagamento, cobranca Pix/cartao ou citar NeuroFinance, use neurofinance_charge. NeuroFinance exige patient_name, amount, due_date e payment_method; se qualquer dado estiver faltando, pergunte antes de preparar o plano e nunca converta a solicitacao em lancamento manual.",
       "BLOQUEIO DE AGENDA: um compromisso/bloqueio sem paciente continua sendo appointment_create com type ou appointment_type='block', mas deve omitir patient_name e patient_id. Nunca herde o paciente em contexto para um bloqueio pessoal da agenda.",
       "Area, titulo e resumo sao opcionais: o servidor deriva defaults seguros quando faltarem.",
@@ -199,11 +209,23 @@ function constrainActionGroupPlanner(
       description: "Data/hora completa do agendamento em Brasília, no formato YYYY-MM-DDTHH:mm:ss-03:00. Converta expressões como amanhã, daqui a N dias e 4 da tarde usando a data/hora atual do prompt; nunca omita mês/ano no valor enviado.",
     };
   }
+  if (unionProperties.due_date && typeof unionProperties.due_date === "object") {
+    unionProperties.due_date = {
+      ...unionProperties.due_date as Record<string, unknown>,
+      description: "Data concreta de vencimento no formato YYYY-MM-DD, sempre hoje ou futura. Nunca envie texto relativo como '2 dias antes'; calcule a data antes de preparar a revisão.",
+    };
+  }
+  if (unionProperties.duration_minutes && typeof unionProperties.duration_minutes === "object") {
+    unionProperties.duration_minutes = {
+      ...unionProperties.duration_minutes as Record<string, unknown>,
+      description: "Duração em minutos como número puro, por exemplo 60. Nunca envie '60 minutos'.",
+    };
+  }
   copy.parameters.properties.steps.items.properties.arguments = {
     type: "object",
     properties: unionProperties,
     additionalProperties: false,
-    description: "Dados humanos da etapa; repita patient_name, valores, textos, datas e destino que o profissional informou.",
+    description: "Dados humanos da etapa; repita patient_name, valores, textos, datas e destino que o profissional informou, usando valores canônicos sem unidades ou frases relativas.",
   };
   return copy;
 }
