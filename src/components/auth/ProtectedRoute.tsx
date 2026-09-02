@@ -1,7 +1,6 @@
-import { DesktopRouteLoadingOverlay } from '@/components/runtime/DesktopRouteLoadingOverlay';
 import { SessionAssuranceOverlay } from '@/components/runtime/SessionAssuranceOverlay';
 import { SettingsSimplifierRuntime } from '@/components/runtime/SettingsSimplifierRuntime';
-import { useUserPreferences } from '@/hooks/use-user-preferences';
+import { UserPreferencesRuntime } from '@/components/runtime/UserPreferencesRuntime';
 import { isPatientAccount } from '@/lib/auth-account-role';
 import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
@@ -12,8 +11,7 @@ import { useAuth } from './SessionContextProvider';
 interface ProtectedRouteProps { children: ReactNode; isFullScreen?: boolean; }
 
 const ProfessionalRouteContent = ({ children, isFullScreen = false }: ProtectedRouteProps) => {
-  useUserPreferences();
-  const content = <><DesktopRouteLoadingOverlay /><SettingsSimplifierRuntime /><SessionAssuranceOverlay />{!isFullScreen && <WelcomeTourModal />}{children}</>;
+  const content = <><UserPreferencesRuntime /><SettingsSimplifierRuntime /><SessionAssuranceOverlay />{!isFullScreen && <WelcomeTourModal />}{children}</>;
   return isFullScreen ? content : <Layout>{content}</Layout>;
 };
 
