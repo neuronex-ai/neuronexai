@@ -53,7 +53,7 @@ export const SynapseActivityToolGroupBridge = () => {
             id,
             title: eventLabel || 'Processando solicitação',
             description: eventDetail || 'Entendendo a solicitação e preparando o contexto.',
-            state: 'pending',
+            state: 'pending' as const,
             startedAt: emittedAt,
             tools: [],
           },
