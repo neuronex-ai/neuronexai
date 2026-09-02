@@ -176,10 +176,16 @@ const APPOINTMENT_LINKED_FINANCE_TOOLS = new Set([
   "create_financial_entry",
 ]);
 
+const FINANCE_MUTATION_TOOLS = new Set([
+  ...APPOINTMENT_LINKED_FINANCE_TOOLS,
+  "create_fiscal_invoice",
+]);
+
 /**
  * The model may describe dependencies, but the server owns the final graph.
- * A finance step or appointment communication for the same patient cannot
- * outlive an appointment creation that appears earlier in the same package.
+ * Finance steps cannot outlive a new appointment that gives them identity, and
+ * patient communication cannot claim a finance outcome before every earlier
+ * finance mutation for that patient has actually completed.
  */
 export function inferRequiredStepDependencies(
   sourceSteps: SynapseActionGroupStep[],
@@ -211,20 +217,23 @@ export function inferRequiredStepDependencies(
       continue;
     }
 
-    if (COMMUNICATION_TOOLS.has(step.toolName) && appointment) {
-      step.dependencies = appendDependency(
-        step.dependencies,
-        appointment.stepId,
-      );
-      const linkedCharge = [...previous].reverse().find((candidate) =>
-        candidate.toolName === "create_neurofinance_charge" &&
-        samePatient(candidate, step) &&
-        candidate.dependencies.includes(appointment.stepId)
-      );
-      step.dependencies = appendDependency(
-        step.dependencies,
-        linkedCharge?.stepId,
-      );
+    if (COMMUNICATION_TOOLS.has(step.toolName)) {
+      if (appointment) {
+        step.dependencies = appendDependency(
+          step.dependencies,
+          appointment.stepId,
+        );
+      }
+
+      for (const financeStep of previous.filter((candidate) =>
+        FINANCE_MUTATION_TOOLS.has(candidate.toolName) &&
+        samePatient(candidate, step)
+      )) {
+        step.dependencies = appendDependency(
+          step.dependencies,
+          financeStep.stepId,
+        );
+      }
     }
   }
 
