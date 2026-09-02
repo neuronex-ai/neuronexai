@@ -1,7 +1,7 @@
 "use client";
 
-import { DesktopDashboardCommandCenter } from "@/components/dashboard/desktop/DesktopDashboardCommandCenter";
+import DesktopHome from "@/components/dashboard/desktop/DesktopHome";
 
-const DesktopDashboard = () => <DesktopDashboardCommandCenter />;
+const DesktopDashboard = () => <DesktopHome />;
 
 export default DesktopDashboard;
