@@ -82,6 +82,12 @@ export default tseslint.config(
     },
   },
   {
+    files: ["src/components/ui/motion-navigation-menu.tsx"],
+    rules: {
+      "react-refresh/only-export-components": "off",
+    },
+  },
+  {
     files: ["supabase/functions/**/*.ts"],
     rules: {
       "@typescript-eslint/ban-ts-comment": "off",
