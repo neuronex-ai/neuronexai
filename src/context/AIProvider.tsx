@@ -26,7 +26,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
-    // ── Patients list ─────────────────────────────────────────────
+    // ── Patients list ──────────────────────────────────────────────
     if (path === '/pacientes') {
       setCurrentContext('patients');
       setActivePatientId(null);
@@ -45,7 +45,7 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
     if (path.includes('/financeiro')) {
       setCurrentContext('finance');
       setActivePatientId(null);
-      setContextSummary('O usuário está no painel financeiro (NeuroFinance). Ações possíveis: consultar métricas financeiras, listar transações, gerar cobranças, registrar receita/despesa e analisar o fluxo de caixa.');
+      setContextSummary('O usuário está no painel financeiro da NeuroNex. Ações possíveis: consultar gestão financeira e NeuroFinance, listar transações, preparar cobranças, registrar receita/despesa e analisar fluxo de caixa, respeitando as confirmações exigidas para ações sensíveis.');
       return;
     }
 
@@ -65,18 +65,18 @@ export const AIProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
 
-    // ── Synapse AI ────────────────────────────────────────────────
+    // ── Synapse AI (legacy route; shell is the primary experience) ─
     if (path.includes('/synapse-ai')) {
       setCurrentContext('synapse');
       setActivePatientId(null);
-      setContextSummary('O usuário está na página dedicada do Synapse AI. Todas as ferramentas ativas estão disponíveis. Modo livre de conversa e execução.');
+      setContextSummary('O usuário está na rota legada do Synapse. O Synapse global é a experiência principal de conversa e execução.');
       return;
     }
 
-    // ── Dashboard (default) ───────────────────────────────────────
+    // ── Home (default) ────────────────────────────────────────────
     setCurrentContext('dashboard');
     setActivePatientId(null);
-    setContextSummary('O usuário está no Dashboard principal (Visão Geral). Foco em resumo do dia, alertas e métricas globais.');
+    setContextSummary('O usuário está na Home operacional da NeuroNex. Priorize contexto do dia, próxima sessão, agenda, pendências realmente acionáveis e próximos passos. Evite transformar a Home em um dashboard de métricas.');
   }, [location]);
 
   const toggleFocusMode = () => setIsFocusMode((previous) => !previous);
