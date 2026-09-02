@@ -547,6 +547,64 @@ class SynapseVoiceSession {
     return data;
   }
 
+  async editActionGroup(payload) {
+    const reviewId = clean(payload.reviewId, 160);
+    const stepId = clean(payload.stepId, 160);
+    const fieldId = clean(payload.fieldId, 120);
+    const requestId = clean(payload.requestId, 160);
+    try {
+      const response = await fetch(`${getFunctionsUrl()}/synapse-voice-tool`, {
+        method: "POST",
+        headers: {
+          Authorization: this.authorization,
+          apikey: getSupabaseAnonKey(),
+          "Content-Type": "application/json",
+          "x-synapse-gateway-secret": getGatewaySecret(),
+        },
+        body: JSON.stringify({
+          action: "edit_action_group",
+          requestId,
+          sessionId: this.conversationId,
+          conversationId: this.conversationId,
+          voiceSessionId: this.voiceSessionId,
+          planId: clean(payload.planId, 160),
+          planVersion: Number(payload.planVersion),
+          planHash: clean(payload.planHash, 64),
+          stepId,
+          fieldId,
+          value: payload.value,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || data?.error || data?.ok === false) {
+        throw new Error(data?.error || data?.message || `Falha ao atualizar a revisao (${response.status}).`);
+      }
+
+      if (data?.clientAction && typeof data.clientAction === "object") {
+        this.sendClient({ type: "review_action", action: data.clientAction });
+      }
+      this.sendClient({
+        type: "action_group_edit_result",
+        requestId,
+        reviewId,
+        stepId,
+        fieldId,
+        success: true,
+        message: clean(data?.message, 500) || "Campo atualizado.",
+      });
+    } catch (error) {
+      this.sendClient({
+        type: "action_group_edit_result",
+        requestId,
+        reviewId,
+        stepId,
+        fieldId,
+        success: false,
+        message: clean(error?.message || error, 500) || "Nao consegui atualizar este campo.",
+      });
+    }
+  }
+
   persistMessage(role, content, event = {}) {
     const normalizedRole = isUserRole(role) ? "user" : isAssistantRole(role) ? "assistant" : "";
     const text = clean(content, 20000);
@@ -623,6 +681,11 @@ class SynapseVoiceSession {
 
     if (payload.type === "inject_user_message") {
       this.injectUserMessage(payload.message);
+      return;
+    }
+
+    if (payload.type === "action_group_edit_request") {
+      void this.editActionGroup(payload);
       return;
     }
 
