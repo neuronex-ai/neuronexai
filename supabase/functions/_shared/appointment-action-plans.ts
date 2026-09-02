@@ -14,6 +14,7 @@ export type AppointmentPlanReference = {
   summary?: Record<string, unknown>;
   result?: Record<string, unknown>;
   confirmationRequired?: boolean;
+  autoFitAdjustments?: Array<Record<string, unknown>>;
 };
 
 export type AppointmentPlanContext = {
@@ -160,12 +161,22 @@ export async function prepareAgendaActionPlan(
   input: Record<string, unknown>,
   idempotencyKey: string,
 ) {
-  return rpc(context.admin, "prepare_agenda_action_plan_internal", {
+  const plan = await rpc(context.admin, "prepare_agenda_action_plan_internal", {
     p_actor_user_id: context.userId,
     p_input: input,
     p_provenance: provenance(context, toolName),
     p_idempotency_key: idempotencyKey,
   });
+  const adjustments = Array.isArray(plan.autoFitAdjustments)
+    ? plan.autoFitAdjustments.filter((item) => item && typeof item === "object")
+    : [];
+  if (adjustments.length) {
+    plan.summary = {
+      ...(plan.summary || {}),
+      autoFitAdjustments: adjustments,
+    };
+  }
+  return plan;
 }
 
 export async function executeAppointmentActionPlan(
