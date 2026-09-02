@@ -114,7 +114,13 @@ export const DesktopHome = () => {
   const { isConnected: financialConnected, isLoading: financialLoading } =
     useFinancialAccount();
 
-  const { setActiveTab, setInputDraft, setShellState, toggleVoiceMode } = useSynapse();
+  const {
+    setActiveTab,
+    setInputDraft,
+    setIntentContextHint,
+    setShellState,
+    toggleVoiceMode,
+  } = useSynapse();
 
   const firstName = firstNameFromProfile(profile);
   const greeting = greetingForHour(today.getHours());
@@ -259,11 +265,12 @@ export const DesktopHome = () => {
     todayAppointments.length,
   ]);
 
-  const openSynapse = (text = "") => {
-    const clean = text.trim();
+  const openSynapse = (visibleIntent = "", contextHint = "") => {
+    const cleanIntent = visibleIntent.trim();
     setActiveTab("chat");
-    if (clean) setInputDraft(clean);
-    setShellState("compact");
+    setInputDraft(cleanIntent);
+    setIntentContextHint(contextHint.trim());
+    setShellState("composer");
   };
 
   const submitPrompt = (event: FormEvent<HTMLFormElement>) => {
@@ -274,6 +281,7 @@ export const DesktopHome = () => {
   };
 
   const startVoice = async () => {
+    setIntentContextHint("");
     setActiveTab("voice");
     setShellState("pill");
     await toggleVoiceMode();
@@ -284,9 +292,9 @@ export const DesktopHome = () => {
       <main className="page-spacing relative z-10 mx-auto flex w-full max-w-[1840px] flex-col gap-5 px-4 md:px-6 lg:px-9 xl:px-12 2xl:px-14">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.6fr)]">
           <Surface className="relative overflow-hidden p-6 md:p-8 lg:p-9">
-            <div className="flex min-h-[420px] flex-col">
+            <div className="flex min-h-[398px] flex-col">
               <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-1.5 text-muted-foreground/55">
+                <div className="flex items-center gap-1.5 text-muted-foreground/50">
                   <Sparkles className="h-3.5 w-3.5" />
                   <span className="text-[9px] font-black uppercase tracking-[0.2em]">Synapse</span>
                 </div>
@@ -327,7 +335,7 @@ export const DesktopHome = () => {
                 </div>
               </div>
 
-              <div className="my-auto py-5 md:py-7">
+              <div className="my-auto py-4 md:py-5">
                 <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
                   {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                 </p>
@@ -354,30 +362,30 @@ export const DesktopHome = () => {
                       <button
                         key={suggestion.id}
                         type="button"
-                        onClick={() => openSynapse(suggestion.prompt)}
+                        onClick={() => openSynapse(suggestion.label, suggestion.prompt)}
                         className={cn(
-                          "group flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[11px] font-bold text-foreground backdrop-blur-2xl transition-[transform,background-color,border-color] hover:-translate-y-0.5",
-                          suggestion.kind === "prepare" && "border-foreground/[0.09] bg-background/55 hover:bg-background/75 dark:border-white/[0.1] dark:bg-white/[0.06] dark:hover:bg-white/[0.09]",
-                          suggestion.kind === "consult" && "border-foreground/[0.07] bg-muted/30 hover:bg-muted/45 dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
-                          suggestion.kind === "act" && "border-foreground/[0.11] bg-foreground/[0.035] hover:bg-foreground/[0.06] dark:border-white/[0.12] dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
-                          suggestion.kind === "plan" && "border-foreground/[0.075] bg-background/40 hover:bg-background/62 dark:border-white/[0.08] dark:bg-white/[0.045] dark:hover:bg-white/[0.075]",
+                          "group flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[11px] font-semibold text-foreground/86 backdrop-blur-2xl transition-[transform,background-color,border-color,color] hover:-translate-y-0.5 hover:text-foreground",
+                          suggestion.kind === "prepare" && "border-foreground/[0.07] bg-background/38 hover:bg-background/58 dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:bg-white/[0.06]",
+                          suggestion.kind === "consult" && "border-foreground/[0.06] bg-muted/18 hover:bg-muted/32 dark:border-white/[0.06] dark:bg-white/[0.025] dark:hover:bg-white/[0.05]",
+                          suggestion.kind === "act" && "border-foreground/[0.075] bg-foreground/[0.022] hover:bg-foreground/[0.045] dark:border-white/[0.08] dark:bg-white/[0.04] dark:hover:bg-white/[0.065]",
+                          suggestion.kind === "plan" && "border-foreground/[0.06] bg-background/28 hover:bg-background/48 dark:border-white/[0.065] dark:bg-white/[0.03] dark:hover:bg-white/[0.055]",
                         )}
                         aria-label={`Perguntar ao Synapse: ${suggestion.label}`}
                       >
-                        <Icon className="h-3 w-3 text-muted-foreground" />
+                        <Icon className="h-3 w-3 text-muted-foreground/75" />
                         <span>{suggestion.label}</span>
                       </button>
                     );
                   })}
                 </div>
 
-                <div className="flex min-h-[70px] items-center gap-3 rounded-[24px] border border-zinc-200/80 bg-background/68 p-2 pl-5 shadow-[inset_0_1px_0_hsl(var(--background)/0.9),0_20px_45px_-35px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl transition-[border-color,background-color] focus-within:border-zinc-300/70 focus-within:bg-background/82 dark:border-white/[0.09] dark:bg-white/[0.05] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_20px_45px_-35px_rgba(0,0,0,0.9)] dark:focus-within:border-white/[0.14] dark:focus-within:bg-white/[0.065]">
-                  <Sparkles className="h-4.5 w-4.5 shrink-0 text-muted-foreground/70" />
+                <div className="flex min-h-[68px] items-center gap-3 rounded-[23px] border border-zinc-200/80 bg-background/68 p-2 pl-5 shadow-[inset_0_1px_0_hsl(var(--background)/0.9),0_20px_45px_-35px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl transition-[border-color,background-color] focus-within:border-zinc-300/70 focus-within:bg-background/82 dark:border-white/[0.09] dark:bg-white/[0.05] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_20px_45px_-35px_rgba(0,0,0,0.9)] dark:focus-within:border-white/[0.14] dark:focus-within:bg-white/[0.065]">
+                  <Sparkles className="h-4.5 w-4.5 shrink-0 text-muted-foreground/65" />
                   <input
                     value={prompt}
                     onChange={(event) => setPrompt(event.target.value)}
                     placeholder="Pergunte ou peça algo à NeuroNex"
-                    className="min-w-0 flex-1 appearance-none border-0 bg-transparent py-3 text-base font-medium shadow-none outline-none ring-0 placeholder:text-muted-foreground/55 focus:border-transparent focus:outline-none focus:ring-0 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-0"
+                    className="min-w-0 flex-1 appearance-none border-0 bg-transparent py-3 text-base font-medium shadow-none outline-none ring-0 placeholder:text-muted-foreground/50 focus:border-transparent focus:outline-none focus:ring-0 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-0"
                   />
                   <Button
                     type="button"
@@ -492,32 +500,19 @@ export const DesktopHome = () => {
           <Surface className="p-5">
             <div className="h-16 animate-pulse rounded-[20px] bg-muted/25" />
           </Surface>
-        ) : attentionItems.length <= 1 ? (
+        ) : attentionItems.length === 0 ? null : attentionItems.length === 1 ? (
           <Surface className="px-5 py-4 md:px-6">
-            {attentionItems.length === 1 ? (
-              <button type="button" onClick={() => navigate(attentionItems[0].actionUrl)} className="group flex w-full items-center gap-4 text-left">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
-                    <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
-                  </div>
-                  <p className="mt-1.5 truncate text-sm font-black">{attentionItems[0].title}</p>
-                  <p className="mt-0.5 line-clamp-1 text-xs font-medium text-muted-foreground">{attentionItems[0].description}</p>
+            <button type="button" onClick={() => navigate(attentionItems[0].actionUrl)} className="group flex w-full items-center gap-4 text-left">
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
+                  <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
                 </div>
-                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-              </button>
-            ) : (
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="h-5 w-5 text-muted-foreground/65" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
-                    <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
-                  </div>
-                  <p className="mt-1 text-sm font-bold">Tudo em dia. Nenhuma pendência precisa ocupar sua Home agora.</p>
-                </div>
+                <p className="mt-1.5 truncate text-sm font-black">{attentionItems[0].title}</p>
+                <p className="mt-0.5 line-clamp-1 text-xs font-medium text-muted-foreground">{attentionItems[0].description}</p>
               </div>
-            )}
+              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+            </button>
           </Surface>
         ) : (
           <Surface className="overflow-hidden p-0">
