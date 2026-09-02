@@ -150,6 +150,14 @@ const displayText = (segment: SynapseReviewSegment) => {
   return selected?.label || segment.value;
 };
 
+const reviewScope = (review: SynapseActionReview) =>
+  review.data.planId || review.data.reviewId.split(":")[0] || review.data.reviewId;
+
+const sameReviewScope = (resultReviewId: string, review: SynapseActionReview) => {
+  const scope = reviewScope(review);
+  return resultReviewId === review.data.reviewId || resultReviewId === scope || resultReviewId.startsWith(`${scope}:`);
+};
+
 const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
   const cards = review.data.actions;
   const reduceMotion = useReducedMotion();
@@ -166,7 +174,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
   useEffect(() => {
     const onEditResult = (event: Event) => {
       const detail = (event as CustomEvent<SynapseActionGroupEditResult>).detail;
-      if (!detail || detail.reviewId !== review.data.reviewId) return;
+      if (!detail || !sameReviewScope(detail.reviewId, review)) return;
       const key = fieldKey(detail.stepId, detail.fieldId);
       setRewriting((current) => current === key ? null : current);
       setEditFeedback({
@@ -176,7 +184,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
     };
     window.addEventListener(SYNAPSE_ACTION_GROUP_EDIT_RESULT_EVENT, onEditResult as EventListener);
     return () => window.removeEventListener(SYNAPSE_ACTION_GROUP_EDIT_RESULT_EVENT, onEditResult as EventListener);
-  }, [review.data.reviewId]);
+  }, [review]);
 
   const requestEdit = useCallback((stepId: string, fieldId: string, value: unknown) => {
     if (!review.data.planId || !review.data.planVersion || !review.data.planHash) return false;
@@ -202,22 +210,31 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
     const presentation = getSynapseReviewFieldPresentation(segment.fieldId, segment.label, segment.value);
     const original = presentation.editValue;
     const value = drafts[key] ?? original;
+    const widthClass = presentation.density === "compact"
+      ? "w-[112px]"
+      : presentation.density === "wide"
+        ? "w-[220px]"
+        : "w-[164px]";
     const submitEdit = () => {
-      if (value !== original) {
+      if (value !== original && value.trim()) {
         requestEdit(stepId, segment.fieldId, presentation.formatForRequest(value));
       }
     };
     return (
       <label key={key} className="inline-flex max-w-full flex-col gap-1.5 align-middle">
-        <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+        <span className="px-0.5 text-[8.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/65">
           {segment.label}
         </span>
         <input
           type={presentation.inputType}
           value={value}
+          min={presentation.min}
+          step={presentation.step}
           inputMode={presentation.inputType === "text"
             ? (segment.inputMode as React.HTMLAttributes<HTMLInputElement>["inputMode"]) || undefined
-            : undefined}
+            : presentation.inputType === "number"
+              ? "decimal"
+              : undefined}
           maxLength={presentation.inputType === "text" ? segment.maxLength : undefined}
           disabled={!versioned || rewriting === key}
           onChange={(event) => setDrafts((current) => ({ ...current, [key]: event.target.value }))}
@@ -234,8 +251,14 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
             }
           }}
           aria-label={segment.label}
-          className="min-h-11 min-w-[104px] max-w-[226px] rounded-[13px] border border-black/[0.08] bg-white/80 px-3 py-1.5 text-center text-xs font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] outline-none transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.09] dark:bg-white/[0.075] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+          aria-invalid={presentation.invalidOriginal || undefined}
+          className={`${widthClass} min-h-10 max-w-full rounded-[12px] border bg-white/68 px-2.5 py-1.5 text-center text-[12px] font-medium tabular-nums text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_7px_18px_-16px_rgba(0,0,0,0.35)] outline-none backdrop-blur-xl transition-[border-color,box-shadow,background-color,opacity] duration-150 ${presentation.invalidOriginal ? "border-amber-500/35" : "border-black/[0.075]"} focus-visible:border-foreground/25 focus-visible:bg-white/82 focus-visible:ring-2 focus-visible:ring-ring/35 disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.085] dark:bg-white/[0.065] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]`}
         />
+        {presentation.invalidOriginal ? (
+          <span className="max-w-[180px] px-0.5 text-[9px] leading-3 text-amber-700/80 dark:text-amber-300/80">
+            {presentation.inputType === "date" ? "Defina uma data válida." : "Revise este valor."}
+          </span>
+        ) : null}
       </label>
     );
   };
@@ -244,7 +267,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
     const key = fieldKey(stepId, segment.fieldId);
     return (
       <label key={key} className="inline-flex max-w-full flex-col gap-1.5 align-middle">
-        <span className="px-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+        <span className="px-0.5 text-[8.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/65">
           {segment.label}
         </span>
         <select
@@ -252,7 +275,7 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
           disabled={!versioned || rewriting === key}
           onChange={(event) => requestEdit(stepId, segment.fieldId, event.target.value)}
           aria-label={segment.label}
-          className="min-h-11 min-w-[112px] max-w-[214px] rounded-[13px] border border-black/[0.08] bg-white/80 px-3 py-1.5 text-center text-xs font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.72)] outline-none transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:ring-2 focus-visible:ring-ring/45 disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.09] dark:bg-white/[0.075] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+          className="min-h-10 w-[148px] max-w-full rounded-[12px] border border-black/[0.075] bg-white/68 px-2.5 py-1.5 text-center text-[12px] font-medium text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.82),0_7px_18px_-16px_rgba(0,0,0,0.35)] outline-none backdrop-blur-xl transition-[border-color,box-shadow,background-color,opacity] duration-150 focus-visible:border-foreground/25 focus-visible:bg-white/82 focus-visible:ring-2 focus-visible:ring-ring/35 disabled:cursor-wait disabled:opacity-60 dark:border-white/[0.085] dark:bg-white/[0.065] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
         >
           {segment.options.map((option) => (
             <option key={option.value} value={option.value}>{option.label}</option>
@@ -264,34 +287,29 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
 
   return (
     <motion.section
-      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 14, scale: 0.99 }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 10, scale: 0.992 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: "calc(-100vw - 48px)", scale: 0.985 }}
+      exit={reduceMotion ? { opacity: 0 } : { opacity: 0, x: "calc(-100vw - 48px)", scale: 0.988 }}
       transition={reduceMotion
-        ? { duration: 0.14 }
-        : { type: "spring", stiffness: 330, damping: 34, mass: 0.86 }}
+        ? { duration: 0.12 }
+        : { type: "spring", stiffness: 340, damping: 35, mass: 0.82 }}
       className="pointer-events-none fixed inset-0 z-[118] flex items-end justify-center px-4 pb-28"
       role="dialog"
       aria-modal="true"
       aria-label="Revisão da ação do Synapse"
       aria-live="polite"
     >
-      <div className="pointer-events-auto relative w-[min(95vw,1120px)] overflow-hidden rounded-[30px] border border-black/[0.09] bg-white/[0.92] p-[18px] shadow-[0_30px_92px_-34px_rgba(0,0,0,0.52),inset_0_1px_0_rgba(255,255,255,0.9)] backdrop-blur-[42px] backdrop-saturate-150 dark:border-white/[0.11] dark:bg-[#09090b]/[0.93] dark:shadow-[0_34px_100px_-36px_rgba(0,0,0,0.82),inset_0_1px_0_rgba(255,255,255,0.09)]">
+      <div className="pointer-events-auto relative w-[min(94vw,1080px)] overflow-hidden rounded-[27px] border border-black/[0.085] bg-white/[0.86] p-4 shadow-[0_28px_86px_-34px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.92)] backdrop-blur-[46px] backdrop-saturate-150 dark:border-white/[0.1] dark:bg-[#09090b]/[0.91] dark:shadow-[0_34px_96px_-36px_rgba(0,0,0,0.8),inset_0_1px_0_rgba(255,255,255,0.09)]">
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-white/20" />
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-x-5 gap-y-3 px-1 pt-0.5">
+        <div className="mb-3.5 flex flex-wrap items-start justify-between gap-x-5 gap-y-2.5 px-0.5 pt-0.5">
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Revisar antes de executar</p>
-              {versioned ? (
-                <span className="rounded-full bg-muted/65 px-2 py-1 text-[10px] font-medium text-muted-foreground">v{review.data.planVersion}</span>
-              ) : null}
-            </div>
-            <p className="mt-1 max-w-[720px] text-sm leading-5 text-foreground/88">
+            <p className="text-[10.5px] font-semibold uppercase tracking-[0.17em] text-muted-foreground">Revisar antes de executar</p>
+            <p className="mt-1 max-w-[720px] text-[13px] leading-[19px] text-foreground/88">
               Confira os detalhes. Edite o que precisar e, quando estiver certo, diga “confirmo ação”.
             </p>
             {editFeedback ? (
               <p
-                className={`mt-1.5 text-xs ${editFeedback.kind === "error" ? "text-destructive" : "text-muted-foreground"}`}
+                className={`mt-1.5 text-[11px] ${editFeedback.kind === "error" ? "text-destructive" : "text-muted-foreground"}`}
                 role="status"
                 aria-live="polite"
               >
@@ -299,61 +317,61 @@ const ReviewOverlay = ({ review }: { review: SynapseActionReview }) => {
               </p>
             ) : null}
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <div className="flex min-h-9 items-center gap-1.5 rounded-full border border-border/55 bg-muted/45 px-3 text-[11px] font-medium text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-1.5">
+            <div className="flex min-h-8 items-center gap-1.5 rounded-full border border-border/50 bg-white/42 px-2.5 text-[10.5px] font-medium text-muted-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl dark:bg-white/[0.045]">
               <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
               {confirmationLabel}
             </div>
-            <div className="flex min-h-9 items-center rounded-full border border-border/55 bg-background/72 px-3 text-[11px] font-medium text-muted-foreground">
+            <div className="flex min-h-8 items-center rounded-full border border-border/50 bg-white/34 px-2.5 text-[10.5px] font-medium text-muted-foreground backdrop-blur-xl dark:bg-white/[0.035]">
               {cards.length} {cards.length === 1 ? "etapa" : "etapas"}
             </div>
           </div>
         </div>
 
         <div className="relative overflow-x-auto overscroll-x-contain pb-1.5 [scrollbar-width:thin] snap-x snap-proximity scroll-px-1" tabIndex={0} aria-label="Etapas da revisão">
-          <div className="flex min-w-max items-stretch gap-3">
+          <div className="flex min-w-max items-stretch gap-2.5">
             {cards.map((card, index) => (
               <motion.article
                 key={card.id}
-                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 8 }}
+                initial={reduceMotion ? { opacity: 0 } : { opacity: 0, x: 6 }}
                 animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: reduceMotion ? 0.12 : 0.18, delay: reduceMotion ? 0 : Math.min(index * 0.035, 0.16) }}
-                className="relative w-[276px] shrink-0 snap-start overflow-hidden rounded-[22px] border border-black/[0.075] bg-white/[0.76] p-[18px] shadow-[0_12px_28px_-22px_rgba(0,0,0,0.38),inset_0_1px_0_rgba(255,255,255,0.86)] backdrop-blur-2xl dark:border-white/[0.085] dark:bg-white/[0.052] dark:shadow-[0_14px_32px_-22px_rgba(0,0,0,0.7),inset_0_1px_0_rgba(255,255,255,0.07)]"
+                transition={{ duration: reduceMotion ? 0.1 : 0.16, delay: reduceMotion ? 0 : Math.min(index * 0.03, 0.12) }}
+                className="relative w-[252px] shrink-0 snap-start overflow-hidden rounded-[20px] border border-black/[0.065] bg-white/[0.58] p-4 shadow-[0_12px_26px_-22px_rgba(0,0,0,0.34),inset_0_1px_0_rgba(255,255,255,0.88)] backdrop-blur-[30px] dark:border-white/[0.075] dark:bg-white/[0.045] dark:shadow-[0_14px_30px_-22px_rgba(0,0,0,0.66),inset_0_1px_0_rgba(255,255,255,0.07)]"
               >
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-[11px] font-semibold tabular-nums text-background" aria-label={`Etapa ${index + 1}`}>
+                <div className="mb-2.5 flex items-center justify-between">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-[10px] font-semibold tabular-nums text-background" aria-label={`Etapa ${index + 1}`}>
                     {index + 1}
                   </span>
                   {rewriting?.startsWith(`${card.id}:`) ? (
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/55 px-2 py-1 text-[10px] font-medium text-muted-foreground" role="status">
-                      <Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" aria-hidden="true" />
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/48 px-2 py-1 text-[9.5px] font-medium text-muted-foreground" role="status">
+                      <Loader2 className="h-3 w-3 animate-spin motion-reduce:animate-none" aria-hidden="true" />
                       atualizando
                     </span>
                   ) : (
-                    <Check className="h-4 w-4 text-muted-foreground/50" aria-hidden="true" />
+                    <Check className="h-3.5 w-3.5 text-muted-foreground/45" aria-hidden="true" />
                   )}
                 </div>
-                <h3 className="text-left text-xs font-semibold tracking-wide text-foreground">{card.area}</h3>
-                <div className="mt-2.5 flex min-h-14 flex-wrap items-end justify-start gap-x-2 gap-y-2.5 text-left text-sm leading-5 text-muted-foreground">
+                <h3 className="text-left text-[11.5px] font-semibold tracking-wide text-foreground">{card.area}</h3>
+                <div className="mt-2 flex min-h-12 flex-wrap items-end justify-start gap-x-2 gap-y-2.5 text-left text-[13px] leading-[19px] text-muted-foreground">
                   {card.segments.map((segment, segmentIndex) => {
                     if (segment.type === "editable") return editableField(card.id, segment);
                     if (segment.type === "select") return selectField(card.id, segment);
                     return <span key={`${card.id}:text:${segmentIndex}`}>{displayText(segment)}</span>;
                   })}
                 </div>
-                <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-foreground/16 to-transparent" />
+                <div className="pointer-events-none absolute inset-x-6 bottom-0 h-px bg-gradient-to-r from-transparent via-foreground/14 to-transparent" />
               </motion.article>
             ))}
           </div>
         </div>
 
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-1 text-[11px] leading-4 text-muted-foreground/80">
+        <div className="mt-2.5 flex flex-wrap items-center justify-between gap-x-5 gap-y-1.5 px-0.5 text-[10.5px] leading-4 text-muted-foreground/75">
           <p>
             {versioned
-              ? "Cada edição gera uma nova versão segura antes da confirmação."
+              ? "As edições atualizam esta revisão no lugar e mantêm uma versão segura internamente."
               : "Somente leitura: esta revisão não recebeu identidade/versionamento seguro do plano."}
           </p>
-          {versioned ? <p className="font-medium text-foreground/65">Enter salva · Esc desfaz o campo</p> : null}
+          {versioned ? <p className="font-medium text-foreground/60">Enter salva · Esc desfaz o campo</p> : null}
         </div>
       </div>
     </motion.section>
@@ -574,6 +592,8 @@ export const SynapseVoiceActionOverlays = () => {
         setReview(null);
         return;
       }
+      // The server may bump planVersion/hash after every edit. We deliberately
+      // replace the data without changing the visual identity of the modal.
       setReview(action);
     };
     const onConfirmation = (event: Event) => {
@@ -600,6 +620,7 @@ export const SynapseVoiceActionOverlays = () => {
   }, []);
 
   const overlayVisible = Boolean(review || confirmation);
+  const stableReviewKey = review ? review.data.planId || reviewScope(review) : "review";
 
   return (
     <>
@@ -627,7 +648,7 @@ export const SynapseVoiceActionOverlays = () => {
             }}
           />
         ) : review ? (
-          <ReviewOverlay key={`review:${review.data.reviewId}`} review={review} />
+          <ReviewOverlay key={`review:${stableReviewKey}`} review={review} />
         ) : null}
       </AnimatePresence>
     </>
