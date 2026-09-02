@@ -24,35 +24,10 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
-
           path = Path("supabase/functions/synapse-text-fallback/executor-v3.ts")
           text = path.read_text()
-          old = '''      const charges = account.has_account
-        ? await queryCharges(admin, userId, { ...args, status, limit }, false)
-        : [];
-'''
-          new = '''      let charges: any[] = [];
-      if (account.has_account) {
-        let chargeQuery = admin
-          .from("nb_payments")
-          .select("id,patient_id,appointment_id,gross_amount,net_amount,status,normalized_status,funds_status,payment_method_type,expires_at,paid_at,created_at,description,checkout_url,provider_payment_id,metadata")
-          .eq("user_id", userId)
-          .eq("patient_id", args.patient_id)
-          .order("created_at", { ascending: false });
-
-        if (status && status !== "all") {
-          chargeQuery = chargeQuery.eq("normalized_status", status === "overdue" ? "overdue" : status);
-        }
-        chargeQuery = chargeQuery.limit(limit);
-
-        const { data: chargeRows, error: chargeError } = await chargeQuery;
-        if (chargeError) throw chargeError;
-        charges = (chargeRows || []).map((row: any) => ({
-          ...mapCharge(row),
-          patient_name: args.patient_name || null,
-        }));
-      }
-'''
+          old = "      const charges = account.has_account\n        ? await queryCharges(admin, userId, { ...args, status, limit }, false)\n        : [];\n"
+          new = "      let charges: any[] = [];\n      if (account.has_account) {\n        let chargeQuery = admin\n          .from(\"nb_payments\")\n          .select(\"id,patient_id,appointment_id,gross_amount,net_amount,status,normalized_status,funds_status,payment_method_type,expires_at,paid_at,created_at,description,checkout_url,provider_payment_id,metadata\")\n          .eq(\"user_id\", userId)\n          .eq(\"patient_id\", args.patient_id)\n          .order(\"created_at\", { ascending: false });\n\n        if (status && status !== \"all\") {\n          chargeQuery = chargeQuery.eq(\"normalized_status\", status === \"overdue\" ? \"overdue\" : status);\n        }\n        chargeQuery = chargeQuery.limit(limit);\n\n        const { data: chargeRows, error: chargeError } = await chargeQuery;\n        if (chargeError) throw chargeError;\n        charges = (chargeRows || []).map((row: any) => ({\n          ...mapCharge(row),\n          patient_name: args.patient_name || null,\n        }));\n      }\n"
           count = text.count(old)
           if count != 1:
               raise SystemExit(f"Expected exactly one target block, found {count}")
