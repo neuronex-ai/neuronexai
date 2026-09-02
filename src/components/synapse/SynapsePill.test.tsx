@@ -5,6 +5,7 @@ import { SynapsePill } from './SynapsePill';
 
 const mocks = vi.hoisted(() => ({
     setActiveTab: vi.fn(),
+    setIntentContextHint: vi.fn(),
     setShellState: vi.fn(),
     toggleVoiceMode: vi.fn().mockResolvedValue(undefined),
     context: {} as Record<string, unknown>,
@@ -30,6 +31,7 @@ describe('Synapse voice presence', () => {
             isVoiceSpeaking: false,
             isVoiceToolActive: false,
             setActiveTab: mocks.setActiveTab,
+            setIntentContextHint: mocks.setIntentContextHint,
             setShellState: mocks.setShellState,
             toggleVoiceMode: mocks.toggleVoiceMode,
             voiceActivityLabel: '',
@@ -42,27 +44,25 @@ describe('Synapse voice presence', () => {
         document.documentElement.classList.remove('reduce-motion');
     });
 
-    it('offers separate text and voice actions in the persistent launcher', () => {
+    it('offers lightweight text and voice entry points in the persistent launcher', () => {
         render(<SynapsePill />);
 
         const launcher = screen.getByRole('toolbar', { name: 'Conversar com o Synapse' });
         expect(launcher).toBeInTheDocument();
         expect(launcher).toHaveAttribute('data-theme-adaptive', 'true');
         expect(launcher).toHaveAttribute('data-magnetic-motion', 'enabled');
-        expect(launcher).not.toHaveClass('text-white');
 
-        const textAction = screen.getByRole('button', { name: 'Abrir conversa por texto com o Synapse' });
+        const textAction = screen.getByRole('button', { name: 'Abrir compositor do Synapse' });
         const voiceAction = screen.getByRole('button', { name: 'Iniciar conversa por voz com o Synapse' });
-        expect(textAction).toHaveAttribute('aria-controls', 'synapse-panel');
+        expect(textAction).toHaveAttribute('aria-controls', 'synapse-quick-composer');
         expect(textAction).toHaveAttribute('data-synapse-action', 'text');
         expect(voiceAction).toHaveAttribute('aria-pressed', 'false');
         expect(voiceAction).toHaveAttribute('data-synapse-action', 'voice');
-        expect(textAction.className).not.toContain('ring-white');
-        expect(voiceAction.className).not.toContain('ring-white');
 
         fireEvent.click(textAction);
+        expect(mocks.setIntentContextHint).toHaveBeenCalledWith('');
         expect(mocks.setActiveTab).toHaveBeenCalledWith('chat');
-        expect(mocks.setShellState).toHaveBeenCalledWith('compact');
+        expect(mocks.setShellState).toHaveBeenCalledWith('composer');
 
         fireEvent.click(voiceAction);
         expect(mocks.setShellState).toHaveBeenCalledWith('pill');
@@ -96,7 +96,7 @@ describe('Synapse voice presence', () => {
         expect(mocks.toggleVoiceMode).toHaveBeenCalledTimes(1);
     });
 
-    it('shows action feedback as one compact sentence without icons or progress bars', () => {
+    it('shows action feedback as one compact sentence without progress chrome', () => {
         mocks.context = {
             ...mocks.context,
             actionExperience: {
