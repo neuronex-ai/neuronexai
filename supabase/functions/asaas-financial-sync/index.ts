@@ -12,6 +12,8 @@ import {
     supabaseAdmin,
 } from "../_shared/asaas-client.ts";
 import {
+    normalizePaymentMethod,
+    normalizePaymentState,
     refreshOverviewSnapshot,
     upsertAccountMovement,
     upsertPaymentFromProvider,
@@ -25,6 +27,7 @@ import {
 const PAGE_SIZE = 100;
 const MAX_INCREMENTAL_PAGES = 20;
 const MAX_FULL_PAGES = 100;
+const PAYMENT_LOOKUP_BATCH_SIZE = 200;
 
 function dateOnly(date: Date) {
     return date.toISOString().slice(0, 10);
@@ -34,6 +37,112 @@ function daysAgo(days: number) {
     const date = new Date();
     date.setUTCDate(date.getUTCDate() - days);
     return dateOnly(date);
+}
+
+function cents(value: unknown) {
+    const numberValue = Number(value || 0);
+    return Number.isFinite(numberValue) ? Math.round(numberValue * 100) : 0;
+}
+
+function nullableString(value: unknown) {
+    if (value == null || value === "") return null;
+    return String(value);
+}
+
+function isPaymentUnchanged(existing: any, payment: any) {
+    if (!existing || !payment?.id) return false;
+
+    const providerStatus = String(payment.status || "PENDING").toUpperCase();
+    const paymentMethod = normalizePaymentMethod(payment.billingType);
+    const installments = Math.max(Number(payment.installmentCount || 1), 1);
+    const grossAmount = cents(payment.value);
+    const providerNetAmount = payment.netValue == null ? null : cents(payment.netValue);
+    const actualFee = providerNetAmount == null
+        ? null
+        : Math.max(grossAmount - providerNetAmount, 0);
+    const state = normalizePaymentState(payment, "RECONCILIATION");
+    const metadata = existing.metadata || {};
+
+    if (String(existing.provider_status || "").toUpperCase() !== providerStatus) return false;
+    if (existing.status !== state.legacyStatus) return false;
+    if (existing.normalized_status !== state.normalizedStatus) return false;
+    if (existing.funds_status !== state.fundsStatus) return false;
+    if (paymentMethod && existing.payment_method_type !== paymentMethod) return false;
+    if (Number(existing.installments || 1) !== installments) return false;
+
+    const expectedGrossAmount = grossAmount || Number(existing.gross_amount || 0);
+    if (Number(existing.gross_amount || 0) !== expectedGrossAmount) return false;
+
+    if (providerNetAmount != null) {
+        if (Number(existing.net_amount || 0) !== providerNetAmount) return false;
+        if (Number(existing.actual_fee_amount || 0) !== actualFee) return false;
+        if (Number(existing.platform_fee_amount || 0) !== actualFee) return false;
+    }
+
+    const expectedDescription = payment.description || existing.description || "Cobrança NeuroFinance";
+    const expectedCheckoutUrl = payment.invoiceUrl || existing.checkout_url || null;
+    const expectedExpiresAt = payment.dueDate || existing.expires_at || null;
+    const expectedPaidAt = payment.paymentDate || existing.paid_at || null;
+    const expectedConfirmedAt = payment.confirmedDate || existing.confirmed_at || null;
+    const expectedEstimatedCreditAt = payment.estimatedCreditDate || existing.estimated_credit_at || null;
+
+    if (nullableString(existing.description) !== nullableString(expectedDescription)) return false;
+    if (nullableString(existing.checkout_url) !== nullableString(expectedCheckoutUrl)) return false;
+    if (nullableString(existing.expires_at) !== nullableString(expectedExpiresAt)) return false;
+    if (nullableString(existing.paid_at) !== nullableString(expectedPaidAt)) return false;
+    if (nullableString(existing.confirmed_at) !== nullableString(expectedConfirmedAt)) return false;
+    if (nullableString(existing.estimated_credit_at) !== nullableString(expectedEstimatedCreditAt)) return false;
+
+    if (state.fundsStatus === "refunded") {
+        const expectedRefundAmount = cents(payment.refundedValue || payment.value);
+        if (Number(existing.refund_amount || 0) !== expectedRefundAmount) return false;
+    }
+
+    if (payment.customer != null && nullableString(metadata.asaas_customer_id) !== nullableString(payment.customer)) {
+        return false;
+    }
+    if (payment.status != null && nullableString(metadata.asaas_status) !== nullableString(payment.status)) {
+        return false;
+    }
+    if (payment.billingType != null && nullableString(metadata.asaas_billing_type) !== nullableString(payment.billingType)) {
+        return false;
+    }
+    if (payment.invoiceUrl != null && nullableString(metadata.asaas_invoice_url) !== nullableString(payment.invoiceUrl)) {
+        return false;
+    }
+    if (payment.bankSlipUrl != null && nullableString(metadata.asaas_bank_slip_url) !== nullableString(payment.bankSlipUrl)) {
+        return false;
+    }
+
+    return true;
+}
+
+async function loadExistingPayments(financialAccountId: string, providerPayments: any[]) {
+    const providerIds = Array.from(new Set(
+        providerPayments
+            .map((payment) => String(payment?.id || ""))
+            .filter(Boolean)
+    ));
+    const existingByProviderId = new Map<string, any>();
+
+    for (let offset = 0; offset < providerIds.length; offset += PAYMENT_LOOKUP_BATCH_SIZE) {
+        const batch = providerIds.slice(offset, offset + PAYMENT_LOOKUP_BATCH_SIZE);
+        const { data, error } = await supabaseAdmin
+            .from("nb_payments")
+            .select("*")
+            .eq("financial_account_id", financialAccountId)
+            .eq("provider", "asaas")
+            .in("provider_payment_id", batch);
+        if (error) throw error;
+
+        for (const payment of data || []) {
+            if (payment.provider_payment_id) {
+                existingByProviderId.set(String(payment.provider_payment_id), payment);
+            }
+        }
+    }
+
+    return existingByProviderId;
 }
 
 async function collectPages(
@@ -204,8 +313,16 @@ async function syncAccount(financialAccount: any, mode: "incremental" | "full") 
     ]);
 
     const syncedPayments: any[] = [];
+    let unchangedPayments = 0;
+    const existingPayments = await loadExistingPayments(financialAccount.id, payments);
 
     for (const payment of payments) {
+        const existing = existingPayments.get(String(payment?.id || ""));
+        if (existing && isPaymentUnchanged(existing, payment)) {
+            unchangedPayments += 1;
+            continue;
+        }
+
         const nbPayment = await upsertPaymentFromProvider(financialAccount, payment, "RECONCILIATION");
         if (nbPayment) syncedPayments.push(nbPayment);
     }
@@ -340,6 +457,8 @@ async function syncAccount(financialAccount: any, mode: "incremental" | "full") 
     return {
         account_id: financialAccount.id,
         payments: payments.length,
+        payments_changed: syncedPayments.length,
+        payments_unchanged: unchangedPayments,
         payments_marked_missing: missingPayments,
         transfers: transfers.length,
         movements: statement.length,
