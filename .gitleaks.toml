@@ -3,9 +3,9 @@ useDefault = true
 
 [[allowlists]]
 description = "Known synthetic values used to verify redaction and validation behavior"
-regexTarget = "secret"
+regexTarget = "match"
 regexes = [
-  '''senhaSegura123''',
-  '''e3107ab5-8cb8-4d9b-ba50-e0250bbd829f''',
-  '''e3107ab5-8cb8-4d9b-ba50-e0250bbd329f''',
+  '''password:\s*['"]senhaSegura123['"]''',
+  '''tokenId:\s*["']e3107ab5-8cb8-4d9b-ba50-e0250bbd829f["']''',
+  '''tokenId:\s*["']e3107ab5-8cb8-4d9b-ba50-e0250bbd329f["']''',
 ]
