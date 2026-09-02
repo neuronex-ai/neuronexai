@@ -32,7 +32,7 @@ jobs:
         uses: denoland/setup-deno@v2
         with:
           deno-version: 2.9.2
-          cache: true
+          cache: false
 
       - name: Use the project npm version
         run: npm install --global npm@11.16.0
@@ -56,6 +56,9 @@ jobs:
         run: npm run check:frontend-boundaries
 
       - name: Run tests
+        env:
+          VITE_SUPABASE_URL: http://127.0.0.1:54321
+          VITE_SUPABASE_ANON_KEY: test-anon-key
         run: npm test -- --reporter=dot
 
       - name: Test Supabase Edge Functions
