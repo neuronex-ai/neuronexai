@@ -22,11 +22,12 @@ describe("Synapse review field presentation", () => {
     expect(presentation.formatForRequest("2026-08-20")).toBe("2026-08-20");
   });
 
-  it("does not reinterpret ordinary text or numeric fields", () => {
+  it("uses numeric editing for canonical amount fields", () => {
     const presentation = getSynapseReviewFieldPresentation("amount", "valor", 229);
 
-    expect(presentation.inputType).toBe("text");
+    expect(presentation.inputType).toBe("number");
     expect(presentation.editValue).toBe("229");
-    expect(presentation.formatForRequest("230")).toBe("230");
+    expect(presentation.formatForRequest("230")).toBe(230);
+    expect(presentation.step).toBe("0.01");
   });
 });
