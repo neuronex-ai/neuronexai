@@ -69,6 +69,7 @@ export const SynapseQuickComposer = () => {
 
     return (
         <motion.form
+            id="synapse-quick-composer"
             onSubmit={handleSubmit}
             initial={shouldReduceMotion ? false : { opacity: 0, y: 10, scale: 0.975 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -79,6 +80,7 @@ export const SynapseQuickComposer = () => {
             className="synapse-quick-composer w-[min(680px,calc(100vw-24px))] rounded-[26px] border p-2 shadow-[0_26px_80px_-38px_rgba(0,0,0,0.45)] backdrop-blur-3xl dark:shadow-[0_30px_90px_-40px_rgba(0,0,0,0.95)]"
             role="search"
             aria-label="Compositor rápido do Synapse"
+            aria-keyshortcuts="Control+K Meta+K"
             data-synapse-shell="true"
             data-synapse-shell-placement="bottom-right"
         >
