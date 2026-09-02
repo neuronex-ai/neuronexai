@@ -58,11 +58,11 @@ export const SynapseGlobalShell = () => {
         // Voice and text are one continuous conversation. When voice ends, return
         // to the lightweight composer instead of dropping the professional back
         // to the passive launcher.
-        if (voiceJustEnded && shellState !== 'closed') {
+        if (voiceJustEnded && isVisible && shellState !== 'closed') {
             setActiveTab('chat');
             setShellState('composer');
         }
-    }, [isVoiceExperienceActive, setActiveTab, setShellState, shellState]);
+    }, [isVisible, isVoiceExperienceActive, setActiveTab, setShellState, shellState]);
 
     useEffect(() => {
         if (typeof document === 'undefined') return undefined;
@@ -100,6 +100,7 @@ export const SynapseGlobalShell = () => {
 
             if (e.key === 'Escape') {
                 if (isVoiceExperienceActive) {
+                    setShellState('pill');
                     setActiveTab('chat');
                     if (voicePhase === 'awaiting_confirmation' && actionExperience) {
                         cancelActionExperience();
