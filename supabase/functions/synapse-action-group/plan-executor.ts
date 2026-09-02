@@ -34,7 +34,7 @@ function resultWarning(result: any) {
   return warnings.map((value: unknown) => clean(value, 500)).filter(Boolean).join("; ") || null;
 }
 
-function resultRecordIds(toolName: string, result: any) {
+function resultRecordIds(toolName: string, result: any): string[] {
   const data = result?.data && typeof result.data === "object" ? result.data : {};
   const nestedResult = data?.result && typeof data.result === "object" ? data.result : {};
   const candidates: unknown[] = [];
@@ -48,21 +48,21 @@ function resultRecordIds(toolName: string, result: any) {
   }
   const primary = primaryRecordIdFromResult(toolName, result);
   if (primary) candidates.unshift(primary);
-  return Array.from(new Set(
+  return Array.from(new Set<string>(
     candidates
       .map((value) => clean(value, 120))
       .filter((value) => UUID_PATTERN.test(value)),
   ));
 }
 
-function persistedRecordIds(result?: SynapseActionGroupStepResult | null) {
+function persistedRecordIds(result?: SynapseActionGroupStepResult | null): string[] {
   if (!result) return [];
   const values = Array.isArray((result as any).recordIds)
     ? (result as any).recordIds
     : result.recordId
       ? [result.recordId]
       : [];
-  return Array.from(new Set(
+  return Array.from(new Set<string>(
     values
       .map((value: unknown) => clean(value, 120))
       .filter((value: string) => UUID_PATTERN.test(value)),
@@ -100,7 +100,7 @@ function appointmentDependencyIds(
   step: SynapseActionGroupStep,
   steps: SynapseActionGroupStep[],
   results: Map<string, SynapseActionGroupStepResult>,
-) {
+): string[] {
   for (const dependencyId of step.dependencies || []) {
     const dependency = steps.find((candidate) => candidate.stepId === dependencyId);
     if (dependency?.toolName !== "create_appointment") continue;
