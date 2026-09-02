@@ -5,6 +5,7 @@ import { useSynapseLiveVoice } from './use-synapse-live-voice';
 
 const mocks = vi.hoisted(() => ({
   navigate: vi.fn(),
+  transitionToTheme: vi.fn(),
   executeAction: vi.fn().mockResolvedValue({
     success: true,
     action: 'navigate',
@@ -21,6 +22,13 @@ vi.mock('react-router-dom', () => ({
 
 vi.mock('@/context/AIContext', () => ({
   useAI: () => ({ currentContext: 'notes', activePatientId: 'patient-1', contextSummary: 'Resumo' }),
+}));
+
+vi.mock('@/hooks/use-theme', () => ({
+  useTheme: () => ({
+    theme: 'light',
+    transitionToTheme: mocks.transitionToTheme,
+  }),
 }));
 
 vi.mock('@/hooks/use-voice-config', () => ({
