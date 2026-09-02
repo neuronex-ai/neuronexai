@@ -829,9 +829,27 @@ async function executeNewReadTool(
       const account = safeAccount(await getFinancialAccount(admin, userId));
       const status = clean(args.status || "all", 30).toLowerCase();
       const limit = clamp(args.limit, 20, 1, 50);
-      const charges = account.has_account
-        ? await queryCharges(admin, userId, { ...args, status, limit }, false)
-        : [];
+      let charges: any[] = [];
+      if (account.has_account) {
+        let chargeQuery = admin
+          .from("nb_payments")
+          .select("id,patient_id,appointment_id,gross_amount,net_amount,status,normalized_status,funds_status,payment_method_type,expires_at,paid_at,created_at,description,checkout_url,provider_payment_id,metadata")
+          .eq("user_id", userId)
+          .eq("patient_id", args.patient_id)
+          .order("created_at", { ascending: false });
+
+        if (status && status !== "all") {
+          chargeQuery = chargeQuery.eq("normalized_status", status === "overdue" ? "overdue" : status);
+        }
+        chargeQuery = chargeQuery.limit(limit);
+
+        const { data: chargeRows, error: chargeError } = await chargeQuery;
+        if (chargeError) throw chargeError;
+        charges = (chargeRows || []).map((row: any) => ({
+          ...mapCharge(row),
+          patient_name: args.patient_name || null,
+        }));
+      }
       const manualResult = await executeBaseAgentTool("list_financial_entries", {
         patient_id: args.patient_id,
         entry_type: "income",
