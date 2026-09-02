@@ -33,7 +33,7 @@ Deno.serve(async (request: Request) => {
         patient_cpf: body.patient_cpf || null,
         patient_email: body.patient_email || null,
         financial_entry_id: body.financial_entry_id || null,
-        operation_id: body.operation_id || null,
+        operation_id: body.operation_id || body.idempotency_key || null,
       },
     });
     return jsonResponse(result);
