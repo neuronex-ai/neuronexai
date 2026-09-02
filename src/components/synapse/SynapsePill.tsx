@@ -58,6 +58,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         isVoiceSpeaking,
         isVoiceToolActive,
         setActiveTab,
+        setIntentContextHint,
         setShellState,
         toggleVoiceMode,
         voiceActivityLabel,
@@ -106,16 +107,18 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
             const rect = launcherRef.current.getBoundingClientRect();
             const centerX = rect.left + rect.width / 2;
             const centerY = rect.top + rect.height / 2;
-            launcherX.set(clamp((event.clientX - centerX) * 0.035, -5, 5));
-            launcherY.set(clamp((event.clientY - centerY) * 0.045, -4, 4));
+            launcherX.set(clamp((event.clientX - centerX) * 0.035, -4, 4));
+            launcherY.set(clamp((event.clientY - centerY) * 0.045, -3, 3));
         };
 
         const openTextConversation = () => {
+            setIntentContextHint("");
             setActiveTab("chat");
-            setShellState("compact");
+            setShellState("composer");
         };
 
         const openVoiceConversation = () => {
+            setIntentContextHint("");
             setShellState("pill");
             void toggleVoiceMode();
         };
@@ -123,7 +126,7 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
         return (
             <motion.div
                 ref={launcherRef}
-                className="synapse-launcher relative flex h-[56px] w-[128px] items-center rounded-full border p-[5px]"
+                className="synapse-launcher relative flex h-[52px] w-[112px] items-center rounded-full border p-[4px]"
                 role="toolbar"
                 aria-label="Conversar com o Synapse"
                 data-synapse-launcher="true"
@@ -138,37 +141,37 @@ export const SynapsePill = ({ mode = "launcher" }: SynapsePillProps) => {
                     willChange: shouldReduceMotion ? "auto" : "transform",
                 }}
             >
-                    <motion.button
-                        type="button"
-                        onClick={openVoiceConversation}
-                        disabled={voiceStatus === "disconnecting"}
-                        whileHover={shouldReduceMotion ? undefined : { y: -0.5, scale: 1.012 }}
-                        whileTap={shouldReduceMotion ? undefined : { y: 0.5, scale: 0.982 }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.6 }}
-                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-full rounded-r-[18px] outline-none disabled:cursor-wait disabled:opacity-60"
-                        aria-label="Iniciar conversa por voz com o Synapse"
-                        aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
-                        aria-pressed={isVoiceSessionActive}
-                        data-synapse-action="voice"
-                        title="Conversar por voz"
-                    >
-                        <AudioLines className="h-[19px] w-[19px]" strokeWidth={1.75} aria-hidden="true" />
-                    </motion.button>
-                    <span className="synapse-launcher-divider h-8 w-px shrink-0" aria-hidden="true" />
-                    <motion.button
-                        type="button"
-                        onClick={openTextConversation}
-                        whileHover={shouldReduceMotion ? undefined : { y: -0.5, scale: 1.012 }}
-                        whileTap={shouldReduceMotion ? undefined : { y: 0.5, scale: 0.982 }}
-                        transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.6 }}
-                        className="synapse-launcher-action flex h-[46px] flex-1 items-center justify-center rounded-l-[18px] rounded-r-full outline-none"
-                        aria-label="Abrir conversa por texto com o Synapse"
-                        aria-controls="synapse-panel"
-                        data-synapse-action="text"
-                        title="Conversar por texto"
-                    >
-                        <MessageCircle className="h-[19px] w-[19px]" strokeWidth={1.75} aria-hidden="true" />
-                    </motion.button>
+                <motion.button
+                    type="button"
+                    onClick={openVoiceConversation}
+                    disabled={voiceStatus === "disconnecting"}
+                    whileHover={shouldReduceMotion ? undefined : { y: -0.5, scale: 1.012 }}
+                    whileTap={shouldReduceMotion ? undefined : { y: 0.5, scale: 0.982 }}
+                    transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.6 }}
+                    className="synapse-launcher-action flex h-[44px] flex-1 items-center justify-center rounded-l-full rounded-r-[16px] outline-none disabled:cursor-wait disabled:opacity-60"
+                    aria-label="Iniciar conversa por voz com o Synapse"
+                    aria-keyshortcuts="Control+Shift+Space Meta+Shift+Space"
+                    aria-pressed={isVoiceSessionActive}
+                    data-synapse-action="voice"
+                    title="Conversar por voz"
+                >
+                    <AudioLines className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                </motion.button>
+                <span className="synapse-launcher-divider h-7 w-px shrink-0" aria-hidden="true" />
+                <motion.button
+                    type="button"
+                    onClick={openTextConversation}
+                    whileHover={shouldReduceMotion ? undefined : { y: -0.5, scale: 1.012 }}
+                    whileTap={shouldReduceMotion ? undefined : { y: 0.5, scale: 0.982 }}
+                    transition={shouldReduceMotion ? { duration: 0 } : { type: "spring", stiffness: 420, damping: 36, mass: 0.6 }}
+                    className="synapse-launcher-action flex h-[44px] flex-1 items-center justify-center rounded-l-[16px] rounded-r-full outline-none"
+                    aria-label="Abrir compositor do Synapse"
+                    aria-controls="synapse-quick-composer"
+                    data-synapse-action="text"
+                    title="Conversar por texto · Ctrl/⌘ K"
+                >
+                    <MessageCircle className="h-[18px] w-[18px]" strokeWidth={1.7} aria-hidden="true" />
+                </motion.button>
             </motion.div>
         );
     }
