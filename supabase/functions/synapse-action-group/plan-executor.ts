@@ -22,6 +22,8 @@ import {
 } from "./dependency-flow.ts";
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const RETRYABLE_CHARGE_STATUSES = new Set(["failed", "canceled", "cancelled", "expired", "refunded"]);
 
 function resultWarning(result: any) {
   const warnings = Array.isArray(result?.data?.warnings)
@@ -30,6 +32,220 @@ function resultWarning(result: any) {
       ? result.warnings
       : [];
   return warnings.map((value: unknown) => clean(value, 500)).filter(Boolean).join("; ") || null;
+}
+
+function resultRecordIds(toolName: string, result: any) {
+  const data = result?.data && typeof result.data === "object" ? result.data : {};
+  const nestedResult = data?.result && typeof data.result === "object" ? data.result : {};
+  const candidates: unknown[] = [];
+  if (toolName === "create_appointment") {
+    if (Array.isArray(nestedResult.appointmentIds)) candidates.push(...nestedResult.appointmentIds);
+    if (Array.isArray(data.appointmentIds)) candidates.push(...data.appointmentIds);
+    candidates.push(nestedResult.appointmentId, data.appointmentId, data?.appointment?.id);
+  } else {
+    if (Array.isArray(data.charge_ids)) candidates.push(...data.charge_ids);
+    candidates.push(data.id, data?.charge?.id, data?.invoice?.id, data?.appointment?.id);
+  }
+  const primary = primaryRecordIdFromResult(toolName, result);
+  if (primary) candidates.unshift(primary);
+  return Array.from(new Set(
+    candidates
+      .map((value) => clean(value, 120))
+      .filter((value) => UUID_PATTERN.test(value)),
+  ));
+}
+
+function persistedRecordIds(result?: SynapseActionGroupStepResult | null) {
+  if (!result) return [];
+  const values = Array.isArray((result as any).recordIds)
+    ? (result as any).recordIds
+    : result.recordId
+      ? [result.recordId]
+      : [];
+  return Array.from(new Set(
+    values
+      .map((value: unknown) => clean(value, 120))
+      .filter((value: string) => UUID_PATTERN.test(value)),
+  ));
+}
+
+function localDate(value: string | Date) {
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) throw new Error("Data da ocorrência inválida para cobrança.");
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+  }).format(parsed);
+}
+
+function dateSerial(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new Error("Data financeira inválida.");
+  return Date.parse(`${value}T00:00:00Z`);
+}
+
+function dateDifferenceDays(left: string, right: string) {
+  return Math.round((dateSerial(left) - dateSerial(right)) / 86_400_000);
+}
+
+function addDateDays(value: string, days: number) {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function chargeMode(step: SynapseActionGroupStep, args: Record<string, any>) {
+  return clean(args.charge_mode || (step.arguments as any)?.charge_mode || "per_occurrence", 40).toLowerCase();
+}
+
+function appointmentDependencyIds(
+  step: SynapseActionGroupStep,
+  steps: SynapseActionGroupStep[],
+  results: Map<string, SynapseActionGroupStepResult>,
+) {
+  for (const dependencyId of step.dependencies || []) {
+    const dependency = steps.find((candidate) => candidate.stepId === dependencyId);
+    if (dependency?.toolName !== "create_appointment") continue;
+    const result = results.get(dependencyId);
+    if (result?.status !== "completed") continue;
+    const ids = persistedRecordIds(result);
+    if (ids.length) return ids;
+  }
+  return [];
+}
+
+async function reusableChargeForAppointment(
+  admin: any,
+  userId: string,
+  appointmentId: string,
+) {
+  const { data, error } = await admin
+    .from("nb_payments")
+    .select("id,status,normalized_status,created_at")
+    .eq("user_id", userId)
+    .eq("appointment_id", appointmentId)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  if (error) throw error;
+  return (data || []).find((row: any) => {
+    const status = clean(row.normalized_status || row.status, 40).toLowerCase();
+    return !RETRYABLE_CHARGE_STATUSES.has(status);
+  }) || null;
+}
+
+class PartialStepExecutionError extends Error {
+  primaryCommitted: boolean;
+  recordIds: string[];
+
+  constructor(message: string, primaryCommitted: boolean, recordIds: string[]) {
+    super(message);
+    this.name = "PartialStepExecutionError";
+    this.primaryCommitted = primaryCommitted;
+    this.recordIds = recordIds;
+  }
+}
+
+async function executePerOccurrenceNeurofinanceCharge(input: {
+  admin: any;
+  userId: string;
+  row: any;
+  step: SynapseActionGroupStep;
+  executionArguments: Record<string, any>;
+  appointmentIds: string[];
+  toolContext: Record<string, any>;
+}) {
+  const { data: appointmentRows, error: appointmentError } = await input.admin
+    .from("appointments")
+    .select("id,start_time")
+    .eq("user_id", input.userId)
+    .in("id", input.appointmentIds);
+  if (appointmentError) throw appointmentError;
+
+  const byId = new Map((appointmentRows || []).map((row: any) => [row.id, row]));
+  const appointments = input.appointmentIds.map((id) => byId.get(id)).filter(Boolean) as Array<{ id: string; start_time: string }>;
+  if (appointments.length !== input.appointmentIds.length) {
+    throw new Error("Não consegui relacionar todas as ocorrências criadas às cobranças.");
+  }
+
+  const firstAppointmentDate = localDate(appointments[0].start_time);
+  const requestedDueDate = clean(input.executionArguments.due_date, 10);
+  const explicitDueDays = Number(input.executionArguments.due_days_before);
+  const hasExplicitDueDays = Number.isFinite(explicitDueDays) && explicitDueDays >= 0;
+  const relativeDueOffset = requestedDueDate && /^\d{4}-\d{2}-\d{2}$/.test(requestedDueDate)
+    ? dateDifferenceDays(requestedDueDate, firstAppointmentDate)
+    : 0;
+  const dueDaysBefore = hasExplicitDueDays ? Math.min(365, Math.floor(explicitDueDays)) : null;
+  const today = localDate(new Date());
+
+  const chargeIds: string[] = [];
+  let createdCount = 0;
+  let reusedCount = 0;
+  let lastClientAction: Record<string, unknown> | null = null;
+
+  for (const [index, appointment] of appointments.entries()) {
+    const appointmentDate = localDate(appointment.start_time);
+    const calculatedDueDate = dueDaysBefore !== null
+      ? addDateDays(appointmentDate, -dueDaysBefore)
+      : addDateDays(appointmentDate, relativeDueOffset);
+    const dueDate = calculatedDueDate < today ? today : calculatedDueDate;
+
+    const existing = await reusableChargeForAppointment(input.admin, input.userId, appointment.id);
+    if (existing?.id) {
+      chargeIds.push(existing.id);
+      reusedCount += 1;
+      continue;
+    }
+
+    const childArguments = {
+      ...input.executionArguments,
+      appointment_id: appointment.id,
+      due_date: dueDate,
+    };
+    const pending: PendingAction = {
+      kind: "synapse_pending_action",
+      actionId: `${input.row.plan_id}:${input.row.plan_version}:${input.step.stepId}:${appointment.id}`,
+      toolName: input.step.toolName,
+      arguments: childArguments,
+      summary: input.step.spokenSummary,
+      status: "executing",
+      createdAt: input.row.created_at,
+      expiresAt: input.row.expires_at,
+    };
+    const childResult = await executeConfirmedMutationV3(pending, input.toolContext as any);
+    if (!childResult?.ok) {
+      throw new PartialStepExecutionError(
+        `A cobrança ${index + 1} de ${appointments.length} não pôde ser concluída. ${clean(childResult?.error || childResult?.message, 500)}`.trim(),
+        chargeIds.length > 0,
+        chargeIds,
+      );
+    }
+
+    const childIds = resultRecordIds(input.step.toolName, childResult);
+    if (childIds.length) chargeIds.push(...childIds);
+    createdCount += 1;
+    if (childResult.clientAction && typeof childResult.clientAction === "object") {
+      lastClientAction = childResult.clientAction as Record<string, unknown>;
+    }
+  }
+
+  const uniqueChargeIds = Array.from(new Set(chargeIds));
+  const warnings = reusedCount > 0
+    ? [`${reusedCount} cobrança(s) já estavam vinculadas e foram preservadas sem duplicação.`]
+    : [];
+  return {
+    ok: true,
+    grounded: true,
+    recordCount: appointments.length,
+    data: {
+      primary_committed: true,
+      charge_ids: uniqueChargeIds,
+      charge: uniqueChargeIds[0] ? { id: uniqueChargeIds[0] } : null,
+      created_count: createdCount,
+      reused_count: reusedCount,
+      total_occurrences: appointments.length,
+      warnings,
+    },
+    message: `${appointments.length} cobrança(s) NeuroFinance ficaram pareadas 1:1 com as ${appointments.length} sessões.`,
+    ...(lastClientAction ? { clientAction: lastClientAction } : {}),
+  };
 }
 
 async function saveExecutionState(admin: any, row: any, resultInternal: Record<string, unknown>, status: string) {
@@ -126,9 +342,25 @@ export async function executePersistedActionGroup(input: {
         correlationId: `${row.plan_id}:${row.plan_version}`,
       };
       const executionArguments = executionArgumentsForStep(step, steps, results);
+      const linkedAppointmentIds = appointmentDependencyIds(step, steps, results);
 
       let result: any;
-      if (policy.executor === "mutation") {
+      if (
+        policy.executor === "mutation" &&
+        step.toolName === "create_neurofinance_charge" &&
+        linkedAppointmentIds.length > 1 &&
+        chargeMode(step, executionArguments) === "per_occurrence"
+      ) {
+        result = await executePerOccurrenceNeurofinanceCharge({
+          admin: input.admin,
+          userId: input.userId,
+          row,
+          step,
+          executionArguments,
+          appointmentIds: linkedAppointmentIds,
+          toolContext,
+        });
+      } else if (policy.executor === "mutation") {
         const pending: PendingAction = {
           kind: "synapse_pending_action",
           actionId: `${row.plan_id}:${step.stepId}`,
@@ -166,21 +398,30 @@ export async function executePersistedActionGroup(input: {
         });
       }
 
-      results.set(step.stepId, {
+      const completedResult: SynapseActionGroupStepResult = {
         stepId: step.stepId,
         status: "completed",
         message: clean(result.message || result.data?.spoken_summary || step.spokenSummary, 800) || step.spokenSummary,
         primaryCommitted: result?.data?.primary_committed !== false,
         recordId: primaryRecordIdFromResult(step.toolName, result),
         warning,
-      });
+      };
+      const recordIds = resultRecordIds(step.toolName, result);
+      if (recordIds.length) (completedResult as any).recordIds = recordIds;
+      results.set(step.stepId, completedResult);
     } catch (error) {
-      results.set(step.stepId, {
+      const partial = error instanceof PartialStepExecutionError ? error : null;
+      const failedResult: SynapseActionGroupStepResult = {
         stepId: step.stepId,
         status: "failed",
         message: clean(error instanceof Error ? error.message : error, 800) || "Etapa falhou.",
-        primaryCommitted: false,
-      });
+        primaryCommitted: partial?.primaryCommitted || false,
+      };
+      if (partial?.recordIds.length) {
+        failedResult.recordId = partial.recordIds[0];
+        (failedResult as any).recordIds = partial.recordIds;
+      }
+      results.set(step.stepId, failedResult);
     }
 
     await saveExecutionState(input.admin, row, {
