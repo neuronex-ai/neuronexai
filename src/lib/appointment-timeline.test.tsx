@@ -15,7 +15,7 @@ const technicalAudit = {
   appointment_id: "9d041059-eb01-4583-8dbc-7c81d2f3616d",
   actor_user_id: "1cc327cf-fb56-49e5-b06f-44b6a2a51690",
   metadata: {
-    tokenId: "e3107ab5-8cb8-4d9b-ba50-e0250bbd829f",
+    tokenId: "00000000-0000-0000-0000-000000000001",
     token: "raw-secret-token",
     ipAddress: "179.216.23.38",
     userAgent: "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 Chrome/149.0.0.0",
