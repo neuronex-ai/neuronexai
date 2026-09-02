@@ -20,6 +20,126 @@ const normalizeName = (value: unknown) =>
     .replace(/\s+/g, " ")
     .trim();
 
+const positiveNumber = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  const raw = clean(value, 120).replace(/\s+/g, " ");
+  if (!raw) return null;
+  const match = raw.match(/-?\d+(?:[.,]\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0].replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const positiveInteger = (value: unknown) => {
+  const parsed = positiveNumber(value);
+  return parsed === null ? null : Math.max(1, Math.round(parsed));
+};
+
+const isoDateOnly = (value: unknown) => {
+  const raw = clean(value, 80);
+  if (!raw) return null;
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const br = raw.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const candidate = iso
+    ? `${iso[1]}-${iso[2]}-${iso[3]}`
+    : br
+      ? `${br[3]}-${br[2]}-${br[1]}`
+      : null;
+  if (!candidate) return null;
+  const [year, month, day] = candidate.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) return null;
+  return candidate;
+};
+
+const todayInSaoPaulo = () => {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${value.year}-${value.month}-${value.day}`;
+};
+
+const canonicalPaymentMethod = (value: unknown) => {
+  const normalized = normalizeName(value);
+  if (normalized === "pix") return "pix";
+  if (normalized === "boleto") return "boleto";
+  if (["card", "cartao", "cartao de credito"].includes(normalized)) return "card";
+  if (["undefined", "a definir", "paciente decide"].includes(normalized)) return "undefined";
+  return clean(value, 80).toLowerCase();
+};
+
+const weeklyCadenceRequested = (step: SynapseActionGroupStep, args: Record<string, unknown>) => {
+  const context = normalizeName([
+    args.frequency,
+    args.recurrence,
+    args.recurrence_rule,
+    step.spokenSummary,
+    step.title,
+  ].filter(Boolean).join(" "));
+  return /\bsemanal\b/.test(context) ||
+    /\bpor semana\b/.test(context) ||
+    /\b(?:uma|1) (?:sessao|consulta|agendamento) por semana\b/.test(context);
+};
+
+const normalizedAppointmentArguments = (step: SynapseActionGroupStep) => {
+  const args: Record<string, unknown> = { ...asRecord(step.arguments) };
+  const count = positiveInteger(args.occurrence_count || args.occurrenceCount);
+  const duration = positiveInteger(
+    args.duration_minutes ?? args.durationMinutes ??
+      args.preferred_duration_minutes ?? args.preferredDurationMinutes,
+  );
+
+  if (count) {
+    args.occurrence_count = count;
+    args.occurrenceCount = count;
+  }
+  if (duration) {
+    // Agenda v2 still reads both names in different layers. Keep them identical so
+    // a review edit such as "60 minutos" cannot leave the old preferred duration behind.
+    args.duration_minutes = duration;
+    args.durationMinutes = duration;
+    args.preferred_duration_minutes = duration;
+    args.preferredDurationMinutes = duration;
+  }
+  if ((count || 1) > 1 && weeklyCadenceRequested(step, args)) {
+    // "quatro sessões no mês, aproximadamente uma por semana" is weekly cadence.
+    // Never translate that intent into one occurrence per month.
+    args.frequency = "weekly";
+  }
+  return args;
+};
+
+const normalizedFinancialArguments = (step: SynapseActionGroupStep) => {
+  const args: Record<string, unknown> = { ...asRecord(step.arguments) };
+  if (step.toolName !== "create_neurofinance_charge") return args;
+
+  const amount = positiveNumber(args.amount);
+  if (amount !== null) args.amount = amount;
+  if (args.payment_method !== undefined) {
+    args.payment_method = canonicalPaymentMethod(args.payment_method);
+  }
+
+  const dueDate = isoDateOnly(args.due_date);
+  if (!dueDate) {
+    throw new Error(
+      "O vencimento da cobrança precisa ser uma data real no formato AAAA-MM-DD; regras como ‘2 dias antes’ devem ser calculadas antes da confirmação.",
+    );
+  }
+  if (dueDate < todayInSaoPaulo()) {
+    throw new Error("O vencimento da cobrança não pode estar no passado.");
+  }
+  args.due_date = dueDate;
+  return args;
+};
+
 const patientIdentity = (step: SynapseActionGroupStep) => {
   const args = asRecord(step.arguments);
   const id = clean(args.patient_id || args.patientId, 120);
@@ -129,7 +249,7 @@ export function appointmentArgumentsForCanonicalPlan(
   const hasDedicatedCommunication = dependents.some((step) =>
     COMMUNICATION_TOOLS.has(step.toolName)
   );
-  const args: Record<string, unknown> = { ...asRecord(appointmentStep.arguments) };
+  const args = normalizedAppointmentArguments(appointmentStep);
 
   if (hasDedicatedCharge) {
     args.financial_mode = "none";
@@ -180,7 +300,7 @@ export function executionArgumentsForStep(
     };
   }
 
-  const args = { ...(step.arguments as Record<string, unknown>) };
+  const args = normalizedFinancialArguments(step);
   if (clean(args.appointment_id || args.appointmentId, 120)) {
     return args;
   }
