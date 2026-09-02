@@ -1,0 +1,69 @@
+name: Temporary patient payment status patch
+
+on:
+  push:
+    branches:
+      - agent/fix-patient-payment-status
+    paths:
+      - .github/workflows/temp-fix-patient-payment-status.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/fix-patient-payment-status
+          fetch-depth: 0
+
+      - name: Apply narrow patient payment status fix
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("supabase/functions/synapse-text-fallback/executor-v3.ts")
+          text = path.read_text()
+          old = '''      const charges = account.has_account
+        ? await queryCharges(admin, userId, { ...args, status, limit }, false)
+        : [];
+'''
+          new = '''      let charges: any[] = [];
+      if (account.has_account) {
+        let chargeQuery = admin
+          .from("nb_payments")
+          .select("id,patient_id,appointment_id,gross_amount,net_amount,status,normalized_status,funds_status,payment_method_type,expires_at,paid_at,created_at,description,checkout_url,provider_payment_id,metadata")
+          .eq("user_id", userId)
+          .eq("patient_id", args.patient_id)
+          .order("created_at", { ascending: false });
+
+        if (status && status !== "all") {
+          chargeQuery = chargeQuery.eq("normalized_status", status === "overdue" ? "overdue" : status);
+        }
+        chargeQuery = chargeQuery.limit(limit);
+
+        const { data: chargeRows, error: chargeError } = await chargeQuery;
+        if (chargeError) throw chargeError;
+        charges = (chargeRows || []).map((row: any) => ({
+          ...mapCharge(row),
+          patient_name: args.patient_name || null,
+        }));
+      }
+'''
+          count = text.count(old)
+          if count != 1:
+              raise SystemExit(f"Expected exactly one target block, found {count}")
+          path.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit patch
+        shell: bash
+        run: |
+          git config user.name "neuronex-ai-agent"
+          git config user.email "agent@users.noreply.github.com"
+          git add supabase/functions/synapse-text-fallback/executor-v3.ts
+          git commit -m "fix(synapse): repair patient payment status lookup"
+          git push origin HEAD:agent/fix-patient-payment-status
