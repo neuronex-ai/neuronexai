@@ -1,12 +1,13 @@
 "use client";
 
-import { addDays, endOfDay, format, startOfDay } from "date-fns";
+import { addDays, differenceInMinutes, endOfDay, format, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   ArrowRight,
   Calendar,
   CheckCircle2,
   Mic,
+  Search,
   Sparkles,
   Stethoscope,
   UserPlus,
@@ -52,14 +53,28 @@ const greetingForHour = (hour: number) => {
   return "Boa noite";
 };
 
+const attentionHeadingForHour = (hour: number) => {
+  if (hour < 12) return "Antes de começar";
+  if (hour < 18) return "Entre uma sessão e outra";
+  return "Antes de encerrar";
+};
+
 const shortSuggestionLabel = (label: string) => {
   const clean = label.trim();
   if (clean.length <= 25) return clean;
   return `${clean.slice(0, 24).trimEnd()}…`;
 };
 
+const appointmentName = (appointment?: Appointment | null) =>
+  appointment
+    ? getAppointmentDisplayTitle(appointment) || appointment.patient_name || "Paciente"
+    : "Paciente";
+
+type SynapseSuggestionKind = "prepare" | "consult" | "act";
+
 type SynapseSuggestion = {
   id: string;
+  kind: SynapseSuggestionKind;
   label: string;
   prompt: string;
 };
@@ -73,7 +88,7 @@ const Surface = ({
 }) => (
   <section
     className={cn(
-      "rounded-[34px] border border-foreground/[0.07] bg-background/72 shadow-[0_34px_90px_-60px_hsl(var(--foreground)/0.35)] backdrop-blur-2xl dark:border-white/[0.065] dark:bg-white/[0.025] dark:shadow-[0_34px_90px_-60px_rgba(0,0,0,0.95)]",
+      "rounded-[32px] border border-foreground/[0.07] bg-background/70 shadow-[0_30px_80px_-58px_hsl(var(--foreground)/0.32)] backdrop-blur-2xl dark:border-white/[0.06] dark:bg-white/[0.024] dark:shadow-[0_30px_80px_-58px_rgba(0,0,0,0.9)]",
       className,
     )}
   >
@@ -97,15 +112,11 @@ export const DesktopHome = () => {
   const { isConnected: financialConnected, isLoading: financialLoading } =
     useFinancialAccount();
 
-  const {
-    setActiveTab,
-    setInputDraft,
-    setShellState,
-    toggleVoiceMode,
-  } = useSynapse();
+  const { setActiveTab, setInputDraft, setShellState, toggleVoiceMode } = useSynapse();
 
   const firstName = firstNameFromProfile(profile);
   const greeting = greetingForHour(today.getHours());
+  const attentionHeading = attentionHeadingForHour(today.getHours());
   const pendingPatients = Number(pendingPatientsRaw || 0);
 
   const activeAppointments = useMemo(
@@ -135,107 +146,92 @@ export const DesktopHome = () => {
         financialLoading,
         limit: 3,
       }),
-    [
-      activeAppointments,
-      financialConnected,
-      financialLoading,
-      notifications,
-      pendingPatients,
-    ],
+    [activeAppointments, financialConnected, financialLoading, notifications, pendingPatients],
   );
 
+  const nextAppointmentContext = useMemo(() => {
+    if (!nextAppointment) return null;
+    const minutes = differenceInMinutes(new Date(nextAppointment.start_time), new Date());
+    if (minutes <= 5) return "agora";
+    if (minutes < 60) return `em ${minutes} min`;
+    if (minutes < 24 * 60) return `em ${Math.max(1, Math.round(minutes / 60))} h`;
+    return format(new Date(nextAppointment.start_time), "EEE", { locale: ptBR });
+  }, [nextAppointment]);
+
   const synapseSuggestions = useMemo(() => {
-    const candidates: SynapseSuggestion[] = [];
+    const nextName = appointmentName(nextAppointment);
+    const nextFirstName = nextName.trim().split(/\s+/)[0] || "sessão";
 
-    if (nextAppointment) {
-      const patientName =
-        getAppointmentDisplayTitle(nextAppointment) ||
-        nextAppointment.patient_name ||
-        "próximo paciente";
-      const patientFirstName = patientName.trim().split(/\s+/)[0] || "sessão";
-      const appointmentTime = format(new Date(nextAppointment.start_time), "HH:mm");
+    const prepare: SynapseSuggestion = nextAppointment
+      ? {
+          id: "prepare-next",
+          kind: "prepare",
+          label: shortSuggestionLabel(`Preparar ${nextFirstName}`),
+          prompt: `Prepare minha próxima sessão com ${nextName}, marcada para ${format(new Date(nextAppointment.start_time), "HH:mm")}. Resuma somente o contexto clínico autorizado e o que merece minha atenção antes do atendimento.`,
+        }
+      : todayAppointments.length > 0
+        ? {
+            id: "prepare-today",
+            kind: "prepare",
+            label: "Preparar minhas sessões",
+            prompt: `Ajude a preparar minhas ${todayAppointments.length} ${todayAppointments.length === 1 ? "sessão" : "sessões"} de hoje. Mostre somente contexto autorizado e pontos que merecem atenção antes de cada atendimento.`,
+          }
+        : {
+            id: "prepare-day",
+            kind: "prepare",
+            label: "Preparar meu dia",
+            prompt: "Prepare meu dia na NeuroNex usando apenas meu contexto autorizado. Priorize agenda, contexto clínico e o que exige preparação antes dos atendimentos.",
+          };
 
-      candidates.push({
-        id: "next-session",
-        label: shortSuggestionLabel(`Preparar ${patientFirstName}`),
-        prompt: `Prepare minha próxima sessão com ${patientName}, marcada para ${appointmentTime}. Resuma somente o contexto clínico autorizado e o que merece minha atenção antes do atendimento.`,
-      });
-    }
+    const consult: SynapseSuggestion = attentionItems.length > 0
+      ? {
+          id: "consult-attention",
+          kind: "consult",
+          label: "Ver o que é urgente",
+          prompt: `Revise o que merece minha atenção agora. Comece por: ${attentionItems[0].title}. ${attentionItems[0].description}`,
+        }
+      : {
+          id: "consult-day",
+          kind: "consult",
+          label: todayAppointments.length > 0 ? "Resumo do dia" : "Checar agenda",
+          prompt: todayAppointments.length > 0
+            ? `Faça um resumo operacional do meu dia. Tenho ${todayAppointments.length} ${todayAppointments.length === 1 ? "sessão" : "sessões"} hoje. Mostre agenda, preparos e informações relevantes sem executar mudanças.`
+            : "Revise minha agenda e mostre somente o que merece atenção agora, incluindo próximos horários, conflitos ou lacunas relevantes.",
+        };
 
+    let act: SynapseSuggestion;
     if (pendingPatients > 0) {
-      candidates.push({
-        id: "pending-patients",
-        label: shortSuggestionLabel(`Revisar ${pendingPatients} cadastros`),
-        prompt: `Tenho ${pendingPatients} ${pendingPatients === 1 ? "cadastro de paciente pendente" : "cadastros de pacientes pendentes"}. Organize o que precisa da minha atenção e me ajude a decidir o próximo passo.`,
-      });
-    }
-
-    if (attentionItems.length > 0) {
-      const topAttention = attentionItems[0];
-      candidates.push({
-        id: "attention",
-        label: "Revisar pendências",
-        prompt: `Revise comigo as pendências que merecem atenção agora. Comece por: ${topAttention.title}. ${topAttention.description}`,
-      });
-    }
-
-    if (!financialLoading && !financialConnected) {
-      candidates.push({
-        id: "financial",
+      act = {
+        id: "act-patients",
+        kind: "act",
+        label: shortSuggestionLabel(`Organizar ${pendingPatients} cadastros`),
+        prompt: `Tenho ${pendingPatients} ${pendingPatients === 1 ? "cadastro de paciente pendente" : "cadastros de pacientes pendentes"}. Organize o que precisa da minha atenção e prepare os próximos passos sem executar mudanças sem minha confirmação.`,
+      };
+    } else if (!financialLoading && !financialConnected) {
+      act = {
+        id: "act-financial",
+        kind: "act",
         label: "Organizar financeiro",
-        prompt: "Revise minha situação financeira operacional na NeuroNex e me diga o que merece atenção agora, separando gestão financeira do que depende do NeuroFinance.",
-      });
+        prompt: "Revise minha situação financeira operacional na NeuroNex e prepare os próximos passos, separando gestão financeira do que depende do NeuroFinance. Não execute mudanças sem minha confirmação.",
+      };
+    } else if (today.getHours() >= 18) {
+      act = {
+        id: "act-close-day",
+        kind: "act",
+        label: "Fechar meu dia",
+        prompt: "Ajude a fechar meu dia na NeuroNex. Revise registros, pendências e próximos compromissos e prepare o que ficou para amanhã, sem executar mudanças sem confirmação.",
+      };
+    } else {
+      act = {
+        id: "act-organize",
+        kind: "act",
+        label: today.getHours() < 12 ? "Organizar meu dia" : "Organizar próximos passos",
+        prompt: "Organize meus próximos passos na NeuroNex com base no contexto atual da clínica. Priorize o que exige decisão ou ação e não execute mudanças sem minha confirmação.",
+      };
     }
 
-    if (todayAppointments.length > 0) {
-      candidates.push({
-        id: "today",
-        label: "Resumo do dia",
-        prompt: `Faça um resumo operacional do meu dia. Tenho ${todayAppointments.length} ${todayAppointments.length === 1 ? "sessão" : "sessões"} hoje. Mostre agenda, preparos importantes e pendências relacionadas sem alterar nada sem minha confirmação.`,
-      });
-    }
-
-    if (activeAppointments.length > 0) {
-      candidates.push({
-        id: "week",
-        label: "Organizar semana",
-        prompt: `Organize minha semana clínica a partir dos ${activeAppointments.length} compromissos carregados na agenda dos próximos dias. Destaque conflitos, espaços livres e o que precisa de preparação.`,
-      });
-    }
-
-    const fallbacks: SynapseSuggestion[] = [
-      {
-        id: "fallback-day",
-        label: "Organizar meu dia",
-        prompt: "Organize meu dia na NeuroNex usando apenas meu contexto autorizado. Mostre primeiro o que realmente exige uma decisão ou ação minha.",
-      },
-      {
-        id: "fallback-agenda",
-        label: "Checar agenda",
-        prompt: "Revise minha agenda e me mostre somente o que merece atenção agora, incluindo próximos horários, conflitos ou lacunas relevantes.",
-      },
-      {
-        id: "fallback-pending",
-        label: "Ver pendências",
-        prompt: "Mostre minhas pendências atuais na NeuroNex em ordem de prioridade e sugira o próximo passo para cada uma, sem executar mudanças sem confirmação.",
-      },
-    ];
-
-    const unique = new Map<string, SynapseSuggestion>();
-    [...candidates, ...fallbacks].forEach((suggestion) => {
-      if (!unique.has(suggestion.label)) unique.set(suggestion.label, suggestion);
-    });
-
-    return Array.from(unique.values()).slice(0, 3);
-  }, [
-    activeAppointments.length,
-    attentionItems,
-    financialConnected,
-    financialLoading,
-    nextAppointment,
-    pendingPatients,
-    todayAppointments.length,
-  ]);
+    return [prepare, consult, act];
+  }, [attentionItems, financialConnected, financialLoading, nextAppointment, pendingPatients, today, todayAppointments.length]);
 
   const openSynapse = (text = "") => {
     const clean = text.trim();
@@ -259,80 +255,76 @@ export const DesktopHome = () => {
 
   return (
     <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 text-foreground">
-      <main className="page-spacing relative z-10 mx-auto flex w-full max-w-[1840px] flex-col gap-6 px-6 md:px-8 lg:px-12 xl:px-16">
-        <div className="flex flex-wrap justify-end gap-2 pt-2">
+      <main className="page-spacing relative z-10 mx-auto flex w-full max-w-[1840px] flex-col gap-5 px-6 md:px-8 lg:px-12 xl:px-16">
+        <div className="flex flex-wrap justify-end gap-1.5 pt-1">
           <NewAppointmentModal selectedDate={today}>
-            <Button variant="outline" className="h-11 rounded-2xl px-4 font-bold">
-              <Calendar className="mr-2 h-4 w-4" /> Agendar
+            <Button variant="ghost" className="h-9 rounded-xl border border-foreground/[0.07] px-3 text-xs font-bold text-muted-foreground hover:text-foreground dark:border-white/[0.06]">
+              <Calendar className="mr-1.5 h-3.5 w-3.5" /> Agendar
             </Button>
           </NewAppointmentModal>
           <NewPatientModal>
-            <Button variant="outline" className="h-11 rounded-2xl px-4 font-bold">
-              <UserPlus className="mr-2 h-4 w-4" /> Paciente
+            <Button variant="ghost" className="h-9 rounded-xl border border-foreground/[0.07] px-3 text-xs font-bold text-muted-foreground hover:text-foreground dark:border-white/[0.06]">
+              <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Paciente
             </Button>
           </NewPatientModal>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.36fr)_minmax(360px,0.64fr)]">
-          <Surface className="overflow-hidden p-6 md:p-8 lg:p-10">
-            <div className="flex min-h-[500px] flex-col">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Sparkles className="h-4 w-4" />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Synapse</span>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.6fr)]">
+          <Surface className="overflow-hidden p-6 md:p-8 lg:p-9">
+            <div className="flex min-h-[420px] flex-col">
+              <div className="flex items-center gap-1.5 text-muted-foreground/55">
+                <Sparkles className="h-3.5 w-3.5" />
+                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Synapse</span>
               </div>
 
-              <div className="my-auto py-9 md:py-10">
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-muted-foreground">
+              <div className="my-auto py-5 md:py-7">
+                <p className="text-[9px] font-black uppercase tracking-[0.22em] text-muted-foreground">
                   {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
                 </p>
-                <h1 className="mt-3 max-w-4xl text-[clamp(2.55rem,4.8vw,5.5rem)] font-black leading-[0.92] tracking-[-0.075em]">
+                <h1 className="mt-2.5 max-w-4xl text-[clamp(2.35rem,4.35vw,5rem)] font-black leading-[0.93] tracking-[-0.072em]">
                   {greeting}, {firstName}
                 </h1>
-                <p className="mt-5 max-w-2xl text-sm font-medium leading-relaxed text-muted-foreground md:text-base">
+                <p className="mt-3.5 text-sm font-medium text-muted-foreground md:text-[15px]">
                   O que você quer resolver agora?
                 </p>
               </div>
 
               <form onSubmit={submitPrompt}>
-                <div className="mb-3 flex flex-wrap gap-2">
-                  {synapseSuggestions.map((suggestion) => (
-                    <button
-                      key={suggestion.id}
-                      type="button"
-                      onClick={() => openSynapse(suggestion.prompt)}
-                      className="group relative overflow-hidden rounded-full border border-foreground/[0.09] bg-background/45 px-4 py-2.5 text-xs font-bold text-foreground shadow-[inset_0_1px_0_hsl(var(--background)/0.85),0_8px_28px_-18px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl transition-[transform,background-color,border-color] hover:-translate-y-0.5 hover:border-foreground/[0.14] hover:bg-background/65 dark:border-white/[0.1] dark:bg-white/[0.055] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1),0_10px_30px_-20px_rgba(0,0,0,0.95)] dark:hover:border-white/[0.16] dark:hover:bg-white/[0.085]"
-                      aria-label={`Perguntar ao Synapse: ${suggestion.label}`}
-                    >
-                      <span className="relative z-10">{suggestion.label}</span>
-                    </button>
-                  ))}
+                <div className="mb-2.5 flex flex-wrap gap-2">
+                  {synapseSuggestions.map((suggestion) => {
+                    const Icon = suggestion.kind === "prepare" ? Sparkles : suggestion.kind === "consult" ? Search : ArrowRight;
+                    return (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        onClick={() => openSynapse(suggestion.prompt)}
+                        className={cn(
+                          "group flex items-center gap-1.5 rounded-full border px-3.5 py-2 text-[11px] font-bold text-foreground backdrop-blur-2xl transition-[transform,background-color,border-color] hover:-translate-y-0.5",
+                          suggestion.kind === "prepare" && "border-foreground/[0.09] bg-background/55 hover:bg-background/75 dark:border-white/[0.1] dark:bg-white/[0.06] dark:hover:bg-white/[0.09]",
+                          suggestion.kind === "consult" && "border-foreground/[0.07] bg-muted/30 hover:bg-muted/45 dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
+                          suggestion.kind === "act" && "border-foreground/[0.11] bg-foreground/[0.035] hover:bg-foreground/[0.06] dark:border-white/[0.12] dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
+                        )}
+                        aria-label={`Perguntar ao Synapse: ${suggestion.label}`}
+                      >
+                        <Icon className="h-3 w-3 text-muted-foreground" />
+                        <span>{suggestion.label}</span>
+                      </button>
+                    );
+                  })}
                 </div>
 
-                <div className="flex min-h-[72px] items-center gap-3 rounded-[26px] border border-foreground/[0.09] bg-muted/25 p-2 pl-5 dark:border-white/[0.08] dark:bg-white/[0.035]">
-                  <Sparkles className="h-5 w-5 shrink-0 text-muted-foreground" />
+                <div className="flex min-h-[70px] items-center gap-3 rounded-[24px] border border-foreground/[0.14] bg-background/68 p-2 pl-5 shadow-[inset_0_1px_0_hsl(var(--background)/0.9),0_20px_45px_-35px_hsl(var(--foreground)/0.55)] backdrop-blur-2xl transition-[border-color,background-color] focus-within:border-foreground/[0.24] focus-within:bg-background/82 dark:border-white/[0.13] dark:bg-white/[0.055] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_20px_45px_-35px_rgba(0,0,0,0.95)] dark:focus-within:border-white/[0.22] dark:focus-within:bg-white/[0.075]">
+                  <Sparkles className="h-4.5 w-4.5 shrink-0 text-muted-foreground/70" />
                   <input
                     value={prompt}
                     onChange={(event) => setPrompt(event.target.value)}
                     placeholder="Pergunte ou peça algo à NeuroNex"
-                    className="min-w-0 flex-1 bg-transparent py-3 text-base font-medium outline-none placeholder:text-muted-foreground/65"
+                    className="min-w-0 flex-1 bg-transparent py-3 text-base font-medium outline-none placeholder:text-muted-foreground/55"
                   />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => void startVoice()}
-                    className="h-12 w-12 shrink-0 rounded-[18px]"
-                    aria-label="Falar com o Synapse"
-                  >
+                  <Button type="button" variant="ghost" size="icon" onClick={() => void startVoice()} className="h-11 w-11 shrink-0 rounded-[16px]" aria-label="Falar com o Synapse">
                     <Mic className="h-5 w-5" />
                   </Button>
-                  <Button
-                    type="submit"
-                    size="icon"
-                    disabled={!prompt.trim()}
-                    className="h-12 w-12 shrink-0 rounded-[18px]"
-                    aria-label="Abrir no Synapse"
-                  >
+                  <Button type="submit" size="icon" disabled={!prompt.trim()} className="h-11 w-11 shrink-0 rounded-[16px]" aria-label="Abrir no Synapse">
                     <ArrowRight className="h-5 w-5" />
                   </Button>
                 </div>
@@ -340,122 +332,151 @@ export const DesktopHome = () => {
             </div>
           </Surface>
 
-          <div className="flex flex-col gap-6">
-            <Surface className="p-6 md:p-7">
+          <Surface className="overflow-hidden p-0">
+            <div className="p-6 md:p-7">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Agora</p>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Agora</p>
                   <h2 className="mt-2 text-2xl font-black tracking-[-0.045em]">Próxima sessão</h2>
                 </div>
                 {nextAppointment ? (
-                  <span className="rounded-full border border-foreground/[0.08] px-3 py-1.5 text-xs font-bold text-muted-foreground dark:border-white/[0.08]">
+                  <span className="rounded-full bg-muted/35 px-3 py-1.5 text-[11px] font-bold text-muted-foreground">
                     {format(new Date(nextAppointment.start_time), "HH:mm")}
                   </span>
                 ) : null}
               </div>
 
               {loadingAppointments ? (
-                <div className="mt-8 h-36 animate-pulse rounded-[26px] bg-muted/40" />
+                <div className="mt-6 h-32 animate-pulse rounded-[22px] bg-muted/35" />
               ) : nextAppointment ? (
                 <button
                   type="button"
                   onClick={() => navigate("/agenda", { state: { openAppointmentId: nextAppointment.id } })}
-                  className="group mt-8 w-full rounded-[28px] border border-foreground/[0.08] bg-foreground p-5 text-left text-background transition-transform hover:-translate-y-0.5 dark:border-white/10 dark:bg-white dark:text-zinc-950"
+                  className="group mt-6 w-full rounded-[24px] bg-foreground/[0.035] p-5 text-left transition-[background-color,transform] hover:-translate-y-0.5 hover:bg-foreground/[0.055] dark:bg-white/[0.045] dark:hover:bg-white/[0.07]"
                 >
-                  <div className="flex items-center gap-2 text-background/60 dark:text-zinc-950/55">
-                    {isOnlineAppointment(nextAppointment) ? <Video className="h-4 w-4" /> : <Stethoscope className="h-4 w-4" />}
-                    <span className="text-[10px] font-black uppercase tracking-[0.16em]">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    {isOnlineAppointment(nextAppointment) ? <Video className="h-3.5 w-3.5" /> : <Stethoscope className="h-3.5 w-3.5" />}
+                    <span className="text-[9px] font-black uppercase tracking-[0.15em]">
                       {isOnlineAppointment(nextAppointment) ? "Online" : "Consultório"}
                     </span>
+                    {nextAppointmentContext ? <span className="text-[11px] font-semibold">· {nextAppointmentContext}</span> : null}
                   </div>
-                  <p className="mt-5 truncate text-2xl font-black tracking-[-0.045em]">
-                    {getAppointmentDisplayTitle(nextAppointment) || nextAppointment.patient_name || "Paciente"}
+                  <p className="mt-4 truncate text-[1.65rem] font-black tracking-[-0.05em]">
+                    {appointmentName(nextAppointment)}
                   </p>
-                  <div className="mt-5 flex items-center justify-between text-sm font-bold">
+                  <div className="mt-4 flex items-center justify-between text-sm font-bold">
                     <span>{format(new Date(nextAppointment.start_time), "HH:mm")}</span>
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
                   </div>
                 </button>
               ) : (
-                <div className="mt-8 flex min-h-36 flex-col items-center justify-center rounded-[26px] border border-dashed border-foreground/[0.1] p-5 text-center dark:border-white/10">
-                  <CheckCircle2 className="h-6 w-6 text-muted-foreground" />
-                  <p className="mt-3 font-bold">Sem sessão próxima.</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Sua agenda está livre por enquanto.</p>
+                <div className="mt-6 flex min-h-28 items-center gap-3 rounded-[22px] bg-muted/20 p-4">
+                  <CheckCircle2 className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="font-bold">Sem sessão próxima.</p>
+                    <p className="mt-0.5 text-xs font-medium text-muted-foreground">Sua agenda está livre por enquanto.</p>
+                  </div>
                 </div>
               )}
-            </Surface>
+            </div>
 
-            <Surface className="p-6 md:p-7">
+            <div className="border-t border-foreground/[0.06] px-6 py-5 dark:border-white/[0.055] md:px-7">
               <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Depois</p>
-                  <h2 className="mt-2 text-xl font-black tracking-[-0.04em]">Próximos horários</h2>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">Depois</p>
+                  <h3 className="mt-1.5 text-base font-black tracking-[-0.03em]">Próximos horários</h3>
                 </div>
-                <Button variant="ghost" className="rounded-xl text-xs font-bold" onClick={() => navigate("/agenda")}>Agenda</Button>
+                <Button variant="ghost" className="h-8 rounded-lg px-2.5 text-[11px] font-bold text-muted-foreground" onClick={() => navigate("/agenda")}>Agenda</Button>
               </div>
-              <div className="mt-5 space-y-2">
-                {nextItems.length ? nextItems.map((appointment) => (
-                  <button
-                    key={appointment.id}
-                    type="button"
-                    onClick={() => navigate("/agenda", { state: { openAppointmentId: appointment.id } })}
-                    className="flex w-full items-center gap-4 rounded-[20px] px-3 py-3 text-left transition-colors hover:bg-muted/45"
-                  >
-                    <span className="w-12 text-sm font-black tabular-nums">{format(new Date(appointment.start_time), "HH:mm")}</span>
-                    <span className="min-w-0 flex-1 truncate text-sm font-bold">
-                      {getAppointmentDisplayTitle(appointment) || appointment.patient_name || "Paciente"}
-                    </span>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
-                  </button>
-                )) : (
-                  <p className="py-4 text-sm font-medium text-muted-foreground">Nada urgente depois disso.</p>
+
+              <div className="relative mt-4">
+                {nextItems.length ? (
+                  <>
+                    <div className="absolute bottom-4 left-[4.5px] top-4 w-px bg-foreground/[0.08] dark:bg-white/[0.07]" />
+                    <div className="space-y-1">
+                      {nextItems.map((appointment) => (
+                        <button
+                          key={appointment.id}
+                          type="button"
+                          onClick={() => navigate("/agenda", { state: { openAppointmentId: appointment.id } })}
+                          className="group relative flex w-full items-center gap-3 rounded-xl py-2.5 pl-5 pr-1 text-left hover:bg-muted/25"
+                        >
+                          <span className="absolute left-0 h-2.5 w-2.5 rounded-full border-2 border-background bg-muted-foreground/45 ring-1 ring-foreground/[0.08]" />
+                          <span className="w-11 text-xs font-black tabular-nums">{format(new Date(appointment.start_time), "HH:mm")}</span>
+                          <span className="min-w-0 flex-1 truncate text-sm font-bold">{appointmentName(appointment)}</span>
+                          <ArrowRight className="h-3.5 w-3.5 text-muted-foreground/35 transition-transform group-hover:translate-x-0.5" />
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <p className="py-2 text-xs font-medium text-muted-foreground">Nada urgente depois disso.</p>
                 )}
               </div>
-            </Surface>
-          </div>
+            </div>
+          </Surface>
         </div>
 
-        <Surface className="p-6 md:p-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-muted-foreground">Atenção</p>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.045em]">O que merece um olhar</h2>
+        {notificationsLoading ? (
+          <Surface className="p-5">
+            <div className="h-16 animate-pulse rounded-[20px] bg-muted/25" />
+          </Surface>
+        ) : attentionItems.length <= 1 ? (
+          <Surface className="px-5 py-4 md:px-6">
+            {attentionItems.length === 1 ? (
+              <button type="button" onClick={() => navigate(attentionItems[0].actionUrl)} className="group flex w-full items-center gap-4 text-left">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
+                  </div>
+                  <p className="mt-1.5 truncate text-sm font-black">{attentionItems[0].title}</p>
+                  <p className="mt-0.5 line-clamp-1 text-xs font-medium text-muted-foreground">{attentionItems[0].description}</p>
+                </div>
+                <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+              </button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <CheckCircle2 className="h-5 w-5 text-muted-foreground/65" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                    <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
+                    <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
+                  </div>
+                  <p className="mt-1 text-sm font-bold">Tudo em dia. Nenhuma pendência precisa ocupar sua Home agora.</p>
+                </div>
+              </div>
+            )}
+          </Surface>
+        ) : (
+          <Surface className="overflow-hidden p-0">
+            <div className="flex flex-col gap-2 px-6 pb-4 pt-5 sm:flex-row sm:items-end sm:justify-between md:px-7">
+              <div>
+                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">{attentionHeading}</p>
+                <h2 className="mt-1.5 text-xl font-black tracking-[-0.04em]">O que merece um olhar</h2>
+              </div>
+              <p className="text-xs font-medium text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</p>
             </div>
-            <p className="text-sm font-medium text-muted-foreground">
-              {todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}
-            </p>
-          </div>
-
-          {notificationsLoading ? (
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              {[1, 2, 3].map((item) => <div key={item} className="h-28 animate-pulse rounded-[24px] bg-muted/35" />)}
-            </div>
-          ) : attentionItems.length ? (
-            <div className="mt-6 grid gap-3 md:grid-cols-3">
-              {attentionItems.map((item) => (
+            <div className="grid border-t border-foreground/[0.06] dark:border-white/[0.055] md:grid-cols-3">
+              {attentionItems.map((item, index) => (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => navigate(item.actionUrl)}
-                  className="group rounded-[26px] border border-foreground/[0.07] p-5 text-left transition-[transform,background-color] hover:-translate-y-0.5 hover:bg-muted/30 dark:border-white/[0.06]"
+                  className={cn(
+                    "group p-5 text-left transition-colors hover:bg-muted/25 md:p-6",
+                    index > 0 && "border-t border-foreground/[0.06] dark:border-white/[0.055] md:border-l md:border-t-0",
+                  )}
                 >
-                  <p className="text-[9px] font-black uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-3 line-clamp-1 text-base font-black tracking-[-0.02em]">{item.title}</p>
-                  <p className="mt-2 line-clamp-2 text-sm font-medium leading-relaxed text-muted-foreground">{item.description}</p>
-                  <ArrowRight className="mt-5 h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+                  <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
+                  <p className="mt-2 line-clamp-1 text-sm font-black tracking-[-0.02em]">{item.title}</p>
+                  <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground">{item.description}</p>
+                  <ArrowRight className="mt-3.5 h-3.5 w-3.5 text-muted-foreground/50 transition-transform group-hover:translate-x-1" />
                 </button>
               ))}
             </div>
-          ) : (
-            <div className="mt-6 flex min-h-28 items-center gap-4 rounded-[26px] border border-dashed border-foreground/[0.1] p-5 dark:border-white/10">
-              <CheckCircle2 className="h-6 w-6 text-emerald-500/70" />
-              <div>
-                <p className="font-bold">Tudo em dia.</p>
-                <p className="mt-1 text-sm font-medium text-muted-foreground">Nenhuma pendência acionável precisa ocupar sua Home agora.</p>
-              </div>
-            </div>
-          )}
-        </Surface>
+          </Surface>
+        )}
       </main>
     </div>
   );
