@@ -204,7 +204,7 @@ describe('LoginFormSchema', () => {
     it('deve aceitar login válido', () => {
         const result = LoginFormSchema.safeParse({
             email: 'psicologa@email.com',
-            password: 'senhaSegura123',
+            password: 'aaaaaa',
         });
         expect(result.success).toBe(true);
     });
@@ -212,7 +212,7 @@ describe('LoginFormSchema', () => {
     it('deve rejeitar email inválido', () => {
         const result = LoginFormSchema.safeParse({
             email: 'nao-email',
-            password: 'senhaSegura123',
+            password: 'aaaaaa',
         });
         expect(result.success).toBe(false);
     });
