@@ -11,12 +11,10 @@ import { supabase } from "@/integrations/supabase/client";
 
 const POST_ONBOARDING_ROLLOUT_AT = new Date("2026-06-11T00:00:00.000Z").getTime();
 
-export function NeuroFinancePostOnboardingGate() {
-  const location = useLocation();
+function NeuroFinancePostOnboardingContent() {
   const isMobile = useIsMobile();
-  const isNeuroFinanceRoute = location.pathname.startsWith("/financeiro/neurofinance");
   const { account, isConnected, isLoading, needsInitialOnboarding, refetch } = useFinancialAccount();
-  const pinStatus = useFinancialPinStatus(Boolean(isNeuroFinanceRoute && isConnected));
+  const pinStatus = useFinancialPinStatus(Boolean(isConnected));
   const postOnboarding = account?.metadata?.neurofinance_post_onboarding;
   const isCompletedInAccount = Boolean(postOnboarding?.completed || postOnboarding?.completed_at);
   const accountCreatedAt = account?.created_at ? new Date(account.created_at).getTime() : null;
@@ -27,7 +25,6 @@ export function NeuroFinancePostOnboardingGate() {
     (account?.tos_accepted_at || account?.onboarding_completed_at || account?.onboarding_payload)
   );
   const shouldMarkAsComplete = Boolean(
-    isNeuroFinanceRoute &&
     account?.id &&
     !isCompletedInAccount &&
     (pinStatus.data?.isConfigured || isLegacyAccount)
@@ -46,7 +43,6 @@ export function NeuroFinancePostOnboardingGate() {
 
   const shouldOpen = Boolean(
     !isMobile &&
-    isNeuroFinanceRoute &&
     !isLoading &&
     !pinStatus.isLoading &&
     isConnected &&
@@ -68,4 +64,10 @@ export function NeuroFinancePostOnboardingGate() {
       onComplete={handleComplete}
     />
   );
+}
+
+export function NeuroFinancePostOnboardingGate() {
+  const location = useLocation();
+  if (!location.pathname.startsWith("/financeiro/neurofinance")) return null;
+  return <NeuroFinancePostOnboardingContent />;
 }
