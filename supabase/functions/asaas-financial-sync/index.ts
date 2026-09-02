@@ -49,6 +49,13 @@ function nullableString(value: unknown) {
     return String(value);
 }
 
+function comparableTemporal(value: unknown) {
+    if (value == null || value === "") return null;
+    const raw = String(value).trim();
+    const parsed = new Date(raw);
+    return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString();
+}
+
 function isPaymentUnchanged(existing: any, payment: any) {
     if (!existing || !payment?.id) return false;
 
@@ -88,10 +95,10 @@ function isPaymentUnchanged(existing: any, payment: any) {
 
     if (nullableString(existing.description) !== nullableString(expectedDescription)) return false;
     if (nullableString(existing.checkout_url) !== nullableString(expectedCheckoutUrl)) return false;
-    if (nullableString(existing.expires_at) !== nullableString(expectedExpiresAt)) return false;
-    if (nullableString(existing.paid_at) !== nullableString(expectedPaidAt)) return false;
-    if (nullableString(existing.confirmed_at) !== nullableString(expectedConfirmedAt)) return false;
-    if (nullableString(existing.estimated_credit_at) !== nullableString(expectedEstimatedCreditAt)) return false;
+    if (comparableTemporal(existing.expires_at) !== comparableTemporal(expectedExpiresAt)) return false;
+    if (comparableTemporal(existing.paid_at) !== comparableTemporal(expectedPaidAt)) return false;
+    if (comparableTemporal(existing.confirmed_at) !== comparableTemporal(expectedConfirmedAt)) return false;
+    if (comparableTemporal(existing.estimated_credit_at) !== comparableTemporal(expectedEstimatedCreditAt)) return false;
 
     if (state.fundsStatus === "refunded") {
         const expectedRefundAmount = cents(payment.refundedValue || payment.value);
