@@ -127,6 +127,47 @@ export interface ExecuteActionGroupResult {
 
 const clean = (value: unknown, max = 5000) => String(value ?? "").trim().slice(0, max);
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const MONEY_REFERENCE_PATTERN = /(?:R\$\s*-?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?|-?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?\s+reais?)/gi;
+
+const positiveMoney = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) return value;
+  const raw = clean(value, 120).replace(/\s+/g, " ");
+  if (!raw) return null;
+  const match = raw.match(/-?\d+(?:[.,]\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0].replace(",", "."));
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+};
+
+const formatMoneyNumber = (amount: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
+function synchronizePlanMoneySummary(
+  value: unknown,
+  steps: SynapseActionGroupStep[],
+) {
+  const summary = clean(value, 1200);
+  if (!summary) return summary;
+  const amounts = Array.from(new Set(
+    steps.flatMap((step) => step.editableFields || [])
+      .filter((field) => field.type === "money" || field.fieldId === "amount")
+      .map((field) => positiveMoney(field.value))
+      .filter((amount): amount is number => amount !== null)
+      .map((amount) => amount.toFixed(2)),
+  )).map(Number);
+  if (amounts.length !== 1) return summary;
+
+  const matches = [...summary.matchAll(new RegExp(MONEY_REFERENCE_PATTERN.source, "gi"))];
+  if (matches.length !== 1) return summary;
+  const current = matches[0][0];
+  const replacement = /^R\$/i.test(current.trim())
+    ? `R$ ${formatMoneyNumber(amounts[0])}`
+    : `${formatMoneyNumber(amounts[0])} reais`;
+  return summary.replace(current, replacement);
+}
 
 const normalizeForHash = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(normalizeForHash);
@@ -274,7 +315,7 @@ export async function prepareSynapseActionGroupPlan(
   const planVersion = Math.max(1, Math.min(100, Number(draft.planVersion) || 1));
   const title = clean(draft.title, 180);
   const intent = clean(draft.intent, 300);
-  const spokenSummary = clean(draft.spokenSummary, 1200);
+  const spokenSummary = synchronizePlanMoneySummary(draft.spokenSummary, draft.steps);
   if (!title || !intent || !spokenSummary) throw new Error("Plano composto sem título, intenção ou resumo falado.");
 
   const expiresAt = draft.expiresAt || new Date(Date.now() + 20 * 60_000).toISOString();
