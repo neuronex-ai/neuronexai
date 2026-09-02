@@ -7,6 +7,7 @@ import {
   Calendar,
   CheckCircle2,
   Mic,
+  Plus,
   Search,
   Sparkles,
   Stethoscope,
@@ -70,7 +71,7 @@ const appointmentName = (appointment?: Appointment | null) =>
     ? getAppointmentDisplayTitle(appointment) || appointment.patient_name || "Paciente"
     : "Paciente";
 
-type SynapseSuggestionKind = "prepare" | "consult" | "act";
+type SynapseSuggestionKind = "prepare" | "consult" | "act" | "plan";
 
 type SynapseSuggestion = {
   id: string;
@@ -100,6 +101,7 @@ export const DesktopHome = () => {
   const navigate = useNavigate();
   const today = useMemo(() => new Date(), []);
   const [prompt, setPrompt] = useState("");
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
 
   const { data: profile } = useProfile();
   const { data: upcomingRaw, isLoading: loadingAppointments } =
@@ -230,8 +232,32 @@ export const DesktopHome = () => {
       };
     }
 
-    return [prepare, consult, act];
-  }, [attentionItems, financialConnected, financialLoading, nextAppointment, pendingPatients, today, todayAppointments.length]);
+    const futureCount = Math.max(0, activeAppointments.length - todayAppointments.length);
+    const plan: SynapseSuggestion = futureCount > 0
+      ? {
+          id: "plan-next-days",
+          kind: "plan",
+          label: "Planejar próximos dias",
+          prompt: `Planeje meus próximos dias a partir dos ${futureCount} compromissos futuros já carregados na agenda. Destaque distribuição dos atendimentos, espaços livres, possíveis conflitos e o que precisa ser preparado com antecedência.`,
+        }
+      : {
+          id: "plan-week",
+          kind: "plan",
+          label: "Planejar minha semana",
+          prompt: "Ajude a planejar minha semana clínica com base na agenda e nas pendências atuais. Mostre espaços livres, prioridades e preparações úteis sem executar nenhuma mudança sem confirmação.",
+        };
+
+    return [prepare, consult, act, plan];
+  }, [
+    activeAppointments.length,
+    attentionItems,
+    financialConnected,
+    financialLoading,
+    nextAppointment,
+    pendingPatients,
+    today,
+    todayAppointments.length,
+  ]);
 
   const openSynapse = (text = "") => {
     const clean = text.trim();
@@ -255,26 +281,50 @@ export const DesktopHome = () => {
 
   return (
     <div className="desktop-lumen-page desktop-content-offset relative min-h-screen w-full bg-transparent pb-24 text-foreground">
-      <main className="page-spacing relative z-10 mx-auto flex w-full max-w-[1840px] flex-col gap-5 px-6 md:px-8 lg:px-12 xl:px-16">
-        <div className="flex flex-wrap justify-end gap-1.5 pt-1">
-          <NewAppointmentModal selectedDate={today}>
-            <Button variant="ghost" className="h-9 rounded-xl border border-foreground/[0.07] px-3 text-xs font-bold text-muted-foreground hover:text-foreground dark:border-white/[0.06]">
-              <Calendar className="mr-1.5 h-3.5 w-3.5" /> Agendar
-            </Button>
-          </NewAppointmentModal>
-          <NewPatientModal>
-            <Button variant="ghost" className="h-9 rounded-xl border border-foreground/[0.07] px-3 text-xs font-bold text-muted-foreground hover:text-foreground dark:border-white/[0.06]">
-              <UserPlus className="mr-1.5 h-3.5 w-3.5" /> Paciente
-            </Button>
-          </NewPatientModal>
-        </div>
-
+      <main className="page-spacing relative z-10 mx-auto flex w-full max-w-[1840px] flex-col gap-5 px-4 md:px-6 lg:px-9 xl:px-12 2xl:px-14">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(360px,0.6fr)]">
-          <Surface className="overflow-hidden p-6 md:p-8 lg:p-9">
+          <Surface className="relative overflow-hidden p-6 md:p-8 lg:p-9">
             <div className="flex min-h-[420px] flex-col">
-              <div className="flex items-center gap-1.5 text-muted-foreground/55">
-                <Sparkles className="h-3.5 w-3.5" />
-                <span className="text-[9px] font-black uppercase tracking-[0.2em]">Synapse</span>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-1.5 text-muted-foreground/55">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em]">Synapse</span>
+                </div>
+
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setQuickCreateOpen((open) => !open)}
+                    className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-foreground text-background shadow-[0_12px_30px_-20px_hsl(var(--foreground)/0.7)] transition-[transform,opacity] hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground/15 dark:shadow-[0_12px_30px_-20px_rgba(255,255,255,0.35)]"
+                    aria-label="Criar novo"
+                    aria-expanded={quickCreateOpen}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </button>
+
+                  {quickCreateOpen ? (
+                    <div className="absolute right-0 top-12 z-30 w-44 rounded-[18px] border border-zinc-200/80 bg-background/90 p-1.5 shadow-[0_18px_45px_-24px_hsl(var(--foreground)/0.3)] backdrop-blur-2xl dark:border-white/[0.09] dark:bg-zinc-950/90 dark:shadow-[0_18px_45px_-24px_rgba(0,0,0,0.9)]">
+                      <NewAppointmentModal selectedDate={today}>
+                        <Button
+                          variant="ghost"
+                          className="h-10 w-full justify-start rounded-xl px-3 text-xs font-bold"
+                          onClick={() => setQuickCreateOpen(false)}
+                        >
+                          <Calendar className="mr-2 h-4 w-4" /> Agendar
+                        </Button>
+                      </NewAppointmentModal>
+                      <NewPatientModal>
+                        <Button
+                          variant="ghost"
+                          className="h-10 w-full justify-start rounded-xl px-3 text-xs font-bold"
+                          onClick={() => setQuickCreateOpen(false)}
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" /> Paciente
+                        </Button>
+                      </NewPatientModal>
+                    </div>
+                  ) : null}
+                </div>
               </div>
 
               <div className="my-auto py-5 md:py-7">
@@ -292,7 +342,14 @@ export const DesktopHome = () => {
               <form onSubmit={submitPrompt}>
                 <div className="mb-2.5 flex flex-wrap gap-2">
                   {synapseSuggestions.map((suggestion) => {
-                    const Icon = suggestion.kind === "prepare" ? Sparkles : suggestion.kind === "consult" ? Search : ArrowRight;
+                    const Icon =
+                      suggestion.kind === "prepare"
+                        ? Sparkles
+                        : suggestion.kind === "consult"
+                          ? Search
+                          : suggestion.kind === "plan"
+                            ? Calendar
+                            : ArrowRight;
                     return (
                       <button
                         key={suggestion.id}
@@ -303,6 +360,7 @@ export const DesktopHome = () => {
                           suggestion.kind === "prepare" && "border-foreground/[0.09] bg-background/55 hover:bg-background/75 dark:border-white/[0.1] dark:bg-white/[0.06] dark:hover:bg-white/[0.09]",
                           suggestion.kind === "consult" && "border-foreground/[0.07] bg-muted/30 hover:bg-muted/45 dark:border-white/[0.075] dark:bg-white/[0.035] dark:hover:bg-white/[0.065]",
                           suggestion.kind === "act" && "border-foreground/[0.11] bg-foreground/[0.035] hover:bg-foreground/[0.06] dark:border-white/[0.12] dark:bg-white/[0.07] dark:hover:bg-white/[0.1]",
+                          suggestion.kind === "plan" && "border-foreground/[0.075] bg-background/40 hover:bg-background/62 dark:border-white/[0.08] dark:bg-white/[0.045] dark:hover:bg-white/[0.075]",
                         )}
                         aria-label={`Perguntar ao Synapse: ${suggestion.label}`}
                       >
@@ -313,18 +371,31 @@ export const DesktopHome = () => {
                   })}
                 </div>
 
-                <div className="flex min-h-[70px] items-center gap-3 rounded-[24px] border border-foreground/[0.14] bg-background/68 p-2 pl-5 shadow-[inset_0_1px_0_hsl(var(--background)/0.9),0_20px_45px_-35px_hsl(var(--foreground)/0.55)] backdrop-blur-2xl transition-[border-color,background-color] focus-within:border-foreground/[0.24] focus-within:bg-background/82 dark:border-white/[0.13] dark:bg-white/[0.055] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.09),0_20px_45px_-35px_rgba(0,0,0,0.95)] dark:focus-within:border-white/[0.22] dark:focus-within:bg-white/[0.075]">
+                <div className="flex min-h-[70px] items-center gap-3 rounded-[24px] border border-zinc-200/80 bg-background/68 p-2 pl-5 shadow-[inset_0_1px_0_hsl(var(--background)/0.9),0_20px_45px_-35px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl transition-[border-color,background-color] focus-within:border-zinc-300/70 focus-within:bg-background/82 dark:border-white/[0.09] dark:bg-white/[0.05] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.055),0_20px_45px_-35px_rgba(0,0,0,0.9)] dark:focus-within:border-white/[0.14] dark:focus-within:bg-white/[0.065]">
                   <Sparkles className="h-4.5 w-4.5 shrink-0 text-muted-foreground/70" />
                   <input
                     value={prompt}
                     onChange={(event) => setPrompt(event.target.value)}
                     placeholder="Pergunte ou peça algo à NeuroNex"
-                    className="min-w-0 flex-1 bg-transparent py-3 text-base font-medium outline-none placeholder:text-muted-foreground/55"
+                    className="min-w-0 flex-1 appearance-none border-0 bg-transparent py-3 text-base font-medium shadow-none outline-none ring-0 placeholder:text-muted-foreground/55 focus:border-transparent focus:outline-none focus:ring-0 focus-visible:border-transparent focus-visible:outline-none focus-visible:ring-0"
                   />
-                  <Button type="button" variant="ghost" size="icon" onClick={() => void startVoice()} className="h-11 w-11 shrink-0 rounded-[16px]" aria-label="Falar com o Synapse">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void startVoice()}
+                    className="h-11 w-11 shrink-0 rounded-[16px]"
+                    aria-label="Falar com o Synapse"
+                  >
                     <Mic className="h-5 w-5" />
                   </Button>
-                  <Button type="submit" size="icon" disabled={!prompt.trim()} className="h-11 w-11 shrink-0 rounded-[16px]" aria-label="Abrir no Synapse">
+                  <Button
+                    type="submit"
+                    size="icon"
+                    disabled={!prompt.trim()}
+                    className="h-11 w-11 shrink-0 rounded-[16px]"
+                    aria-label="Abrir no Synapse"
+                  >
                     <ArrowRight className="h-5 w-5" />
                   </Button>
                 </div>
