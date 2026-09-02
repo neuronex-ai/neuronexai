@@ -96,6 +96,45 @@ export class ActionGroupPreparationError extends Error {
   }
 }
 
+function smartFitDateTime(value: unknown) {
+  const parsed = new Date(String(value || ""));
+  if (Number.isNaN(parsed.getTime())) return "";
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(parsed).replace(", ", " às ");
+}
+
+function stripSmartFitSummary(value: unknown) {
+  return clean(value, 600)
+    .replace(/\s*Ajustes automáticos por indisponibilidade:.*$/s, "")
+    .trim();
+}
+
+function smartFitReviewSummary(value: unknown) {
+  const adjustments = Array.isArray(value)
+    ? value.filter((item) => item && typeof item === "object")
+    : [];
+  if (!adjustments.length) return "";
+  const labels = adjustments.slice(0, 6).map((item: any) => {
+    const occurrence = Number(item?.occurrenceNumber);
+    const from = smartFitDateTime(item?.originalStartTime);
+    const to = smartFitDateTime(item?.startTime);
+    const label = Number.isInteger(occurrence) && occurrence > 0
+      ? `sessão ${occurrence}`
+      : "uma sessão";
+    return from && to
+      ? `${label} ajustada de ${from} para ${to}`
+      : `${label} ajustada para um horário livre próximo`;
+  });
+  if (adjustments.length > labels.length) labels.push(`mais ${adjustments.length - labels.length} ajuste(s)`);
+  return `Ajustes automáticos por indisponibilidade: ${labels.join("; ")}.`;
+}
+
 async function attachCanonicalAppointmentPlans(input: {
   admin: any;
   userId: string;
@@ -153,8 +192,19 @@ async function attachCanonicalAppointmentPlans(input: {
       );
     }
 
+    const adjustments = Array.isArray(result.data?.summary?.autoFitAdjustments)
+      ? result.data.summary.autoFitAdjustments
+      : [];
+    const baseSummary = stripSmartFitSummary(step.spokenSummary);
+    const adjustmentSummary = smartFitReviewSummary(adjustments);
+    const spokenSummary = clean(
+      [baseSummary, adjustmentSummary].filter(Boolean).join(" "),
+      600,
+    ) || baseSummary || step.spokenSummary;
+
     preparedSteps.push({
       ...step,
+      spokenSummary,
       canonicalPlanRef: {
         kind: "appointment",
         id: planId,
