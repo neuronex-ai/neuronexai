@@ -101,6 +101,52 @@ Deno.test("falha do agendamento bloqueia cobrança e comunicação", () => {
   );
 });
 
+Deno.test("comunicação financeira depende das cobranças anteriores mesmo sem novo agendamento", () => {
+  const steps = inferRequiredStepDependencies([
+    step("charge-1", 1, "create_neurofinance_charge", {
+      patient_id: "patient-123",
+      amount: 200,
+      due_date: "2026-09-04",
+      payment_method: "pix",
+    }),
+    step("charge-2", 2, "create_neurofinance_charge", {
+      patient_id: "patient-123",
+      amount: 200,
+      due_date: "2026-09-05",
+      payment_method: "pix",
+    }),
+    step("email", 3, "send_patient_email", {
+      patient_id: "patient-123",
+      subject: "Cobranças emitidas",
+      body: "As duas cobranças foram emitidas.",
+    }),
+  ]);
+
+  equal(
+    steps[2].dependencies,
+    ["charge-1", "charge-2"],
+    "e-mail depende de todas as cobranças anteriores do mesmo paciente",
+  );
+
+  const results = new Map<string, SynapseActionGroupStepResult>([
+    ["charge-1", {
+      stepId: "charge-1",
+      status: "completed",
+      message: "Cobrança criada",
+    }],
+    ["charge-2", {
+      stepId: "charge-2",
+      status: "failed",
+      message: "Cobrança recusada",
+    }],
+  ]);
+  equal(
+    hasIncompleteDependency(steps[2], results),
+    true,
+    "e-mail fica bloqueado se qualquer cobrança falhar",
+  );
+});
+
 Deno.test("plano oficial da Agenda não duplica efeitos dos cards dependentes", () => {
   const steps = bundle();
   const args = appointmentArgumentsForCanonicalPlan(steps[0], steps);
