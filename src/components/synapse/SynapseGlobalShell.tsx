@@ -159,7 +159,7 @@ export const SynapseGlobalShell = () => {
                 {isVoiceExperienceActive ? (
                     <motion.div
                         key="synapse-voice-presence"
-                        className="synapse-presence-layer fixed left-1/2 flex w-[min(320px,calc(100vw-32px))] -translate-x-1/2 flex-col items-center"
+                        className="synapse-presence-layer fixed left-1/2 flex w-[min(320px,calc(100vw-32px))] flex-col items-center"
                         data-synapse-shell="true"
                         data-synapse-shell-placement="bottom-center"
                         initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.96 }}
