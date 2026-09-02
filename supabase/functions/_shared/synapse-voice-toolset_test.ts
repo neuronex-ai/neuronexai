@@ -17,7 +17,7 @@ Deno.test("núcleo Deepgram estável fica abaixo do teto de funções", () => {
   const functions = buildSynapseVoiceFunctions();
   const names = functions.map((tool) => tool.name);
   equal(functions.length, 15, "quantidade de funções de voz");
-  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v12-theme-stable", "versão do payload");
+  equal(SYNAPSE_VOICE_TOOLSET_VERSION, "neuronex.voice-core.v14-review-canonical", "versão do payload");
   equal(functions.length <= MAX_SYNAPSE_VOICE_FUNCTIONS, true, "limite do gateway");
   equal(new Set(names).size, names.length, "nomes únicos");
   equal(names[0], "confirm_pending_action", "confirm primeiro");
