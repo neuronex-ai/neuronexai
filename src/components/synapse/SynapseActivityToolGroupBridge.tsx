@@ -225,7 +225,7 @@ export const SynapseActivityToolGroupBridge = () => {
   }, [activeTab, shellState]);
 
   const interfaceGroup = useMemo<SynapseActivityGroupModel | null>(() => {
-    const candidates = timeline
+    const candidates = (Array.isArray(timeline) ? timeline : [])
       .slice(-24)
       .filter((entry) => entry.toolId || entry.state === 'executing' || entry.state === 'error');
     if (!candidates.length) return null;
