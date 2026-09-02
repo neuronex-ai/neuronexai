@@ -4,7 +4,7 @@ import type { SynapseActionLifecycleEvent } from '@/lib/synapse-interface-action
 import type { PcmAudioSignal } from '@/lib/pcm-audio-player';
 import type { SynapseTool } from '@/lib/synapse-tool-catalog';
 
-export type SynapseShellState = 'closed' | 'pill' | 'compact';
+export type SynapseShellState = 'closed' | 'pill' | 'composer' | 'compact';
 
 export type SynapseExecState =
   | 'idle'
@@ -46,6 +46,8 @@ export interface SynapseContextType {
   setActiveSessionId: (id: string | null) => void;
   inputDraft: string;
   setInputDraft: (text: string) => void;
+  intentContextHint: string;
+  setIntentContextHint: (text: string) => void;
   isVisible: boolean;
   voiceStatus: 'disconnected' | 'connecting' | 'connected' | 'disconnecting' | 'error';
   isVoiceSpeaking: boolean;
