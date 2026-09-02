@@ -228,13 +228,14 @@ describe("VoiceFunctionRunner", () => {
     expect(client.some((event) => event.type === "function_status" && event.status === "duplicate_ignored")).toBe(true);
   });
 
-  it("keeps Node and Edge gateways free of injected agent filler speech", () => {
+  it("keeps routine Node and Edge gateway progress speech silent", () => {
     const nodeSource = readFileSync("server/voice-agent-gateway/function-runner.js", "utf8");
     const edgeSource = readFileSync("supabase/functions/synapse-voice-gateway/index.ts", "utf8");
     const promptSource = readFileSync("supabase/functions/_shared/synapse-voice-prompt.ts", "utf8");
 
     expect(nodeSource).not.toContain("InjectAgentMessage");
-    expect(edgeSource).not.toContain("InjectAgentMessage");
+    expect(edgeSource.match(/InjectAgentMessage/g)).toHaveLength(1);
+    expect(edgeSource).toContain('message: "Repita o número no centro da sua tela."');
     expect(nodeSource).toContain('status: "duplicate_ignored"');
     expect(edgeSource).toContain('status: "duplicate_ignored"');
     expect(promptSource).toContain("Ao chamar uma função, permaneça em silêncio enquanto ela executa.");
@@ -265,7 +266,7 @@ describe("VoiceFunctionRunner", () => {
     const toolsetSource = readFileSync("supabase/functions/_shared/synapse-voice-toolset.ts", "utf8");
     const voiceToolSource = readFileSync("supabase/functions/synapse-voice-tool/index.ts", "utf8");
 
-    expect(promptSource).toContain("use execute_synapse_tool");
+    expect(promptSource).toContain("execute_synapse_tool é uma ponte para consultas e capacidades delegadas");
     expect(toolsetSource).toContain('SYNAPSE_VOICE_DISPATCH_TOOL_NAME = "execute_synapse_tool"');
     expect(toolsetSource).toContain("buildDispatchTool(delegatedTools)");
     expect(voiceToolSource).toContain("unwrapVoiceToolCall");
