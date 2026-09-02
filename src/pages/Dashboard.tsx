@@ -6,19 +6,27 @@ import { useTour } from "@/components/onboarding/TourContext";
 import { DevelopmentModeNotice } from "@/components/runtime/DevelopmentModeNotice";
 import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
 import { useIsMobile } from "@/hooks/use-mobile";
+import DesktopDashboard from "@/pages/desktop/DesktopDashboard";
 
-// Lazy load ONLY the needed version
-const DesktopDashboard = lazy(() => import("@/pages/desktop/DesktopDashboard"));
 const MobileDashboard = lazy(() => import("@/mobile/pages/MobileDashboard").then(m => ({ default: m.MobileDashboard })));
 
-const PageLoader = () => <NeuroNexLoadingLoop surface="page" label="Abrindo dashboard" />;
+const MobilePageLoader = () => <NeuroNexLoadingLoop surface="page" label="Abrindo dashboard" />;
 
 const Dashboard = () => {
   const isMobile = useIsMobile();
 
+  if (!isMobile) {
+    return (
+      <>
+        <DesktopDashboard />
+        <DashboardDevelopmentNotice />
+      </>
+    );
+  }
+
   return (
-    <Suspense fallback={<PageLoader />}>
-      {isMobile ? <MobileDashboard /> : <DesktopDashboard />}
+    <Suspense fallback={<MobilePageLoader />}>
+      <MobileDashboard />
       <DashboardDevelopmentNotice />
     </Suspense>
   );
