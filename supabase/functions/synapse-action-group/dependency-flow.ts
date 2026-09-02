@@ -181,6 +181,111 @@ const FINANCE_MUTATION_TOOLS = new Set([
   "create_fiscal_invoice",
 ]);
 
+const MONEY_REFERENCE_PATTERN = /(?:R\$\s*-?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?|-?(?:\d{1,3}(?:\.\d{3})+|\d+)(?:,\d{1,2})?\s+reais?)/gi;
+
+const formatMoneyNumber = (amount: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    minimumFractionDigits: Number.isInteger(amount) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(amount);
+
+const replaceSingleMoneyReference = (value: unknown, amount: number) => {
+  const text = typeof value === "string" ? value : "";
+  if (!text) return value;
+  const matches = [...text.matchAll(new RegExp(MONEY_REFERENCE_PATTERN.source, "gi"))];
+  if (matches.length !== 1) return value;
+  const current = matches[0][0];
+  const replacement = /^R\$/i.test(current.trim())
+    ? `R$ ${formatMoneyNumber(amount)}`
+    : `${formatMoneyNumber(amount)} reais`;
+  return text.replace(current, replacement);
+};
+
+const financeAmount = (step: SynapseActionGroupStep) =>
+  APPOINTMENT_LINKED_FINANCE_TOOLS.has(step.toolName)
+    ? positiveNumber(asRecord(step.arguments).amount)
+    : null;
+
+function dependencyComponents(steps: SynapseActionGroupStep[]) {
+  const byId = new Map(steps.map((step) => [step.stepId, step]));
+  const neighbors = new Map<string, Set<string>>(
+    steps.map((step) => [step.stepId, new Set<string>()]),
+  );
+  for (const step of steps) {
+    for (const dependency of step.dependencies || []) {
+      if (!byId.has(dependency)) continue;
+      neighbors.get(step.stepId)?.add(dependency);
+      neighbors.get(dependency)?.add(step.stepId);
+    }
+  }
+
+  const visited = new Set<string>();
+  const components: SynapseActionGroupStep[][] = [];
+  for (const step of steps) {
+    if (visited.has(step.stepId)) continue;
+    const queue = [step.stepId];
+    const component: SynapseActionGroupStep[] = [];
+    visited.add(step.stepId);
+    while (queue.length) {
+      const currentId = queue.shift()!;
+      const current = byId.get(currentId);
+      if (current) component.push(current);
+      for (const neighbor of neighbors.get(currentId) || []) {
+        if (visited.has(neighbor)) continue;
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+    components.push(component);
+  }
+  return components;
+}
+
+/**
+ * Review edits are authoritative. If one dependency-linked package contains a
+ * single finance mutation, its canonical amount must also be the amount shown
+ * in summaries and in dependent communication text. We intentionally skip
+ * automatic rewriting when a component has more than one finance mutation or
+ * a text contains more than one monetary reference, because that would require
+ * guessing which amount the user intended to change.
+ */
+function synchronizeLinkedFinancePresentation(
+  steps: SynapseActionGroupStep[],
+): SynapseActionGroupStep[] {
+  for (const component of dependencyComponents(steps)) {
+    const financeSteps = component.filter((step) => financeAmount(step) !== null);
+    if (financeSteps.length !== 1) continue;
+    const financeStep = financeSteps[0];
+    const amount = financeAmount(financeStep);
+    if (amount === null) continue;
+
+    for (const step of component) {
+      const spokenSummary = replaceSingleMoneyReference(step.spokenSummary, amount);
+      if (typeof spokenSummary === "string") step.spokenSummary = spokenSummary;
+
+      step.editableFields = (step.editableFields || []).map((field) => {
+        if (step.stepId === financeStep.stepId && field.fieldId === "amount") {
+          return { ...field, value: amount };
+        }
+        const value = replaceSingleMoneyReference(field.value, amount);
+        return value === field.value ? field : { ...field, value };
+      });
+
+      if (step.stepId === financeStep.stepId) {
+        step.arguments = { ...asRecord(step.arguments), amount };
+      } else if (COMMUNICATION_TOOLS.has(step.toolName)) {
+        step.arguments = Object.fromEntries(
+          Object.entries(asRecord(step.arguments)).map(([key, value]) => [
+            key,
+            replaceSingleMoneyReference(value, amount),
+          ]),
+        );
+      }
+    }
+  }
+  return steps;
+}
+
 /**
  * The model may describe dependencies, but the server owns the final graph.
  * Finance steps cannot outlive a new appointment that gives them identity, and
@@ -237,7 +342,7 @@ export function inferRequiredStepDependencies(
     }
   }
 
-  return steps;
+  return synchronizeLinkedFinancePresentation(steps);
 }
 
 /**
