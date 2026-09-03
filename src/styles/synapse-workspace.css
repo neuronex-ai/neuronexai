@@ -38,8 +38,7 @@
   border-radius: 28px;
 }
 
-/* The workspace header identifies the surface only once. Context lives next
-   to the composer, where it is useful while the professional writes. */
+/* Workspace header only names the assistant. Context belongs next to input. */
 .synapse-chat-panel header [aria-label="Voltar para a conversa"] {
   gap: 0;
 }
@@ -49,8 +48,7 @@
   display: none;
 }
 
-/* History starts directly at its channel switcher. The heading/subheading are
-   intentionally omitted to keep this utility surface compact. */
+/* History starts at the channel switcher. */
 .synapse-desktop-viewport section[aria-label="Histórico do Synapse"] > div:first-child {
   display: none;
 }
@@ -59,8 +57,7 @@
   padding-top: 14px !important;
 }
 
-/* Context is metadata, not a section title: a tiny liquid-glass chip sits just
-   above the message field. No leading rule or decorative dash. */
+/* Context is compact metadata embedded above the composer. */
 .synapse-desktop-composer-dock > div:first-child {
   display: inline-flex;
   width: max-content;
@@ -96,8 +93,6 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
-/* Keep the quick composer consistent with the expanded workspace: context is
-   a tiny chip, never a horizontal rule. */
 .synapse-quick-composer > div:first-child > div:first-child > span:first-child {
   display: none;
 }
@@ -126,9 +121,21 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
-/* Desktop Home dark mode follows the same nested-surface grammar used by
-   Financial Management: deep frame, raised panels, darker working insets. */
-.dark .dashboard-desktop {
+/* Current Desktop Home: one quiet outer shell, matching the layer grammar of
+   Notes Desktop. Existing sections remain intact as raised internal surfaces. */
+.desktop-lumen-page:has(.desktop-home-attention) > main {
+  border: 1px solid hsl(var(--border) / 0.45);
+  border-radius: 38px;
+  background: hsl(var(--card) / 0.34);
+  box-shadow:
+    0 22px 90px -76px hsl(var(--foreground) / 0.7),
+    inset 0 1px 0 hsl(var(--background) / 0.7),
+    inset 0 0 0 1px hsl(var(--foreground) / 0.018);
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+.dark .desktop-lumen-page:has(.desktop-home-attention) {
   --dashboard-dark-frame: #080808;
   --dashboard-dark-panel: #171717;
   --dashboard-dark-inset: #0c0c0c;
@@ -137,94 +144,69 @@
   --dashboard-dark-highlight: rgba(255, 255, 255, 0.032);
 }
 
-.dark .dashboard-desktop .dashboard-shell-surface {
-  border-color: var(--dashboard-dark-edge);
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main {
+  border-color: rgba(255, 255, 255, 0.04);
   background:
-    linear-gradient(160deg, rgba(15, 15, 15, 0.99), rgba(5, 5, 5, 0.99)),
+    linear-gradient(160deg, rgba(15, 15, 15, 0.98), rgba(5, 5, 5, 0.99)),
     var(--dashboard-dark-frame);
   box-shadow:
-    0 28px 82px -62px rgba(0, 0, 0, 0.98),
-    inset 0 1px 0 rgba(255, 255, 255, 0.018);
+    0 30px 92px -68px rgba(0, 0, 0, 0.99),
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.012);
 }
 
-.dark .dashboard-desktop .dashboard-morning-shell {
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main > .grid > section,
+.dark .desktop-lumen-page:has(.desktop-home-attention) .desktop-home-attention > section {
   border-color: var(--dashboard-dark-edge);
   background:
-    linear-gradient(155deg, rgba(17, 17, 17, 0.98), rgba(8, 8, 8, 0.99)),
-    #0b0b0b;
-  box-shadow:
-    0 24px 68px -54px rgba(0, 0, 0, 0.98),
-    inset 0 1px 0 rgba(255, 255, 255, 0.02);
-}
-
-.dark .dashboard-desktop :is(.dashboard-panel-surface, .dashboard-morning-panel, .next-schedule-stage) {
-  border-color: var(--dashboard-dark-edge);
-  background:
-    linear-gradient(155deg, rgba(28, 28, 28, 0.98), rgba(17, 17, 17, 0.99)),
+    linear-gradient(155deg, rgba(27, 27, 27, 0.985), rgba(16, 16, 16, 0.99)),
     var(--dashboard-dark-panel);
   box-shadow:
     0 22px 60px -48px rgba(0, 0, 0, 0.98),
     inset 0 1px 0 var(--dashboard-dark-highlight);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
-.dark .dashboard-desktop .dashboard-retina-card:not([class*="bg-amber"]):not([class*="bg-rose"]),
-.dark .dashboard-desktop .dashboard-finance-metric {
-  border-color: rgba(0, 0, 0, 0.78);
+/* Greeting input and schedule card sit one level deeper than their panel. */
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main > .grid > section:first-child form > div:last-child,
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main > .grid > section:nth-child(2) > div:first-child > button {
+  border: 1px solid rgba(0, 0, 0, 0.84);
   background:
-    linear-gradient(155deg, rgba(18, 18, 18, 0.98), rgba(9, 9, 9, 0.99)),
+    linear-gradient(155deg, rgba(16, 16, 16, 0.99), rgba(8, 8, 8, 0.99)),
     var(--dashboard-dark-inset);
   box-shadow:
-    0 18px 44px -38px rgba(0, 0, 0, 0.98),
-    inset 0 1px 0 rgba(255, 255, 255, 0.024);
+    inset 0 1px 0 rgba(255, 255, 255, 0.022),
+    0 14px 34px -32px rgba(0, 0, 0, 0.98);
 }
 
-.dark .dashboard-desktop .dashboard-soft-fill {
-  border-color: rgba(0, 0, 0, 0.78);
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main > .grid > section:first-child form > div:last-child:focus-within {
+  border-color: rgba(255, 255, 255, 0.075);
   background: var(--dashboard-dark-deep);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    0 0 0 1px rgba(255, 255, 255, 0.018);
+}
+
+/* Home contextual suggestions use the same restrained liquid-glass treatment
+   as Notes controls instead of floating as bright independent cards. */
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main > .grid > section:first-child form > div:first-child > button {
+  border-color: rgba(255, 255, 255, 0.055);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.025), transparent 48%),
+    rgba(5, 5, 5, 0.54);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
 }
 
-.dark .dashboard-desktop .dashboard-synapse-day {
-  border-color: rgba(0, 0, 0, 0.82);
+.dark .desktop-lumen-page:has(.desktop-home-attention) > main > .grid > section:first-child form > div:first-child > button:hover {
+  border-color: rgba(255, 255, 255, 0.085);
   background:
-    linear-gradient(155deg, rgba(15, 15, 15, 0.99), rgba(8, 8, 8, 0.99)),
-    var(--dashboard-dark-inset);
-  box-shadow:
-    0 18px 44px -38px rgba(0, 0, 0, 0.98),
-    inset 0 1px 0 rgba(255, 255, 255, 0.022);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 48%),
+    rgba(10, 10, 10, 0.76);
 }
 
-.dark .dashboard-desktop .dashboard-synapse-day-icon,
-.dark .dashboard-desktop .dashboard-synapse-suggestion {
-  border-color: rgba(0, 0, 0, 0.8);
-  background: var(--dashboard-dark-deep);
-}
-
-.dark .dashboard-desktop .dashboard-synapse-composer {
-  border-color: rgba(0, 0, 0, 0.88);
-  background: #050505;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.018),
-    0 12px 32px -30px rgba(0, 0, 0, 0.98);
-}
-
-.dark .dashboard-desktop .next-schedule-card {
-  border-color: rgba(0, 0, 0, 0.82);
-  background:
-    linear-gradient(155deg, rgba(15, 15, 15, 0.99), rgba(8, 8, 8, 0.99)),
-    var(--dashboard-dark-inset);
-  box-shadow:
-    0 18px 44px -38px rgba(0, 0, 0, 0.98),
-    inset 0 1px 0 rgba(255, 255, 255, 0.022);
-}
-
-.dark .dashboard-desktop :is(.next-schedule-details, .next-schedule-detail-cell) {
-  border-color: rgba(0, 0, 0, 0.82);
-  background: var(--dashboard-dark-deep);
-}
-
-/* Expanded global chat uses the same depth ladder as the Home and quick
-   composer: shell > conversation canvas > text input. No new chrome. */
+/* Expanded global chat uses the same depth ladder as Home/Notes: shell,
+   conversation canvas, then a darker writing surface. No additional chrome. */
 .dark .synapse-desktop-shell.synapse-chat-panel {
   border-color: rgba(0, 0, 0, 0.86);
   background:
@@ -301,9 +283,7 @@
   min-width: 0;
 }
 
-/* Only the Home was designed to reflow around Synapse. Dense operational
-   surfaces (Agenda, Pacientes, Financeiro, Notas...) keep their native width
-   and the workspace overlays the right edge instead of collapsing the page. */
+/* Only Home reflows around the expanded Synapse workspace. */
 @media (min-width: 1480px) {
   body.synapse-workspace-open .desktop-lumen-page:has(.desktop-home-attention) {
     box-sizing: border-box;
@@ -325,9 +305,6 @@
   }
 }
 
-/* When the attention band naturally wraps to two columns, keep the third
-   action visually attached to the row above instead of leaving a stray
-   vertical separator at the start of the new line. */
 @media (min-width: 768px) and (max-width: 1535px) {
   .desktop-home-attention-grid > :nth-child(3) {
     border-left-width: 0 !important;
@@ -338,6 +315,12 @@
 @media (max-width: 720px) {
   .synapse-quick-composer {
     border-radius: 22px;
+  }
+
+  .desktop-lumen-page:has(.desktop-home-attention) > main {
+    border-radius: 28px;
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
   }
 }
 
