@@ -49,6 +49,83 @@
   display: none;
 }
 
+/* History starts directly at its channel switcher. The heading/subheading are
+   intentionally omitted to keep this utility surface compact. */
+.synapse-desktop-viewport section[aria-label="Histórico do Synapse"] > div:first-child {
+  display: none;
+}
+
+.synapse-desktop-viewport section[aria-label="Histórico do Synapse"] {
+  padding-top: 14px !important;
+}
+
+/* Context is metadata, not a section title: a tiny liquid-glass chip sits just
+   above the message field. No leading rule or decorative dash. */
+.synapse-desktop-composer-dock > div:first-child {
+  display: inline-flex;
+  width: max-content;
+  max-width: calc(100% - 16px);
+  align-items: center;
+  gap: 0;
+  margin: 0 0 6px 8px;
+  padding: 3px 8px;
+  border: 1px solid rgba(17, 17, 19, 0.075);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.44);
+  color: rgba(17, 17, 19, 0.58);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(14px) saturate(1.08);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+}
+
+.synapse-desktop-composer-dock > div:first-child > span:first-child {
+  display: none;
+}
+
+.synapse-desktop-composer-dock > div:first-child > span:last-child {
+  max-width: 190px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .synapse-desktop-composer-dock > div:first-child {
+  border-color: rgba(255, 255, 255, 0.065);
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+/* Keep the quick composer consistent with the expanded workspace: context is
+   a tiny chip, never a horizontal rule. */
+.synapse-quick-composer > div:first-child > div:first-child > span:first-child {
+  display: none;
+}
+
+.synapse-quick-composer > div:first-child > div:first-child > span:last-child {
+  display: inline-flex;
+  max-width: 190px;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border: 1px solid rgba(17, 17, 19, 0.07);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.38);
+  padding: 3px 8px;
+  color: rgba(17, 17, 19, 0.56);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.68);
+  backdrop-filter: blur(12px) saturate(1.06);
+  -webkit-backdrop-filter: blur(12px) saturate(1.06);
+}
+
+.dark .synapse-quick-composer > div:first-child > div:first-child > span:last-child {
+  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+
 .desktop-home-attention,
 .desktop-home-attention-grid {
   min-width: 0;
