@@ -108,7 +108,9 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
         routeSupportsDesktopSynapseShell(location.pathname);
 
     const baseTools = getToolsForRoute(location.pathname);
-    const quickActions = getQuickActionsForRoute(location.pathname).slice(0, 6);
+    const quickActions = shellState === 'composer'
+        ? getQuickActionsForRoute(location.pathname).slice(0, 6)
+        : [];
     const availableTools = baseTools;
 
     const toggleCompact = useCallback(() => {
