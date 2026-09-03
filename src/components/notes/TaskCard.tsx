@@ -2,9 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import {
-    CheckCircle2, Clock, FileText, GripVertical
-} from "lucide-react";
+import { GripVertical } from "lucide-react";
 import { format, isPast, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -21,55 +19,63 @@ interface TaskCardProps {
     categories?: string[];
 }
 
-export const TaskCard = ({ task, onToggle, onDelete, onUpdate, isKanban = false, isOverlay = false, categories }: TaskCardProps) => {
+export const TaskCard = ({
+    task,
+    onToggle,
+    onDelete,
+    onUpdate,
+    isKanban = false,
+    isOverlay = false,
+    categories,
+}: TaskCardProps) => {
     const {
         attributes,
         listeners,
         setNodeRef,
         transform,
         transition,
-        isDragging
-    } = useSortable({ id: task.id, disabled: isOverlay });
+        isDragging,
+    } = useSortable({
+        id: task.id,
+        disabled: isOverlay,
+        data: {
+            type: "task",
+            category: task.category || "Geral",
+        },
+    });
 
     const style = {
         transform: CSS.Translate.toString(transform),
         transition: transition || "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)",
     };
 
-    const isOverdue = !task.is_completed && isPast(new Date(task.due_date)) && !isToday(new Date(task.due_date));
     const due = new Date(task.due_date);
+    const isOverdue = !task.is_completed && isPast(due) && !isToday(due);
+    const dateLabel = isToday(due)
+        ? "Hoje"
+        : isTomorrow(due)
+            ? "Amanhã"
+            : format(due, "dd MMM", { locale: ptBR });
+
+    const statusDotClass = task.is_completed
+        ? "bg-emerald-500"
+        : isOverdue
+            ? "bg-red-500"
+            : "bg-amber-400";
 
     const cardContent = (
         <div
             className={cn(
-                "group relative rounded-[28px] border transition-[background-color,border-color,box-shadow,transform,opacity] duration-200",
-                "border-zinc-200/55 bg-white/88 shadow-[0_8px_20px_-10px_rgba(0,0,0,0.08)] dark:border-white/[0.07] dark:bg-white/[0.03] dark:shadow-none",
-                !isOverlay && !task.isGhost && "hover:border-zinc-300 hover:bg-white hover:shadow-[0_18px_38px_-24px_rgba(0,0,0,0.2)] dark:hover:border-white/[0.11] dark:hover:bg-white/[0.045]",
-                isOverlay && [
-                    "border-zinc-300 bg-white shadow-[0_24px_54px_-28px_rgba(0,0,0,0.34)]",
-                    "dark:border-white/[0.12] dark:bg-[#171717] dark:shadow-[0_28px_64px_-34px_rgba(0,0,0,0.92)]"
-                ],
-                task.isGhost && "border-dashed border-zinc-200 bg-transparent opacity-25 shadow-none grayscale dark:border-white/[0.06]",
-                task.is_completed && "border-zinc-200/35 bg-zinc-50/55 opacity-55 grayscale-[0.35] dark:border-white/[0.04] dark:bg-white/[0.012]",
-                isKanban ? "px-5 py-5" : "px-5 py-4"
+                "group relative rounded-[24px] border transition-[background-color,border-color,box-shadow,transform,opacity] duration-200",
+                "border-zinc-200/55 bg-white/88 shadow-[0_8px_22px_-16px_rgba(0,0,0,0.16)] dark:border-white/[0.07] dark:bg-white/[0.028] dark:shadow-none",
+                !isOverlay && !task.isGhost && "hover:border-zinc-300/80 hover:bg-white hover:shadow-[0_18px_36px_-28px_rgba(0,0,0,0.28)] dark:hover:border-white/[0.11] dark:hover:bg-white/[0.045]",
+                isOverlay && "border-zinc-300 bg-white shadow-[0_26px_56px_-28px_rgba(0,0,0,0.38)] dark:border-white/[0.12] dark:bg-[#171717] dark:shadow-[0_28px_64px_-34px_rgba(0,0,0,0.92)]",
+                task.isGhost && "border-dashed border-zinc-200 bg-transparent opacity-25 shadow-none dark:border-white/[0.06]",
+                task.is_completed && "border-zinc-200/35 bg-zinc-50/55 dark:border-white/[0.04] dark:bg-white/[0.014]",
+                isKanban ? "px-4 py-4" : "px-5 py-4"
             )}
         >
-            {!task.isGhost && (
-                <div className={cn(
-                    "absolute right-5 top-5",
-                    task.is_completed ? "opacity-30" : "opacity-100"
-                )}>
-                    <div className={cn(
-                        "h-2 w-2 rounded-full transition-colors duration-200",
-                        task.is_completed ? "bg-zinc-300 dark:bg-zinc-800" :
-                            isOverdue ? "bg-red-500" :
-                                isToday(due) ? "bg-zinc-900 dark:bg-zinc-200" :
-                                    "bg-zinc-400 dark:bg-zinc-700"
-                    )} />
-                </div>
-            )}
-
-            <div className="relative z-10 flex items-start gap-3.5">
+            <div className="relative z-10 flex items-start gap-2.5">
                 {!task.isGhost && !isOverlay ? (
                     <button
                         type="button"
@@ -79,7 +85,7 @@ export const TaskCard = ({ task, onToggle, onDelete, onUpdate, isKanban = false,
                             event.preventDefault();
                             event.stopPropagation();
                         }}
-                        className="mt-0.5 flex h-9 w-7 shrink-0 touch-none cursor-grab items-center justify-center rounded-xl text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:text-zinc-700 dark:hover:bg-white/[0.06] dark:hover:text-zinc-300"
+                        className="-ml-1 mt-0.5 flex h-8 w-6 shrink-0 touch-none cursor-grab items-center justify-center rounded-lg text-zinc-300 transition-colors hover:bg-zinc-100 hover:text-zinc-600 active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 dark:text-zinc-700 dark:hover:bg-white/[0.06] dark:hover:text-zinc-300"
                         aria-label={`Arrastar tarefa: ${task.title}`}
                         title="Arrastar tarefa"
                     >
@@ -87,41 +93,42 @@ export const TaskCard = ({ task, onToggle, onDelete, onUpdate, isKanban = false,
                     </button>
                 ) : null}
 
-                <div className={cn(
-                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] border transition-colors duration-200",
-                    task.is_completed
-                        ? "border-zinc-200/50 bg-zinc-100 text-zinc-400 dark:border-white/[0.05] dark:bg-zinc-900/50"
-                        : "border-zinc-200/60 bg-white text-zinc-900 shadow-sm dark:border-white/[0.08] dark:bg-white/[0.035] dark:text-zinc-100"
-                )}>
-                    {task.is_completed
-                        ? <CheckCircle2 className="h-[18px] w-[18px]" />
-                        : <FileText className="h-[18px] w-[18px]" />
-                    }
-                </div>
+                <div className="min-w-0 flex-1 pt-0.5">
+                    <div className="flex items-start gap-2.5">
+                        {!task.isGhost && (
+                            <span
+                                className={cn("mt-[6px] h-2 w-2 shrink-0 rounded-full", statusDotClass)}
+                                aria-hidden="true"
+                            />
+                        )}
+                        <h4
+                            className={cn(
+                                "line-clamp-2 min-w-0 flex-1 text-[14px] font-bold leading-[1.35] tracking-tight transition-colors duration-200",
+                                task.is_completed
+                                    ? "text-zinc-400 line-through decoration-zinc-300/45 dark:text-zinc-600"
+                                    : "text-zinc-900 dark:text-zinc-100"
+                            )}
+                        >
+                            {task.title}
+                        </h4>
+                    </div>
 
-                <div className="min-w-0 flex-1 space-y-2 pt-0.5">
-                    <h4 className={cn(
-                        "line-clamp-2 pr-3 text-[15px] font-bold leading-snug tracking-tight transition-colors duration-200",
-                        task.is_completed
-                            ? "text-zinc-400 line-through decoration-zinc-300/40 dark:text-zinc-600"
-                            : "text-zinc-900 dark:text-zinc-100"
-                    )}>
-                        {task.title}
-                    </h4>
-
-                    <div className="flex items-center gap-2.5">
-                        <div className={cn(
-                            "flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em]",
-                            isOverdue ? "bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400" :
-                                isToday(due) ? "bg-zinc-100 text-zinc-900 dark:bg-white/[0.07] dark:text-zinc-200" :
-                                    "bg-zinc-50 text-zinc-400 dark:bg-black/25 dark:text-zinc-500"
-                        )}>
-                            <Clock className="h-3 w-3 shrink-0" />
-                            <span>
-                                {isToday(due) ? "Hoje" : isTomorrow(due) ? "Amanhã" : format(due, "dd MMM", { locale: ptBR })}
+                    {!task.isGhost && (
+                        <div className="mt-2 pl-[18px]">
+                            <span
+                                className={cn(
+                                    "text-[9px] font-semibold uppercase tracking-[0.13em]",
+                                    task.is_completed
+                                        ? "text-emerald-600/65 dark:text-emerald-400/55"
+                                        : isOverdue
+                                            ? "text-red-600/70 dark:text-red-400/65"
+                                            : "text-zinc-400 dark:text-zinc-600"
+                                )}
+                            >
+                                {dateLabel}
                             </span>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -135,7 +142,7 @@ export const TaskCard = ({ task, onToggle, onDelete, onUpdate, isKanban = false,
             style={style}
             className={cn(
                 "relative outline-none",
-                isDragging ? "pointer-events-none opacity-25" : "opacity-100"
+                isDragging ? "pointer-events-none opacity-20" : "opacity-100"
             )}
         >
             <TaskDetailModal
