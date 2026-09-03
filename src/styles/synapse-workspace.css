@@ -22,13 +22,13 @@
 
 .dark .synapse-quick-composer {
   background:
-    linear-gradient(145deg, rgba(255, 255, 255, 0.045), transparent 44%),
-    rgba(10, 10, 11, 0.88);
-  border-color: rgba(255, 255, 255, 0.075);
+    linear-gradient(145deg, rgba(255, 255, 255, 0.032), transparent 46%),
+    rgba(24, 24, 24, 0.97);
+  border-color: rgba(255, 255, 255, 0.06);
   box-shadow:
-    0 34px 96px -42px rgba(0, 0, 0, 0.98),
-    0 10px 28px -20px rgba(0, 0, 0, 0.76),
-    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+    0 34px 96px -42px rgba(0, 0, 0, 0.99),
+    0 10px 28px -20px rgba(0, 0, 0, 0.82),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .synapse-desktop-shell.synapse-chat-panel {
@@ -120,10 +120,10 @@
 }
 
 .dark .synapse-quick-composer > div:first-child > div:first-child > span:last-child {
-  border-color: rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.6);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  border-color: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .desktop-home-attention,
