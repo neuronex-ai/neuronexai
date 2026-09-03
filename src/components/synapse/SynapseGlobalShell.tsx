@@ -180,9 +180,9 @@ export const SynapseGlobalShell = () => {
                 ) : shellState === 'composer' ? (
                     <motion.div
                         key="synapse-quick-composer"
-                        className="synapse-presence-layer fixed"
+                        className="synapse-presence-layer fixed left-1/2"
                         data-synapse-shell="true"
-                        data-synapse-shell-placement="bottom-right"
+                        data-synapse-shell-placement="bottom-center"
                         initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8, scale: 0.985 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6, scale: 0.99 }}
@@ -190,7 +190,6 @@ export const SynapseGlobalShell = () => {
                             ? { duration: 0 }
                             : { type: 'spring', stiffness: 390, damping: 38, mass: 0.76 }}
                         style={{
-                            right: 'max(16px, env(safe-area-inset-right))',
                             bottom: 'max(16px, env(safe-area-inset-bottom))',
                         }}
                     >
