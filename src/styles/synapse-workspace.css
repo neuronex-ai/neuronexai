@@ -124,6 +124,10 @@
 /* Current Desktop Home: one quiet outer shell, matching the layer grammar of
    Notes Desktop. Existing sections remain intact as raised internal surfaces. */
 .desktop-lumen-page:has(.desktop-home-attention) > main {
+  width: calc(100% - clamp(2rem, 3vw, 4rem));
+  max-width: 1760px;
+  margin-inline: auto;
+  box-sizing: border-box;
   border: 1px solid hsl(var(--border) / 0.45);
   border-radius: 38px;
   background: hsl(var(--card) / 0.34);
