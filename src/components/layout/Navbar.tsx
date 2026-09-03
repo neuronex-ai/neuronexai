@@ -2,7 +2,6 @@
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { LayoutGroup, motion } from "framer-motion";
-import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -11,7 +10,6 @@ import {
   DollarSign,
   Settings,
   LogOut,
-  Search,
   NotebookPen,
   Bell,
   Video,
@@ -39,9 +37,7 @@ import { useProfile } from "@/hooks/use-profile";
 import { useTheme } from "@/hooks/use-theme";
 import { useReducedMotionPreference } from "@/hooks/use-reduced-motion-preference";
 import { useAuth } from "@/components/auth/SessionContextProvider";
-import { CommandSearch } from "./CommandSearch";
 import { TrialStatusIndicator } from "@/components/subscription";
-import { SYNAPSE_PAGE_ACTION_EVENT, type SynapseInterfaceAction } from "@/lib/synapse-interface-actions";
 
 export const Navbar = () => {
   const location = useLocation();
@@ -53,16 +49,6 @@ export const Navbar = () => {
   const isDarkTheme = theme === "dark";
   const isMobile = useIsMobile();
   const shouldReduceMotion = useReducedMotionPreference();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  useEffect(() => {
-    const handleSynapseAction = (event: Event) => {
-      const action = (event as CustomEvent<SynapseInterfaceAction>).detail;
-      if (action?.destination === "global.search") setIsSearchOpen(true);
-    };
-    window.addEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
-    return () => window.removeEventListener(SYNAPSE_PAGE_ACTION_EVENT, handleSynapseAction);
-  }, []);
 
   const navigation = [
     { name: "Painel", href: "/dashboard", icon: LayoutDashboard },
@@ -200,15 +186,6 @@ export const Navbar = () => {
         </LayoutGroup>
 
         <div className={cn("flex items-center gap-1 pl-4 border-l", isDarkTheme ? "border-white/[0.08]" : "border-black/[0.055]")}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button id="global-search" size="icon" variant="ghost" className={utilityButtonClass} onClick={() => setIsSearchOpen(true)}>
-                <Search className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className={tooltipClass}>Buscar</TooltipContent>
-          </Tooltip>
-
           <Popover>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -298,7 +275,6 @@ export const Navbar = () => {
           </DropdownMenu>
         </div>
       </div>
-      <CommandSearch open={isSearchOpen} setOpen={setIsSearchOpen} />
     </nav>
   );
 };
