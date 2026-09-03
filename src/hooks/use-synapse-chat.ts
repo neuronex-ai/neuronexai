@@ -24,10 +24,6 @@ import {
     requestAppointmentPlanReview,
 } from '@/lib/appointment-plan-review';
 
-// ─── Synapse Chat Hook ────────────────────────────────────────────────
-// Text and voice share sessions, memory, tools and the same structured
-// interface-action executor. Only their presentation differs.
-
 const conversationTitleFromPrompt = (prompt: string) => {
     const title = prompt
         .replace(/```[\s\S]*?```/g, ' ')
@@ -38,6 +34,13 @@ const conversationTitleFromPrompt = (prompt: string) => {
         .slice(0, 72)
         .trim();
     return title || 'Conversa com o Synapse';
+};
+
+const normalizeDecisionMessage = (message: string) => {
+    const clean = message.trim();
+    if (/^(aceitar|aceito|confirmar|confirmo)$/i.test(clean)) return 'confirmo';
+    if (/^(recusar|recuso)$/i.test(clean)) return 'cancelar';
+    return clean;
 };
 
 const INTERFACE_TARGET_LABELS: Record<string, string> = {
@@ -104,6 +107,7 @@ export const useSynapseChat = () => {
         setActionExperience,
         intentContextHint,
         setIntentContextHint,
+        setInlineTurn,
     } = useSynapse();
     const { currentContext, contextSummary, activePatientId } = useAI();
 
@@ -121,7 +125,7 @@ export const useSynapseChat = () => {
 
     const send = useCallback(
         (message: string) => {
-            const cleanMessage = message.trim();
+            const cleanMessage = normalizeDecisionMessage(message);
             if (!user || !cleanMessage) return;
 
             const contextualHint = intentContextHint.trim();
@@ -132,8 +136,6 @@ export const useSynapseChat = () => {
                 .filter(Boolean)
                 .join('\n\n');
 
-            // The short human intent remains the visible message. Rich Home context is
-            // passed separately so implementation-oriented prompt text never leaks into UI.
             if (contextualHint) setIntentContextHint('');
 
             setExecState('thinking');
@@ -158,92 +160,92 @@ export const useSynapseChat = () => {
                 if (!sessionId) throw new Error('Não foi possível iniciar a conversa.');
 
                 sendMessage.mutate(
-                {
-                    message: cleanMessage,
-                    sessionId,
-                    context: {
-                        route: currentContext,
-                        summary: contextualSummary,
-                        patientId: activePatientId || lastPatientIdRef.current,
-                        channel: 'text',
-                        source: 'synapse-shell',
+                    {
+                        message: cleanMessage,
+                        sessionId,
+                        context: {
+                            route: currentContext,
+                            summary: contextualSummary,
+                            patientId: activePatientId || lastPatientIdRef.current,
+                            channel: 'text',
+                            source: 'synapse-shell',
+                        },
+                        streamProgress: true,
+                        onProgress: setProgressEvent,
                     },
-                    streamProgress: true,
-                    onProgress: setProgressEvent,
-                },
-                {
-                    onSuccess: async (data) => {
-                        const appointmentPlan = parseAppointmentPlanReviewAction(data?.clientAction);
-                        if (appointmentPlan) {
-                            requestAppointmentPlanReview(appointmentPlan);
-                            setExecState('success');
-                            addTimelineEntry({
-                                label: 'Plano de agendamento pronto para revisão',
-                                state: 'success',
-                                detail: 'A confirmação será feita com os dados atualizados do servidor.',
-                            });
-                            window.setTimeout(() => setExecState('idle'), 2200);
-                            setProgressEvent(null);
-                            return;
-                        }
-                        const action = normalizeSynapseClientAction(data?.clientAction);
+                    {
+                        onSuccess: async (data) => {
+                            const appointmentPlan = parseAppointmentPlanReviewAction(data?.clientAction);
+                            if (appointmentPlan) {
+                                requestAppointmentPlanReview(appointmentPlan);
+                                setExecState('success');
+                                addTimelineEntry({
+                                    label: 'Plano de agendamento pronto para revisão',
+                                    state: 'success',
+                                    detail: 'A confirmação será feita com os dados atualizados do servidor.',
+                                });
+                                window.setTimeout(() => setExecState('idle'), 2200);
+                                setProgressEvent(null);
+                                return;
+                            }
+                            const action = normalizeSynapseClientAction(data?.clientAction);
 
-                        if (action) {
-                            const actionLabel = describeInterfaceAction(action);
-                            setExecState('executing');
-                            addTimelineEntry({
-                                label: actionLabel,
-                                state: 'executing',
-                                toolId: action.action,
-                                detail: sanitizeSynapseDisplayText(action.reason, 'Aplicando a solicitação no painel.'),
-                            });
+                            if (action) {
+                                const actionLabel = describeInterfaceAction(action);
+                                setExecState('executing');
+                                addTimelineEntry({
+                                    label: actionLabel,
+                                    state: 'executing',
+                                    toolId: action.action,
+                                    detail: sanitizeSynapseDisplayText(action.reason, 'Aplicando a solicitação no painel.'),
+                                });
 
-                            const result = await executeSynapseInterfaceAction(action, {
-                                navigate,
-                                channel: 'text',
-                                onLifecycle: (event) => {
-                                    activeLifecycleIdRef.current = event.id;
-                                    setActionExperience(event);
-                                },
-                            });
+                                const result = await executeSynapseInterfaceAction(action, {
+                                    navigate,
+                                    channel: 'text',
+                                    onLifecycle: (event) => {
+                                        activeLifecycleIdRef.current = event.id;
+                                        setActionExperience(event);
+                                    },
+                                });
 
-                            if (isCurrentCancelledSynapseAction(result, activeLifecycleIdRef.current)) {
-                                activeLifecycleIdRef.current = null;
-                                setActionExperience(null);
+                                if (isCurrentCancelledSynapseAction(result, activeLifecycleIdRef.current)) {
+                                    activeLifecycleIdRef.current = null;
+                                    setActionExperience(null);
+                                }
+
+                                setExecState(result.success ? 'success' : result.cancelled ? 'idle' : 'error');
+                                addTimelineEntry({
+                                    label: result.success
+                                        ? 'Ação de interface concluída'
+                                        : result.cancelled
+                                          ? 'Ação cancelada'
+                                          : 'Não foi possível concluir a ação',
+                                    state: result.success ? 'success' : result.cancelled ? 'idle' : 'error',
+                                    toolId: action.action,
+                                    detail: result.message,
+                                });
+                            } else {
+                                setExecState('success');
+                                addTimelineEntry({
+                                    label: data?.response?.slice(0, 80) || 'Resposta recebida',
+                                    state: 'success',
+                                });
                             }
 
-                            setExecState(result.success ? 'success' : result.cancelled ? 'idle' : 'error');
+                            window.setTimeout(() => setExecState('idle'), 2200);
+                            setProgressEvent(null);
+                        },
+                        onError: (error) => {
+                            setExecState('error');
+                            setProgressEvent(null);
                             addTimelineEntry({
-                                label: result.success
-                                    ? 'Ação de interface concluída'
-                                    : result.cancelled
-                                      ? 'Ação cancelada'
-                                      : 'Não foi possível concluir a ação',
-                                state: result.success ? 'success' : result.cancelled ? 'idle' : 'error',
-                                toolId: action.action,
-                                detail: result.message,
+                                label: error.message || 'Erro ao processar',
+                                state: 'error',
                             });
-                        } else {
-                            setExecState('success');
-                            addTimelineEntry({
-                                label: data?.response?.slice(0, 80) || 'Resposta recebida',
-                                state: 'success',
-                            });
-                        }
-
-                        window.setTimeout(() => setExecState('idle'), 2200);
-                        setProgressEvent(null);
+                            window.setTimeout(() => setExecState('idle'), 3000);
+                        },
                     },
-                    onError: (error) => {
-                        setExecState('error');
-                        setProgressEvent(null);
-                        addTimelineEntry({
-                            label: error.message || 'Erro ao processar',
-                            state: 'error',
-                        });
-                        window.setTimeout(() => setExecState('idle'), 3000);
-                    },
-                },
                 );
             };
 
@@ -281,18 +283,22 @@ export const useSynapseChat = () => {
     const clearSession = useCallback(() => {
         if (!activeSessionId) return;
         deleteSession.mutate(activeSessionId, {
-            onSuccess: () => setActiveSessionId(null),
+            onSuccess: () => {
+                setInlineTurn(null);
+                setActiveSessionId(null);
+            },
         });
-    }, [activeSessionId, deleteSession, setActiveSessionId]);
+    }, [activeSessionId, deleteSession, setActiveSessionId, setInlineTurn]);
 
     const startNewSession = useCallback(async () => {
         if (createSession.isPending || sendMessage.isPending) return false;
+        setInlineTurn(null);
         setActiveSessionId(null);
         setProgressEvent(null);
         setIntentContextHint('');
         setExecState('idle');
         return true;
-    }, [createSession.isPending, sendMessage.isPending, setActiveSessionId, setExecState, setIntentContextHint]);
+    }, [createSession.isPending, sendMessage.isPending, setActiveSessionId, setExecState, setInlineTurn, setIntentContextHint]);
 
     return {
         send,
