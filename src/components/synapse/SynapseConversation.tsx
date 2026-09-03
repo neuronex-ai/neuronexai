@@ -8,7 +8,7 @@ import React, {
   type KeyboardEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Check, Copy, Loader2, Mic } from 'lucide-react';
+import { ArrowUp, Check, ChevronRight, Copy, Loader2, Mic } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -35,6 +35,11 @@ type QuickAction = {
     name: string;
 };
 
+type SynapseChoicePrompt = {
+    body: string;
+    options: string[];
+};
+
 type SynapseConversationProps = {
     messages: Message[];
     isSending: boolean;
@@ -58,6 +63,41 @@ type SynapseComposerProps = {
     onToggleListening: () => void;
 };
 
+const CHOICE_TRIGGER_PATTERN = /\b(?:qual\s+(?:das|dos|dessas|desses|op[cç][oõ]es)|qual\s+(?:voc[eê]\s+)?prefere|o\s+que\s+(?:voc[eê]\s+)?prefere|escolha|selecione|indique\s+(?:a|o|uma|um)|por\s+favor,?\s*indique)\b/i;
+const CHOICE_OPTION_PATTERN = /^\s*(?:[-*•]|\d+[.)])\s+(.+?)\s*$/;
+
+const stripChoiceFormatting = (value: string) => value
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/__(.*?)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .trim();
+
+const parseSynapseChoicePrompt = (content: string): SynapseChoicePrompt | null => {
+    const normalized = content.trim();
+    if (!normalized || !CHOICE_TRIGGER_PATTERN.test(normalized)) return null;
+
+    const lines = normalized.split(/\r?\n/);
+    const optionIndexes = new Set<number>();
+    const options: string[] = [];
+
+    lines.forEach((line, index) => {
+        const match = line.match(CHOICE_OPTION_PATTERN);
+        if (!match?.[1]) return;
+        optionIndexes.add(index);
+        options.push(stripChoiceFormatting(match[1]));
+    });
+
+    if (options.length < 2 || options.length > 5) return null;
+
+    const body = lines
+        .filter((_, index) => !optionIndexes.has(index))
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+
+    return { body, options };
+};
+
 const formatMessageTime = (value: string) => {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return null;
@@ -72,25 +112,29 @@ const formatAssistantContent = (content: string) =>
 
 const formatVisibleUserContent = (content: string) => {
     const clean = content.trim();
-    if (/^confirmar$/i.test(clean)) return 'Aceitar';
-    if (/^(recusar|cancelar)$/i.test(clean)) return 'Recusar';
+    if (/^(confirmar|confirmo|aceitar|aceito)$/i.test(clean)) return 'Aceitar';
+    if (/^(recusar|recuso|cancelar)$/i.test(clean)) return 'Recusar';
     return content;
 };
 
 export const SynapseMarkdownContent = memo(function SynapseMarkdownContent({
     content,
     renderWidgets = true,
+    onQuickAction,
 }: {
     content: string;
     renderWidgets?: boolean;
+    onQuickAction?: (prompt: string) => void;
 }) {
     const parsedMessage = parseSynapseWidgetsFromContent(content);
     const cleanContent = parsedMessage.cleanContent || (parsedMessage.widgetData.length > 0 ? '' : content);
     const displayContent = formatAssistantContent(cleanContent);
+    const choicePrompt = onQuickAction ? parseSynapseChoicePrompt(displayContent) : null;
+    const markdownContent = choicePrompt?.body || displayContent;
 
     return (
         <>
-            {displayContent ? (
+            {markdownContent ? (
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -122,9 +166,26 @@ export const SynapseMarkdownContent = memo(function SynapseMarkdownContent({
                         },
                     }}
                 >
-                    {displayContent}
+                    {markdownContent}
                 </ReactMarkdown>
             ) : null}
+
+            {choicePrompt ? (
+                <div className="mt-3 flex w-full flex-col gap-1.5" aria-label="Opções sugeridas pelo Synapse">
+                    {choicePrompt.options.map((option) => (
+                        <button
+                            key={option}
+                            type="button"
+                            onClick={() => onQuickAction?.(option)}
+                            className="group/choice flex min-h-9 w-full items-center justify-between gap-3 rounded-[11px] border border-foreground/[0.07] bg-foreground/[0.018] px-3 py-2 text-left text-[11.5px] font-medium leading-4 text-foreground/72 transition-[background-color,border-color,color,transform] hover:-translate-y-px hover:border-foreground/[0.12] hover:bg-foreground/[0.04] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.075] dark:bg-white/[0.018] dark:text-white/72 dark:hover:border-white/[0.13] dark:hover:bg-white/[0.045] dark:hover:text-white"
+                        >
+                            <span className="min-w-0 flex-1">{option}</span>
+                            <ChevronRight className="h-3.5 w-3.5 shrink-0 text-foreground/28 transition-transform group-hover/choice:translate-x-0.5 group-hover/choice:text-foreground/50 dark:text-white/28 dark:group-hover/choice:text-white/50" aria-hidden="true" />
+                        </button>
+                    ))}
+                </div>
+            ) : null}
+
             {renderWidgets ? parsedMessage.widgetData.map((widget, index) => (
                 <SynapseWidgetRenderer
                     key={`${widget.__actionType || widget.type || 'synapse-widget'}-${index}`}
@@ -172,10 +233,12 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
     message,
     isLatest,
     shouldReduceMotion,
+    onQuickAction,
 }: {
     message: Message;
     isLatest: boolean;
     shouldReduceMotion: boolean;
+    onQuickAction?: (prompt: string) => void;
 }) {
     const [copied, setCopied] = useState(false);
     const isUser = message.role === 'user';
@@ -224,7 +287,12 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
                     ) : null}
 
                     <div className={cn('synapse-desktop-prose break-words', isUser && 'synapse-desktop-prose-user')}>
-                        {isUser ? visibleUserContent : <SynapseMarkdownContent content={message.content} />}
+                        {isUser ? visibleUserContent : (
+                            <SynapseMarkdownContent
+                                content={message.content}
+                                onQuickAction={onQuickAction}
+                            />
+                        )}
                     </div>
                 </div>
 
@@ -280,6 +348,7 @@ export const SynapseConversation = ({
                             message={message}
                             isLatest={index === messages.length - 1}
                             shouldReduceMotion={shouldReduceMotion}
+                            onQuickAction={onQuickAction}
                         />
                     ))}
 
