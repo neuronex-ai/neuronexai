@@ -99,6 +99,46 @@ const formatDateTime = (value: string) => new Intl.DateTimeFormat("pt-BR", { tim
 const formatTime = (value: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 const formatMoney = (value: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
+const APPOINTMENT_LIFECYCLE_LABELS: Record<string, string> = {
+  created: "agendamento criado",
+  invitation_sent: "convite enviado ao paciente",
+  awaiting_confirmation: "aguardando confirmação do paciente",
+  awaiting_reconfirmation: "aguardando nova confirmação do paciente",
+  confirmed: "confirmada pelo paciente",
+  cancellation_requested: "cancelamento solicitado",
+  cancelled: "cancelada",
+  reschedule_requested: "remarcação solicitada",
+  reschedule_approved: "remarcação aprovada",
+  reschedule_rejected: "remarcação recusada",
+  professional_response_overdue: "resposta do profissional pendente",
+  in_progress: "em andamento",
+  completed: "concluída",
+  closed: "encerrada",
+};
+const APPOINTMENT_ATTENTION_LIFECYCLES = new Set([
+  "awaiting_confirmation",
+  "awaiting_reconfirmation",
+  "cancellation_requested",
+  "reschedule_requested",
+  "professional_response_overdue",
+]);
+const appointmentLifecycle = (item: any) => cleanText(item?.lifecycle_status || "", 60).toLowerCase();
+const appointmentIsCancelled = (item: any) =>
+  appointmentLifecycle(item) === "cancelled" || CANCELLED_STATUSES.has(String(item?.status || "").toLowerCase());
+const appointmentLifecycleLabel = (item: any) => {
+  const lifecycle = appointmentLifecycle(item);
+  if (APPOINTMENT_LIFECYCLE_LABELS[lifecycle]) return APPOINTMENT_LIFECYCLE_LABELS[lifecycle];
+  if (appointmentIsCancelled(item)) return "cancelada";
+  return "estado operacional não informado";
+};
+const appointmentConfirmationLabel = (item: any) => {
+  const lifecycle = appointmentLifecycle(item);
+  if (lifecycle === "confirmed") return "confirmada";
+  if (["awaiting_confirmation", "awaiting_reconfirmation"].includes(lifecycle)) return "aguardando confirmação";
+  if (lifecycle === "cancelled") return "não se aplica";
+  return "não registrada pelo estado operacional atual";
+};
+
 const brazilIso = (value: string) => {
   const raw = cleanText(value, 40);
   if (!raw) throw new Error("Data e hora ausentes.");
@@ -152,7 +192,32 @@ function mapPatient(row: any) {
   return { id: row.id, name: row.name, email: row.email || null, phone: row.phone || null, cpf: row.cpf || null, status: row.status || null, diagnosis: row.diagnosis || null, birth_date: row.birth_date || null, address: row.address || null, emergency_contact: row.emergency_contact || null, risk_score: row.risk_score ?? null, last_session: row.last_session || null, next_session: row.next_session || null, created_at: row.created_at || null };
 }
 function mapAppointment(item: any) {
-  return { id: item.id, patient_id: item.patient_id, patient_name: item.patient?.name || (item.type === "block" ? "Bloqueio" : "Sem paciente"), patient_email: item.patient?.email || null, patient_phone: item.patient?.phone || null, start_time: item.start_time, end_time: item.end_time, start_time_local: item.start_time ? formatDateTime(item.start_time) : null, end_time_local: item.end_time ? formatDateTime(item.end_time) : null, time_label: item.start_time ? formatTime(item.start_time) : null, date: item.start_time ? localDate(item.start_time) : null, type: item.type, status: item.status, notes: item.notes, location: item.location || null, google_meet_link: typeof item.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(item.google_meet_link) ? item.google_meet_link : null, price: item.price ?? null, metadata: item.metadata || {} };
+  const lifecycle = appointmentLifecycle(item);
+  const isCancelled = appointmentIsCancelled(item);
+  return {
+    id: item.id,
+    patient_id: item.patient_id,
+    patient_name: item.patient?.name || (item.type === "block" ? "Bloqueio" : "Sem paciente"),
+    patient_email: item.patient?.email || null,
+    patient_phone: item.patient?.phone || null,
+    start_time: item.start_time,
+    end_time: item.end_time,
+    start_time_local: item.start_time ? formatDateTime(item.start_time) : null,
+    end_time_local: item.end_time ? formatDateTime(item.end_time) : null,
+    time_label: item.start_time ? formatTime(item.start_time) : null,
+    date: item.start_time ? localDate(item.start_time) : null,
+    type: item.type,
+    status: appointmentLifecycleLabel(item),
+    patient_confirmation: appointmentConfirmationLabel(item),
+    is_confirmed: lifecycle === "confirmed",
+    is_cancelled: isCancelled,
+    needs_attention: APPOINTMENT_ATTENTION_LIFECYCLES.has(lifecycle) || item.metadata?.syncStatus === "pending_professional_review",
+    notes: item.notes,
+    location: item.location || null,
+    google_meet_link: typeof item.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(item.google_meet_link) ? item.google_meet_link : null,
+    price: item.price ?? null,
+    metadata: item.metadata || {},
+  };
 }
 async function queryPatients(admin: any, userId: string, args: Record<string, any> = {}) {
   const resultLimit = clamp(args.limit, 50, 1, 100);
@@ -181,21 +246,21 @@ async function queryPatients(admin: any, userId: string, args: Record<string, an
 }
 async function queryAppointments(admin: any, userId: string, startDate: string, endDate: string, options: Record<string, any> = {}) {
   const period = dateBounds(startDate, endDate);
-  let query = admin.from("appointments").select("id,user_id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").eq("user_id", userId).gte("start_time", period.startIso).lte("start_time", period.endIso).order("start_time").limit(clamp(options.limit, 80, 1, 200));
-  if (!options.include_cancelled) query = query.not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)");
+  let query = admin.from("appointments").select("id,user_id,patient_id,start_time,end_time,type,status,lifecycle_status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").eq("user_id", userId).gte("start_time", period.startIso).lte("start_time", period.endIso).order("start_time").limit(clamp(options.limit, 80, 1, 200));
   if (options.patient_id) query = query.eq("patient_id", cleanId(options.patient_id));
   if (options.type) query = query.eq("type", cleanText(options.type, 30));
   const { data, error } = await query;
   if (error) throw error;
-  return (data || []).map(mapAppointment);
+  const appointments = (data || []).map(mapAppointment);
+  return options.include_cancelled ? appointments : appointments.filter((item: any) => !item.is_cancelled);
 }
 function summarizeAgenda(appointments: any[], period: { start: string; end: string }) {
   const now = Date.now();
-  const active = appointments.filter((item) => !CANCELLED_STATUSES.has(String(item.status || "").toLowerCase()));
+  const active = appointments.filter((item) => !item.is_cancelled);
   const sessions = active.filter((item) => item.type !== "block" && item.patient_id);
   const blocks = active.filter((item) => item.type === "block");
-  const cancelled = appointments.filter((item) => CANCELLED_STATUSES.has(String(item.status || "").toLowerCase()));
-  const pendingReview = appointments.filter((item) => item.status === "pending" || item.metadata?.syncStatus === "pending_professional_review");
+  const cancelled = appointments.filter((item) => item.is_cancelled);
+  const pendingReview = appointments.filter((item) => item.needs_attention);
   const nextAppointment = active.find((item) => item.start_time && new Date(item.start_time).getTime() >= now) || null;
   const byDay: Record<string, any> = {};
   for (const item of appointments) {
@@ -203,11 +268,11 @@ function summarizeAgenda(appointments: any[], period: { start: string; end: stri
     byDay[date] ||= { date, total: 0, sessions: 0, blocks: 0, cancelled: 0, appointments: [] };
     byDay[date].total += 1;
     if (item.type === "block") byDay[date].blocks += 1;
-    else if (CANCELLED_STATUSES.has(String(item.status || "").toLowerCase())) byDay[date].cancelled += 1;
+    else if (item.is_cancelled) byDay[date].cancelled += 1;
     else byDay[date].sessions += 1;
     byDay[date].appointments.push(item);
   }
-  return { period, total: appointments.length, active_count: active.length, sessions_count: sessions.length, blocks_count: blocks.length, cancelled_count: cancelled.length, pending_review_count: pendingReview.length, next_appointment: nextAppointment, day_groups: Object.values(byDay), attention: pendingReview.map((appointment) => ({ kind: appointment.metadata?.syncStatus === "pending_professional_review" ? "reschedule_request" : "pending_appointment", appointment })) };
+  return { period, total: appointments.length, active_count: active.length, sessions_count: sessions.length, blocks_count: blocks.length, cancelled_count: cancelled.length, pending_review_count: pendingReview.length, next_appointment: nextAppointment, day_groups: Object.values(byDay), attention: pendingReview.map((appointment) => ({ kind: appointment.metadata?.syncStatus === "pending_professional_review" ? "reschedule_request" : "appointment_attention", appointment })) };
 }
 async function resolvePatientByName(admin: any, userId: string, name: string) {
   const term = cleanText(name, 160).replace(/[%_]/g, "");
@@ -219,7 +284,7 @@ async function resolvePatientByName(admin: any, userId: string, name: string) {
 }
 async function findAppointment(admin: any, userId: string, args: Record<string, any>) {
   if (args.appointment_id) {
-    const { data, error } = await admin.from("appointments").select("id,user_id,patient_id,start_time,end_time,type,status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").eq("id", cleanId(args.appointment_id)).eq("user_id", userId).maybeSingle();
+    const { data, error } = await admin.from("appointments").select("id,user_id,patient_id,start_time,end_time,type,status,lifecycle_status,notes,location,google_meet_link,price,metadata,patient:patient_id(name,email,phone)").eq("id", cleanId(args.appointment_id)).eq("user_id", userId).maybeSingle();
     if (error) throw error;
     return data ? mapAppointment(data) : null;
   }
@@ -581,9 +646,9 @@ async function buildSlots(admin: any, userId: string, args: Record<string, any>)
   const duration = clamp(args.duration_minutes, 50, 15, 240);
   const limit = clamp(args.limit, 10, 1, 30);
   const period = dateBounds(start, end);
-  const { data, error } = await admin.from("appointments").select("start_time,end_time,status").eq("user_id", userId).not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)").gte("start_time", period.startIso).lte("start_time", period.endIso).order("start_time");
+  const { data, error } = await admin.from("appointments").select("start_time,end_time,status,lifecycle_status").eq("user_id", userId).gte("start_time", period.startIso).lte("start_time", period.endIso).order("start_time");
   if (error) throw error;
-  const appointments = data || [];
+  const appointments = (data || []).filter((appointment: any) => !appointmentIsCancelled(appointment));
   const slots: Array<{ date: string; time: string; datetime: string; end_datetime: string }> = [];
   const cursor = new Date(`${start}T00:00:00-03:00`);
   const endCursor = new Date(`${end}T23:59:59-03:00`);
