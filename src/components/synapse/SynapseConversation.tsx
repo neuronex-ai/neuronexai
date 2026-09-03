@@ -8,7 +8,7 @@ import React, {
   type KeyboardEvent,
 } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUp, Check, Copy, Loader2, Mic, Sparkles } from 'lucide-react';
+import { ArrowUp, Check, Copy, Loader2, Mic } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -70,14 +70,12 @@ const formatMessageTime = (value: string) => {
 const formatAssistantContent = (content: string) =>
     sanitizeSynapseMarkdown(content);
 
-const SynapseMessageMark = ({ className }: { className?: string }) => (
-    <span
-        className={cn('synapse-desktop-message-mark flex h-8 w-8 shrink-0 items-center justify-center', className)}
-        aria-hidden="true"
-    >
-        <Sparkles className="relative z-10 h-3.5 w-3.5" />
-    </span>
-);
+const formatVisibleUserContent = (content: string) => {
+    const clean = content.trim();
+    if (/^confirmar$/i.test(clean)) return 'Aceitar';
+    if (/^(recusar|cancelar)$/i.test(clean)) return 'Recusar';
+    return content;
+};
 
 export const SynapseMarkdownContent = memo(function SynapseMarkdownContent({
     content,
@@ -144,32 +142,24 @@ const SynapseEmptyConversation = ({
 }: Pick<SynapseConversationProps, 'quickActions' | 'shouldReduceMotion' | 'onQuickAction'>) => (
     <div
         key="empty"
-        className="flex min-h-[330px] flex-1 flex-col items-center justify-center px-2 py-6 text-center"
+        className="flex min-h-[310px] flex-1 flex-col items-start justify-end px-1 pb-6 pt-8"
     >
-        <div
-            className="synapse-desktop-empty-mark flex h-12 w-12 items-center justify-center"
-            aria-hidden="true"
-        >
-            <Sparkles className="relative z-10 h-[18px] w-[18px]" />
-        </div>
-
-        <div className="mt-4 space-y-1.5">
+        <div className="space-y-1.5">
             <h2 className="text-[16px] font-semibold leading-6 text-foreground">Como posso ajudar?</h2>
-            <p className="mx-auto max-w-[292px] text-[12px] leading-5 text-muted-foreground">
-                Converse naturalmente com o Synapse sobre sua rotina clínica.
+            <p className="max-w-[300px] text-[12px] leading-5 text-muted-foreground">
+                Converse naturalmente sobre o que você precisa resolver agora.
             </p>
         </div>
 
         {quickActions.length > 0 ? (
-            <div className="mt-5 grid w-full max-w-[360px] grid-cols-1 gap-2 min-[410px]:grid-cols-2">
+            <div className="mt-5 grid w-full grid-cols-1 gap-1.5 min-[410px]:grid-cols-2">
                 {quickActions.slice(0, 4).map((tool) => (
                     <button
                         key={tool.id}
                         type="button"
                         onClick={() => onQuickAction(tool.name)}
-                        className="synapse-desktop-prompt flex min-h-11 items-center gap-2.5 px-3 text-left text-[11px] font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:translate-y-px"
+                        className="min-h-10 rounded-[12px] px-2.5 text-left text-[11px] font-medium text-muted-foreground transition-colors hover:bg-foreground/[0.035] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.045]"
                     >
-                        <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                         <span className="line-clamp-2 leading-4">{tool.name}</span>
                     </button>
                 ))}
@@ -190,8 +180,9 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
     const [copied, setCopied] = useState(false);
     const isUser = message.role === 'user';
     const messageTime = formatMessageTime(message.created_at);
+    const visibleUserContent = isUser ? formatVisibleUserContent(message.content) : '';
     const copyContent = isUser
-        ? message.content
+        ? visibleUserContent
         : formatAssistantContent(parseSynapseWidgetsFromContent(message.content).cleanContent);
 
     const handleCopy = async () => {
@@ -207,25 +198,25 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
     return (
         <article
             className={cn(
-                'synapse-conversation-row group/message flex min-w-0 items-end gap-2.5',
+                'synapse-conversation-row group/message flex min-w-0',
                 isUser ? 'justify-end' : 'justify-start',
                 isLatest && !shouldReduceMotion && 'synapse-message-enter',
             )}
         >
-            {!isUser ? <SynapseMessageMark className="mb-[18px]" /> : null}
-
-            <div className={cn('flex min-w-0 max-w-[84%] flex-col', isUser ? 'items-end' : 'items-start')}>
+            <div className={cn('flex min-w-0 flex-col', isUser ? 'max-w-[84%] items-end' : 'w-full max-w-[96%] items-start')}>
                 <div
                     className={cn(
-                        'synapse-desktop-message group relative min-w-0 px-3.5 py-2.5',
-                        isUser ? 'synapse-desktop-message-user' : 'synapse-desktop-message-assistant pr-11',
+                        'group relative min-w-0',
+                        isUser
+                            ? 'synapse-desktop-message synapse-desktop-message-user px-3.5 py-2.5'
+                            : 'w-full py-1.5 pr-9',
                     )}
                 >
                     {!isUser ? (
                         <button
                             type="button"
                             onClick={() => void handleCopy()}
-                            className="absolute right-0.5 top-0.5 flex h-11 w-11 items-center justify-center rounded-[12px] text-muted-foreground opacity-0 transition-[opacity,color,background-color,transform] hover:bg-background/45 hover:text-foreground active:translate-y-px group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                            className="absolute -right-1 -top-1 flex h-9 w-9 items-center justify-center rounded-[11px] text-muted-foreground opacity-0 transition-[opacity,color,background-color] hover:bg-foreground/[0.035] hover:text-foreground group-hover:opacity-100 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.045]"
                             aria-label="Copiar mensagem"
                         >
                             {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -233,14 +224,14 @@ const SynapseMessageRow = memo(function SynapseMessageRow({
                     ) : null}
 
                     <div className={cn('synapse-desktop-prose break-words', isUser && 'synapse-desktop-prose-user')}>
-                        {isUser ? message.content : <SynapseMarkdownContent content={message.content} />}
+                        {isUser ? visibleUserContent : <SynapseMarkdownContent content={message.content} />}
                     </div>
                 </div>
 
                 {messageTime ? (
                     <time
                         dateTime={message.created_at}
-                        className="mt-1.5 px-1 text-[9px] font-medium text-muted-foreground/55 transition-opacity group-hover/message:text-muted-foreground"
+                        className="mt-1 px-1 text-[9px] font-medium text-muted-foreground/48 transition-opacity group-hover/message:text-muted-foreground"
                     >
                         {messageTime}
                     </time>
@@ -254,7 +245,7 @@ export const SynapseConversation = ({
     messages,
     isSending,
     isProcessing,
-    activityLabel = 'Processando solicitação',
+    activityLabel = 'Analisando solicitação',
     activityDetail,
     activityMode = 'thinking',
     quickActions,
@@ -296,13 +287,12 @@ export const SynapseConversation = ({
                         {processingActive ? (
                             <motion.div
                                 key="thinking"
-                                initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
+                                initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 3 }}
-                                transition={shouldReduceMotion ? { duration: 0 } : { type: 'spring', stiffness: 420, damping: 34, mass: 0.72 }}
-                                className="flex items-end gap-2.5"
+                                exit={{ opacity: 0, y: 2 }}
+                                transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.16 }}
+                                className="min-w-0"
                             >
-                                <SynapseMessageMark />
                                 <SynapseProcessingState
                                     label={activityLabel}
                                     detail={activityDetail}
