@@ -4,6 +4,7 @@ import "./styles/design-tokens.css";
 import "./styles/dashboard-command-center-refinement.css";
 import "./styles/dashboard-command-center-spacing.css";
 import "./styles/desktop-operational-dark-contrast.css";
+import "./styles/desktop-operational-surface-polish.css";
 import "./styles/public-navbar-liquid-glass.css";
 import { StartupFailure } from "./components/runtime/StartupFailure";
 import { registerPwaBackgroundCapabilities, registerPwaLaunchHandlers } from "./lib/pwa-integrations";
