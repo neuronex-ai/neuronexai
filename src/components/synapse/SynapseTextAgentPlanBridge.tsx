@@ -82,6 +82,9 @@ export const SynapseTextAgentPlanBridge = ({
         ) ||
         document.querySelector<HTMLElement>(
           '#synapse-panel section[aria-label="Conversa com o Synapse"]',
+        ) ||
+        document.querySelector<HTMLElement>(
+          '#synapse-quick-composer [data-synapse-inline-response-target="true"]',
         );
       setTarget((current) => current === next ? current : next);
     };
@@ -158,8 +161,6 @@ export const SynapseTextAgentPlanBridge = ({
       label: decision === "accept" ? "Aplicando alteração" : "Cancelando ação",
       awaitingConfirmation: false,
     });
-    // Keep button labels human while sending only vocabulary that the pending-action
-    // resolver consumes deterministically. This prevents a decision from being replanned.
     send(decision === "accept" ? "confirmo" : "cancelar");
   };
 
