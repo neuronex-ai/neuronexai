@@ -139,12 +139,18 @@ export const usePatients = () => {
   });
 
   const sessionContext = sessionContextQuery.data || {};
+  const hasCanonicalSessionContext = sessionContextQuery.isSuccess;
   const data = patientsQuery.data?.map((patient) => ({
     ...patient,
     // `patients.last_session` / `patients.next_session` are legacy denormalized
     // fields and can drift. The Agenda is the canonical source for directory UI.
-    last_session: sessionContext[patient.id]?.last_session ?? null,
-    next_session: sessionContext[patient.id]?.next_session ?? null,
+    // Keep the legacy values only as a graceful fallback if the Agenda read fails.
+    last_session: hasCanonicalSessionContext
+      ? sessionContext[patient.id]?.last_session ?? null
+      : patient.last_session,
+    next_session: hasCanonicalSessionContext
+      ? sessionContext[patient.id]?.next_session ?? null
+      : patient.next_session,
   }));
 
   return {
