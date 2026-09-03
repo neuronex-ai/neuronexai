@@ -126,6 +126,176 @@
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
+/* Desktop Home dark mode follows the same nested-surface grammar used by
+   Financial Management: deep frame, raised panels, darker working insets. */
+.dark .dashboard-desktop {
+  --dashboard-dark-frame: #080808;
+  --dashboard-dark-panel: #171717;
+  --dashboard-dark-inset: #0c0c0c;
+  --dashboard-dark-deep: #070707;
+  --dashboard-dark-edge: rgba(0, 0, 0, 0.82);
+  --dashboard-dark-highlight: rgba(255, 255, 255, 0.032);
+}
+
+.dark .dashboard-desktop .dashboard-shell-surface {
+  border-color: var(--dashboard-dark-edge);
+  background:
+    linear-gradient(160deg, rgba(15, 15, 15, 0.99), rgba(5, 5, 5, 0.99)),
+    var(--dashboard-dark-frame);
+  box-shadow:
+    0 28px 82px -62px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.dark .dashboard-desktop .dashboard-morning-shell {
+  border-color: var(--dashboard-dark-edge);
+  background:
+    linear-gradient(155deg, rgba(17, 17, 17, 0.98), rgba(8, 8, 8, 0.99)),
+    #0b0b0b;
+  box-shadow:
+    0 24px 68px -54px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.dark .dashboard-desktop :is(.dashboard-panel-surface, .dashboard-morning-panel, .next-schedule-stage) {
+  border-color: var(--dashboard-dark-edge);
+  background:
+    linear-gradient(155deg, rgba(28, 28, 28, 0.98), rgba(17, 17, 17, 0.99)),
+    var(--dashboard-dark-panel);
+  box-shadow:
+    0 22px 60px -48px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 var(--dashboard-dark-highlight);
+}
+
+.dark .dashboard-desktop .dashboard-retina-card:not([class*="bg-amber"]):not([class*="bg-rose"]),
+.dark .dashboard-desktop .dashboard-finance-metric {
+  border-color: rgba(0, 0, 0, 0.78);
+  background:
+    linear-gradient(155deg, rgba(18, 18, 18, 0.98), rgba(9, 9, 9, 0.99)),
+    var(--dashboard-dark-inset);
+  box-shadow:
+    0 18px 44px -38px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.024);
+}
+
+.dark .dashboard-desktop .dashboard-soft-fill {
+  border-color: rgba(0, 0, 0, 0.78);
+  background: var(--dashboard-dark-deep);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.dark .dashboard-desktop .dashboard-synapse-day {
+  border-color: rgba(0, 0, 0, 0.82);
+  background:
+    linear-gradient(155deg, rgba(15, 15, 15, 0.99), rgba(8, 8, 8, 0.99)),
+    var(--dashboard-dark-inset);
+  box-shadow:
+    0 18px 44px -38px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.022);
+}
+
+.dark .dashboard-desktop .dashboard-synapse-day-icon,
+.dark .dashboard-desktop .dashboard-synapse-suggestion {
+  border-color: rgba(0, 0, 0, 0.8);
+  background: var(--dashboard-dark-deep);
+}
+
+.dark .dashboard-desktop .dashboard-synapse-composer {
+  border-color: rgba(0, 0, 0, 0.88);
+  background: #050505;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 12px 32px -30px rgba(0, 0, 0, 0.98);
+}
+
+.dark .dashboard-desktop .next-schedule-card {
+  border-color: rgba(0, 0, 0, 0.82);
+  background:
+    linear-gradient(155deg, rgba(15, 15, 15, 0.99), rgba(8, 8, 8, 0.99)),
+    var(--dashboard-dark-inset);
+  box-shadow:
+    0 18px 44px -38px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 rgba(255, 255, 255, 0.022);
+}
+
+.dark .dashboard-desktop :is(.next-schedule-details, .next-schedule-detail-cell) {
+  border-color: rgba(0, 0, 0, 0.82);
+  background: var(--dashboard-dark-deep);
+}
+
+/* Expanded global chat uses the same depth ladder as the Home and quick
+   composer: shell > conversation canvas > text input. No new chrome. */
+.dark .synapse-desktop-shell.synapse-chat-panel {
+  border-color: rgba(0, 0, 0, 0.86);
+  background:
+    linear-gradient(155deg, rgba(27, 27, 27, 0.99), rgba(16, 16, 16, 0.99)),
+    #181818;
+  box-shadow:
+    0 38px 110px -48px rgba(0, 0, 0, 0.99),
+    0 12px 34px -24px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.01);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dark .synapse-chat-panel::before {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent 20%),
+    linear-gradient(112deg, transparent 0%, rgba(255, 255, 255, 0.008) 46%, transparent 68%);
+}
+
+.dark .synapse-chat-panel::after {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.024),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.54),
+    inset 0 -42px 72px -64px rgba(0, 0, 0, 0.88);
+}
+
+.dark .synapse-chat-panel > header {
+  border-bottom-color: rgba(0, 0, 0, 0.84);
+  background: #171717;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.dark .synapse-chat-panel .synapse-desktop-viewport {
+  background:
+    linear-gradient(180deg, #0d0d0d, #090909 58%, #0a0a0a),
+    #0a0a0a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.012),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.72);
+}
+
+.dark .synapse-chat-panel .synapse-desktop-composer-dock {
+  border-top-color: rgba(0, 0, 0, 0.84);
+  background: #151515;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.dark .synapse-chat-panel .synapse-desktop-composer-dock > div:first-child {
+  border-color: rgba(0, 0, 0, 0.76);
+  background: #0d0d0d;
+  color: rgba(255, 255, 255, 0.62);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
+.dark .synapse-chat-panel .synapse-desktop-composer {
+  border-color: rgba(0, 0, 0, 0.88);
+  background: #070707;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    0 14px 36px -32px rgba(0, 0, 0, 0.98);
+}
+
+.dark .synapse-chat-panel .synapse-desktop-message-assistant,
+.dark .synapse-chat-panel .synapse-desktop-thinking,
+.dark .synapse-chat-panel .synapse-thinking-signal {
+  border-color: rgba(0, 0, 0, 0.82);
+  background: #070707;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018);
+}
+
 .desktop-home-attention,
 .desktop-home-attention-grid {
   min-width: 0;
