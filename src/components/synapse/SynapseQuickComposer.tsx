@@ -7,6 +7,14 @@ import { useSynapseChat } from '@/hooks/use-synapse-chat';
 import { useSynapseContextLabel } from '@/hooks/use-synapse-context-label';
 import { cn } from '@/lib/utils';
 
+const cleanSuggestedDraft = (value: string) =>
+    value
+        .replace(/\bcontexto clínico autorizado\b/gi, 'contexto clínico')
+        .replace(/\bcontexto autorizado\b/gi, 'contexto')
+        .replace(/\bacesso clínico seguro\b/gi, 'acesso clínico')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+
 export const SynapseQuickComposer = () => {
     const shouldReduceMotion = useReducedMotion();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -23,7 +31,8 @@ export const SynapseQuickComposer = () => {
     } = useSynapse();
     const { send, isSending, sessionReady } = useSynapseChat();
 
-    const visibleDraft = intentContextHint.trim() || inputDraft;
+    const contextualDraft = cleanSuggestedDraft(intentContextHint.trim());
+    const visibleDraft = contextualDraft || inputDraft;
     const canSend = Boolean(visibleDraft.trim()) && sessionReady && !isSending;
     const voiceBusy = voiceStatus === 'connecting' || voiceStatus === 'disconnecting';
 
@@ -33,15 +42,13 @@ export const SynapseQuickComposer = () => {
     }, []);
 
     // Home suggestions use intentContextHint as a transport so the compact
-    // launcher can reveal the complete, contextualized question. Promote it
-    // immediately into the real draft: from this point on the professional can
-    // edit exactly what will be sent, both minimized and expanded.
+    // launcher can reveal the complete, contextualized question. Promote the
+    // polished user-facing copy into the real draft immediately.
     useEffect(() => {
-        const contextualDraft = intentContextHint.trim();
         if (!contextualDraft) return;
         setInputDraft(contextualDraft);
         setIntentContextHint('');
-    }, [intentContextHint, setInputDraft, setIntentContextHint]);
+    }, [contextualDraft, setInputDraft, setIntentContextHint]);
 
     const handleChange = (value: string) => {
         setInputDraft(value);
@@ -49,7 +56,6 @@ export const SynapseQuickComposer = () => {
     };
 
     const promoteContextualDraft = () => {
-        const contextualDraft = intentContextHint.trim();
         if (!contextualDraft) return;
         setInputDraft(contextualDraft);
         setIntentContextHint('');
