@@ -38,6 +38,17 @@
   border-radius: 28px;
 }
 
+/* The workspace header identifies the surface only once. Context lives next
+   to the composer, where it is useful while the professional writes. */
+.synapse-chat-panel header [aria-label="Voltar para a conversa"] {
+  gap: 0;
+}
+
+.synapse-chat-panel header [aria-label="Voltar para a conversa"] > span:first-child,
+.synapse-chat-panel header [aria-label="Voltar para a conversa"] > span:last-child > span:last-child {
+  display: none;
+}
+
 .desktop-home-attention,
 .desktop-home-attention-grid {
   min-width: 0;
