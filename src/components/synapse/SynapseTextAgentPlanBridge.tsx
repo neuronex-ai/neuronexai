@@ -158,9 +158,9 @@ export const SynapseTextAgentPlanBridge = ({
       label: decision === "accept" ? "Aplicando alteração" : "Cancelando ação",
       awaitingConfirmation: false,
     });
-    // The text runtime currently consumes explicit confirmation vocabulary.
-    // "confirmo" is the canonical affirmative token; the conversation renders it as "Aceitar".
-    send(decision === "accept" ? "confirmo" : "recusar");
+    // Keep button labels human while sending only vocabulary that the pending-action
+    // resolver consumes deterministically. This prevents a decision from being replanned.
+    send(decision === "accept" ? "confirmo" : "cancelar");
   };
 
   if (!enabled || !target) return null;
