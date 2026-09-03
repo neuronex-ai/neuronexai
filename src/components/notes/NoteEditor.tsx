@@ -334,47 +334,58 @@ export const NoteEditor = ({
                     variant="ghost"
                     size="sm"
                     className={cn(
-                      "h-9 px-3 rounded-xl border transition-all duration-200 gap-2",
+                      "group h-9 gap-2 rounded-xl border px-3 shadow-none backdrop-blur-xl transition-[background-color,border-color,color,box-shadow] duration-200",
                       selectedPatient
-                        ? "border-transparent bg-foreground text-background hover:bg-foreground/90"
-                        : "border-border/45 bg-background/45 text-muted-foreground hover:bg-muted/70 hover:text-foreground"
+                        ? "border-zinc-200/80 bg-zinc-100/80 text-zinc-900 hover:bg-zinc-100 dark:border-white/[0.09] dark:bg-white/[0.055] dark:text-zinc-100 dark:hover:bg-white/[0.075]"
+                        : "border-zinc-200/70 bg-white/65 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-100/75 hover:text-zinc-900 dark:border-white/[0.075] dark:bg-white/[0.028] dark:text-zinc-400 dark:hover:border-white/[0.12] dark:hover:bg-white/[0.055] dark:hover:text-zinc-100"
                     )}
                   >
-                    <User className="h-3.5 w-3.5" />
-                    <span className="text-xs font-semibold tracking-tight truncate max-w-[120px]">
+                    <User className="h-3.5 w-3.5 shrink-0 opacity-75" />
+                    <span className="max-w-[132px] truncate text-xs font-semibold tracking-tight">
                       {selectedPatient ? selectedPatient.name : "Vincular"}
                     </span>
-                    <ChevronDown className="h-3 w-3 opacity-50" />
+                    <ChevronDown className="h-3 w-3 shrink-0 opacity-45 transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="notes-liquid-surface w-[300px] p-0 backdrop-blur-3xl rounded-2xl overflow-hidden shadow-xl" align="start">
-                  <Command className="bg-transparent">
-                    <CommandInput placeholder="Buscar paciente..." className="h-10 border-none focus:ring-0 text-sm dark:text-white dark:placeholder:text-zinc-500" />
-                    <CommandList className="max-h-[300px] custom-scrollbar p-1">
-                      <CommandEmpty className="py-6 text-center text-xs text-muted-foreground">Nenhum paciente encontrado.</CommandEmpty>
-                      <CommandGroup>
+                <PopoverContent
+                  className="w-[336px] overflow-hidden rounded-[22px] border border-zinc-200/75 bg-white/96 p-2 text-zinc-950 shadow-[0_28px_72px_-34px_rgba(0,0,0,0.38)] backdrop-blur-3xl dark:border-white/[0.085] dark:bg-[#0b0b0c]/96 dark:text-zinc-100 dark:shadow-[0_32px_80px_-38px_rgba(0,0,0,0.9)]"
+                  align="start"
+                  sideOffset={8}
+                >
+                  <Command className="bg-transparent text-inherit [&_[cmdk-input-wrapper]]:mx-1 [&_[cmdk-input-wrapper]]:mb-1.5 [&_[cmdk-input-wrapper]]:rounded-xl [&_[cmdk-input-wrapper]]:border [&_[cmdk-input-wrapper]]:border-zinc-200/75 [&_[cmdk-input-wrapper]]:bg-zinc-50/85 [&_[cmdk-input-wrapper]]:px-3 [&_[cmdk-input-wrapper]]:shadow-none dark:[&_[cmdk-input-wrapper]]:border-white/[0.07] dark:[&_[cmdk-input-wrapper]]:bg-white/[0.035]">
+                    <CommandInput
+                      placeholder="Buscar paciente..."
+                      className="h-10 border-none text-sm text-zinc-900 placeholder:text-zinc-400 focus:ring-0 dark:text-zinc-100 dark:placeholder:text-zinc-600"
+                    />
+                    <CommandList className="custom-scrollbar max-h-[292px] p-1">
+                      <CommandEmpty className="py-8 text-center text-xs text-zinc-400 dark:text-zinc-600">Nenhum paciente encontrado.</CommandEmpty>
+                      <CommandGroup className="p-0">
                         {patients?.map((patient) => (
                           <CommandItem
                             key={patient.id}
                             onSelect={() => void handleMetadataUpdate({ patient_id: patient.id })}
-                            className="flex items-center justify-between px-3 py-2 cursor-pointer rounded-lg mx-1 aria-selected:bg-zinc-100 dark:aria-selected:bg-white/5 dark:text-zinc-200"
+                            className="mx-0.5 flex min-h-11 cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-zinc-700 transition-colors aria-selected:bg-zinc-100 aria-selected:text-zinc-950 dark:text-zinc-300 dark:aria-selected:bg-white/[0.06] dark:aria-selected:text-white"
                           >
-                            <div className="flex items-center gap-3">
-                              <div className="h-6 w-6 rounded-full bg-primary/10 flex items-center justify-center text-[10px] font-bold text-primary border border-primary/10">
-                                {patient.name.charAt(0)}
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-zinc-200/80 bg-zinc-100 text-[10px] font-bold text-zinc-600 dark:border-white/[0.07] dark:bg-white/[0.055] dark:text-zinc-300">
+                                {patient.name.charAt(0).toUpperCase()}
                               </div>
-                              <span className="text-sm font-medium">{patient.name}</span>
+                              <span className="truncate text-sm font-semibold tracking-tight">{patient.name}</span>
                             </div>
-                            {note.patient_id === patient.id && <Check className="h-3.5 w-3.5 text-primary" />}
+                            {note.patient_id === patient.id && (
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-white dark:bg-white dark:text-zinc-950">
+                                <Check className="h-3.5 w-3.5" />
+                              </span>
+                            )}
                           </CommandItem>
                         ))}
                         {note.patient_id && (
                           <CommandItem
                             onSelect={() => void handleMetadataUpdate({ patient_id: null })}
-                            className="flex items-center gap-2 px-3 py-2 cursor-pointer text-destructive focus:text-destructive rounded-lg mx-1 mt-1"
+                            className="mx-0.5 mt-1.5 flex min-h-10 cursor-pointer items-center gap-2 rounded-xl border-t border-zinc-200/70 px-3 py-2.5 text-zinc-400 aria-selected:bg-red-50 aria-selected:text-red-600 dark:border-white/[0.06] dark:text-zinc-600 dark:aria-selected:bg-red-500/10 dark:aria-selected:text-red-400"
                           >
                             <X className="h-3.5 w-3.5" />
-                            <span className="text-sm font-medium">Desvincular</span>
+                            <span className="text-xs font-semibold">Desvincular paciente</span>
                           </CommandItem>
                         )}
                       </CommandGroup>
@@ -637,23 +648,6 @@ export const NoteEditor = ({
           </div>
         </div>
       </div>
-
-      {/* Accessibility Hint */}
-      <AnimatePresence>
-        {isFocusMode && showToolbar && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, x: 20 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.9, x: 20 }}
-            className="fixed bottom-10 right-10 z-50 pointer-events-none"
-          >
-            <div className="notes-toolbar-surface flex items-center gap-4 rounded-2xl border px-6 py-3 shadow-[0_20px_50px_rgba(0,0,0,0.5)] backdrop-blur-3xl">
-              <div className="flex h-7 min-w-[36px] items-center justify-center rounded-lg border border-border/60 bg-muted/60 px-2 text-[10px] font-black tracking-tighter text-foreground/80 shadow-inner">ESC</div>
-              <span className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em]">Encerrar Sessão de Foco</span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent className="max-w-md rounded-[26px] border-white/[0.08] bg-zinc-950/95 p-0 text-white shadow-[0_36px_100px_-32px_rgba(0,0,0,0.9)] backdrop-blur-3xl [.light_&]:border-zinc-200/80 [.light_&]:bg-white/95 [.light_&]:text-zinc-950">
