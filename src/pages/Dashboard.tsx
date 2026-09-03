@@ -2,6 +2,7 @@
 
 import { Suspense, lazy } from "react";
 import { useAuth } from "@/components/auth/SessionContextProvider";
+import { FounderProgramAnnouncementGate } from "@/components/founder/FounderProgramExperience";
 import { useTour } from "@/components/onboarding/TourContext";
 import { DevelopmentModeNotice } from "@/components/runtime/DevelopmentModeNotice";
 import { NeuroNexLoadingLoop } from "@/components/ui/neuronex-loading-loop";
@@ -19,6 +20,7 @@ const Dashboard = () => {
     return (
       <>
         <DesktopDashboard />
+        <FounderProgramAnnouncementGate />
         <DashboardDevelopmentNotice />
       </>
     );
@@ -27,6 +29,7 @@ const Dashboard = () => {
   return (
     <Suspense fallback={<MobilePageLoader />}>
       <MobileDashboard />
+      <FounderProgramAnnouncementGate />
       <DashboardDevelopmentNotice />
     </Suspense>
   );
