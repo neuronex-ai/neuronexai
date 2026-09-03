@@ -54,16 +54,17 @@
   min-width: 0;
 }
 
-/* On roomy desktop widths the Synapse behaves like a sidecar instead of
-   covering the clinical surface underneath it. The navbar remains untouched. */
+/* Only the Home was designed to reflow around Synapse. Dense operational
+   surfaces (Agenda, Pacientes, Financeiro, Notas...) keep their native width
+   and the workspace overlays the right edge instead of collapsing the page. */
 @media (min-width: 1480px) {
-  body.synapse-workspace-open .desktop-lumen-page {
+  body.synapse-workspace-open .desktop-lumen-page:has(.desktop-home-attention) {
     box-sizing: border-box;
     padding-right: calc(var(--synapse-workspace-width) + var(--synapse-workspace-gap) + 12px);
     transition: padding-right 320ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
-  body:not(.synapse-workspace-open) .desktop-lumen-page {
+  body:not(.synapse-workspace-open) .desktop-lumen-page:has(.desktop-home-attention) {
     transition: padding-right 280ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
@@ -94,8 +95,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  body.synapse-workspace-open .desktop-lumen-page,
-  body:not(.synapse-workspace-open) .desktop-lumen-page {
+  body.synapse-workspace-open .desktop-lumen-page:has(.desktop-home-attention),
+  body:not(.synapse-workspace-open) .desktop-lumen-page:has(.desktop-home-attention) {
     transition: none !important;
   }
 }
