@@ -18,6 +18,7 @@ import {
 
 import { EditTransactionModal } from "../financeiro/EditTransactionModal";
 import { InvoiceEmissionModal } from "../financeiro/InvoiceEmissionModal";
+import { PatientFinancialSettingsDialog } from "@/components/patients/PatientFinancialSettingsDialog";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,6 +34,7 @@ interface PatientFinanceTabProps {
 
 const DESKTOP_PAGE_SIZE = 10;
 const MOBILE_PAGE_SIZE = 8;
+const INVOICE_PAGE_SIZE = 8;
 type FinanceView = "movements" | "charges" | "nfse";
 
 const formatCurrency = (value: number) =>
@@ -163,7 +165,16 @@ export const PatientFinanceTab = ({ patientId }: PatientFinanceTabProps) => {
 
   return (
     <div className="space-y-5 pb-8">
-      <section className="desktop-retina-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/68 p-5 md:p-6">
+      <section className="patient-record-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/68 p-5 md:p-6">
+        <div className="mb-4 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">Financeiro do paciente</p>
+            <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">
+              Histórico financeiro e regra padrão usada em novos lançamentos, cobranças e agendamentos.
+            </p>
+          </div>
+          {!isMobile ? <PatientFinancialSettingsDialog patientId={patientId} /> : null}
+        </div>
         <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr_1fr]">
           <SummaryMetric
             label="Balanço"
@@ -206,7 +217,7 @@ export const PatientFinanceTab = ({ patientId }: PatientFinanceTabProps) => {
         </nav>
       ) : null}
 
-      {(isMobile || view === "movements") ? <section className="desktop-retina-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/62">
+      {(isMobile || view === "movements") ? <section className="patient-record-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/62">
         <header className="flex flex-col gap-3 border-b border-border/45 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
           <div className="flex items-center gap-3">
             <span className="desktop-retina-inset flex h-10 w-10 items-center justify-center rounded-2xl border border-border/45 text-muted-foreground">
@@ -229,7 +240,7 @@ export const PatientFinanceTab = ({ patientId }: PatientFinanceTabProps) => {
 
         {transactions.length > 0 ? (
           <>
-            <div className="custom-scrollbar max-h-[620px] space-y-2.5 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable] md:p-5">
+            <div className="patient-record-scrollbar max-h-[620px] space-y-2.5 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable] md:p-5">
               {visibleTransactions.map((transaction) => (
                 <TransactionItem key={transaction.id} transaction={transaction} isMobile={isMobile} />
               ))}
@@ -311,12 +322,29 @@ const PatientInvoicePanel = ({
   mode: "charges" | "nfse";
   patientId?: string;
 }) => {
-  const visible = mode === "nfse"
-    ? invoices.filter((invoice) => Boolean(invoice.nfse_status || invoice.nfse_reference || invoice.nfse_number))
-    : invoices;
+  const [page, setPage] = useState(1);
+  const visible = useMemo(
+    () => mode === "nfse"
+      ? invoices.filter((invoice) => Boolean(invoice.nfse_status || invoice.nfse_reference || invoice.nfse_number))
+      : invoices,
+    [invoices, mode],
+  );
+  const totalPages = Math.max(1, Math.ceil(visible.length / INVOICE_PAGE_SIZE));
+  const pageItems = useMemo(
+    () => visible.slice((page - 1) * INVOICE_PAGE_SIZE, page * INVOICE_PAGE_SIZE),
+    [page, visible],
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [mode]);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, totalPages));
+  }, [totalPages]);
 
   return (
-    <section className="desktop-retina-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/62">
+    <section className="patient-record-panel overflow-hidden rounded-[28px] border border-border/45 bg-card/62">
       <header className="flex flex-col gap-3 border-b border-border/45 px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-6">
         <div className="flex items-center gap-3">
           <span className="desktop-retina-inset flex h-10 w-10 items-center justify-center rounded-2xl border border-border/45 text-muted-foreground">
@@ -328,6 +356,7 @@ const PatientInvoicePanel = ({
             </h3>
             <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
               {visible.length} {visible.length === 1 ? "registro" : "registros"}
+              {totalPages > 1 ? ` · página ${page} de ${totalPages}` : ""}
             </p>
           </div>
         </div>
@@ -348,62 +377,76 @@ const PatientInvoicePanel = ({
           <Skeleton className="h-20 rounded-[20px] motion-reduce:animate-none" />
         </div>
       ) : visible.length ? (
-        <div className="patient-record-scrollbar max-h-[620px] space-y-2.5 overflow-y-auto p-4 [scrollbar-gutter:stable] md:p-5">
-          {visible.map((invoice) => {
-            const documentUrl = mode === "nfse"
-              ? invoice.nfse_pdf_url || invoice.nfse_xml_url
-              : invoice.payment_url || invoice.pdf_url;
-            const fiscalStatus = invoice.nfse_status_description || invoice.nfse_status || "Registrada";
-            return (
-              <article key={invoice.id} className="desktop-retina-inset rounded-[22px] border border-border/45 bg-background/62 p-4 md:p-5">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex min-w-0 items-start gap-4">
-                    <span className={cn(
-                      "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
-                      mode === "nfse"
-                        ? "border-sky-500/18 bg-sky-500/9 text-sky-600 dark:text-sky-300"
-                        : "border-border/55 bg-muted/40 text-muted-foreground",
-                    )}>
-                      {mode === "nfse" ? <FileText className="h-4 w-4" /> : <Receipt className="h-4 w-4" />}
-                    </span>
-                    <div className="min-w-0">
-                      <h4 className="truncate text-sm font-semibold text-foreground">
-                        {invoice.description || (mode === "nfse" ? "Nota fiscal de serviço" : "Cobrança NeuroFinance")}
-                      </h4>
-                      <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-                        <span>{mode === "nfse" ? fiscalStatus : invoiceStatusLabel[invoice.status]}</span>
-                        <span aria-hidden="true">•</span>
-                        <span>{new Date(invoice.created_at).toLocaleDateString("pt-BR")}</span>
-                        {invoice.appointment_id ? <span className="rounded-full border border-border/50 px-2 py-0.5">Vinculada a agendamento</span> : null}
+        <>
+          <div className="patient-record-scrollbar max-h-[620px] space-y-2.5 overflow-y-auto overscroll-contain p-4 [scrollbar-gutter:stable] md:p-5">
+            {pageItems.map((invoice) => {
+              const documentUrl = mode === "nfse"
+                ? invoice.nfse_pdf_url || invoice.nfse_xml_url
+                : invoice.payment_url || invoice.pdf_url;
+              const fiscalStatus = invoice.nfse_status_description || invoice.nfse_status || "Registrada";
+              return (
+                <article key={invoice.id} className="desktop-retina-inset rounded-[22px] border border-border/45 bg-background/62 p-4 md:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex min-w-0 items-start gap-4">
+                      <span className={cn(
+                        "flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border",
+                        mode === "nfse"
+                          ? "border-sky-500/18 bg-sky-500/9 text-sky-600 dark:text-sky-300"
+                          : "border-border/55 bg-muted/40 text-muted-foreground",
+                      )}>
+                        {mode === "nfse" ? <FileText className="h-4 w-4" /> : <Receipt className="h-4 w-4" />}
+                      </span>
+                      <div className="min-w-0">
+                        <h4 className="truncate text-sm font-semibold text-foreground">
+                          {invoice.description || (mode === "nfse" ? "Nota fiscal de serviço" : "Cobrança NeuroFinance")}
+                        </h4>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+                          <span>{mode === "nfse" ? fiscalStatus : invoiceStatusLabel[invoice.status]}</span>
+                          <span aria-hidden="true">•</span>
+                          <span>{new Date(invoice.created_at).toLocaleDateString("pt-BR")}</span>
+                          {invoice.appointment_id ? <span className="rounded-full border border-border/50 px-2 py-0.5">Vinculada a agendamento</span> : null}
+                        </div>
+                        {mode === "nfse" && invoice.nfse_number ? (
+                          <p className="mt-2 text-xs font-medium text-muted-foreground">Nota {invoice.nfse_number}</p>
+                        ) : null}
+                        {mode === "nfse" && invoice.nfse_error_message ? (
+                          <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300">{invoice.nfse_error_message}</p>
+                        ) : null}
                       </div>
-                      {mode === "nfse" && invoice.nfse_number ? (
-                        <p className="mt-2 text-xs font-medium text-muted-foreground">Nota {invoice.nfse_number}</p>
-                      ) : null}
-                      {mode === "nfse" && invoice.nfse_error_message ? (
-                        <p className="mt-2 text-xs font-medium text-rose-600 dark:text-rose-300">{invoice.nfse_error_message}</p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <p className="font-mono text-sm font-black tracking-[-0.035em] text-foreground">{formatCurrency(invoice.amount)}</p>
+                      {documentUrl ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="mt-2 min-h-10 rounded-xl px-3 text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground"
+                          onClick={() => window.open(documentUrl, "_blank", "noopener,noreferrer")}
+                        >
+                          <ExternalLink className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
+                          Abrir documento
+                        </Button>
                       ) : null}
                     </div>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="font-mono text-sm font-black tracking-[-0.035em] text-foreground">{formatCurrency(invoice.amount)}</p>
-                    {documentUrl ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="mt-2 min-h-10 rounded-xl px-3 text-[9px] font-black uppercase tracking-[0.12em] text-muted-foreground"
-                        onClick={() => window.open(documentUrl, "_blank", "noopener,noreferrer")}
-                      >
-                        <ExternalLink className="mr-2 h-3.5 w-3.5" aria-hidden="true" />
-                        Abrir documento
-                      </Button>
-                    ) : null}
-                  </div>
-                </div>
-              </article>
-            );
-          })}
-        </div>
+                </article>
+              );
+            })}
+          </div>
+          {totalPages > 1 ? (
+            <footer className="flex items-center justify-between gap-3 border-t border-border/45 px-4 py-3 md:px-5">
+              <Button type="button" variant="outline" className="h-10 rounded-xl px-4" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                <ChevronLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+                Anterior
+              </Button>
+              <Button type="button" variant="outline" className="h-10 rounded-xl px-4" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                Próxima
+                <ChevronRight className="ml-2 h-4 w-4" aria-hidden="true" />
+              </Button>
+            </footer>
+          ) : null}
+        </>
       ) : (
         <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center">
           <span className="desktop-retina-inset mb-4 flex h-14 w-14 items-center justify-center rounded-[20px] border border-border/45 text-muted-foreground">
