@@ -33,7 +33,6 @@ export const SynapseQuickComposer = () => {
         inputDraft,
         inlineTurn,
         intentContextHint,
-        quickActions,
         setActiveTab,
         setInlineTurn,
         setInputDraft,
@@ -132,16 +131,6 @@ export const SynapseQuickComposer = () => {
         startInlineTurn(message);
     };
 
-    const handleSuggestion = (suggestion: string) => {
-        const message = suggestion.trim();
-        if (!message || !sessionReady || isSending) return;
-        if (inlineTurn) {
-            sendFromExpandedChat(message);
-            return;
-        }
-        startInlineTurn(message);
-    };
-
     const handleInlineChoice = (choice: string) => {
         setInputDraft('');
         sendFromExpandedChat(choice);
@@ -163,7 +152,7 @@ export const SynapseQuickComposer = () => {
             transition={shouldReduceMotion
                 ? { duration: 0 }
                 : { type: 'spring', stiffness: 410, damping: 38, mass: 0.76 }}
-            className="synapse-quick-composer w-[min(760px,calc(100vw-24px))] overflow-hidden rounded-[30px] border p-3 shadow-[0_30px_90px_-42px_rgba(0,0,0,0.52)] backdrop-blur-3xl dark:shadow-[0_34px_100px_-44px_rgba(0,0,0,0.96)]"
+            className="synapse-quick-composer w-[min(760px,calc(100vw-24px))] overflow-hidden rounded-[30px] border p-3 shadow-[0_30px_90px_-42px_rgba(0,0,0,0.52)] backdrop-blur-3xl dark:shadow-[0_34px_100px_-44px_rgba(0,0,0,0.98)]"
             aria-label="Compositor rápido do Synapse"
             data-synapse-shell="true"
             data-synapse-shell-placement="bottom-center"
@@ -205,7 +194,7 @@ export const SynapseQuickComposer = () => {
                         animate={{ opacity: 1, height: 'auto', y: 0 }}
                         exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, height: 0, y: -2 }}
                         transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2 }}
-                        className="mb-3 overflow-hidden rounded-[22px] border border-foreground/[0.065] bg-background/52 dark:border-white/[0.07] dark:bg-black/24"
+                        className="mb-3 overflow-hidden rounded-[22px] border border-foreground/[0.065] bg-background/60 shadow-[0_14px_40px_-34px_rgba(0,0,0,0.32)] ring-1 ring-background/35 dark:border-black/80 dark:bg-[#080808] dark:ring-white/[0.022] dark:shadow-[0_18px_50px_-36px_rgba(0,0,0,0.98)]"
                         aria-label="Primeira resposta do Synapse"
                     >
                         <div className="max-h-[250px] overflow-y-auto px-5 py-4 [scrollbar-width:thin]">
@@ -231,11 +220,11 @@ export const SynapseQuickComposer = () => {
                         </div>
 
                         {hasInlineResponse ? (
-                            <div className="flex justify-end border-t border-foreground/[0.055] px-3 py-2.5 dark:border-white/[0.055]">
+                            <div className="flex justify-end border-t border-foreground/[0.055] px-3 py-2.5 dark:border-white/[0.045]">
                                 <button
                                     type="button"
                                     onClick={openFullChat}
-                                    className="group flex min-h-8 items-center gap-1.5 rounded-full border border-foreground/[0.075] bg-foreground/[0.025] px-3 text-[10px] font-semibold text-foreground/72 transition-[background-color,border-color,color,transform] hover:-translate-y-px hover:border-foreground/[0.13] hover:bg-foreground/[0.055] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.08] dark:bg-white/[0.025] dark:text-white/72 dark:hover:border-white/[0.14] dark:hover:bg-white/[0.06] dark:hover:text-white"
+                                    className="group flex min-h-8 items-center gap-1.5 rounded-full border border-foreground/[0.075] bg-foreground/[0.025] px-3 text-[10px] font-semibold text-foreground/72 transition-[background-color,border-color,color,transform] hover:-translate-y-px hover:border-foreground/[0.13] hover:bg-foreground/[0.055] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-white/[0.065] dark:bg-white/[0.025] dark:text-white/72 dark:hover:border-white/[0.12] dark:hover:bg-white/[0.05] dark:hover:text-white"
                                 >
                                     Continuar no chat
                                     <ArrowUpRight className="h-3.5 w-3.5 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
@@ -246,23 +235,7 @@ export const SynapseQuickComposer = () => {
                 ) : null}
             </AnimatePresence>
 
-            {quickActions.length > 0 ? (
-                <div className="mb-2.5 flex flex-wrap gap-1.5 px-0.5" aria-label="Sugestões do Synapse">
-                    {quickActions.slice(0, 4).map((tool) => (
-                        <button
-                            key={tool.id}
-                            type="button"
-                            onClick={() => handleSuggestion(tool.name)}
-                            disabled={isSending}
-                            className="min-h-8 rounded-full border border-foreground/[0.075] bg-foreground/[0.018] px-3 text-[10.5px] font-semibold text-foreground/72 transition-[background-color,border-color,color,transform] hover:-translate-y-px hover:border-foreground/[0.13] hover:bg-foreground/[0.045] hover:text-foreground disabled:pointer-events-none disabled:opacity-45 dark:border-white/[0.08] dark:bg-white/[0.018] dark:text-white/72 dark:hover:border-white/[0.14] dark:hover:bg-white/[0.05] dark:hover:text-white"
-                        >
-                            {tool.name}
-                        </button>
-                    ))}
-                </div>
-            ) : null}
-
-            <div className="flex min-h-[62px] items-center gap-2 rounded-[22px] border border-zinc-200/70 bg-white/58 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] transition-[border-color,background-color,box-shadow] focus-within:border-zinc-300/80 focus-within:bg-white/76 dark:border-white/[0.075] dark:bg-black/28 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.045)] dark:focus-within:border-white/[0.12] dark:focus-within:bg-black/36">
+            <div className="flex min-h-[62px] items-center gap-2 rounded-[22px] border border-zinc-200/70 bg-white/58 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.82)] transition-[border-color,background-color,box-shadow] focus-within:border-zinc-300/80 focus-within:bg-white/76 dark:border-black/80 dark:bg-[#0c0c0c] dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.025)] dark:ring-1 dark:ring-white/[0.022] dark:focus-within:border-black/90 dark:focus-within:bg-[#0a0a0a] dark:focus-within:ring-white/[0.04]">
                 <Sparkles className="ml-1 h-4 w-4 shrink-0 text-muted-foreground/58" aria-hidden="true" />
                 <input
                     ref={inputRef}
