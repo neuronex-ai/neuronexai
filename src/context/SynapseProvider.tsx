@@ -13,6 +13,7 @@ import {
     SynapseContext,
     type SynapseActiveTab,
     type SynapseExecState,
+    type SynapseInlineTurn,
     type SynapseShellState,
     type SynapseTimelineEntry,
 } from './SynapseContext';
@@ -20,6 +21,7 @@ import {
 export type {
     SynapseActiveTab,
     SynapseExecState,
+    SynapseInlineTurn,
     SynapseShellState,
     SynapseTimelineEntry,
 } from './SynapseContext';
@@ -80,43 +82,33 @@ const sanitizeTimelineText = (value?: string) => {
         .trim();
 };
 
-// ─── Provider ─────────────────────────────────────────────────────────
-
 export const SynapseProvider = ({ children }: { children: ReactNode }) => {
     const { user } = useAuth();
     const location = useLocation();
 
-    // Shell state
     const [shellState, setShellState] = useState<SynapseShellState>('pill');
     const [activeTab, setActiveTab] = useState<SynapseActiveTab>('chat');
-
-    // Execution state
     const [execState, setExecState] = useState<SynapseExecState>('idle');
 
-    // Timeline
     const [timeline, setTimeline] = useState<SynapseTimelineEntry[]>([]);
     const [actionExperience, setActionExperience] = useState<SynapseActionLifecycleEvent | null>(null);
-    // Voice Modal State
     const [isVoiceExpanded, setIsVoiceExpanded] = useState(false);
     const timelineIdCounter = useRef(0);
 
-    // Chat persistence across routes
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [inputDraft, setInputDraft] = useState('');
     const [intentContextHint, setIntentContextHint] = useState('');
+    const [inlineTurn, setInlineTurn] = useState<SynapseInlineTurn | null>(null);
 
     const isMobile = useIsMobile();
 
-    // Visibility
     const isVisible =
         !isMobile &&
         !!user &&
         routeSupportsDesktopSynapseShell(location.pathname);
 
-    // Derived: tools for current route
     const baseTools = getToolsForRoute(location.pathname);
     const quickActions = getQuickActionsForRoute(location.pathname).slice(0, 6);
-
     const availableTools = baseTools;
 
     const toggleCompact = useCallback(() => {
@@ -132,11 +124,11 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 detail: sanitizeTimelineText(entry.detail),
             };
             setTimeline((prev) => [
-                ...prev.slice(-19), // keep last 20 entries
+                ...prev.slice(-19),
                 { ...safeEntry, id, timestamp: new Date() },
             ]);
         },
-        []
+        [],
     );
 
     const clearTimeline = useCallback(() => setTimeline([]), []);
@@ -155,7 +147,6 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
         return () => window.clearTimeout(timeout);
     }, [actionExperience]);
 
-    // ─── Voice Integration (Deepgram Agent) ───────────────────────────────
     const synapseVoice = useSynapseLiveVoice({
         onActionLifecycle: setActionExperience,
         onConnect: () => {
@@ -170,7 +161,6 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
         onError: (err) => {
             console.error('[Synapse Global Voice] Erro:', err);
             setExecState('error');
-            // Auto-recover: switch back to chat after a short delay
             setTimeout(() => {
                 setExecState('idle');
                 if (activeTab === 'voice') setActiveTab('chat');
@@ -210,7 +200,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 console.log('[Synapse Global Voice] Iniciando sessão...');
                 await synapseVoice.startSession();
             } catch (err) {
-                console.error("[Synapse Global Voice] Falha ao iniciar:", err);
+                console.error('[Synapse Global Voice] Falha ao iniciar:', err);
                 setExecState('error');
                 setTimeout(() => {
                     setActiveTab('chat');
@@ -218,8 +208,7 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 }, 2500);
             }
         }
-    }, [synapseVoice, setActiveTab, setExecState]);
-    // ─────────────────────────────────────────────────────────────────────
+    }, [synapseVoice]);
 
     return (
         <SynapseContext.Provider
@@ -245,6 +234,8 @@ export const SynapseProvider = ({ children }: { children: ReactNode }) => {
                 setInputDraft,
                 intentContextHint,
                 setIntentContextHint,
+                inlineTurn,
+                setInlineTurn,
                 isVisible,
                 voiceStatus: synapseVoice.status,
                 isVoiceSpeaking: synapseVoice.isSpeaking,
