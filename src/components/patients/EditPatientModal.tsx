@@ -38,7 +38,7 @@ export const EditPatientModal = ({ patient, children, defaultOpen = false, onOpe
       <DialogContent
         showCloseButton={false}
         className={cn(
-          "desktop-retina-modal desktop-retina-form z-[180] flex h-dvh max-h-dvh w-dvw max-w-none grid-cols-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0",
+          "patient-record-edit-modal desktop-retina-modal desktop-retina-form z-[180] flex h-dvh max-h-dvh w-dvw max-w-none grid-cols-1 flex-col gap-0 overflow-hidden rounded-none border-0 bg-background p-0",
           "sm:!h-[min(900px,calc(100dvh-2.5rem))] sm:!max-h-[calc(100dvh-2.5rem)] sm:!w-[min(1180px,calc(100vw-2.5rem))] sm:!max-w-[1180px] sm:!rounded-[34px] sm:!border",
           "data-[state=open]:zoom-in-[0.985] data-[state=closed]:zoom-out-[0.985]",
         )}
