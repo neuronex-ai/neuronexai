@@ -8,6 +8,7 @@ import { useNavigate } from "react-router-dom";
 
 import {
   DesktopWorkspacePanel,
+  DesktopWorkspaceShell,
 } from "@/components/ui/desktop-workspace";
 import { useSessionNotes } from "@/hooks/use-session-notes";
 import type { AISummary, Appointment, SessionNote } from "@/types";
@@ -115,96 +116,98 @@ export const DesktopDashboardMorningBriefing = ({
   ];
 
   return (
-    <DesktopWorkspacePanel
-      highContrast
-      className="dashboard-high-contrast-panel dashboard-morning-panel min-h-[264px] p-0"
-    >
-      <div className="grid min-h-[264px] lg:grid-cols-[minmax(0,1.22fr)_minmax(390px,0.78fr)]">
-        <div className="flex min-h-[264px] flex-col gap-5 p-6 lg:px-8 lg:py-6">
-          <div>
-            <p className="text-[10px] font-black uppercase tracking-[0.24em] text-background/52">
-              {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
-            </p>
-            <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-background lg:text-5xl">
-              Bom dia, {firstName}.
-            </h1>
-          </div>
-
-          <section className="dashboard-synapse-day mt-auto rounded-[32px] border p-5 sm:p-6" aria-labelledby="dashboard-synapse-day-title">
-            <div className="flex items-center gap-2">
-              <span className="dashboard-synapse-day-icon flex h-8 w-8 items-center justify-center rounded-xl border text-muted-foreground">
-                <Sparkles className="h-4 w-4" aria-hidden="true" />
-              </span>
-              <h2 id="dashboard-synapse-day-title" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                Synapse do dia
-              </h2>
+    <DesktopWorkspaceShell className="dashboard-morning-shell border-border/45 bg-background/70 dark:border-black/80 dark:bg-black/[0.32] dark:ring-black/60">
+      <div className="grid min-h-[264px] items-stretch gap-3 lg:grid-cols-[minmax(0,1.22fr)_minmax(390px,0.78fr)]">
+        <DesktopWorkspacePanel className="dashboard-morning-panel finance-panel min-h-[264px] border-border/55 bg-background/[0.76] p-0 dark:border-black/75 dark:bg-zinc-900/[0.58] dark:ring-black/45">
+          <div className="flex min-h-[264px] flex-col gap-5 p-6 lg:px-8 lg:py-6">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.24em] text-muted-foreground">
+                {format(today, "EEEE, dd 'de' MMMM", { locale: ptBR })}
+              </p>
+              <h1 className="mt-3 max-w-2xl text-4xl font-black leading-[0.92] tracking-[-0.065em] text-foreground lg:text-5xl">
+                Bom dia, {firstName}.
+              </h1>
             </div>
 
-            <p className="dashboard-synapse-day-brief mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-[clamp(0.95rem,1.15vw,1.05rem)] font-medium leading-relaxed tracking-[-0.02em] text-foreground">
-              {counts.total > 0 ? (
-                <>
-                  <span>Hoje:</span>
-                  <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir os ${counts.total} agendamentos de hoje`}>
-                    {counts.total} {counts.total === 1 ? "sessão" : "sessões"}
-                  </button>
-                  {counts.pending > 0 ? <span aria-hidden="true">·</span> : null}
-                  {counts.pending > 0 ? (
-                    <button type="button" onClick={() => openAgenda("Pendente")} className="dashboard-synapse-chip" aria-label={`Abrir os ${counts.pending} agendamentos pendentes de hoje`}>
-                      {counts.pending} {counts.pending === 1 ? "pendente" : "pendentes"}
-                    </button>
-                  ) : null}
-                  {counts.online > 0 ? <span aria-hidden="true">·</span> : null}
-                  {counts.online > 0 ? (
-                    <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir a agenda de hoje, que inclui ${counts.online} agendamentos online`}>
-                      {counts.online} online
-                    </button>
-                  ) : null}
-                </>
-              ) : (
-                <>
-                  <span>Agenda livre hoje.</span>
-                  <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir os ${weekAppointmentsCount} compromissos dos próximos sete dias`}>
-                    {weekAppointmentsCount} {weekAppointmentsCount === 1 ? "compromisso" : "compromissos"} nos próximos sete dias
-                  </button>
-                </>
-              )}
-              {clinicalSignals > 0 ? <span aria-hidden="true">·</span> : null}
-              {clinicalSignals > 0 ? (
-                <button type="button" onClick={openPendingWorkspace} className="dashboard-synapse-chip" aria-label={`Revisar ${clinicalSignals} ${clinicalSignals === 1 ? "sinal" : "sinais"} antes da próxima sessão`}>
-                  {clinicalSignals} {clinicalSignals === 1 ? "sinal para revisar" : "sinais para revisar"}
-                </button>
-              ) : null}
-            </p>
-
-            <form className="mt-4" onSubmit={submitSynapsePrompt}>
-              <label className="sr-only" htmlFor="dashboard-synapse-prompt">Pergunte ao Synapse sobre seu dia</label>
-              <div className="dashboard-synapse-composer flex min-h-11 items-center gap-2 rounded-2xl border px-3">
-                <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-                <input
-                  id="dashboard-synapse-prompt"
-                  type="text"
-                  value={synapsePrompt}
-                  onChange={(event) => setSynapsePrompt(event.target.value)}
-                  placeholder={synapsePlaceholder}
-                  className="min-w-0 flex-1 bg-transparent py-2 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/65"
-                />
-                <button type="submit" className="dashboard-synapse-send flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-45" aria-label="Enviar pergunta ao Synapse" disabled={!synapsePrompt.trim()}>
-                  <ArrowUp className="h-4 w-4" aria-hidden="true" />
-                </button>
+            <section
+              className="dashboard-synapse-day mt-auto rounded-[28px] border border-border/55 bg-background/[0.66] p-5 shadow-[0_16px_48px_-42px_rgba(0,0,0,0.32)] ring-1 ring-background/45 dark:border-black/75 dark:bg-black/[0.38] dark:ring-white/[0.018] sm:p-6"
+              aria-labelledby="dashboard-synapse-day-title"
+            >
+              <div className="flex items-center gap-2">
+                <span className="dashboard-synapse-day-icon flex h-8 w-8 items-center justify-center rounded-xl border border-border/55 bg-background/55 text-muted-foreground dark:border-black/70 dark:bg-zinc-950/80">
+                  <Sparkles className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <h2 id="dashboard-synapse-day-title" className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                  Synapse do dia
+                </h2>
               </div>
-            </form>
 
-            <div className="mt-2 flex flex-wrap gap-2" aria-label="Sugestões para o Synapse">
-              {synapseSuggestions.map((suggestion) => (
-                <button key={suggestion} type="button" onClick={() => openSynapse(suggestion)} className="dashboard-synapse-suggestion rounded-full border px-3 text-xs font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
-                  {suggestion}
-                </button>
-              ))}
-            </div>
-          </section>
-        </div>
+              <p className="dashboard-synapse-day-brief mt-3 flex flex-wrap items-center gap-x-2 gap-y-2 text-[clamp(0.95rem,1.15vw,1.05rem)] font-medium leading-relaxed tracking-[-0.02em] text-foreground">
+                {counts.total > 0 ? (
+                  <>
+                    <span>Hoje:</span>
+                    <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir os ${counts.total} agendamentos de hoje`}>
+                      {counts.total} {counts.total === 1 ? "sessão" : "sessões"}
+                    </button>
+                    {counts.pending > 0 ? <span aria-hidden="true">·</span> : null}
+                    {counts.pending > 0 ? (
+                      <button type="button" onClick={() => openAgenda("Pendente")} className="dashboard-synapse-chip" aria-label={`Abrir os ${counts.pending} agendamentos pendentes de hoje`}>
+                        {counts.pending} {counts.pending === 1 ? "pendente" : "pendentes"}
+                      </button>
+                    ) : null}
+                    {counts.online > 0 ? <span aria-hidden="true">·</span> : null}
+                    {counts.online > 0 ? (
+                      <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir a agenda de hoje, que inclui ${counts.online} agendamentos online`}>
+                        {counts.online} online
+                      </button>
+                    ) : null}
+                  </>
+                ) : (
+                  <>
+                    <span>Agenda livre hoje.</span>
+                    <button type="button" onClick={() => openAgenda("all")} className="dashboard-synapse-chip" aria-label={`Abrir os ${weekAppointmentsCount} compromissos dos próximos sete dias`}>
+                      {weekAppointmentsCount} {weekAppointmentsCount === 1 ? "compromisso" : "compromissos"} nos próximos sete dias
+                    </button>
+                  </>
+                )}
+                {clinicalSignals > 0 ? <span aria-hidden="true">·</span> : null}
+                {clinicalSignals > 0 ? (
+                  <button type="button" onClick={openPendingWorkspace} className="dashboard-synapse-chip" aria-label={`Revisar ${clinicalSignals} ${clinicalSignals === 1 ? "sinal" : "sinais"} antes da próxima sessão`}>
+                    {clinicalSignals} {clinicalSignals === 1 ? "sinal para revisar" : "sinais para revisar"}
+                  </button>
+                ) : null}
+              </p>
 
-        <div className="next-schedule-stage relative min-h-[264px] border-t border-background/10 bg-background/[0.07] p-4 dark:border-zinc-950/10 dark:bg-zinc-950/[0.035] lg:border-l lg:border-t-0">
+              <form className="mt-4" onSubmit={submitSynapsePrompt}>
+                <label className="sr-only" htmlFor="dashboard-synapse-prompt">Pergunte ao Synapse sobre seu dia</label>
+                <div className="dashboard-synapse-composer flex min-h-11 items-center gap-2 rounded-2xl border border-border/55 bg-background/72 px-3 dark:border-black/75 dark:bg-zinc-950/95 dark:ring-1 dark:ring-white/[0.018]">
+                  <Sparkles className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+                  <input
+                    id="dashboard-synapse-prompt"
+                    type="text"
+                    value={synapsePrompt}
+                    onChange={(event) => setSynapsePrompt(event.target.value)}
+                    placeholder={synapsePlaceholder}
+                    className="min-w-0 flex-1 bg-transparent py-2 text-sm font-medium text-foreground outline-none placeholder:text-muted-foreground/65"
+                  />
+                  <button type="submit" className="dashboard-synapse-send flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-foreground text-background outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-45" aria-label="Enviar pergunta ao Synapse" disabled={!synapsePrompt.trim()}>
+                    <ArrowUp className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                </div>
+              </form>
+
+              <div className="mt-2 flex flex-wrap gap-2" aria-label="Sugestões para o Synapse">
+                {synapseSuggestions.map((suggestion) => (
+                  <button key={suggestion} type="button" onClick={() => openSynapse(suggestion)} className="dashboard-synapse-suggestion rounded-full border border-border/55 bg-background/45 px-3 text-xs font-semibold text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background dark:border-black/70 dark:bg-black/25">
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        </DesktopWorkspacePanel>
+
+        <DesktopWorkspacePanel className="next-schedule-stage finance-panel relative min-h-[264px] border-border/55 bg-background/[0.72] p-3 dark:border-black/75 dark:bg-zinc-900/[0.48] dark:ring-black/45">
           <NextScheduleCard
             today={today}
             appointment={nextAppointment}
@@ -217,8 +220,8 @@ export const DesktopDashboardMorningBriefing = ({
             latestNextSteps={latestNextSteps}
             loadingSessionNotes={loadingSessionNotes}
           />
-        </div>
+        </DesktopWorkspacePanel>
       </div>
-    </DesktopWorkspacePanel>
+    </DesktopWorkspaceShell>
   );
 };
