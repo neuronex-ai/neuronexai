@@ -1,27 +1,16 @@
-import { FormEvent, useEffect, useMemo, useRef } from 'react';
+import { FormEvent, useEffect, useRef } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { ArrowUp, Command, Maximize2, Mic, Sparkles, X } from 'lucide-react';
 
-import { useAI } from '@/context/AIContext';
 import { useSynapse } from '@/context/SynapseContext';
 import { useSynapseChat } from '@/hooks/use-synapse-chat';
+import { useSynapseContextLabel } from '@/hooks/use-synapse-context-label';
 import { cn } from '@/lib/utils';
-
-const CONTEXT_LABELS: Record<string, string> = {
-    dashboard: 'Hoje · clínica',
-    'patient-profile': 'Paciente em tela',
-    patients: 'Pacientes',
-    calendar: 'Agenda',
-    finance: 'Gestão financeira',
-    session: 'Teleconsulta',
-    notes: 'Notas',
-    synapse: 'Synapse',
-};
 
 export const SynapseQuickComposer = () => {
     const shouldReduceMotion = useReducedMotion();
     const inputRef = useRef<HTMLInputElement>(null);
-    const { currentContext } = useAI();
+    const contextLabel = useSynapseContextLabel();
     const {
         inputDraft,
         intentContextHint,
@@ -34,10 +23,6 @@ export const SynapseQuickComposer = () => {
     } = useSynapse();
     const { send, isSending, sessionReady } = useSynapseChat();
 
-    const contextLabel = useMemo(
-        () => CONTEXT_LABELS[currentContext] || 'Contexto atual',
-        [currentContext],
-    );
     const visibleDraft = intentContextHint.trim() || inputDraft;
     const canSend = Boolean(visibleDraft.trim()) && sessionReady && !isSending;
     const voiceBusy = voiceStatus === 'connecting' || voiceStatus === 'disconnecting';
@@ -111,9 +96,9 @@ export const SynapseQuickComposer = () => {
             data-synapse-shell-placement="bottom-center"
         >
             <div className="flex items-center gap-2 px-2 pb-1.5 pt-1">
-                <div className="flex min-w-0 flex-1 items-center gap-2 text-[10px] font-semibold text-muted-foreground">
-                    <Sparkles className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    <span className="truncate">Contexto · {contextLabel}</span>
+                <div className="flex min-w-0 flex-1 items-center gap-2 text-[9px] font-semibold tracking-[-0.01em] text-foreground/48 dark:text-white/52">
+                    <span className="h-px w-5 shrink-0 bg-foreground/58 dark:bg-white/62" aria-hidden="true" />
+                    <span className="truncate">{contextLabel}</span>
                 </div>
                 <div className="hidden items-center gap-1 rounded-full border border-foreground/[0.06] px-2 py-1 text-[9px] font-semibold text-muted-foreground/65 dark:border-white/[0.06] sm:flex">
                     <Command className="h-3 w-3" aria-hidden="true" />K
