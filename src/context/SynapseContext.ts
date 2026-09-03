@@ -26,6 +26,12 @@ export interface SynapseTimelineEntry {
   actionPath?: string;
 }
 
+export interface SynapseInlineTurn {
+  prompt: string;
+  baselineMessageCount: number;
+  startedAt: number;
+}
+
 export interface SynapseContextType {
   shellState: SynapseShellState;
   setShellState: (state: SynapseShellState) => void;
@@ -48,6 +54,8 @@ export interface SynapseContextType {
   setInputDraft: (text: string) => void;
   intentContextHint: string;
   setIntentContextHint: (text: string) => void;
+  inlineTurn: SynapseInlineTurn | null;
+  setInlineTurn: (turn: SynapseInlineTurn | null) => void;
   isVisible: boolean;
   voiceStatus: 'disconnected' | 'connecting' | 'connected' | 'disconnecting' | 'error';
   isVoiceSpeaking: boolean;
