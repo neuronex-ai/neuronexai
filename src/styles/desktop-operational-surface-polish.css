@@ -93,6 +93,37 @@
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.014) !important;
   }
 
+  .dark .patient-financial-settings-trigger {
+    border-color: rgba(0, 0, 0, 0.86) !important;
+    background: #090909 !important;
+    color: rgba(255, 255, 255, 0.72) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.016) !important;
+  }
+
+  .dark .patient-financial-settings-dialog {
+    border-color: rgba(255, 255, 255, 0.045) !important;
+    background:
+      linear-gradient(155deg, rgba(23, 23, 23, 0.995), rgba(8, 8, 8, 0.998)),
+      #111111 !important;
+    box-shadow:
+      0 42px 110px -56px rgba(0, 0, 0, 0.995),
+      inset 0 1px 0 rgba(255, 255, 255, 0.024) !important;
+  }
+
+  .dark .patient-financial-settings-dialog :is(.patient-record-panel, .desktop-retina-inset) {
+    border-color: rgba(0, 0, 0, 0.86) !important;
+    background:
+      linear-gradient(152deg, rgba(24, 24, 24, 0.995), rgba(12, 12, 12, 0.998)),
+      #151515 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02) !important;
+  }
+
+  .dark .patient-financial-settings-dialog :is(input, textarea, button[role='combobox']) {
+    border-color: rgba(0, 0, 0, 0.9) !important;
+    background: #050505 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.014) !important;
+  }
+
   /* ─── Notes editor ────────────────────────────────────────────── */
   .dark .notes-lumen-canvas :is(.notes-retina-rail, .notes-toolbar-surface) {
     border-color: rgba(0, 0, 0, 0.82) !important;
