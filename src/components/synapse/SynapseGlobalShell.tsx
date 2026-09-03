@@ -55,9 +55,6 @@ export const SynapseGlobalShell = () => {
         const voiceJustEnded = wasVoiceExperienceActive.current && !isVoiceExperienceActive;
         wasVoiceExperienceActive.current = isVoiceExperienceActive;
 
-        // Voice and text are one continuous conversation. When voice ends, return
-        // to the lightweight composer instead of dropping the professional back
-        // to the passive launcher.
         if (voiceJustEnded && isVisible && shellState !== 'closed') {
             setActiveTab('chat');
             setShellState('composer');
@@ -76,19 +73,11 @@ export const SynapseGlobalShell = () => {
         return () => document.body.classList.remove('synapse-workspace-open');
     }, [isVisible, isVoiceExperienceActive, shellState]);
 
-    // ─── Keyboard shortcuts ───────────────────────────────────────────
-    // Cmd/Ctrl + K: quick composer
-    // Ctrl/Cmd + Shift + Space: continuous voice
+    // Ctrl/Cmd + Shift + Space remains reserved for continuous voice.
+    // Text navigation/search is now owned by Synapse itself; Cmd/Ctrl + K is intentionally free.
     const handleKeyDown = useCallback(
         (e: KeyboardEvent) => {
             if (e.repeat) return;
-
-            if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'k') {
-                e.preventDefault();
-                setActiveTab('chat');
-                setShellState('composer');
-                return;
-            }
 
             if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.code === 'Space') {
                 e.preventDefault();
@@ -138,7 +127,7 @@ export const SynapseGlobalShell = () => {
             toggleVoiceMode,
             voicePhase,
             voiceStatus,
-        ]
+        ],
     );
 
     useEffect(() => {
@@ -146,12 +135,11 @@ export const SynapseGlobalShell = () => {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 
-    // The provider hides the shell on unsupported or unauthenticated surfaces.
     if (!isVisible) return null;
 
     const textAgentPlanEnabled =
         !isVoiceExperienceActive &&
-        shellState === 'compact' &&
+        (shellState === 'compact' || shellState === 'composer') &&
         activeTab === 'chat';
 
     const shell = (
