@@ -62,6 +62,25 @@ interface RichTextEditorProps {
   isFocusMode?: boolean;
 }
 
+const hydrateNotionSubpageLinks = (html: string) => {
+  if (!html || !html.toLowerCase().includes('<note-link')) return html;
+
+  return html.replace(/<note-link\b([^>]*)>/gi, (tag, attributes: string) => {
+    const notionPageIdMatch = attributes.match(/\bnotionPageId=(['"])(.*?)\1/i);
+    const notionPageId = notionPageIdMatch?.[2]?.trim();
+    if (!notionPageId) return tag;
+
+    const hrefMatch = attributes.match(/\bhref=(['"])(.*?)\1/i);
+    if (hrefMatch?.[2]?.trim()) return tag;
+
+    const notionHref = `https://www.notion.so/${notionPageId.replace(/-/g, '')}`;
+    if (hrefMatch) {
+      return tag.replace(hrefMatch[0], `href="${notionHref}"`);
+    }
+    return tag.replace(/>$/, ` href="${notionHref}">`);
+  });
+};
+
 const MenuButton = ({ onClick, isActive, icon: Icon, title, className }: any) => (
   <button
     onClick={onClick}
@@ -203,7 +222,7 @@ export const RichTextEditor = ({
         },
       }),
     ],
-    content: content,
+    content: hydrateNotionSubpageLinks(content),
     editable: editable,
     onUpdate: ({ editor }) => {
       onChangeRef.current(editor.getHTML());
@@ -328,9 +347,10 @@ export const RichTextEditor = ({
   });
 
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    const hydratedContent = hydrateNotionSubpageLinks(content);
+    if (editor && hydratedContent !== editor.getHTML()) {
       if (!editor.isFocused) {
-        editor.commands.setContent(content, false);
+        editor.commands.setContent(hydratedContent, false);
       }
     }
   }, [content, editor]);
@@ -422,6 +442,11 @@ export const RichTextEditor = ({
 
       <EditorContent editor={editor} className="notes-editor-content w-full font-sans" />
 
+      <style>{`
+        .dark .notes-editor-content .group\\/note-link > button {
+          box-shadow: none !important;
+        }
+      `}</style>
     </div>
   );
 };
