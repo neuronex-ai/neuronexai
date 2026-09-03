@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useEffect, useState } from "react";
 import { Clock3, FileText } from "lucide-react";
 
 import { ClinicalSummaryCard } from "@/components/patients/ClinicalSummaryCard";
@@ -21,7 +21,16 @@ const views = [
 ];
 
 export function PatientSessionsTab({ patient, patientId, latestNote, view, onViewChange }: PatientSessionsTabProps) {
-  const shouldReduceMotion = useReducedMotion();
+  const [mountedViews, setMountedViews] = useState<Set<"history" | "pending">>(() => new Set([view]));
+
+  useEffect(() => {
+    setMountedViews((current) => {
+      if (current.has(view)) return current;
+      const next = new Set(current);
+      next.add(view);
+      return next;
+    });
+  }, [view]);
 
   return (
     <div className="space-y-4 pb-6">
@@ -47,29 +56,32 @@ export function PatientSessionsTab({ patient, patientId, latestNote, view, onVie
       </div>
 
       <div className="relative min-h-[420px]">
-        <AnimatePresence initial={false} mode="wait">
-          <motion.div
-            key={view}
-            id={`patient-sessions-panel-${view}`}
+        {mountedViews.has("history") ? (
+          <div
+            id="patient-sessions-panel-history"
             role="tabpanel"
-            aria-labelledby={`patient-sessions-tab-${view}`}
-            tabIndex={0}
-            initial={shouldReduceMotion ? false : { opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: -3 }}
-            transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
+            aria-labelledby="patient-sessions-tab-history"
+            tabIndex={view === "history" ? 0 : -1}
+            hidden={view !== "history"}
+            className="space-y-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+          >
+            <ClinicalSummaryCard latestNote={latestNote} patient={patient} />
+            <PatientHistoryTab patientId={patientId} />
+          </div>
+        ) : null}
+
+        {mountedViews.has("pending") ? (
+          <div
+            id="patient-sessions-panel-pending"
+            role="tabpanel"
+            aria-labelledby="patient-sessions-tab-pending"
+            tabIndex={view === "pending" ? 0 : -1}
+            hidden={view !== "pending"}
             className="focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
           >
-            {view === "history" ? (
-              <div className="space-y-5">
-                <ClinicalSummaryCard latestNote={latestNote} patient={patient} />
-                <PatientHistoryTab patientId={patientId} />
-              </div>
-            ) : (
-              <PatientPendingSessionReviewsTab patientId={patientId} />
-            )}
-          </motion.div>
-        </AnimatePresence>
+            <PatientPendingSessionReviewsTab patientId={patientId} />
+          </div>
+        ) : null}
       </div>
     </div>
   );
