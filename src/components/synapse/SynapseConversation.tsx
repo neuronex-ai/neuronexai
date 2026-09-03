@@ -12,6 +12,7 @@ import { ArrowUp, Check, Copy, Loader2, Mic, Sparkles } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+import { useSynapseContextLabel } from '@/hooks/use-synapse-context-label';
 import { cn } from '@/lib/utils';
 import { sanitizeSynapseMarkdown } from '@/lib/synapse-humanize';
 import { parseSynapseWidgetsFromContent } from '@/lib/synapse-widget-parser';
@@ -331,6 +332,7 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
     forwardedRef,
 ) {
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const contextLabel = useSynapseContextLabel();
     const canSend = Boolean(value.trim()) && sessionReady && !isSending;
 
     const setTextareaRef = useCallback((node: HTMLTextAreaElement | null) => {
@@ -356,6 +358,10 @@ export const SynapseComposer = forwardRef<HTMLTextAreaElement, SynapseComposerPr
 
     return (
         <div className="synapse-desktop-composer-dock shrink-0 px-4 pb-4 pt-2.5">
+            <div className="flex items-center gap-2 px-2 pb-1.5 text-[9px] font-semibold tracking-[-0.01em] text-foreground/46 dark:text-white/50" aria-label={`Contexto atual: ${contextLabel}`}>
+                <span className="h-px w-5 shrink-0 bg-foreground/60 dark:bg-white/64" aria-hidden="true" />
+                <span className="truncate">{contextLabel}</span>
+            </div>
             <div className="synapse-desktop-composer flex min-h-[58px] items-end gap-2 p-2">
                 <textarea
                     ref={setTextareaRef}
