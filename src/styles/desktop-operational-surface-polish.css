@@ -1,0 +1,281 @@
+/* Desktop/tablet operational surface polish.
+   Keeps structural contrast near-black in dark mode and removes decorative
+   lighting that competes with clinical/editor content. Mobile is intentionally
+   excluded from these overrides. */
+
+@media (min-width: 768px) {
+  /* ─── Patient record / prontuario ─────────────────────────────── */
+  .dark .patient-record-header,
+  .dark .patient-record-shell {
+    border-color: rgba(255, 255, 255, 0.04) !important;
+    background:
+      linear-gradient(155deg, rgba(14, 14, 14, 0.995), rgba(5, 5, 5, 0.998)),
+      #080808 !important;
+    box-shadow:
+      0 30px 88px -66px rgba(0, 0, 0, 0.995),
+      inset 0 1px 0 rgba(255, 255, 255, 0.018) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .patient-record-content,
+  .dark .patient-record-panel,
+  .dark .patient-record-card {
+    border-color: rgba(0, 0, 0, 0.84) !important;
+    background:
+      linear-gradient(155deg, rgba(27, 27, 27, 0.99), rgba(15, 15, 15, 0.997)),
+      #171717 !important;
+    box-shadow:
+      0 22px 58px -48px rgba(0, 0, 0, 0.99),
+      inset 0 1px 0 rgba(255, 255, 255, 0.028),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .patient-record-tabbar,
+  .dark .patient-record-shell :is(.desktop-retina-inset, .clinical-inset-surface) {
+    border-color: rgba(0, 0, 0, 0.86) !important;
+    background:
+      linear-gradient(152deg, rgba(14, 14, 14, 0.995), rgba(6, 6, 6, 0.998)),
+      #090909 !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.016),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.72) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .patient-record-tabbar {
+    scrollbar-width: none;
+    scroll-behavior: auto !important;
+    overscroll-behavior-inline: contain;
+  }
+
+  .dark .patient-record-tabbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .dark .patient-record-content :is(input, textarea, button[role='combobox']) {
+    border-color: rgba(0, 0, 0, 0.88) !important;
+    background: #050505 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.014) !important;
+  }
+
+  .dark .patient-record-edit-modal {
+    border-color: rgba(255, 255, 255, 0.045) !important;
+    background:
+      linear-gradient(155deg, rgba(22, 22, 22, 0.995), rgba(8, 8, 8, 0.998)),
+      #111111 !important;
+    box-shadow:
+      0 42px 112px -58px rgba(0, 0, 0, 0.995),
+      inset 0 1px 0 rgba(255, 255, 255, 0.024) !important;
+  }
+
+  .dark .patient-record-edit-modal > header {
+    border-color: rgba(255, 255, 255, 0.04) !important;
+    background: #090909 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .patient-record-edit-modal .desktop-retina-form :is(section, .desktop-retina-inset) {
+    border-color: rgba(0, 0, 0, 0.86) !important;
+    background:
+      linear-gradient(152deg, rgba(24, 24, 24, 0.995), rgba(12, 12, 12, 0.998)),
+      #151515 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02) !important;
+  }
+
+  .dark .patient-record-edit-modal .desktop-retina-form :is(input, textarea, button[role='combobox']) {
+    border-color: rgba(0, 0, 0, 0.9) !important;
+    background: #050505 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.014) !important;
+  }
+
+  /* ─── Notes editor ────────────────────────────────────────────── */
+  .dark .notes-lumen-canvas :is(.notes-retina-rail, .notes-toolbar-surface) {
+    border-color: rgba(0, 0, 0, 0.82) !important;
+    background:
+      linear-gradient(155deg, rgba(23, 23, 23, 0.995), rgba(11, 11, 11, 0.998)),
+      #141414 !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.02),
+      0 20px 48px -42px rgba(0, 0, 0, 0.98) !important;
+  }
+
+  /* The editor toolbar should read as a quiet divider, not the upper edge of
+     a floating rounded card. Focus mode keeps its compact floating toolbar. */
+  .notes-lumen-canvas .notes-toolbar-surface.sticky {
+    border-radius: 0 !important;
+    border-left: 0 !important;
+    border-right: 0 !important;
+    border-top: 0 !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .notes-lumen-canvas .notes-toolbar-surface.sticky {
+    background: #0b0b0b !important;
+    border-bottom-color: rgba(0, 0, 0, 0.88) !important;
+  }
+
+  .light .notes-lumen-canvas .notes-toolbar-surface.sticky {
+    background: rgba(250, 250, 250, 0.98) !important;
+    border-bottom-color: rgba(0, 0, 0, 0.09) !important;
+  }
+
+  /* Remove the ambient wash directly above the editor body. */
+  .notes-lumen-canvas div[class*='-inset-x-4'][class*='bg-gradient-to-b'][class*='to-transparent'] {
+    display: none !important;
+  }
+
+  /* Embedded note components use their own information hierarchy; remove
+     decorative under-lighting/glow and keep only a restrained structural edge. */
+  .notes-lumen-canvas [data-node-view-wrapper] > :is(div, section, a) {
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    transform: none !important;
+  }
+
+  .dark .notes-lumen-canvas [data-node-view-wrapper] > :is(div, section, a) {
+    border-color: rgba(0, 0, 0, 0.84) !important;
+    background-color: #121212 !important;
+  }
+
+  .notes-lumen-canvas [data-node-view-wrapper] :is(
+    [class*='blur-[90px]'],
+    [class*='blur-[100px]']
+  ) {
+    display: none !important;
+  }
+
+  .notes-lumen-canvas [data-node-view-wrapper] :is(
+    [class*='shadow-xl'],
+    [class*='shadow-primary'],
+    [class*='hover:shadow']
+  ) {
+    box-shadow: none !important;
+  }
+
+  /* Tags and mentions use a neutral theme-aware edge instead of the primary
+     white outline in dark mode. */
+  .notes-lumen-canvas :is(
+    span[class*='border-primary/18'],
+    span[class*='border-primary/20'],
+    [data-type='mention']
+  ) {
+    border-color: hsl(var(--border)) !important;
+    background: hsl(var(--muted) / 0.48) !important;
+    color: hsl(var(--foreground) / 0.82) !important;
+    box-shadow: none !important;
+  }
+
+  .dark .notes-lumen-canvas :is(
+    span[class*='border-primary/18'],
+    span[class*='border-primary/20'],
+    [data-type='mention']
+  ) {
+    border-color: rgba(0, 0, 0, 0.86) !important;
+  }
+
+  .light .notes-lumen-canvas :is(
+    span[class*='border-primary/18'],
+    span[class*='border-primary/20'],
+    [data-type='mention']
+  ) {
+    border-color: rgba(0, 0, 0, 0.12) !important;
+  }
+
+  /* ─── Notes > Tasks ───────────────────────────────────────────── */
+  /* Old liquid reflection beam: visual-only, intentionally removed. */
+  .notes-lumen-canvas div[class*='animate-[spin_8s_linear_infinite]'] {
+    display: none !important;
+    animation: none !important;
+  }
+
+  .dark .notes-lumen-canvas div[class*='dark:bg-white/[0.03]'][class*='rounded-[28px]'] {
+    border-color: rgba(0, 0, 0, 0.84) !important;
+    background:
+      linear-gradient(155deg, rgba(25, 25, 25, 0.995), rgba(13, 13, 13, 0.998)),
+      #171717 !important;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.022),
+      0 18px 42px -36px rgba(0, 0, 0, 0.99) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .dark .notes-lumen-canvas div[class*='dark:bg-white/[0.03]'][class*='rounded-[24px]'] {
+    border-color: rgba(0, 0, 0, 0.86) !important;
+    background: #111111 !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.018) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .notes-lumen-canvas [class*='cursor-grab'] {
+    touch-action: none;
+  }
+
+  /* ─── Desktop notifications spacing and scroll ───────────────── */
+  .notification-popover-surface .notification-scroll-region {
+    padding: 5.5rem 1.125rem 1.25rem !important;
+    scroll-padding: 5.5rem 0 1.25rem;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(127, 127, 127, 0.26) transparent;
+    overscroll-behavior: contain;
+  }
+
+  .notification-popover-surface .notification-scroll-region::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .notification-popover-surface .notification-scroll-region::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .notification-popover-surface .notification-scroll-region::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.24);
+  }
+
+  .notification-popover-surface .notification-scroll-region > div > section {
+    margin-bottom: 1.5rem !important;
+  }
+
+  .notification-popover-surface .notification-scroll-region > div > section > p {
+    margin-bottom: 0.75rem !important;
+    padding-inline: 0.25rem !important;
+  }
+
+  .notification-popover-surface .notification-scroll-region > div > section > div {
+    display: grid;
+    gap: 0.75rem !important;
+  }
+
+  .notification-popover-surface .notification-card-liquid {
+    padding: 0.7rem !important;
+    border-radius: 1.25rem !important;
+  }
+
+  .notification-popover-surface .notification-card-primary {
+    gap: 0.9rem !important;
+    padding: 0.7rem !important;
+  }
+
+  .notification-popover-surface .notification-card-menu-control {
+    margin-top: 0.2rem;
+  }
+
+  .notification-popover-surface .notification-liquid-header {
+    padding-top: 1.125rem !important;
+  }
+
+  .notification-popover-surface .notification-liquid-toolbar {
+    padding: 0.35rem !important;
+    gap: 0.2rem !important;
+  }
+}
