@@ -64,6 +64,39 @@ const paidStatuses = new Set(["paid", "received", "completed", "confirmed"]);
 const openStatuses = new Set(["planned", "pending", "overdue", "scheduled", "processing"]);
 const cancelledAppointmentStatuses = new Set(["cancelled", "canceled", "cancelled_by_patient", "cancelled_by_professional"]);
 const currentWaitlistStatuses = ["active", "paused", "offered"] as const;
+const appointmentLifecycleLabels: Record<string, string> = {
+  created: "agendamento criado",
+  invitation_sent: "convite enviado ao paciente",
+  awaiting_confirmation: "aguardando confirmação do paciente",
+  awaiting_reconfirmation: "aguardando nova confirmação do paciente",
+  confirmed: "confirmada pelo paciente",
+  cancellation_requested: "cancelamento solicitado",
+  cancelled: "cancelada",
+  reschedule_requested: "remarcação solicitada",
+  reschedule_approved: "remarcação aprovada",
+  reschedule_rejected: "remarcação recusada",
+  professional_response_overdue: "resposta do profissional pendente",
+  in_progress: "em andamento",
+  completed: "concluída",
+  closed: "encerrada",
+};
+const appointmentAttentionLifecycles = new Set([
+  "awaiting_confirmation",
+  "awaiting_reconfirmation",
+  "cancellation_requested",
+  "reschedule_requested",
+  "professional_response_overdue",
+]);
+const appointmentLifecycle = (row: any) => clean(row?.lifecycle_status, 60).toLowerCase();
+const appointmentIsCancelled = (row: any) =>
+  appointmentLifecycle(row) === "cancelled" || cancelledAppointmentStatuses.has(String(row?.status || "").toLowerCase());
+const appointmentConfirmationLabel = (row: any) => {
+  const lifecycle = appointmentLifecycle(row);
+  if (lifecycle === "confirmed") return "confirmada";
+  if (["awaiting_confirmation", "awaiting_reconfirmation"].includes(lifecycle)) return "aguardando confirmação";
+  if (lifecycle === "cancelled") return "não se aplica";
+  return "não registrada pelo estado operacional atual";
+};
 
 function summarizePaymentTotals(charges: any[], entries: any[]) {
   const chargePendingStatuses = new Set(["pending", "overdue", "processing"]);
@@ -301,6 +334,7 @@ async function getNeurofinanceOverviewData(admin: any, userId: string) {
 }
 
 function mapAppointment(row: any) {
+  const lifecycle = appointmentLifecycle(row);
   return {
     id: row.id,
     patient_id: row.patient_id,
@@ -308,7 +342,11 @@ function mapAppointment(row: any) {
     start_time: row.start_time,
     end_time: row.end_time,
     type: row.type,
-    status: row.status,
+    status: appointmentLifecycleLabels[lifecycle] || (appointmentIsCancelled(row) ? "cancelada" : "estado operacional não informado"),
+    patient_confirmation: appointmentConfirmationLabel(row),
+    is_confirmed: lifecycle === "confirmed",
+    is_cancelled: appointmentIsCancelled(row),
+    needs_attention: appointmentAttentionLifecycles.has(lifecycle) || row.metadata?.syncStatus === "pending_professional_review",
     location: row.location || null,
     google_meet_link: typeof row.google_meet_link === "string" && /\/join\/[a-f0-9]{64}$/i.test(row.google_meet_link)
       ? row.google_meet_link
@@ -323,28 +361,27 @@ async function queryDashboardAppointments(admin: any, userId: string, startDate:
   const end = `${endDate}T23:59:59.999-03:00`;
   const { data, error } = await admin
     .from("appointments")
-    .select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,notes,metadata,patient:patient_id(name)")
+    .select("id,patient_id,start_time,end_time,type,status,lifecycle_status,location,google_meet_link,notes,metadata,patient:patient_id(name)")
     .eq("user_id", userId)
     .gte("start_time", new Date(start).toISOString())
     .lte("start_time", new Date(end).toISOString())
     .order("start_time", { ascending: true })
     .limit(limit);
   if (error) throw error;
-  return (data || []).map(mapAppointment);
+  return (data || []).map(mapAppointment).filter((appointment: any) => !appointment.is_cancelled);
 }
 
 async function getNextAppointment(admin: any, userId: string) {
   const { data, error } = await admin
     .from("appointments")
-    .select("id,patient_id,start_time,end_time,type,status,location,google_meet_link,notes,metadata,patient:patient_id(name)")
+    .select("id,patient_id,start_time,end_time,type,status,lifecycle_status,location,google_meet_link,notes,metadata,patient:patient_id(name)")
     .eq("user_id", userId)
     .gte("start_time", new Date().toISOString())
-    .not("status", "in", "(cancelled,canceled,cancelled_by_patient,cancelled_by_professional)")
     .order("start_time", { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(20);
   if (error) throw error;
-  return data ? mapAppointment(data) : null;
+  const appointment = (data || []).map(mapAppointment).find((item: any) => !item.is_cancelled) || null;
+  return appointment;
 }
 
 async function getDashboardFinancialOverview(admin: any, userId: string) {
@@ -393,8 +430,7 @@ async function getDashboardAttentionQueue(admin: any, userId: string, limit = 20
   const yesterday = dateOnly(addDays(new Date(), -1));
   const upcoming = await queryDashboardAppointments(admin, userId, yesterday, today, 80);
   const appointmentItems = upcoming
-    .filter((appointment: any) => !cancelledAppointmentStatuses.has(String(appointment.status || "").toLowerCase()))
-    .filter((appointment: any) => ["unscored", "pending"].includes(String(appointment.status || "").toLowerCase()) || appointment.metadata?.syncStatus === "pending_professional_review")
+    .filter((appointment: any) => appointment.needs_attention)
     .map((appointment: any) => ({
       kind: "appointment_attention",
       priority: appointment.metadata?.syncStatus === "pending_professional_review" ? "high" : "normal",
