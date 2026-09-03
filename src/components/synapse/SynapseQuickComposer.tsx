@@ -47,6 +47,17 @@ export const SynapseQuickComposer = () => {
         return () => window.clearTimeout(timeout);
     }, []);
 
+    // Home suggestions use intentContextHint as a transport so the compact
+    // launcher can reveal the complete, contextualized question. Promote it
+    // immediately into the real draft: from this point on the professional can
+    // edit exactly what will be sent, both minimized and expanded.
+    useEffect(() => {
+        const contextualDraft = intentContextHint.trim();
+        if (!contextualDraft) return;
+        setInputDraft(contextualDraft);
+        setIntentContextHint('');
+    }, [intentContextHint, setInputDraft, setIntentContextHint]);
+
     const handleChange = (value: string) => {
         setInputDraft(value);
         if (intentContextHint) setIntentContextHint('');
