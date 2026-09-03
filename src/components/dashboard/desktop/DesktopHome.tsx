@@ -175,7 +175,7 @@ export const DesktopHome = () => {
           id: "prepare-next",
           kind: "prepare",
           label: shortSuggestionLabel(`Preparar ${nextFirstName}`),
-          prompt: `Prepare minha próxima sessão com ${nextName}, marcada para ${format(new Date(nextAppointment.start_time), "HH:mm")}. Resuma somente o contexto clínico autorizado e o que merece minha atenção antes do atendimento.`,
+          prompt: `Prepare minha próxima sessão com ${nextName}, marcada para ${format(new Date(nextAppointment.start_time), "HH'h'")}. Resuma somente o contexto mais relevante sobre ele.`,
         }
       : todayAppointments.length > 0
         ? {
@@ -266,9 +266,8 @@ export const DesktopHome = () => {
   ]);
 
   const openSynapse = (visibleIntent = "", contextHint = "") => {
-    const cleanIntent = visibleIntent.trim();
     setActiveTab("chat");
-    setInputDraft(cleanIntent);
+    setInputDraft(visibleIntent.trim());
     setIntentContextHint(contextHint.trim());
     setShellState("composer");
   };
@@ -496,53 +495,68 @@ export const DesktopHome = () => {
           </Surface>
         </div>
 
-        {notificationsLoading ? (
-          <Surface className="p-5">
-            <div className="h-16 animate-pulse rounded-[20px] bg-muted/25" />
-          </Surface>
-        ) : attentionItems.length === 0 ? null : attentionItems.length === 1 ? (
-          <Surface className="px-5 py-4 md:px-6">
-            <button type="button" onClick={() => navigate(attentionItems[0].actionUrl)} className="group flex w-full items-center gap-4 text-left">
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
-                  <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
-                </div>
-                <p className="mt-1.5 truncate text-sm font-black">{attentionItems[0].title}</p>
-                <p className="mt-0.5 line-clamp-1 text-xs font-medium text-muted-foreground">{attentionItems[0].description}</p>
-              </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
-            </button>
-          </Surface>
-        ) : (
-          <Surface className="overflow-hidden p-0">
-            <div className="flex flex-col gap-2 px-6 pb-4 pt-5 sm:flex-row sm:items-end sm:justify-between md:px-7">
-              <div>
-                <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">{attentionHeading}</p>
-                <h2 className="mt-1.5 text-xl font-black tracking-[-0.04em]">O que merece um olhar</h2>
-              </div>
-              <p className="text-xs font-medium text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</p>
-            </div>
-            <div className="grid border-t border-foreground/[0.06] dark:border-white/[0.055] md:grid-cols-3">
-              {attentionItems.map((item, index) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => navigate(item.actionUrl)}
-                  className={cn(
-                    "group p-5 text-left transition-colors hover:bg-muted/25 md:p-6",
-                    index > 0 && "border-t border-foreground/[0.06] dark:border-white/[0.055] md:border-l md:border-t-0",
-                  )}
-                >
-                  <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
-                  <p className="mt-2 line-clamp-1 text-sm font-black tracking-[-0.02em]">{item.title}</p>
-                  <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground">{item.description}</p>
-                  <ArrowRight className="mt-3.5 h-3.5 w-3.5 text-muted-foreground/50 transition-transform group-hover:translate-x-1" />
+        <div className="desktop-home-attention min-w-0">
+          {notificationsLoading ? (
+            <Surface className="p-5">
+              <div className="h-16 animate-pulse rounded-[20px] bg-muted/25" />
+            </Surface>
+          ) : attentionItems.length <= 1 ? (
+            <Surface className="px-5 py-4 md:px-6">
+              {attentionItems.length === 1 ? (
+                <button type="button" onClick={() => navigate(attentionItems[0].actionUrl)} className="group flex w-full items-center gap-4 text-left">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
+                    </div>
+                    <p className="mt-1.5 truncate text-sm font-black">{attentionItems[0].title}</p>
+                    <p className="mt-0.5 line-clamp-1 text-xs font-medium text-muted-foreground">{attentionItems[0].description}</p>
+                  </div>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
                 </button>
-              ))}
-            </div>
-          </Surface>
-        )}
+              ) : (
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 shrink-0 text-muted-foreground/65" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-[0.17em] text-muted-foreground">{attentionHeading}</span>
+                      <span className="text-[11px] font-semibold text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</span>
+                    </div>
+                    <p className="mt-1 text-sm font-bold">Tudo em dia. Nenhuma pendência precisa ocupar sua atenção agora.</p>
+                  </div>
+                </div>
+              )}
+            </Surface>
+          ) : (
+            <Surface className="overflow-hidden p-0">
+              <div className="flex flex-col gap-2 px-6 pb-4 pt-5 sm:flex-row sm:items-end sm:justify-between md:px-7">
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-muted-foreground">{attentionHeading}</p>
+                  <h2 className="mt-1.5 text-xl font-black tracking-[-0.04em]">O que merece um olhar</h2>
+                </div>
+                <p className="text-xs font-medium text-muted-foreground">{todayAppointments.length} {todayAppointments.length === 1 ? "sessão hoje" : "sessões hoje"}</p>
+              </div>
+              <div className="desktop-home-attention-grid grid border-t border-foreground/[0.06] dark:border-white/[0.055] md:grid-cols-2 2xl:grid-cols-3">
+                {attentionItems.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigate(item.actionUrl)}
+                    className={cn(
+                      "group min-w-0 p-5 text-left transition-colors hover:bg-muted/25 md:p-6",
+                      index > 0 && "border-t border-foreground/[0.06] dark:border-white/[0.055] md:border-l md:border-t-0",
+                    )}
+                  >
+                    <p className="text-[8px] font-black uppercase tracking-[0.16em] text-muted-foreground">{item.label}</p>
+                    <p className="mt-2 line-clamp-1 text-sm font-black tracking-[-0.02em]">{item.title}</p>
+                    <p className="mt-1.5 line-clamp-2 text-xs font-medium leading-relaxed text-muted-foreground">{item.description}</p>
+                    <ArrowRight className="mt-3.5 h-3.5 w-3.5 text-muted-foreground/50 transition-transform group-hover:translate-x-1" />
+                  </button>
+                ))}
+              </div>
+            </Surface>
+          )}
+        </div>
       </main>
     </div>
   );
