@@ -1,0 +1,169 @@
+/* Shared high-contrast dark hierarchy for current desktop operational surfaces.
+   Scope is intentionally limited to Agenda Desktop and the Patients directory.
+   Patient detail / prontuario surfaces are not targeted here. */
+
+.dark .agenda-desktop-page {
+  --desktop-op-frame: #080808;
+  --desktop-op-panel: #171717;
+  --desktop-op-inset: #0c0c0c;
+  --desktop-op-deep: #070707;
+  --desktop-op-field: #050505;
+  --desktop-op-edge: rgba(0, 0, 0, 0.82);
+  --desktop-op-highlight: rgba(255, 255, 255, 0.032);
+}
+
+.dark .agenda-desktop-page .agenda-desktop-shell.agenda-liquid-surface {
+  border-color: rgba(255, 255, 255, 0.04) !important;
+  background:
+    linear-gradient(160deg, rgba(15, 15, 15, 0.99), rgba(5, 5, 5, 0.995)),
+    var(--desktop-op-frame) !important;
+  box-shadow:
+    0 30px 92px -68px rgba(0, 0, 0, 0.99),
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.012) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dark .agenda-desktop-page .agenda-calendar-stage.agenda-liquid-surface {
+  border-color: var(--desktop-op-edge) !important;
+  background:
+    linear-gradient(155deg, rgba(27, 27, 27, 0.985), rgba(16, 16, 16, 0.995)),
+    var(--desktop-op-panel) !important;
+  box-shadow:
+    0 22px 60px -48px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 var(--desktop-op-highlight) !important;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dark .agenda-desktop-page .agenda-grid-surface {
+  border-color: rgba(0, 0, 0, 0.84) !important;
+  background:
+    linear-gradient(180deg, rgba(14, 14, 14, 0.99), rgba(8, 8, 8, 0.995)),
+    var(--desktop-op-inset) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 0 0 1px rgba(0, 0, 0, 0.54),
+    0 20px 52px -44px rgba(0, 0, 0, 0.98) !important;
+}
+
+.dark .agenda-desktop-page :is(.agenda-liquid-card, .agenda-choice-card, .agenda-appointment-card, .agenda-month-cell) {
+  border-color: rgba(0, 0, 0, 0.82) !important;
+  background:
+    linear-gradient(150deg, rgba(14, 14, 14, 0.99), rgba(7, 7, 7, 0.995)),
+    var(--desktop-op-deep) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.022),
+    0 16px 38px -32px rgba(0, 0, 0, 0.98) !important;
+}
+
+.dark .agenda-desktop-page :is(.agenda-field, .agenda-modal-surface input, .agenda-modal-surface textarea, .agenda-modal-surface button[role='combobox']) {
+  border-color: rgba(0, 0, 0, 0.88) !important;
+  background: var(--desktop-op-field) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.016) !important;
+}
+
+.dark .agenda-desktop-page .agenda-modal-surface {
+  border-color: rgba(255, 255, 255, 0.045) !important;
+  background:
+    linear-gradient(155deg, rgba(25, 25, 25, 0.99), rgba(13, 13, 13, 0.995)),
+    #151515 !important;
+  box-shadow:
+    0 34px 96px -54px rgba(0, 0, 0, 0.99),
+    inset 0 1px 0 rgba(255, 255, 255, 0.026) !important;
+}
+
+.dark .agenda-desktop-page .agenda-period-rail .dashboard-segment-indicator {
+  border-color: rgba(255, 255, 255, 0.055);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 52%),
+    rgba(255, 255, 255, 0.065);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5),
+    0 10px 22px -18px rgba(0, 0, 0, 0.94);
+}
+
+/* Patients directory only. PatientDetail / prontuario does not render this
+   page-level class, so the individual patient experience remains untouched. */
+.dark .patients-desktop-shell {
+  --desktop-patients-panel: #171717;
+  --desktop-patients-inset: #0c0c0c;
+  --desktop-patients-deep: #070707;
+  --desktop-patients-field: #050505;
+  --desktop-patients-edge: rgba(0, 0, 0, 0.82);
+  --desktop-patients-highlight: rgba(255, 255, 255, 0.032);
+}
+
+.dark .patients-desktop-shell :is(.patients-directory-header, .patients-directory-card, .patients-directory-list, .patients-directory-empty) {
+  border-color: var(--desktop-patients-edge);
+  background:
+    linear-gradient(155deg, rgba(27, 27, 27, 0.985), rgba(16, 16, 16, 0.995)),
+    var(--desktop-patients-panel);
+  box-shadow:
+    0 22px 60px -48px rgba(0, 0, 0, 0.98),
+    inset 0 1px 0 var(--desktop-patients-highlight);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.dark .patients-desktop-shell .patients-directory-card:hover {
+  border-color: rgba(255, 255, 255, 0.065);
+  background:
+    linear-gradient(155deg, rgba(31, 31, 31, 0.99), rgba(18, 18, 18, 0.995)),
+    #1a1a1a;
+  box-shadow:
+    0 24px 64px -48px rgba(0, 0, 0, 0.99),
+    inset 0 1px 0 rgba(255, 255, 255, 0.038);
+}
+
+.dark .patients-desktop-shell :is(.patients-directory-inset, .patients-directory-count, .patients-status-pill) {
+  border-color: rgba(0, 0, 0, 0.84);
+  background:
+    linear-gradient(152deg, rgba(15, 15, 15, 0.99), rgba(7, 7, 7, 0.995)),
+    var(--desktop-patients-inset);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.68);
+}
+
+.dark .patients-desktop-shell .patients-directory-table-head {
+  background: var(--desktop-patients-deep);
+  box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.74);
+}
+
+.dark .patients-desktop-shell .patients-directory-row {
+  border-color: rgba(0, 0, 0, 0.72);
+}
+
+.dark .patients-desktop-shell .patients-directory-row:hover {
+  background: rgba(255, 255, 255, 0.028) !important;
+}
+
+.dark .patients-desktop-shell .patients-directory-row .bg-background,
+.dark .patients-desktop-shell .patients-directory-row [class*='bg-background'] {
+  background-color: var(--desktop-patients-deep);
+}
+
+.dark .patients-desktop-shell :is(input, [role='searchbox']) {
+  border-color: rgba(0, 0, 0, 0.86);
+  background: var(--desktop-patients-field);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.016);
+}
+
+.dark .patients-desktop-shell .patients-view-control.dashboard-segment-list {
+  border-color: rgba(0, 0, 0, 0.82);
+  background: var(--desktop-patients-inset);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.018),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.dark .patients-desktop-shell .patients-view-control .dashboard-segment-indicator {
+  border-color: rgba(255, 255, 255, 0.055);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, 0.035), transparent 52%),
+    rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
