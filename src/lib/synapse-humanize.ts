@@ -38,6 +38,8 @@ const CATEGORY_LABELS = [
 const TECHNICAL_TOKEN_RE = /\b(?:payload|params|tool|endpoint|json|uuid|session_id|clientaction|function_call|synapse_widget|appointment_id|patient_id)\b/gi;
 const SNAKE_CASE_RE = /\b[a-z]+(?:_[a-z0-9]+){1,}\b/gi;
 const UUID_RE = /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi;
+const DECISION_INPUT_RE = /(^|[.!?]\s+|\n)(?:digite|responda|escreva)[^.!?\n]{0,180}(?:confirmar|recusar|cancelar)[^.!?\n]*[.!?]?/gi;
+const DECISION_INPUT_REVERSED_RE = /(^|[.!?]\s+|\n)para\s+(?:confirmar|recusar|cancelar)[^.!?\n]{0,180}(?:digite|responda|escreva)[^.!?\n]*[.!?]?/gi;
 
 export const humanizeSynapseActionType = (type?: string | null) => {
   const normalized = normalizeSynapseWidgetType(type || "synapse_action");
@@ -56,6 +58,9 @@ export const sanitizeSynapseDisplayText = (value: unknown, fallback = "Ação do
     .replace(TECHNICAL_TOKEN_RE, " ")
     .replace(/[{}[\]"]/g, " ")
     .replace(SNAKE_CASE_RE, " ")
+    .replace(/\bcontexto clínico autorizado\b/gi, "contexto clínico")
+    .replace(/\bcontexto autorizado\b/gi, "contexto")
+    .replace(/\bacesso clínico seguro\b/gi, "acesso clínico")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -70,15 +75,21 @@ export const sanitizeSynapseMarkdown = (value: unknown) =>
     .map((segment, index) => {
       if (index % 2 === 1) return segment;
       return segment
+        .replace(DECISION_INPUT_RE, "$1")
+        .replace(DECISION_INPUT_REVERSED_RE, "$1")
         .replace(UUID_RE, " ")
         .replace(TECHNICAL_TOKEN_RE, " ")
         .replace(SNAKE_CASE_RE, " ")
+        .replace(/\bcontexto clínico autorizado\b/gi, "contexto clínico")
+        .replace(/\bcontexto autorizado\b/gi, "contexto")
+        .replace(/\bacesso clínico seguro\b/gi, "acesso clínico")
         .replace(/\(\s*\)/g, "")
         .replace(/[ \t]+([,.;:!?])/g, "$1")
         .replace(/[ \t]{2,}/g, " ")
         .replace(/[ \t]+$/gm, "");
     })
     .join("")
+    .replace(/\n{3,}/g, "\n\n")
     .trim();
 
 export const humanizeSynapseWidgetTitle = (title: unknown, type?: string | null) => {
