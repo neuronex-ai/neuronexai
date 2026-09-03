@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { FounderProfileBadge } from "@/components/founder/FounderProgramExperience";
 import { useProfile } from "@/hooks/use-profile";
 import { cn } from "@/lib/utils";
 import { buildPublicProfessionalProfileUrl } from "@/lib/public-app-url";
@@ -14,7 +15,6 @@ import {
   Loader2,
   QrCode,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -111,23 +111,7 @@ export const NeuroNexIDCard = ({ profile }: NeuroNexIDCardProps) => {
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 {hasCrp ? "CRP informado" : "Perfil profissional"}
               </div>
-              <motion.div
-                animate={
-                  reduceMotion
-                    ? undefined
-                    : { opacity: [0.72, 1, 0.72], scale: [1, 1.025, 1] }
-                }
-                transition={{
-                  duration: 3.6,
-                  repeat: Infinity,
-                  ease: "easeInOut",
-                }}
-                className="relative flex items-center gap-1.5 overflow-hidden rounded-full border border-zinc-300/70 bg-zinc-950 px-3 py-2 text-[8px] font-black uppercase tracking-[0.16em] text-white shadow-lg dark:border-white/10 dark:bg-white/[0.075]"
-                title="Reconhecimento a quem ajudou a construir a NeuroNex desde o início"
-              >
-                <Sparkles className="h-3 w-3" />
-                Founder
-              </motion.div>
+              <FounderProfileBadge reduceMotion={reduceMotion} />
             </div>
 
             <div className="flex flex-col items-center gap-5">
