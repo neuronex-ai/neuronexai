@@ -105,20 +105,10 @@ export const SynapseQuickComposer = () => {
         send(message);
     };
 
-    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-        event.preventDefault();
-        if (!canSend) return;
-
-        const message = visibleDraft.trim();
+    const startInlineTurn = (message: string) => {
         setIntentContextHint('');
         setInputDraft('');
         setActiveTab('chat');
-
-        if (inlineTurn) {
-            sendFromExpandedChat(message);
-            return;
-        }
-
         setInlineTurn({
             prompt: message,
             baselineMessageCount: messages.length,
@@ -127,13 +117,29 @@ export const SynapseQuickComposer = () => {
         send(message);
     };
 
-    const handleSuggestion = (suggestion: string) => {
+    const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        if (!canSend) return;
+
+        const message = visibleDraft.trim();
         if (inlineTurn) {
-            sendFromExpandedChat(suggestion);
+            setInputDraft('');
+            setIntentContextHint('');
+            sendFromExpandedChat(message);
             return;
         }
-        setInputDraft(suggestion);
-        window.requestAnimationFrame(() => inputRef.current?.focus());
+
+        startInlineTurn(message);
+    };
+
+    const handleSuggestion = (suggestion: string) => {
+        const message = suggestion.trim();
+        if (!message || !sessionReady || isSending) return;
+        if (inlineTurn) {
+            sendFromExpandedChat(message);
+            return;
+        }
+        startInlineTurn(message);
     };
 
     const handleInlineChoice = (choice: string) => {
