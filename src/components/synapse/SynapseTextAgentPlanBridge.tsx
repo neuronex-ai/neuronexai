@@ -151,14 +151,16 @@ export const SynapseTextAgentPlanBridge = ({
     };
   }, [clearHideTimer, hideSoon, sessionId]);
 
-  const handleDecision = (decision: "confirmar" | "recusar") => {
+  const handleDecision = (decision: "accept" | "reject") => {
     if (isSending) return;
     setRuntime({
       visible: true,
-      label: decision === "confirmar" ? "Aplicando alteração" : "Cancelando ação",
+      label: decision === "accept" ? "Aplicando alteração" : "Cancelando ação",
       awaitingConfirmation: false,
     });
-    send(decision);
+    // The text runtime currently consumes explicit confirmation vocabulary.
+    // "confirmo" is the canonical affirmative token; the conversation renders it as "Aceitar".
+    send(decision === "accept" ? "confirmo" : "recusar");
   };
 
   if (!enabled || !target) return null;
@@ -194,7 +196,7 @@ export const SynapseTextAgentPlanBridge = ({
                 <div className="mt-2.5 flex items-center gap-2" aria-label="Confirmar ou recusar ação">
                   <button
                     type="button"
-                    onClick={() => handleDecision("recusar")}
+                    onClick={() => handleDecision("reject")}
                     disabled={isSending}
                     className="min-h-9 rounded-full border border-foreground/[0.08] bg-background/28 px-3.5 text-[10px] font-semibold text-foreground/68 backdrop-blur-xl transition-[background-color,border-color,color,transform] hover:-translate-y-px hover:border-foreground/[0.13] hover:bg-background/58 hover:text-foreground disabled:opacity-45 dark:border-white/[0.08] dark:bg-white/[0.025] dark:text-white/68 dark:hover:border-white/[0.14] dark:hover:bg-white/[0.065] dark:hover:text-white"
                   >
@@ -202,7 +204,7 @@ export const SynapseTextAgentPlanBridge = ({
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleDecision("confirmar")}
+                    onClick={() => handleDecision("accept")}
                     disabled={isSending}
                     className="min-h-9 rounded-full border border-foreground/[0.12] bg-foreground/[0.065] px-3.5 text-[10px] font-semibold text-foreground backdrop-blur-xl transition-[background-color,border-color,transform] hover:-translate-y-px hover:border-foreground/[0.18] hover:bg-foreground/[0.1] disabled:opacity-45 dark:border-white/[0.14] dark:bg-white/[0.075] dark:text-white dark:hover:border-white/[0.2] dark:hover:bg-white/[0.11]"
                   >
