@@ -4,6 +4,24 @@ import { cn } from '@/lib/utils';
 
 export type SynapseProcessingMode = 'thinking' | 'responding' | 'executing';
 
+const conciseStatusLabel = (value: string) => {
+  const label = value.trim();
+  const normalized = label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+  if (/preparando solicitacao|processando solicitacao/.test(normalized)) return 'Analisando solicitação';
+  if (/organizando contexto dos pacientes/.test(normalized)) return 'Analisando pacientes';
+  if (/consultando agenda clinica/.test(normalized)) return 'Acessando Agenda';
+  if (/conferindo dados financeiros/.test(normalized)) return 'Acessando Financeiro';
+  if (/preparando conteudo solicitado/.test(normalized)) return 'Preparando conteúdo';
+  if (/aguardando confirmacao/.test(normalized)) return 'Aguardando sua decisão';
+  if (/resposta pronta/.test(normalized)) return 'Preparando resposta';
+
+  return label || 'Analisando solicitação';
+};
+
 export const SynapseTextShimmer = ({
   children,
   className,
@@ -40,16 +58,20 @@ export const SynapseProcessingState = ({
   detail?: string;
   mode: SynapseProcessingMode;
   reducedMotion: boolean;
-}) => (
-  <div
-    className="synapse-desktop-thinking min-w-0 py-1.5"
-    data-reduced-motion={reducedMotion ? 'true' : undefined}
-  >
-    <SynapseTextShimmer
-      reducedMotion={reducedMotion}
-      className="max-w-full truncate text-[11.5px] font-semibold leading-5 tracking-[-0.01em]"
+}) => {
+  const displayLabel = conciseStatusLabel(label);
+
+  return (
+    <div
+      className="synapse-desktop-thinking min-w-0 py-1.5"
+      data-reduced-motion={reducedMotion ? 'true' : undefined}
     >
-      {label}
-    </SynapseTextShimmer>
-  </div>
-);
+      <SynapseTextShimmer
+        reducedMotion={reducedMotion}
+        className="max-w-full truncate text-[11.5px] font-semibold leading-5 tracking-[-0.01em]"
+      >
+        {displayLabel}
+      </SynapseTextShimmer>
+    </div>
+  );
+};
