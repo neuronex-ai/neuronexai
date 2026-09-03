@@ -18,8 +18,8 @@ import { useProfile } from "@/hooks/use-profile";
 import { useSessionNotes } from "@/hooks/use-session-notes";
 import { endOfMonth, format, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AlertCircle, FileText, Loader2, Mail, MessageCircle, Package, Plus, Printer, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { AlertCircle, ChevronLeft, ChevronRight, FileText, Loader2, Mail, MessageCircle, Package, Plus, Printer, X } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { MonthlyReportTemplate } from "./MonthlyReportTemplate";
 import { NewPackageModal } from "./NewPackageModal";
@@ -30,6 +30,8 @@ interface PatientPackagesTabProps {
     patientId: string;
 }
 
+const PACKAGES_PAGE_SIZE = 6;
+
 export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
     const { data: packages, isLoading: isLoadingPackages, error: packagesError } = usePatientPackages(patientId);
     const { data: notes } = useSessionNotes(patientId);
@@ -38,6 +40,7 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
 
     const { session } = useAuth();
     const [isSending, setIsSending] = useState(false);
+    const [page, setPage] = useState(1);
     const printRef = useRef<HTMLDivElement>(null);
 
     const now = new Date();
@@ -50,8 +53,26 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
     }) || [];
 
     const activePkg = packages?.find(p => p.total_sessions > p.sessions_used + (p.sessions_reserved || 0));
-
     const isRunningLow = activePkg && (activePkg.total_sessions - activePkg.sessions_used - (activePkg.sessions_reserved || 0) <= 1);
+
+    const orderedPackages = useMemo(
+        () => [...(packages || [])].sort((left, right) => {
+            const leftActive = left.total_sessions > left.sessions_used + (left.sessions_reserved || 0);
+            const rightActive = right.total_sessions > right.sessions_used + (right.sessions_reserved || 0);
+            if (leftActive !== rightActive) return leftActive ? -1 : 1;
+            return new Date(right.created_at).getTime() - new Date(left.created_at).getTime();
+        }),
+        [packages],
+    );
+    const totalPages = Math.max(1, Math.ceil(orderedPackages.length / PACKAGES_PAGE_SIZE));
+    const visiblePackages = useMemo(
+        () => orderedPackages.slice((page - 1) * PACKAGES_PAGE_SIZE, page * PACKAGES_PAGE_SIZE),
+        [orderedPackages, page],
+    );
+
+    useEffect(() => {
+        setPage((current) => Math.min(current, totalPages));
+    }, [totalPages]);
 
     const reportData = {
         patientName: patient?.name || "Paciente",
@@ -111,32 +132,31 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
     if (isLoadingPackages) {
         return (
             <div className="space-y-6">
-                <Skeleton className="h-40 w-full bg-zinc-100/50 dark:bg-zinc-800/50 rounded-3xl" />
-                <Skeleton className="h-40 w-full bg-zinc-100/50 dark:bg-zinc-800/50 rounded-3xl" />
+                <Skeleton className="h-40 w-full rounded-3xl bg-zinc-100/50 dark:bg-zinc-800/50" />
+                <Skeleton className="h-40 w-full rounded-3xl bg-zinc-100/50 dark:bg-zinc-800/50" />
             </div>
         );
     }
 
     if (packagesError) {
         return (
-            <div className="text-center py-12 px-6">
-                <div className="p-4 rounded-full bg-rose-50 dark:bg-rose-500/10 text-rose-500 inline-block mb-4">
+            <div className="px-6 py-12 text-center">
+                <div className="mb-4 inline-block rounded-full bg-rose-50 p-4 text-rose-500 dark:bg-rose-500/10">
                     <AlertCircle className="h-8 w-8" />
                 </div>
                 <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">Erro ao carregar pacotes</h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2">Tente recarregar a página.</p>
+                <p className="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Tente recarregar a página.</p>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6 md:space-y-8 animate-fade-in pb-10">
-
+        <div className="space-y-6 pb-10 md:space-y-8">
             {isRunningLow && (
                 <section className="patient-record-card rounded-[26px] border p-5 md:p-6">
                     <div className="flex items-center justify-between gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="p-2.5 rounded-xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-md shrink-0">
+                            <div className="shrink-0 rounded-xl bg-zinc-900 p-2.5 text-white dark:bg-white dark:text-zinc-900">
                                 <AlertCircle className="h-5 w-5" />
                             </div>
                             <div>
@@ -153,12 +173,13 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                 </section>
             )}
 
-            <div className="patient-record-panel flex flex-col items-center justify-between gap-3 rounded-[24px] border p-2 shadow-sm sm:flex-row sm:gap-0">
-                <div className="px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 flex items-center gap-3 w-full sm:w-auto">
+            <div className="patient-record-panel flex flex-col items-center justify-between gap-3 rounded-[24px] border p-2 sm:flex-row sm:gap-0">
+                <div className="flex w-full items-center gap-3 px-5 py-3 text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400 dark:text-zinc-500 sm:w-auto">
                     <Package className="h-4 w-4 opacity-50" />
                     Gestão de planos
+                    {orderedPackages.length > 0 ? <span className="rounded-full border border-border/45 px-2 py-0.5 text-[9px] text-muted-foreground">{orderedPackages.length}</span> : null}
                 </div>
-                <div className="flex gap-2 w-full sm:w-auto p-1">
+                <div className="flex w-full gap-2 p-1 sm:w-auto">
                     <Dialog>
                         <DialogTrigger asChild>
                             <Button
@@ -211,7 +232,7 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                     </Dialog>
 
                     <NewPackageModal patientId={patientId}>
-                        <Button size="sm" className="gap-2 bg-zinc-900 dark:bg-white text-zinc-50 dark:text-zinc-900 hover:bg-zinc-800 dark:hover:bg-zinc-200 shadow-xl h-10 text-[10px] font-black uppercase tracking-widest px-6 rounded-xl transition-all hover:scale-105 flex-1 sm:flex-none">
+                        <Button size="sm" className="h-10 flex-1 gap-2 rounded-xl bg-zinc-900 px-6 text-[10px] font-black uppercase tracking-widest text-zinc-50 transition-colors hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 sm:flex-none">
                             <Plus className="h-3.5 w-3.5 stroke-[3]" />
                             Novo plano
                         </Button>
@@ -219,14 +240,35 @@ export const PatientPackagesTab = ({ patientId }: PatientPackagesTabProps) => {
                 </div>
             </div>
 
-            {packages && packages.length > 0 ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 md:gap-8">
-                    {packages.map((pkg, index) => (
-                        <div key={pkg.id} className="animate-fade-up" style={{ animationDelay: `${index * 100}ms` }}>
-                            <PackageCard pkg={pkg} patientId={patientId} />
+            {orderedPackages.length > 0 ? (
+                <section className="patient-record-panel overflow-hidden rounded-[28px] border">
+                    <header className="flex items-center justify-between gap-3 border-b border-border/45 px-5 py-4 md:px-6">
+                        <div>
+                            <h3 className="text-sm font-semibold text-foreground">Planos do paciente</h3>
+                            <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Ativos primeiro · {orderedPackages.length} registros</p>
                         </div>
-                    ))}
-                </div>
+                        {totalPages > 1 ? <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-muted-foreground">Página {page} de {totalPages}</span> : null}
+                    </header>
+                    <div className="grid grid-cols-1 gap-5 p-4 md:p-5 xl:grid-cols-2">
+                        {visiblePackages.map((pkg) => (
+                            <div key={pkg.id} style={{ contentVisibility: "auto", containIntrinsicSize: "320px" }}>
+                                <PackageCard pkg={pkg} patientId={patientId} />
+                            </div>
+                        ))}
+                    </div>
+                    {totalPages > 1 ? (
+                        <footer className="flex items-center justify-between border-t border-border/45 px-4 py-3 md:px-5">
+                            <Button type="button" variant="outline" className="h-10 rounded-xl px-4" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
+                                <ChevronLeft className="mr-2 h-4 w-4" aria-hidden="true" />
+                                Anterior
+                            </Button>
+                            <Button type="button" variant="outline" className="h-10 rounded-xl px-4" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
+                                Próxima
+                                <ChevronRight className="ml-2 h-4 w-4" aria-hidden="true" />
+                            </Button>
+                        </footer>
+                    ) : null}
+                </section>
             ) : (
                 <div className="patient-record-card flex flex-col items-center justify-center rounded-[36px] border border-dashed py-24 text-center md:py-32">
                     <h3 className="mb-3 text-2xl font-black leading-none tracking-tight text-foreground">Nenhum plano ativo</h3>
