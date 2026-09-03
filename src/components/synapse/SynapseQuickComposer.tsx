@@ -38,7 +38,8 @@ export const SynapseQuickComposer = () => {
         () => CONTEXT_LABELS[currentContext] || 'Contexto atual',
         [currentContext],
     );
-    const canSend = Boolean(inputDraft.trim()) && sessionReady && !isSending;
+    const visibleDraft = intentContextHint.trim() || inputDraft;
+    const canSend = Boolean(visibleDraft.trim()) && sessionReady && !isSending;
     const voiceBusy = voiceStatus === 'connecting' || voiceStatus === 'disconnecting';
 
     useEffect(() => {
@@ -51,12 +52,26 @@ export const SynapseQuickComposer = () => {
         if (intentContextHint) setIntentContextHint('');
     };
 
+    const promoteContextualDraft = () => {
+        const contextualDraft = intentContextHint.trim();
+        if (!contextualDraft) return;
+        setInputDraft(contextualDraft);
+        setIntentContextHint('');
+    };
+
     const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
         if (!canSend) return;
-        const message = inputDraft.trim();
+        const message = visibleDraft.trim();
+        setIntentContextHint('');
         send(message);
         setInputDraft('');
+        setActiveTab('chat');
+        setShellState('compact');
+    };
+
+    const handleExpand = () => {
+        promoteContextualDraft();
         setActiveTab('chat');
         setShellState('compact');
     };
@@ -82,7 +97,7 @@ export const SynapseQuickComposer = () => {
             aria-label="Compositor rápido do Synapse"
             aria-keyshortcuts="Control+K Meta+K"
             data-synapse-shell="true"
-            data-synapse-shell-placement="bottom-right"
+            data-synapse-shell-placement="bottom-center"
         >
             <div className="flex items-center gap-2 px-2 pb-1.5 pt-1">
                 <div className="flex min-w-0 flex-1 items-center gap-2 text-[10px] font-semibold text-muted-foreground">
@@ -94,10 +109,7 @@ export const SynapseQuickComposer = () => {
                 </div>
                 <button
                     type="button"
-                    onClick={() => {
-                        setActiveTab('chat');
-                        setShellState('compact');
-                    }}
+                    onClick={handleExpand}
                     className="flex h-9 w-9 items-center justify-center rounded-[12px] text-muted-foreground transition-colors hover:bg-foreground/[0.045] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:hover:bg-white/[0.055]"
                     aria-label="Abrir workspace do Synapse"
                     title="Abrir conversa"
@@ -118,7 +130,7 @@ export const SynapseQuickComposer = () => {
                 <Sparkles className="ml-1 h-4.5 w-4.5 shrink-0 text-muted-foreground/60" aria-hidden="true" />
                 <input
                     ref={inputRef}
-                    value={inputDraft}
+                    value={visibleDraft}
                     onChange={(event) => handleChange(event.target.value)}
                     placeholder="Pergunte ou peça algo ao Synapse"
                     disabled={!sessionReady || isSending}
