@@ -34,6 +34,11 @@
   border-radius: 28px;
 }
 
+.desktop-home-attention,
+.desktop-home-attention-grid {
+  min-width: 0;
+}
+
 /* On roomy desktop widths the Synapse behaves like a sidecar instead of
    covering the clinical surface underneath it. The navbar remains untouched. */
 @media (min-width: 1480px) {
@@ -45,6 +50,25 @@
 
   body:not(.synapse-workspace-open) .desktop-lumen-page {
     transition: padding-right 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  body.synapse-workspace-open .desktop-home-attention-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  body.synapse-workspace-open .desktop-home-attention-grid > :nth-child(3) {
+    border-left-width: 0 !important;
+    border-top-width: 1px !important;
+  }
+}
+
+/* When the attention band naturally wraps to two columns, keep the third
+   action visually attached to the row above instead of leaving a stray
+   vertical separator at the start of the new line. */
+@media (min-width: 768px) and (max-width: 1535px) {
+  .desktop-home-attention-grid > :nth-child(3) {
+    border-left-width: 0 !important;
+    border-top-width: 1px !important;
   }
 }
 
