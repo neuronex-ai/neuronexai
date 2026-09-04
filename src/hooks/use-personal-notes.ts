@@ -28,9 +28,27 @@ const hydrateNotionChildPageLinks = (content: string) => {
   });
 };
 
+const hydrateNotionDocumentCards = (content: string) => {
+  if (!content || !content.toLowerCase().includes('<embedded-doc')) return content;
+
+  return content.replace(/<embedded-doc\b[^>]*><\/embedded-doc>/gi, (tag) => {
+    const size = tag.match(/\bsize=["']([^"']*)["']/i)?.[1]?.trim().toLowerCase();
+    const url = tag.match(/\burl=["']([^"']*)["']/i)?.[1]?.trim();
+    if (size !== 'notion' || !url || url === '#') return tag;
+
+    const title = tag.match(/\bname=["']([^"']*)["']/i)?.[1]?.trim() || 'Arquivo do Notion';
+    const type = tag.match(/\btype=["']([^"']*)["']/i)?.[1]?.trim() || 'arquivo';
+
+    return `<link-card url="${url}" title="${title}" description="${type} importado do Notion" siteName="Notion"></link-card>`;
+  });
+};
+
+const normalizeImportedNotionContent = (content: string) =>
+  hydrateNotionDocumentCards(hydrateNotionChildPageLinks(content));
+
 const normalizePersonalNote = (note: any): PersonalNote => ({
   ...note,
-  content: hydrateNotionChildPageLinks(note.content || ''),
+  content: normalizeImportedNotionContent(note.content || ''),
   patient_name: note.patient?.name ?? note.patient_name,
 });
 
