@@ -31,6 +31,9 @@ const escapeHtml = (value: unknown) =>
 
 const attr = (value: unknown) => escapeHtml(value);
 
+const notionPageUrl = (pageId: string | undefined) =>
+  pageId ? `https://www.notion.so/${pageId.replace(/-/g, "")}` : "";
+
 export const notionRichTextPlain = (richText: any[] = []) =>
   (Array.isArray(richText) ? richText : [{ plain_text: richText }])
     .map((part) => {
@@ -283,8 +286,10 @@ const renderBlock = (
     case "bookmark":
     case "link_preview":
       return linkCard(data.url, type === "bookmark" ? "Bookmark do Notion" : "Embed do Notion");
-    case "child_page":
-      return `<note-link notionPageId="${attr(block.id || "")}" href="${attr(block.url || data.url || "")}" title="${attr(data.title || "Subpagina do Notion")}" description="Subpagina referenciada no Notion. Importe-a para transformar em nota editavel." source="Notion"></note-link>`;
+    case "child_page": {
+      const href = block.url || data.url || notionPageUrl(block.id);
+      return `<note-link notionPageId="${attr(block.id || "")}" href="${attr(href)}" title="${attr(data.title || "Subpagina do Notion")}" description="Subpagina referenciada no Notion. Importe-a para transformar em nota editavel." source="Notion"></note-link>`;
+    }
     case "child_database":
       return fallbackCard(block, "Banco de dados do Notion", data.title || "Banco referenciado pela pagina.", unsupportedBlocks);
     case "synced_block":
