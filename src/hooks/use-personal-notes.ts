@@ -5,6 +5,35 @@ import { getUserFacingErrorMessage } from '@/lib/user-facing-error';
 import { PersonalNote } from '@/types';
 import { toast } from 'sonner';
 
+const getNotionPageUrl = (pageId: string) =>
+  `https://www.notion.so/${pageId.replace(/-/g, '')}`;
+
+const hydrateNotionChildPageLinks = (content: string) => {
+  if (!content || !content.toLowerCase().includes('<note-link')) return content;
+
+  return content.replace(/<note-link\b[^>]*>/gi, (tag) => {
+    const pageIdMatch = tag.match(/\bnotionpageid=["']([^"']+)["']/i);
+    if (!pageIdMatch?.[1]) return tag;
+
+    const pageUrl = getNotionPageUrl(pageIdMatch[1]);
+    const hrefMatch = tag.match(/\bhref=["']([^"']*)["']/i);
+    const currentHref = hrefMatch?.[1]?.trim();
+
+    if (currentHref && currentHref !== '#') return tag;
+    if (hrefMatch) {
+      return tag.replace(/\bhref=["'][^"']*["']/i, `href="${pageUrl}"`);
+    }
+
+    return tag.replace(/>$/, ` href="${pageUrl}">`);
+  });
+};
+
+const normalizePersonalNote = (note: any): PersonalNote => ({
+  ...note,
+  content: hydrateNotionChildPageLinks(note.content || ''),
+  patient_name: note.patient?.name ?? note.patient_name,
+});
+
 const fetchNotes = async (userId: string): Promise<PersonalNote[]> => {
   const { data, error } = await supabase
     .from('personal_notes')
@@ -17,10 +46,7 @@ const fetchNotes = async (userId: string): Promise<PersonalNote[]> => {
 
   if (error) throw new Error(error.message);
 
-  return (data || []).map((note: any) => ({
-    ...note,
-    patient_name: note.patient?.name,
-  }));
+  return (data || []).map(normalizePersonalNote);
 };
 
 const createNote = async (note: Partial<PersonalNote>, userId: string) => {
@@ -31,7 +57,7 @@ const createNote = async (note: Partial<PersonalNote>, userId: string) => {
     .single();
 
   if (error) throw new Error(error.message);
-  return data as PersonalNote;
+  return normalizePersonalNote(data);
 };
 
 const updateNote = async (id: string, updates: Partial<PersonalNote>, userId: string) => {
@@ -44,7 +70,7 @@ const updateNote = async (id: string, updates: Partial<PersonalNote>, userId: st
     .single();
 
   if (error) throw new Error(error.message);
-  return data as PersonalNote;
+  return normalizePersonalNote(data);
 };
 
 const deleteNote = async (id: string, userId: string) => {
