@@ -1,0 +1,6 @@
+/* Imported Notion child-page cards use a light-theme elevation token by default.
+   In dark mode that token reads as a pale halo under the card, so keep the
+   surface flat and let the border/background carry the hierarchy instead. */
+.dark .notes-editor-content [class*="group/note-link"] > button {
+  box-shadow: none !important;
+}
