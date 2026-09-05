@@ -241,13 +241,12 @@ export function resolveSynapseDestination(
   if (destination.startsWith("finance.")) return financeNavigation(destination);
 
   if (destination.startsWith("dashboard.")) {
-    const selectorByDestination: Partial<Record<SynapseDestination, string>> = {
-      "dashboard.overview": "main",
-      "dashboard.agenda": "[data-synapse-target='dashboard-agenda']",
-      "dashboard.finance": "[data-synapse-target='dashboard-finance']",
-      "dashboard.pending": "[data-synapse-target='dashboard-pending']",
-    };
-    return { path: "/dashboard", selector: selectorByDestination[destination] };
+    if (destination === "dashboard.agenda") return { path: "/agenda" };
+    if (destination === "dashboard.finance") return { path: "/financeiro?view=conta-digital" };
+    if (destination === "dashboard.pending") {
+      return { path: "/dashboard", selector: ".desktop-home-attention" };
+    }
+    return { path: "/dashboard", selector: "main" };
   }
 
   if (destination.startsWith("agenda.")) {
