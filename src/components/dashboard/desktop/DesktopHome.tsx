@@ -33,8 +33,9 @@ import type { Appointment } from "@/types";
 import {
   buildAttentionQueue,
   getActiveAppointments,
-  getNextScheduleItem,
+  getNextSession,
   getTodayAppointments,
+  getUpcomingScheduleItems,
   isOnlineAppointment,
 } from "./dashboard-command-center-model";
 
@@ -136,11 +137,11 @@ export const DesktopHome = () => {
     [activeAppointments, today],
   );
   const nextAppointment = useMemo(
-    () => getNextScheduleItem(activeAppointments, new Date()),
+    () => getNextSession(activeAppointments, new Date()),
     [activeAppointments],
   );
   const nextItems = useMemo(
-    () => activeAppointments.filter((item) => item.id !== nextAppointment?.id).slice(0, 2),
+    () => getUpcomingScheduleItems(activeAppointments, new Date(), nextAppointment?.id, 2),
     [activeAppointments, nextAppointment?.id],
   );
 
