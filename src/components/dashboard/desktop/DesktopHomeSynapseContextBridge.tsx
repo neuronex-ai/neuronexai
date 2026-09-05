@@ -15,8 +15,9 @@ import type { Appointment } from "@/types";
 import {
   buildAttentionQueue,
   getActiveAppointments,
-  getNextScheduleItem,
+  getNextSession,
   getTodayAppointments,
+  getUpcomingScheduleItems,
 } from "./dashboard-command-center-model";
 
 const appointmentLabel = (appointment: Appointment) =>
@@ -44,16 +45,13 @@ export const DesktopHomeSynapseContextBridge = () => {
     [activeAppointments, today],
   );
   const nextAppointment = useMemo(
-    () => getNextScheduleItem(activeAppointments, new Date()),
+    () => getNextSession(activeAppointments, new Date()),
     [activeAppointments],
   );
-  const futureAppointments = useMemo(() => {
-    const now = Date.now();
-    return activeAppointments
-      .filter((appointment) => appointment.id !== nextAppointment?.id)
-      .filter((appointment) => new Date(appointment.end_time).getTime() > now)
-      .slice(0, 2);
-  }, [activeAppointments, nextAppointment?.id]);
+  const futureAppointments = useMemo(
+    () => getUpcomingScheduleItems(activeAppointments, new Date(), nextAppointment?.id, 2),
+    [activeAppointments, nextAppointment?.id],
+  );
   const attentionItems = useMemo(
     () => buildAttentionQueue({
       notifications,
@@ -70,7 +68,7 @@ export const DesktopHomeSynapseContextBridge = () => {
     const loading = loadingAppointments || loadingNotifications || loadingPendingPatients;
     const next = nextAppointment
       ? `${appointmentLabel(nextAppointment)} às ${format(new Date(nextAppointment.start_time), "HH:mm")}`
-      : "nenhum compromisso futuro carregado";
+      : "nenhuma sessão futura carregada";
     const upcoming = futureAppointments.length
       ? futureAppointments
           .map((appointment) => `${appointmentLabel(appointment)} às ${format(new Date(appointment.start_time), "HH:mm")}`)
@@ -90,12 +88,12 @@ export const DesktopHomeSynapseContextBridge = () => {
       `Data da Home: ${format(today, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}.`,
       loading ? "Parte dos dados visuais ainda está carregando; não trate números incompletos como definitivos." : "Os dados abaixo correspondem ao estado atualmente carregado na Home.",
       `Sessões exibidas para hoje: ${todayAppointments.length}.`,
-      `Próximo compromisso exibido: ${next}.`,
+      `Próxima sessão exibida: ${next}.`,
       `Próximos horários exibidos: ${upcoming}.`,
       `Fila visual de atenção: ${attention}.`,
       `Cadastros de pacientes com status pending: ${pendingPatients}.`,
       `Estado do NeuroFinance usado pela Home: ${neuroFinanceState}.`,
-      "Ações que realmente existem na Home: conversar com o Synapse por texto; iniciar voz; usar sugestões rápidas; abrir criação de agendamento; abrir criação de paciente; abrir o próximo compromisso na Agenda; abrir os próximos horários na Agenda; abrir o destino real de cada item da fila de atenção.",
+      "Ações que realmente existem na Home: conversar com o Synapse por texto; iniciar voz; usar sugestões rápidas; abrir criação de agendamento; abrir criação de paciente; abrir a próxima sessão na Agenda; abrir os próximos horários na Agenda; abrir o destino real de cada item da fila de atenção.",
       "A Home não possui subpainéis próprios de Financeiro ou Pendências: quando um item aponta para essas áreas, a navegação leva à área real correspondente.",
       "Para qualquer criação ou alteração pedida ao Synapse, preserve a revisão/confirmação exigida pelo runtime antes de executar o efeito.",
     ].join("\n");
