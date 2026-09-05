@@ -6,6 +6,7 @@ export interface AIContextType {
   isFocusMode: boolean;
   toggleFocusMode: () => void;
   contextSummary: string;
+  setSurfaceContextSummary: (summary: string) => void;
 }
 
 export const AIContext = createContext<AIContextType | undefined>(undefined);
