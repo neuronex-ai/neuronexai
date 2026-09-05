@@ -144,6 +144,21 @@ export const getNextSession = (appointments: Appointment[], now: Date) =>
 export const getNextScheduleItem = (appointments: Appointment[], now: Date) =>
   appointments.find((appointment) => isAfter(new Date(appointment.end_time), now));
 
+export const getUpcomingScheduleItems = (
+  appointments: Appointment[],
+  now: Date,
+  excludeId?: string,
+  limit = 2,
+) => {
+  const nowMs = now.getTime();
+  const normalizedLimit = Number.isFinite(limit) ? Math.max(0, Math.floor(limit)) : 2;
+
+  return appointments
+    .filter((appointment) => appointment.id !== excludeId)
+    .filter((appointment) => new Date(appointment.end_time).getTime() > nowMs)
+    .slice(0, normalizedLimit);
+};
+
 export const paginateAttentionItems = (
   items: AttentionQueueItem[],
   requestedPageIndex: number,
