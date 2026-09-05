@@ -8,6 +8,7 @@ import {
   getNextScheduleItem,
   getNextSession,
   getTodayAppointments,
+  getUpcomingScheduleItems,
   isOnlineAppointment,
   paginateAttentionItems,
 } from "./dashboard-command-center-model";
@@ -79,6 +80,43 @@ describe("dashboard command center model", () => {
 
     expect(getNextScheduleItem(active, new Date("2026-06-28T10:00:00.000Z"))?.id).toBe("event");
     expect(getNextSession(active, new Date("2026-06-28T10:00:00.000Z"))?.id).toBe("session");
+  });
+
+  it("keeps Home upcoming items in the future and excludes the highlighted session", () => {
+    const active = getActiveAppointments([
+      appointment({
+        id: "ended-unscored",
+        start_time: "2026-06-28T08:00:00.000Z",
+        end_time: "2026-06-28T09:00:00.000Z",
+        status: "unscored",
+      }),
+      appointment({
+        id: "next-session",
+        start_time: "2026-06-28T11:00:00.000Z",
+        end_time: "2026-06-28T12:00:00.000Z",
+      }),
+      appointment({
+        id: "future-event",
+        patient_id: null,
+        start_time: "2026-06-28T13:00:00.000Z",
+        end_time: "2026-06-28T14:00:00.000Z",
+        metadata: { kind: "event", eventTitle: "Supervisao", eventCategoryLabel: "Supervisao" },
+        patient_name: undefined,
+      }),
+      appointment({
+        id: "later-session",
+        start_time: "2026-06-28T15:00:00.000Z",
+        end_time: "2026-06-28T16:00:00.000Z",
+      }),
+    ]);
+    const now = new Date("2026-06-28T10:00:00.000Z");
+    const nextSession = getNextSession(active, now);
+
+    expect(nextSession?.id).toBe("next-session");
+    expect(getUpcomingScheduleItems(active, now, nextSession?.id, 2).map((item) => item.id)).toEqual([
+      "future-event",
+      "later-session",
+    ]);
   });
 
   it("finds the next presencial session", () => {
